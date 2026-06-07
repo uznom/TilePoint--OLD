@@ -336,16 +336,6 @@ function AppContent() {
   // ATPOS v2 Directory Hierarchical Folders
   const sidebarCategoryTree = [
     {
-      id: 'inventory',
-      name: 'Inventory',
-      icon: Layers,
-      subItems: [
-        { id: 'inventory-stocks', name: 'Stocks' },
-        { id: 'inventory-transfer', name: 'Stocks Transfer' },
-        { id: 'inventory-pulled-out', name: 'Pulled-Out Stocks' }
-      ]
-    },
-    {
       id: 'sale',
       name: 'Sale',
       icon: ShoppingCart,
@@ -356,20 +346,31 @@ function AppContent() {
       ]
     },
     {
+      id: 'inventory',
+      name: 'Inventory',
+      icon: Layers,
+      subItems: [
+        { id: 'inventory-stocks', name: 'Stocks' },
+        { id: 'inventory-transfer', name: 'Stocks Transfer' },
+        { id: 'inventory-pulled-out', name: 'Pulled-Out Stocks' }
+      ]
+    },
+    {
+      id: 'bir',
+      name: 'BIR & Sales Transmission',
+      icon: FileText,
+      subItems: [
+        { id: 'reports-transmission', name: 'Sales reports Transmission' },
+        { id: 'bir-xz', name: 'Search X&Z Reading' },
+        { id: 'bir-summary', name: 'BIR Summary Report' }
+      ]
+    },
+    {
       id: 'deliveries',
       name: 'Cargo Deliveries',
       icon: Truck,
       subItems: [
         { id: 'deliveries-panel', name: 'Delivery Center' }
-      ]
-    },
-    {
-      id: 'adjustments',
-      name: 'Sale Adjustments',
-      icon: RefreshCw,
-      subItems: [
-        { id: 'adjustments-void', name: 'Search Voided Sales' },
-        { id: 'adjustments-return', name: 'Search Returned Products' }
       ]
     },
     {
@@ -382,15 +383,6 @@ function AppContent() {
       ]
     },
     {
-      id: 'expenses',
-      name: 'Expenses',
-      icon: DollarSign,
-      subItems: [
-        { id: 'expenses-add', name: 'Add Expenses' },
-        { id: 'expenses-search', name: 'Search Expenses' }
-      ]
-    },
-    {
       id: 'supplier',
       name: 'Supplier',
       icon: Building2,
@@ -400,13 +392,21 @@ function AppContent() {
       ]
     },
     {
-      id: 'bir',
-      name: 'BIR & Sales Transmission',
-      icon: FileText,
+      id: 'expenses',
+      name: 'Expenses',
+      icon: DollarSign,
       subItems: [
-        { id: 'reports-transmission', name: 'Sales reports Transmission' },
-        { id: 'bir-xz', name: 'Search X&Z Reading' },
-        { id: 'bir-summary', name: 'BIR Summary Report' }
+        { id: 'expenses-add', name: 'Add Expenses' },
+        { id: 'expenses-search', name: 'Search Expenses' }
+      ]
+    },
+    {
+      id: 'adjustments',
+      name: 'Sale Adjustments',
+      icon: RefreshCw,
+      subItems: [
+        { id: 'adjustments-void', name: 'Search Voided Sales' },
+        { id: 'adjustments-return', name: 'Search Returned Products' }
       ]
     },
     {
