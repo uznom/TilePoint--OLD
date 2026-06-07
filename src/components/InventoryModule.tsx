@@ -141,6 +141,10 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
   // Primary navigation sub-tabs: "catalog" | "movements" | "transfers" | "ledger"
   const [activeSubTab, setActiveSubTab] = useState<'catalog' | 'movements' | 'transfers' | 'ledger'>('catalog');
 
+  // Pagination State for lists inside Inventory
+  const [prodPage, setProdPage] = useState(1);
+  const [ledgerPage, setLedgerPage] = useState(1);
+
   // Stock Transfer Creation Form States
   const [showCreateTransfer, setShowCreateTransfer] = useState(false);
   const [transferSource, setTransferSource] = useState(currentUser.branchAssignmentId || 'B1');
@@ -156,6 +160,16 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
   const [term, setTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
+
+  // Reset prodPage when filters change
+  useEffect(() => {
+    setProdPage(1);
+  }, [term, categoryFilter, statusFilter]);
+
+  // Reset ledgerPage when sub-tab changes
+  useEffect(() => {
+    setLedgerPage(1);
+  }, [activeSubTab]);
 
   // Add/Edit Modals state
   const [showModal, setShowModal] = useState(false);
@@ -379,6 +393,18 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
 
     return matchSearch && matchCategory && matchStatus;
   });
+
+  const PRODS_PER_PAGE = 50;
+  const totalProdPages = Math.ceil(filteredProducts.length / PRODS_PER_PAGE) || 1;
+  const paginatedProducts = React.useMemo(() => {
+    return filteredProducts.slice((prodPage - 1) * PRODS_PER_PAGE, prodPage * PRODS_PER_PAGE);
+  }, [filteredProducts, prodPage]);
+
+  const LEDGER_PER_PAGE = 100;
+  const totalLedgerPages = Math.ceil(ledgerEntries.length / LEDGER_PER_PAGE) || 1;
+  const paginatedLedger = React.useMemo(() => {
+    return ledgerEntries.slice((ledgerPage - 1) * LEDGER_PER_PAGE, ledgerPage * LEDGER_PER_PAGE);
+  }, [ledgerEntries, ledgerPage]);
 
   // Calculate Key Inventory Performance Indicators (Dashboard Statistics)
   const stats = React.useMemo(() => {
@@ -877,7 +903,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
                 </tr>
               </thead>
               <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
-                {filteredProducts.map((p) => {
+                {paginatedProducts.map((p) => {
                   // Determine status indicators
                   let statusLabel = 'In Stock';
                   let statusClass = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/25';
@@ -1049,6 +1075,54 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
                 )}
               </tbody>
             </table>
+
+            {/* Pagination Controls bar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-m3-surface-low/80 border-t border-m3-outline-variant/30 text-xs">
+              <span className="font-medium text-m3-on-surface-variant font-mono">
+                Showing {Math.min(filteredProducts.length, (prodPage - 1) * PRODS_PER_PAGE + 1)}-{Math.min(filteredProducts.length, prodPage * PRODS_PER_PAGE)} of {filteredProducts.length} entries
+              </span>
+              <div className="flex items-center gap-1.5 select-none">
+                <button
+                  type="button"
+                  disabled={prodPage === 1}
+                  onClick={() => setProdPage(prev => Math.max(1, prev - 1))}
+                  className="px-3.5 py-1.5 rounded-lg border border-m3-outline-variant/30 text-m3-on-surface hover:bg-m3-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[10px]"
+                >
+                  Prev
+                </button>
+                {Array.from({ length: totalProdPages }).map((_, i) => {
+                  const pNum = i + 1;
+                  if (totalProdPages > 5 && Math.abs(pNum - prodPage) > 2 && pNum !== 1 && pNum !== totalProdPages) {
+                    if (pNum === 2 || pNum === totalProdPages - 1) {
+                      return <span key={pNum} className="px-1.5 text-zinc-400">...</span>;
+                    }
+                    return null;
+                  }
+                  return (
+                    <button
+                      key={pNum}
+                      type="button"
+                      onClick={() => setProdPage(pNum)}
+                      className={`h-7.5 w-7.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                        prodPage === pNum
+                          ? 'bg-m3-primary text-m3-on-primary shadow-sm'
+                          : 'border border-m3-outline-variant/20 hover:bg-m3-primary/10 text-m3-on-surface-variant'
+                      }`}
+                    >
+                      {pNum}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  disabled={prodPage === totalProdPages}
+                  onClick={() => setProdPage(prev => Math.min(totalProdPages, prev + 1))}
+                  className="px-3.5 py-1.5 rounded-lg border border-m3-outline-variant/30 text-m3-on-surface hover:bg-m3-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[10px]"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </div>
         </>
       )}
@@ -1583,7 +1657,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-m3-outline-variant/10 text-xs font-medium">
-                  {ledgerEntries.map((l) => {
+                  {paginatedLedger.map((l) => {
                     const matchedB = branches.find(b => b.id === l.branchId);
                     
                     let eventBadge = 'bg-zinc-500/10 text-zinc-500 border-zinc-500/15';
@@ -1630,6 +1704,54 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
                   })}
                 </tbody>
               </table>
+            </div>
+
+            {/* Pagination Controls bar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-m3-surface-low/80 border-t border-m3-outline-variant/30 text-xs font-sans">
+              <span className="font-medium text-m3-on-surface-variant font-mono">
+                Showing {Math.min(ledgerEntries.length, (ledgerPage - 1) * LEDGER_PER_PAGE + 1)}-{Math.min(ledgerEntries.length, ledgerPage * LEDGER_PER_PAGE)} of {ledgerEntries.length} movements
+              </span>
+              <div className="flex items-center gap-1.5 select-none">
+                <button
+                  type="button"
+                  disabled={ledgerPage === 1}
+                  onClick={() => setLedgerPage(prev => Math.max(1, prev - 1))}
+                  className="px-3.5 py-1.5 rounded-lg border border-m3-outline-variant/30 text-m3-on-surface hover:bg-m3-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[10px]"
+                >
+                  Prev
+                </button>
+                {Array.from({ length: totalLedgerPages }).map((_, i) => {
+                  const pNum = i + 1;
+                  if (totalLedgerPages > 5 && Math.abs(pNum - ledgerPage) > 2 && pNum !== 1 && pNum !== totalLedgerPages) {
+                    if (pNum === 2 || pNum === totalLedgerPages - 1) {
+                      return <span key={pNum} className="px-1.5 text-zinc-400">...</span>;
+                    }
+                    return null;
+                  }
+                  return (
+                    <button
+                      key={pNum}
+                      type="button"
+                      onClick={() => setLedgerPage(pNum)}
+                      className={`h-7.5 w-7.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                        ledgerPage === pNum
+                          ? 'bg-m3-primary text-m3-on-primary shadow-sm'
+                          : 'border border-m3-outline-variant/30 hover:bg-m3-primary/10 text-m3-on-surface-variant'
+                      }`}
+                    >
+                      {pNum}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  disabled={ledgerPage === totalLedgerPages}
+                  onClick={() => setLedgerPage(prev => Math.min(totalLedgerPages, prev + 1))}
+                  className="px-3.5 py-1.5 rounded-lg border border-m3-outline-variant/30 text-m3-on-surface hover:bg-m3-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[10px]"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </div>
 

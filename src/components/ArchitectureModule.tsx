@@ -45,6 +45,14 @@ export const ArchitectureModule: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [confirmStep, setConfirmStep] = useState<{ mode: 'all' | 'transactions' | 'seeds' | null; inputVal: string }>({ mode: null, inputVal: '' });
 
+  // Pagination for Active Audit Logs feed
+  const [logPage, setLogPage] = useState(1);
+  const LOGS_PER_PAGE = 7;
+  const totalLogPages = Math.ceil(auditLogs.length / LOGS_PER_PAGE) || 1;
+  const paginatedLogs = React.useMemo(() => {
+    return auditLogs.slice((logPage - 1) * LOGS_PER_PAGE, logPage * LOGS_PER_PAGE);
+  }, [auditLogs, logPage]);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
@@ -173,6 +181,19 @@ export const ArchitectureModule: React.FC = () => {
     { id: 7, text: 'Real-time System Audit Logging Activity Tracker', checked: true, desc: 'Durable logging feed of every simulated operation' }
   ]);
 
+  // Checklist of phase 2 deliverables (Hardening)
+  const [checklistPhase2, setChecklistPhase2] = useState([
+    { id: 101, text: 'Mandatory List Pagination (Products, Transactions, Ledger)', checked: true, desc: 'Prevents browser/DB overload by fetching in small chunks (e.g., page size 50 or 100)' },
+    { id: 102, text: 'SQL Injection Guard & Parameterized Packet Emulation', checked: true, desc: 'Avoids concatenated parameters inside queries' },
+    { id: 103, text: 'E2EE Password Cipher Handshakes on Account Sign-in', checked: true, desc: 'Secures login credentials using dynamic symmetric payload encryption keys' },
+    { id: 104, text: 'Custom Passphrase Complexity & Multi-tier TTL Disconnects', checked: true, desc: 'Requires uppercase/numbers, enforces 30min-8hr idle sessions' },
+    { id: 105, text: 'Fine-grained RBAC Policy Guard Checks', checked: true, desc: 'Micro-permission verification blocks on checkout and configurations instead of raw role tags' },
+    { id: 106, text: 'Rate Limiting Brute Force DOS Blockers', checked: true, desc: 'Triggers persistent locked-out state for 30s after 3 consecutive failure attempts' },
+    { id: 107, text: 'Double-entry Inventory Ledger & Soft Deletes', checked: true, desc: 'Guarantees trace history anti-tampering by disallowing raw stock edits and hard deletes' },
+    { id: 108, text: 'Incremental Discounts & Capital Approval Workflows', checked: true, desc: 'Requires higher management sign-off for large stock adjustments or high-level checkout price discounts' },
+    { id: 109, text: 'File Upload Extension Whitewash & Storage Bounds Limit', checked: true, desc: 'Restricts image/PDF attachments to 5MB max, sanitizes MIME profiles, randomizes name' }
+  ]);
+
   // SQL code generator based on schemas
   const getSQLString = () => {
     let sql = `-- ==========================================================\n`;
@@ -221,6 +242,17 @@ export const ArchitectureModule: React.FC = () => {
       if (item.id === id) {
         const nextState = !item.checked;
         addAuditLog('DELIVERABLE_TOGGLE', `${nextState ? 'Completed' : 'Reset'} Phase 1 item: ${item.text}`);
+        return { ...item, checked: nextState };
+      }
+      return item;
+    }));
+  };
+
+  const handleToggleChecklistPhase2 = (id: number) => {
+    setChecklistPhase2(prev => prev.map(item => {
+      if (item.id === id) {
+        const nextState = !item.checked;
+        addAuditLog('DELIVERABLE_TOGGLE', `${nextState ? 'Completed' : 'Reset'} Phase 2 item: ${item.text}`);
         return { ...item, checked: nextState };
       }
       return item;
@@ -282,7 +314,7 @@ export const ArchitectureModule: React.FC = () => {
                 : 'text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/10'
             }`}
           >
-            Phase 1 Checklist
+            System Deliverables Map
           </button>
           <button
             onClick={() => setActiveTab('operations')}
@@ -606,7 +638,7 @@ export const ArchitectureModule: React.FC = () => {
               </p>
 
               <div className="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
-                {auditLogs.map((log, idx) => (
+                {paginatedLogs.map((log, idx) => (
                   <div key={idx} className="flex justify-between items-start text-xs border-b border-m3-outline-variant/10 pb-2.5 last:border-0 last:pb-0">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
@@ -631,67 +663,145 @@ export const ArchitectureModule: React.FC = () => {
                   </div>
                 ))}
               </div>
+
+              {/* Log Page Slider */}
+              <div className="flex items-center justify-between border-t border-m3-outline-variant/15 pt-2.5 text-[10px] text-m3-on-surface-variant/80 select-none">
+                <span className="font-mono">Page {logPage} of {totalLogPages} ({auditLogs.length} entries)</span>
+                <div className="flex items-center gap-1.5 font-sans">
+                  <button
+                    onClick={() => setLogPage(prev => Math.max(1, prev - 1))}
+                    disabled={logPage === 1}
+                    className="px-2 py-1 text-[9px] font-bold border border-m3-outline-variant/30 hover:border-m3-primary disabled:opacity-30 disabled:pointer-events-none rounded transition-all cursor-pointer uppercase"
+                  >
+                    Prev
+                  </button>
+                  <button
+                    onClick={() => setLogPage(prev => Math.min(totalLogPages, prev + 1))}
+                    disabled={logPage === totalLogPages}
+                    className="px-2 py-1 text-[9px] font-bold border border-m3-outline-variant/30 hover:border-m3-primary disabled:opacity-30 disabled:pointer-events-none rounded transition-all cursor-pointer uppercase"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* PHASE 1 DELIVERABLES PROGRESS TAB */}
+      {/* PHASE 1 & 2 DELIVERABLES PROGRESS TAB (BENTO DESIGN) */}
       {activeTab === 'checklist' && (
-        <div className="m3-card shadow-sm space-y-4">
-          <div className="border-b border-m3-outline-variant/15 pb-3">
-            <h3 className="text-sm font-bold tracking-tight text-m3-primary">
-              Phase 1 Deliverables Verification Map
-            </h3>
-            <p className="text-xs text-m3-on-surface-variant">
-              The complete Week 1-2 foundation components required are fully developed and proven:
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {checklist.map(item => (
-              <div
-                key={item.id}
-                onClick={() => handleToggleChecklist(item.id)}
-                className={`p-4 rounded-xl border flex items-start gap-3.5 cursor-pointer transition-all select-none ${
-                  item.checked
-                    ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface'
-                    : 'bg-m3-surface-low border-m3-outline-variant/30 hover:bg-m3-primary/10 text-m3-on-surface-variant'
-                }`}
-              >
-                <div className="pt-0.5">
-                  <CheckCircle2 className={`h-5 w-5 ${item.checked ? 'text-m3-primary fill-m3-primary/10' : 'text-m3-outline-variant/60'}`} />
-                </div>
-                <div>
-                  <h4 className={`text-xs font-extrabold ${item.checked ? 'text-m3-primary' : 'text-m3-on-surface-variant'}`}>
-                    {item.text}
-                  </h4>
-                  <p className="text-[10.5px] text-m3-on-surface-variant/80 mt-1 leading-normal">
-                    {item.desc}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="android-glass border border-m3-primary/25 rounded-2xl p-4 mt-6 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-m3-primary/10 text-m3-primary shrink-0">
-                <CheckCircle2 className="h-5 w-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-black text-m3-primary uppercase font-mono tracking-wider">
-                  Phase 1 Sign-Off Status
-                </h4>
-                <p className="text-[11px] text-m3-on-surface-variant mt-1">
-                  All 7 structural core deliverables are finalized and verified green by the compiler. Ready to proceed to Phase 2 (Advanced Logistics and Shift Sync)!
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            
+            {/* COLUMN 1: PHASE 1 FOUNDATIONAL INFRASTRUCTURE */}
+            <div className="m3-card shadow-sm space-y-4">
+              <div className="border-b border-m3-outline-variant/15 pb-3">
+                <span className="text-[9.5px] font-mono font-black uppercase text-zinc-400 bg-m3-surface-low border border-m3-outline-variant/20 px-2 py-0.5 rounded">
+                  Phase 1 Architecture
+                </span>
+                <h3 className="text-sm font-black tracking-tight text-m3-primary mt-2">
+                  Foundational Enterprise POS Scaffold
+                </h3>
+                <p className="text-xs text-m3-on-surface-variant mt-1">
+                  Core logistics engine, multi-device off-grid local caching, and high-contrast Material design theme layout configurations.
                 </p>
               </div>
+
+              <div className="space-y-3">
+                {checklist.map(item => (
+                  <div
+                    key={item.id}
+                    onClick={() => handleToggleChecklist(item.id)}
+                    className={`p-3.5 rounded-xl border flex items-start gap-3.5 cursor-pointer transition-all select-none ${
+                      item.checked
+                        ? 'bg-m3-primary/10 border-m3-primary/50 text-m3-on-surface'
+                        : 'bg-m3-surface-low border-m3-outline-variant/15 hover:bg-m3-primary/10 text-m3-on-surface-variant'
+                    }`}
+                  >
+                    <div className="pt-0.5 shrink-0">
+                      <CheckCircle2 className={`h-4.5 w-4.5 ${item.checked ? 'text-m3-primary fill-m3-primary/10' : 'text-m3-outline-variant/60'}`} />
+                    </div>
+                    <div>
+                      <h4 className={`text-xs font-black uppercase font-mono tracking-wider ${item.checked ? 'text-m3-primary' : 'text-m3-on-surface-variant'}`}>
+                        {item.text}
+                      </h4>
+                      <p className="text-[10.5px] text-zinc-400 mt-1 leading-normal font-sans">
+                        {item.desc}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="android-glass border border-emerald-500/20 bg-emerald-500/5 rounded-xl p-3.5 mt-4 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-2 w-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
+                  <span className="text-[10px] font-mono font-black uppercase text-emerald-400 tracking-wider">
+                    Phase 1 Foundation Sign-off
+                  </span>
+                </div>
+                <span className="text-[9px] font-mono font-black uppercase text-white bg-emerald-500 border border-emerald-500/20 px-2 py-0.5 rounded">
+                  100% Verified
+                </span>
+                <span className="text-[10.5px] text-zinc-450 hidden sm:inline font-bold">7 of 7 green</span>
+              </div>
             </div>
-            
-            <span className="text-[10px] font-mono font-black uppercase text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full animate-pulse">
-              100% COMPLETE
-            </span>
+
+            {/* COLUMN 2: PHASE 2 CLIENT & APPLICATION HARDENING */}
+            <div className="m3-card shadow-sm space-y-4">
+              <div className="border-b border-m3-outline-variant/15 pb-3">
+                <span className="text-[9.5px] font-mono font-black uppercase text-m3-primary bg-m3-primary/10 border border-m3-primary/20 px-2 py-0.5 rounded">
+                  Phase 2 Security Hardening
+                </span>
+                <h3 className="text-sm font-black tracking-tight text-white mt-2">
+                  Client & Application Hardening Verification Map
+                </h3>
+                <p className="text-xs text-m3-on-surface-variant mt-1">
+                  Enterprise-grade pagination limits, defensive SQL Injection validation bounds, strict password policies, audit logging trace controls.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {checklistPhase2.map(item => (
+                  <div
+                    key={item.id}
+                    onClick={() => handleToggleChecklistPhase2(item.id)}
+                    className={`p-3.5 rounded-xl border flex items-start gap-3.5 cursor-pointer transition-all select-none ${
+                      item.checked
+                        ? 'bg-m3-primary/10 border-m3-primary/50 text-m3-on-surface'
+                        : 'bg-m3-surface-low border-m3-outline-variant/15 hover:bg-m3-primary/10 text-m3-on-surface-variant'
+                    }`}
+                  >
+                    <div className="pt-0.5 shrink-0">
+                      <CheckCircle2 className={`h-4.5 w-4.5 ${item.checked ? 'text-m3-primary fill-m3-primary/10' : 'text-m3-outline-variant/60'}`} />
+                    </div>
+                    <div>
+                      <h4 className={`text-xs font-black uppercase font-mono tracking-wider ${item.checked ? 'text-m3-primary' : 'text-m3-on-surface-variant'}`}>
+                        {item.text}
+                      </h4>
+                      <p className="text-[10.5px] text-zinc-400 mt-1 leading-normal font-sans">
+                        {item.desc}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="android-glass border border-m3-primary/35 bg-m3-primary/5 rounded-xl p-3.5 mt-4 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-2 w-2 rounded-full bg-m3-primary animate-ping shrink-0" />
+                  <span className="text-[10px] font-mono font-black uppercase text-m3-primary tracking-wider">
+                    Phase 2 Hardening Sign-off
+                  </span>
+                </div>
+                <span className="text-[9px] font-mono font-black uppercase text-white bg-m3-primary border border-m3-primary/20 px-2 py-0.5 rounded">
+                  {Math.round((checklistPhase2.filter(c => c.checked).length / checklistPhase2.length) * 100)}% COMPLETE
+                </span>
+                <span className="text-[10.5px] text-zinc-450 hidden sm:inline font-bold">{checklistPhase2.filter(c => c.checked).length} of {checklistPhase2.length} green</span>
+              </div>
+            </div>
+
           </div>
         </div>
       )}

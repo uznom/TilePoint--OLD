@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useDb } from '../context/DbContext';
 import { Delivery, DeliveryStatus, UserRole } from '../types/db';
 import {
@@ -51,6 +51,14 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
   // Search and status filters
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatusTab, setSelectedStatusTab] = useState<string>('All');
+
+  // Pagination State for Deliveries
+  const [delivPage, setDelivPage] = useState(1);
+
+  // Reset page when search or filters change
+  useEffect(() => {
+    setDelivPage(1);
+  }, [searchTerm, selectedStatusTab, selectedBranchId]);
 
   // Detail Drawer state
   const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | null>(null);
@@ -118,6 +126,12 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
       );
     });
   }, [branchFilteredDeliveries, selectedStatusTab, searchTerm]);
+
+  const DELIV_PER_PAGE = 50;
+  const totalDelivPages = Math.ceil(displayDeliveries.length / DELIV_PER_PAGE) || 1;
+  const paginatedDeliveries = useMemo(() => {
+    return displayDeliveries.slice((delivPage - 1) * DELIV_PER_PAGE, delivPage * DELIV_PER_PAGE);
+  }, [displayDeliveries, delivPage]);
 
   // Derived Statistics counts
   const stats = useMemo(() => {
@@ -346,7 +360,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
                 </thead>
 
                 <tbody className="divide-y divide-m3-outline-variant/10">
-                  {displayDeliveries.map(d => {
+                  {paginatedDeliveries.map(d => {
                     const isSelected = selectedDeliveryId === d.id;
                     return (
                       <tr
@@ -427,6 +441,54 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Pagination Controls bar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-m3-surface-low border-t border-m3-outline-variant/15 text-xs font-sans">
+              <span className="font-semibold text-zinc-400 font-mono">
+                Showing {Math.min(displayDeliveries.length, (delivPage - 1) * DELIV_PER_PAGE + 1)}-{Math.min(displayDeliveries.length, delivPage * DELIV_PER_PAGE)} of {displayDeliveries.length} items
+              </span>
+              <div className="flex items-center gap-1.5 select-none font-sans">
+                <button
+                  type="button"
+                  disabled={delivPage === 1}
+                  onClick={() => setDelivPage(prev => Math.max(1, prev - 1))}
+                  className="px-3 py-1.5 rounded-lg border border-m3-outline-variant/60 hover:border-m3-primary hover:bg-m3-primary/10 text-m3-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px]"
+                >
+                  Prev
+                </button>
+                {Array.from({ length: totalDelivPages }).map((_, i) => {
+                  const pNum = i + 1;
+                  if (totalDelivPages > 5 && Math.abs(pNum - delivPage) > 2 && pNum !== 1 && pNum !== totalDelivPages) {
+                    if (pNum === 2 || pNum === totalDelivPages - 1) {
+                      return <span key={pNum} className="px-1 text-zinc-500">...</span>;
+                    }
+                    return null;
+                  }
+                  return (
+                    <button
+                      key={pNum}
+                      type="button"
+                      onClick={() => setDelivPage(pNum)}
+                      className={`h-7 w-7 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                        delivPage === pNum
+                          ? 'bg-m3-primary text-m3-on-primary shadow-md'
+                          : 'border border-m3-outline-variant/20 hover:bg-m3-primary/10 text-zinc-300'
+                      }`}
+                    >
+                      {pNum}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  disabled={delivPage === totalDelivPages}
+                  onClick={() => setDelivPage(prev => Math.min(totalDelivPages, prev + 1))}
+                  className="px-3 py-1.5 rounded-lg border border-m3-outline-variant/60 hover:border-m3-primary hover:bg-m3-primary/10 text-m3-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px]"
+                >
+                  Next
+                </button>
+              </div>
             </div>
 
             {/* Footer page notes count */}

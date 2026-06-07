@@ -56,12 +56,20 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
   const [startCashInput, setStartCashInput] = useState('3000');
   const [showShiftModal, setShowShiftModal] = useState(false);
 
+  // Pagination State for Ledger Sales
+  const [salesPage, setSalesPage] = useState(1);
+
   // Cart & POS Screen States
   const [cart, setCart] = useState<{ product: Product; quantity: number; overridePrice?: number }[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [customerName, setCustomerName] = useState('Walk-in Customer');
   const [customerNotes, setCustomerNotes] = useState('');
+
+  // Reset salesPage when filters change
+  useEffect(() => {
+    setSalesPage(1);
+  }, [searchTerm, currentUser.branchAssignmentId]);
 
   // Surcharges, limits and discounts
   const [discountValue, setDiscountValue] = useState(0); // in PHP
@@ -763,6 +771,16 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     setSecurityPinInput('');
   };
 
+  const filteredSales = React.useMemo(() => {
+    return sales.filter(s => s.branchId === currentUser.branchAssignmentId);
+  }, [sales, currentUser.branchAssignmentId]);
+
+  const SALES_PER_PAGE = 50;
+  const totalSalesPages = Math.ceil(filteredSales.length / SALES_PER_PAGE) || 1;
+  const paginatedSales = React.useMemo(() => {
+    return filteredSales.slice((salesPage - 1) * SALES_PER_PAGE, salesPage * SALES_PER_PAGE);
+  }, [filteredSales, salesPage]);
+
   return (
     <div className="space-y-4 w-full">
       {/* 1. CLOSED DRAWER SHIFT ALERT BANNER (OPTIMIZATION FOR CASHIER WRITING EXPERIENCE) */}
@@ -1262,7 +1280,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                 </tr>
               </thead>
               <tbody className="divide-y divide-m3-outline-variant/10 font-mono text-[11px] text-zinc-300">
-                {sales.filter(s => s.branchId === currentUser.branchAssignmentId).map((s, idx) => (
+                {paginatedSales.map((s, idx) => (
                   <tr key={idx} className={`hover:bg-m3-surface-low/40 transition-colors font-bold ${s.isDeleted ? 'bg-red-500/5 text-zinc-650 line-through decoration-rose-650' : ''}`}>
                     <td className="py-3 px-4 text-m3-primary font-black uppercase">{s.saleNumber}</td>
                     <td className="py-3 px-4 text-zinc-550 font-sans font-medium hover:text-emerald-500" title="Settled instant transaction date">{new Date(s.createdAt).toLocaleString()}</td>
@@ -1301,7 +1319,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                     </td>
                   </tr>
                 ))}
-                {sales.filter(s => s.branchId === currentUser.branchAssignmentId).length === 0 && (
+                {filteredSales.length === 0 && (
                   <tr>
                     <td colSpan={9} className="py-12 text-center text-zinc-400 font-sans font-bold">
                       No matching sales invoice ledgers recorded today.
@@ -1310,6 +1328,54 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                 )}
               </tbody>
             </table>
+
+            {/* Pagination Controls bar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-m3-surface-low border-t border-m3-outline-variant/20 text-xs font-sans">
+              <span className="font-semibold text-zinc-400 font-mono">
+                Showing {Math.min(filteredSales.length, (salesPage - 1) * SALES_PER_PAGE + 1)}-{Math.min(filteredSales.length, salesPage * SALES_PER_PAGE)} of {filteredSales.length} invoices
+              </span>
+              <div className="flex items-center gap-1.5 select-none font-sans">
+                <button
+                  type="button"
+                  disabled={salesPage === 1}
+                  onClick={() => setSalesPage(prev => Math.max(1, prev - 1))}
+                  className="px-3 py-1.5 rounded-lg border border-m3-outline-variant/60 hover:border-m3-primary hover:bg-m3-primary/10 text-m3-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px]"
+                >
+                  Prev
+                </button>
+                {Array.from({ length: totalSalesPages }).map((_, i) => {
+                  const pNum = i + 1;
+                  if (totalSalesPages > 5 && Math.abs(pNum - salesPage) > 2 && pNum !== 1 && pNum !== totalSalesPages) {
+                    if (pNum === 2 || pNum === totalSalesPages - 1) {
+                      return <span key={pNum} className="px-1 text-zinc-500">...</span>;
+                    }
+                    return null;
+                  }
+                  return (
+                    <button
+                      key={pNum}
+                      type="button"
+                      onClick={() => setSalesPage(pNum)}
+                      className={`h-7 w-7 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                        salesPage === pNum
+                          ? 'bg-m3-primary text-m3-on-primary shadow-md'
+                          : 'border border-m3-outline-variant/20 hover:bg-m3-primary/10 text-zinc-300'
+                      }`}
+                    >
+                      {pNum}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  disabled={salesPage === totalSalesPages}
+                  onClick={() => setSalesPage(prev => Math.min(totalSalesPages, prev + 1))}
+                  className="px-3 py-1.5 rounded-lg border border-m3-outline-variant/60 hover:border-m3-primary hover:bg-m3-primary/10 text-m3-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px]"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}      {/* MODAL 1: Cashier Shift Opener */}
