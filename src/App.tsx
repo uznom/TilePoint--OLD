@@ -28,6 +28,7 @@ import AtposExtraModules from './components/AtposExtraModules';
 import { SalesTransmissionModule } from './components/SalesTransmissionModule';
 import { DeliveriesModule } from './components/DeliveriesModule';
 import { TutorialOnboarding } from './components/TutorialOnboarding';
+import { PrivacyAccessibilityHub } from './components/PrivacyAccessibilityHub';
 
 import {
   LayoutDashboard,
@@ -253,15 +254,30 @@ function AppContent() {
   }, []);
 
   if (!isConfigured) {
-    return <SetupModule />;
+    return (
+      <>
+        <SetupModule />
+        <PrivacyAccessibilityHub darkMode={false} />
+      </>
+    );
   }
 
   if (!isLoggedIn || !currentUser) {
-    return <LoginModule />;
+    return (
+      <>
+        <LoginModule />
+        <PrivacyAccessibilityHub darkMode={true} />
+      </>
+    );
   }
 
   if (currentUser.role === UserRole.STAFF) {
-    return <StaffPortal darkMode={darkMode} setDarkMode={setDarkMode} />;
+    return (
+      <>
+        <StaffPortal darkMode={darkMode} setDarkMode={setDarkMode} />
+        <PrivacyAccessibilityHub darkMode={darkMode} />
+      </>
+    );
   }
 
   // Tab change simulator timer with active linear progress
@@ -1136,6 +1152,9 @@ function AppContent() {
           <span>{toastMessage}</span>
         </div>
       )}
+
+      {/* PRIVACY SHIELD & ACCESSIBILITY HUB FLOATING SUITE */}
+      <PrivacyAccessibilityHub darkMode={darkMode} />
     </div>
   );
 }

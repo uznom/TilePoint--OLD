@@ -486,4 +486,84 @@ table thead tr th:last-child {
   scrollbar-width: none !important;
 }
 
+/* ========================================================
+   ACCESSIBILITY OVERGRADES & RECOGNITION CLASSES
+   ======================================================== */
+
+/* 1. Large Screen Font Scale Customizers */
+html.accessibility-large-text {
+  font-size: 112% !important;
+}
+html.accessibility-large-text .text-xs,
+html.accessibility-large-text .text-\[10px\] {
+  font-size: 0.8rem !important;
+}
+html.accessibility-large-text .text-sm {
+  font-size: 0.95rem !important;
+}
+html.accessibility-large-text .text-base {
+  font-size: 1.1rem !important;
+}
+html.accessibility-large-text .text-lg {
+  font-size: 1.25rem !important;
+}
+
+html.accessibility-xlarge-text {
+  font-size: 124% !important;
+}
+html.accessibility-xlarge-text .text-xs,
+html.accessibility-xlarge-text .text-\[10px\] {
+  font-size: 0.9rem !important;
+}
+html.accessibility-xlarge-text .text-sm {
+  font-size: 1.05rem !important;
+}
+html.accessibility-xlarge-text .text-base {
+  font-size: 1.2rem !important;
+}
+html.accessibility-xlarge-text .text-lg {
+  font-size: 1.4rem !important;
+}
+
+/* 2. Dyslexic-Friendly Typography Switcher */
+html.accessibility-dyslexic-font:not(.font-mono) :not(code):not(pre):not(.font-mono) {
+  font-family: "Comic Sans MS", "Comic Neue", "Andika", "Courier New", sans-serif !important;
+  letter-spacing: 0.05em !important;
+  word-spacing: 0.12em !important;
+  line-height: 1.65 !important;
+}
+
+/* 3. Extreme High Contrast Modes */
+html.accessibility-high-contrast {
+  --m3-primary: #0044cc !important;
+  --m3-surface: #ffffff !important;
+  --m3-on-surface: #000000 !important;
+  --m3-on-surface-variant: #000000 !important;
+  --m3-outline: #000000 !important;
+  --m3-outline-variant: #000000 !important;
+  --m3-surface-container-low: #ffffff !important;
+  --m3-surface-container: #eaeaea !important;
+  --m3-surface-container-high: #cccccc !important;
+  filter: contrast(1.25) saturate(1) !important;
+}
+html.dark.accessibility-high-contrast {
+  --m3-primary: #ffff00 !important; /* Visual Yellow high-vis contrast */
+  --m3-surface: #000000 !important;
+  --m3-on-surface: #ffffff !important;
+  --m3-on-surface-variant: #ffffff !important;
+  --m3-outline: #ffffff !important;
+  --m3-outline-variant: #ffffff !important;
+  --m3-surface-container-low: #000000 !important;
+  --m3-surface-container: #1a1a1a !important;
+  --m3-surface-container-high: #333333 !important;
+  filter: contrast(1.3) saturate(1) !important;
+}
+
+/* 4. Highlighted Keyboard Focus Indicator Markers */
+html.accessibility-enhanced-outlines *:focus {
+  outline: 4px solid #f59e0b !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.5) !important;
+}
+
 
