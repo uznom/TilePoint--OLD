@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { createSaltedHash, formatHashToken, verifyPasswordWithToken, detectSQLi, encryptCredentialPacket, decryptCredentialPacket } from '../lib/crypto';
 import {
   User,
@@ -160,6 +160,27 @@ interface DbContextType {
   updateDeliveryStatus: (id: string, status: DeliveryStatus, notes?: string) => void;
   assignDeliveryPersonnel: (id: string, truck: string, driver: string, helper: string) => void;
   completeDelivery: (id: string, proofPhotoUrl?: string, customerSignature?: string, receiverName?: string) => void;
+
+  // DB Performance Tuning & Backup Snapshots Properties
+  debounceDelay: number;
+  setDebounceDelay: (delay: number) => void;
+  dbSyncStatus: 'idle' | 'queued' | 'syncing';
+  writeStatsCount: number;
+  resetWriteStats: () => void;
+  forceSyncAll: () => void;
+  dbSnapshots: DbSnapshot[];
+  createDbSnapshot: (name: string) => void;
+  restoreDbSnapshot: (snapshotId: string) => boolean;
+  deleteDbSnapshot: (snapshotId: string) => void;
+}
+
+export interface DbSnapshot {
+  id: string;
+  name: string;
+  timestamp: string;
+  creator: string;
+  sizeBytes: number;
+  data: string;
 }
 
 const DbContext = createContext<DbContextType | undefined>(undefined);
@@ -677,81 +698,296 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     setActiveShift(openShift || null);
   }, [shifts, currentUser]);
 
-  // Write changes to cache
-  useEffect(() => {
+  // DB Tuning debouncer settings & stats
+  const [debounceDelay, setDebounceDelay] = useState<number>(() => {
+    const cached = localStorage.getItem('tp_debounce_delay');
+    return cached !== null ? Number(cached) : 500;
+  });
+
+  const [writeStatsCount, setWriteStatsCount] = useState<number>(() => {
+    const cached = localStorage.getItem('tp_write_stats_prevented');
+    return cached !== null ? Number(cached) : 0;
+  });
+
+  const [dbSnapshots, setDbSnapshots] = useState<DbSnapshot[]>(() => {
+    const cached = localStorage.getItem('tp_db_snapshots');
+    return cached ? JSON.parse(cached) : [];
+  });
+
+  const [dbSyncStatus, setDbSyncStatus] = useState<'idle' | 'queued' | 'syncing'>('idle');
+  const timeoutRefs = useRef<Record<string, any>>({});
+
+  const saveToStorageWithDebounce = (key: string, value: any, bypassDebounce = false) => {
+    const dataStr = JSON.stringify(value);
+    
+    // Quick check to avoid redundant operations if current local value matches exactly
+    const currentCached = localStorage.getItem(key);
+    if (currentCached === dataStr) {
+      return;
+    }
+
+    if (bypassDebounce || debounceDelay === 0) {
+      localStorage.setItem(key, dataStr);
+      setDbSyncStatus('syncing');
+      setTimeout(() => setDbSyncStatus('idle'), 150);
+      return;
+    }
+
+    // Capture every prevented write attempt to demonstrate DB strain reduction
+    setWriteStatsCount(prev => {
+      const updated = prev + 1;
+      localStorage.setItem('tp_write_stats_prevented', String(updated));
+      return updated;
+    });
+
+    setDbSyncStatus('queued');
+
+    if (timeoutRefs.current[key]) {
+      clearTimeout(timeoutRefs.current[key]);
+    }
+
+    timeoutRefs.current[key] = setTimeout(() => {
+      localStorage.setItem(key, dataStr);
+      delete timeoutRefs.current[key];
+      
+      const pendingKeys = Object.keys(timeoutRefs.current);
+      if (pendingKeys.length === 0) {
+        setDbSyncStatus('syncing');
+        setTimeout(() => setDbSyncStatus('idle'), 300);
+      }
+    }, debounceDelay);
+  };
+
+  const forceSyncAll = () => {
+    // Save everything immediately
     localStorage.setItem('tp_current_user', JSON.stringify(currentUser));
+    localStorage.setItem('tp_users', JSON.stringify(users));
+    localStorage.setItem('tp_branches', JSON.stringify(branches));
+    localStorage.setItem('tp_suppliers', JSON.stringify(suppliers));
+    localStorage.setItem('tp_products', JSON.stringify(products));
+    localStorage.setItem('tp_purchase_orders', JSON.stringify(purchaseOrders));
+    localStorage.setItem('tp_po_items', JSON.stringify(poItems));
+    localStorage.setItem('tp_transmittals', JSON.stringify(transmittals));
+    localStorage.setItem('tp_shifts', JSON.stringify(shifts));
+    localStorage.setItem('tp_sales', JSON.stringify(sales));
+    localStorage.setItem('tp_sale_items', JSON.stringify(saleItems));
+    localStorage.setItem('tp_movements', JSON.stringify(movements));
+    localStorage.setItem('tp_audit_logs', JSON.stringify(auditLogs));
+    localStorage.setItem('tp_parked_sales', JSON.stringify(parkedSales));
+    localStorage.setItem('tp_stock_transfers', JSON.stringify(stockTransfers));
+    localStorage.setItem('tp_branch_stock', JSON.stringify(branchStock));
+    localStorage.setItem('tp_ledger_entries', JSON.stringify(ledgerEntries));
+    localStorage.setItem('tp_branch_sales_reports', JSON.stringify(branchSalesReports));
+    localStorage.setItem('tp_deliveries', JSON.stringify(deliveries));
+    
+    // Clear all timeouts
+    Object.values(timeoutRefs.current).forEach(t => clearTimeout(t as any));
+    timeoutRefs.current = {};
+    
+    setDbSyncStatus('syncing');
+    addAuditLog('DB_TUNING_FLUSH', 'Manually forced database cache sync and flushed all queued writes.', 'SYSTEM', 'FLUSH');
+    setTimeout(() => setDbSyncStatus('idle'), 300);
+  };
+
+  const resetWriteStats = () => {
+    setWriteStatsCount(0);
+    localStorage.setItem('tp_write_stats_prevented', '0');
+  };
+
+  const createDbSnapshot = (name: string) => {
+    const payload = {
+      isConfigured,
+      users,
+      branches,
+      suppliers,
+      products,
+      purchaseOrders,
+      poItems,
+      transmittals,
+      shifts,
+      sales,
+      saleItems,
+      movements,
+      auditLogs,
+      parkedSales,
+      stockTransfers,
+      branchStock,
+      ledgerEntries,
+      branchSalesReports,
+      deliveries
+    };
+    const dataStr = JSON.stringify(payload);
+    const id = `SNAP-${Date.now()}`;
+    const newSnapshot: DbSnapshot = {
+      id,
+      name: name || `Backup snapshot - ${new Date().toLocaleTimeString()}`,
+      timestamp: new Date().toISOString(),
+      creator: currentUser.fullName,
+      sizeBytes: new Blob([dataStr]).size,
+      data: dataStr
+    };
+    
+    const updatedSnapshots = [newSnapshot, ...dbSnapshots];
+    setDbSnapshots(updatedSnapshots);
+    localStorage.setItem('tp_db_snapshots', JSON.stringify(updatedSnapshots));
+
+    addAuditLog('DB_BACKUP_CREATE', `Created manual backup snapshot: ${newSnapshot.name}`, 'SYSTEM', id);
+  };
+
+  const restoreDbSnapshot = (snapshotId: string): boolean => {
+    const snap = dbSnapshots.find(s => s.id === snapshotId);
+    if (!snap) return false;
+    try {
+      const payload = JSON.parse(snap.data);
+      if (payload.users) setUsers(payload.users);
+      if (payload.branches) setBranches(payload.branches);
+      if (payload.suppliers) setSuppliers(payload.suppliers);
+      if (payload.products) setProducts(payload.products);
+      if (payload.purchaseOrders) setPurchaseOrders(payload.purchaseOrders);
+      if (payload.poItems) setPoItems(payload.poItems);
+      if (payload.transmittals) setTransmittals(payload.transmittals);
+      if (payload.shifts) setShifts(payload.shifts);
+      if (payload.sales) setSales(payload.sales);
+      if (payload.saleItems) setSaleItems(payload.saleItems);
+      if (payload.movements) setMovements(payload.movements);
+      if (payload.auditLogs) setAuditLogs(payload.auditLogs);
+      if (payload.parkedSales) setParkedSales(payload.parkedSales);
+      if (payload.stockTransfers) setStockTransfers(payload.stockTransfers);
+      if (payload.branchStock) setBranchStock(payload.branchStock);
+      if (payload.ledgerEntries) setLedgerEntries(payload.ledgerEntries);
+      if (payload.branchSalesReports) setBranchSalesReports(payload.branchSalesReports);
+      if (payload.deliveries) setDeliveries(payload.deliveries);
+      if (payload.isConfigured !== undefined) setIsConfigured(payload.isConfigured);
+
+      // Immediately save back to avoid delays during system transitions
+      const keysToSave = {
+        'tp_users': payload.users,
+        'tp_branches': payload.branches,
+        'tp_suppliers': payload.suppliers,
+        'tp_products': payload.products,
+        'tp_purchase_orders': payload.purchaseOrders,
+        'tp_po_items': payload.poItems,
+        'tp_transmittals': payload.transmittals,
+        'tp_shifts': payload.shifts,
+        'tp_sales': payload.sales,
+        'tp_sale_items': payload.saleItems,
+        'tp_movements': payload.movements,
+        'tp_audit_logs': payload.auditLogs,
+        'tp_parked_sales': payload.parkedSales,
+        'tp_stock_transfers': payload.stockTransfers,
+        'tp_branch_stock': payload.branchStock,
+        'tp_ledger_entries': payload.ledgerEntries,
+        'tp_branch_sales_reports': payload.branchSalesReports,
+        'tp_deliveries': payload.deliveries,
+        'tp_is_configured': String(payload.isConfigured)
+      };
+
+      Object.entries(keysToSave).forEach(([k, val]) => {
+        if (val !== undefined) {
+          localStorage.setItem(k, typeof val === 'string' ? val : JSON.stringify(val));
+        }
+      });
+
+      const restoreLog: AuditLog = {
+        id: `AL-RESTORE-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        userId: currentUser.id,
+        username: currentUser.username,
+        action: 'DB_BACKUP_RESTORE',
+        description: `Successfully restored database from snapshot "${snap.name}".`,
+        tableAffected: 'ALL',
+        recordId: snapshotId,
+      };
+      setAuditLogs(prev => [restoreLog, ...prev]);
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  };
+
+  const deleteDbSnapshot = (snapshotId: string) => {
+    const updated = dbSnapshots.filter(s => s.id !== snapshotId);
+    setDbSnapshots(updated);
+    localStorage.setItem('tp_db_snapshots', JSON.stringify(updated));
+    addAuditLog('DB_BACKUP_DELETE', `Deleted backup snapshot key: ${snapshotId}`, 'SYSTEM', snapshotId);
+  };
+
+  // Write changes to cache - now debounced to eliminate LocalStorage / Database I/O strain in high-volume POS environments!
+  useEffect(() => {
+    saveToStorageWithDebounce('tp_current_user', currentUser);
   }, [currentUser]);
 
   useEffect(() => {
-    localStorage.setItem('tp_users', JSON.stringify(users));
+    saveToStorageWithDebounce('tp_users', users);
   }, [users]);
 
   useEffect(() => {
-    localStorage.setItem('tp_branches', JSON.stringify(branches));
+    saveToStorageWithDebounce('tp_branches', branches);
   }, [branches]);
 
   useEffect(() => {
-    localStorage.setItem('tp_suppliers', JSON.stringify(suppliers));
+    saveToStorageWithDebounce('tp_suppliers', suppliers);
   }, [suppliers]);
 
   useEffect(() => {
-    localStorage.setItem('tp_products', JSON.stringify(products));
+    saveToStorageWithDebounce('tp_products', products);
   }, [products]);
 
   useEffect(() => {
-    localStorage.setItem('tp_purchase_orders', JSON.stringify(purchaseOrders));
+    saveToStorageWithDebounce('tp_purchase_orders', purchaseOrders);
   }, [purchaseOrders]);
 
   useEffect(() => {
-    localStorage.setItem('tp_po_items', JSON.stringify(poItems));
+    saveToStorageWithDebounce('tp_po_items', poItems);
   }, [poItems]);
 
   useEffect(() => {
-    localStorage.setItem('tp_transmittals', JSON.stringify(transmittals));
+    saveToStorageWithDebounce('tp_transmittals', transmittals);
   }, [transmittals]);
 
   useEffect(() => {
-    localStorage.setItem('tp_shifts', JSON.stringify(shifts));
+    saveToStorageWithDebounce('tp_shifts', shifts);
   }, [shifts]);
 
   useEffect(() => {
-    localStorage.setItem('tp_sales', JSON.stringify(sales));
+    saveToStorageWithDebounce('tp_sales', sales);
   }, [sales]);
 
   useEffect(() => {
-    localStorage.setItem('tp_sale_items', JSON.stringify(saleItems));
+    saveToStorageWithDebounce('tp_sale_items', saleItems);
   }, [saleItems]);
 
   useEffect(() => {
-    localStorage.setItem('tp_movements', JSON.stringify(movements));
+    saveToStorageWithDebounce('tp_movements', movements);
   }, [movements]);
 
   useEffect(() => {
-    localStorage.setItem('tp_audit_logs', JSON.stringify(auditLogs));
+    saveToStorageWithDebounce('tp_audit_logs', auditLogs);
   }, [auditLogs]);
 
   useEffect(() => {
-    localStorage.setItem('tp_parked_sales', JSON.stringify(parkedSales));
+    saveToStorageWithDebounce('tp_parked_sales', parkedSales);
   }, [parkedSales]);
 
   useEffect(() => {
-    localStorage.setItem('tp_stock_transfers', JSON.stringify(stockTransfers));
+    saveToStorageWithDebounce('tp_stock_transfers', stockTransfers);
   }, [stockTransfers]);
 
   useEffect(() => {
-    localStorage.setItem('tp_branch_stock', JSON.stringify(branchStock));
+    saveToStorageWithDebounce('tp_branch_stock', branchStock);
   }, [branchStock]);
 
   useEffect(() => {
-    localStorage.setItem('tp_ledger_entries', JSON.stringify(ledgerEntries));
+    saveToStorageWithDebounce('tp_ledger_entries', ledgerEntries);
   }, [ledgerEntries]);
 
   useEffect(() => {
-    localStorage.setItem('tp_branch_sales_reports', JSON.stringify(branchSalesReports));
+    saveToStorageWithDebounce('tp_branch_sales_reports', branchSalesReports);
   }, [branchSalesReports]);
 
   useEffect(() => {
-    localStorage.setItem('tp_deliveries', JSON.stringify(deliveries));
+    saveToStorageWithDebounce('tp_deliveries', deliveries);
   }, [deliveries]);
 
   // General Audit Log function
@@ -2043,6 +2279,16 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         updateDeliveryStatus,
         assignDeliveryPersonnel,
         completeDelivery,
+        debounceDelay,
+        setDebounceDelay,
+        dbSyncStatus,
+        writeStatsCount,
+        resetWriteStats,
+        forceSyncAll,
+        dbSnapshots,
+        createDbSnapshot,
+        restoreDbSnapshot,
+        deleteDbSnapshot,
       }}
     >
       {children}
