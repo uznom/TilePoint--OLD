@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { DbProvider, useDb } from './context/DbContext';
-import { UserRole } from './types/db';
+import { UserRole, User } from './types/db';
 import { motion, AnimatePresence } from 'motion/react';
 import { SkeletalLoader } from './components/SkeletalLoader';
 import { LoginModule } from './components/LoginModule';
@@ -42,7 +42,7 @@ import {
   Calculator,
   Moon,
   Sun,
-  User,
+  User as LucideUser,
   Power,
   Package,
   Building,
@@ -58,7 +58,9 @@ import {
   RefreshCw,
   DollarSign,
   Truck,
-  BookOpen
+  BookOpen,
+  Accessibility,
+  Shield
 } from 'lucide-react';
 
 function AppContent() {
@@ -140,6 +142,19 @@ function AppContent() {
   const [settingsError, setSettingsError] = useState('');
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
+  // Profile customisation edit states
+  const [editFullName, setEditFullName] = useState('');
+  const [editUsername, setEditUsername] = useState('');
+  const [editProfilePicture, setEditProfilePicture] = useState('');
+
+  useEffect(() => {
+    if (showAccountSettingsModal && currentUser) {
+      setEditFullName(currentUser.fullName);
+      setEditUsername(currentUser.username);
+      setEditProfilePicture(currentUser.profilePicture || '');
+    }
+  }, [showAccountSettingsModal, currentUser]);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => {
@@ -153,40 +168,73 @@ function AppContent() {
     setIsUpdatingPassword(true);
 
     try {
-      if (!currentPassword || !newPassword || !confirmPassword) {
-        setSettingsError('⚠️ Please fill out all fields.');
+      let passwordUpdates: Partial<User> = {};
+
+      // Parse password updates if any of the fields are populated
+      if (currentPassword || newPassword || confirmPassword) {
+        if (!currentPassword || !newPassword || !confirmPassword) {
+          setSettingsError('To change password, please fill out all password fields.');
+          setIsUpdatingPassword(false);
+          return;
+        }
+
+        // Verify current password match using our PBKDF2 hash
+        const isMatch = await verifyPasswordWithToken(currentPassword, currentUser.passwordHash || '');
+        if (!isMatch) {
+          setSettingsError('Verification Failed: Current password is incorrect.');
+          setIsUpdatingPassword(false);
+          return;
+        }
+
+        if (newPassword.length < 6) {
+          setSettingsError('Security Policy: New password must be at least 6 characters.');
+          setIsUpdatingPassword(false);
+          return;
+        }
+
+        if (newPassword !== confirmPassword) {
+          setSettingsError('Confirmation Error: New passwords do not match.');
+          setIsUpdatingPassword(false);
+          return;
+        }
+
+        // Create new salted PBKDF2 bcrypt hash token
+        const salt = (editUsername || currentUser.username) + '_salt_tok';
+        const hashedVal = await createSaltedHash(newPassword, salt, 2500);
+        const formattedToken = formatHashToken(salt, hashedVal, 2500);
+        passwordUpdates.passwordHash = formattedToken;
+      }
+
+      // Check name/username validations
+      if (!editFullName.trim()) {
+        setSettingsError('Validation Error: Full Name is required.');
         setIsUpdatingPassword(false);
         return;
       }
 
-      // Verify current password match using our PBKDF2 hash
-      const isMatch = await verifyPasswordWithToken(currentPassword, currentUser.passwordHash || '');
-      if (!isMatch) {
-        setSettingsError('❌ Verification Failed: Current password is incorrect.');
+      if (!editUsername.trim()) {
+        setSettingsError('Validation Error: Username is required.');
         setIsUpdatingPassword(false);
         return;
       }
 
-      if (newPassword.length < 6) {
-        setSettingsError('⚠️ Security Policy: New password must be at least 6 characters.');
-        setIsUpdatingPassword(false);
-        return;
-      }
+      const cleanUsername = editUsername.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
 
-      if (newPassword !== confirmPassword) {
-        setSettingsError('⚠️ Confirmation Error: New passwords do not match.');
-        setIsUpdatingPassword(false);
-        return;
-      }
+      // Recalculate initials
+      const newInitials = editFullName.split(' ').map(n => n ? n[0] : '').join('').toUpperCase().slice(0, 2) || 'AD';
 
-      // Create new salted PBKDF2 bcrypt hash token
-      const salt = currentUser.username + '_salt_tok';
-      const hashedVal = await createSaltedHash(newPassword, salt, 2500);
-      const formattedToken = formatHashToken(salt, hashedVal, 2500);
+      // Combine general updates
+      const generalUpdates: Partial<User> = {
+        fullName: editFullName.trim(),
+        username: cleanUsername,
+        profilePicture: editProfilePicture || undefined,
+        avatarInitials: newInitials,
+        ...passwordUpdates
+      };
 
       // Mutate database structure states
-      updateUser(currentUser.id, { passwordHash: formattedToken });
-      updateCurrentUser({ passwordHash: formattedToken });
+      updateUser(currentUser.id, generalUpdates);
+      updateCurrentUser(generalUpdates);
 
       // Clean success flow
       setCurrentPassword('');
@@ -195,10 +243,10 @@ function AppContent() {
       setShowCurrentPassword(false);
       setShowNewPassword(false);
       setShowAccountSettingsModal(false);
-      showToast('🟢 Account password successfully encrypted & updated!');
+      showToast('Account details successfully updated!');
     } catch (err) {
       console.error(err);
-      setSettingsError('❌ Dynamic crypt engine error: unable to salt password hash.');
+      setSettingsError('Dynamic crypt engine error: unable to update profile.');
     } finally {
       setIsUpdatingPassword(false);
     }
@@ -275,7 +323,7 @@ function AppContent() {
     return (
       <>
         <StaffPortal darkMode={darkMode} setDarkMode={setDarkMode} />
-        <PrivacyAccessibilityHub darkMode={darkMode} />
+        <PrivacyAccessibilityHub darkMode={darkMode} hideFloatingButton={true} />
       </>
     );
   }
@@ -479,7 +527,7 @@ function AppContent() {
 
           {/* Branch tag indicator */}
           <span className="hidden sm:inline-block px-3 py-1 rounded-xl text-[10px] font-extrabold uppercase bg-m3-secondary-container text-m3-on-secondary-container border border-m3-outline-variant/40">
-            🏢 {getBranchName(currentUser.branchAssignmentId)}
+            {getBranchName(currentUser.branchAssignmentId)}
           </span>
         </div>
 
@@ -491,9 +539,26 @@ function AppContent() {
               onClick={() => setIsAccountDropdownOpen(!isAccountDropdownOpen)}
               className="flex items-center gap-2 md:gap-3 p-1.5 pr-3 rounded-xl border border-m3-outline-variant/40 hover:bg-m3-primary/5 transition-all cursor-pointer text-left focus:outline-none bg-m3-surface-low select-none active:scale-[0.98]"
             >
-              <div className="h-8 w-8 rounded-xl bg-m3-primary font-black text-xs items-center justify-center flex text-m3-on-primary shadow-sm m3-shape-asymmetric relative">
-                {currentUser.avatarInitials}
-                <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 border border-m3-surface animate-pulse" />
+              <div className="h-8 w-8 rounded-xl bg-m3-primary font-black text-xs items-center justify-center flex text-m3-on-primary shadow-sm m3-shape-asymmetric relative overflow-hidden">
+                {(() => {
+                  const isErica = currentUser.fullName.toLowerCase().includes('erica') || currentUser.username?.toLowerCase().includes('erica');
+                  if (isErica) {
+                    return "E";
+                  }
+                  
+                  const avatarSrc = currentUser.profilePicture || '';
+
+                  return (
+                    <>
+                      {avatarSrc ? (
+                        <img src={avatarSrc} alt={currentUser.fullName} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        currentUser.avatarInitials
+                      )}
+                      <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 border border-m3-surface animate-pulse" />
+                    </>
+                  );
+                })()}
               </div>
               <div className="hidden sm:block">
                 <div className="text-xs font-extrabold leading-none text-m3-on-surface flex items-center gap-1">
@@ -545,6 +610,21 @@ function AppContent() {
                   >
                     <LockKeyhole className="h-4 w-4 text-amber-500" />
                     <span>Account Settings</span>
+                  </button>
+
+                  <div className="h-px bg-m3-outline-variant/10 !my-1" />
+
+                  {/* Accessibility & Policy trigger */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAccountDropdownOpen(false);
+                      window.dispatchEvent(new Event('open-privacy-hub'));
+                    }}
+                    className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                  >
+                    <img src="/images/accessibility_icon.svg" alt="Accessibility & Policy" className="h-4.5 w-4.5 object-contain" referrerPolicy="no-referrer" />
+                    <span>Accessibility & Policy</span>
                   </button>
 
                   <div className="h-px bg-m3-outline-variant/10 !my-1" />
@@ -1010,37 +1090,48 @@ function AppContent() {
               </button>
             </div>
 
-            {/* Profile Overview Card (Read Only details) */}
-            <div className="bg-m3-surface-container/60 border border-m3-outline-variant/20 p-3.5 rounded-2xl text-[11px] leading-relaxed text-zinc-300 font-bold grid grid-cols-2 gap-x-4 gap-y-2">
-              <div className="col-span-2 text-[10px] uppercase font-black text-zinc-400 tracking-wider mb-0.5">
-                Active Employee Profile (Read-Only)
+            {/* Profile Overview Card (Editable details & Avatar selector) */}
+            <div className="space-y-4">
+              <div className="text-[10.5px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1 pl-1">
+                <span>Corporate Identity Details</span>
               </div>
-              <div className="flex flex-col">
-                <span className="text-zinc-500 text-[10px] font-medium leading-none mb-1">Full Name:</span>
-                <span className="text-m3-on-surface leading-none truncate">{currentUser.fullName}</span>
+
+              {/* Full Name & Username inputs */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFullName}
+                    onChange={e => setEditFullName(e.target.value)}
+                    placeholder="Enter full name"
+                    className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-sans"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">Username</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2 text-zinc-500 text-xs font-mono select-none">@</span>
+                    <input
+                      type="text"
+                      required
+                      value={editUsername}
+                      onChange={e => setEditUsername(e.target.value)}
+                      placeholder="Username"
+                      className="w-full bg-m3-surface border-b-2 border-m3-outline-variant pl-7 pr-3 py-2 text-xs text-m3-on-surface font-mono focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg"
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="flex flex-col">
-                <span className="text-zinc-500 text-[10px] font-medium leading-none mb-1">Username:</span>
-                <span className="text-m3-on-surface leading-none font-mono truncate">@{currentUser.username}</span>
-              </div>
-              <div className="flex flex-col mt-1">
-                <span className="text-zinc-500 text-[10px] font-medium leading-none mb-1">Assigned Role:</span>
-                <span className="text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 text-[9.5px] uppercase font-mono tracking-wider font-black w-max mt-0.5 leading-none">
-                  {currentUser.role}
-                </span>
-              </div>
-              <div className="flex flex-col mt-1">
-                <span className="text-zinc-500 text-[10px] font-medium leading-none mb-1">Assigned Branch:</span>
-                <span className="text-m3-on-surface truncate mt-0.5 leading-none">
-                  🏢 {getBranchName(currentUser.branchAssignmentId)}
-                </span>
-              </div>
+
+
             </div>
 
             {/* Change Password Form Container */}
-            <div className="space-y-3 pt-1">
+            <div className="space-y-3 pt-1 border-t border-m3-outline-variant/15">
               <div className="text-[10.5px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1 pl-1">
-                <span>Update Security Password code</span>
+                <span>Update Security Password (Optional)</span>
               </div>
 
               {/* Current Password field */}
@@ -1049,13 +1140,12 @@ function AppContent() {
                 <div className="relative">
                   <input
                     type={showCurrentPassword ? 'text' : 'password'}
-                    required
                     value={currentPassword}
                     onChange={e => {
                       setCurrentPassword(e.target.value);
                       setSettingsError('');
                     }}
-                    placeholder="Provide current login password"
+                    placeholder="Provide current login password to verify"
                     className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-sans"
                   />
                   <button
@@ -1074,7 +1164,6 @@ function AppContent() {
                 <div className="relative">
                   <input
                     type={showNewPassword ? 'text' : 'password'}
-                    required
                     value={newPassword}
                     onChange={e => {
                       setNewPassword(e.target.value);
@@ -1098,7 +1187,6 @@ function AppContent() {
                 <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">Confirm New Password</label>
                 <input
                   type={showNewPassword ? 'text' : 'password'}
-                  required
                   value={confirmPassword}
                   onChange={e => {
                     setConfirmPassword(e.target.value);
@@ -1115,7 +1203,7 @@ function AppContent() {
                 </p>
               ) : (
                 <p className="text-[9px] text-zinc-400 px-1 leading-normal font-medium flex items-center gap-1">
-                  <span>🔒 Salted PBKDF2 cryptography hashes are automatically updated across all local registers.</span>
+                  <span>Salted PBKDF2 cryptography hashes are automatically updated across all local registers.</span>
                 </p>
               )}
             </div>
@@ -1154,7 +1242,7 @@ function AppContent() {
       )}
 
       {/* PRIVACY SHIELD & ACCESSIBILITY HUB FLOATING SUITE */}
-      <PrivacyAccessibilityHub darkMode={darkMode} />
+      <PrivacyAccessibilityHub darkMode={darkMode} hideFloatingButton={true} />
     </div>
   );
 }

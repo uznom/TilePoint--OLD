@@ -89,7 +89,7 @@ export const LoginModule: React.FC = () => {
     if (hasSQLiUser || hasSQLiPass) {
       // Failed Injection blocked!
       setSecuritySteps(prev => prev.map((s, idx) => {
-        if (idx === 0) return { ...s, status: 'FAILED', details: '🚨 SECURITY ATTACK DETECTED! SQL statement parsing detected bypass characters: OR \/ UNION \/ --' };
+        if (idx === 0) return { ...s, status: 'FAILED', details: 'SECURITY ATTACK DETECTED! SQL statement parsing detected bypass characters: OR \/ UNION \/ --' };
         return s;
       }));
       setIsSubmitting(false);
@@ -101,7 +101,7 @@ export const LoginModule: React.FC = () => {
     }
 
     setSecuritySteps(prev => prev.map((s, idx) => {
-      if (idx === 0) return { ...s, status: 'SUCCESS', details: '✅ SAFE: Inputs verified. No SQL injection patterns found.' };
+      if (idx === 0) return { ...s, status: 'SUCCESS', details: 'SAFE: Inputs verified. No SQL injection patterns found.' };
       if (idx === 1) return { ...s, status: 'RUNNING', details: 'Encrypting plaintext using AES-GCM-256...' };
       return s;
     }));
@@ -115,7 +115,7 @@ export const LoginModule: React.FC = () => {
       if (idx === 1) return { 
         ...s, 
         status: 'SUCCESS', 
-        details: `✅ ENCRYPTED: Ciphertext packed successfully:`, 
+        details: `ENCRYPTED: Ciphertext packed successfully:`, 
         cipher: `Ciphertext: ${simulatedCipher} | Ephemeral Key: ${simulatedKey}` 
       };
       if (idx === 2) return { ...s, status: 'RUNNING', details: 'Sending 204 B parcel through local Wi-Fi router to HQ local context...' };
@@ -125,7 +125,7 @@ export const LoginModule: React.FC = () => {
     // Step 3: Wi-Fi transport emulated ping
     await new Promise(resolve => setTimeout(resolve, 700));
     setSecuritySteps(prev => prev.map((s, idx) => {
-      if (idx === 2) return { ...s, status: 'SUCCESS', details: '✅ DELIVERED: Transport tunnel closed cleanly with no packet loss.' };
+      if (idx === 2) return { ...s, status: 'SUCCESS', details: 'DELIVERED: Transport tunnel closed cleanly with no packet loss.' };
       if (idx === 3) return { ...s, status: 'RUNNING', details: 'Decoding E2EE. Triggering PBKDF2 stretching with SHA-256 (2,500 cycles)...' };
       return s;
     }));
@@ -137,13 +137,13 @@ export const LoginModule: React.FC = () => {
     
     if (loginResult.success) {
       setSecuritySteps(prev => prev.map((s, idx) => {
-        if (idx === 3) return { ...s, status: 'SUCCESS', details: '✅ VALIDATED: Salt match. PBKDF2 matched hash database record. Terminal session authorized.' };
+        if (idx === 3) return { ...s, status: 'SUCCESS', details: 'VALIDATED: Salt match. PBKDF2 matched hash database record. Terminal session authorized.' };
         return s;
       }));
       await new Promise(resolve => setTimeout(resolve, 400));
     } else {
       setSecuritySteps(prev => prev.map((s, idx) => {
-        if (idx === 3) return { ...s, status: 'FAILED', details: `❌ REJECTED: ${loginResult.error}` };
+        if (idx === 3) return { ...s, status: 'FAILED', details: `REJECTED: ${loginResult.error}` };
         return s;
       }));
       setErrorMsg(loginResult.error || 'Authentication failure.');

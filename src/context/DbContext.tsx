@@ -502,14 +502,14 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     if (!sqlCheckUser.isSafe || !sqlCheckPass.isSafe) {
       const reason = (!sqlCheckUser.isSafe ? sqlCheckUser.reason : sqlCheckPass.reason) || 'SQLi Signature Detected';
       addAuditLog('SECURITY_ALERT', `SQL Injection attempt blocked on input username/password! Vector: ${reason}`, 'Users', 'SYSTEM');
-      return { success: false, error: `🚨 SECURITY VIOLATION: SQL injection pattern detected (${reason}). Authentication halted. Attempt logged in corporate security log.`, sqliBlocked: true };
+      return { success: false, error: `SECURITY VIOLATION: SQL injection pattern detected (${reason}). Authentication halted. Attempt logged in corporate security log.`, sqliBlocked: true };
     }
 
     // 2. Check for Rate Limiting Lockout
     const now = Date.now();
     if (now < lockoutUntil) {
       const left = Math.ceil((lockoutUntil - now) / 1000);
-      return { success: false, error: `🛑 TOO MANY ATTEMPTS: Access locked out. Please try again in ${left} seconds.` };
+      return { success: false, error: `TOO MANY ATTEMPTS: Access locked out. Please try again in ${left} seconds.` };
     }
 
     // Find user in db
@@ -518,12 +518,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       // Simulate slow verification to prevent timing attacks
       await new Promise(r => setTimeout(r, 600));
       handleFailedLogin();
-      return { success: false, error: '⚠️ Invalid employee ID or security password code.' };
+      return { success: false, error: 'Invalid employee ID or security password code.' };
     }
 
     // Check account status
     if (targetUser.status !== 'Active') {
-      return { success: false, error: '❌ Suspended Account: This terminal credentials have been restricted by Administration.' };
+      return { success: false, error: 'Suspended Account: This terminal credentials have been restricted by Administration.' };
     }
 
     // 3. E2EE Packets Emulation Demonstration
@@ -536,7 +536,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     const isMatch = await verifyPasswordWithToken(decryptedPayload.password, targetUser.passwordHash || '');
     if (!isMatch) {
       handleFailedLogin();
-      return { success: false, error: '⚠️ Invalid employee ID or security password code.' };
+      return { success: false, error: 'Invalid employee ID or security password code.' };
     }
 
     // Success Authentication

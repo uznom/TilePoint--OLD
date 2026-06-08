@@ -30,7 +30,8 @@ import {
   Minus,
   Trash2,
   Check,
-  ChevronDown
+  ChevronDown,
+  Accessibility
 } from 'lucide-react';
 
 interface StaffPortalProps {
@@ -195,7 +196,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
     );
 
     // Alert popup feedback
-    setScanMessage(`🎯 Verified: ${prod.productName}`);
+    setScanMessage(`Verified: ${prod.productName}`);
     setTimeout(() => {
       setScanMessage(null);
     }, 4000);
@@ -288,7 +289,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
     playBeep();
     
     // Explicit long running toast or message
-    setScanMessage(`🎯 Pre-Saved Order Code: ${holdId}`);
+    setScanMessage(`Pre-Saved Order Code: ${holdId}`);
     setTimeout(() => {
       setScanMessage(null);
     }, 6000);
@@ -326,6 +327,15 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
             title="Toggle color theme"
           >
             {darkMode ? <Sun className="h-4 w-4 text-amber-500 animate-pulse" /> : <Moon className="h-4 w-4" />}
+          </button>
+
+          <button
+            id="accessibility-toggle-staff"
+            onClick={() => window.dispatchEvent(new Event('open-privacy-hub'))}
+            className="p-2.5 rounded-xl border border-m3-outline-variant text-m3-primary hover:bg-m3-primary/10 transition-colors cursor-pointer"
+            title="Privacy Policies & Accessibility Hub"
+          >
+            <Accessibility className="h-4 w-4" />
           </button>
 
           <button
@@ -579,10 +589,10 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
                     </div>
                     <span className="text-[9px] block font-black uppercase tracking-wider font-mono">
                       {stats.isOutOfStock 
-                        ? '🚫 Depleted' 
+                        ? 'Depleted' 
                         : stats.isCritical 
-                          ? '⚠️ Critical Alert!' 
-                          : '✅ Safe Stock'}
+                          ? 'Critical Alert!' 
+                          : 'Safe Stock'}
                     </span>
                   </div>
                 );

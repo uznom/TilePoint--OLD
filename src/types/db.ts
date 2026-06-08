@@ -23,6 +23,7 @@ export interface User {
   status: UserStatus;
   passwordHash?: string; // Salted cryptographic pbkdf2 hash token
   managerPin?: string; // 4-6 digit passcode distinct from password for manager-level overrides
+  profilePicture?: string; // Custom profile photo or SVG URL
   createdAt: string;
   updatedAt: string;
 }

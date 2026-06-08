@@ -808,7 +808,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                       Browse Files
                     </label>
                     <span className="text-[11px] text-zinc-400 font-mono truncate max-w-[240px]">
-                      {pastedJson ? "✅ Report loaded. Ready for import code." : "No file loaded yet."}
+                      {pastedJson ? "Report loaded. Ready for import code." : "No file loaded yet."}
                     </span>
                   </div>
                 </div>

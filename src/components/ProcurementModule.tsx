@@ -84,7 +84,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode }
   // Draft mechanics
   const addDraftItem = () => {
     if (!selectedProdId) {
-      showToast('⚠️ Action Missing: Please select a product first.');
+      showToast('Action Missing: Please select a product first.');
       return;
     }
     const targetProd = products.find(p => p.id === selectedProdId);
@@ -92,13 +92,13 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode }
 
     const requested = Number(qtyRequestedInput) || 0;
     if (requested <= 0) {
-      showToast('⚠️ Quantity Error: Input volume must be greater than zero.');
+      showToast('Quantity Error: Input volume must be greater than zero.');
       return;
     }
 
     // Check if product already in drafts list
     if (draftItems.some(i => i.productId === selectedProdId)) {
-      showToast('⚠️ Redundant SKU: This item has already been added to the requisition sheet.');
+      showToast('Redundant SKU: This item has already been added to the requisition sheet.');
       return;
     }
 
@@ -114,18 +114,18 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode }
     // Reset item selectors
     setSelectedProdId('');
     setQtyRequestedInput('100');
-    showToast(`🟢 Drafted item: ${targetProd.productName}.`);
+    showToast(`Drafted item: ${targetProd.productName}.`);
   };
 
   const removeDraftItem = (id: string) => {
     const pName = getProductName(id);
     setDraftItems(prev => prev.filter(item => item.productId !== id));
-    showToast(`🗑️ Removed ${pName} from draft list.`);
+    showToast(`Removed ${pName} from draft list.`);
   };
 
   const handleSavePO = () => {
     if (draftItems.length === 0) {
-      showToast('⚠️ Blank Order: Requisition catalog list cannot be empty.');
+      showToast('Blank Order: Requisition catalog list cannot be empty.');
       return;
     }
 
@@ -135,7 +135,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode }
     setDraftItems([]);
     setPoNotes('');
     setShowPOModal(false);
-    showToast('🟢 PO drafted successfully and queued for Verification.');
+    showToast('PO drafted successfully and queued for Verification.');
   };
 
   // Open cargo receipts
@@ -164,13 +164,13 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode }
     });
 
     if (totalReceived <= 0) {
-      showToast('⚠️ Quantity Error: Newly received volume must exceed zero.');
+      showToast('Quantity Error: Newly received volume must exceed zero.');
       return;
     }
 
     receivePOItems(activePo.id, receiveQuantities);
     setShowReceiveModal(false);
-    showToast('🚚 Logistics Logged: Inventory stocks updated automatically.');
+    showToast('Logistics Logged: Inventory stocks updated automatically.');
   };
 
   return (
@@ -258,7 +258,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode }
                             <button
                               onClick={() => {
                                 updatePOStatus(po.id, 'Approved');
-                                showToast(`🟢 Requisition slip ${po.poNumber} approved.`);
+                                showToast(`Requisition slip ${po.poNumber} approved.`);
                               }}
                               className="px-3 py-1 text-[10.5px] font-bold bg-m3-primary/5 hover:bg-m3-primary/10 text-m3-primary border border-m3-primary/30 rounded-full cursor-pointer transition-colors"
                             >

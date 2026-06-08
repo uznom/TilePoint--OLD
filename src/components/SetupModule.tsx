@@ -112,23 +112,23 @@ export const SetupModule: React.FC = () => {
       setTerminalLogs([...logHistory]);
     };
 
-    addLog('📡 Initializing local database node for TilePoint POS...', 'info');
+    addLog('Initializing local database node for TilePoint POS...', 'info');
     await new Promise(r => setTimeout(r, 150));
 
     addLog('✔ Client structures successfully bound to environment parameters.', 'success');
-    addLog('💾 Allocating clean database schema registers...', 'info');
+    addLog('Allocating clean database schema registers...', 'info');
     await new Promise(r => setTimeout(r, 150));
 
-    addLog('🛠 Designing table mappings for Sales, Product stocks, and Suppliers...', 'info');
+    addLog('Designing table mappings for Sales, Product stocks, and Suppliers...', 'info');
     await new Promise(r => setTimeout(r, 150));
 
     addLog('✔ Database structures allocated in client persistent context store.', 'success');
-    addLog(`🔑 Generating security keys for admin user [${username}]...`, 'info');
+    addLog(`Generating security keys for admin user [${username}]...`, 'info');
     await new Promise(r => setTimeout(r, 150));
 
     const salt = username.trim() + '_salt_tok';
-    addLog(`🔒 Salting administrator security key using salt index: [${salt}]`, 'info');
-    addLog('🌀 Running cryptographic PBKDF2 stretching rounds (2,500 SHA-256 iterations)...', 'info');
+    addLog(`Salting administrator security key using salt index: [${salt}]`, 'info');
+    addLog('Running cryptographic PBKDF2 stretching rounds (2,500 SHA-256 iterations)...', 'info');
     await new Promise(r => setTimeout(r, 150));
 
     const hashed = await createSaltedHash(password, salt, 2500);
@@ -136,13 +136,13 @@ export const SetupModule: React.FC = () => {
     addLog(`✔ Secure hashed password generated successfully.`, 'success');
     await new Promise(r => setTimeout(r, 150));
 
-    addLog(`🏢 Instantiating primary headquarters node: [${branchName}]`, 'info');
+    addLog(`Instantiating primary headquarters node: [${branchName}]`, 'info');
     await new Promise(r => setTimeout(r, 150));
 
-    addLog('🧾 Logging initial system bootstrap audit event...', 'info');
+    addLog('Logging initial system bootstrap audit event...', 'info');
     await new Promise(r => setTimeout(r, 150));
 
-    addLog('✨ SUCCESS: System build authenticated. Local database certified.', 'success');
+    addLog('SUCCESS: System build authenticated. Local database certified.', 'success');
     setInstallSuccess(true);
   };
 
@@ -413,7 +413,7 @@ export const SetupModule: React.FC = () => {
                 {/* Error Banner */}
                 {errorMsg && (
                   <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-[10px] font-bold tracking-wide">
-                    ⚠️ Error Check: {errorMsg}
+                    Error Verification Check: {errorMsg}
                   </div>
                 )}
 

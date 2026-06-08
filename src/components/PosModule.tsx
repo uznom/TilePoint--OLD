@@ -25,7 +25,9 @@ import {
   ShieldCheck,
   Barcode,
   History,
-  LockKeyhole
+  LockKeyhole,
+  ShoppingBag,
+  Truck
 } from 'lucide-react';
 
 interface PosModuleProps {
@@ -263,7 +265,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
   // Cart operations
   const addToCart = (product: Product) => {
     if (product.stockQuantity === 0) {
-      showToast('⚠️ Depleted Stock: Clicked product is currently out of stock.');
+      showToast('Depleted Stock: Clicked product is currently out of stock.');
       return;
     }
 
@@ -272,7 +274,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
       if (idx !== -1) {
         const currentQty = prev[idx].quantity;
         if (currentQty >= product.stockQuantity) {
-          showToast(`⚠️ Stock Limit: Maximum available is ${product.stockQuantity} ${product.unit}.`);
+          showToast(`Stock Limit: Maximum available is ${product.stockQuantity} ${product.unit}.`);
           return prev;
         }
         const updated = [...prev];
@@ -289,7 +291,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
       return;
     }
     if (newQty > maxStock) {
-      showToast(`⚠️ Excess Volume: Cannot exceed active stock level of ${maxStock}.`);
+      showToast(`Excess Volume: Cannot exceed active stock level of ${maxStock}.`);
       return;
     }
     setCart(prev => prev.map(item => (item.product.id === productId ? { ...item, quantity: newQty } : item)));
@@ -299,7 +301,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     const p = cart.find(item => item.product.id === productId);
     setCart(prev => prev.filter(item => item.product.id !== productId));
     if (p) {
-      showToast(`🗑️ Removed ${p.product.productName} from terminal basket.`);
+      showToast(`Removed ${p.product.productName} from terminal basket.`);
     }
   };
 
@@ -319,7 +321,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     if (cart.length === 0) return;
     holdSale(cart, customerName, customerNotes);
     handleCancelSale();
-    showToast('🟢 Transaction parked inside safe hold registers.');
+    showToast('Transaction parked inside safe hold registers.');
   };
 
   const handleResume = (parkedId: string) => {
@@ -332,7 +334,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
 
     // Remove from parked
     setParkedSales(prev => prev.filter(p => p.id !== parkedId));
-    showToast('🟢 Resumed parked basket.');
+    showToast('Resumed parked basket.');
   };
 
   const checkDiscountApprovalRequired = (type: string, numericVal: number) => {
@@ -371,11 +373,11 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
   const applyCustomDiscount = (type: 'NONE' | 'FLAT' | 'PERCENT' | 'SENIOR' | 'PWD' | 'CONTRACT', inputVal?: string) => {
     const numericVal = parseFloat(inputVal || '0') || 0;
     if (type === 'FLAT' && (numericVal < 0 || numericVal > subtotal)) {
-      showToast('⚠️ Error: Invalid discount value.');
+      showToast('Error: Invalid discount value.');
       return;
     }
     if (type === 'PERCENT' && (numericVal < 0 || numericVal > 100)) {
-      showToast('⚠️ Error: Invalid percentage fraction.');
+      showToast('Error: Invalid percentage fraction.');
       return;
     }
 
@@ -404,17 +406,17 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     setShowDiscountModal(false);
     
     if (type === 'NONE') {
-      showToast('🟢 Removed all active discounts.');
+      showToast('Removed all active discounts.');
     } else if (type === 'FLAT') {
-      showToast(`🟢 Applied ₱${numericVal.toFixed(2)} cash discount.`);
+      showToast(`Applied ₱${numericVal.toFixed(2)} cash discount.`);
     } else if (type === 'PERCENT') {
-      showToast(`🟢 Applied ${numericVal}% percentage discount.`);
+      showToast(`Applied ${numericVal}% percentage discount.`);
     } else if (type === 'SENIOR') {
-      showToast('👵 Senior Privilege: Applied 20% Off + 12% VAT Exemption!');
+      showToast('Senior Privilege: Applied 20% Off + 12% VAT Exemption!');
     } else if (type === 'PWD') {
-      showToast('♿ PWD Exemption: Applied 20% Off + 12% VAT Exemption!');
+      showToast('PWD Exemption: Applied 20% Off + 12% VAT Exemption!');
     } else if (type === 'CONTRACT') {
-      showToast('👷 Contractor Special: Applied 10% Trade Alliance Discount!');
+      showToast('Contractor Special: Applied 10% Trade Alliance Discount!');
     }
   };
 
@@ -422,7 +424,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     if (cart.length === 0) return;
 
     if (currentUser.role === UserRole.STAFF) {
-      setErrorMessage("⚠️ ACCESS RESTRICTED: Logistics Floor Staff (Santi Santos) is unauthorized to execute customer checkouts from this terminal. Please login as Cashier, Manager, or Admin to execute client checkouts.");
+      setErrorMessage("ACCESS RESTRICTED: Logistics Floor Staff (Santi Santos) is unauthorized to execute customer checkouts from this terminal. Please login as Cashier, Manager, or Admin to execute client checkouts.");
       return;
     }
 
@@ -456,9 +458,9 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
       setShowFulfillmentModal(true);
 
       handleCancelSale();
-      showToast('💵 Payment Completed. Please assign receipt fulfillment.');
+      showToast('Payment Completed. Please assign receipt fulfillment.');
     } catch (e: any) {
-      showToast('⚠️ Checkout Error: ' + e?.message);
+      showToast('Checkout Error: ' + e?.message);
     }
   }
 
@@ -468,7 +470,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     setShowReceiptModal(true);
     setShowFulfillmentModal(false);
     setPendingSaleForFulfillment(null);
-    showToast('🟢 Invoice settled: Materials Released to Buyer.');
+    showToast('Invoice settled: Materials Released to Buyer.');
   };
 
   const handleFulfillmentDeliverySubmit = (e: React.FormEvent) => {
@@ -476,7 +478,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     if (!pendingSaleForFulfillment) return;
 
     if (!deliveryContact.trim() || !deliveryBarangay.trim() || !deliveryCity.trim()) {
-      showToast('⚠️ Contact, Barangay, and City/Municipality are strictly required!');
+      showToast('Contact, Barangay, and City/Municipality are strictly required!');
       return;
     }
 
@@ -497,7 +499,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
 
     setActiveReceipt({
       ...pendingSaleForFulfillment,
-      notes: `🚚 SYSTEM ASSIGNED STORE DELIVERY TRACE: ${dRecord.id}\n${deliveryNotes}`
+      notes: `SYSTEM ASSIGNED STORE DELIVERY TRACE: ${dRecord.id}\n${deliveryNotes}`
     });
 
     setShowReceiptModal(true);
@@ -513,7 +515,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     setDeliveryLandmark('');
     setDeliveryNotes('');
 
-    showToast(`🟢 Store delivery scheduled successfully: ${dRecord.id}`);
+    showToast(`Store delivery scheduled successfully: ${dRecord.id}`);
   };
 
   const handleBarcodeSubmit = (e: React.FormEvent) => {
@@ -534,11 +536,11 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
 
     if (found) {
       if (found.stockQuantity <= 0) {
-        showToast(`⚠️ Out of stock: Cannot add ${found.productName} (0 remaining)`);
+        showToast(`Out of stock: Cannot add ${found.productName} (0 remaining)`);
         return;
       }
       addToCart(found);
-      setBarcodeAddFeedback(`🟢 Added to Basket: ${found.productName}`);
+      setBarcodeAddFeedback(`Added to Basket: ${found.productName}`);
       setBarcodeSearchTerm('');
       setTimeout(() => setBarcodeAddFeedback(null), 3000);
     } else {
@@ -553,15 +555,15 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
 
       if (looseFound) {
         if (looseFound.stockQuantity <= 0) {
-          showToast(`⚠️ Out of stock: ${looseFound.productName} (0 remaining)`);
+          showToast(`Out of stock: ${looseFound.productName} (0 remaining)`);
           return;
         }
         addToCart(looseFound);
-        setBarcodeAddFeedback(`🟢 Added Loose Match: ${looseFound.productName}`);
+        setBarcodeAddFeedback(`Added Loose Match: ${looseFound.productName}`);
         setBarcodeSearchTerm('');
         setTimeout(() => setBarcodeAddFeedback(null), 3000);
       } else {
-        showToast('❌ Match Failure: No tile product matches that barcode/SKU.');
+        showToast('Match Failure: No tile product matches that barcode/SKU.');
       }
     }
   };
@@ -572,14 +574,14 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     const startingVal = parseFloat(startCashInput) || 0;
     openShift(startingVal);
     setShowShiftModal(false);
-    showToast(`🟢 Cashier terminal shift opened: ₱${startingVal.toFixed(2)} starting drawer.`);
+    showToast(`Cashier terminal shift opened: ₱${startingVal.toFixed(2)} starting drawer.`);
   };
 
   const handleSaveCustomerName = (e: React.FormEvent) => {
     e.preventDefault();
     setCustomerName(customerModalInput.trim() || 'Walk-in Customer');
     setShowCustomerModal(false);
-    showToast(`🟢 Ticket assigned to "${customerModalInput || 'Walk-in Customer'}".`);
+    showToast(`Ticket assigned to "${customerModalInput || 'Walk-in Customer'}".`);
   };
 
   const handleTriggerPriceOverride = (index: number) => {
@@ -597,7 +599,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     const item = cart[overrideItemIndex];
 
     if (targetPrice < 0) {
-      showToast('⚠️ Error: Overridden price cannot be negative.');
+      showToast('Error: Overridden price cannot be negative.');
       return;
     }
 
@@ -607,7 +609,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
       updatedCart[overrideItemIndex].overridePrice = targetPrice;
       setCart(updatedCart);
       setOverrideModalOpen(false);
-      showToast(`🟢 Applied Custom Price Override: ₱${targetPrice.toFixed(2)}`);
+      showToast(`Applied Custom Price Override: ₱${targetPrice.toFixed(2)}`);
       addAuditLog('POS_OVERRIDE_DIRECT', `Manager/Admin ${currentUser.fullName} applied price override of ₱${targetPrice.toFixed(2)} directly on ${item.product.productName}`, 'Sales', item.product.id);
     } else {
       // Cashier requires authorization from Manager or Admin
@@ -632,12 +634,12 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
 
     const approver = users.find(u => u.username.trim().toLowerCase() === approverUsername.trim().toLowerCase());
     if (!approver) {
-      setApprovalError('⚠️ Invalid approver username.');
+      setApprovalError('Invalid approver username.');
       return;
     }
 
     if (approver.status !== 'Active') {
-      setApprovalError('❌ Approver terminal credentials have been restricted.');
+      setApprovalError('Approver terminal credentials have been restricted.');
       return;
     }
 
@@ -645,14 +647,14 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     // Admin overrides everything, Manager can authorize Manager level.
     const isAuth = approver.role === UserRole.ADMIN || (required === UserRole.MANAGER && approver.role === UserRole.MANAGER);
     if (!isAuth) {
-      setApprovalError(`⚠️ Authorization Refused: ${approver.fullName} has role ${approver.role}, but at least role ${required} is required.`);
+      setApprovalError(`Authorization Refused: ${approver.fullName} has role ${approver.role}, but at least role ${required} is required.`);
       return;
     }
 
     // Hash PBKDF2 check
     const isMatch = await verifyPasswordWithToken(approverPassword, approver.passwordHash || '');
     if (!isMatch) {
-      setApprovalError('⚠️ Invalid security credentials password.');
+      setApprovalError('Invalid security credentials password.');
       return;
     }
 
@@ -665,7 +667,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
         setDiscountValue(0);
       }
       addAuditLog('POS_OVERRIDE_APPROVED', `${approver.role} ${approver.fullName} authorized discount override: ${pendingApproval.discountType}, value: ${pendingApproval.discountValue} for Cashier ${currentUser.fullName}`, 'Sales', 'OVERRIDE');
-      showToast(`🟢 Custom discount authorized & applied by ${approver.fullName}!`);
+      showToast(`Custom discount authorized & applied by ${approver.fullName}!`);
     } else if (pendingApproval?.type === 'PRICE_OVERRIDE') {
       const idx = pendingApproval.tempCartItemIndex;
       if (idx !== undefined && idx !== null && cart[idx]) {
@@ -673,7 +675,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
         updatedCart[idx].overridePrice = pendingApproval.overridePrice;
         setCart(updatedCart);
         addAuditLog('POS_OVERRIDE_APPROVED', `${approver.role} ${approver.fullName} authorized price override: ₱${pendingApproval.overridePrice?.toFixed(2)} (was ₱${pendingApproval.originalPrice?.toFixed(2)}) on ${cart[idx].product.productName} for Cashier ${currentUser.fullName}`, 'Sales', pendingApproval.productId!);
-        showToast(`🟢 Price override authorized & applied by ${approver.fullName}!`);
+        showToast(`Price override authorized & applied by ${approver.fullName}!`);
       }
     }
 
@@ -705,7 +707,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     
     const input = securityPinInput.trim();
     if (!input) {
-      setSecurityPinError('⚠️ Please enter a supervisor PIN.');
+      setSecurityPinError('Please enter a supervisor PIN.');
       return;
     }
 
@@ -748,7 +750,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     }
 
     if (!isAuthorized) {
-      setSecurityPinError('❌ Invalid Manager PIN. Verification failed.');
+      setSecurityPinError('Invalid Manager PIN. Verification failed.');
       return;
     }
 
@@ -760,7 +762,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
       addAuditLog('POS_REPRINT_PIN', `Manager ${authorizerName} authorized PIN reprint on transaction ${pinTargetSale.saleNumber}`, 'Sales', pinTargetSale.id);
     } else if (pinAction === 'VOID' && pinTargetSale) {
       voidSale(pinTargetSale.id);
-      showToast(`🟢 Void Complete. Restored stock and reversed invoice: ${pinTargetSale.saleNumber}`);
+      showToast(`Void Complete. Restored stock and reversed invoice: ${pinTargetSale.saleNumber}`);
       addAuditLog('POS_VOID_PIN', `Manager ${authorizerName} authorized PIN void on transaction ${pinTargetSale.saleNumber}`, 'Sales', pinTargetSale.id);
     }
 
@@ -865,7 +867,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                         <div>
                           <div className="text-xs font-extrabold text-m3-on-surface leading-snug group-hover:text-m3-primary transition-colors">{park.customerName}</div>
                           <p className="text-[10px] text-zinc-400 mt-1 flex items-center gap-1 font-mono font-bold">
-                            <span>🕒 {park.timestamp}</span>
+                            <span>{park.timestamp}</span>
                             <span>•</span>
                             <span className="text-m3-primary">{park.items.length} tile sets</span>
                           </p>
@@ -883,7 +885,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                   </div>
                 ) : (
                   <div className="py-12 text-center text-xs text-zinc-400 font-bold border border-dashed border-m3-outline-variant/20 rounded-2xl bg-m3-surface-lowest flex flex-col items-center justify-center gap-2 p-4 h-full my-auto">
-                    <span className="text-zinc-500 text-lg">🕒</span>
+                    <History className="h-5 w-5 text-zinc-500" />
                     <span className="animate-pulse text-zinc-500 leading-relaxed">Staged Lobby Clear: Waiting for floor staff to upload material hold queues from customer devices.</span>
                   </div>
                 )}
@@ -962,14 +964,14 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                         type="submit"
                         className="w-full md:w-auto px-5 py-2 bg-m3-primary text-m3-surface hover:bg-m3-primary/95 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer self-end shrink-0 transition-all flex items-center gap-1.5 h-[34px] shadow-sm justify-center"
                       >
-                        ⚡ SKU Scan
+                        SKU Scan
                       </button>
                     </div>
 
                     {/* Live Scanner matching notices feedback popup */}
                     {barcodeAddFeedback && (
                       <div className="absolute -top-3 left-4 bg-m3-tertiary-container text-m3-on-tertiary-container text-[10px] font-black px-2.5 py-0.5 rounded-full border border-m3-tertiary/25 shadow-sm animate-bounce flex items-center gap-1">
-                        📦 {barcodeAddFeedback}
+                        {barcodeAddFeedback}
                       </div>
                     )}
                   </form>
@@ -1066,9 +1068,9 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                     {discountAmount > 0 && (
                       <div className="flex justify-between text-xs font-black text-emerald-500 mt-1">
                         <span>
-                          {discountType === 'SENIOR' ? '👵 Senior Citizen Exclusive (20%)' :
-                           discountType === 'PWD' ? '♿ PWD Exemption (20%)' :
-                           discountType === 'CONTRACT' ? '👷 Contractor Alliance Special (10%)' :
+                          {discountType === 'SENIOR' ? 'Senior Citizen Exclusive (20%)' :
+                           discountType === 'PWD' ? 'PWD Exemption (20%)' :
+                           discountType === 'CONTRACT' ? 'Contractor Alliance Special (10%)' :
                            discountType === 'PERCENT' ? `Discount Rate Custom (${discountValue}%)` :
                            'Standard Discount Voucher'}
                         </span>
@@ -1246,7 +1248,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
           </div>
         </div>
       ) : (
-        /* 🚀 COMPONENT 4: DEDICATED CORPORATE DAILY SALES LEDGER & VOID TERMINAL (SUB-MODULE TAB) */
+        /* COMPONENT 4: DEDICATED CORPORATE DAILY SALES LEDGER & VOID TERMINAL (SUB-MODULE TAB) */
         <div className="col-span-full border border-m3-outline-variant/30 rounded-[28px] bg-m3-surface-low p-6 text-left space-y-4 animate-fade-in shadow-lg">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-m3-outline-variant/20 pb-4 gap-4">
             <div>
@@ -1460,7 +1462,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                     : 'border-m3-outline-variant/20 bg-m3-surface hover:bg-m3-outline-variant/10'
                 }`}
               >
-                <div className="font-bold text-xs text-m3-primary flex items-center gap-1">👵 Senior Citizen</div>
+                <div className="font-bold text-xs text-m3-primary flex items-center gap-1">Senior Citizen</div>
                 <div className="text-[10px] text-m3-on-surface-variant mt-1 font-medium">20% Off base + 12% VAT exemption (Philippine RA 9994).</div>
               </button>
 
@@ -1473,7 +1475,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                     : 'border-m3-outline-variant/20 bg-m3-surface hover:bg-m3-outline-variant/10'
                 }`}
               >
-                <div className="font-bold text-xs text-m3-primary flex items-center gap-1">♿ PWD Resident</div>
+                <div className="font-bold text-xs text-m3-primary flex items-center gap-1">PWD Resident</div>
                 <div className="text-[10px] text-m3-on-surface-variant mt-1 font-medium">20% Off base + 12% VAT exemption (Philippine RA 10754).</div>
               </button>
 
@@ -1486,7 +1488,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                     : 'border-m3-outline-variant/20 bg-m3-surface hover:bg-m3-outline-variant/10'
                 }`}
               >
-                <div className="font-bold text-xs text-m3-primary">👷 Contractor Alliance</div>
+                <div className="font-bold text-xs text-m3-primary">Contractor Alliance</div>
                 <div className="text-[10px] text-m3-on-surface-variant mt-1 font-medium">Flat 10% Trade Allied partner discount.</div>
               </button>
             </div>
@@ -1646,7 +1648,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                 onClick={() => {
                   window.print();
                   addAuditLog('POS_RECEIPT_PRINT', `Printed physical invoice ticket ${activeReceipt.saleNumber}`, 'Sales', activeReceipt.id);
-                  showToast('💾 Sent printing signal to hardware terminal.');
+                  showToast('Sent printing signal to hardware terminal.');
                 }}
                 className="flex-1 py-2 text-xs font-bold rounded-full border border-m3-outline-variant hover:bg-m3-outline-variant/20 transition-colors flex items-center justify-center gap-1.5 cursor-pointer text-center"
               >
@@ -1828,7 +1830,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                 className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold font-mono"
               />
               <span className="text-[9px] text-m3-on-surface-variant pl-1 block mt-1 font-medium">
-                {currentUser.role === UserRole.CASHIER ? '⚠️ Changing the standard price requires Manager override verification.' : '✅ Your role has privileges to direct-apply this override.'}
+                {currentUser.role === UserRole.CASHIER ? 'Changing the standard price requires Manager override verification.' : 'Your role has privileges to direct-apply this override.'}
               </span>
             </div>
 
@@ -1882,7 +1884,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                       : 'border-m3-outline-variant/30 hover:border-m3-outline-variant/60 bg-m3-surface-lowest text-m3-on-surface'
                   }`}
                 >
-                  <span className="text-xl">🛍️</span>
+                  <ShoppingBag className="h-6 w-6 text-m3-primary" />
                   <div>
                     <h4 className="text-[10.5px] font-black uppercase tracking-wide">Take Home / Pickup</h4>
                     <p className="text-[8.5px] opacity-80 mt-0.5 leading-normal font-medium">Material leaves physical store desk. Fulfillment releases immediately.</p>
@@ -1898,7 +1900,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                       : 'border-m3-outline-variant/30 hover:border-m3-outline-variant/60 bg-m3-surface-lowest text-m3-on-surface'
                   }`}
                 >
-                  <span className="text-xl">🚚</span>
+                  <Truck className="h-6 w-6 text-m3-primary" />
                   <div>
                     <h4 className="text-[10.5px] font-black uppercase tracking-wide">Store Delivery</h4>
                     <p className="text-[8.5px] opacity-80 mt-0.5 leading-normal font-medium">Customer requests heavy unloading trucks. Hold stock at distribution warehouse.</p>
@@ -1910,7 +1912,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
             {fulfillmentType === 'TakeHome' && (
               <div className="space-y-4 border-t border-m3-outline-variant/15 pt-4">
                 <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-xs text-emerald-400 font-medium leading-relaxed">
-                  💡 <strong>TAKE HOME IMMEDIATE RELEASE:</strong> All products in the cart are logged as released immediately. Stock has been deducted. No further truck scheduling is tracking.
+                  <strong>TAKE HOME IMMEDIATE RELEASE:</strong> All products in the cart are logged as released immediately. Stock has been deducted. No further truck scheduling is tracking.
                 </div>
                 <div className="flex justify-end pt-1">
                   <button
@@ -1918,7 +1920,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                     onClick={handleFulfillmentTakeHome}
                     className="m3-btn-primary px-8 py-2.5 text-xs font-black uppercase tracking-widest shadow-md cursor-pointer"
                   >
-                    🚀 Release Material & View Receipt
+                    Release Material & View Receipt
                   </button>
                 </div>
               </div>
@@ -1927,7 +1929,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
             {fulfillmentType === 'Delivery' && (
               <form onSubmit={handleFulfillmentDeliverySubmit} className="space-y-4 border-t border-m3-outline-variant/15 pt-4">
                 <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-[10.5px] text-blue-400 font-medium leading-relaxed">
-                  ℹ️ <strong>STORE DELIVERY ALLOCATION:</strong> This creates a <strong>Pending Scheduling</strong> transport ledger. Stock quantities are reserved of this location immediately.
+                  <strong>STORE DELIVERY ALLOCATION:</strong> This creates a <strong>Pending Scheduling</strong> transport ledger. Stock quantities are reserved of this location immediately.
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pl-1">
@@ -2039,7 +2041,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                     type="submit"
                     className="m3-btn-primary px-8 py-2.5 text-xs font-black uppercase tracking-widest shadow-md cursor-pointer flex items-center gap-1.5"
                   >
-                    🚛 Schedule Store Delivery
+                    Schedule Store Delivery
                   </button>
                 </div>
               </form>
@@ -2173,7 +2175,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
 
             {/* Quick-reference info helper to support sandbox testing */}
             <div className="pt-2 text-[8.5px] font-semibold text-zinc-500 text-center border-t border-m3-outline-variant/10">
-              💡 Demopack PIN: <span className="text-amber-500 font-bold">9988</span> (Manager Juan) or <span className="text-amber-500 font-bold">4321</span> (Admin Erica)
+              Demopack PIN: <span className="text-amber-500 font-bold">9988</span> (Manager Juan) or <span className="text-amber-500 font-bold">4321</span> (Admin Erica)
             </div>
 
             <div className="flex justify-end gap-2 pt-2">

@@ -95,7 +95,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
     e.preventDefault();
 
     if (!isUserAdmin) {
-       showToast('❌ Permission Denied: Corporate structure edits are locked to Admins.');
+       showToast('Permission Denied: Corporate structure edits are locked to Admins.');
        return;
     }
 
@@ -119,10 +119,10 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
 
     if (isEditMode) {
       updateUser(editingId, payload);
-      showToast(`✨ Updated profile details for ${fullName}.`);
+      showToast(`Updated profile details for ${fullName}.`);
     } else {
       createUser(payload);
-      showToast(`🟢 Registered and enlisted ${fullName} successfully.`);
+      showToast(`Registered and enlisted ${fullName} successfully.`);
     }
 
     setShowModal(false);
@@ -130,21 +130,21 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
 
   const handleToggleStatus = (u: User) => {
     if (!isUserAdmin) {
-      showToast('❌ Action Denied: Requires Administrator credentials.');
+      showToast('Action Denied: Requires Administrator credentials.');
       return;
     }
     const targetStatus: UserStatus = u.status === 'Active' ? 'Disabled' : 'Active';
     updateUser(u.id, { status: targetStatus });
-    showToast(`🔒 Changed Account status for ${u.fullName} to ${targetStatus}.`);
+    showToast(`Changed Account status for ${u.fullName} to ${targetStatus}.`);
   };
 
   const handleResetPassword = (id: string, name: string) => {
     if (!isUserAdmin) {
-      showToast('❌ Action Denied: Requires Administrator credentials.');
+      showToast('Action Denied: Requires Administrator credentials.');
       return;
     }
     resetPassword(id);
-    showToast(`🔑 Temporary password initialized to default for ${name}.`);
+    showToast(`Temporary password initialized to default for ${name}.`);
   };
 
   return (
@@ -190,8 +190,12 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
                 <div className="flex items-center justify-between border-b border-m3-outline-variant/20 pb-3">
                   <div className="flex items-center gap-3">
                     {/* Visual initials emblem circular badge */}
-                    <div className="h-11 w-11 rounded-[16px] bg-m3-primary/10 text-m3-primary text-sm font-black flex items-center justify-center tracking-tight shadow-inner border border-m3-outline-variant/15">
-                      {u.avatarInitials}
+                    <div className="h-11 w-11 rounded-[16px] bg-m3-primary/10 text-m3-primary text-sm font-black flex items-center justify-center tracking-tight shadow-inner border border-m3-outline-variant/15 overflow-hidden">
+                      {u.profilePicture ? (
+                        <img src={u.profilePicture} alt={u.fullName} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        u.avatarInitials
+                      )}
                     </div>
 
                     <div>

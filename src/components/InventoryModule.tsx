@@ -304,7 +304,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
       [{ productId: rec.productId, quantity: rec.suggestedQty }],
       rec.reason
     );
-    showToast(`⚡ Smart Redistribution Route Initiated: Approved transmittal pending dispatch.`);
+    showToast(`Smart Redistribution Route Initiated: Approved transmittal pending dispatch.`);
   };
 
   // Categories list
@@ -534,7 +534,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
     e.preventDefault();
 
     if (!allowedToModify) {
-      showToast('⚠️ Authorization Required: Only Manager profiles are authorized to register items.');
+      showToast('Authorization Required: Only Manager profiles are authorized to register items.');
       return;
     }
 
@@ -561,10 +561,10 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
     if (isEditMode) {
       updateProduct(editingId, payload);
       // addAuditLog and logManualAdjustment are triggered inside updateProduct automatically if qty changes
-      showToast(`🟢 Custom specifications for details updated successfully.`);
+      showToast(`Custom specifications for details updated successfully.`);
     } else {
       createProduct(payload);
-      showToast('🟢 Registered new item in global stock catalogs.');
+      showToast('Registered new item in global stock catalogs.');
     }
     setShowModal(false);
   };
@@ -572,7 +572,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
   // Safe deletion routine
   const handleDeleteTrigger = (id: string, name: string) => {
     if (!allowedToModify) {
-      showToast('⚠️ Authorization Required: Access limited to Manager profiles.');
+      showToast('Authorization Required: Access limited to Manager profiles.');
       return;
     }
     setConfirmDeleteId(id);
@@ -595,7 +595,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
     if (!p) return;
 
     if (!allowedToModify) {
-      showToast('⚠️ Security Violation: Only Store Managers are authorized to manually adjust stock counts.');
+      showToast('Security Violation: Only Store Managers are authorized to manually adjust stock counts.');
       return;
     }
 
@@ -604,7 +604,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
 
     // Call updateProduct with our custom adjustment context reason
     updateProduct(adjustProductId, { stockQuantity: finalNewQty }, adjustReason);
-    showToast(`🟢 Stock level updated. Registered stock action log: ${finalChange > 0 ? '+' : ''}${finalChange}`);
+    showToast(`Stock level updated. Registered stock action log: ${finalChange > 0 ? '+' : ''}${finalChange}`);
     setShowAdjustModal(false);
   };
 
@@ -617,8 +617,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
   const handleSimulatePrint = () => {
     setPrintingCode(true);
     setTimeout(() => {
-      setPrintingCode(false);
-      showToast('🖨️ Label sent to Z-Min Zebra printer queue successfully!');
+       setPrintingCode(false);
+       showToast('Label sent to Z-Min Zebra printer queue successfully!');
     }, 1500);
   };
 
@@ -630,7 +630,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
     dlAnchorElem.setAttribute('download', `TilePoint_Inventory_${new Date().toISOString().slice(0, 10)}.json`);
     dlAnchorElem.click();
     addAuditLog('INVENTORY_EXPORT', 'Exported product database as JSON file', 'Products', 'EXPORT');
-    showToast('💾 Exported full non-deleted inventory roster as JSON file.');
+    showToast('Exported full non-deleted inventory roster as JSON file.');
   };
 
   const handleOpenImport = () => {
@@ -640,7 +640,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
 
   const executeBulkImport = () => {
     if (!rawImportText.trim()) {
-      showToast('⚠️ Error: Please input a valid JSON array text block.');
+      showToast('Error: Please input a valid JSON array text block.');
       return;
     }
 
@@ -650,22 +650,22 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
         const result = importProducts(parsed);
         if (result.success) {
           setShowImportModal(false);
-          showToast(`🟢 Successfully updated ${result.count} tile products.`);
+          showToast(`Successfully updated ${result.count} tile products.`);
         } else {
-          showToast(`⚠️ Import Failure: ${result.error}`);
+          showToast(`Import Failure: ${result.error}`);
         }
       } else {
-        showToast('⚠️ Format Mismatch: Imported contents must represent a valid Tile Array.');
+        showToast('Format Mismatch: Imported contents must represent a valid Tile Array.');
       }
     } catch (e) {
-      showToast('⚠️ Syntax Error: Failed Parsing JSON. Verify code format structure.');
+      showToast('Syntax Error: Failed Parsing JSON. Verify code format structure.');
     }
   };
 
   return (
     <div className="space-y-6 animate-fade-in text-m3-on-surface">
       
-      {/* 🚀 SUB-HEADER TAB NAVIGATION */}
+      {/* SUB-HEADER TAB NAVIGATION */}
       <div className="flex border-b border-m3-outline-variant/20 pb-px items-center justify-between sticky top-0 bg-m3-surface/90 backdrop-blur-md z-30 pt-2 pb-2 rounded-b-xl px-2 shadow-sm">
         <div className="flex flex-wrap gap-1 md:gap-2">
           <button
@@ -728,7 +728,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
         </div>
       </div>
 
-      {/* 📦 INVENTORY DASHBOARD SUMMARY STATS */}
+      {/* INVENTORY DASHBOARD SUMMARY STATS */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {/* Total SKUs */}
         <div className="p-4 rounded-3xl bg-m3-surface-low border border-m3-outline-variant/30 flex items-center gap-3.5 relative shadow-sm overflow-hidden group">
@@ -806,7 +806,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
         </div>
       </div>
 
-      {/* 📁 VIEW 1: CATALOG STOCK LEDGER */}
+      {/* VIEW 1: CATALOG STOCK LEDGER */}
       {activeSubTab === 'catalog' && (
         <>
           {/* Main Filter Controller Panel Card */}
@@ -1127,7 +1127,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
         </>
       )}
 
-      {/* 🔄 VIEW 2: MOVEMENT HISTORY LEDGER LOGS */}
+      {/* VIEW 2: MOVEMENT HISTORY LEDGER LOGS */}
       {activeSubTab === 'movements' && (
         <>
           {/* Movement search filters */}
@@ -1260,7 +1260,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
         </>
       )}
 
-      {/* 🚚 VIEW 3: STOCK TRANSFERS & DISTRIBUTION WORKFLOWS */}
+      {/* VIEW 3: STOCK TRANSFERS & DISTRIBUTION WORKFLOWS */}
       {activeSubTab === 'transfers' && (
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-m3-surface-low p-6 rounded-[28px] border border-m3-outline-variant/20 shadow-sm animate-scale-up">
@@ -1413,15 +1413,15 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
                             <button
                               onClick={() => {
                                 if (!canApprove) {
-                                  showToast('⚠️ Access Denied: Requires Enterprise Admin or Main Branch/Logistics Hub Manager clearance.');
+                                  showToast('Access Denied: Requires Enterprise Admin or Main Branch/Logistics Hub Manager clearance.');
                                   return;
                                 }
                                 updateStockTransferStatus(t.id, 'Approved');
-                                showToast('🟢 Stock Transfer approved. Stock reserved at dispatch branch.');
+                                showToast('Stock Transfer approved. Stock reserved at dispatch branch.');
                               }}
                               className={`flex-1 text-[11px] font-black uppercase tracking-wider py-2.5 px-3 rounded-xl border flex items-center justify-center gap-1 transition-all cursor-pointer ${
                                 canApprove 
-                                  ? 'bg-emerald-505 bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-600' 
+                                  ? 'bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-600' 
                                   : 'bg-zinc-100 text-zinc-400 border-zinc-200 cursor-not-allowed opacity-60'
                               }`}
                             >
@@ -1432,11 +1432,11 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
                             <button
                               onClick={() => {
                                 if (!canApprove) {
-                                  showToast('⚠️ Access Denied: Only Admin or Distribution Hub Managers can decline transmittals.');
+                                  showToast('Access Denied: Only Admin or Distribution Hub Managers can decline transmittals.');
                                   return;
                                 }
                                 updateStockTransferStatus(t.id, 'Declined');
-                                showToast('🔴 Transfer request declined successfully.');
+                                showToast('Transfer request declined successfully.');
                               }}
                               className={`text-[11px] font-black uppercase tracking-wider py-2.5 px-3 rounded-xl border flex items-center justify-center gap-1 transition-all cursor-pointer ${
                                 canApprove 
@@ -1454,11 +1454,11 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
                           <button
                             onClick={() => {
                               if (!canDispatch) {
-                                showToast(`⚠️ Dispatch Refused: You must be assigned to dispatching branch ${t.fromBranchId} to ship this stock.`);
+                                showToast(`Dispatch Refused: You must be assigned to dispatching branch ${t.fromBranchId} to ship this stock.`);
                                 return;
                               }
                               updateStockTransferStatus(t.id, 'In Transit');
-                              showToast('🚚 Stock dispatched! Deducted from dispatching branch. Items are now In-Transit.');
+                              showToast('Stock dispatched! Deducted from dispatching branch. Items are now In-Transit.');
                             }}
                             className={`flex-1 text-[11px] font-black uppercase tracking-wider py-3 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                               canDispatch
@@ -1475,11 +1475,11 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
                           <button
                             onClick={() => {
                               if (!canReceive) {
-                                showToast(`⚠️ Receipt Refused: You must be assigned to receiving branch ${t.toBranchId} to acknowledge.`);
+                                showToast(`Receipt Refused: You must be assigned to receiving branch ${t.toBranchId} to acknowledge.`);
                                 return;
                               }
                               updateStockTransferStatus(t.id, 'Received');
-                              showToast('🏢 Stock fully received! Target branch inventory incremented automatically.');
+                              showToast('Stock fully received! Target branch inventory incremented automatically.');
                             }}
                             className={`flex-1 text-[11px] font-black uppercase tracking-wider py-3 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                               canReceive
@@ -1506,11 +1506,11 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
         </div>
       )}
 
-      {/* 📊 VIEW 4: LOGISTICS LEDGER & HEATMAP */}
+      {/* VIEW 4: LOGISTICS LEDGER & HEATMAP */}
       {activeSubTab === 'ledger' && (
         <div className="space-y-8 animate-fade-in">
           
-          {/* 💥 SECTION A: SMART MATRIX ADVISOR & MOVEMENT RECOMMENDATIONS */}
+          {/* SECTION A: SMART MATRIX ADVISOR & MOVEMENT RECOMMENDATIONS */}
           <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] p-6 shadow-sm space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
               <div>
@@ -1558,13 +1558,13 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
 
               {recommendedTransfers.length === 0 && (
                 <div className="col-span-2 text-center py-6 text-zinc-500 font-black text-xs">
-                  🟢 Balanced Load: All tile channels maintain robust optimal safety levels. No active redistribution loops requested.
+                  Balanced Load: All tile channels maintain robust optimal safety levels. No active redistribution loops requested.
                 </div>
               )}
             </div>
           </div>
 
-          {/* 📊 SECTION B: RELATIONAL BRANCH STOCK MATRIX */}
+          {/* SECTION B: RELATIONAL BRANCH STOCK MATRIX */}
           <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] overflow-hidden shadow-sm">
             <div className="p-5 border-b border-m3-outline-variant/15">
               <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest">Multi-Branch Stock Balance Heatmap</h3>
@@ -1601,25 +1601,25 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
                         {/* Branch cells with interactive alerts */}
                         <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
                           <span className={b1Stock < 30 ? 'bg-amber-500/15 text-amber-600 border border-amber-500/20 px-2 py-0.5 rounded-lg text-xs' : 'text-m3-on-surface'}>
-                            {b1Stock} boxes {b1Stock < 30 ? '⚠️' : ''}
+                            {b1Stock} boxes
                           </span>
                         </td>
 
                         <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
                           <span className={b2Stock < 15 ? 'bg-rose-500/15 text-rose-600 border border-rose-500/20 px-2 py-0.5 rounded-lg text-xs' : 'text-m3-on-surface'}>
-                            {b2Stock} boxes {b2Stock < 15 ? '🚨' : ''}
+                            {b2Stock} boxes
                           </span>
                         </td>
 
                         <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
                           <span className={b3Stock < 15 ? 'bg-rose-500/15 text-rose-600 border border-rose-500/20 px-2 py-0.5 rounded-lg text-xs' : 'text-m3-on-surface'}>
-                            {b3Stock} boxes {b3Stock < 15 ? '🚨' : ''}
+                            {b3Stock} boxes
                           </span>
                         </td>
 
                         <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
                           <span className={b4Stock < 15 ? 'bg-rose-500/15 text-rose-600 border border-rose-500/20 px-2 py-0.5 rounded-lg text-xs' : 'text-m3-on-surface'}>
-                            {b4Stock} boxes {b4Stock < 15 ? '🚨' : ''}
+                            {b4Stock} boxes
                           </span>
                         </td>
 
@@ -1634,7 +1634,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
             </div>
           </div>
 
-          {/* 🧾 SECTION C: CHRONOLOGICAL DOUBLE-ENTRY LEDGER VIEW */}
+          {/* SECTION C: CHRONOLOGICAL DOUBLE-ENTRY LEDGER VIEW */}
           <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] overflow-hidden shadow-sm">
             <div className="p-5 border-b border-m3-outline-variant/15 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div>
@@ -1755,7 +1755,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
             </div>
           </div>
 
-          {/* 📅 SECTION D: PRODUCT STOCK AGING ANALYSIS */}
+          {/* SECTION D: PRODUCT STOCK AGING ANALYSIS */}
           <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] overflow-hidden shadow-sm">
             <div className="p-5 border-b border-m3-outline-variant/15">
               <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest">Inventory Aging & Capital Velocity Audit</h3>
@@ -1833,7 +1833,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
         </div>
       )}
 
-      {/* 🛠️ MODAL 1: ADD & EDIT PRODUCT DIALOG */}
+      {/* MODAL 1: ADD & EDIT PRODUCT DIALOG */}
       {showModal && (
         <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm shadow-xl" onClick={() => setShowModal(false)} />
@@ -2127,7 +2127,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
         </div>
       )}
 
-      {/* ⚠️ MODAL 2: MANUAL STOCK ADJUSTMENT DIALOG */}
+      {/* MODAL 2: MANUAL STOCK ADJUSTMENT DIALOG */}
       {showAdjustModal && (
         <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm shadow-xl" onClick={() => setShowAdjustModal(false)} />
@@ -2226,7 +2226,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
         </div>
       )}
 
-      {/* 🏷️ MODAL 3: BARCODE & QR CODES VIEWER / PRINT DIALOG */}
+      {/* MODAL 3: BARCODE & QR CODES VIEWER / PRINT DIALOG */}
       {showCodesModal && codesProduct && (
         <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm shadow-xl" onClick={() => setShowCodesModal(false)} />
@@ -2318,7 +2318,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
                 onClick={() => {
                   deleteProduct(confirmDeleteId!);
                   setConfirmDeleteId(null);
-                  showToast('🟢 Listing archived and soft-deleted successfully.');
+                  showToast('Listing archived and soft-deleted successfully.');
                 }}
                 className="px-5 py-2 text-xs font-black uppercase tracking-wider rounded-full bg-rose-600 text-white hover:bg-rose-700 shadow-md cursor-pointer transition-colors border"
               >

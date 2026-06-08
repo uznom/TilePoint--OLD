@@ -17,17 +17,34 @@ import {
   Keyboard,
   ShieldAlert,
   Flame,
-  Accessibility
+  Accessibility,
+  MapPin,
+  Code,
+  Terminal,
+  Cpu,
+  Github
 } from 'lucide-react';
 
 interface PrivacyAccessibilityHubProps {
   darkMode: boolean;
+  hideFloatingButton?: boolean;
 }
 
-export function PrivacyAccessibilityHub({ darkMode }: PrivacyAccessibilityHubProps) {
+export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }: PrivacyAccessibilityHubProps) {
   // Hub open state
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'accessibility' | 'cookies' | 'privacy'>('accessibility');
+  const [activeTab, setActiveTab] = useState<'accessibility' | 'cookies' | 'privacy' | 'about'>('accessibility');
+
+  // Listen to open events from other modules/dropdowns
+  useEffect(() => {
+    const handleOpenEvent = () => {
+      setIsOpen(true);
+    };
+    window.addEventListener('open-privacy-hub', handleOpenEvent);
+    return () => {
+      window.removeEventListener('open-privacy-hub', handleOpenEvent);
+    };
+  }, []);
 
   // Cookie prompt bar state
   const [showBanner, setShowBanner] = useState(() => {
@@ -131,7 +148,7 @@ export function PrivacyAccessibilityHub({ darkMode }: PrivacyAccessibilityHubPro
 
   return (
     <>
-      {/* 🍪 COOKIE CONSENT DRAWER/BANNER OVERLAY */}
+      {/* COOKIE CONSENT DRAWER/BANNER OVERLAY */}
       {showBanner && (
         <div className="fixed bottom-0 left-0 right-0 z-[100] p-4 animate-slide-up sm:px-6">
           <div className="max-w-4xl mx-auto m3-card border-amber-500/10 bg-m3-surface-low/95 backdrop-blur-xl shadow-[0_-12px_44px_rgba(0,0,0,0.25)] flex flex-col md:flex-row items-start md:items-center justify-between gap-5 p-5 sm:p-6 rounded-3xl">
@@ -179,18 +196,20 @@ export function PrivacyAccessibilityHub({ darkMode }: PrivacyAccessibilityHubPro
         </div>
       )}
 
-      {/* 🛠️ ACCESSIBILITY & SHIELD FLOATING HUB BUTTON */}
-      <button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-[90] h-12 w-12 bg-m3-primary hover:bg-m3-primary/90 active:scale-95 text-m3-on-primary rounded-full shadow-2xl justify-center items-center flex cursor-pointer transition-all border border-m3-primary-container group"
-        title="Privacy Policies and Accessibility Assistant Hub"
-        aria-label="Open Accessibility Options and Privacy center"
-      >
-        <Accessibility className="h-5.5 w-5.5 group-hover:rotate-12 transition-transform duration-300" />
-        <span className="absolute bottom-13 right-0 scale-0 group-hover:scale-100 transition-all duration-200 origin-bottom bg-m3-on-surface text-m3-surface text-[9px] font-black tracking-widest uppercase px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-m3-outline-variant/20">
-          Accessibility & Policy
-        </span>
-      </button>
+      {/* ACCESSIBILITY & SHIELD FLOATING HUB BUTTON */}
+      {!hideFloatingButton && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="fixed bottom-6 right-6 z-[90] h-12 w-12 bg-m3-primary hover:bg-m3-primary/90 active:scale-95 text-m3-on-primary rounded-full shadow-2xl justify-center items-center flex cursor-pointer transition-all border border-m3-primary-container group"
+          title="Privacy Policies and Accessibility Assistant Hub"
+          aria-label="Open Accessibility Options and Privacy center"
+        >
+          <Accessibility className="h-5.5 w-5.5 group-hover:rotate-12 transition-transform duration-300" />
+          <span className="absolute bottom-13 right-0 scale-0 group-hover:scale-100 transition-all duration-200 origin-bottom bg-m3-on-surface text-m3-surface text-[9px] font-black tracking-widest uppercase px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-m3-outline-variant/20">
+            Accessibility & Policy
+          </span>
+        </button>
+      )}
 
       {/* INTERACTIVE HUB MODAL */}
       {isOpen && (
@@ -257,6 +276,17 @@ export function PrivacyAccessibilityHub({ darkMode }: PrivacyAccessibilityHubPro
                 >
                   <Shield className="h-4 w-4" />
                   <span>Privacy Shield</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('about')}
+                  className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
+                    activeTab === 'about'
+                      ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
+                      : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
+                  }`}
+                >
+                  <Info className="h-4 w-4" />
+                  <span>About System</span>
                 </button>
               </div>
 
@@ -533,6 +563,134 @@ export function PrivacyAccessibilityHub({ darkMode }: PrivacyAccessibilityHubPro
                           <Check className="h-3 w-3" /> Certified Secure POS Node No. 11917622
                         </span>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB D: ABOUT SYSTEM & DEVELOPER PROFILE */}
+                {activeTab === 'about' && (
+                  <div className="space-y-5 animate-fade-in font-sans">
+                    <div>
+                      <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
+                        System Configuration & Developer Profile
+                      </h4>
+                      <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
+                        TilePoint point-of-sale node telemetry data, compiled engineering details, and systems developer metadata.
+                      </p>
+                    </div>
+
+                    <div className="h-px bg-m3-outline-variant/15" />
+
+                    {/* Developer Profile Card */}
+                    <div className="m3-card bg-m3-surface-low border border-m3-outline-variant/15 p-5 sm:p-6 rounded-2xl shadow-sm relative overflow-hidden flex flex-col md:flex-row items-start md:items-center gap-5 sm:gap-6">
+                      
+                      {/* Left side: Pure CSS aesthetic terminal/ring representation inspired by the mockup */}
+                      <div className="relative h-24 w-24 shrink-0 flex items-center justify-center bg-m3-surface/30 rounded-2xl border border-m3-outline-variant/10 overflow-hidden shadow-inner self-center sm:self-start md:self-center">
+                        {/* Decorative concentric translucent rings */}
+                        <div className="absolute -top-6 -left-6 h-20 w-20 rounded-full border border-m3-primary/15 bg-m3-primary/5" />
+                        <div className="absolute -bottom-4 -right-4 h-16 w-16 rounded-full border border-m3-primary/10 bg-m3-primary/5" />
+                        <div className="absolute h-14 w-14 rounded-full border border-m3-primary/20 bg-m3-primary/5 animate-pulse" />
+                        
+                        {/* Interactive-looking terminal display box */}
+                        <div className="relative z-10 h-11 w-11 rounded-xl bg-[#0b0f19] border border-m3-primary/40 shadow-[0_0_12px_rgba(28,100,242,0.15)] flex items-center justify-center font-mono text-xs text-m3-primary font-black">
+                          <span>&gt;_</span>
+                        </div>
+                      </div>
+
+                      {/* Right side: Clean stack hierarchy */}
+                      <div className="flex-1 space-y-3 font-sans w-full">
+                        <div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[9px] sm:text-[10px] font-mono font-black uppercase text-zinc-400 tracking-widest block leading-3">
+                              Senior Systems Architect &amp; Creator
+                            </span>
+                            <span className="text-[8.5px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 uppercase font-black tracking-wider shadow-sm select-none">
+                              Verified Architect
+                            </span>
+                          </div>
+                          
+                          <h4 className="text-base sm:text-lg font-black text-white uppercase tracking-wider font-sans mt-1.5 leading-tight">
+                            Mark Jefferson Monares
+                          </h4>
+                          
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-m3-on-surface-variant text-[10.5px] mt-2">
+                            <div className="flex items-center gap-1.5">
+                              <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                              <span className="font-semibold text-zinc-300">Dipolog City, Philippines</span>
+                            </div>
+                            <a
+                              href="https://github.com/uznom"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1.5 text-m3-primary hover:text-m3-primary/80 transition-colors font-bold group"
+                            >
+                              <Github className="h-3.5 w-3.5 shrink-0" />
+                              <span className="font-mono group-hover:underline">@uznom</span>
+                            </a>
+                          </div>
+                        </div>
+
+                        <div className="h-px bg-m3-outline-variant/10 !my-2" />
+
+                        <div className="text-[11px] sm:text-xs text-m3-on-surface-variant leading-relaxed">
+                          <p className="text-zinc-200 border-l-2 border-m3-primary/60 pl-2.5 font-medium italic">
+                            Mark Jefferson builds streamlined systems that are both technically disciplined and exceptionally practical.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* System specs info card */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Tech stack card */}
+                      <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/40 space-y-2 animate-fade-in">
+                        <div className="flex items-center gap-2">
+                          <Code className="h-4.5 w-4.5 text-m3-primary" />
+                          <h5 className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono">
+                            Enterprise Tech Stack
+                          </h5>
+                        </div>
+                        <ul className="space-y-1.5 text-[10px] leading-normal font-mono text-zinc-300">
+                          <li className="flex items-center gap-1.5">
+                            <span className="h-1 w-1 rounded-full bg-m3-primary shrink-0" />
+                            <span>React 18 & TypeScript (Safe Typings)</span>
+                          </li>
+                          <li className="flex items-center gap-1.5">
+                            <span className="h-1 w-1 rounded-full bg-m3-primary shrink-0" />
+                            <span>Vite Build System (optimized bundles)</span>
+                          </li>
+                          <li className="flex items-center gap-1.5">
+                            <span className="h-1 w-1 rounded-full bg-m3-primary shrink-0" />
+                            <span>Tailwind CSS v4 (Material design context)</span>
+                          </li>
+                          <li className="flex items-center gap-1.5">
+                            <span className="h-1 w-1 rounded-full bg-m3-primary shrink-0" />
+                            <span>Framer Motion & Lucide Icons</span>
+                          </li>
+                          <li className="flex items-center gap-1.5">
+                            <span className="h-1 w-1 rounded-full bg-m3-primary shrink-0" />
+                            <span>D3.js / Recharts (Data Visualizations)</span>
+                          </li>
+                        </ul>
+                      </div>
+
+                      {/* System architecture scope */}
+                      <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/40 space-y-2 animate-fade-in">
+                        <div className="flex items-center gap-2">
+                          <Cpu className="h-4.5 w-4.5 text-m3-primary" />
+                          <h5 className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono">
+                            Architecture Specs
+                          </h5>
+                        </div>
+                        <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+                          Enterprise-grade point-of-sale (POS) and inventory logistics platform with premium offline-first caching layers, robust mathematical tile coverage analyzers, role-based security configurations, and secure transmittals compliant with international audit regulations.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1 border-t border-m3-outline-variant/10 text-[9px] font-mono text-m3-on-surface-variant/70">
+                      <span>POS Node Version 2.4.1</span>
+                      <span className="text-emerald-500 font-bold">Node Status: Online & Secured</span>
                     </div>
                   </div>
                 )}

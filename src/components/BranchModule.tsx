@@ -97,7 +97,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
     e.preventDefault();
 
     if (!isUserAdmin) {
-      showToast('❌ Permission Denied: Branch modifications are restricted to Admins.');
+      showToast('Permission Denied: Branch modifications are restricted to Admins.');
       return;
     }
 
@@ -114,17 +114,17 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
 
     if (isEditMode) {
       updateBranch(editingId, payload);
-      showToast(`✨ Updated records for branch '${name}'.`);
+      showToast(`Updated records for branch '${name}'.`);
     } else {
       createBranch(payload);
-      showToast(`🟢 Launched new branch location '${name}'.`);
+      showToast(`Launched new branch location '${name}'.`);
     }
     setShowModal(false);
   };
 
   const triggerDelete = (id: string, branchName: string) => {
     if (!isUserAdmin) {
-      showToast('❌ Permission Denied: Branch deletion is restricted to Admins.');
+      showToast('Permission Denied: Branch deletion is restricted to Admins.');
       return;
     }
     setConfirmDeleteId(id);
@@ -134,7 +134,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
   const proceedWithDelete = () => {
     if (confirmDeleteId) {
       deleteBranch(confirmDeleteId);
-      showToast(`🗑️ Archived and soft-deleted branch '${confirmDeleteName}'.`);
+      showToast(`Archived and soft-deleted branch '${confirmDeleteName}'.`);
       setConfirmDeleteId(null);
     }
   };
@@ -181,12 +181,12 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {b.id === 'B1' && (
                     <span className="text-[9px] font-black uppercase font-mono tracking-widest bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded border border-amber-500/20">
-                      ⭐ Main HQ
+                      Main HQ
                     </span>
                   )}
                   {(b.id === 'B1' || b.isDistributionBranch) && (
                     <span className="text-[9px] font-black uppercase font-mono tracking-widest bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded border border-emerald-500/20">
-                      🚚 Distribution Hub
+                      Distribution Hub
                     </span>
                   )}
                 </div>
@@ -359,7 +359,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
                   className="h-4.5 w-4.5 text-m3-primary border-m3-outline focus:ring-m3-primary rounded cursor-pointer accent-amber-500"
                 />
                 <label htmlFor="isDistributionBranchCheckbox" className="text-xs font-black text-m3-on-surface cursor-pointer leading-tight">
-                  {isEditMode && editingId === 'B1' ? '⭐ Main Branch / HQ' : '🚚 Distribution Hub Designation'}
+                  {isEditMode && editingId === 'B1' ? 'Main Branch / HQ' : 'Distribution Hub Designation'}
                   <span className="block text-[9.5px] text-m3-on-surface-variant font-medium mt-1 leading-normal">
                     {isEditMode && editingId === 'B1' 
                       ? 'This main HQ location has implicit global distribution privileges.' 

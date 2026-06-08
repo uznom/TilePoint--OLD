@@ -140,7 +140,7 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
     
     const limitNum = Number(newMemberLimit);
     if (isNaN(limitNum) || limitNum < 0) {
-      alert('⚠️ Credit limit must be a positive number.');
+      alert('Credit limit must be a positive number.');
       return;
     }
 
@@ -167,7 +167,7 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
     setNewMemberPhone('');
     setNewMemberEmail('');
     setNewMemberLimit(15000);
-    alert('🎉 Client Member registered successfully into main ledger!');
+    alert('Client Member registered successfully into main ledger!');
   };
 
   // Pay Account Receivables
@@ -176,11 +176,11 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
     if (!selectedMember || !paymentAmount) return;
     const payNum = Number(paymentAmount);
     if (isNaN(payNum) || payNum <= 0) {
-      alert('⚠️ Payment amount must be a positive number.');
+      alert('Payment amount must be a positive number.');
       return;
     }
     if (payNum > selectedMember.outstandingBalance) {
-      alert(`⚠️ Payment amount cannot exceed the outstanding balance of ₱${selectedMember.outstandingBalance.toLocaleString()}`);
+      alert(`Payment amount cannot exceed the outstanding balance of ₱${selectedMember.outstandingBalance.toLocaleString()}`);
       return;
     }
 
@@ -222,7 +222,7 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
     e.preventDefault();
     const amountNum = Number(expAmount);
     if (!expAmount || isNaN(amountNum) || amountNum <= 0) {
-      alert('⚠️ Please enter a valid positive petty cash amount.');
+      alert('Please enter a valid positive petty cash amount.');
       return;
     }
     const entry: Expense = {
@@ -245,7 +245,7 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
     saveExpenses([entry, ...expenses]);
     setExpAmount('');
     setExpNotes('');
-    alert('💸 Monthly branch expense securely registered & deducted from general branch ledger!');
+    alert('Monthly branch expense securely registered & deducted from general branch ledger!');
   };
 
   // Add Product Return
@@ -257,11 +257,11 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
     const amountRefundedNum = Number(retRef) || 0;
     
     if (qtyReturnedNum <= 0) {
-      alert('⚠️ Quantity returned must be greater than zero.');
+      alert('Quantity returned must be greater than zero.');
       return;
     }
     if (amountRefundedNum < 0) {
-      alert('⚠️ Refund amount cannot be negative.');
+      alert('Refund amount cannot be negative.');
       return;
     }
 
@@ -309,7 +309,7 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
     setRetProduct('');
     setRetQty('');
     setRetRef('');
-    alert(`🔄 Return settled! ${retStatus === 'Restocked' ? 'Stock count adjusted in active product ledger.' : 'Returned stock archived as damaged.'}`);
+    alert(`Return settled! ${retStatus === 'Restocked' ? 'Stock count adjusted in active product ledger.' : 'Returned stock archived as damaged.'}`);
   };
 
   // BIR tax computation helpers using db.sales
@@ -353,7 +353,7 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
         
         {/* Active Branch Tag */}
         <span className="self-start md:self-auto px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-m3-primary/10 text-m3-primary border border-m3-primary/25">
-          📍 {db.currentUser?.branchAssignmentId === 'B1' ? 'EMMAN MAIN BRANCH' : 'BRANCH REGION B4'}
+          {db.currentUser?.branchAssignmentId === 'B1' ? 'EMMAN MAIN BRANCH' : 'BRANCH REGION B4'}
         </span>
       </div>
 
@@ -494,7 +494,7 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
                           <div>{m.phone}</div>
                           <div className="text-[10px] text-zinc-400">{m.email}</div>
                         </td>
-                        <td className="p-3 text-right font-mono font-bold text-amber-500">{m.points} ★</td>
+                        <td className="p-3 text-right font-mono font-bold text-amber-500">{m.points} pts</td>
                         <td className="p-3 text-right font-mono">₱{m.creditLimit.toLocaleString('en-US')}</td>
                         <td className="p-3 text-right font-mono text-rose-500 font-extrabold">₱{m.outstandingBalance.toLocaleString('en-US')}</td>
                       </tr>
@@ -686,7 +686,7 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
               </div>
               <button 
                 onClick={() => {
-                  alert('📊 Excel ledger report compiled & downloaded successfully!');
+                  alert('Excel ledger report compiled & downloaded successfully!');
                 }}
                 className="py-1.5 px-3 rounded bg-m3-primary text-m3-on-primary font-bold transition flex items-center gap-1 border-0 cursor-pointer"
               >
@@ -867,7 +867,7 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
                     </div>
 
                     <button 
-                      onClick={() => alert(`📦 Sent payment dispatch authorization request to accounting for ${sup.name}!`)}
+                      onClick={() => alert(`Sent payment dispatch authorization request to accounting for ${sup.name}!`)}
                       className="w-full py-1.5 bg-m3-primary/10 hover:bg-m3-primary text-m3-primary hover:text-m3-on-primary text-xs rounded-lg font-bold transition mt-3 cursor-pointer"
                     >
                       Authorize Payment
@@ -913,7 +913,7 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
                       <span className="text-xs font-bold leading-none">{day}</span>
                       {hasPayment && (
                         <div className="text-[10px] text-amber-600 font-extrabold leading-tight">
-                          💰 Payable Due: <span className="block italic text-zinc-400 mt-0.5">{supplierName}</span>
+                          Payable Due: <span className="block italic text-zinc-400 mt-0.5">{supplierName}</span>
                         </div>
                       )}
                     </div>
@@ -1036,7 +1036,7 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
                   </div>
                   <button 
                     onClick={() => {
-                      if (confirm('⚠️ Generating Z-Reading locks cashier drawers for the calendar cycle. Proceed?')) {
+                      if (confirm('Generating Z-Reading locks cashier drawers for the calendar cycle. Proceed?')) {
                         setPrintReceiptData({
                           title: 'BIR CUMULATIVE Z-READING',
                           receiptNo: 'Z-' + Math.floor(Math.random() * 89999 + 10000),
@@ -1069,7 +1069,7 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
                     <button onClick={() => window.print()} className="py-1 px-2 text-[11px] bg-zinc-200 dark:bg-zinc-800 text-m3-on-surface rounded font-bold hover:bg-zinc-300 transition flex items-center gap-1 cursor-pointer border-0">
                       <Printer className="h-3.5 w-3.5" /> Print Sheets
                     </button>
-                    <button onClick={() => alert('📥 System exported taxation file as CSV!')} className="py-1 px-2 text-[11px] bg-m3-primary text-m3-on-primary rounded font-bold hover:opacity-90 transition flex items-center gap-1 cursor-pointer border-0">
+                    <button onClick={() => alert('System exported taxation file as CSV!')} className="py-1 px-2 text-[11px] bg-m3-primary text-m3-on-primary rounded font-bold hover:opacity-90 transition flex items-center gap-1 cursor-pointer border-0">
                       <Download className="h-3.5 w-3.5" /> Export CSV
                     </button>
                   </div>

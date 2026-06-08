@@ -26,6 +26,7 @@ import {
   RefreshCw,
   ChevronRight,
   Check,
+  Edit,
   X,
   ArrowRightLeft,
   Truck,
@@ -492,30 +493,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
       const reason = `${currentUser.role} Action: Automated redistribution of slow moving tile (unsold for ${candidate.daysUnsold} days) to showroom`;
       
       createStockTransfer(candidate.branchId, candidate.targetBranchId, 'Redistribution', items, reason);
-      showToastMsg(`🚀 Created redistribution transfer request of ${candidate.productName} from ${candidate.branchName}!`, 'success');
+      showToastMsg(`Created redistribution transfer request of ${candidate.productName} from ${candidate.branchName}!`, 'success');
     } catch (e) {
       console.error(e);
-      showToastMsg('❌ Failed to execute stock redistribution transfer request.', 'error');
+      showToastMsg('Failed to execute stock redistribution transfer request.', 'error');
     }
   };
 
   const handleApproveTransfer = (id: string, transferNo: string) => {
     try {
       updateStockTransferStatus(id, 'Approved');
-      showToastMsg(`🟢 Approved and Shipped Transfer Request ${transferNo}! Assets routed.`, 'success');
+      showToastMsg(`Approved and Shipped Transfer Request ${transferNo}! Assets routed.`, 'success');
     } catch (e) {
       console.error(e);
-      showToastMsg('❌ Approval processing error.', 'error');
+      showToastMsg('Approval processing error.', 'error');
     }
   };
 
   const handleDeclineTransfer = (id: string, transferNo: string) => {
     try {
       updateStockTransferStatus(id, 'Cancelled');
-      showToastMsg(`🔴 Rejected and Cancelled Stock Transfer Request ${transferNo}.`, 'info');
+      showToastMsg(`Rejected and Cancelled Stock Transfer Request ${transferNo}.`, 'info');
     } catch (e) {
       console.error(e);
-      showToastMsg('❌ Rejection processing error.', 'error');
+      showToastMsg('Rejection processing error.', 'error');
     }
   };
 
@@ -546,10 +547,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
       });
 
       setShowSetupWizard(false);
-      showToastMsg(`🎉 SYSTEM SETUP WALKTHROUGH COMPLETE: ${customCompanyName} system parameters successfully locked!`, 'success');
+      showToastMsg(`SYSTEM SETUP WALKTHROUGH COMPLETE: ${customCompanyName} system parameters successfully locked!`, 'success');
     } catch (err) {
       console.error(err);
-      showToastMsg('❌ Setup execution error failed.', 'error');
+      showToastMsg('Setup execution error failed.', 'error');
     }
   };
 
@@ -596,7 +597,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
             {setupStep === 1 && (
               <div className="space-y-5 animate-slide-left">
                 <div className="p-4 rounded-2xl bg-m3-primary/5 border border-m3-primary/10 text-m3-on-surface-variant text-xs leading-relaxed flex gap-3">
-                  <span className="text-xl">🏢</span>
+                  <Building className="h-5 w-5 text-m3-primary mt-0.5 shrink-0" />
                   <p>
                     Set up your overarching corporate identity profile. Changing the brand prefix updates all branch showroom listings, transmittal sheets, and receipt headers dynamically over the system cache.
                   </p>
@@ -646,7 +647,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
             {setupStep === 2 && (
               <div className="space-y-5 animate-slide-left">
                 <div className="p-4 rounded-2xl bg-sky-500/5 border border-sky-500/10 text-m3-on-surface-variant text-xs leading-relaxed flex gap-3">
-                  <span className="text-xl">🏪</span>
+                  <Users className="h-5 w-5 text-sky-400 mt-0.5 shrink-0" />
                   <p>
                     Customize branch operational boundaries. Establishing initial sales targets computes appropriate target achievement percentages dynamically in performance trackers.
                   </p>
@@ -694,7 +695,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
             {setupStep === 3 && (
               <div className="space-y-5 animate-slide-left">
                 <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-m3-on-surface-variant text-xs leading-relaxed flex gap-3">
-                  <span className="text-xl">📦</span>
+                  <Package className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
                   <p>
                     Establish your active trading catalog inventory profiles. The system seeds standard sizes like 60x60 cm glazed porcelain slabs. You may instantly certify starting parameters.
                   </p>
@@ -727,7 +728,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
             {setupStep === 4 && (
               <div className="space-y-5 animate-slide-left">
                 <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/10 text-m3-on-surface-variant text-xs leading-relaxed flex gap-3">
-                  <span className="text-xl">🔐</span>
+                  <ShieldCheck className="h-5 w-5 text-rose-500 mt-0.5 shrink-0" />
                   <p>
                     Lock executive passwords and authorization codes. The Manager Security PIN authorizes override events (such as price alterations or cashier shift voids).
                   </p>
@@ -883,13 +884,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                   value={selectedBranchId}
                   onChange={(e) => {
                     setSelectedBranchId(e.target.value);
-                    showToastMsg(`🏢 Switched Command View-Port to: ${e.target.value === 'all' ? 'All Corporate Branches' : getBranchName(e.target.value)}`, 'info');
+                    showToastMsg(`Switched Command View-Port to: ${e.target.value === 'all' ? 'All Corporate Branches' : getBranchName(e.target.value)}`, 'info');
                   }}
                   className="bg-m3-surface-low border border-m3-outline-variant/35 rounded-2xl text-xs font-bold p-3 text-m3-on-surface focus:outline-none cursor-pointer hover:border-m3-primary transition-colors min-w-[210px] [color-scheme:dark]"
                 >
-                  <option value="all">🏢 All Branches (Consolidated)</option>
+                  <option value="all">All Branches (Consolidated)</option>
                   {branches.filter(b => !b.isDeleted).map((b) => (
-                    <option key={b.id} value={b.id}>🏪 {b.name}</option>
+                    <option key={b.id} value={b.id}>{b.name}</option>
                   ))}
                 </select>
               </div>
@@ -900,7 +901,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                   className="p-3 text-xs bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 text-emerald-400 rounded-2xl border border-emerald-500/30 hover:from-emerald-500 hover:to-emerald-600 hover:text-white font-extrabold transition-all flex items-center gap-1.5 cursor-pointer shadow-md active:scale-95"
                   title="Configure core company thresholds & branding profiles"
                 >
-                  ⚙️ Setup Wizard
+                  Setup Wizard
                 </button>
                 <button 
                   onClick={() => onNavigate('architecture')}
@@ -1116,7 +1117,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                                         staffCount: editingBranchStaff
                                       });
                                       setEditingBranchId(null);
-                                      showToastMsg(`🟢 Successfully updated branch operational boundaries for ${b.name}!`, 'success');
+                                      showToastMsg(`Successfully updated branch operational boundaries for ${b.name}!`, 'success');
                                     }}
                                     className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-xl font-bold font-mono"
                                   >
@@ -1137,7 +1138,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                                     className="p-1 rounded hover:bg-zinc-805 text-zinc-400 hover:text-emerald-400 transition-colors"
                                     title="Edit target goals / staff counts inline"
                                   >
-                                    ✏️
+                                    <Edit className="h-3.5 w-3.5" />
                                   </button>
                                 </div>
                                 <div className="text-[10.5px] text-zinc-400 mt-0.5 font-mono">
@@ -1236,7 +1237,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                 <div>
                   <h3 className="text-base font-extrabold tracking-tight text-m3-primary flex items-center gap-2">
                     <TrendingUp className="h-5 w-5 text-m3-primary animate-pulse" />
-                    <span>🔥 Best-Selling Products Analyzer</span>
+                    <span>Best-Selling Products Analyzer</span>
                   </h3>
                   <p className="text-xs text-m3-on-surface-variant mt-0.5">Top performing stock across transaction registers</p>
                 </div>
@@ -1363,7 +1364,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                     return (
                       <div key={index} className="p-3 bg-emerald-500/5 border border-emerald-500/15 rounded-xl space-y-2">
                         <div className="flex justify-between items-start">
-                          <span className="text-[10px] text-emerald-400 font-black uppercase font-mono tracking-wider">💡 Branch Rebalance Match</span>
+                          <span className="text-[10px] text-emerald-400 font-black uppercase font-mono tracking-wider">Branch Rebalance Match</span>
                           <span className="text-[9.5px] font-mono font-bold bg-rose-500/20 text-rose-400 px-2 rounded-full">
                             Shortage ({localStock} left)
                           </span>
@@ -1379,9 +1380,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                               const items = [{ productId: shortageProd.id, quantity: 15 }];
                               const reason = `Auto Broker Recommendation: Rebalance ${shortageProd.productName} from ${donorBranch?.name} overstock to ${getBranchName(destinationBranchId)}`;
                               createStockTransfer(matchingExcessStock.branchId, destinationBranchId, 'Redistribution', items, reason);
-                              showToastMsg(`🚀 Dispatched balancing transfer request for ${shortageProd.productName} from ${donorBranch?.name}!`, 'success');
+                              showToastMsg(`Dispatched balancing transfer request for ${shortageProd.productName} from ${donorBranch?.name}!`, 'success');
                             } catch (err) {
-                              showToastMsg('❌ Rebalancing transfer dispatch rejected.', 'error');
+                              showToastMsg('Rebalancing transfer dispatch rejected.', 'error');
                             }
                           }}
                           className="w-full bg-emerald-500 text-white py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-emerald-600 transition-all cursor-pointer flex items-center justify-center gap-1 shadow-sm mt-1 animate-pulse"
@@ -1458,7 +1459,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
                       {t.items.map((it, itemIdx) => (
                         <div key={itemIdx} className="text-xs text-zinc-400 font-mono">
-                          📦 Cargo: <span className="font-extrabold text-zinc-300">{it.productName}</span> — <span className="text-m3-primary font-black py-0.5 px-2 bg-m3-primary/10 rounded">{it.quantity} boxes</span>
+                          Cargo: <span className="font-extrabold text-zinc-300">{it.productName}</span> — <span className="text-m3-primary font-black py-0.5 px-2 bg-m3-primary/10 rounded">{it.quantity} boxes</span>
                         </div>
                       ))}
 
@@ -1637,7 +1638,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
                         <button 
                           onClick={() => {
-                            showToastMsg(`📦 Created automatic logistics restock PO request for ${p.productName}! Supplier notified.`, 'success');
+                            showToastMsg(`Created automatic logistics restock PO request for ${p.productName}! Supplier notified.`, 'success');
                           }}
                           className="w-full py-1.5 bg-m3-primary hover:bg-m3-primary/80 transition-all text-m3-on-primary font-bold rounded-lg text-[10.5px] uppercase cursor-pointer"
                         >
@@ -1687,20 +1688,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                     onClick={() => { setWeeklyMetric('orders'); setSelectedWeeklyDay(null); }} 
                     className={`px-2.5 py-1 text-[10px] rounded-lg font-bold transition-all ${weeklyMetric === 'orders' ? 'bg-m3-primary text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}
                   >
-                    🧾 Orders
+                    Orders
                   </button>
                   <button 
                     onClick={() => { setWeeklyMetric('boxes'); setSelectedWeeklyDay(null); }} 
                     className={`px-2.5 py-1 text-[10px] rounded-lg font-bold transition-all ${weeklyMetric === 'boxes' ? 'bg-m3-primary text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}
                   >
-                    📦 Units Box
+                    Units Box
                   </button>
                 </div>
               </div>
 
               {/* Day simulated overlay helper */}
               <div className="p-2 border border-m3-outline-variant/15 rounded-xl bg-m3-surface-low/50 text-[10.5px] text-m3-on-surface-variant leading-normal flex items-center gap-2 mb-3">
-                <span className="text-xs">💡</span>
+                <span className="text-xs font-bold text-m3-primary">•</span>
                 <span>Select a day below to simulate a high-value bulk transaction in real-time.</span>
               </div>
 
@@ -1770,7 +1771,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
               <div className="p-3.5 mt-2 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/25 rounded-2xl animate-fade-in flex flex-col gap-2 shrink-0 select-none">
                 <div className="flex justify-between items-center text-[11px] font-bold">
                   <span className="text-emerald-400 flex items-center gap-1 font-mono">
-                    💸 Simulate Bulk deal for {weeklyChartData[selectedWeeklyDay].day}
+                    Simulate Bulk deal for {weeklyChartData[selectedWeeklyDay].day}
                   </span>
                   <button onClick={() => setSelectedWeeklyDay(null)} className="text-zinc-500 hover:text-white px-1">✕</button>
                 </div>
@@ -1785,7 +1786,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                           ...daysSimulatedSales,
                           [dayName]: (daysSimulatedSales[dayName] || 0) + val
                         });
-                        showToastMsg(`🚀 Simulated custom transaction bulk deal worth ₱${val.toLocaleString()} on ${dayName}!`, 'success');
+                        showToastMsg(`Simulated custom transaction bulk deal worth ₱${val.toLocaleString()} on ${dayName}!`, 'success');
                       }}
                       className="bg-zinc-900 border border-m3-outline-variant/20 p-2 rounded-xl text-[10px] font-bold text-white hover:border-emerald-500 hover:bg-emerald-500/20 active:scale-95 transition-all text-center"
                     >
@@ -1803,7 +1804,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                         onClick={() => {
                           const dayName = weeklyChartData[selectedWeeklyDay].day;
                           setDaysSimulatedSales({ ...daysSimulatedSales, [dayName]: 0 });
-                          showToastMsg(`🧹 Reset Simulated Deals on ${dayName}`, 'info');
+                          showToastMsg(`Reset Simulated Deals on ${dayName}`, 'info');
                         }}
                         className="text-[9.5px] text-rose-400 hover:underline font-extrabold"
                       >
@@ -1862,7 +1863,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                       checked={forecastEnabled}
                       onChange={(e) => {
                         setForecastEnabled(e.target.checked);
-                        showToastMsg(e.target.checked ? '🔮 Exponential trend forecasting model overlay enabled!' : '🔮 Extended forecasting deactivated.', 'info');
+                        showToastMsg(e.target.checked ? 'Exponential trend forecasting model overlay enabled!' : 'Extended forecasting deactivated.', 'info');
                       }}
                       className="accent-m3-primary rounded cursor-pointer h-3.5 w-3.5" 
                     />
@@ -1932,7 +1933,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                           onMouseLeave={() => setHoveredPoint(null)}
                           onClick={() => {
                             setSelectedForecastMonth(selectedForecastMonth === idx ? null : idx);
-                            showToastMsg(`📊 Drilled down details for ${pt.month}: ₱${pt.revenue.toLocaleString()} model projections.`, 'info');
+                            showToastMsg(`Drilled down details for ${pt.month}: ₱${pt.revenue.toLocaleString()} model projections.`, 'info');
                           }}
                         />
                       </g>
@@ -1984,7 +1985,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                   <div className="p-2.5 rounded-xl bg-zinc-900 border border-m3-outline-variant/15">
                     <span className="text-[9px] text-zinc-400 block uppercase">Simulated Status:</span>
                     <span className="text-[11px] font-black text-white mt-1 block">
-                      {monthlyChartData[selectedForecastMonth].isPredicted ? "🔮 ESTIMATION" : "🟢 HISTORIC"}
+                      {monthlyChartData[selectedForecastMonth].isPredicted ? "ESTIMATION" : "HISTORIC"}
                     </span>
                   </div>
                   <div className="p-2.5 rounded-xl bg-zinc-900 border border-m3-outline-variant/15">
@@ -2223,16 +2224,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-4">
               {currentUser.role !== UserRole.CASHIER && (
                 <button onClick={() => onNavigate('inventory')} className="p-2.5 text-left text-xs bg-m3-surface-low rounded-xl border border-m3-outline-variant/35 hover:bg-m3-primary/10 hover:text-m3-primary transition-all flex justify-between items-center cursor-pointer">
-                  <span className="font-bold">📦 Verify Branch Stock levels</span>
+                  <span className="font-bold">Verify Branch Stock levels</span>
                   <ArrowUpRight className="h-4 w-4 shrink-0" />
                 </button>
               )}
               <button onClick={() => onNavigate('pos')} className="p-2.5 text-left text-xs bg-m3-surface-low rounded-xl border border-m3-outline-variant/35 hover:bg-m3-primary/10 hover:text-m3-primary transition-all flex justify-between items-center cursor-pointer">
-                <span className="font-bold">🛒 Point-of-Sale Checkout</span>
+                <span className="font-bold">Point-of-Sale Checkout</span>
                 <ArrowUpRight className="h-4 w-4 shrink-0" />
               </button>
               <button onClick={() => onNavigate('shift')} className="p-2.5 text-left text-xs bg-m3-surface-low rounded-xl border border-m3-outline-variant/35 hover:bg-m3-primary/10 hover:text-m3-primary transition-all flex justify-between items-center cursor-pointer">
-                <span className="font-bold">🔒 Cashier Shift Drawers</span>
+                <span className="font-bold">Cashier Shift Drawers</span>
                 <ArrowUpRight className="h-4 w-4 shrink-0" />
               </button>
             </div>

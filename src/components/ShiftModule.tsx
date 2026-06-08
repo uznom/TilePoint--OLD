@@ -55,7 +55,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
     e.preventDefault();
     const stVal = parseFloat(startCashInput) || 0;
     openShift(stVal);
-    showToast(`🟢 Shift drawer opened successfully. Starting cash: ₱${stVal.toFixed(2)}`);
+    showToast(`Shift drawer opened successfully. Starting cash: ₱${stVal.toFixed(2)}`);
   };
 
   const handleCloseLocalShift = (e: React.FormEvent) => {
@@ -63,7 +63,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
     const endingVal = parseFloat(closingCashInput) || 0;
     closeShift(endingVal);
     setClosingCashInput('');
-    showToast(`🔒 Shift closed successfully. Financial logs synchronized.`);
+    showToast(`Shift closed successfully. Financial logs synchronized.`);
   };
 
   return (

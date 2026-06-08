@@ -67,7 +67,7 @@ export const ArchitectureModule: React.FC = () => {
     if (!mode) return;
 
     if (mode !== 'seeds' && confirmStep.inputVal.trim().toUpperCase() !== 'TRUNCATE') {
-      showToast('⚠️ Mismatch: Please enter the exact word "TRUNCATE" to proceed.');
+      showToast('Mismatch: Please enter the exact word "TRUNCATE" to proceed.');
       return;
     }
 
@@ -75,14 +75,14 @@ export const ArchitectureModule: React.FC = () => {
       truncateDatabase(mode);
       setConfirmStep({ mode: null, inputVal: '' });
       if (mode === 'seeds') {
-        showToast('🟢 Success: Standard database schemas & system seed data re-populated!');
+        showToast('Success: Standard database schemas & system seed data re-populated!');
       } else if (mode === 'all') {
-        showToast('🔥 Purge Complete: Database completely truncated to blank slate!');
+        showToast('Purge Complete: Database completely truncated to blank slate!');
       } else {
-        showToast('🧹 Purge Complete: All transactions cleared. Product designs preserved.');
+        showToast('Purge Complete: All transactions cleared. Product designs preserved.');
       }
     } catch (err) {
-      showToast('❌ DB Engine Exception: Truncation pipeline error.');
+      showToast('DB Engine Exception: Truncation pipeline error.');
     }
   };
   const [customTables, setCustomTables] = useState<TableSchema[]>([
@@ -324,7 +324,7 @@ export const ArchitectureModule: React.FC = () => {
                 : 'text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/10'
             }`}
           >
-            ⚙️ DB Maintenance
+            DB Maintenance
           </button>
         </div>
       </div>
@@ -517,45 +517,45 @@ export const ArchitectureModule: React.FC = () => {
                 <tbody className="divide-y divide-m3-outline-variant/10 font-bold">
                   <tr>
                     <td className="py-3 px-2 text-m3-on-surface">Manage Employees Profile / Setup</td>
-                    <td className="py-3 text-center text-emerald-500">✅ Authorized</td>
-                    <td className="py-3 text-center text-red-500">🚫 Restricted</td>
-                    <td className="py-3 text-center text-red-500">🚫 Restricted</td>
-                    <td className="py-3 text-center text-red-500">🚫 Restricted</td>
+                    <td className="py-3 text-center text-emerald-500">Authorized</td>
+                    <td className="py-3 text-center text-red-500">Restricted</td>
+                    <td className="py-3 text-center text-red-500">Restricted</td>
+                    <td className="py-3 text-center text-red-500">Restricted</td>
                   </tr>
                   <tr>
                     <td className="py-3 px-2 text-m3-on-surface">Edit Store Outlet Registers</td>
-                    <td className="py-3 text-center text-emerald-500">✅ Authorized</td>
-                    <td className="py-3 text-center text-red-500">🚫 Restricted</td>
-                    <td className="py-3 text-center text-red-500">🚫 Restricted</td>
-                    <td className="py-3 text-center text-red-500">🚫 Restricted</td>
+                    <td className="py-3 text-center text-emerald-500">Authorized</td>
+                    <td className="py-3 text-center text-red-500">Restricted</td>
+                    <td className="py-3 text-center text-red-500">Restricted</td>
+                    <td className="py-3 text-center text-red-500">Restricted</td>
                   </tr>
                   <tr>
                     <td className="py-3 px-2 text-m3-on-surface">Procurement Approval / Order Signing</td>
-                    <td className="py-3 text-center text-emerald-500">✅ Authorized</td>
-                    <td className="py-3 text-center text-emerald-500">✅ Authorized</td>
-                    <td className="py-3 text-center text-red-500">🚫 Restricted</td>
-                    <td className="py-3 text-center text-red-500">🚫 Restricted</td>
+                    <td className="py-3 text-center text-emerald-500">Authorized</td>
+                    <td className="py-3 text-center text-emerald-500">Authorized</td>
+                    <td className="py-3 text-center text-red-500">Restricted</td>
+                    <td className="py-3 text-center text-red-500">Restricted</td>
                   </tr>
                   <tr>
                     <td className="py-3 px-2 text-m3-on-surface">Initiate Daily Cash Drawers Shift</td>
-                    <td className="py-3 text-center text-emerald-500">✅ Authorized</td>
-                    <td className="py-3 text-center text-emerald-500">✅ Authorized</td>
-                    <td className="py-3 text-center text-emerald-500">✅ Log In Active</td>
-                    <td className="py-3 text-center text-red-500">🚫 Restricted</td>
+                    <td className="py-3 text-center text-emerald-500">Authorized</td>
+                    <td className="py-3 text-center text-emerald-500">Authorized</td>
+                    <td className="py-3 text-center text-emerald-500">Log In Active</td>
+                    <td className="py-3 text-center text-red-500">Restricted</td>
                   </tr>
                   <tr>
                     <td className="py-3 px-2 text-m3-on-surface">Sales Terminal Bill Checkout Mode</td>
-                    <td className="py-3 text-center text-emerald-500">✅ Authorized</td>
-                    <td className="py-3 text-center text-emerald-500">✅ Authorized</td>
-                    <td className="py-3 text-center text-emerald-500">✅ Checkout active</td>
-                    <td className="py-3 text-center text-red-500">🚫 Restricted (Staff Blocked)</td>
+                    <td className="py-3 text-center text-emerald-500">Authorized</td>
+                    <td className="py-3 text-center text-emerald-500">Authorized</td>
+                    <td className="py-3 text-center text-emerald-500">Checkout active</td>
+                    <td className="py-3 text-center text-red-500">Restricted (Staff Blocked)</td>
                   </tr>
                   <tr>
                     <td className="py-3 px-2 text-m3-on-surface">Warehouse Stock Counts & Movements</td>
-                    <td className="py-3 text-center text-emerald-500">✅ Authorized</td>
-                    <td className="py-3 text-center text-emerald-500">✅ Authorized</td>
-                    <td className="py-3 text-center text-emerald-500">✅ Authorized</td>
-                    <td className="py-3 text-center text-emerald-500">✅ Stock-checking Floor</td>
+                    <td className="py-3 text-center text-emerald-500">Authorized</td>
+                    <td className="py-3 text-center text-emerald-500">Authorized</td>
+                    <td className="py-3 text-center text-emerald-500">Authorized</td>
+                    <td className="py-3 text-center text-emerald-500">Stock-checking Floor</td>
                   </tr>
                 </tbody>
               </table>
@@ -870,8 +870,8 @@ export const ArchitectureModule: React.FC = () => {
               {/* Card 1: Truncate All Transactions */}
               <div className="p-5 rounded-[24px] border border-m3-outline-variant/20 hover:border-m3-primary/30 transition-all bg-m3-surface-low/50 text-left flex flex-col justify-between">
                 <div className="space-y-2">
-                  <div className="h-9 w-9 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold">
-                    🧹
+                  <div className="h-9 w-9 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                    <Trash2 className="h-5 w-5" />
                   </div>
                   <h4 className="text-sm font-black text-white leading-tight uppercase font-sans">
                     Purge Transactions
@@ -892,8 +892,8 @@ export const ArchitectureModule: React.FC = () => {
               {/* Card 2: Factory Deep Reset */}
               <div className="p-5 rounded-[24px] border border-m3-outline-variant/20 hover:border-m3-primary/30 transition-all bg-m3-surface-low/50 text-left flex flex-col justify-between">
                 <div className="space-y-2">
-                  <div className="h-9 w-9 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center font-bold">
-                    🔥
+                  <div className="h-9 w-9 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center">
+                    <Flame className="h-5 w-5" />
                   </div>
                   <h4 className="text-sm font-black text-white leading-tight uppercase font-sans">
                     Deep Blank Slate Reset
@@ -914,8 +914,8 @@ export const ArchitectureModule: React.FC = () => {
               {/* Card 3: Restore Seeds */}
               <div className="p-5 rounded-[24px] border border-m3-outline-variant/20 hover:border-m3-primary/30 transition-all bg-m3-surface-low/50 text-left flex flex-col justify-between">
                 <div className="space-y-2">
-                  <div className="h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-bold">
-                    🚀
+                  <div className="h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                    <Database className="h-5 w-5" />
                   </div>
                   <h4 className="text-sm font-black text-white leading-tight uppercase font-sans">
                     Reseed Seed Datasets
@@ -940,7 +940,7 @@ export const ArchitectureModule: React.FC = () => {
             <div className="m3-card border-rose-500/30 bg-rose-500/5 shadow-2xl p-6 text-left space-y-4 animate-fade-in">
               <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-2">
                 <h4 className="text-xs font-black uppercase text-rose-400 font-mono tracking-wider flex items-center gap-2">
-                  🛡️ Security Check required to confirm truncate
+                  Security Check required to confirm truncate
                 </h4>
                 <button 
                   onClick={() => setConfirmStep({ mode: null, inputVal: '' })} 
@@ -979,7 +979,7 @@ export const ArchitectureModule: React.FC = () => {
                     Absolutely all stored values in local device storage cache under these matrices will be destroyed.
                   </p>
                   <p className="text-[11px] text-red-300 font-extrabold uppercase tracking-wide">
-                    ⚠️ To authorize this destructive action, please type the word <strong className="text-white font-black underline bg-rose-950 px-2.5 py-1 rounded">TRUNCATE</strong> below:
+                    To authorize this destructive action, please type the word <strong className="text-white font-black underline bg-rose-950 px-2.5 py-1 rounded">TRUNCATE</strong> below:
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3">
                     <input

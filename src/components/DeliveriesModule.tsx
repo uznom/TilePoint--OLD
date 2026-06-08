@@ -155,13 +155,13 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
   // Lifecycle execution triggers
   const handlePackCargo = (id: string) => {
     updateDeliveryStatus(id, 'Packed', 'Items catalog packaged and prepared at logistics dispatch deck.');
-    triggerToast('🟢 Cargo status updated to Packed.');
+    triggerToast('Cargo status updated to Packed.');
   };
 
   const handleAssignPersonnelSubmit = (e: React.FormEvent, id: string) => {
     e.preventDefault();
     if (!assignTruck.trim() || !assignDriver.trim()) {
-      triggerToast('⚠️ Truck plate number and Driver pilot are required!');
+      triggerToast('Truck plate number and Driver pilot are required!');
       return;
     }
     assignDeliveryPersonnel(id, assignTruck.trim(), assignDriver.trim(), assignHelper.trim());
@@ -169,12 +169,12 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
     setAssignTruck('');
     setAssignDriver('');
     setAssignHelper('');
-    triggerToast('🚚 Delivery personnel assigned and scheduled.');
+    triggerToast('Delivery personnel assigned and scheduled.');
   };
 
   const handleDispatchTransit = (id: string) => {
     updateDeliveryStatus(id, 'Out For Delivery', 'Cargo dispatched out of branch warehouse gate.');
-    triggerToast('🚀 Truck marked in transit (Out for Delivery!).');
+    triggerToast('Truck marked in transit (Out for Delivery!).');
   };
 
   const handleCompleteSubmit = (e: React.FormEvent, id: string) => {
@@ -188,19 +188,19 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
     setShowCompleteForm(false);
     setReceiverName('');
     setProofPhotoUrl('');
-    triggerToast('✅ Shipment completed and archived.');
+    triggerToast('Shipment completed and archived.');
   };
 
   const handleFailSubmit = (e: React.FormEvent, id: string) => {
     e.preventDefault();
     if (!failReason.trim()) {
-      triggerToast('⚠️ Fail remarks reason is required!');
+      triggerToast('Fail remarks reason is required!');
       return;
     }
     updateDeliveryStatus(id, 'Failed Delivery', `FAILED REASON: ${failReason.trim()}`);
     setShowFailForm(false);
     setFailReason('');
-    triggerToast('❌ Delivery flagged as Failed Shipment.');
+    triggerToast('Delivery flagged as Failed Shipment.');
   };
 
   return (
@@ -229,10 +229,10 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
               onChange={e => setSelectedBranchId(e.target.value)}
               className="text-xs bg-m3-surface text-m3-on-surface font-black uppercase tracking-wide border-0 border-b border-m3-outline-variant/40 focus:border-m3-primary focus:outline-none py-1 px-2.5 rounded-lg cursor-pointer"
             >
-              <option value="ALL">🏢 ALL OUTLETS DIRECTORY</option>
+              <option value="ALL">ALL OUTLETS DIRECTORY</option>
               {branches.map(b => (
                 <option key={b.id} value={b.id}>
-                  📍 {b.name.toUpperCase()}
+                  {b.name.toUpperCase()}
                 </option>
               ))}
             </select>
@@ -243,7 +243,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
       {/* TOAST PANEL BAR */}
       {toastMessage && (
         <div className="bg-m3-tertiary-container border border-m3-tertiary/25 text-m3-on-tertiary-container p-3 px-5 rounded-2xl text-xs font-black shadow-lg animate-fade-in flex items-center justify-between">
-          <span>📦 {toastMessage}</span>
+          <span>{toastMessage}</span>
           <button onClick={() => setToastMessage(null)} className="text-[10px] uppercase underline opacity-70 cursor-pointer pl-4">Dismiss</button>
         </div>
       )}
@@ -299,12 +299,12 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
         {/* Status Tab buttons */}
         <div className="flex flex-wrap gap-1.5 self-start w-full md:w-auto">
           {[
-            { tag: 'All', count: stats.total, label: '📋 All cargo' },
-            { tag: 'Pending', count: stats.pending, label: '📦 Unscheduled' },
-            { tag: 'Scheduled', count: stats.scheduled, label: '🚚 Scheduled' },
-            { tag: 'Transit', count: stats.transit, label: '🚀 In Transit' },
-            { tag: 'Delivered', count: stats.completed, label: '✅ Delivered' },
-            { tag: 'Failed', count: stats.failed, label: '⚠️ Failed/Cancel' }
+            { tag: 'All', count: stats.total, label: 'All cargo' },
+            { tag: 'Pending', count: stats.pending, label: 'Unscheduled' },
+            { tag: 'Scheduled', count: stats.scheduled, label: 'Scheduled' },
+            { tag: 'Transit', count: stats.transit, label: 'In Transit' },
+            { tag: 'Delivered', count: stats.completed, label: 'Delivered' },
+            { tag: 'Failed', count: stats.failed, label: 'Failed/Cancel' }
           ].map(tab => (
             <button
               key={tab.tag}
@@ -403,7 +403,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
                           {d.driver ? (
                             <div>
                               <span className="text-m3-primary ">{d.truck}</span>
-                              <span className="text-zinc-500 block text-[9.5px]">👨‍✈️ {d.driver}</span>
+                              <span className="text-zinc-500 block text-[9.5px]">Driver: {d.driver}</span>
                             </div>
                           ) : (
                             <span className="text-zinc-500 block italic leading-none text-[10px]">Unscheduled</span>
@@ -425,7 +425,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
                               ? 'bg-rose-550/10 border-rose-500/20 text-rose-400'
                               : 'bg-zinc-550/10 border-zinc-500/20 text-zinc-400'
                           }`}>
-                            {d.status === 'Out For Delivery' ? '⚡ IN TRANSIT' : d.status}
+                            {d.status === 'Out For Delivery' ? 'IN TRANSIT' : d.status}
                           </span>
                         </td>
                       </tr>
@@ -606,7 +606,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
                   </div>
                 ) : (
                   <div className="py-2 text-center text-[10px] text-zinc-500 font-extrabold italic select-none">
-                    ⚠️ No driver pilot or freight carrier plate assigned yet.
+                    No driver pilot or freight carrier plate assigned yet.
                   </div>
                 )}
               </div>
@@ -643,7 +643,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
                 </div>
               )}
 
-              {/* ⚡ ACTIVE LIFECYCLE ACTION CONTROL PANEL FOR CASHIERS & WAREHOUSE MANAGERS */}
+              {/* ACTIVE LIFECYCLE ACTION CONTROL PANEL FOR CASHIERS & WAREHOUSE MANAGERS */}
               {activeDelivery.status !== 'Delivered' && activeDelivery.status !== 'Cancelled' && (
                 <div className="border-t border-m3-outline-variant/15 pt-4 space-y-2 mt-2">
                   <span className="text-[9px] font-black text-m3-primary uppercase tracking-widest block text-left">
@@ -893,7 +893,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
             </div>
           ) : (
             <div className="border border-dashed border-m3-outline-variant/30 rounded-[28px] bg-m3-surface-low/50 py-16 px-4 text-center text-xs text-zinc-500 font-bold font-mono p-5 h-full flex flex-col justify-center items-center gap-3">
-              <span className="text-zinc-400 text-2xl animate-bounce">🚚</span>
+              <Truck className="h-8 w-8 text-zinc-400 animate-bounce" />
               <span className="leading-relaxed">Click any delivery record on the left grid panel to view physical destination, assignment forms, and status logs.</span>
             </div>
           )}

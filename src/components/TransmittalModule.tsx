@@ -74,7 +74,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
 
       setPayloadText(JSON.stringify(packet, null, 2));
       setNotes(`Automated snapshot compilation: ${filteredStocks.length} stocks, ${branchSales.length} sales records.`);
-      showToast('🟢 Full core database of branch compiled into snapshot packet!');
+      showToast('Full core database of branch compiled into snapshot packet!');
     } else if (docType === 'Daily Sales Report') {
       const branchSales = sales.filter(s => s.branchId === currentBranchId && !s.isDeleted);
       const totalAmount = branchSales.reduce((sum, s) => sum + s.grandTotal, 0);
@@ -90,7 +90,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
       };
       setPayloadText(JSON.stringify(packet, null, 2));
       setNotes(`Daily sales ledger report: ${branchSales.length} transactions, total: ₱${totalAmount.toLocaleString()}`);
-      showToast('🟢 Branch Sales ledger record compiled.');
+      showToast('Branch Sales ledger record compiled.');
     } else if (docType === 'Inventory Count Report') {
       const filteredStocks = branchStock.filter(bs => bs.branchId === currentBranchId).map(bs => {
         const p = products.find(prod => prod.id === bs.productId);
@@ -110,7 +110,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
       };
       setPayloadText(JSON.stringify(packet, null, 2));
       setNotes(`Stock count Audit: verified ${filteredStocks.length} physical line levels.`);
-      showToast('🟢 Core branch stock allocations compiled.');
+      showToast('Core branch stock allocations compiled.');
     } else {
       const packet = {
         compiledAt: new Date().toISOString(),
@@ -120,7 +120,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
         docCategory: docType
       };
       setPayloadText(JSON.stringify(packet, null, 2));
-      showToast('🟢 Base digital cargo packet compiled.');
+      showToast('Base digital cargo packet compiled.');
     }
   };
 
@@ -151,7 +151,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
     try {
       JSON.parse(payloadText);
     } catch (err) {
-      showToast('❌ JSON Syntax Error: Payload must be properly structured.');
+      showToast('JSON Syntax Error: Payload must be properly structured.');
       return;
     }
 
@@ -161,7 +161,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
     setNotes('');
     setPayloadText('{\n  "totalSales": 35400,\n  "discrepancies": 0,\n  "countVerified": true\n}');
     setShowModal(false);
-    showToast('🟢 Ledger packet dispatched to matching destination branch.');
+    showToast('Ledger packet dispatched to matching destination branch.');
   };
 
   const handleExportTransmittal = (t: Transmittal) => {
@@ -182,7 +182,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
     dlAnchorElem.setAttribute('download', `TilePoint_Transmittal_${t.id}.json`);
     dlAnchorElem.click();
     addAuditLog('TRANSMITTAL_EXPORT', `Downloaded transmittal slip JSON for ${t.id}`, 'Transmittals', t.id);
-    showToast(`💾 Slip downloaded to TilePoint_Transmittal_${t.id}.json successfully.`);
+    showToast(`Slip downloaded to TilePoint_Transmittal_${t.id}.json successfully.`);
   };
 
   const handleOpenImport = () => {
@@ -192,7 +192,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
 
   const executeLocalImport = () => {
     if (!rawImportText.trim()) {
-      showToast('❌ Please paste a valid JSON transmittal packet.');
+      showToast('Please paste a valid JSON transmittal packet.');
       return;
     }
 
@@ -207,12 +207,12 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
           `Imported cargo: ${parsed.notes || 'No description'}. (Origin: ${parsed.sentFrom})`
         );
         setShowImportModal(false);
-        showToast('🟢 Transmittal slip parsed, cataloged, and approved.');
+        showToast('Transmittal slip parsed, cataloged, and approved.');
       } else {
-        showToast('❌ Format Mismatch: Ledger packet lacks transmittal identification schema.');
+        showToast('Format Mismatch: Ledger packet lacks transmittal identification schema.');
       }
     } catch (err) {
-      showToast('❌ Syntax Error: Failed to parse raw text packet contents.');
+      showToast('Syntax Error: Failed to parse raw text packet contents.');
     }
   };
 
@@ -235,7 +235,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
             Under standard distribution parameters, only the <strong className="font-black text-amber-500">Main HQ Branch</strong> or dynamically designated <strong className="text-emerald-500 font-bold">Distribution Hubs</strong> are authorized to dispatch or import digital transmittals.
           </p>
           <div className="pt-2 text-[10px] font-bold text-zinc-500 font-mono">
-            💡 Instruct the System Administrator to designate this location as a Distribution Hub in Branch settings.
+            Instruct the System Administrator to designate this location as a Distribution Hub in Branch settings.
           </div>
         </div>
       </div>
@@ -381,7 +381,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
                   className="bg-m3-primary/10 text-m3-primary hover:bg-m3-primary/25 border border-m3-primary/20 px-2 py-0.5 rounded text-[9px] font-black uppercase transition-colors"
                   title="Automatically snapshot and wrap core matching branch records into standard JSON ledger schema"
                 >
-                  ⚡ Pull Live Data
+                  Pull Live Data
                 </button>
               </div>
               <select
@@ -508,7 +508,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
                   onClick={() => {
                     updateTransmittalStatus(activeTrans.id, 'Approved');
                     setActiveTrans(null);
-                    showToast('🟢 Inter-branch document verified and authenticated successfully.');
+                    showToast('Inter-branch document verified and authenticated successfully.');
                   }}
                   className="w-full py-2.5 font-bold uppercase tracking-wider bg-m3-tertiary text-m3-surface rounded-full text-xs cursor-pointer flex items-center justify-center gap-1 hover:bg-m3-tertiary/90 transition-colors"
                 >
