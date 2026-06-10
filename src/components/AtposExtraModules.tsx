@@ -364,7 +364,7 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
           <motion.div 
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="w-full max-w-sm bg-white text-zinc-900 rounded-2xl shadow-2xl p-5 font-mono text-xs border border-zinc-200 relative"
+            className="w-full max-w-sm bg-white text-zinc-900 rounded-2xl shadow-2xl p-5 font-mono text-xs border border-zinc-200 relative bir-receipt-container"
           >
             <div className="text-center pb-3 border-b-2 border-dashed border-zinc-300">
               <h3 className="font-extrabold text-sm tracking-wide">TILEPOINT CLOUD</h3>
@@ -411,7 +411,7 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
               </div>
               <p className="text-[9px] text-zinc-400">BIR Permitted System - Official Receipt copy.</p>
               
-              <div className="flex gap-2">
+              <div className="flex gap-2 bir-report-no-print">
                 <button 
                   onClick={() => window.print()}
                   className="flex-1 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 font-bold transition flex items-center justify-center gap-1 cursor-pointer"
@@ -1235,12 +1235,12 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
 
             {/* BIR report Tables */}
             {activeSubTab !== 'bir-xz' && (
-              <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl overflow-hidden shadow-sm space-y-4">
+              <div className="bir-report-container bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl overflow-hidden shadow-sm space-y-4">
                 <div className="flex justify-between items-center bg-m3-surface-high/30 p-3 rounded-xl border border-m3-outline-variant/10 font-sans text-xs">
                   <span className="font-extrabold text-m3-primary uppercase font-mono tracking-wider">
                     {activeSubTab.replace('bir-', '').replace('-', ' ').toUpperCase()} LEDGER SHEETS
                   </span>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 bir-report-no-print">
                     <button onClick={() => window.print()} className="py-1 px-2 text-[11px] bg-zinc-200 dark:bg-zinc-800 text-m3-on-surface rounded font-bold hover:bg-zinc-300 transition flex items-center gap-1 cursor-pointer border-0">
                       <Printer className="h-3.5 w-3.5" /> Print Sheets
                     </button>

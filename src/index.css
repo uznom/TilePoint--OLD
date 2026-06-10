@@ -608,4 +608,103 @@ html.accessibility-enhanced-outlines *:focus {
   box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.5) !important;
 }
 
+/* 5. Clean, Professional @media print System for BIR ledger compliance sheets & slips */
+@media print {
+  /* Hide the entire system interface (sidebars, dialog backdrops, headers, main wrappers, etc.) */
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+  
+  /* Selectively make only the targeted BIR reports or dynamic slip modals visible */
+  .bir-report-container, 
+  .bir-report-container *,
+  .bir-receipt-container,
+  .bir-receipt-container * {
+    visibility: visible !important;
+  }
+  
+  /* Set exact positioning for the printable report/receipt to avoid blank margins */
+  .bir-report-container {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11px !important;
+  }
+
+  .bir-receipt-container {
+    position: absolute !important;
+    left: 50% !important;
+    top: 1cm !important;
+    transform: translateX(-50%) !important;
+    width: 80mm !important; /* Standard POS thermal slip width */
+    max-width: 80mm !important;
+    margin: 0 auto !important;
+    padding: 10px !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Force background colors to print beautifully, disable dark mode color adaptations */
+  html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    height: auto !important;
+  }
+
+  /* Completely eliminate non-printable navigation, download, and trigger buttons */
+  .bir-report-no-print,
+  .bir-report-no-print * {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Optimize layout for maximum page width */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 10px !important;
+    background: #ffffff !important;
+  }
+
+  th {
+    border-bottom: 2px solid #333333 !important;
+    background: #f4f4f4 !important;
+    color: #000000 !important;
+    font-weight: bold !important;
+  }
+
+  td {
+    border-bottom: 1px solid #cccccc !important;
+    color: #000000 !important;
+  }
+
+  /* Ensure standard text colors render black on white print */
+  .text-m3-on-surface, .text-m3-on-surface-variant, .text-zinc-400, .text-emerald-500, .text-amber-500 {
+    color: #000000 !important;
+  }
+
+  @page {
+    margin: 1.5cm;
+    size: portrait;
+  }
+}
+
+
 
