@@ -143,7 +143,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     createStockTransfer,
     updateStockTransferStatus,
     createSupplier,
-    triggerSystemProcessing
+    triggerSystemProcessing,
+    createManualLedgerEntry
   } = useDb();
 
   // Primary navigation sub-tabs: "catalog" | "movements" | "transfers" | "ledger" | "import"
@@ -192,8 +193,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   // Pagination State for lists inside Inventory
   const [prodPage, setProdPage] = useState(1);
   const [ledgerPage, setLedgerPage] = useState(1);
-  const [prodsPerPage, setProdsPerPage] = useState<number>(50);
-  const [ledgerPerPage, setLedgerPerPage] = useState<number>(100);
+  const [prodsPerPage, setProdsPerPage] = useState<number>(5);
+  const [ledgerPerPage, setLedgerPerPage] = useState<number>(10);
 
   // Reset prodPage when filters or page size changes
   useEffect(() => {
@@ -248,6 +249,15 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   const [adjustType, setAdjustType] = useState<'ADD' | 'SUB'>('ADD');
   const [adjustVal, setAdjustVal] = useState<number>(10);
   const [adjustReason, setAdjustReason] = useState('Weekly stock-take variance reconciliation');
+
+  // Manual Stock Ledger entry form state
+  const [showManualLedgerModal, setShowManualLedgerModal] = useState(false);
+  const [manualLedgerProductId, setManualLedgerProductId] = useState('');
+  const [manualLedgerBranchId, setManualLedgerBranchId] = useState('B1');
+  const [manualLedgerType, setManualLedgerType] = useState<'IN' | 'OUT' | 'ADJUST' | 'TRANSFER' | 'PURCHASE' | 'SALE'>('ADJUST');
+  const [manualLedgerQty, setManualLedgerQty] = useState<number>(10);
+  const [manualLedgerRefNo, setManualLedgerRefNo] = useState('');
+  const [manualLedgerRemarks, setManualLedgerRemarks] = useState('');
 
   // Barcode & QR Label viewer state
   const [showCodesModal, setShowCodesModal] = useState(false);
@@ -689,6 +699,48 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     updateProduct(adjustProductId, { stockQuantity: finalNewQty }, adjustReason);
     showToast(`Stock level updated. Registered stock action log: ${finalChange > 0 ? '+' : ''}${finalChange}`);
     setShowAdjustModal(false);
+  };
+
+  const handleManualLedgerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualLedgerProductId) {
+      showToast('Error: Please select a target product.');
+      return;
+    }
+    if (manualLedgerQty <= 0) {
+      showToast('Error: Quantity must be greater than zero.');
+      return;
+    }
+
+    try {
+      await triggerSystemProcessing(
+        'Processing Manual Ledger Double-Entry...',
+        1400,
+        'db',
+        undefined,
+        'Validating SKU constraints, preparing ledgers, and adjusting inventories...'
+      );
+
+      createManualLedgerEntry({
+        productId: manualLedgerProductId,
+        branchId: manualLedgerBranchId,
+        movementType: manualLedgerType,
+        quantity: manualLedgerQty,
+        referenceNo: manualLedgerRefNo,
+        remarks: manualLedgerRemarks
+      });
+
+      showToast('Success: Manual ledger entry registered and stock levels synced!');
+      setShowManualLedgerModal(false);
+      
+      // Reset form fields
+      setManualLedgerProductId('');
+      setManualLedgerRefNo('');
+      setManualLedgerRemarks('');
+      setManualLedgerQty(10);
+    } catch (err) {
+      showToast('Error: Failed to register manual ledger entry.');
+    }
   };
 
   // Opening the labels viewer
@@ -1989,6 +2041,33 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
             {!collapsedSections.ledger && (
               <>
+                <div className="p-4 bg-m3-surface border-b border-m3-outline-variant/15 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest block font-mono">System Ledger Maintenance</span>
+                    <p className="text-xs text-m3-on-surface-variant font-medium">Inject custom debit/credit movements directly into the chronological double-entry ledger database.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Pre-fill defaults
+                      const firstProduct = products.filter(p => !p.isDeleted)[0];
+                      if (firstProduct) {
+                        setManualLedgerProductId(firstProduct.id);
+                      }
+                      setManualLedgerQty(10);
+                      setManualLedgerType('ADJUST');
+                      setManualLedgerRefNo(`MAN-${Date.now().toString().slice(-6)}`);
+                      setManualLedgerRemarks('');
+                      setShowManualLedgerModal(true);
+                    }}
+                    className="flex items-center gap-1.5 bg-m3-primary hover:bg-m3-primary/95 text-xs font-black uppercase tracking-wider text-m3-on-primary px-4 py-2.5 rounded-2xl cursor-pointer shadow-md transition-all shrink-0 hover:scale-[1.02] active:scale-95 border-0"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Insert Ledger Entry</span>
+                  </button>
+                </div>
+
                 <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-m3-outline-variant">
                   <table className="w-full text-left border-collapse min-w-[900px]">
                     <thead>
@@ -2833,6 +2912,145 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                 className="m3-btn-primary px-5 py-2.5 text-xs shadow-md border"
               >
                 Execute Stock Correction
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* MODAL: MANUAL STOCK LEDGER ENTRY DIALOG */}
+      {showManualLedgerModal && (
+        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm shadow-xl" onClick={() => setShowManualLedgerModal(false)} />
+          <form
+            onSubmit={handleManualLedgerSubmit}
+            className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-[32px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4"
+          >
+            <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-3">
+              <h3 className="text-sm font-black text-m3-primary uppercase tracking-wider flex items-center gap-2">
+                <Sliders className="h-5 w-5" />
+                <span>Insert Manual Stock Ledger Entry</span>
+              </h3>
+              <button type="button" onClick={() => setShowManualLedgerModal(false)} className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full border-0 bg-transparent">
+                <X className="h-4.5 w-4.5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-m3-on-surface-variant font-medium">
+              Create a custom movement to adjust both physical multi-branch inventory tracking registers and cumulative catalog quantities instantly.
+            </p>
+
+            {/* Product selection dropdown */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Select Catalogue Tile</label>
+              <select
+                required
+                value={manualLedgerProductId}
+                onChange={e => setManualLedgerProductId(e.target.value)}
+                className="w-full bg-m3-surface-lowest border border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface rounded-xl focus:outline-none transition-colors font-sans"
+              >
+                <option value="" disabled>-- Choose a product --</option>
+                {products.filter(p => !p.isDeleted).map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.productName} ({p.skuCode || p.id.slice(-6)}) - Current Qty: {p.stockQuantity}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Grid for parameters */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Branch Yard selector */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Impacted Yard / Branch</label>
+                <select
+                  required
+                  value={manualLedgerBranchId}
+                  onChange={e => setManualLedgerBranchId(e.target.value)}
+                  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface rounded-xl focus:outline-none transition-colors font-sans"
+                >
+                  {branches.map(b => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Movement Type */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Movement Ledger Type</label>
+                <select
+                  required
+                  value={manualLedgerType}
+                  onChange={e => setManualLedgerType(e.target.value as any)}
+                  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface rounded-xl focus:outline-none transition-colors font-sans font-bold"
+                >
+                  <option value="ADJUST">ADJUST (Signed variance +/-)</option>
+                  <option value="IN">IN (Receive to stock +)</option>
+                  <option value="OUT">OUT (Issue out / breakages -)</option>
+                  <option value="PURCHASE">PURCHASE (Direct replenishment +)</option>
+                  <option value="SALE">SALE (Floor sale issue out -)</option>
+                  <option value="TRANSFER">TRANSFER (Signed Inter-branch +/-)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Quantity */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Quantity Delta count</label>
+                <input
+                  type="number"
+                  required
+                  min={1}
+                  value={manualLedgerQty}
+                  onChange={e => setManualLedgerQty(Math.max(1, Number(e.target.value)))}
+                  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/35 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-xl font-mono font-bold"
+                />
+                <span className="text-[9px] text-zinc-400 font-mono italic block pt-0.5 pl-1">
+                  Note: IN/PURCHASE adds. OUT/SALE subtracts automatically.
+                </span>
+              </div>
+
+              {/* Reference No */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Reference Code / Ticket ID</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. TKT-YRD-2092"
+                  value={manualLedgerRefNo}
+                  onChange={e => setManualLedgerRefNo(e.target.value)}
+                  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/35 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-xl font-mono font-bold"
+                />
+              </div>
+            </div>
+
+            {/* Remarks / Reason */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Audit Sign-off Remarks</label>
+              <textarea
+                required
+                rows={3}
+                placeholder="Describe why this entry is being manually added (e.g., Audit mismatch on Cebu yard, physical breakage during transport, showroom sample allocation...)"
+                value={manualLedgerRemarks}
+                onChange={e => setManualLedgerRemarks(e.target.value)}
+                className="w-full bg-m3-surface-lowest border border-m3-outline-variant/35 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-xl font-sans italic"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-m3-outline-variant/15 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowManualLedgerModal(false)}
+                className="px-4 py-2.5 text-xs font-black uppercase tracking-wider rounded-full hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors border-0 bg-transparent cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="m3-btn-primary px-5 py-2.5 text-xs shadow-md border cursor-pointer font-black uppercase tracking-wider"
+              >
+                Apply Ledger Movement
               </button>
             </div>
           </form>

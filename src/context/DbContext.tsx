@@ -147,6 +147,14 @@ interface DbContextType {
   stats: SummaryStats;
   addAuditLog: (action: string, description: string, tableAffected: string, recordId: string) => void;
   logManualAdjustment: (productId: string, quantity: number, notes: string) => void;
+  createManualLedgerEntry: (entry: {
+    productId: string;
+    branchId: string;
+    movementType: 'IN' | 'OUT' | 'ADJUST' | 'TRANSFER' | 'PURCHASE' | 'SALE';
+    quantity: number;
+    referenceNo: string;
+    remarks: string;
+  }) => void;
   truncateDatabase: (mode: 'all' | 'transactions' | 'seeds') => void;
 
   // Actions - Branch Sales Reports Transmission
@@ -1578,6 +1586,94 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     setMovements(prev => [newMove, ...prev]);
   };
 
+  const createManualLedgerEntry = (entry: {
+    productId: string;
+    branchId: string;
+    movementType: 'IN' | 'OUT' | 'ADJUST' | 'TRANSFER' | 'PURCHASE' | 'SALE';
+    quantity: number;
+    referenceNo: string;
+    remarks: string;
+  }) => {
+    const prod = products.find(p => p.id === entry.productId);
+    if (!prod) return;
+
+    // Based on movementType, determine sign of the amount
+    let changeValue = entry.quantity;
+    if (['OUT', 'SALE'].includes(entry.movementType)) {
+      changeValue = -Math.abs(entry.quantity);
+    } else if (['IN', 'PURCHASE'].includes(entry.movementType)) {
+      changeValue = Math.abs(entry.quantity);
+    } else {
+      changeValue = entry.quantity; // ADJUST or TRANSFER takes signed change
+    }
+
+    const newLedgerId = `L-MANUAL-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const newEntry: LedgerEntry = {
+      id: newLedgerId,
+      date: new Date().toISOString(),
+      productId: entry.productId,
+      productName: prod.productName,
+      branchId: entry.branchId,
+      movementType: entry.movementType,
+      quantity: changeValue,
+      referenceNo: entry.referenceNo || `MAN-${Date.now().toString().slice(-4)}`,
+      remarks: entry.remarks || 'Manual ledger adjustment'
+    };
+
+    setLedgerEntries(prev => [newEntry, ...prev]);
+
+    setBranchStock(stockList => {
+      const idx = stockList.findIndex(bs => bs.productId === entry.productId && bs.branchId === entry.branchId);
+      if (idx !== -1) {
+        const updated = [...stockList];
+        const nextQty = Math.max(0, updated[idx].quantity + changeValue);
+        updated[idx] = { ...updated[idx], quantity: nextQty };
+        return updated;
+      } else {
+        const nextQty = Math.max(0, changeValue);
+        return [...stockList, {
+          id: `${entry.branchId}_${entry.productId}`,
+          branchId: entry.branchId,
+          productId: entry.productId,
+          quantity: nextQty
+        }];
+      }
+    });
+
+    setProducts(prods => prods.map(p => {
+      if (p.id === entry.productId) {
+        return {
+          ...p,
+          stockQuantity: Math.max(0, p.stockQuantity + changeValue),
+          updatedAt: new Date().toISOString(),
+          updatedBy: currentUser.fullName
+        };
+      }
+      return p;
+    }));
+
+    const newMove: InventoryMovement = {
+      id: `M-MANUAL-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      productId: entry.productId,
+      type: entry.movementType === 'TRANSFER' ? 'TRANSFER' : 'ADJUST',
+      quantity: changeValue,
+      destinationBranchId: entry.branchId,
+      referenceId: newEntry.referenceNo,
+      notes: newEntry.remarks,
+      timestamp: new Date().toISOString(),
+      userId: currentUser.id,
+      username: currentUser.username,
+    };
+    setMovements(prev => [newMove, ...prev]);
+
+    addAuditLog(
+      'LEDGER_INSERT',
+      `Manual catalog double-entry ledger update: ${entry.movementType} mode, quantity delta: ${changeValue} for tile SKU ${prod.productCode} at Branch ${entry.branchId}`,
+      'Products',
+      entry.productId
+    );
+  };
+
   // --- INITIAL POS & INVENTORY SYSTEM SETUP ACTION ---
   const setupSystem = (
     adminData: {
@@ -2879,6 +2975,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         stats,
         addAuditLog,
         logManualAdjustment,
+        createManualLedgerEntry,
         truncateDatabase,
         branchSalesReports,
         transmitSalesReport,
