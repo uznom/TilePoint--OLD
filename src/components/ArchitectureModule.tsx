@@ -41,7 +41,7 @@ interface TableSchema {
 export const ArchitectureModule: React.FC = () => {
   const { auditLogs, addAuditLog, currentUser, truncateDatabase, products, sales, stockTransfers, suppliers } = useDb();
   const [selectedTable, setSelectedTable] = useState<string>('Users');
-  const [activeTab, setActiveTab] = useState<'erd' | 'rbac' | 'topology' | 'checklist' | 'operations'>('operations');
+  const [activeTab, setActiveTab] = useState<'erd' | 'rbac' | 'topology' | 'operations'>('operations');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [confirmStep, setConfirmStep] = useState<{ mode: 'all' | 'transactions' | 'seeds' | null; inputVal: string }>({ mode: null, inputVal: '' });
 
@@ -170,30 +170,6 @@ export const ArchitectureModule: React.FC = () => {
     }
   ]);
 
-  // Checklist of phase 1 deliverables
-  const [checklist, setChecklist] = useState([
-    { id: 1, text: 'Vite + React TS Multi-Branch Enterprise Scaffold', checked: true, desc: 'Foundation workspace configured' },
-    { id: 2, text: 'Offline durability storage Engine (LocalStorage Cache Sync)', checked: true, desc: 'Loss-free device caching configured' },
-    { id: 3, text: 'Custom Color Scheme Integration via Dynamic Theme Tokens', checked: true, desc: 'Adjust styles dynamically with no ovals theme' },
-    { id: 4, text: 'Android 17 Translucency Glossy Backdrop Blurring UI Layers', checked: true, desc: 'Added frosted active glass class styling across views' },
-    { id: 5, text: 'Multi-Branch Tenant Separation Architecture', checked: true, desc: 'Branch Assignment filters dynamic lists and cash records' },
-    { id: 6, text: 'Interactive Role-Based Access controls (RBAC) Switcher', checked: true, desc: 'Simulate Admin, Manager, Cashier, and Staff identities' },
-    { id: 7, text: 'Real-time System Audit Logging Activity Tracker', checked: true, desc: 'Durable logging feed of every simulated operation' }
-  ]);
-
-  // Checklist of phase 2 deliverables (Hardening)
-  const [checklistPhase2, setChecklistPhase2] = useState([
-    { id: 101, text: 'Mandatory List Pagination (Products, Transactions, Ledger)', checked: true, desc: 'Prevents browser/DB overload by fetching in small chunks (e.g., page size 50 or 100)' },
-    { id: 102, text: 'SQL Injection Guard & Parameterized Packet Emulation', checked: true, desc: 'Avoids concatenated parameters inside queries' },
-    { id: 103, text: 'E2EE Password Cipher Handshakes on Account Sign-in', checked: true, desc: 'Secures login credentials using dynamic symmetric payload encryption keys' },
-    { id: 104, text: 'Custom Passphrase Complexity & Multi-tier TTL Disconnects', checked: true, desc: 'Requires uppercase/numbers, enforces 30min-8hr idle sessions' },
-    { id: 105, text: 'Fine-grained RBAC Policy Guard Checks', checked: true, desc: 'Micro-permission verification blocks on checkout and configurations instead of raw role tags' },
-    { id: 106, text: 'Rate Limiting Brute Force DOS Blockers', checked: true, desc: 'Triggers persistent locked-out state for 30s after 3 consecutive failure attempts' },
-    { id: 107, text: 'Double-entry Inventory Ledger & Soft Deletes', checked: true, desc: 'Guarantees trace history anti-tampering by disallowing raw stock edits and hard deletes' },
-    { id: 108, text: 'Incremental Discounts & Capital Approval Workflows', checked: true, desc: 'Requires higher management sign-off for large stock adjustments or high-level checkout price discounts' },
-    { id: 109, text: 'File Upload Extension Whitewash & Storage Bounds Limit', checked: true, desc: 'Restricts image/PDF attachments to 5MB max, sanitizes MIME profiles, randomizes name' }
-  ]);
-
   // SQL code generator based on schemas
   const getSQLString = () => {
     let sql = `-- ==========================================================\n`;
@@ -237,28 +213,6 @@ export const ArchitectureModule: React.FC = () => {
     addAuditLog('SCHEMA_UPDATE', `Added target attribute "${name}" (${type}) to Core Database Table [${tableName}]`);
   };
 
-  const handleToggleChecklist = (id: number) => {
-    setChecklist(prev => prev.map(item => {
-      if (item.id === id) {
-        const nextState = !item.checked;
-        addAuditLog('DELIVERABLE_TOGGLE', `${nextState ? 'Completed' : 'Reset'} Phase 1 item: ${item.text}`);
-        return { ...item, checked: nextState };
-      }
-      return item;
-    }));
-  };
-
-  const handleToggleChecklistPhase2 = (id: number) => {
-    setChecklistPhase2(prev => prev.map(item => {
-      if (item.id === id) {
-        const nextState = !item.checked;
-        addAuditLog('DELIVERABLE_TOGGLE', `${nextState ? 'Completed' : 'Reset'} Phase 2 item: ${item.text}`);
-        return { ...item, checked: nextState };
-      }
-      return item;
-    }));
-  };
-
   const selectedTableData = customTables.find(t => t.name === selectedTable);
 
   return (
@@ -270,7 +224,7 @@ export const ArchitectureModule: React.FC = () => {
             <Database className="h-6 w-6 text-m3-primary" /> System Architecture & ERD Studio
           </h1>
           <p className="text-xs text-m3-on-surface-variant mt-1">
-            Browse and configure Core Tables, visual ERD relationships, dynamic RBAC matrices, and Phase 1 deliverables status.
+            Browse and configure Core Tables, visual ERD relationships, and dynamic RBAC matrices.
           </p>
         </div>
 
@@ -305,16 +259,6 @@ export const ArchitectureModule: React.FC = () => {
             }`}
           >
             Network Topology
-          </button>
-          <button
-            onClick={() => setActiveTab('checklist')}
-            className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
-              activeTab === 'checklist'
-                ? 'bg-m3-primary text-m3-on-primary shadow-sm'
-                : 'text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/10'
-            }`}
-          >
-            System Deliverables Map
           </button>
           <button
             onClick={() => setActiveTab('operations')}
@@ -685,123 +629,6 @@ export const ArchitectureModule: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* PHASE 1 & 2 DELIVERABLES PROGRESS TAB (BENTO DESIGN) */}
-      {activeTab === 'checklist' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            
-            {/* COLUMN 1: PHASE 1 FOUNDATIONAL INFRASTRUCTURE */}
-            <div className="m3-card shadow-sm space-y-4">
-              <div className="border-b border-m3-outline-variant/15 pb-3">
-                <span className="text-[9.5px] font-mono font-black uppercase text-zinc-400 bg-m3-surface-low border border-m3-outline-variant/20 px-2 py-0.5 rounded">
-                  Phase 1 Architecture
-                </span>
-                <h3 className="text-sm font-black tracking-tight text-m3-primary mt-2">
-                  Foundational Enterprise POS Scaffold
-                </h3>
-                <p className="text-xs text-m3-on-surface-variant mt-1">
-                  Core logistics engine, multi-device off-grid local caching, and high-contrast Material design theme layout configurations.
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                {checklist.map(item => (
-                  <div
-                    key={item.id}
-                    onClick={() => handleToggleChecklist(item.id)}
-                    className={`p-3.5 rounded-xl border flex items-start gap-3.5 cursor-pointer transition-all select-none ${
-                      item.checked
-                        ? 'bg-m3-primary/10 border-m3-primary/50 text-m3-on-surface'
-                        : 'bg-m3-surface-low border-m3-outline-variant/15 hover:bg-m3-primary/10 text-m3-on-surface-variant'
-                    }`}
-                  >
-                    <div className="pt-0.5 shrink-0">
-                      <CheckCircle2 className={`h-4.5 w-4.5 ${item.checked ? 'text-m3-primary fill-m3-primary/10' : 'text-m3-outline-variant/60'}`} />
-                    </div>
-                    <div>
-                      <h4 className={`text-xs font-black uppercase font-mono tracking-wider ${item.checked ? 'text-m3-primary' : 'text-m3-on-surface-variant'}`}>
-                        {item.text}
-                      </h4>
-                      <p className="text-[10.5px] text-zinc-400 mt-1 leading-normal font-sans">
-                        {item.desc}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="android-glass border border-emerald-500/20 bg-emerald-500/5 rounded-xl p-3.5 mt-4 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="h-2 w-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
-                  <span className="text-[10px] font-mono font-black uppercase text-emerald-400 tracking-wider">
-                    Phase 1 Foundation Sign-off
-                  </span>
-                </div>
-                <span className="text-[9px] font-mono font-black uppercase text-white bg-emerald-500 border border-emerald-500/20 px-2 py-0.5 rounded">
-                  100% Verified
-                </span>
-                <span className="text-[10.5px] text-zinc-450 hidden sm:inline font-bold">7 of 7 green</span>
-              </div>
-            </div>
-
-            {/* COLUMN 2: PHASE 2 CLIENT & APPLICATION HARDENING */}
-            <div className="m3-card shadow-sm space-y-4">
-              <div className="border-b border-m3-outline-variant/15 pb-3">
-                <span className="text-[9.5px] font-mono font-black uppercase text-m3-primary bg-m3-primary/10 border border-m3-primary/20 px-2 py-0.5 rounded">
-                  Phase 2 Security Hardening
-                </span>
-                <h3 className="text-sm font-black tracking-tight text-white mt-2">
-                  Client & Application Hardening Verification Map
-                </h3>
-                <p className="text-xs text-m3-on-surface-variant mt-1">
-                  Enterprise-grade pagination limits, defensive SQL Injection validation bounds, strict password policies, audit logging trace controls.
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                {checklistPhase2.map(item => (
-                  <div
-                    key={item.id}
-                    onClick={() => handleToggleChecklistPhase2(item.id)}
-                    className={`p-3.5 rounded-xl border flex items-start gap-3.5 cursor-pointer transition-all select-none ${
-                      item.checked
-                        ? 'bg-m3-primary/10 border-m3-primary/50 text-m3-on-surface'
-                        : 'bg-m3-surface-low border-m3-outline-variant/15 hover:bg-m3-primary/10 text-m3-on-surface-variant'
-                    }`}
-                  >
-                    <div className="pt-0.5 shrink-0">
-                      <CheckCircle2 className={`h-4.5 w-4.5 ${item.checked ? 'text-m3-primary fill-m3-primary/10' : 'text-m3-outline-variant/60'}`} />
-                    </div>
-                    <div>
-                      <h4 className={`text-xs font-black uppercase font-mono tracking-wider ${item.checked ? 'text-m3-primary' : 'text-m3-on-surface-variant'}`}>
-                        {item.text}
-                      </h4>
-                      <p className="text-[10.5px] text-zinc-400 mt-1 leading-normal font-sans">
-                        {item.desc}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="android-glass border border-m3-primary/35 bg-m3-primary/5 rounded-xl p-3.5 mt-4 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="h-2 w-2 rounded-full bg-m3-primary animate-ping shrink-0" />
-                  <span className="text-[10px] font-mono font-black uppercase text-m3-primary tracking-wider">
-                    Phase 2 Hardening Sign-off
-                  </span>
-                </div>
-                <span className="text-[9px] font-mono font-black uppercase text-white bg-m3-primary border border-m3-primary/20 px-2 py-0.5 rounded">
-                  {Math.round((checklistPhase2.filter(c => c.checked).length / checklistPhase2.length) * 100)}% COMPLETE
-                </span>
-                <span className="text-[10.5px] text-zinc-450 hidden sm:inline font-bold">{checklistPhase2.filter(c => c.checked).length} of {checklistPhase2.length} green</span>
-              </div>
-            </div>
-
           </div>
         </div>
       )}

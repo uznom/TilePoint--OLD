@@ -200,13 +200,323 @@ const GUEST_USER: User = {
 };
 
 // Initial Seed data constants
-const SEED_BRANCHES: Branch[] = [];
+const SEED_BRANCHES: Branch[] = [
+  {
+    id: 'B1',
+    name: 'Emman Tile Center Central HQ',
+    manager: 'Erica Manaban',
+    address: 'Lacson Street, Bacolod City',
+    phone: '0917-123-4567',
+    monthlySales: 1250000,
+    staffCount: 5,
+    activeCashiers: 2,
+    createdAt: new Date('2026-01-01T08:00:00Z').toISOString(),
+    updatedAt: new Date('2026-01-01T08:00:00Z').toISOString(),
+    isDeleted: false,
+    isDistributionBranch: true
+  },
+  {
+    id: 'B2',
+    name: 'TilePoint Davao Branch',
+    manager: 'Tomas Lopez',
+    address: 'JP Laurel Ave, Davao City',
+    phone: '0917-987-6543',
+    monthlySales: 750000,
+    staffCount: 3,
+    activeCashiers: 1,
+    createdAt: new Date('2026-02-15T09:00:00Z').toISOString(),
+    updatedAt: new Date('2026-02-15T09:00:00Z').toISOString(),
+    isDeleted: false
+  },
+  {
+    id: 'B3',
+    name: 'TilePoint Iloilo Branch',
+    manager: 'Juan dela Cruz',
+    address: 'Diversion Road, Iloilo City',
+    phone: '0917-555-4321',
+    monthlySales: 540000,
+    staffCount: 3,
+    activeCashiers: 1,
+    createdAt: new Date('2026-03-01T08:30:00Z').toISOString(),
+    updatedAt: new Date('2026-03-01T08:30:00Z').toISOString(),
+    isDeleted: false
+  },
+  {
+    id: 'B4',
+    name: 'TilePoint Silay Branch',
+    manager: 'Tomas Lopez',
+    address: 'Rizal St, Silay City',
+    phone: '0917-222-3333',
+    monthlySales: 320000,
+    staffCount: 2,
+    activeCashiers: 1,
+    createdAt: new Date('2026-03-15T10:00:00Z').toISOString(),
+    updatedAt: new Date('2026-03-15T10:00:00Z').toISOString(),
+    isDeleted: false
+  }
+];
 
-const SEED_USERS: User[] = [];
+const SEED_USERS: User[] = [
+  {
+    id: 'U1',
+    avatarInitials: 'EM',
+    fullName: 'Erica Manaban',
+    username: 'erica_admin',
+    email: 'erica.manaban.04@gmail.com',
+    role: UserRole.ADMIN,
+    branchAssignmentId: 'B1',
+    status: 'Active',
+    managerPin: '8888',
+    createdAt: new Date('2026-01-01T08:00:00Z').toISOString(),
+    updatedAt: new Date('2026-01-01T08:00:00Z').toISOString()
+  },
+  {
+    id: 'U2',
+    avatarInitials: 'JD',
+    fullName: 'Juan dela Cruz',
+    username: 'juan_mgr',
+    email: 'juan@tilepoint.com',
+    role: UserRole.MANAGER,
+    branchAssignmentId: 'B3',
+    status: 'Active',
+    managerPin: '1234',
+    createdAt: new Date('2026-02-16T08:00:00Z').toISOString(),
+    updatedAt: new Date('2026-02-16T08:00:00Z').toISOString()
+  },
+  {
+    id: 'U3',
+    avatarInitials: 'TL',
+    fullName: 'Tomas Lopez',
+    username: 'tomas_mgr',
+    email: 'tomas@tilepoint.com',
+    role: UserRole.MANAGER,
+    branchAssignmentId: 'B2',
+    status: 'Active',
+    managerPin: '4321',
+    createdAt: new Date('2026-02-16T08:00:00Z').toISOString(),
+    updatedAt: new Date('2026-02-16T08:00:00Z').toISOString()
+  },
+  {
+    id: 'U4',
+    avatarInitials: 'CG',
+    fullName: 'Carla Gomez',
+    username: 'carla_cashier',
+    email: 'carla@tilepoint.com',
+    role: UserRole.CASHIER,
+    branchAssignmentId: 'B1',
+    status: 'Active',
+    createdAt: new Date('2026-03-02T08:00:00Z').toISOString(),
+    updatedAt: new Date('2026-03-02T08:00:00Z').toISOString()
+  },
+  {
+    id: 'U5',
+    avatarInitials: 'MS',
+    fullName: 'Maria Santos',
+    username: 'maria_staff',
+    email: 'maria@tilepoint.com',
+    role: UserRole.STAFF,
+    branchAssignmentId: 'B2',
+    status: 'Active',
+    createdAt: new Date('2026-03-10T08:00:00Z').toISOString(),
+    updatedAt: new Date('2026-03-10T08:00:00Z').toISOString()
+  }
+];
 
-const SEED_SUPPLIERS: Supplier[] = [];
+const SEED_SUPPLIERS: Supplier[] = [
+  {
+    id: 'S1',
+    name: 'Pioneer Ceramics Inc.',
+    contactPerson: 'Ferdinand Marcos Jr.',
+    phone: '0918-444-2222',
+    email: 'sales@pioneerceramics.ph',
+    address: 'Mariquina Complex, Pasig City',
+    createdAt: new Date('2026-01-01T08:00:00Z').toISOString(),
+    isDeleted: false
+  },
+  {
+    id: 'S2',
+    name: 'Premium Clay Co.',
+    contactPerson: 'Elen Gurner',
+    phone: '0922-888-9999',
+    email: 'contracts@premiumclay.ph',
+    address: 'Industrial Zone, Cebu City',
+    createdAt: new Date('2026-01-10T08:00:00Z').toISOString(),
+    isDeleted: false
+  },
+  {
+    id: 'S3',
+    name: 'Global Tile Imports Co.',
+    contactPerson: 'Charles Wu',
+    phone: '0917-777-6666',
+    email: 'charles.wu@globalimports.com.ph',
+    address: 'North Harbor, Port Area, Manila',
+    createdAt: new Date('2026-01-15T08:00:00Z').toISOString(),
+    isDeleted: false
+  },
+  {
+    id: 'S4',
+    name: 'Apex Freight & Ceramic Logistics',
+    contactPerson: 'Diana Prince',
+    phone: '0905-111-3333',
+    email: 'logistics@apexceramics.ph',
+    address: 'SLEX Interchange, Santa Rosa, Laguna',
+    createdAt: new Date('2026-01-20T08:00:00Z').toISOString(),
+    isDeleted: false
+  }
+];
 
-const SEED_PRODUCTS: Product[] = [];
+const SEED_PRODUCTS: Product[] = [
+  {
+    id: 'P1',
+    productCode: 'TL-MAR-60',
+    sku: 'TL-MAR-WHITE-60X60',
+    barcode: '4801234560011',
+    qrCode: 'URL:TL-MAR-60',
+    designName: 'Carrara Pure White Marble',
+    productName: 'Carrara Polished Porcelain Tile',
+    category: 'Marble Glazed Porcelain',
+    brand: 'Mariwasa',
+    supplierId: 'S1',
+    unit: 'Boxes',
+    size: '60x60 cm',
+    boxQuantity: 4,
+    coveragePerBox: 1.44,
+    costPrice: 450,
+    sellingPrice: 850,
+    stockQuantity: 280,
+    minimumStock: 40,
+    isDeleted: false,
+    createdAt: new Date('2026-01-02T08:00:00Z').toISOString(),
+    updatedAt: new Date('2026-01-02T08:00:00Z').toISOString(),
+    createdBy: 'U1',
+    updatedBy: 'U1'
+  },
+  {
+    id: 'P2',
+    productCode: 'TL-SLT-30',
+    sku: 'TL-SLT-GREY-30X30',
+    barcode: '4801234560028',
+    qrCode: 'URL:TL-SLT-30',
+    designName: 'Basalt Charcoal Rock',
+    productName: 'Basalt Matte Exterior Slate Tile',
+    category: 'Rustic Ceramic Tiles',
+    brand: 'Lepanto',
+    supplierId: 'S2',
+    unit: 'Boxes',
+    size: '30x30 cm',
+    boxQuantity: 11,
+    coveragePerBox: 0.99,
+    costPrice: 280,
+    sellingPrice: 480,
+    stockQuantity: 150,
+    minimumStock: 30,
+    isDeleted: false,
+    createdAt: new Date('2026-01-12T08:00:00Z').toISOString(),
+    updatedAt: new Date('2026-01-12T08:00:00Z').toISOString(),
+    createdBy: 'U1',
+    updatedBy: 'U1'
+  },
+  {
+    id: 'P3',
+    productCode: 'TL-TRA-80',
+    sku: 'TL-TRA-GOLD-80X80',
+    barcode: '4801234560035',
+    qrCode: 'URL:TL-TRA-80',
+    designName: 'Pamplona Golden Travertine',
+    productName: 'Pamplona Double-Loaded Vitrified Tile',
+    category: 'Vitrified Granite',
+    brand: 'Pioneer',
+    supplierId: 'S1',
+    unit: 'Boxes',
+    size: '80x80 cm',
+    boxQuantity: 3,
+    coveragePerBox: 1.92,
+    costPrice: 720,
+    sellingPrice: 1350,
+    stockQuantity: 110,
+    minimumStock: 20,
+    isDeleted: false,
+    createdAt: new Date('2026-01-15T08:00:00Z').toISOString(),
+    updatedAt: new Date('2026-01-15T08:00:00Z').toISOString(),
+    createdBy: 'U1',
+    updatedBy: 'U1'
+  },
+  {
+    id: 'P4',
+    productCode: 'TL-WOO-15',
+    sku: 'TL-WOO-TEAK-15X90',
+    barcode: '4801234560042',
+    qrCode: 'URL:TL-WOO-15',
+    designName: 'Golden Teak Lumber Strip',
+    productName: 'Teak Wooden-Plank Finish Ceramic Tile',
+    category: 'Wood Ceramic Plank',
+    brand: 'Kito',
+    supplierId: 'S3',
+    unit: 'Boxes',
+    size: '15x90 cm',
+    boxQuantity: 8,
+    coveragePerBox: 1.08,
+    costPrice: 420,
+    sellingPrice: 720,
+    stockQuantity: 320,
+    minimumStock: 50,
+    isDeleted: false,
+    createdAt: new Date('2026-01-20T08:00:00Z').toISOString(),
+    updatedAt: new Date('2026-01-20T08:00:00Z').toISOString(),
+    createdBy: 'U1',
+    updatedBy: 'U1'
+  },
+  {
+    id: 'P5',
+    productCode: 'TL-MOS-30',
+    sku: 'TL-MOS-AQUA-30X30',
+    barcode: '4801234560059',
+    qrCode: 'URL:TL-MOS-30',
+    designName: 'Aqua Glass Hexagonal',
+    productName: 'Aqua Marine Pool Mosaic Mesh',
+    category: 'Glass Mosaics',
+    brand: 'Premium Ceramics',
+    supplierId: 'S2',
+    unit: 'Sheets',
+    size: '30x30 cm',
+    boxQuantity: 10,
+    coveragePerBox: 0.90,
+    costPrice: 850,
+    sellingPrice: 1580,
+    stockQuantity: 75,
+    minimumStock: 15,
+    isDeleted: false,
+    createdAt: new Date('2026-01-22T08:00:00Z').toISOString(),
+    updatedAt: new Date('2026-01-22T08:00:00Z').toISOString(),
+    createdBy: 'U1',
+    updatedBy: 'U1'
+  },
+  {
+    id: 'P6',
+    productCode: 'TL-RET-60',
+    sku: 'TL-RET-STN-60X60',
+    barcode: '4801234560066',
+    qrCode: 'URL:TL-RET-60',
+    designName: 'Galicia Oxide Slate',
+    productName: 'Galicia Slip-Resistant Outdoor Stone Panel',
+    category: 'Rustic Ceramic Tiles',
+    brand: 'Lepanto',
+    supplierId: 'S4',
+    unit: 'Boxes',
+    size: '60x60 cm',
+    boxQuantity: 4,
+    coveragePerBox: 1.44,
+    costPrice: 380,
+    sellingPrice: 650,
+    stockQuantity: 95,
+    minimumStock: 25,
+    isDeleted: false,
+    createdAt: new Date('2026-01-30T08:00:00Z').toISOString(),
+    updatedAt: new Date('2026-01-30T08:00:00Z').toISOString(),
+    createdBy: 'U1',
+    updatedBy: 'U1'
+  }
+];
 
 const generateSeedSales = (productsList: Product[]): { sales: Sale[]; saleItems: SaleItem[] } => {
   const salesList: Sale[] = [];
@@ -384,10 +694,85 @@ const generateSeedSales = (productsList: Product[]): { sales: Sale[]; saleItems:
 };
 
 const SEED_SHIFTS: Shift[] = [];
-const SEED_SALES: Sale[] = [];
-const SEED_SALE_ITEMS: SaleItem[] = [];
-const SEED_POS: PurchaseOrder[] = [];
-const SEED_PO_ITEMS: PurchaseOrderItem[] = [];
+
+const seedSalesResult = generateSeedSales(SEED_PRODUCTS);
+const SEED_SALES: Sale[] = seedSalesResult.sales;
+const SEED_SALE_ITEMS: SaleItem[] = seedSalesResult.saleItems;
+
+const SEED_POS: PurchaseOrder[] = [
+  {
+    id: 'PO-2026-00001',
+    poNumber: 'PO-2026-00001',
+    supplierId: 'S1',
+    branchId: 'B1',
+    status: 'Completed',
+    requestedBy: 'Erica Manaban',
+    date: new Date('2026-04-01T10:00:00Z').toISOString(),
+    notes: 'Initial Restock for Q2 Carrara Marble Line',
+    createdAt: new Date('2026-04-01T10:00:00Z').toISOString(),
+    updatedAt: new Date('2026-04-05T14:30:00Z').toISOString()
+  },
+  {
+    id: 'PO-2026-00002',
+    poNumber: 'PO-2026-00002',
+    supplierId: 'S2',
+    branchId: 'B2',
+    status: 'Ordered',
+    requestedBy: 'Tomas Lopez',
+    date: new Date('2026-05-15T11:20:00Z').toISOString(),
+    notes: 'Matte Slate Outdoor Tile Buffer Fill',
+    createdAt: new Date('2026-05-15T11:20:00Z').toISOString(),
+    updatedAt: new Date('2026-05-15T11:22:00Z').toISOString()
+  },
+  {
+    id: 'PO-2026-00003',
+    poNumber: 'PO-2026-00003',
+    supplierId: 'S3',
+    branchId: 'B1',
+    status: 'Draft',
+    requestedBy: 'Erica Manaban',
+    date: new Date('2026-06-02T13:45:00Z').toISOString(),
+    notes: 'Teak Wooden Planks Draft Spec Template',
+    createdAt: new Date('2026-06-02T13:45:00Z').toISOString(),
+    updatedAt: new Date('2026-06-02T13:45:00Z').toISOString()
+  }
+];
+
+const SEED_PO_ITEMS: PurchaseOrderItem[] = [
+  {
+    id: 'POI-1',
+    poId: 'PO-2026-00001',
+    productId: 'P1',
+    costPrice: 450,
+    quantityRequested: 100,
+    quantityReceived: 100
+  },
+  {
+    id: 'POI-2',
+    poId: 'PO-2026-00001',
+    productId: 'P3',
+    costPrice: 720,
+    quantityRequested: 50,
+    quantityReceived: 50
+  },
+  {
+    id: 'POI-3',
+    poId: 'PO-2026-00002',
+    productId: 'P2',
+    costPrice: 280,
+    quantityRequested: 80,
+    quantityReceived: 0
+  },
+  {
+    id: 'POI-4',
+    poId: 'PO-2026-00003',
+    productId: 'P4',
+    costPrice: 420,
+    quantityRequested: 60,
+    quantityReceived: 0
+  }
+];
+
 const SEED_TRANSMITTALS: Transmittal[] = [];
 const SEED_MOVEMENTS: InventoryMovement[] = [];
 const SEED_AUDIT_LOGS: AuditLog[] = [];
