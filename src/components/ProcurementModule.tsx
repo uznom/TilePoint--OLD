@@ -112,6 +112,10 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedPoForExport, setSelectedPoForExport] = useState<PurchaseOrder | null>(null);
 
+  // Drilldown / detail views requested by the user
+  const [selectedPoDetails, setSelectedPoDetails] = useState<PurchaseOrder | null>(null);
+  const [selectedSupplierCatalog, setSelectedSupplierCatalog] = useState<any | null>(null);
+
   const companyName = localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center';
   const companyLogo = localStorage.getItem('tilepoint_store_logo_v1') || '';
   const taxRate = Number(localStorage.getItem('tilepoint_tax_rate_v1')) || 12;
@@ -247,13 +251,9 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
     }
 
     const cost = Number(manualCostPrice) || 0;
-    const sell = Number(manualSellingPrice) || 0;
+    const sell = 0; // Selling price is not required in PO (disclosed in stores later)
     const qty = Number(manualQtyRequested) || 0;
 
-    if (cost <= 0 || sell <= 0) {
-      showToast('Price Error: Cost and retail selling prices must be greater than zero.');
-      return;
-    }
     if (qty <= 0) {
       showToast('Quantity Error: Ordered quantity must be greater than zero.');
       return;
@@ -458,9 +458,16 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
                   if (po.status === 'Partially Received') statusBadge = 'bg-m3-secondary-container text-m3-on-secondary-container';
 
                   return (
-                    <tr key={po.id} className="hover:bg-m3-surface-low/50">
+                    <tr
+                      key={po.id}
+                      onClick={() => setSelectedPoDetails(po)}
+                      className="hover:bg-m3-surface-low/90 cursor-pointer transition-colors"
+                      title="Click to view full purchase order (PO) requisition details"
+                    >
                       <td className="py-3.5 px-4">
-                        <div className="font-extrabold text-m3-primary font-mono text-xs">{po.poNumber}</div>
+                        <div className="font-extrabold text-m3-primary font-mono text-xs hover:underline flex items-center gap-1">
+                          <span>{po.poNumber}</span>
+                        </div>
                         <div className="text-[10px] text-m3-on-surface-variant font-medium">{relatedPoItems.length} material segments req.</div>
                       </td>
 
@@ -488,11 +495,12 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
 
                       <td className="py-3.5 px-4 text-center">
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setSelectedPoForExport(po);
                             setShowExportModal(true);
                           }}
-                          className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider bg-amber-500 hover:bg-amber-400 text-zinc-950 border border-amber-650/15 rounded-full cursor-pointer flex items-center gap-1 transition-all hover:scale-103 mx-auto"
+                          className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider bg-amber-500 hover:bg-amber-400 text-zinc-950 border border-amber-650/15 rounded-full cursor-pointer flex items-center gap-1 transition-all hover:scale-103 mx-auto shadow-sm"
                         >
                           <FileText className="h-3 w-3" />
                           <span>Export</span>
@@ -501,10 +509,11 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
 
                       {allowedToModify && (
                         <td className="py-3.5 px-4 text-center">
-                          <div className="flex gap-2 justify-center">
+                          <div className="flex gap-2 justify-center" onClick={(e) => e.stopPropagation()}>
                             {po.status === 'Pending' && (
                               <button
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   updatePOStatus(po.id, 'Approved');
                                   showToast(`Requisition slip ${po.poNumber} approved.`);
                                 }}
@@ -516,7 +525,10 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
 
                             {(po.status === 'Approved' || po.status === 'Ordered' || po.status === 'Partially Received') && (
                               <button
-                                onClick={() => handleOpenReceive(po)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenReceive(po);
+                                }}
                                 className="px-3 py-1 text-[10.5px] font-black bg-m3-tertiary/5 hover:bg-m3-tertiary/10 text-m3-tertiary border border-m3-tertiary/30 rounded-full cursor-pointer flex items-center justify-center gap-1.5 transition-colors"
                               >
                                 <Truck className="h-3.5 w-3.5" /> Receive Cargo Delivery
@@ -597,10 +609,15 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
               </thead>
               <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
                 {suppliers.filter(s => !s.isDeleted).map((sup) => (
-                  <tr key={sup.id} className="hover:bg-m3-surface-low/50">
-                    <td className="py-3.5 px-4 font-mono font-black text-m3-primary">{sup.id}</td>
-                    <td className="py-3.5 px-4 font-bold text-sm text-m3-on-surface">{sup.name}</td>
-                    <td className="py-3.5 px-4">
+                  <tr
+                    key={sup.id}
+                    onClick={() => setSelectedSupplierCatalog(sup)}
+                    className="hover:bg-m3-surface-low/90 cursor-pointer transition-colors"
+                    title="Click to view company profile and product catalog"
+                  >
+                    <td className="py-3.5 px-4 font-mono font-black text-m3-primary hover:underline">{sup.id}</td>
+                    <td className="py-3.5 px-4 font-bold text-sm text-m3-on-surface hover:underline">{sup.name}</td>
+                    <td className="py-3.5 px-4 font-sans">
                       <div className="flex items-center gap-1.5 font-bold">
                         <Users className="h-3.5 w-3.5 text-zinc-400" />
                         <span>{sup.contactPerson || 'N/A'}</span>
@@ -612,25 +629,31 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
                         <span>{sup.phone || 'N/A'}</span>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 font-mono">
                       <div className="flex items-center gap-1.5">
                         <Mail className="h-3.5 w-3.5 text-zinc-400" />
                         <span>{sup.email || 'N/A'}</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 max-w-xs truncate text-m3-on-surface-variant font-medium">{sup.address}</td>
-                    <td className="py-3.5 px-4 text-center">
+                    <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-2 justify-center">
                         <button
-                          onClick={() => handleOpenEditSupplier(sup)}
-                          className="p-1 px-1.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary rounded"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEditSupplier(sup);
+                          }}
+                          className="p-1 px-1.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary rounded transition-all active:scale-95"
                           title="Edit corporate profile"
                         >
                           <Edit2 className="h-3.5 w-3.5" />
                         </button>
                         <button
-                          onClick={() => handleDeleteSupplier(sup.id, sup.name)}
-                          className="p-1 px-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSupplier(sup.id, sup.name);
+                          }}
+                          className="p-1 px-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded transition-all active:scale-95"
                           title="De-register supplier"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -655,7 +678,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
       {showPOModal && (
         <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setShowPOModal(false)} />
-          <div className="relative w-full max-w-2xl rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
             <div className="md:col-span-2 flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5 flex-shrink-0">
               <h3 className="text-base font-bold text-m3-primary flex items-center gap-2">
                 <FileText className="h-5 w-5" />
@@ -835,38 +858,30 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
                     />
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="space-y-1 col-span-1">
-                      <label className="text-[9px] font-bold uppercase text-amber-600 dark:text-amber-400 block pl-1">Cost (₱)</label>
-                      <input
-                        type="number"
-                        required
-                        value={manualCostPrice}
-                        onChange={e => setManualCostPrice(e.target.value)}
-                        className="w-full bg-m3-surface border-b border-amber-500/30 px-2 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 rounded-t-lg font-mono font-bold"
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1 col-span-1">
+                        <label className="text-[9px] font-bold uppercase text-amber-600 dark:text-amber-400 block pl-1">
+                          Cost (₱) <span className="text-[7.5px] italic opacity-75 lowercase">(Optional)</span>
+                        </label>
+                        <input
+                          type="number"
+                          value={manualCostPrice}
+                          onChange={e => setManualCostPrice(e.target.value)}
+                          placeholder="0"
+                          className="w-full bg-m3-surface border-b border-amber-500/30 px-2 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 rounded-t-lg font-mono font-bold"
+                        />
+                      </div>
+                      <div className="space-y-1 col-span-1">
+                        <label className="text-[9px] font-bold uppercase text-amber-600 dark:text-amber-400 block pl-1">PO Qty</label>
+                        <input
+                          type="number"
+                          required
+                          value={manualQtyRequested}
+                          onChange={e => setManualQtyRequested(e.target.value)}
+                          className="w-full bg-m3-surface border-b border-amber-500/30 px-2 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 rounded-t-lg font-mono font-bold"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-1 col-span-1">
-                      <label className="text-[9px] font-bold uppercase text-amber-600 dark:text-amber-400 block pl-1">Sell Price (₱)</label>
-                      <input
-                        type="number"
-                        required
-                        value={manualSellingPrice}
-                        onChange={e => setManualSellingPrice(e.target.value)}
-                        className="w-full bg-m3-surface border-b border-amber-500/30 px-2 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 rounded-t-lg font-mono font-bold"
-                      />
-                    </div>
-                    <div className="space-y-1 col-span-1">
-                      <label className="text-[9px] font-bold uppercase text-amber-600 dark:text-amber-400 block pl-1">PO Qty</label>
-                      <input
-                        type="number"
-                        required
-                        value={manualQtyRequested}
-                        onChange={e => setManualQtyRequested(e.target.value)}
-                        className="w-full bg-m3-surface border-b border-amber-500/30 px-2 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 rounded-t-lg font-mono font-bold"
-                      />
-                    </div>
-                  </div>
                 </div>
 
                 <div className="flex justify-end pt-2 border-t border-amber-500/10">
@@ -1027,7 +1042,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
       {showReceiveModal && activePo && (
         <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setShowReceiveModal(false)} />
-          <div className="relative w-full max-w-lg rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4">
+          <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4">
             <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
               <h3 className="text-base font-bold text-m3-primary flex items-center gap-2">
                 <Truck className="h-5 w-5" />
@@ -1099,7 +1114,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
       {showSupplierModal && (
         <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setShowSupplierModal(false)} />
-          <div className="relative w-full max-w-md rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4">
+          <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4">
             <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
               <h3 className="text-base font-bold text-m3-primary flex items-center gap-2">
                 <Building2 className="h-5 w-5" />
@@ -1430,6 +1445,225 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
                 }
               }
             `}</style>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: Drilldown Purchase Order Requisition Details */}
+      {selectedPoDetails && (
+        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in text-left">
+          <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setSelectedPoDetails(null)} />
+          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4">
+            <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-3">
+              <h3 className="text-base font-black text-m3-primary flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                <span>PO Requisition: {selectedPoDetails.poNumber}</span>
+              </h3>
+              <button onClick={() => setSelectedPoDetails(null)} className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-m3-surface/30 p-4 rounded-2xl border border-m3-outline-variant/10 text-xs text-m3-on-surface/90">
+              <div>
+                <span className="block text-[10px] uppercase font-bold text-m3-on-surface-variant">Vendor Partner</span>
+                <span className="font-bold text-sm text-m3-primary mt-0.5 block">{getSuplierName(selectedPoDetails.supplierId)}</span>
+              </div>
+              <div>
+                <span className="block text-[10px] uppercase font-bold text-m3-on-surface-variant">Target Branch</span>
+                <span className="font-bold text-sm mt-0.5 block">{getBranchName(selectedPoDetails.branchId)}</span>
+              </div>
+              <div>
+                <span className="block text-[10px] uppercase font-bold text-m3-on-surface-variant">Status Code</span>
+                <span className="mt-0.5 block">
+                  <span className="px-2 py-0.5 rounded-full font-black text-[9px] uppercase tracking-wider bg-m3-primary-container text-m3-on-primary-container">
+                    {selectedPoDetails.status}
+                  </span>
+                </span>
+              </div>
+              <div>
+                <span className="block text-[10px] uppercase font-bold text-m3-on-surface-variant">Drafted Date</span>
+                <span className="font-mono font-bold mt-0.5 block">{selectedPoDetails.date}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider pl-1">Requested Product Items</h4>
+              <div className="border border-m3-outline-variant/15 rounded-xl overflow-hidden bg-m3-surface-lowest">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-m3-surface-low/50 text-[10px] uppercase font-bold text-m3-on-surface-variant border-b border-m3-outline-variant/15">
+                    <tr>
+                      <th className="py-2.5 px-3">Item Name</th>
+                      <th className="py-2.5 px-3">Specs / Code</th>
+                      <th className="py-2.5 px-3 text-right">Cost (₱)</th>
+                      <th className="py-2.5 px-3 text-center">Req. Qty</th>
+                      <th className="py-2.5 px-3 text-center">Recv. Qty</th>
+                      <th className="py-2.5 px-3 text-right">Total Est</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-m3-outline-variant/10">
+                    {poItems.filter(item => item.poId === selectedPoDetails.id).map((item, idx) => (
+                      <tr key={idx} className="hover:bg-m3-surface-low/30 font-medium">
+                        <td className="py-2 px-3 font-bold text-m3-on-surface">{getProductName(item.productId)}</td>
+                        <td className="py-2 px-3 text-[10px] text-m3-on-surface-variant font-mono">
+                          {(() => {
+                            const prod = products.find(p => p.id === item.productId);
+                            return prod ? `${prod.size} (${prod.productCode})` : 'Custom Item';
+                          })()}
+                        </td>
+                        <td className="py-2 px-3 text-right font-mono">₱{item.costPrice.toLocaleString()}</td>
+                        <td className="py-2 px-3 text-center font-mono font-bold">{item.quantityRequested}</td>
+                        <td className="py-2 px-3 text-center font-mono text-m3-tertiary font-bold">{item.quantityReceived}</td>
+                        <td className="py-2 px-3 text-right font-mono font-bold text-m3-primary">
+                          ₱{(item.costPrice * item.quantityRequested).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                    {poItems.filter(item => item.poId === selectedPoDetails.id).length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="py-4 text-center text-m3-on-surface-variant italic">No segments inside this purchase requisition.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center border-t border-m3-outline-variant/20 pt-4">
+              <div className="text-xs">
+                <span className="text-m3-on-surface-variant">Requisition Total Cost: </span>
+                <span className="font-extrabold text-sm font-mono text-m3-primary pl-1">
+                  ₱{poItems.filter(item => item.poId === selectedPoDetails.id)
+                    .reduce((sum, item) => sum + (item.costPrice * item.quantityRequested), 0)
+                    .toLocaleString()}
+                </span>
+              </div>
+              
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setSelectedPoForExport(selectedPoDetails);
+                    setShowExportModal(true);
+                  }}
+                  className="px-4 py-2 text-xs font-black uppercase tracking-wider bg-amber-500 hover:bg-amber-400 text-zinc-950 border border-amber-650/15 rounded-full cursor-pointer flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  <span>Print PO Receipt</span>
+                </button>
+                <button
+                  onClick={() => setSelectedPoDetails(null)}
+                  className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
+                >
+                  Close View
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 5: Supplier Corporate Profile & Product Catalog */}
+      {selectedSupplierCatalog && (
+        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in text-left">
+          <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setSelectedSupplierCatalog(null)} />
+          <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4">
+            <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-3">
+              <h3 className="text-base font-black text-m3-primary flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                <span>Vendor: {selectedSupplierCatalog.name}</span>
+              </h3>
+              <button onClick={() => setSelectedSupplierCatalog(null)} className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-m3-surface/30 p-4 rounded-2xl border border-m3-outline-variant/10 text-xs">
+              <div className="space-y-2">
+                <h4 className="text-[10px] uppercase font-bold text-m3-primary tracking-widest pl-0.5">Corporate Contacts</h4>
+                <div className="space-y-1.5 font-medium">
+                  <div className="flex items-center gap-2 text-m3-on-surface-variant">
+                    <Users className="h-4 w-4 text-zinc-400 shrink-0" />
+                    <span>Representative: <strong className="text-m3-on-surface pl-1">{selectedSupplierCatalog.contactPerson || 'N/A'}</strong></span>
+                  </div>
+                  <div className="flex items-center gap-2 text-m3-on-surface-variant">
+                    <Phone className="h-4 w-4 text-zinc-400 shrink-0" />
+                    <span>Phone line: <strong className="text-m3-on-surface pl-1">{selectedSupplierCatalog.phone || 'N/A'}</strong></span>
+                  </div>
+                  <div className="flex items-center gap-2 text-m3-on-surface-variant">
+                    <Mail className="h-4 w-4 text-zinc-400 shrink-0" />
+                    <span>Corporate Email: <strong className="text-m3-on-surface pl-1">{selectedSupplierCatalog.email || 'N/A'}</strong></span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="text-[10px] uppercase font-bold text-m3-primary tracking-widest pl-0.5">Registered Location</h4>
+                <div className="text-m3-on-surface-variant leading-relaxed">
+                  <p className="bg-m3-surface-lowest p-2 border border-m3-outline-variant/10 rounded-xl min-h-[50px] font-medium">
+                    {selectedSupplierCatalog.address || 'Address information was not registered.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center pl-1">
+                <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider">Product Catalog List ({products.filter(p => !p.isDeleted && p.supplierId === selectedSupplierCatalog.id).length})</h4>
+              </div>
+
+              <div className="border border-m3-outline-variant/15 rounded-xl overflow-hidden bg-m3-surface-lowest max-h-[250px] overflow-y-auto">
+                <table className="w-full text-left text-xs min-w-[500px]">
+                  <thead className="bg-m3-surface-low/50 text-[10px] uppercase font-bold text-m3-on-surface-variant border-b border-m3-outline-variant/15 sticky top-0 bg-m3-surface-low/95 backdrop-blur-sm">
+                    <tr>
+                      <th className="py-2.5 px-3">Item Name</th>
+                      <th className="py-2.5 px-3">Code / SKU</th>
+                      <th className="py-2.5 px-3">Specs / Brand</th>
+                      <th className="py-2.5 px-3 text-right">Cost Price (₱)</th>
+                      <th className="py-2.5 px-3 text-right">Sell Price (₱)</th>
+                      <th className="py-2.5 px-3 text-center">In Stock</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-m3-outline-variant/10">
+                    {products.filter(p => !p.isDeleted && p.supplierId === selectedSupplierCatalog.id).map((p, idx) => (
+                      <tr key={p.id} className="hover:bg-m3-surface-low/30 font-medium">
+                        <td className="py-2 px-3 font-bold text-m3-on-surface">{p.productName}</td>
+                        <td className="py-2 px-3 text-[10px] text-m3-on-surface-variant font-mono">
+                          <span>{p.productCode}</span>
+                          <span className="block opacity-70 text-[9px]">{p.sku}</span>
+                        </td>
+                        <td className="py-2 px-3 text-[10px] text-m3-on-surface-variant">
+                          <span>{p.size} {p.designName && `(${p.designName})`}</span>
+                          <span className="block opacity-75 font-semibold text-m3-secondary">{p.brand}</span>
+                        </td>
+                        <td className="py-2 px-3 text-right font-mono text-amber-600 dark:text-amber-400 font-bold">₱{p.costPrice.toLocaleString()}</td>
+                        <td className="py-2 px-3 text-right font-mono text-emerald-600 dark:text-emerald-400 font-bold">₱{p.sellingPrice.toLocaleString()}</td>
+                        <td className="py-2 px-3 text-center font-mono font-bold">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] ${p.stockQuantity <= p.minimumStock ? 'bg-amber-500/10 text-amber-500' : 'bg-green-500/10 text-green-500'}`}>
+                            {p.stockQuantity} {p.unit || 'Box'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    {products.filter(p => !p.isDeleted && p.supplierId === selectedSupplierCatalog.id).length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-m3-on-surface-variant font-medium">
+                          No products linked under this vendor broker catalog. Link products inside Catalog Ledger.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-4">
+              <button
+                onClick={() => setSelectedSupplierCatalog(null)}
+                className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
+              >
+                Close Catalog View
+              </button>
+            </div>
           </div>
         </div>
       )}

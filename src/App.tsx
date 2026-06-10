@@ -118,7 +118,9 @@ function AppContent() {
     expenses: false,
     supplier: false,
     bir: false,
-    admin: false
+    'admin-bi': false,
+    'admin-org': false,
+    'admin-data': false
   });
 
   const toggleFolder = (folderId: string) => {
@@ -477,14 +479,28 @@ function AppContent() {
       ]
     },
     {
-      id: 'admin',
-      name: 'System Admin Tools',
-      icon: Database,
+      id: 'admin-bi',
+      name: 'Admin: Business Intelligence',
+      icon: LayoutDashboard,
       subItems: [
-        { id: 'dashboard', name: 'Branch Dashboard' },
-        { id: 'architecture', name: 'Database ERD Studio' },
+        { id: 'dashboard', name: 'Branch Dashboard' }
+      ]
+    },
+    {
+      id: 'admin-org',
+      name: 'Admin: Staff & Settings',
+      icon: UsersIcon,
+      subItems: [
         { id: 'branches', name: 'Branches Profile' },
         { id: 'users', name: 'Employee Directory' }
+      ]
+    },
+    {
+      id: 'admin-data',
+      name: 'Admin: Database Core',
+      icon: Database,
+      subItems: [
+        { id: 'architecture', name: 'Database ERD Studio' }
       ]
     }
   ];
@@ -615,6 +631,19 @@ function AppContent() {
                     <span>Account Settings</span>
                   </button>
 
+                  {/* Operational Walkthrough */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAccountDropdownOpen(false);
+                      changeTab('tutorials');
+                    }}
+                    className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                  >
+                    <BookOpen className="h-4 w-4 text-m3-primary" />
+                    <span>Operational Walkthrough</span>
+                  </button>
+
                   <div className="h-px bg-m3-outline-variant/10 !my-1" />
 
                   {/* Accessibility & Policy trigger */}
@@ -679,22 +708,6 @@ function AppContent() {
             {/* Profile card removed for cleaner non-duplicated design */}
 
             <nav className="space-y-1">
-              {/* Operational Walkthrough Guide Option */}
-              <button
-                id="sidebar-tutorials-btn"
-                onClick={() => changeTab('tutorials')}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === 'tutorials'
-                    ? 'bg-m3-primary text-m3-on-primary shadow-md font-black scale-[1.01]'
-                    : 'hover:bg-m3-primary/5 text-m3-on-surface-variant hover:text-m3-primary'
-                } ${isSidebarMinimized ? 'justify-center px-1' : ''}`}
-                title="Operational Walkthrough Guide"
-              >
-                <BookOpen className={`h-4.5 w-4.5 shrink-0 ${activeTab === 'tutorials' ? 'text-m3-on-primary' : 'text-m3-on-surface-variant'}`} />
-                {!isSidebarMinimized && <span>Operation Walkthrough</span>}
-              </button>
-
-              <div className="h-px bg-m3-outline-variant/15 my-2" />
 
               {sidebarCategoryTree.map(category => {
                 const CategoryIcon = category.icon;
@@ -783,24 +796,6 @@ function AppContent() {
               </div>
 
               <nav className="space-y-1.5 overflow-y-auto max-h-[calc(100vh-180px)] pr-1 font-sans">
-                {/* Mobile walkthrough link */}
-                <button
-                  id="mobile-sidebar-tutorials-btn"
-                  onClick={() => {
-                    changeTab('tutorials');
-                    setMobileSidebarOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    activeTab === 'tutorials'
-                      ? 'bg-m3-primary text-m3-on-primary shadow-md font-black scale-[1.01]'
-                      : 'hover:bg-m3-primary/5 text-m3-on-surface-variant hover:text-m3-primary'
-                  }`}
-                >
-                  <BookOpen className={`h-4.5 w-4.5 shrink-0 ${activeTab === 'tutorials' ? 'text-m3-on-primary' : 'text-m3-on-surface-variant'}`} />
-                  <span>Operation Walkthrough</span>
-                </button>
-
-                <div className="h-px bg-m3-outline-variant/15 my-1.5" />
 
                 {sidebarCategoryTree.map(category => {
                   const CategoryIcon = category.icon;

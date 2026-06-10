@@ -93,6 +93,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
   // Branch Quota / Goal Quick Editor Inline State
   const [editingBranchId, setEditingBranchId] = useState<string | null>(null);
+
+  // Corporate Target State
+  const [corporateTarget, setCorporateTarget] = useState<number>(() => {
+    return Number(localStorage.getItem('tilepoint_corporate_target_v1')) || 10000000;
+  });
+  const [isEditingCorporateTarget, setIsEditingCorporateTarget] = useState<boolean>(false);
+  const [tempCorporateTargetInput, setTempCorporateTargetInput] = useState<string>('');
   const [editingBranchQuota, setEditingBranchQuota] = useState<number>(2000000);
   const [editingBranchStaff, setEditingBranchStaff] = useState<number>(10);
 
@@ -1015,8 +1022,80 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
               <div className="text-2xl font-black mt-2 tracking-tight text-m3-primary">
                 ₱{stats.monthlyRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </div>
-              <div className="text-[10px] text-zinc-400 mt-1.5">
-                {selectedBranchId === 'all' ? "Corporate Target: ₱10,000,000" : `Target quota benchmark: ₱2.5M`}
+              <div className="text-[10.5px] text-zinc-400 mt-1.5 flex items-center gap-1.5 flex-wrap">
+                {selectedBranchId === 'all' ? (
+                  isEditingCorporateTarget ? (
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <span className="text-xs font-bold font-sans">₱</span>
+                      <input
+                        type="number"
+                        className="w-24 bg-m3-surface-lowest border border-m3-outline-variant/50 px-1 py-0.5 text-[11px] font-mono rounded font-bold text-m3-on-surface"
+                        value={tempCorporateTargetInput}
+                        onChange={(e) => setTempCorporateTargetInput(e.target.value)}
+                        placeholder="10000000"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            const val = Number(tempCorporateTargetInput);
+                            if (isNaN(val) || val <= 0) {
+                              showToastMsg('Please enter a valid target amount.', 'error');
+                              return;
+                            }
+                            localStorage.setItem('tilepoint_corporate_target_v1', String(val));
+                            setCorporateTarget(val);
+                            setIsEditingCorporateTarget(false);
+                            showToastMsg('Corporate target updated successfully.');
+                          } else if (e.key === 'Escape') {
+                            setIsEditingCorporateTarget(false);
+                          }
+                        }}
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => {
+                          const val = Number(tempCorporateTargetInput);
+                          if (isNaN(val) || val <= 0) {
+                            showToastMsg('Please enter a valid target amount.', 'error');
+                            return;
+                          }
+                          localStorage.setItem('tilepoint_corporate_target_v1', String(val));
+                          setCorporateTarget(val);
+                          setIsEditingCorporateTarget(false);
+                          showToastMsg('Corporate target updated successfully.');
+                        }}
+                        className="p-1 text-emerald-500 hover:bg-emerald-500/10 rounded font-black text-xs cursor-pointer"
+                        title="Save target"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        onClick={() => setIsEditingCorporateTarget(false)}
+                        className="p-1 text-red-500 hover:bg-red-500/10 rounded font-black text-xs cursor-pointer"
+                        title="Cancel"
+                      >
+                        ✗
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <span>Corporate Target: <strong className="font-extrabold text-m3-on-surface font-sans">₱{corporateTarget.toLocaleString()}</strong></span>
+                      {currentUser.role === UserRole.ADMIN && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTempCorporateTargetInput(String(corporateTarget));
+                            setIsEditingCorporateTarget(true);
+                          }}
+                          className="p-1 text-m3-primary hover:bg-m3-primary/10 rounded-full cursor-pointer flex items-center justify-center"
+                          title="Edit Corporate Target"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  )
+                ) : (
+                  `Target quota benchmark: ₱2.5M`
+                )}
               </div>
             </div>
             <div className="p-3.5 rounded-2xl bg-m3-primary/10 text-m3-primary m3-shape-asymmetric shrink-0 group-hover:scale-110 transition-transform duration-300">

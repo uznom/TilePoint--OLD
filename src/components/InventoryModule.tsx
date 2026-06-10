@@ -138,14 +138,18 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     branchStock,
     ledgerEntries,
     createStockTransfer,
-    updateStockTransferStatus
+    updateStockTransferStatus,
+    createSupplier
   } = useDb();
 
   // Primary navigation sub-tabs: "catalog" | "movements" | "transfers" | "ledger" | "import"
   const [activeSubTab, setActiveSubTab] = useState<'catalog' | 'movements' | 'transfers' | 'ledger' | 'import'>(initialSubTab || 'catalog');
 
   // Table layout optimization states
-  const [isCompactColumns, setIsCompactColumns] = useState(false);
+  const [isCompactColumns, setIsCompactColumns] = useState<boolean>(() => {
+    const saved = localStorage.getItem('tilepoint_inventory_compact_columns');
+    return saved ? JSON.parse(saved) : false;
+  });
   const [expandedProductIds, setExpandedProductIds] = useState<Record<string, boolean>>({});
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     heatmap: false,
@@ -234,6 +238,14 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   const [showCodesModal, setShowCodesModal] = useState(false);
   const [codesProduct, setCodesProduct] = useState<Product | null>(null);
   const [printingCode, setPrintingCode] = useState(false);
+
+  // States to register a brand new supplier inside Add Product Modal
+  const [isRegisteringNewSupplier, setIsRegisteringNewSupplier] = useState(false);
+  const [newSupplierName, setNewSupplierName] = useState('');
+  const [newSupplierContact, setNewSupplierContact] = useState('');
+  const [newSupplierPhone, setNewSupplierPhone] = useState('');
+  const [newSupplierEmail, setNewSupplierEmail] = useState('');
+  const [newSupplierAddress, setNewSupplierAddress] = useState('');
 
   // Custom toast alert
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -530,6 +542,14 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     setMinimumStock(20);
     setOrigin('');
 
+    // Reset new supplier registration sub-fields
+    setIsRegisteringNewSupplier(false);
+    setNewSupplierName('');
+    setNewSupplierContact('');
+    setNewSupplierPhone('');
+    setNewSupplierEmail('');
+    setNewSupplierAddress('');
+
     setIsEditMode(false);
     setShowModal(true);
   };
@@ -555,6 +575,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     setMinimumStock(p.minimumStock);
     setOrigin(p.origin || '');
 
+    // Reset new supplier fields for edit mode
+    setIsRegisteringNewSupplier(false);
     setIsEditMode(true);
     setShowModal(true);
   };
@@ -567,6 +589,24 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
       return;
     }
 
+    let finalSupplierId = supplierId;
+
+    if (!isEditMode && isRegisteringNewSupplier) {
+      if (!newSupplierName.trim()) {
+        showToast('Validation Error: Please provide a Supplier company name or uncheck registering new supplier.');
+        return;
+      }
+
+      const newSup = createSupplier({
+        name: newSupplierName.trim(),
+        contactPerson: newSupplierContact.trim() || 'N/A',
+        phone: newSupplierPhone.trim() || 'N/A',
+        email: newSupplierEmail.trim() || 'N/A',
+        address: newSupplierAddress.trim() || 'Registered on item addition'
+      });
+      finalSupplierId = newSup.id;
+    }
+
     const payload = {
       productCode,
       sku,
@@ -574,8 +614,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
       designName,
       productName,
       category,
-      brand,
-      supplierId,
+      brand: isRegisteringNewSupplier ? newSupplierName.trim() : brand,
+      supplierId: finalSupplierId,
       unit,
       size,
       boxQuantity: Number(boxQuantity),
@@ -594,7 +634,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
       showToast(`Custom specifications for details updated successfully.`);
     } else {
       createProduct(payload);
-      showToast('Registered new item in global stock catalogs.');
+      showToast('Registered new item with recorded supplier in catalogs.');
     }
     setShowModal(false);
   };
@@ -762,9 +802,16 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
           <span>Old POS Migration</span>
         </button>
 
-        <div className="hidden lg:flex lg:ml-auto items-center gap-2 text-[10px] uppercase font-black tracking-widest text-m3-on-surface-variant bg-m3-surface-low py-1.5 px-3 rounded-full border border-m3-outline-variant/25">
-          <Sliders className="h-3.5 w-3.5 text-m3-primary" />
-          <span>Section: Inventory Operations v2.0</span>
+        <div className="ml-auto flex items-center gap-2 pl-4 py-1.5">
+          {allowedToModify && (
+            <button
+              onClick={handleOpenAdd}
+              className="px-4 py-2 bg-m3-primary hover:bg-m3-primary/95 text-white hover:shadow-md font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 shadow-lg"
+            >
+              <Plus className="h-4.5 w-4.5" />
+              <span>Add Item (Manual)</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -862,8 +909,17 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   placeholder="Filter by Name, SKU, design name, code..."
                   value={term}
                   onChange={e => setTerm(e.target.value)}
-                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2.5 pl-10 text-xs text-m3-on-surface focus:outline-none transition-all rounded-t-md font-medium"
+                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2.5 pl-10 pr-8 text-xs text-m3-on-surface focus:outline-none transition-all rounded-t-md font-medium"
                 />
+                {term && (
+                  <button
+                    onClick={() => setTerm('')}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-zinc-400 hover:text-rose-500 cursor-pointer text-sm font-black transition-colors"
+                    title="Clear search"
+                  >
+                    ✗
+                  </button>
+                )}
               </div>
 
               {/* Advanced catalog filters and commands */}
@@ -904,15 +960,19 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
                 <button
                   type="button"
-                  onClick={() => setIsCompactColumns(!isCompactColumns)}
+                  onClick={() => {
+                    const newValue = !isCompactColumns;
+                    setIsCompactColumns(newValue);
+                    localStorage.setItem('tilepoint_inventory_compact_columns', JSON.stringify(newValue));
+                  }}
                   className={`p-2 px-3.5 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer rounded-full transition-all border ${
-                    isCompactColumns
-                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-500 font-extrabold'
-                      : 'border-m3-outline-variant/20 hover:bg-m3-outline-variant/15 text-m3-on-surface-variant font-bold'
+                    !isCompactColumns
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500 font-extrabold'
+                      : 'bg-amber-500/10 border-amber-500/30 text-amber-500 font-extrabold'
                   }`}
-                  title={isCompactColumns ? "Expand to show all columns" : "Collapse columns to fit screen"}
+                  title={!isCompactColumns ? "Currently in Comfortable Mode. Click to switch to Compact Fit." : "Currently in Compact Fit. Click to switch to Comfortable Mode."}
                 >
-                  <Sliders className="h-3.5 w-3.5" /> {isCompactColumns ? "Comfortable Mode" : "Compact Fit"}
+                  <Sliders className="h-3.5 w-3.5" /> {!isCompactColumns ? "Comfortable Mode" : "Compact Fit"}
                 </button>
 
                 {allowedToModify && (
@@ -1347,8 +1407,17 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   placeholder="Filter by ref ID, code, notes, user..."
                   value={movementSearch}
                   onChange={e => setMovementSearch(e.target.value)}
-                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2.5 pl-10 text-xs text-m3-on-surface focus:outline-none transition-all rounded-t-md font-medium"
+                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2.5 pl-10 pr-8 text-xs text-m3-on-surface focus:outline-none transition-all rounded-t-md font-medium"
                 />
+                {movementSearch && (
+                  <button
+                    onClick={() => setMovementSearch('')}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-zinc-400 hover:text-rose-500 cursor-pointer text-sm font-black transition-colors"
+                    title="Clear search"
+                  >
+                    ✗
+                  </button>
+                )}
               </div>
 
               <div className="flex items-center gap-2 w-full justify-start md:justify-end">
@@ -2372,18 +2441,102 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
               />
             </div>
 
-            {/* Supplier select */}
-            <div className="space-y-1 relative">
-              <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Standard Wholesaler Supplier</label>
-              <select
-                value={supplierId}
-                onChange={e => setSupplierId(e.target.value)}
-                className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md cursor-pointer font-bold"
-              >
-                {suppliers.filter(s => !s.isDeleted).map((sup, i) => (
-                  <option key={sup.id} value={sup.id}>{sup.name}</option>
-                ))}
-              </select>
+            {/* Supplier select or Add New Supplier */}
+            <div className="space-y-2 md:col-span-2 relative p-4 bg-m3-surface-low rounded-2xl border border-m3-outline-variant/30 mt-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest select-none">Wholesaler Supplier Source</label>
+                {!isEditMode && (
+                  <label className="flex items-center gap-1.5 cursor-pointer text-[10.5px] font-bold text-m3-tertiary select-none">
+                    <input
+                      type="checkbox"
+                      checked={isRegisteringNewSupplier}
+                      onChange={e => setIsRegisteringNewSupplier(e.target.checked)}
+                      className="rounded text-m3-tertiary focus:ring-m3-tertiary"
+                    />
+                    <span>Register Brand New Supplier</span>
+                  </label>
+                )}
+              </div>
+
+              {!isRegisteringNewSupplier ? (
+                <div className="grid grid-cols-1 gap-1">
+                  <select
+                    value={supplierId}
+                    onChange={e => setSupplierId(e.target.value)}
+                    className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md cursor-pointer font-bold"
+                  >
+                    {suppliers.filter(s => !s.isDeleted).map((sup) => (
+                      <option key={sup.id} value={sup.id}>{sup.name}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="space-y-3 pt-1">
+                  <p className="text-[10px] text-m3-on-surface-variant font-medium leading-normal bg-m3-primary/5 p-2 rounded-lg">
+                    This will register a new vendor profile in the database and automatically link it to this product.
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-m3-on-surface-variant uppercase pl-0.5">Supplier Company Name *</label>
+                      <input
+                        type="text"
+                        required={isRegisteringNewSupplier}
+                        value={newSupplierName}
+                        onChange={e => setNewSupplierName(e.target.value)}
+                        placeholder="e.g. Asia Pacific Ceramics Inc."
+                        className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-2 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-m3-on-surface-variant uppercase pl-0.5">Primary Contact Agent</label>
+                      <input
+                        type="text"
+                        value={newSupplierContact}
+                        onChange={e => setNewSupplierContact(e.target.value)}
+                        placeholder="e.g. Matthew Lim"
+                        className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-2 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-m3-on-surface-variant uppercase pl-0.5">Contact Phone</label>
+                      <input
+                        type="text"
+                        value={newSupplierPhone}
+                        onChange={e => setNewSupplierPhone(e.target.value)}
+                        placeholder="e.g. +63 2 8111 2222"
+                        className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-2 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-m3-on-surface-variant uppercase pl-0.5">Corporate Email</label>
+                      <input
+                        type="email"
+                        value={newSupplierEmail}
+                        onChange={e => setNewSupplierEmail(e.target.value)}
+                        placeholder="e.g. contact@asiapacific.ph"
+                        className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-2 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-m3-on-surface-variant uppercase pl-0.5">Office Address</label>
+                    <input
+                      type="text"
+                      value={newSupplierAddress}
+                      onChange={e => setNewSupplierAddress(e.target.value)}
+                      placeholder="e.g. 15th Flr, Pacific Star Bldg, Makati City"
+                      className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-2 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Dimensions and unit */}
@@ -2533,7 +2686,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
           <div className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm shadow-xl" onClick={() => setShowAdjustModal(false)} />
           <form
             onSubmit={handleAdjustSubmit}
-            className="relative w-full max-w-md rounded-[32px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4"
+            className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[32px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4"
           >
             <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-3">
               <h3 className="text-sm font-black text-m3-primary uppercase tracking-wider flex items-center gap-2">
@@ -2630,7 +2783,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
       {showCodesModal && codesProduct && (
         <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm shadow-xl" onClick={() => setShowCodesModal(false)} />
-          <div className="relative w-full max-w-md rounded-[32px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-center space-y-5">
+          <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[32px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-center space-y-5">
             
             <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-2.5 text-left">
               <h3 className="text-sm font-black text-m3-primary uppercase tracking-wide flex items-center gap-1.5">
@@ -2733,7 +2886,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
       {showImportModal && (
         <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm shadow-xl" onClick={() => setShowImportModal(false)} />
-          <div className="relative w-full max-w-md rounded-[32px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4">
+          <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[32px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4">
             <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-2.5">
               <h3 className="text-sm font-black text-m3-primary uppercase tracking-wider flex items-center gap-2">
                 <Upload className="h-5 w-5" /> Batch JSON Import Catalog

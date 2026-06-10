@@ -100,7 +100,7 @@ interface DbContextType {
   deleteBranch: (id: string) => void;
 
   // Actions - Suppliers
-  createSupplier: (supplier: Omit<Supplier, 'id' | 'createdAt' | 'isDeleted'>) => void;
+  createSupplier: (supplier: Omit<Supplier, 'id' | 'createdAt' | 'isDeleted'>) => Supplier;
   updateSupplier: (id: string, updates: Partial<Supplier>) => void;
   deleteSupplier: (id: string) => void;
 
@@ -1850,7 +1850,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   // SUPPLIERS
-  const createSupplier = (supFields: Omit<Supplier, 'id' | 'createdAt' | 'isDeleted'>) => {
+  const createSupplier = (supFields: Omit<Supplier, 'id' | 'createdAt' | 'isDeleted'>): Supplier => {
     const newSup: Supplier = {
       ...supFields,
       id: `S-${Date.now()}`,
@@ -1859,6 +1859,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     };
     setSuppliers(prev => [...prev, newSup]);
     addAuditLog('SUPPLIER_CREATE', `Created supplier ${newSup.name}`, 'Suppliers', newSup.id);
+    return newSup;
   };
 
   const updateSupplier = (id: string, updates: Partial<Supplier>) => {

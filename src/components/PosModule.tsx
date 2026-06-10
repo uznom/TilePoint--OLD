@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useDb } from '../context/DbContext';
-import { Product, Sale, UserRole } from '../types/db';
+import { Product, Sale, SaleItem, UserRole } from '../types/db';
 import { verifyPasswordWithToken } from '../lib/crypto';
 import {
   Search,
@@ -27,7 +27,8 @@ import {
   History,
   LockKeyhole,
   ShoppingBag,
-  Truck
+  Truck,
+  FileText
 } from 'lucide-react';
 
 interface PosModuleProps {
@@ -48,6 +49,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     parkedSales,
     setParkedSales,
     sales,
+    saleItems,
     users,
     addAuditLog,
     currentUser,
@@ -60,6 +62,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
 
   // Pagination State for Ledger Sales
   const [salesPage, setSalesPage] = useState(1);
+  const [selectedSaleDetail, setSelectedSaleDetail] = useState<Sale | null>(null);
 
   // Cart & POS Screen States
   const [cart, setCart] = useState<{ product: Product; quantity: number; overridePrice?: number }[]>([]);
@@ -952,12 +955,83 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                             type="text"
                             value={barcodeSearchTerm}
                             onChange={e => setBarcodeSearchTerm(e.target.value)}
-                            placeholder="Scan standard USB code bar or type matching SKU... (e.g. BLD01, SLVR-40, hit Enter)"
-                            className="w-full bg-m3-surface-lowest text-xs text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary/50 border border-m3-outline-variant/30 px-3.5 py-2 rounded-xl placeholder-zinc-500 font-bold"
+                            placeholder="Type product name, SKU, or custom design... (e.g. BLD01, SLVR-40, hit Enter)"
+                            className="w-full bg-m3-surface-lowest text-xs text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary/50 border border-m3-outline-variant/30 px-3.5 py-2 pr-12 rounded-xl placeholder-zinc-500 font-bold"
                           />
+                          {barcodeSearchTerm && (
+                            <button
+                              type="button"
+                              onClick={() => setBarcodeSearchTerm('')}
+                              className="absolute right-16 top-2 text-zinc-400 hover:text-rose-500 text-xs font-black cursor-pointer px-1 py-0.5"
+                              title="Clear input"
+                            >
+                              ✗
+                            </button>
+                          )}
                           <span className="absolute right-3.5 top-2.5 text-zinc-500 text-[9px] uppercase font-mono font-bold select-none pointer-events-none">
                             [ ENTER ]
                           </span>
+
+                          {/* Instant Product suggestions dropdown following strict user intent */}
+                          {barcodeSearchTerm.trim().length > 0 && (
+                            <div className="absolute left-0 right-0 mt-2 bg-m3-surface-container-high border border-m3-outline-variant/40 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-m3-outline-variant/10 text-xs">
+                              {products
+                                .filter(p => !p.isDeleted && (
+                                  p.productName.toLowerCase().includes(barcodeSearchTerm.toLowerCase()) ||
+                                  p.sku.toLowerCase().includes(barcodeSearchTerm.toLowerCase()) ||
+                                  p.barcode.toLowerCase().includes(barcodeSearchTerm.toLowerCase()) ||
+                                  p.productCode.toLowerCase().includes(barcodeSearchTerm.toLowerCase()) ||
+                                  p.designName.toLowerCase().includes(barcodeSearchTerm.toLowerCase())
+                                ))
+                                .slice(0, 6)
+                                .map(p => {
+                                  // Find if it has a match
+                                  return (
+                                    <div
+                                      key={p.id}
+                                      onClick={() => {
+                                        if (p.stockQuantity <= 0) {
+                                          showToast(`Out of stock: Cannot add ${p.productName}`);
+                                          return;
+                                        }
+                                        addToCart(p);
+                                        setBarcodeAddFeedback(`Added: ${p.productName}`);
+                                        setBarcodeSearchTerm('');
+                                        setTimeout(() => setBarcodeAddFeedback(null), 3000);
+                                      }}
+                                      className="p-3 hover:bg-m3-primary/10 cursor-pointer flex justify-between items-center transition-colors text-left"
+                                    >
+                                      <div className="space-y-0.5">
+                                        <div className="font-extrabold text-m3-on-surface text-xs">{p.productName}</div>
+                                        <div className="text-[10px] text-zinc-400 font-mono font-bold flex items-center gap-1.5">
+                                          <span className="text-m3-primary">SKU: {p.sku}</span>
+                                          <span>•</span>
+                                          <span>Brand: {p.brand}</span>
+                                          <span>•</span>
+                                          <span className="text-zinc-500 bg-m3-surface/30 px-1 rounded">Qty: {p.stockQuantity}</span>
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <div className="font-black text-emerald-400 text-xs">₱{p.sellingPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                        <div className="text-[9px] text-zinc-500 uppercase font-mono">{p.unit}</div>
+                                      </div>
+                                    </div>
+                                  );
+                                })
+                              }
+                              {products.filter(p => !p.isDeleted && (
+                                p.productName.toLowerCase().includes(barcodeSearchTerm.toLowerCase()) ||
+                                p.sku.toLowerCase().includes(barcodeSearchTerm.toLowerCase()) ||
+                                p.barcode.toLowerCase().includes(barcodeSearchTerm.toLowerCase()) ||
+                                p.productCode.toLowerCase().includes(barcodeSearchTerm.toLowerCase()) ||
+                                p.designName.toLowerCase().includes(barcodeSearchTerm.toLowerCase())
+                              )).length === 0 && (
+                                <div className="p-4 text-center text-zinc-400 text-[11px] italic font-bold">
+                                  No product match found for "{barcodeSearchTerm}"
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <button
@@ -1283,8 +1357,13 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
               </thead>
               <tbody className="divide-y divide-m3-outline-variant/10 font-mono text-[11px] text-zinc-300">
                 {paginatedSales.map((s, idx) => (
-                  <tr key={idx} className={`hover:bg-m3-surface-low/40 transition-colors font-bold ${s.isDeleted ? 'bg-red-500/5 text-zinc-650 line-through decoration-rose-650' : ''}`}>
-                    <td className="py-3 px-4 text-m3-primary font-black uppercase">{s.saleNumber}</td>
+                  <tr
+                    key={idx}
+                    onClick={() => setSelectedSaleDetail(s)}
+                    className={`hover:bg-m3-surface-low/90 hover:text-white cursor-pointer transition-colors font-bold ${s.isDeleted ? 'bg-red-500/5 text-zinc-650 line-through decoration-rose-650' : ''}`}
+                    title="Click to view full transaction invoice ledger details"
+                  >
+                    <td className="py-3 px-4 text-m3-primary font-black uppercase hover:underline">{s.saleNumber}</td>
                     <td className="py-3 px-4 text-zinc-550 font-sans font-medium hover:text-emerald-500" title="Settled instant transaction date">{new Date(s.createdAt).toLocaleString()}</td>
                     <td className="py-3 px-4 text-m3-on-surface font-sans font-extrabold">{s.customerName}</td>
                     <td className="py-3 px-4 text-right text-zinc-400">₱{s.subtotal.toFixed(2)}</td>
@@ -1384,7 +1463,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
       {showShiftModal && (
         <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setShowShiftModal(false)} />
-          <div className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4">
+          <div className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4">
             <div className="flex items-start gap-3 mb-1">
               <div className="p-2 rounded-2xl bg-m3-primary/10 text-m3-primary shrink-0">
                 <Lock className="h-5 w-5" />
@@ -1433,7 +1512,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
       {showDiscountModal && (
         <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setShowDiscountModal(false)} />
-          <div className="relative w-full max-w-md rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left">
+          <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left">
             <h3 className="text-sm font-bold text-m3-primary flex items-center gap-2">
               <Sparkles className="h-4.5 w-4.5 text-m3-primary" /> Select Trade & Exemption Discounts
             </h3>
@@ -1546,7 +1625,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
       {showReceiptModal && activeReceipt && (
         <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm animate-fade-in" onClick={() => setShowReceiptModal(false)} />
-          <div className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-5 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface flex flex-col justify-between shrink-0">
+          <div className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-5 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface flex flex-col justify-between shrink-0">
             {/* Header Success symbol */}
             <div className="flex flex-col items-center justify-center mb-4 text-center">
               <div className="p-2 rounded-full bg-m3-tertiary-container border border-m3-tertiary/20 text-m3-on-tertiary-container mb-2 text-center">
@@ -1671,7 +1750,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
           <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setShowCustomerModal(false)} />
           <form
             onSubmit={handleSaveCustomerName}
-            className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left"
+            className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left"
           >
             <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
               <h3 className="text-base font-bold text-m3-primary flex items-center gap-2">
@@ -1720,7 +1799,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
           <div className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm" onClick={() => setPendingApproval(null)} />
           <form
             onSubmit={handleVerifyApprovalSubmit}
-            className="relative w-full max-w-sm rounded-[28px] border border-rose-500/35 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left border-t-4"
+            className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-rose-500/35 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left border-t-4"
           >
             <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
               <h3 className="text-sm font-black text-rose-500 flex items-center gap-1.5 uppercase tracking-wider">
@@ -1802,7 +1881,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
           <div className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm" onClick={() => setOverrideModalOpen(false)} />
           <form
             onSubmit={handleSavePriceOverride}
-            className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left"
+            className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left"
           >
             <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
               <h3 className="text-sm font-black text-m3-primary flex items-center gap-1.5 uppercase tracking-wider">
@@ -2061,7 +2140,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
           }} />
           <form
             onSubmit={handleVerifySecurityPin}
-            className="relative w-full max-w-sm rounded-[28px] border border-amber-500/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left font-sans"
+            className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-amber-500/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left font-sans"
           >
             <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
               <h3 className="text-sm font-black text-amber-500 flex items-center gap-1.5 uppercase tracking-widest">
@@ -2192,6 +2271,143 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* MODAL 10: Selected Sale Transaction Details (LEDGER & VOID TERMINAL CLICK) */}
+      {selectedSaleDetail && (
+        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in text-left">
+          <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setSelectedSaleDetail(null)} />
+          <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4">
+            <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-3">
+              <h3 className="text-sm font-black text-rose-500 flex items-center gap-2 uppercase tracking-wider font-mono">
+                <FileText className="h-5 w-5 text-rose-500" />
+                <span>Invoice Ledger: {selectedSaleDetail.saleNumber}</span>
+              </h3>
+              <button onClick={() => setSelectedSaleDetail(null)} className="text-zinc-400 hover:text-white cursor-pointer p-1 rounded-full hover:bg-zinc-800">
+                <X className="h-4.5 w-4.5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 bg-m3-surface-lowest/70 p-3.5 rounded-2xl border border-m3-outline-variant/10 text-xs font-sans">
+              <div>
+                <span className="block text-[10px] uppercase font-bold text-zinc-450 tracking-wider">Buyer Name</span>
+                <span className="font-extrabold text-sm text-m3-primary mt-0.5 block">{selectedSaleDetail.customerName}</span>
+              </div>
+              <div>
+                <span className="block text-[10px] uppercase font-bold text-zinc-450 tracking-wider">Settled Timestamp</span>
+                <span className="font-mono mt-0.5 block">{new Date(selectedSaleDetail.createdAt).toLocaleString()}</span>
+              </div>
+              <div>
+                <span className="block text-[10px] uppercase font-bold text-zinc-450 tracking-wider">Cashier Agent</span>
+                <span className="font-bold mt-0.5 block">{selectedSaleDetail.cashierName}</span>
+              </div>
+              <div>
+                <span className="block text-[10px] uppercase font-bold text-zinc-450 tracking-wider">Settlement Type</span>
+                <span className="font-bold mt-0.5 block text-[#10B981]">{selectedSaleDetail.paymentMethod}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1 font-mono">Purchased Tile Products</h4>
+              <div className="border border-m3-outline-variant/15 rounded-xl overflow-hidden bg-m3-surface-lowest">
+                <table className="w-full text-left text-[11px] font-sans">
+                  <thead className="bg-m3-surface-low/50 text-[9px] uppercase font-bold text-zinc-400 border-b border-m3-outline-variant/15">
+                    <tr>
+                      <th className="py-2.5 px-3">Product Description</th>
+                      <th className="py-2.5 px-3 text-right">Unit Price</th>
+                      <th className="py-2.5 px-3 text-center">Qty</th>
+                      <th className="py-2.5 px-3 text-right">Total Price</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-m3-outline-variant/10 font-mono text-zinc-300">
+                    {saleItems.filter(item => item.saleId === selectedSaleDetail.id).map((item, idx) => (
+                      <tr key={idx} className="hover:bg-m3-surface-low/30">
+                        <td className="py-2 px-3 font-sans font-bold text-white">{item.productName}</td>
+                        <td className="py-2 px-3 text-right">₱{item.unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="py-2 px-3 text-center font-bold text-[#10B981]">x{item.quantity}</td>
+                        <td className="py-2 px-3 text-right text-m3-primary font-bold">₱{item.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      </tr>
+                    ))}
+                    {saleItems.filter(item => item.saleId === selectedSaleDetail.id).length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="py-4 text-center text-zinc-400 italic font-sans animate-pulse">
+                          No products registered in this invoice record.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="p-3 bg-m3-surface-lowest/70 border border-m3-outline-variant/10 rounded-xl space-y-1.5 text-[11px] font-mono">
+              <div className="flex justify-between">
+                <span className="text-zinc-400 font-sans">Subtotal Sale:</span>
+                <span className="font-bold">₱{selectedSaleDetail.subtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-400 font-sans">VAT Included (12%):</span>
+                <span className="font-bold text-zinc-300">₱{selectedSaleDetail.vat.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-400 font-sans">Discount Deductions:</span>
+                <span className="font-bold text-rose-500">-₱{selectedSaleDetail.discount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between border-t border-m3-outline-variant/10 pt-1.5 text-xs text-m3-primary font-bold">
+                <span className="font-sans">Grand Total:</span>
+                <span className="text-sm font-extrabold text-[#10B981]">₱{selectedSaleDetail.grandTotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-[10px] text-zinc-500 pt-1">
+                <span className="font-sans">Amount Tendered:</span>
+                <span>₱{selectedSaleDetail.amountTendered.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-[10px] text-zinc-500">
+                <span className="font-sans">Change Settled:</span>
+                <span>₱{selectedSaleDetail.changeAmount.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {selectedSaleDetail.notes && (
+              <div className="text-[10px] bg-amber-500/5 text-amber-500 px-3 py-2 border border-amber-500/10 rounded-xl font-sans">
+                <strong>Transaction Notes:</strong> {selectedSaleDetail.notes}
+              </div>
+            )}
+
+            <div className="flex justify-between gap-2 border-t border-m3-outline-variant/20 pt-4 font-sans">
+              <div className="flex gap-2">
+                {!selectedSaleDetail.isDeleted && (
+                  <button
+                    onClick={() => {
+                      const s = selectedSaleDetail;
+                      setSelectedSaleDetail(null);
+                      triggerVoidWithPin(s);
+                    }}
+                    className="px-3.5 py-2 bg-rose-500/15 hover:bg-rose-500 hover:text-black text-rose-500 rounded-full text-[10px] uppercase font-black tracking-widest transition-all cursor-pointer shadow-sm active:scale-95"
+                    title="Void sale and reclaim inventory quantities"
+                  >
+                    Void Sale
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    triggerReprintWithPin(selectedSaleDetail);
+                  }}
+                  className="px-3.5 py-2 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary rounded-full text-[10px] uppercase font-black tracking-widest transition-all cursor-pointer shadow-sm active:scale-95"
+                  title="Reprint Receipt Slip"
+                >
+                  Reprint Slip
+                </button>
+              </div>
+
+              <button
+                onClick={() => setSelectedSaleDetail(null)}
+                className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-zinc-400 transition-colors"
+              >
+                Close Details
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

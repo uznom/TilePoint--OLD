@@ -486,7 +486,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
           <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setShowModal(false)} />
           <form
             onSubmit={handleSubmit}
-            className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl space-y-4 bg-m3-surface-low text-m3-on-surface"
+            className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl space-y-4 bg-m3-surface-low text-m3-on-surface"
           >
             <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5 flex-shrink-0">
               <h3 className="text-base font-bold text-m3-primary flex items-center gap-2">
@@ -615,7 +615,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
       {confirmDeleteId && (
         <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setConfirmDeleteId(null)} />
-          <div className="relative w-full max-w-xs rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-center space-y-4">
+          <div className="relative w-full max-w-xs max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-center space-y-4">
             <div className="mx-auto h-12 w-12 rounded-full bg-m3-primary-container text-m3-on-primary-container flex items-center justify-center">
               <AlertTriangle className="h-6 w-6" />
             </div>
