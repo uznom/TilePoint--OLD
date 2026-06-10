@@ -315,20 +315,20 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
 
   // BIR tax computation helpers using db.sales
   const totalSalesFromDay = db.sales.reduce((acc, s) => {
-    if (s.voided) return acc;
+    if (s.isDeleted) return acc;
     // enforce dynamic branch scoping if not admin
     if (db.currentUser?.role !== 'Admin' && s.branchId !== db.currentUser?.branchAssignmentId) {
       return acc;
     }
-    return acc + s.netTotal;
+    return acc + (s.grandTotal || 0);
   }, 0);
 
   const discountTotal = db.sales.reduce((acc, s) => {
-    if (s.voided) return acc;
+    if (s.isDeleted) return acc;
     if (db.currentUser?.role !== 'Admin' && s.branchId !== db.currentUser?.branchAssignmentId) {
       return acc;
     }
-    return acc + s.discountAmount;
+    return acc + (s.discount || 0);
   }, 0);
 
   const vatOutput = totalSalesFromDay * 0.12;
@@ -1262,33 +1262,33 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-m3-outline-variant/10">
-                    {db.sales.filter(s => !s.voided).map((s, idx) => {
+                    {db.sales.filter(s => !s.isDeleted).map((s, idx) => {
                       // distribute some discount profiles across demo transactions
                       const isPwd = activeSubTab === 'bir-pwd' && idx % 2 === 0;
                       const isSenior20 = activeSubTab === 'bir-senior20' && idx % 3 === 0;
                       const isSenior5 = activeSubTab === 'bir-senior5' && idx % 3 === 1;
                       const isSolo = activeSubTab === 'bir-solo' && idx % 4 === 1;
                       const isAthletes = activeSubTab === 'bir-athletes' && idx % 5 === 2;
-                      const isRegular = activeSubTab === 'bir-regular' && s.discountAmount > 0;
+                      const isRegular = activeSubTab === 'bir-regular' && (s.discount || 0) > 0;
                       const isSummary = activeSubTab === 'bir-summary';
 
                       const matchesFilter = isSummary || isRegular || isPwd || isSenior20 || isSenior5 || isSolo || isAthletes;
                       if (!matchesFilter) return null;
 
                       const taxLabel = isPwd ? 'PWD Dsc. 20%' : isSenior20 ? 'Senior 20% Dsc.' : isSenior5 ? 'Senior 5% Special' : isSolo ? 'Solo Parent Dsc.' : isAthletes ? 'Athletes Dsc.' : 'Regular Promo';
-                      const deductVal = s.discountAmount || (s.netTotal * 0.12);
+                      const deductVal = (s.discount || 0) || ((s.grandTotal || 0) * 0.12);
 
                       return (
                         <tr key={s.id} className="hover:bg-m3-primary/5 transition-all text-m3-on-surface">
-                          <td className="p-3 font-mono text-[10.5px] text-zinc-400">{new Date(s.dateTime).toLocaleString()}</td>
+                          <td className="p-3 font-mono text-[10.5px] text-zinc-400">{new Date(s.createdAt || Date.now()).toLocaleString()}</td>
                           <td className="p-3 font-mono font-black text-m3-primary">{s.id}</td>
                           <td className="p-3 font-bold uppercase text-[10px]">
                             {s.customerName || 'Walk-In Customer'}
                             <span className="block font-mono text-[9px] text-zinc-400 font-normal lowercase tracking-wide mt-0.5">({taxLabel})</span>
                           </td>
-                          <td className="p-3 text-right font-mono">₱{(s.netTotal * 0.88).toFixed(2)}</td>
+                          <td className="p-3 text-right font-mono">₱{((s.grandTotal || 0) * 0.88).toFixed(2)}</td>
                           <td className="p-3 text-right font-mono text-amber-500 font-bold">-₱{deductVal.toFixed(2)}</td>
-                          <td className="p-3 text-right font-mono text-emerald-500 font-extrabold">₱{(s.netTotal - deductVal).toFixed(2)}</td>
+                          <td className="p-3 text-right font-mono text-emerald-500 font-extrabold">₱{((s.grandTotal || 0) - deductVal).toFixed(2)}</td>
                         </tr>
                       );
                     })}
