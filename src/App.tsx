@@ -64,7 +64,8 @@ import {
   CalendarDays,
   Trash2,
   Download,
-  Upload
+  Upload,
+  Sliders
 } from 'lucide-react';
 
 function AppContent() {
@@ -178,6 +179,10 @@ function AppContent() {
   const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
   const [showLogoutConfirmModal, setShowLogoutConfirmModal] = useState(false);
   const [showAccountSettingsModal, setShowAccountSettingsModal] = useState(false);
+  const [isCompactColumns, setIsCompactColumns] = useState<boolean>(() => {
+    const saved = localStorage.getItem('tilepoint_inventory_compact_columns');
+    return saved ? JSON.parse(saved) : false;
+  });
   const [showDatabaseCoreModal, setShowDatabaseCoreModal] = useState(false);
   const [dbCoreTab, setDbCoreTab] = useState<'scheduler' | 'ledger' | 'import-export'>('scheduler');
   const [manualSnapshotName, setManualSnapshotName] = useState('');
@@ -427,9 +432,11 @@ function AppContent() {
     { id: 'users', name: 'Employee Directory', icon: UsersIcon, roles: [UserRole.ADMIN] },
     
     // ATPOS v2 Submodules
-    { id: 'inventory-stocks', name: 'Stocks', icon: Layers, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF] },
-    { id: 'inventory-transfer', name: 'Stocks Transfer', icon: Send, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF] },
-    { id: 'inventory-pulled-out', name: 'Pulled-Out Stocks', icon: Layers, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF] },
+    { id: 'inventory-stocks', name: 'Catalog Stock Ledger', icon: Layers, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF] },
+    { id: 'inventory-adjustments', name: 'Adjustments Logs', icon: Layers, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF] },
+    { id: 'inventory-transfer', name: 'Stock Transfers', icon: Send, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF] },
+    { id: 'inventory-logistics', name: 'Logistics Ledger & Heatmap', icon: Layers, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF] },
+    { id: 'inventory-import', name: 'Old POS Migration', icon: Layers, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF] },
 
     { id: 'adjustments-void', name: 'Search Voided Sales', icon: History, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER] },
     { id: 'adjustments-return', name: 'Search Returned Products', icon: RefreshCw, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER] },
@@ -467,9 +474,11 @@ function AppContent() {
       name: 'Inventory',
       icon: Layers,
       subItems: [
-        { id: 'inventory-stocks', name: 'Stocks' },
-        { id: 'inventory-transfer', name: 'Stocks Transfer' },
-        { id: 'inventory-pulled-out', name: 'Pulled-Out Stocks' }
+        { id: 'inventory-stocks', name: 'Catalog Stock Ledger' },
+        { id: 'inventory-adjustments', name: 'Adjustments Logs' },
+        { id: 'inventory-transfer', name: 'Stock Transfers' },
+        { id: 'inventory-logistics', name: 'Logistics Ledger & Heatmap' },
+        { id: 'inventory-import', name: 'Old POS Migration' }
       ]
     },
     {
@@ -529,7 +538,7 @@ function AppContent() {
     },
     {
       id: 'admin-bi',
-      name: 'Admin: Business Intelligence',
+      name: 'Business Intelligence',
       icon: LayoutDashboard,
       subItems: [
         { id: 'dashboard', name: 'Branch Dashboard' }
@@ -537,19 +546,11 @@ function AppContent() {
     },
     {
       id: 'admin-org',
-      name: 'Admin: Staff & Settings',
+      name: 'Staff & Settings',
       icon: UsersIcon,
       subItems: [
         { id: 'branches', name: 'Branches Profile' },
         { id: 'users', name: 'Employee Directory' }
-      ]
-    },
-    {
-      id: 'admin-data',
-      name: 'Admin: Database Core',
-      icon: Database,
-      subItems: [
-        { id: 'architecture', name: 'Database ERD Studio' }
       ]
     }
   ];
@@ -601,6 +602,25 @@ function AppContent() {
 
         {/* Right side controls with Dropdown Menu following strict user intent */}
         <div className="flex items-center gap-3 relative">
+          {/* Dynamic Density Toggle Button */}
+          <button
+            type="button"
+            onClick={() => {
+              const newVal = !isCompactColumns;
+              setIsCompactColumns(newVal);
+              localStorage.setItem('tilepoint_inventory_compact_columns', JSON.stringify(newVal));
+            }}
+            className={`hidden md:flex p-2 px-3 hover:bg-m3-primary/10 text-xs font-black uppercase tracking-wider items-center gap-1.5 cursor-pointer rounded-xl transition-all border ${
+              !isCompactColumns
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-500'
+            }`}
+            title={!isCompactColumns ? "Currently in Comfortable Mode. Click to switch to Compact Fit." : "Currently in Compact Fit. Click to switch to Comfortable Mode."}
+          >
+            <Sliders className="h-4 w-4" />
+            <span>{!isCompactColumns ? "Comfortable" : "Compact Fit"}</span>
+          </button>
+
           <div className="relative animate-fade-in">
             <button
               id="account-dropdown-trigger"
@@ -664,6 +684,26 @@ function AppContent() {
                     </div>
                     <span className="text-[9px] font-black uppercase text-zinc-400 px-1.5 py-0.5 bg-m3-outline-variant/20 rounded font-mono">
                       {darkMode ? 'LIGHT' : 'DARK'}
+                    </span>
+                  </button>
+
+                  {/* Compact / Comfort Density Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newVal = !isCompactColumns;
+                      setIsCompactColumns(newVal);
+                      localStorage.setItem('tilepoint_inventory_compact_columns', JSON.stringify(newVal));
+                      setIsAccountDropdownOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Sliders className="h-4 w-4 text-m3-primary" />
+                      <span>{!isCompactColumns ? 'Comfort Mode' : 'Compact Fit'}</span>
+                    </div>
+                    <span className="text-[9px] font-black uppercase text-zinc-400 px-1.5 py-0.5 bg-m3-outline-variant/20 rounded font-mono">
+                      {!isCompactColumns ? 'COMFORT' : 'COMPACT'}
                     </span>
                   </button>
 
@@ -897,7 +937,7 @@ function AppContent() {
         )}
 
         {/* DYNAMIC COMPONENT PANEL AREA */}
-        <main className="flex-1 p-4 md:p-6 pb-26 md:pb-6 overflow-y-auto relative z-10 flex flex-col">
+        <main className={`flex-1 p-4 md:p-6 pb-26 md:pb-6 overflow-y-auto relative z-10 flex flex-col ${isCompactColumns ? 'compact-fit' : ''}`}>
           {/* Elegant Collapsible Horizontal Sub-menu Navigation Pill Bar with Dynamic RBAC */}
           {(() => {
             const activeCategory = sidebarCategoryTree.find(cat => 
@@ -988,7 +1028,7 @@ function AppContent() {
                 {activeTab === 'architecture' && <ArchitectureModule />}
                 {activeTab === 'pos' && <PosModule darkMode={darkMode} onNavigate={changeTab} viewMode="checkout" />}
                 {activeTab === 'ledger' && <PosModule darkMode={darkMode} onNavigate={changeTab} viewMode="ledger" />}
-                {activeTab === 'inventory' && <InventoryModule darkMode={darkMode} />}
+                {activeTab === 'inventory' && <InventoryModule darkMode={darkMode} isCompactGlobal={isCompactColumns} />}
                 {activeTab === 'procurement' && <ProcurementModule darkMode={darkMode} />}
                 {activeTab === 'transmittal' && <TransmittalModule darkMode={darkMode} />}
                 {activeTab === 'shift' && <ShiftModule darkMode={darkMode} onNavigate={changeTab} />}
@@ -999,15 +1039,36 @@ function AppContent() {
                 {activeTab === 'deliveries-panel' && <DeliveriesModule darkMode={darkMode} />}
 
                 {/* ATPOS v2 Sub-items routing to standard Core Modules */}
-                {activeTab.startsWith('inventory-') && (
-                  ['inventory-stocks', 'inventory-warehouse', 'inventory-low-qty', 'inventory-convert', 'inventory-pulled-out', 'inventory-add', 'inventory-print-label', 'inventory-transaction-history', 'inventory-product-history', 'inventory-expiration', 'inventory-new-pullout', 'inventory-pending-pullout', 'inventory-search-pullout'].includes(activeTab) ? (
-                    <InventoryModule darkMode={darkMode} />
-                  ) : ['inventory-transfer', 'inventory-search-transfer'].includes(activeTab) ? (
-                    <InventoryModule darkMode={darkMode} initialSubTab="transfers" />
-                  ) : (
-                    <ProcurementModule darkMode={darkMode} />
-                  )
-                )}
+                {activeTab.startsWith('inventory-') && (() => {
+                  const map: Record<string, 'catalog' | 'movements' | 'transfers' | 'ledger' | 'import'> = {
+                    'inventory-stocks': 'catalog',
+                    'inventory-adjustments': 'movements',
+                    'inventory-transfer': 'transfers',
+                    'inventory-logistics': 'ledger',
+                    'inventory-import': 'import'
+                  };
+                  const subTab = map[activeTab] || 'catalog';
+                  return (
+                    <InventoryModule 
+                      darkMode={darkMode} 
+                      initialSubTab={subTab} 
+                      hideTabHeader={true}
+                      isCompactGlobal={isCompactColumns}
+                      onSubTabChange={(sub) => {
+                        const rMap: Record<string, string> = {
+                          catalog: 'inventory-stocks',
+                          movements: 'inventory-adjustments',
+                          transfers: 'inventory-transfer',
+                          ledger: 'inventory-logistics',
+                          import: 'inventory-import'
+                        };
+                        if (rMap[sub]) {
+                          setActiveTab(rMap[sub]);
+                        }
+                      }}
+                    />
+                  );
+                })()}
 
                 {activeTab === 'adjustments-void' && <PosModule darkMode={darkMode} onNavigate={changeTab} viewMode="ledger" />}
                 {activeTab === 'suppliers-manage' && <ProcurementModule darkMode={darkMode} />}

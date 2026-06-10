@@ -42,6 +42,9 @@ import {
 interface InventoryModuleProps {
   darkMode: boolean;
   initialSubTab?: 'catalog' | 'movements' | 'transfers' | 'ledger' | 'import';
+  hideTabHeader?: boolean;
+  isCompactGlobal?: boolean;
+  onSubTabChange?: (sub: 'catalog' | 'movements' | 'transfers' | 'ledger' | 'import') => void;
 }
 
 // Visual Barcode Component utilizing custom styled SVG lines for absolute accuracy
@@ -122,7 +125,7 @@ const StyledQrCode: React.FC<{ code: string }> = ({ code }) => {
   );
 };
 
-export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, initialSubTab }) => {
+export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, initialSubTab, hideTabHeader, isCompactGlobal, onSubTabChange }) => {
   const {
     products,
     suppliers,
@@ -146,10 +149,12 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   const [activeSubTab, setActiveSubTab] = useState<'catalog' | 'movements' | 'transfers' | 'ledger' | 'import'>(initialSubTab || 'catalog');
 
   // Table layout optimization states
-  const [isCompactColumns, setIsCompactColumns] = useState<boolean>(() => {
+  const [isCompactColumnsLocal, setIsCompactColumnsLocal] = useState<boolean>(() => {
     const saved = localStorage.getItem('tilepoint_inventory_compact_columns');
     return saved ? JSON.parse(saved) : false;
   });
+  
+  const isCompactColumns = isCompactGlobal !== undefined ? isCompactGlobal : isCompactColumnsLocal;
   const [expandedProductIds, setExpandedProductIds] = useState<Record<string, boolean>>({});
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     heatmap: false,
@@ -163,6 +168,13 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
   const toggleSection = (sectionId: string) => {
     setCollapsedSections(prev => ({ ...prev, [sectionId]: !prev[sectionId] }));
+  };
+
+  const changeActiveSubTab = (tab: 'catalog' | 'movements' | 'transfers' | 'ledger' | 'import') => {
+    setActiveSubTab(tab);
+    if (onSubTabChange) {
+      onSubTabChange(tab);
+    }
   };
 
   useEffect(() => {
@@ -736,84 +748,86 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     <div className="space-y-6 animate-fade-in text-m3-on-surface">
       
       {/* SUB-HEADER TAB NAVIGATION */}
-      <div className="flex flex-wrap gap-1 md:gap-2 border-b border-m3-outline-variant/20 pb-px items-center sticky top-0 bg-m3-surface/90 backdrop-blur-md z-30 pt-2 pb-2 rounded-b-xl px-2 shadow-sm">
-        <button
-          onClick={() => setActiveSubTab('catalog')}
-          className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
-            activeSubTab === 'catalog'
-              ? 'border-m3-primary text-m3-primary font-black scale-102'
-              : 'border-transparent text-m3-on-surface-variant'
-          }`}
-        >
-          <Package className="h-4 w-4" />
-          <span>Catalog Stock Ledger</span>
-        </button>
-        
-        <button
-          onClick={() => setActiveSubTab('movements')}
-          className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
-            activeSubTab === 'movements'
-              ? 'border-m3-primary text-m3-primary font-black scale-102'
-              : 'border-transparent text-m3-on-surface-variant'
-          }`}
-        >
-          <Activity className="h-4 w-4" />
-          <span>Adjustments Logs</span>
-        </button>
+      {!hideTabHeader && (
+        <div className="flex flex-wrap gap-1 md:gap-2 border-b border-m3-outline-variant/20 pb-px items-center sticky top-0 bg-m3-surface/90 backdrop-blur-md z-30 pt-2 pb-2 rounded-b-xl px-2 shadow-sm">
+          <button
+            onClick={() => changeActiveSubTab('catalog')}
+            className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
+              activeSubTab === 'catalog'
+                ? 'border-m3-primary text-m3-primary font-black scale-102'
+                : 'border-transparent text-m3-on-surface-variant'
+            }`}
+          >
+            <Package className="h-4 w-4" />
+            <span>Catalog Stock Ledger</span>
+          </button>
+          
+          <button
+            onClick={() => changeActiveSubTab('movements')}
+            className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
+              activeSubTab === 'movements'
+                ? 'border-m3-primary text-m3-primary font-black scale-102'
+                : 'border-transparent text-m3-on-surface-variant'
+            }`}
+          >
+            <Activity className="h-4 w-4" />
+            <span>Adjustments Logs</span>
+          </button>
 
-        <button
-          onClick={() => setActiveSubTab('transfers')}
-          className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl relative ${
-            activeSubTab === 'transfers'
-              ? 'border-m3-primary text-m3-primary font-black scale-102'
-              : 'border-transparent text-m3-on-surface-variant'
-          }`}
-        >
-          <ArrowRightLeft className="h-4 w-4" />
-          <span>Stock Transfers</span>
-          {stockTransfers.filter(t => t.status === 'Pending').length > 0 && (
-            <span className="absolute -top-1 right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black leading-none text-white animate-pulse shadow-md">
-              {stockTransfers.filter(t => t.status === 'Pending').length}
-            </span>
-          )}
-        </button>
+          <button
+            onClick={() => changeActiveSubTab('transfers')}
+            className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl relative ${
+              activeSubTab === 'transfers'
+                ? 'border-m3-primary text-m3-primary font-black scale-102'
+                : 'border-transparent text-m3-on-surface-variant'
+            }`}
+          >
+            <ArrowRightLeft className="h-4 w-4" />
+            <span>Stock Transfers</span>
+            {stockTransfers.filter(t => t.status === 'Pending').length > 0 && (
+              <span className="absolute -top-1 right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black leading-none text-white animate-pulse shadow-md">
+                {stockTransfers.filter(t => t.status === 'Pending').length}
+              </span>
+            )}
+          </button>
 
-        <button
-          onClick={() => setActiveSubTab('ledger')}
-          className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
-            activeSubTab === 'ledger'
-              ? 'border-m3-primary text-m3-primary font-black scale-102'
-              : 'border-transparent text-m3-on-surface-variant'
-          }`}
-        >
-          <Sliders className="h-4 w-4" />
-          <span>Logistics Ledger & Heatmap</span>
-        </button>
+          <button
+            onClick={() => changeActiveSubTab('ledger')}
+            className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
+              activeSubTab === 'ledger'
+                ? 'border-m3-primary text-m3-primary font-black scale-102'
+                : 'border-transparent text-m3-on-surface-variant'
+            }`}
+          >
+            <Sliders className="h-4 w-4" />
+            <span>Logistics Ledger & Heatmap</span>
+          </button>
 
-        <button
-          onClick={() => setActiveSubTab('import')}
-          className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
-            activeSubTab === 'import'
-              ? 'border-m3-primary text-m3-primary font-black scale-102'
-              : 'border-transparent text-m3-on-surface-variant'
-          }`}
-        >
-          <Upload className="h-4 w-4 text-emerald-500 animate-pulse" />
-          <span>Old POS Migration</span>
-        </button>
+          <button
+            onClick={() => changeActiveSubTab('import')}
+            className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
+              activeSubTab === 'import'
+                ? 'border-m3-primary text-m3-primary font-black scale-102'
+                : 'border-transparent text-m3-on-surface-variant'
+            }`}
+          >
+            <Upload className="h-4 w-4 text-emerald-500 animate-pulse" />
+            <span>Old POS Migration</span>
+          </button>
 
-        <div className="ml-auto flex items-center gap-2 pl-4 py-1.5">
-          {allowedToModify && (
-            <button
-              onClick={handleOpenAdd}
-              className="px-4 py-2 bg-m3-primary hover:bg-m3-primary/95 text-white hover:shadow-md font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 shadow-lg"
-            >
-              <Plus className="h-4.5 w-4.5" />
-              <span>Add Item (Manual)</span>
-            </button>
-          )}
+          <div className="ml-auto flex items-center gap-2 pl-4 py-1.5">
+            {allowedToModify && (
+              <button
+                onClick={handleOpenAdd}
+                className="px-4 py-2 bg-m3-primary hover:bg-m3-primary/95 text-white hover:shadow-md font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 shadow-lg"
+              >
+                <Plus className="h-4.5 w-4.5" />
+                <span>Add Item (Manual)</span>
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* INVENTORY DASHBOARD SUMMARY STATS */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
@@ -962,7 +976,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   type="button"
                   onClick={() => {
                     const newValue = !isCompactColumns;
-                    setIsCompactColumns(newValue);
+                    setIsCompactColumnsLocal(newValue);
                     localStorage.setItem('tilepoint_inventory_compact_columns', JSON.stringify(newValue));
                   }}
                   className={`p-2 px-3.5 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer rounded-full transition-all border ${
