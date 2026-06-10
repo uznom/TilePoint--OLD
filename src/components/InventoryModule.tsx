@@ -31,6 +31,8 @@ import {
   Check,
   Printer,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Clock,
   Flame,
   ArrowRightLeft,
@@ -141,6 +143,23 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
   // Primary navigation sub-tabs: "catalog" | "movements" | "transfers" | "ledger"
   const [activeSubTab, setActiveSubTab] = useState<'catalog' | 'movements' | 'transfers' | 'ledger'>(initialSubTab || 'catalog');
+
+  // Table layout optimization states
+  const [isCompactColumns, setIsCompactColumns] = useState(false);
+  const [expandedProductIds, setExpandedProductIds] = useState<Record<string, boolean>>({});
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
+    heatmap: false,
+    ledger: false,
+    aging: false,
+  });
+
+  const toggleProductExpand = (id: string) => {
+    setExpandedProductIds(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const toggleSection = (sectionId: string) => {
+    setCollapsedSections(prev => ({ ...prev, [sectionId]: !prev[sectionId] }));
+  };
 
   useEffect(() => {
     if (initialSubTab) {
@@ -869,6 +888,19 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   <Download className="h-4 w-4" /> JSON Export
                 </button>
 
+                <button
+                  type="button"
+                  onClick={() => setIsCompactColumns(!isCompactColumns)}
+                  className={`p-2 px-3.5 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer rounded-full transition-all border ${
+                    isCompactColumns
+                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-500 font-extrabold'
+                      : 'border-m3-outline-variant/20 hover:bg-m3-outline-variant/15 text-m3-on-surface-variant font-bold'
+                  }`}
+                  title={isCompactColumns ? "Expand to show all columns" : "Collapse columns to fit screen"}
+                >
+                  <Sliders className="h-3.5 w-3.5" /> {isCompactColumns ? "Comfortable Mode" : "Compact Fit"}
+                </button>
+
                 {allowedToModify && (
                   <>
                     <button
@@ -891,20 +923,21 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
           </div>
 
           {/* Database Catalog Table List */}
-          <div className="m3-card shadow-sm overflow-x-auto p-0">
-            <table className="w-full text-left border-collapse table-auto text-xs min-w-[1280px]">
+          <div className="m3-card shadow-sm overflow-x-auto p-0 scrollbar-thin scrollbar-thumb-m3-outline-variant">
+            <table className={`w-full text-left border-collapse table-auto text-xs transition-all ${isCompactColumns ? 'min-w-[700px]' : 'min-w-[1280px]'}`}>
               <thead>
                 <tr className="border-b border-m3-outline-variant/20 bg-m3-surface/30 text-[10px] uppercase font-bold text-m3-on-surface-variant tracking-wider">
-                  <th className="py-3 px-4 w-12 text-center">Image</th>
+                  <th className="py-3 px-2 w-10 text-center bg-m3-surface-low/40 select-none"></th>
+                  {!isCompactColumns && <th className="py-3 px-4 w-12 text-center">Image</th>}
                   <th className="py-3 px-4">Code / SKU</th>
-                  <th className="py-3 px-4">Identifier codes</th>
+                  {!isCompactColumns && <th className="py-3 px-4">Identifier codes</th>}
                   <th className="py-3 px-4">Product Details</th>
-                  <th className="py-3 px-4">Category / Brand</th>
-                  <th className="py-3 px-4 text-center">Packaging dimensions</th>
-                  <th className="py-3 px-4 text-right">Unit cost</th>
+                  {!isCompactColumns && <th className="py-3 px-4">Category / Brand</th>}
+                  {!isCompactColumns && <th className="py-3 px-4 text-center">Packaging dimensions</th>}
+                  {!isCompactColumns && <th className="py-3 px-4 text-right">Unit cost</th>}
                   <th className="py-3 px-4 text-right">Sale Price</th>
                   <th className="py-3 px-4 text-center">Current Stock</th>
-                  <th className="py-3 px-2 text-center">Threshold</th>
+                  {!isCompactColumns && <th className="py-3 px-2 text-center">Threshold</th>}
                   <th className="py-3 px-4 text-center">Status</th>
                   <th className="py-3 px-4 text-center">Controls</th>
                 </tr>
@@ -926,156 +959,295 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                     statusClass = 'bg-amber-500/10 text-amber-500 border-amber-500/25';
                   }
 
+                  const isExpanded = !!expandedProductIds[p.id];
+
                   return (
-                    <tr key={p.id} className="hover:bg-m3-surface-low/50 transition-colors">
-                      
-                      {/* Product Thumbnail view */}
-                      <td className="py-3.5 px-4 font-mono select-none">
-                        <div className="w-10 h-10 rounded-xl overflow-hidden border border-zinc-200/40 dark:border-zinc-700/40 bg-zinc-300/30 flex items-center justify-center shrink-0">
-                          {p.image ? (
-                            <img
-                              src={p.image}
-                              alt={p.productName}
-                              className="w-full h-full object-cover"
-                              referrerPolicy="no-referrer"
-                            />
-                          ) : (
-                            <div className="text-[9px] uppercase tracking-tighter text-zinc-400 font-extrabold text-center leading-none p-1 shrink-0">
-                              No Pix
-                            </div>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Code / SKU details */}
-                      <td className="py-3.5 px-4 font-mono">
-                        <div className="font-extrabold text-m3-primary">{p.productCode}</div>
-                        <div className="text-[10px] text-m3-on-surface-variant font-bold">{p.sku}</div>
-                      </td>
-
-                      {/* Scannable keys info */}
-                      <td className="py-3.5 px-4 font-mono text-[10px] text-zinc-500 select-all">
-                        <div>BC: {p.barcode}</div>
-                        <div>QR: {p.qrCode}</div>
-                      </td>
-
-                      {/* Primary specifications block */}
-                      <td className="py-3.5 px-4">
-                        <strong className="text-m3-on-surface text-xs block truncate max-w-[240px]" title={p.productName}>
-                          {p.productName}
-                        </strong>
-                        <div className="flex items-center gap-2 mt-0.5 whitespace-nowrap">
-                          {p.designName && (
-                            <span className="text-[10px] text-m3-on-surface-variant font-medium bg-m3-surface-lowest px-1.5 py-0.5 rounded border border-m3-outline-variant/15 font-sans">
-                              Design: {p.designName}
-                            </span>
-                          )}
-                          {p.coveragePerBox ? (
-                            <span className="text-[10px] text-m3-primary/95 font-bold bg-m3-primary/5 px-1.5 py-0.5 rounded border border-m3-primary/10 font-sans">
-                              Coverage: {p.coveragePerBox} m²
-                            </span>
-                          ) : null}
-                        </div>
-                      </td>
-
-                      {/* Category metadata */}
-                      <td className="py-3.5 px-4">
-                        <span className="bg-m3-outline-variant/25 px-2.5 py-0.5 rounded-full text-m3-on-surface text-[11px] font-bold">
-                          {p.category}
-                        </span>
-                        <div className="text-[9px] text-m3-on-surface-variant mt-1.5 font-bold">Brand: {p.brand}</div>
-                      </td>
-
-                      {/* Packaging dimensions and piece count */}
-                      <td className="py-3.5 px-4 text-center font-bold">
-                        <div className="text-m3-on-surface">{p.unit}</div>
-                        {p.size && (
-                          <div className="text-[10px] text-m3-on-surface-variant font-medium">
-                            {p.size} {p.boxQuantity > 1 && `(${p.boxQuantity} pcs)`}
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Financial unit cost */}
-                      <td className="py-3.5 px-4 text-right font-mono font-bold text-m3-on-surface">
-                        ₱{p.costPrice.toFixed(2)}
-                      </td>
-
-                      {/* Retail selling price */}
-                      <td className="py-3.5 px-4 text-right font-mono font-extrabold text-m3-primary">
-                        ₱{p.sellingPrice.toFixed(2)}
-                      </td>
-
-                      {/* Current physical warehouse qty */}
-                      <td className="py-3.5 px-4 text-center font-mono text-sm font-extrabold">
-                        <div className={
-                          p.stockQuantity === 0 
-                            ? 'text-zinc-400 dark:text-zinc-600' 
-                            : p.stockQuantity <= p.minimumStock 
-                              ? 'text-m3-primary tracking-wide' 
-                              : 'text-m3-on-surface'
-                        }>
-                          {p.stockQuantity}
-                        </div>
-                      </td>
-
-                      {/* Threshold warnings trigger limit */}
-                      <td className="py-3.5 px-2 text-center font-mono text-m3-on-surface-variant font-bold">
-                        {p.minimumStock}
-                      </td>
-
-                      {/* Visual Status badge */}
-                      <td className="py-3.5 px-4 text-center select-none">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase border ${statusClass}`}>
-                          {statusLabel}
-                        </span>
-                      </td>
-
-                      {/* CRUD + Action buttons */}
-                      <td className="py-3.5 px-4 text-center select-none">
-                        <div className="flex gap-0.5 justify-center">
+                    <React.Fragment key={p.id}>
+                      <tr 
+                        className={`hover:bg-m3-surface-low/50 transition-colors cursor-pointer ${isExpanded ? 'bg-m3-primary/5 hover:bg-m3-primary/10' : ''}`}
+                        onClick={() => toggleProductExpand(p.id)}
+                        title="Click to expand/collapse full tile specifications"
+                      >
+                        {/* Expand/Collapse Toggle Button column */}
+                        <td className="py-3.5 px-2 text-center bg-m3-surface-low/15" onClick={e => e.stopPropagation()}>
                           <button
-                            onClick={() => handleOpenCodesModal(p)}
-                            className="p-1.5 text-zinc-500 hover:text-m3-primary hover:bg-m3-outline-variant/15 transition-all rounded-full cursor-pointer shrink-0"
-                            title="View / Print Barcodes & QR Codes"
+                            type="button"
+                            onClick={() => toggleProductExpand(p.id)}
+                            className="p-1 hover:bg-m3-primary/10 text-m3-primary rounded-full cursor-pointer transition-all"
                           >
-                            <QrCode className="h-4 w-4" />
+                            {isExpanded ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
                           </button>
-                          
-                          {allowedToModify && (
-                            <>
-                              <button
-                                onClick={() => handleOpenAdjust(p)}
-                                className="p-1.5 text-zinc-500 hover:text-emerald-500 hover:bg-m3-outline-variant/15 transition-all rounded-full cursor-pointer shrink-0"
-                                title="Quick Stock Adjustment Intake/outtake"
-                              >
-                                <Sliders className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleOpenEdit(p)}
-                                className="p-1.5 text-zinc-500 hover:text-m3-primary hover:bg-m3-outline-variant/15 transition-all rounded-full cursor-pointer shrink-0"
-                                title="Edit specs / Upload Image"
-                              >
-                                <Edit2 className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteTrigger(p.id, p.productName)}
-                                className="p-1.5 text-zinc-500 hover:text-rose-500 hover:bg-rose-500/10 transition-all rounded-full cursor-pointer shrink-0"
-                                title="Soft-delete listings"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                        
+                        {/* Product Thumbnail view */}
+                        {!isCompactColumns && (
+                          <td className="py-3.5 px-4 font-mono select-none">
+                            <div className="w-10 h-10 rounded-xl overflow-hidden border border-zinc-200/40 dark:border-zinc-700/40 bg-zinc-300/30 flex items-center justify-center shrink-0">
+                              {p.image ? (
+                                <img
+                                  src={p.image}
+                                  alt={p.productName}
+                                  className="w-full h-full object-cover"
+                                  referrerPolicy="no-referrer"
+                                />
+                              ) : (
+                                <div className="text-[9px] uppercase tracking-tighter text-zinc-400 font-extrabold text-center leading-none p-1 shrink-0">
+                                  No Pix
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        )}
+
+                        {/* Code / SKU details */}
+                        <td className="py-3.5 px-4 font-mono">
+                          <div className="font-extrabold text-m3-primary">{p.productCode}</div>
+                          <div className="text-[10px] text-m3-on-surface-variant font-bold">{p.sku}</div>
+                        </td>
+
+                        {/* Scannable keys info */}
+                        {!isCompactColumns && (
+                          <td className="py-3.5 px-4 font-mono text-[10px] text-zinc-500 select-all">
+                            <div>BC: {p.barcode}</div>
+                            <div>QR: {p.qrCode}</div>
+                          </td>
+                        )}
+
+                        {/* Primary specifications block */}
+                        <td className="py-3.5 px-4">
+                          <strong className="text-m3-on-surface text-xs block truncate max-w-[240px]" title={p.productName}>
+                            {p.productName}
+                          </strong>
+                          <div className="flex items-center gap-2 mt-0.5 whitespace-nowrap">
+                            {p.designName && (
+                              <span className="text-[10px] text-m3-on-surface-variant font-medium bg-m3-surface-lowest px-1.5 py-0.5 rounded border border-m3-outline-variant/15 font-sans">
+                                Design: {p.designName}
+                              </span>
+                            )}
+                            {p.coveragePerBox ? (
+                              <span className="text-[10px] text-m3-primary/95 font-bold bg-m3-primary/5 px-1.5 py-0.5 rounded border border-m3-primary/10 font-sans">
+                                Coverage: {p.coveragePerBox} m²
+                              </span>
+                            ) : null}
+                          </div>
+                        </td>
+
+                        {/* Category metadata */}
+                        {!isCompactColumns && (
+                          <td className="py-3.5 px-4">
+                            <span className="bg-m3-outline-variant/25 px-2.5 py-0.5 rounded-full text-m3-on-surface text-[11px] font-bold">
+                              {p.category}
+                            </span>
+                            <div className="text-[9px] text-m3-on-surface-variant mt-1.5 font-bold">Brand: {p.brand}</div>
+                          </td>
+                        )}
+
+                        {/* Packaging dimensions and piece count */}
+                        {!isCompactColumns && (
+                          <td className="py-3.5 px-4 text-center font-bold">
+                            <div className="text-m3-on-surface">{p.unit}</div>
+                            {p.size && (
+                              <div className="text-[10px] text-m3-on-surface-variant font-medium">
+                                {p.size} {p.boxQuantity > 1 && `(${p.boxQuantity} pcs)`}
+                              </div>
+                            )}
+                          </td>
+                        )}
+
+                        {/* Financial unit cost */}
+                        {!isCompactColumns && (
+                          <td className="py-3.5 px-4 text-right font-mono font-bold text-m3-on-surface">
+                            ₱{p.costPrice.toFixed(2)}
+                          </td>
+                        )}
+
+                        {/* Retail selling price */}
+                        <td className="py-3.5 px-4 text-right font-mono font-extrabold text-m3-primary">
+                          ₱{p.sellingPrice.toFixed(2)}
+                        </td>
+
+                        {/* Current physical warehouse qty */}
+                        <td className="py-3.5 px-4 text-center font-mono text-sm font-extrabold">
+                          <div className={
+                            p.stockQuantity === 0 
+                              ? 'text-zinc-400 dark:text-zinc-600' 
+                              : p.stockQuantity <= p.minimumStock 
+                                ? 'text-m3-primary tracking-wide' 
+                                : 'text-m3-on-surface'
+                          }>
+                            {p.stockQuantity}
+                          </div>
+                        </td>
+
+                        {/* Threshold warnings trigger limit */}
+                        {!isCompactColumns && (
+                          <td className="py-3.5 px-2 text-center font-mono text-m3-on-surface-variant font-bold">
+                            {p.minimumStock}
+                          </td>
+                        )}
+
+                        {/* Visual Status badge */}
+                        <td className="py-3.5 px-4 text-center select-none">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase border ${statusClass}`}>
+                            {statusLabel}
+                          </span>
+                        </td>
+
+                        {/* CRUD + Action buttons */}
+                        <td className="py-3.5 px-4 text-center select-none" onClick={e => e.stopPropagation()}>
+                          <div className="flex gap-0.5 justify-center">
+                            <button
+                              onClick={() => handleOpenCodesModal(p)}
+                              className="p-1.5 text-zinc-500 hover:text-m3-primary hover:bg-m3-outline-variant/15 transition-all rounded-full cursor-pointer shrink-0"
+                              title="View / Print Barcodes & QR Codes"
+                            >
+                              <QrCode className="h-4 w-4" />
+                            </button>
+                            
+                            {allowedToModify && (
+                              <>
+                                <button
+                                  onClick={() => handleOpenAdjust(p)}
+                                  className="p-1.5 text-zinc-500 hover:text-emerald-500 hover:bg-m3-outline-variant/15 transition-all rounded-full cursor-pointer shrink-0"
+                                  title="Quick Stock Adjustment Intake/outtake"
+                                >
+                                  <Sliders className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleOpenEdit(p)}
+                                  className="p-1.5 text-zinc-500 hover:text-m3-primary hover:bg-m3-outline-variant/15 transition-all rounded-full cursor-pointer shrink-0"
+                                  title="Edit specs / Upload Image"
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteTrigger(p.id, p.productName)}
+                                  className="p-1.5 text-zinc-500 hover:text-rose-500 hover:bg-rose-500/10 transition-all rounded-full cursor-pointer shrink-0"
+                                  title="Soft-delete listings"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Expanded Sub-Row with Detailed Layout Card to Prevent Screen Overflow */}
+                      {isExpanded && (
+                        <tr key={`${p.id}-expanded-details`}>
+                          <td colSpan={isCompactColumns ? 7 : 13} className="p-4 bg-m3-surface-low border-b border-m3-outline-variant/20 animate-scale-up">
+                            <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/15 grid grid-cols-1 md:grid-cols-3 gap-6 shadow-inner text-left">
+                              
+                              {/* Left specs: Branding & Thumbnail */}
+                              <div className="space-y-4 border-b md:border-b-0 md:border-r border-m3-outline-variant/10 pb-4 md:pb-0 md:pr-6">
+                                <div className="flex gap-4 items-start">
+                                  <div className="w-16 h-16 rounded-xl overflow-hidden border border-zinc-200/40 dark:border-zinc-700/40 bg-zinc-300/30 flex items-center justify-center shrink-0">
+                                    {p.image ? (
+                                      <img
+                                        src={p.image}
+                                        alt={p.productName}
+                                        className="w-full h-full object-cover"
+                                        referrerPolicy="no-referrer"
+                                      />
+                                    ) : (
+                                      <div className="text-[9px] uppercase tracking-tighter text-zinc-400 font-extrabold text-center leading-none p-2 truncate">No Image</div>
+                                    )}
+                                  </div>
+                                  <div className="space-y-1">
+                                    <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest block">Primary SKU Details</span>
+                                    <strong className="text-sm text-m3-on-surface block leading-tight">{p.productName}</strong>
+                                    <span className="text-[10px] text-zinc-400 font-mono block">ID Key: {p.id}</span>
+                                  </div>
+                                </div>
+                                
+                                <div className="pt-2">
+                                  <StyledBarcode code={p.barcode} />
+                                  <span className="text-[9px] font-mono font-bold text-zinc-400 block mt-1.5 text-center">SCAN BARCODE: {p.barcode}</span>
+                                </div>
+                              </div>
+
+                              {/* Center specs: Dimensions, quantities and price indices */}
+                              <div className="space-y-3 md:border-r border-m3-outline-variant/10 md:pr-6">
+                                <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest block">Dimensional Specifications</span>
+                                <div className="grid grid-cols-2 gap-3 text-xs font-semibold">
+                                  <div>
+                                    <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Brand Name</span>
+                                    <span className="text-m3-on-surface">{p.brand || 'No registered brand'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Catalog Category</span>
+                                    <span className="text-m3-on-surface">{p.category}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Dimensions / Size</span>
+                                    <span className="text-m3-on-surface">{p.size || 'Unspecified'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Box Coverage</span>
+                                    <span className="text-m3-primary">{p.coveragePerBox ? `${p.coveragePerBox} m²` : '0.00 m²'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Pcs / Package</span>
+                                    <span className="text-m3-on-surface">{p.boxQuantity} pieces</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Safety Threshold</span>
+                                    <span className="text-amber-500 font-mono">{p.minimumStock} {p.unit}</span>
+                                  </div>
+                                  <div className="border-t border-m3-outline-variant/10 pt-2 col-span-2 grid grid-cols-2 gap-2">
+                                    <div>
+                                      <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Unit Cost</span>
+                                      <span className="text-zinc-500 font-mono text-xs">₱{p.costPrice.toFixed(2)}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Selling Retail</span>
+                                      <span className="text-m3-primary font-mono text-xs font-extrabold">₱{p.sellingPrice.toFixed(2)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Right specs: Regional Branch distributions */}
+                              <div className="space-y-3">
+                                <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest block">Live Multi-Branch Stock balance</span>
+                                <div className="space-y-2">
+                                  {branches.filter(b => !b.isDeleted).map((b) => {
+                                    const qty = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id)?.quantity || 0;
+                                    let statusBg = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/10';
+                                    if (qty === 0) statusBg = 'bg-rose-500/10 text-rose-500 border-rose-500/10';
+                                    else if (qty <= p.minimumStock / 4) statusBg = 'bg-amber-500/10 text-amber-500 border-amber-500/10';
+
+                                    return (
+                                      <div key={b.id} className="flex justify-between items-center text-xs p-2.5 rounded-xl bg-m3-surface border border-m3-outline-variant/10 shadow-3xs">
+                                        <div className="flex flex-col">
+                                          <span className="font-extrabold text-[10px] text-m3-on-surface uppercase tracking-tight">{b.name.replace('Emman Tile Center ', '')}</span>
+                                          <span className="text-[8px] text-zinc-400 font-mono uppercase">{b.id} - Location ID</span>
+                                        </div>
+                                        <span className={`font-mono font-black text-xs px-2.5 py-1 rounded-lg border ${statusBg}`}>
+                                          {qty} {p.unit || 'Boxes'}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
 
                 {filteredProducts.length === 0 && (
                   <tr>
-                    <td colSpan={12} className="py-12 text-center text-m3-on-surface-variant font-bold text-sm">
+                    <td colSpan={isCompactColumns ? 7 : 13} className="py-12 text-center text-m3-on-surface-variant font-bold text-sm">
                       No hardware listings or tiles match your filtered search.
                     </td>
                   </tr>
@@ -1573,268 +1745,319 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
           {/* SECTION B: RELATIONAL BRANCH STOCK MATRIX */}
           <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] overflow-hidden shadow-sm">
-            <div className="p-5 border-b border-m3-outline-variant/15">
-              <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest">Multi-Branch Stock Balance Heatmap</h3>
-              <p className="text-[10px] text-zinc-400 font-medium">Grid inventory of active products across the franchise spectrum</p>
+            <div 
+              onClick={() => toggleSection('heatmap')}
+              className="p-5 border-b border-m3-outline-variant/15 flex justify-between items-center cursor-pointer hover:bg-m3-surface-low/60 transition-colors select-none"
+              title="Click to toggle Section Visibility"
+            >
+              <div>
+                <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest flex items-center gap-2">
+                  <span>Multi-Branch Stock Balance Heatmap</span>
+                  {collapsedSections.heatmap && <span className="text-[9px] bg-m3-primary/10 text-m3-primary px-2 py-0.5 rounded font-mono font-bold uppercase tracking-wider">Collapsed</span>}
+                </h3>
+                <p className="text-[10px] text-zinc-400 font-medium">Grid inventory of active products across the franchise spectrum</p>
+              </div>
+              <button 
+                type="button" 
+                className="p-1.5 text-zinc-500 hover:text-m3-primary hover:bg-m3-outline-variant/10 rounded-full transition-all"
+              >
+                {collapsedSections.heatmap ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+              </button>
             </div>
             
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-m3-surface text-[10px] font-black uppercase tracking-wider text-zinc-500 border-b border-m3-outline-variant/15">
-                    <th className="py-3 px-4">Associated Product</th>
-                    <th className="py-3 px-4 text-center">B1: Cebu Main HQ</th>
-                    <th className="py-3 px-4 text-center">B2: Bacolod Branch</th>
-                    <th className="py-3 px-4 text-center">B3: Iloilo Hub</th>
-                    <th className="py-3 px-4 text-center">B4: Dumaguete Center</th>
-                    <th className="py-3 px-4 text-right">Unified Global Pools</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-m3-outline-variant/10 text-xs font-semibold">
-                  {products.filter(p => !p.isDeleted).map((p) => {
-                    const b1Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B1')?.quantity || 0;
-                    const b2Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B2')?.quantity || 0;
-                    const b3Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B3')?.quantity || 0;
-                    const b4Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B4')?.quantity || 0;
-                    const totalGlobal = b1Stock + b2Stock + b3Stock + b4Stock;
+            {!collapsedSections.heatmap && (
+              <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-m3-outline-variant">
+                <table className="w-full text-left border-collapse min-w-[750px]">
+                  <thead>
+                    <tr className="bg-m3-surface text-[10px] font-black uppercase tracking-wider text-zinc-500 border-b border-m3-outline-variant/15">
+                      <th className="py-3 px-4">Associated Product</th>
+                      <th className="py-3 px-4 text-center">B1: Cebu Main HQ</th>
+                      <th className="py-3 px-4 text-center">B2: Bacolod Branch</th>
+                      <th className="py-3 px-4 text-center">B3: Iloilo Hub</th>
+                      <th className="py-3 px-4 text-center">B4: Dumaguete Center</th>
+                      <th className="py-3 px-4 text-right">Unified Global Pools</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-m3-outline-variant/10 text-xs font-semibold">
+                    {products.filter(p => !p.isDeleted).map((p) => {
+                      const b1Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B1')?.quantity || 0;
+                      const b2Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B2')?.quantity || 0;
+                      const b3Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B3')?.quantity || 0;
+                      const b4Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B4')?.quantity || 0;
+                      const totalGlobal = b1Stock + b2Stock + b3Stock + b4Stock;
 
-                    return (
-                      <tr key={p.id} className="hover:bg-m3-surface-high/30 transition-colors">
-                        <td className="py-3.5 px-4 font-black">
-                          <span className="block truncate max-w-[200px]" title={p.productName}>{p.productName}</span>
-                          <span className="text-[9px] font-mono font-bold text-zinc-400">SKU Code: {p.skuCode} | Category: {p.category}</span>
-                        </td>
-                        
-                        {/* Branch cells with interactive alerts */}
-                        <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
-                          <span className={b1Stock < 30 ? 'bg-amber-500/15 text-amber-600 border border-amber-500/20 px-2 py-0.5 rounded-lg text-xs' : 'text-m3-on-surface'}>
-                            {b1Stock} boxes
-                          </span>
-                        </td>
+                      return (
+                        <tr key={p.id} className="hover:bg-m3-surface-high/30 transition-colors">
+                          <td className="py-3.5 px-4 font-black">
+                            <span className="block truncate max-w-[200px]" title={p.productName}>{p.productName}</span>
+                            <span className="text-[9px] font-mono font-bold text-zinc-400">SKU Code: {p.skuCode} | Category: {p.category}</span>
+                          </td>
+                          
+                          {/* Branch cells with interactive alerts */}
+                          <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
+                            <span className={b1Stock < 30 ? 'bg-amber-500/15 text-amber-600 border border-amber-500/20 px-2 py-0.5 rounded-lg text-xs' : 'text-m3-on-surface'}>
+                              {b1Stock} boxes
+                            </span>
+                          </td>
 
-                        <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
-                          <span className={b2Stock < 15 ? 'bg-rose-500/15 text-rose-600 border border-rose-500/20 px-2 py-0.5 rounded-lg text-xs' : 'text-m3-on-surface'}>
-                            {b2Stock} boxes
-                          </span>
-                        </td>
+                          <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
+                            <span className={b2Stock < 15 ? 'bg-rose-500/15 text-rose-600 border border-rose-500/20 px-2 py-0.5 rounded-lg text-xs' : 'text-m3-on-surface'}>
+                              {b2Stock} boxes
+                            </span>
+                          </td>
 
-                        <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
-                          <span className={b3Stock < 15 ? 'bg-rose-500/15 text-rose-600 border border-rose-500/20 px-2 py-0.5 rounded-lg text-xs' : 'text-m3-on-surface'}>
-                            {b3Stock} boxes
-                          </span>
-                        </td>
+                          <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
+                            <span className={b3Stock < 15 ? 'bg-rose-500/15 text-rose-600 border border-rose-500/20 px-2 py-0.5 rounded-lg text-xs' : 'text-m3-on-surface'}>
+                              {b3Stock} boxes
+                            </span>
+                          </td>
 
-                        <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
-                          <span className={b4Stock < 15 ? 'bg-rose-500/15 text-rose-600 border border-rose-500/20 px-2 py-0.5 rounded-lg text-xs' : 'text-m3-on-surface'}>
-                            {b4Stock} boxes
-                          </span>
-                        </td>
+                          <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
+                            <span className={b4Stock < 15 ? 'bg-rose-500/15 text-rose-600 border border-rose-500/20 px-2 py-0.5 rounded-lg text-xs' : 'text-m3-on-surface'}>
+                              {b4Stock} boxes
+                            </span>
+                          </td>
 
-                        <td className="py-3.5 px-4 text-right font-mono font-black text-sm text-m3-primary">
-                          {totalGlobal} units
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          <td className="py-3.5 px-4 text-right font-mono font-black text-sm text-m3-primary">
+                            {totalGlobal} units
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* SECTION C: CHRONOLOGICAL DOUBLE-ENTRY LEDGER VIEW */}
           <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] overflow-hidden shadow-sm">
-            <div className="p-5 border-b border-m3-outline-variant/15 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div 
+              onClick={() => toggleSection('ledger')}
+              className="p-5 border-b border-m3-outline-variant/15 flex justify-between items-center cursor-pointer hover:bg-m3-surface-low/60 transition-colors select-none"
+              title="Click to toggle Section Visibility"
+            >
               <div>
-                <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest">Double-Entry Logistics Audit Ledger (Chronicler)</h3>
+                <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest flex items-center gap-2">
+                  <span>Double-Entry Logistics Audit Ledger (Chronicler)</span>
+                  {collapsedSections.ledger && <span className="text-[9px] bg-m3-primary/10 text-m3-primary px-2 py-0.5 rounded font-mono font-bold uppercase tracking-wider">Collapsed</span>}
+                </h3>
                 <p className="text-[10px] text-zinc-400 font-medium">Unalterable transaction ledger tracking chronological inventory movements</p>
               </div>
+              <button 
+                type="button" 
+                className="p-1.5 text-zinc-500 hover:text-m3-primary hover:bg-m3-outline-variant/10 rounded-full transition-all"
+              >
+                {collapsedSections.ledger ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+              </button>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-m3-surface text-[10px] font-black uppercase tracking-wider text-zinc-500 border-b border-m3-outline-variant/15">
-                    <th className="py-3 px-4">Date / Timestamp</th>
-                    <th className="py-3 px-4">Associated Tile Catalog</th>
-                    <th className="py-3 px-4 text-center">Affected Yard</th>
-                    <th className="py-3 px-4 text-center">Type</th>
-                    <th className="py-3 px-4 text-right">Debit / Credit Change</th>
-                    <th className="py-3 px-4 font-mono">Reference No</th>
-                    <th className="py-3 px-4 w-[280px]">Audit Signature Remarks</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-m3-outline-variant/10 text-xs font-medium">
-                  {paginatedLedger.map((l) => {
-                    const matchedB = branches.find(b => b.id === l.branchId);
-                    
-                    let eventBadge = 'bg-zinc-500/10 text-zinc-500 border-zinc-500/15';
-                    if (l.movementType === 'SALE') eventBadge = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/15';
-                    if (l.movementType === 'TRANSFER') eventBadge = 'bg-indigo-500/10 text-indigo-500 border-indigo-500/15';
-                    if (l.movementType === 'CORRECTION') eventBadge = 'bg-yellow-500/10 text-yellow-500 border-yellow-500/15';
-
-                    return (
-                      <tr key={l.id} className="hover:bg-m3-surface-high/30 transition-colors">
-                        <td className="py-3.5 px-4 text-zinc-400 font-mono text-[10px] whitespace-nowrap">
-                          {new Date(l.date).toLocaleString()}
-                        </td>
-                        
-                        <td className="py-3.5 px-4 font-black">
-                          {l.productName}
-                          <span className="block text-[9px] font-mono font-bold text-zinc-400 uppercase">PROD CODE: #{l.productId}</span>
-                        </td>
-                        
-                        <td className="py-3.5 px-4 text-center font-bold">
-                          {matchedB ? matchedB.name.replace('Emman Tile Center ', '') : l.branchId}
-                        </td>
-                        
-                        <td className="py-3.5 px-4 text-center select-none">
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border uppercase tracking-wider ${eventBadge}`}>
-                            {l.movementType}
-                          </span>
-                        </td>
-
-                        <td className="py-3.5 px-4 text-right font-mono font-extrabold text-sm">
-                          <span className={l.quantity > 0 ? 'text-emerald-500' : 'text-rose-500'}>
-                            {l.quantity > 0 ? '+' : ''}{l.quantity} boxes
-                          </span>
-                        </td>
-
-                        <td className="py-3.5 px-4 font-mono font-bold text-zinc-500 whitespace-nowrap">
-                          {l.referenceNo}
-                        </td>
-
-                        <td className="py-3.5 px-4 italic text-zinc-400 text-xs truncate max-w-[280px]" title={l.remarks}>
-                          "{l.remarks}"
-                        </td>
+            {!collapsedSections.ledger && (
+              <>
+                <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-m3-outline-variant">
+                  <table className="w-full text-left border-collapse min-w-[900px]">
+                    <thead>
+                      <tr className="bg-m3-surface text-[10px] font-black uppercase tracking-wider text-zinc-500 border-b border-m3-outline-variant/15">
+                        <th className="py-3 px-4">Date / Timestamp</th>
+                        <th className="py-3 px-4">Associated Tile Catalog</th>
+                        <th className="py-3 px-4 text-center">Affected Yard</th>
+                        <th className="py-3 px-4 text-center">Type</th>
+                        <th className="py-3 px-4 text-right">Debit / Credit Change</th>
+                        <th className="py-3 px-4 font-mono">Reference No</th>
+                        <th className="py-3 px-4 w-[280px]">Audit Signature Remarks</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody className="divide-y divide-m3-outline-variant/10 text-xs font-medium">
+                      {paginatedLedger.map((l) => {
+                        const matchedB = branches.find(b => b.id === l.branchId);
+                        
+                        let eventBadge = 'bg-zinc-500/10 text-zinc-500 border-zinc-500/15';
+                        if (l.movementType === 'SALE') eventBadge = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/15';
+                        if (l.movementType === 'TRANSFER') eventBadge = 'bg-indigo-500/10 text-indigo-500 border-indigo-500/15';
+                        if (l.movementType === 'CORRECTION') eventBadge = 'bg-yellow-500/10 text-yellow-500 border-yellow-500/15';
 
-            {/* Pagination Controls bar */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-m3-surface-low/80 border-t border-m3-outline-variant/30 text-xs font-sans">
-              <span className="font-medium text-m3-on-surface-variant font-mono">
-                Showing {Math.min(ledgerEntries.length, (ledgerPage - 1) * LEDGER_PER_PAGE + 1)}-{Math.min(ledgerEntries.length, ledgerPage * LEDGER_PER_PAGE)} of {ledgerEntries.length} movements
-              </span>
-              <div className="flex items-center gap-1.5 select-none">
-                <button
-                  type="button"
-                  disabled={ledgerPage === 1}
-                  onClick={() => setLedgerPage(prev => Math.max(1, prev - 1))}
-                  className="px-3.5 py-1.5 rounded-lg border border-m3-outline-variant/30 text-m3-on-surface hover:bg-m3-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[10px]"
-                >
-                  Prev
-                </button>
-                {Array.from({ length: totalLedgerPages }).map((_, i) => {
-                  const pNum = i + 1;
-                  if (totalLedgerPages > 5 && Math.abs(pNum - ledgerPage) > 2 && pNum !== 1 && pNum !== totalLedgerPages) {
-                    if (pNum === 2 || pNum === totalLedgerPages - 1) {
-                      return <span key={pNum} className="px-1.5 text-zinc-400">...</span>;
-                    }
-                    return null;
-                  }
-                  return (
+                        return (
+                          <tr key={l.id} className="hover:bg-m3-surface-high/30 transition-colors">
+                            <td className="py-3.5 px-4 text-zinc-400 font-mono text-[10px] whitespace-nowrap">
+                              {new Date(l.date).toLocaleString()}
+                            </td>
+                            
+                            <td className="py-3.5 px-4 font-black">
+                              {l.productName}
+                              <span className="block text-[9px] font-mono font-bold text-zinc-400 uppercase">PROD CODE: #{l.productId}</span>
+                            </td>
+                            
+                            <td className="py-3.5 px-4 text-center font-bold">
+                              {matchedB ? matchedB.name.replace('Emman Tile Center ', '') : l.branchId}
+                            </td>
+                            
+                            <td className="py-3.5 px-4 text-center select-none">
+                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border uppercase tracking-wider ${eventBadge}`}>
+                                {l.movementType}
+                              </span>
+                            </td>
+
+                            <td className="py-3.5 px-4 text-right font-mono font-extrabold text-sm">
+                              <span className={l.quantity > 0 ? 'text-emerald-500' : 'text-rose-500'}>
+                                {l.quantity > 0 ? '+' : ''}{l.quantity} boxes
+                              </span>
+                            </td>
+
+                            <td className="py-3.5 px-4 font-mono font-bold text-zinc-500 whitespace-nowrap">
+                              {l.referenceNo}
+                            </td>
+
+                            <td className="py-3.5 px-4 italic text-zinc-400 text-xs truncate max-w-[280px]" title={l.remarks}>
+                              "{l.remarks}"
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination Controls bar */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-m3-surface-low/80 border-t border-m3-outline-variant/30 text-xs font-sans">
+                  <span className="font-medium text-m3-on-surface-variant font-mono">
+                    Showing {Math.min(ledgerEntries.length, (ledgerPage - 1) * LEDGER_PER_PAGE + 1)}-{Math.min(ledgerEntries.length, ledgerPage * LEDGER_PER_PAGE)} of {ledgerEntries.length} movements
+                  </span>
+                  <div className="flex items-center gap-1.5 select-none">
                     <button
-                      key={pNum}
                       type="button"
-                      onClick={() => setLedgerPage(pNum)}
-                      className={`h-7.5 w-7.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
-                        ledgerPage === pNum
-                          ? 'bg-m3-primary text-m3-on-primary shadow-sm'
-                          : 'border border-m3-outline-variant/30 hover:bg-m3-primary/10 text-m3-on-surface-variant'
-                      }`}
+                      disabled={ledgerPage === 1}
+                      onClick={() => setLedgerPage(prev => Math.max(1, prev - 1))}
+                      className="px-3.5 py-1.5 rounded-lg border border-m3-outline-variant/30 text-m3-on-surface hover:bg-m3-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[10px]"
                     >
-                      {pNum}
+                      Prev
                     </button>
-                  );
-                })}
-                <button
-                  type="button"
-                  disabled={ledgerPage === totalLedgerPages}
-                  onClick={() => setLedgerPage(prev => Math.min(totalLedgerPages, prev + 1))}
-                  className="px-3.5 py-1.5 rounded-lg border border-m3-outline-variant/30 text-m3-on-surface hover:bg-m3-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[10px]"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
+                    {Array.from({ length: totalLedgerPages }).map((_, i) => {
+                      const pNum = i + 1;
+                      if (totalLedgerPages > 5 && Math.abs(pNum - ledgerPage) > 2 && pNum !== 1 && pNum !== totalLedgerPages) {
+                        if (pNum === 2 || pNum === totalLedgerPages - 1) {
+                          return <span key={pNum} className="px-1.5 text-zinc-400">...</span>;
+                        }
+                        return null;
+                      }
+                      return (
+                        <button
+                          key={pNum}
+                          type="button"
+                          onClick={() => setLedgerPage(pNum)}
+                          className={`h-7.5 w-7.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                            ledgerPage === pNum
+                              ? 'bg-m3-primary text-m3-on-primary shadow-sm'
+                              : 'border border-m3-outline-variant/30 hover:bg-m3-primary/10 text-m3-on-surface-variant'
+                          }`}
+                        >
+                          {pNum}
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      disabled={ledgerPage === totalLedgerPages}
+                      onClick={() => setLedgerPage(prev => Math.min(totalLedgerPages, prev + 1))}
+                      className="px-3.5 py-1.5 rounded-lg border border-m3-outline-variant/30 text-m3-on-surface hover:bg-m3-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[10px]"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* SECTION D: PRODUCT STOCK AGING ANALYSIS */}
           <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] overflow-hidden shadow-sm">
-            <div className="p-5 border-b border-m3-outline-variant/15">
-              <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest">Inventory Aging & Capital Velocity Audit</h3>
-              <p className="text-[10px] text-zinc-400 font-medium">Tracks stock sales velocities and identifies non-liquidating capital slots</p>
+            <div 
+              onClick={() => toggleSection('aging')}
+              className="p-5 border-b border-m3-outline-variant/15 flex justify-between items-center cursor-pointer hover:bg-m3-surface-low/60 transition-colors select-none"
+              title="Click to toggle Section Visibility"
+            >
+              <div>
+                <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest flex items-center gap-2">
+                  <span>Inventory Aging & Capital Velocity Audit</span>
+                  {collapsedSections.aging && <span className="text-[9px] bg-m3-primary/10 text-m3-primary px-2 py-0.5 rounded font-mono font-bold uppercase tracking-wider">Collapsed</span>}
+                </h3>
+                <p className="text-[10px] text-zinc-400 font-medium">Tracks stock sales velocities and identifies non-liquidating capital slots</p>
+              </div>
+              <button 
+                type="button" 
+                className="p-1.5 text-zinc-500 hover:text-m3-primary hover:bg-m3-outline-variant/10 rounded-full transition-all"
+              >
+                {collapsedSections.aging ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+              </button>
             </div>
             
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-m3-surface text-[10px] font-black uppercase tracking-wider text-zinc-500 border-b border-m3-outline-variant/15">
-                    <th className="py-3 px-4">Associated Hard Product</th>
-                    <th className="py-3 px-4 text-center">Global Stock Balance</th>
-                    <th className="py-3 px-4 text-center">Days Idle Since Last Sale</th>
-                    <th className="py-3 px-4 text-center">Velocity Classification</th>
-                    <th className="py-3 px-4">Advisory Recommendation</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-m3-outline-variant/10 text-xs font-semibold">
-                  {products.filter(p => !p.isDeleted).map((p) => {
-                    const b1Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B1')?.quantity || 0;
-                    const b2Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B2')?.quantity || 0;
-                    const b3Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B3')?.quantity || 0;
-                    const b4Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B4')?.quantity || 0;
-                    const totalGlobal = b1Stock + b2Stock + b3Stock + b4Stock;
+            {!collapsedSections.aging && (
+              <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-m3-outline-variant">
+                <table className="w-full text-left border-collapse min-w-[800px]">
+                  <thead>
+                    <tr className="bg-m3-surface text-[10px] font-black uppercase tracking-wider text-zinc-500 border-b border-m3-outline-variant/15">
+                      <th className="py-3 px-4">Associated Hard Product</th>
+                      <th className="py-3 px-4 text-center">Global Stock Balance</th>
+                      <th className="py-3 px-4 text-center">Days Idle Since Last Sale</th>
+                      <th className="py-3 px-4 text-center">Velocity Classification</th>
+                      <th className="py-3 px-4">Advisory Recommendation</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-m3-outline-variant/10 text-xs font-semibold">
+                    {products.filter(p => !p.isDeleted).map((p) => {
+                      const b1Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B1')?.quantity || 0;
+                      const b2Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B2')?.quantity || 0;
+                      const b3Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B3')?.quantity || 0;
+                      const b4Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B4')?.quantity || 0;
+                      const totalGlobal = b1Stock + b2Stock + b3Stock + b4Stock;
 
-                    const ages: Record<string, number> = { 'P1': 14, 'P2': 210, 'P3': 45, 'P4': 185 };
-                    const ageDays = ages[p.id] || 35;
-                    
-                    let agingLabel = 'Fast-Moving';
-                    let agingBadge = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/15';
-                    let recommendationText = 'Strong consumer interest. Maintain high replenishment safety factors at Main HQ.';
-                    
-                    if (ageDays >= 30 && ageDays < 90) {
-                      agingLabel = 'Stable';
-                      agingBadge = 'bg-blue-500/10 text-blue-500 border-blue-500/15';
-                      recommendationText = 'Baseline performance. Keep standard order levels linked to monthly POS logs.';
-                    } else if (ageDays >= 90 && ageDays < 180) {
-                      agingLabel = 'Slow-Moving';
-                      agingBadge = 'bg-amber-500/10 text-amber-500 border-amber-500/15';
-                      recommendationText = 'Redistribution target. Flagged for regional pull out back to high-density hubs.';
-                    } else if (ageDays >= 180) {
-                      agingLabel = 'Dead Stock Alert';
-                      agingBadge = 'bg-rose-500/10 text-rose-500 border-rose-500/15 animate-pulse';
-                      recommendationText = 'Urgent clear-out required! Recommend bundle promotion discount cash registers.';
-                    }
+                      const ages: Record<string, number> = { 'P1': 14, 'P2': 210, 'P3': 45, 'P4': 185 };
+                      const ageDays = ages[p.id] || 35;
+                      
+                      let agingLabel = 'Fast-Moving';
+                      let agingBadge = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/15';
+                      let recommendationText = 'Strong consumer interest. Maintain high replenishment safety factors at Main HQ.';
+                      
+                      if (ageDays >= 30 && ageDays < 90) {
+                        agingLabel = 'Stable';
+                        agingBadge = 'bg-blue-500/10 text-blue-500 border-blue-500/15';
+                        recommendationText = 'Baseline performance. Keep standard order levels linked to monthly POS logs.';
+                      } else if (ageDays >= 90 && ageDays < 180) {
+                        agingLabel = 'Slow-Moving';
+                        agingBadge = 'bg-amber-500/10 text-amber-500 border-amber-500/15';
+                        recommendationText = 'Redistribution target. Flagged for regional pull out back to high-density hubs.';
+                      } else if (ageDays >= 180) {
+                        agingLabel = 'Dead Stock Alert';
+                        agingBadge = 'bg-rose-500/10 text-rose-500 border-rose-500/15 animate-pulse';
+                        recommendationText = 'Urgent clear-out required! Recommend bundle promotion discount cash registers.';
+                      }
 
-                    return (
-                      <tr key={p.id} className="hover:bg-m3-surface-high/30 transition-colors">
-                        <td className="py-3.5 px-4 font-black">
-                          {p.productName}
-                          <span className="block text-[9px] font-mono font-bold text-zinc-400">SKU Code: {p.skuCode}</span>
-                        </td>
-                        <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm text-m3-primary">
-                          {totalGlobal} boxes
-                        </td>
-                        <td className="py-3.5 px-4 text-center font-mono font-bold text-sm text-zinc-600">
-                          {ageDays} days sold out clock
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-wider uppercase border ${agingBadge}`}>
-                            {agingLabel}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 italic text-zinc-500 font-medium max-w-[280px]">
-                          {recommendationText}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                      return (
+                        <tr key={p.id} className="hover:bg-m3-surface-high/30 transition-colors">
+                          <td className="py-3.5 px-4 font-black">
+                            {p.productName}
+                            <span className="block text-[9px] font-mono font-bold text-zinc-400">SKU Code: {p.skuCode}</span>
+                          </td>
+                          <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm text-m3-primary">
+                            {totalGlobal} boxes
+                          </td>
+                          <td className="py-3.5 px-4 text-center font-mono font-bold text-sm text-zinc-600">
+                            {ageDays} days sold out clock
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-wider uppercase border ${agingBadge}`}>
+                              {agingLabel}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 italic text-zinc-500 font-medium max-w-[280px]">
+                            {recommendationText}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
         </div>
