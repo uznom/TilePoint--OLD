@@ -39,6 +39,7 @@ import {
 
 interface InventoryModuleProps {
   darkMode: boolean;
+  initialSubTab?: 'catalog' | 'movements' | 'transfers' | 'ledger';
 }
 
 // Visual Barcode Component utilizing custom styled SVG lines for absolute accuracy
@@ -119,7 +120,7 @@ const StyledQrCode: React.FC<{ code: string }> = ({ code }) => {
   );
 };
 
-export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) => {
+export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, initialSubTab }) => {
   const {
     products,
     suppliers,
@@ -139,7 +140,13 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
   } = useDb();
 
   // Primary navigation sub-tabs: "catalog" | "movements" | "transfers" | "ledger"
-  const [activeSubTab, setActiveSubTab] = useState<'catalog' | 'movements' | 'transfers' | 'ledger'>('catalog');
+  const [activeSubTab, setActiveSubTab] = useState<'catalog' | 'movements' | 'transfers' | 'ledger'>(initialSubTab || 'catalog');
+
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
 
   // Pagination State for lists inside Inventory
   const [prodPage, setProdPage] = useState(1);

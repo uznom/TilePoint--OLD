@@ -946,7 +946,7 @@ function AppContent() {
                   ['inventory-stocks', 'inventory-warehouse', 'inventory-low-qty', 'inventory-convert', 'inventory-pulled-out', 'inventory-add', 'inventory-print-label', 'inventory-transaction-history', 'inventory-product-history', 'inventory-expiration', 'inventory-new-pullout', 'inventory-pending-pullout', 'inventory-search-pullout'].includes(activeTab) ? (
                     <InventoryModule darkMode={darkMode} />
                   ) : ['inventory-transfer', 'inventory-search-transfer'].includes(activeTab) ? (
-                    <TransmittalModule darkMode={darkMode} />
+                    <InventoryModule darkMode={darkMode} initialSubTab="transfers" />
                   ) : (
                     <ProcurementModule darkMode={darkMode} />
                   )
