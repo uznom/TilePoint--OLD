@@ -136,7 +136,7 @@ interface DbContextType {
   receivePOItems: (id: string, receivedMap: Record<string, number>) => void; // productId -> qty
 
   // Actions - Transmittals
-  createTransmittal: (docType: TransmittalDocType, toBranchId: string, payloadJson: string, notes?: string) => void;
+  createTransmittal: (docType: TransmittalDocType, toBranchId: string, payloadJson: string, notes?: string) => string;
   updateTransmittalStatus: (id: string, status: TransmittalStatus) => void;
 
   // Actions - Stock Transfers & Distribution
@@ -173,6 +173,12 @@ interface DbContextType {
   createDbSnapshot: (name: string) => void;
   restoreDbSnapshot: (snapshotId: string) => boolean;
   deleteDbSnapshot: (snapshotId: string) => void;
+  autoBackupEnabled: boolean;
+  setAutoBackupEnabled: (val: boolean) => void;
+  backupIntervalHours: number;
+  setBackupIntervalHours: (val: number) => void;
+  lastAutoBackupTime: string | null;
+  setLastAutoBackupTime: (val: string | null) => void;
 }
 
 export interface DbSnapshot {
@@ -1099,6 +1105,111 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     const cached = localStorage.getItem('tp_db_snapshots');
     return cached ? JSON.parse(cached) : [];
   });
+
+  const [autoBackupEnabled, setAutoBackupEnabled] = useState<boolean>(() => {
+    const cached = localStorage.getItem('tp_autobackup_enabled');
+    return cached !== null ? cached === 'true' : true;
+  });
+
+  const [backupIntervalHours, setBackupIntervalHours] = useState<number>(() => {
+    const cached = localStorage.getItem('tp_autobackup_interval');
+    return cached !== null ? Number(cached) : 1;
+  });
+
+  const [lastAutoBackupTime, setLastAutoBackupTime] = useState<string | null>(() => {
+    return localStorage.getItem('tp_autobackup_last_time');
+  });
+
+  // Persist auto backup settings
+  useEffect(() => {
+    localStorage.setItem('tp_autobackup_enabled', String(autoBackupEnabled));
+  }, [autoBackupEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem('tp_autobackup_interval', String(backupIntervalHours));
+  }, [backupIntervalHours]);
+
+  useEffect(() => {
+    if (lastAutoBackupTime) {
+      localStorage.setItem('tp_autobackup_last_time', lastAutoBackupTime);
+    } else {
+      localStorage.removeItem('tp_autobackup_last_time');
+    }
+  }, [lastAutoBackupTime]);
+
+  // Automated database background backup scheduler
+  useEffect(() => {
+    if (!autoBackupEnabled || !isConfigured) return;
+
+    const timer = setInterval(() => {
+      const now = Date.now();
+      const lastTime = lastAutoBackupTime ? new Date(lastAutoBackupTime).getTime() : 0;
+      const intervalMs = backupIntervalHours * 60 * 60 * 1000;
+
+      if (now - lastTime >= intervalMs) {
+        // Trigger automated backup
+        const id = `SNAP-AUTO-${now}`;
+        const payload = {
+          isConfigured,
+          users,
+          branches,
+          suppliers,
+          products,
+          purchaseOrders,
+          poItems,
+          transmittals,
+          shifts,
+          sales,
+          saleItems,
+          movements,
+          auditLogs,
+          parkedSales,
+          stockTransfers,
+          branchStock,
+          ledgerEntries,
+          branchSalesReports,
+          deliveries
+        };
+        const dataStr = JSON.stringify(payload);
+        const name = `Automated Backup - ${backupIntervalHours}hr Interval`;
+        const newSnapshot: DbSnapshot = {
+          id,
+          name,
+          timestamp: new Date().toISOString(),
+          creator: 'System Auto-Scheduler',
+          sizeBytes: new Blob([dataStr]).size,
+          data: dataStr
+        };
+
+        // Update snapshots state cleanly
+        setDbSnapshots(prev => {
+          const updated = [newSnapshot, ...prev];
+          localStorage.setItem('tp_db_snapshots', JSON.stringify(updated));
+          return updated;
+        });
+
+        const newTime = new Date().toISOString();
+        setLastAutoBackupTime(newTime);
+        localStorage.setItem('tp_autobackup_last_time', newTime);
+
+        // Append to audit logs
+        const autoLog: AuditLog = {
+          id: `AL-AUTO-BACKUP-${now}`,
+          timestamp: newTime,
+          userId: 'SYSTEM',
+          username: 'auto_scheduler',
+          action: 'DB_BACKUP_CREATE',
+          description: `Automatically created background backup snapshot: ${name}`,
+          tableAffected: 'ALL',
+          recordId: id,
+        };
+        setAuditLogs(prev => [autoLog, ...prev]);
+        console.log(`[AutoBackup] Successfully triggered automated backup snapshot ${id}`);
+      }
+    }, 30000); // Check every 30 seconds
+
+    return () => clearInterval(timer);
+  }, [autoBackupEnabled, backupIntervalHours, lastAutoBackupTime, isConfigured, users, branches, suppliers, products, purchaseOrders, poItems, transmittals, shifts, sales, saleItems, movements, auditLogs, parkedSales, stockTransfers, branchStock, ledgerEntries, branchSalesReports, deliveries]);
 
   const [dbSyncStatus, setDbSyncStatus] = useState<'idle' | 'queued' | 'syncing'>('idle');
   const timeoutRefs = useRef<Record<string, any>>({});
@@ -2385,7 +2496,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   // TRANSMITTAL SYSTEM (Submit reports across branches or upload JSON summaries)
-  const createTransmittal = (docType: TransmittalDocType, toBranchId: string, payloadJson: string, notes?: string) => {
+  const createTransmittal = (docType: TransmittalDocType, toBranchId: string, payloadJson: string, notes?: string): string => {
     const transId = `TRAN-${Date.now()}`;
     const newTrans: Transmittal = {
       id: transId,
@@ -2402,6 +2513,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
     setTransmittals(prev => [newTrans, ...prev]);
     addAuditLog('TRANSMITTAL_SUBMIT', `Transmitted form type '${docType}' to target branch ID ${toBranchId}`, 'Transmittals', transId);
+    return transId;
   };
 
   const updateTransmittalStatus = (id: string, status: TransmittalStatus) => {
@@ -2728,6 +2840,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         createDbSnapshot,
         restoreDbSnapshot,
         deleteDbSnapshot,
+        autoBackupEnabled,
+        setAutoBackupEnabled,
+        backupIntervalHours,
+        setBackupIntervalHours,
+        lastAutoBackupTime,
+        setLastAutoBackupTime,
       }}
     >
       {children}

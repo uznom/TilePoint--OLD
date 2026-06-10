@@ -14,7 +14,9 @@ import {
   Plus,
   X,
   FileCheck,
-  ShieldCheck
+  ShieldCheck,
+  Printer,
+  FileText
 } from 'lucide-react';
 
 interface TransmittalModuleProps {
@@ -126,6 +128,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
 
   // Selected details modal
   const [activeTrans, setActiveTrans] = useState<Transmittal | null>(null);
+  const [inspectTab, setInspectTab] = useState<'itemized' | 'raw'>('itemized');
 
   // Custom visual feedback state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -155,13 +158,30 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
       return;
     }
 
-    createTransmittal(selectedDocType, toBranchId, payloadText, notes);
+    const newId = createTransmittal(selectedDocType, toBranchId, payloadText, notes);
+
+    const newlyCreated: Transmittal = {
+      id: newId,
+      documentType: selectedDocType,
+      fromBranchId: currentUser.branchAssignmentId || 'B1',
+      toBranchId,
+      submittedBy: currentUser.fullName,
+      status: 'Submitted',
+      payloadJson: payloadText,
+      notes,
+      submittedAt: new Date().toISOString(),
+      isDeleted: false
+    };
 
     // Reset modals
     setNotes('');
     setPayloadText('{\n  "totalSales": 35400,\n  "discrepancies": 0,\n  "countVerified": true\n}');
     setShowModal(false);
-    showToast('Ledger packet dispatched to matching destination branch.');
+    
+    // Auto-open inspector for immediate print
+    setInspectTab('itemized');
+    setActiveTrans(newlyCreated);
+    showToast('Dispatched! Delivery slip opened for printing / PDF export.');
   };
 
   const handleExportTransmittal = (t: Transmittal) => {
@@ -214,6 +234,91 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
     } catch (err) {
       showToast('Syntax Error: Failed to parse raw text packet contents.');
     }
+  };
+
+  const renderPayloadPrintTable = (data: any) => {
+    if (!data) return <p className="italic text-[10px] text-zinc-400">Empty payload contents.</p>;
+
+    // Case 1: Has stocks/inventoryStocks list
+    const items = data.stocks || data.inventoryStocks;
+    if (Array.isArray(items)) {
+      return (
+        <div className="space-y-1.5 mt-2">
+          <p className="font-extrabold uppercase text-[9px] border-b border-black dark:border-zinc-700 pb-0.5 tracking-wider">Itemized Stock Allocations:</p>
+          <table className="w-full text-left text-[10px] border-collapse print:text-black">
+            <thead>
+              <tr className="border-b border-black text-[9px] font-bold text-zinc-500 print:text-black">
+                <th className="py-1">Material/Product Name</th>
+                <th className="py-1 text-center font-mono">SKU</th>
+                <th className="py-1 text-right">Handover Qty</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item: any, i: number) => (
+                <tr key={i} className="border-b border-zinc-200 dark:border-zinc-800 border-dashed print:border-zinc-400">
+                  <td className="py-1.5 font-sans font-bold text-m3-on-surface print:text-black">{item.productName || item.productId}</td>
+                  <td className="py-1.5 text-center font-mono text-zinc-500 print:text-black">{item.sku || 'N/A'}</td>
+                  <td className="py-1.5 text-right font-mono font-black text-emerald-500 print:text-black">{item.quantity} pcs</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    // Case 2: Has salesHistory
+    const salesList = data.salesHistory;
+    if (Array.isArray(salesList)) {
+      return (
+        <div className="space-y-2 mt-2">
+          <p className="font-extrabold uppercase text-[9px] border-b border-black dark:border-zinc-700 pb-0.5 tracking-wider">Registered Sales Handover:</p>
+          <table className="w-full text-left text-[10px] border-collapse print:text-black">
+            <thead>
+              <tr className="border-b border-black text-[9px] font-bold text-zinc-500 print:text-black">
+                <th className="py-1">Transaction Ref</th>
+                <th className="py-1 text-center font-mono">Payment</th>
+                <th className="py-1 text-right font-mono">Grand Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {salesList.map((sale: any, i: number) => (
+                <tr key={i} className="border-b border-zinc-200 dark:border-zinc-800 border-dashed print:border-zinc-400">
+                  <td className="py-1.5 font-bold font-mono text-m3-primary print:text-black">{sale.saleNumber || sale.id}</td>
+                  <td className="py-1.5 text-center font-medium text-zinc-500 print:text-black">{sale.paymentMethod || 'CASH'}</td>
+                  <td className="py-1.5 text-right font-mono font-black text-emerald-500 print:text-black">₱{(sale.grandTotal || 0).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    // Case 3: Just flat key-value pairs
+    const keys = Object.keys(data).filter(k => typeof data[k] !== 'object');
+    if (keys.length > 0) {
+      return (
+        <div className="space-y-1.5 mt-2">
+          <p className="font-extrabold uppercase text-[9px] border-b border-black dark:border-zinc-700 pb-0.5 tracking-wider">Transmittal Properties Ledger:</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-[10.5px]">
+            {keys.map((k, idx) => (
+              <div key={idx} className="flex justify-between border-b border-zinc-200 dark:border-zinc-800 py-1 print:border-zinc-400">
+                <span className="capitalize font-medium text-zinc-400 dark:text-zinc-500 font-sans print:text-zinc-700">{k.replace(/([A-Z])/g, ' $1')}:</span>
+                <span className="font-mono font-bold text-m3-on-surface print:text-black">{String(data[k])}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // Default fallback
+    return (
+      <pre className="p-2 border border-zinc-300 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 font-mono text-[9px] overflow-auto whitespace-pre-wrap max-h-[140px] text-zinc-400 print:text-black print:bg-white print:border-zinc-400">
+        {JSON.stringify(data, null, 2)}
+      </pre>
+    );
   };
 
   const currentBranch = branches.find(b => b.id === currentUser.branchAssignmentId);
@@ -326,10 +431,13 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
                   <td className="py-3.5 px-4 text-center">
                     <div className="flex gap-1.5 justify-center">
                       <button
-                        onClick={() => setActiveTrans(t)}
-                        className="py-1 px-3 text-[10px] rounded-full border border-m3-primary/30 text-m3-primary bg-m3-primary/5 hover:bg-m3-primary/10 cursor-pointer font-bold transition-colors"
+                        onClick={() => {
+                          setInspectTab('itemized');
+                          setActiveTrans(t);
+                        }}
+                        className="py-1 px-3 text-[10px] rounded-full border border-m3-primary/35 text-m3-primary bg-m3-primary/5 hover:bg-m3-primary/10 cursor-pointer font-bold transition-colors flex items-center gap-1"
                       >
-                        Inspect Payload
+                        <Printer className="h-3 w-3 text-m3-primary" /> Inspect & Print
                       </button>
 
                       <button
@@ -452,57 +560,117 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
         </div>
       )}
 
-      {/* MODAL 2: Inspect Payload contents details */}
+      {/* MODAL 2: Inspect Payload contents details & Printable interactive slip */}
       {activeTrans && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
+        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in no-print">
           <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setActiveTrans(null)} />
-          <div className="relative w-full max-w-md rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left">
+          <div className="relative w-full max-w-md rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left flex flex-col max-h-[90vh]">
             <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
-              <h3 className="text-base font-bold text-m3-primary flex items-center gap-2">
+              <h3 className="text-base font-black text-m3-primary flex items-center gap-2">
                 <FileCheck className="h-5 w-5" />
-                <span>Inspect Packet: {activeTrans.id}</span>
+                <span className="uppercase tracking-wide">Transmittal Slip Details</span>
               </h3>
               <button onClick={() => setActiveTrans(null)} className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            {/* Content summary */}
-            <div className="space-y-2 text-xs leading-relaxed text-m3-on-surface-variant/90 font-medium">
-              <div className="flex justify-between">
-                <strong>Dispatch Branch:</strong>
-                <span className="text-m3-on-surface font-bold">{getBranchName(activeTrans.fromBranchId)}</span>
+            {/* Modal Navigation Tabs */}
+            <div className="flex border-b border-m3-outline-variant/15 p-1 bg-m3-surface-low/50 rounded-xl flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setInspectTab('itemized')}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer text-center ${
+                  inspectTab === 'itemized'
+                    ? 'bg-m3-primary text-m3-on-primary shadow-sm font-black'
+                    : 'text-m3-on-surface-variant hover:bg-m3-primary/10 hover:text-m3-primary'
+                }`}
+              >
+                Delivery Slip Preview
+              </button>
+              <button
+                type="button"
+                onClick={() => setInspectTab('raw')}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer text-center ${
+                  inspectTab === 'raw'
+                    ? 'bg-m3-primary text-m3-on-primary shadow-sm font-black'
+                    : 'text-m3-on-surface-variant hover:bg-m3-primary/10 hover:text-m3-primary'
+                }`}
+              >
+                Raw JSON Ledger
+              </button>
+            </div>
+
+            {/* Scrollable Container */}
+            <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 py-1 max-h-[50vh]">
+              {/* Content summary */}
+              <div className="space-y-2 text-xs leading-relaxed text-m3-on-surface-variant/90 font-medium bg-m3-surface-lowest/50 p-3 rounded-2xl border border-m3-outline-variant/10">
+                <div className="flex justify-between">
+                  <strong>Tracking Slip Ref:</strong>
+                  <span className="font-mono text-m3-primary font-bold">{activeTrans.id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <strong>Dispatch Branch:</strong>
+                  <span className="text-m3-on-surface font-bold">{getBranchName(activeTrans.fromBranchId)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <strong>Recipient Destination:</strong>
+                  <span className="text-m3-on-surface font-bold">{getBranchName(activeTrans.toBranchId)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <strong>Signed Supervisor:</strong>
+                  <span className="text-m3-on-surface font-bold">{activeTrans.submittedBy}</span>
+                </div>
+                <div className="flex justify-between">
+                  <strong>Dispatch Date:</strong>
+                  <span className="font-mono text-m3-on-surface font-bold">{new Date(activeTrans.submittedAt).toLocaleString()}</span>
+                </div>
+                {activeTrans.notes && (
+                  <div className="pt-2 italic text-m3-tertiary border-t border-m3-outline-variant/10 mt-1">
+                    Notes: "{activeTrans.notes}"
+                  </div>
+                )}
               </div>
-              <div className="flex justify-between">
-                <strong>Recipient destination:</strong>
-                <span className="text-m3-on-surface font-bold">{getBranchName(activeTrans.toBranchId)}</span>
-              </div>
-              <div className="flex justify-between">
-                <strong>Signed Supervisor:</strong>
-                <span className="text-m3-on-surface font-bold">{activeTrans.submittedBy}</span>
-              </div>
-              <div className="flex justify-between">
-                <strong>Dispatch Date:</strong>
-                <span className="font-mono text-m3-on-surface font-bold">{new Date(activeTrans.submittedAt).toLocaleString()}</span>
-              </div>
-              {activeTrans.notes && (
-                <div className="pt-2 italic text-m3-tertiary">
-                  Notes: "{activeTrans.notes}"
+
+              {inspectTab === 'itemized' ? (
+                <div className="rounded-2xl border border-m3-outline-variant/30 p-4 bg-m3-surface-lowest space-y-3 font-mono text-xs text-zinc-800 dark:text-zinc-200 shadow-inner">
+                  <div className="text-center border-b border-zinc-300 dark:border-zinc-800 border-dashed pb-2">
+                    <div className="text-xs font-black tracking-wider text-m3-primary flex items-center justify-center gap-1">
+                      <Send className="h-3.5 w-3.5" /> TILEPOINT LOGISTICS SUMMARY
+                    </div>
+                    <div className="text-[9px] text-zinc-400 mt-0.5 tracking-widest uppercase font-sans">Official Inter-Branch Slips</div>
+                  </div>
+
+                  {/* Dynamic Print Preview Content */}
+                  <div>
+                    {(() => {
+                      try {
+                        return renderPayloadPrintTable(JSON.parse(activeTrans.payloadJson));
+                      } catch (err) {
+                        return <p className="text-rose-500 font-mono text-[10px]">Error parsing transmittal JSON: Invalid Schema</p>;
+                      }
+                    })()}
+                  </div>
+
+                  <div className="text-center pt-2 border-t border-dashed border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[9px] text-zinc-400 font-sans leading-tight">
+                      Reconcile physical stock counts fully upon handover reception.
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1 block">Decrypted Payload Contents</span>
+                  <pre className="p-3 bg-m3-surface-lowest text-m3-primary text-[10.5px] rounded-[16px] border border-m3-outline-variant/30 font-mono max-h-[180px] overflow-auto select-all leading-relaxed shadow-inner">
+                    {JSON.stringify(JSON.parse(activeTrans.payloadJson), null, 2)}
+                  </pre>
                 </div>
               )}
             </div>
 
-            {/* RAW JSON container box */}
-            <div className="space-y-1 my-2">
-              <span className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1 block">Decrypted Payload Contents</span>
-              <pre className="p-3 bg-m3-surface-lowest text-m3-primary text-[10.5px] rounded-lg border border-m3-outline-variant/30 font-mono max-h-[160px] overflow-auto select-all leading-relaxed">
-                {JSON.stringify(JSON.parse(activeTrans.payloadJson), null, 2)}
-              </pre>
-            </div>
-
             {/* Verification action row */}
             {currentUser.role === UserRole.ADMIN && activeTrans.status !== 'Approved' && (
-              <div className="pt-2">
+              <div className="pt-1 flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => {
@@ -510,25 +678,167 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
                     setActiveTrans(null);
                     showToast('Inter-branch document verified and authenticated successfully.');
                   }}
-                  className="w-full py-2.5 font-bold uppercase tracking-wider bg-m3-tertiary text-m3-surface rounded-full text-xs cursor-pointer flex items-center justify-center gap-1 hover:bg-m3-tertiary/90 transition-colors"
+                  className="w-full py-2 bg-m3-tertiary text-m3-surface rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1 hover:bg-m3-tertiary/90 transition-all border-0"
                 >
-                  <CheckSquare className="h-4.5 w-4.5" /> Authenticate & Approve Document
+                  <CheckSquare className="h-4 w-4" /> Authenticate & Approve Document
                 </button>
               </div>
             )}
 
-            {/* Back button */}
-            <div className="flex justify-end pt-1 border-t border-m3-outline-variant/15">
+            {/* Interactive footer action row */}
+            <div className="flex gap-2 pt-3 border-t border-m3-outline-variant/15 justify-end flex-shrink-0">
               <button
-                onClick={() => setActiveTrans(null)}
-                className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
+                type="button"
+                onClick={() => {
+                  window.print();
+                  addAuditLog('TRANSMITTAL_PRINT', `Printed transmittal slip ${activeTrans.id}`, 'Transmittals', activeTrans.id);
+                  showToast('Preparing slip print canvas...');
+                }}
+                className="px-4 py-2 bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm flex items-center gap-1.5 transition-all"
               >
-                Close details
+                <Printer className="h-4 w-4" /> Print / Save PDF
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleExportTransmittal(activeTrans)}
+                className="px-3 py-2 bg-m3-outline-variant/15 text-m3-primary hover:bg-m3-outline-variant/25 text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer transition-colors border border-m3-outline-variant/10"
+                title="Download raw JSON packet"
+              >
+                <Download className="h-4 w-4" /> Export JSON
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTrans(null)}
+                className="px-4 py-2 text-xs font-bold rounded-xl cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
+              >
+                Close
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* EXCLUSIVELY FOR PHYSICAL PRINT / PDF COMPILATION */}
+      {activeTrans && (
+        <div
+          id="printable-transmittal-slip"
+          className="hidden print:block print:fixed print:inset-0 print:bg-white print:text-black print:z-[99999999] print:p-8 print:overflow-visible font-mono text-[11px] leading-relaxed"
+        >
+          <div className="max-w-xl mx-auto border-4 border-double border-black p-6 space-y-5">
+            
+            {/* Header */}
+            <div className="text-center border-b-2 border-black pb-4">
+              <h1 className="text-lg font-black tracking-widest uppercase">TILEPOINT SYSTEMS GROUP</h1>
+              <p className="text-xs font-bold mt-1 tracking-wider uppercase">OFFICIAL INTER-BRANCH DELIVERY & TRANSMITTAL SLIP</p>
+              <p className="text-[9px] text-zinc-500 mt-0.5">COMPLIANT WITH CORPORATE INVENTORY DISTRIBUTION DIRECTIVES</p>
+            </div>
+
+            {/* Key-Value Details Table */}
+            <div className="grid grid-cols-2 gap-y-2 border-b border-black pb-4 text-[10px]">
+              <div>
+                <span className="font-bold uppercase text-[9px] text-zinc-600 block">TRACKING SLIP ID:</span>
+                <p className="text-xs font-black text-black font-mono mt-0.5">{activeTrans.id}</p>
+              </div>
+              <div>
+                <span className="font-bold uppercase text-[9px] text-zinc-600 block">DOCUMENT CATEGORY:</span>
+                <p className="text-xs font-black mt-0.5 underline">{activeTrans.documentType}</p>
+              </div>
+              <div>
+                <span className="font-bold uppercase text-[9px] text-zinc-600 block">DISPATCH ORIGIN:</span>
+                <p className="text-xs font-bold mt-0.5">{getBranchName(activeTrans.fromBranchId)} (ID: {activeTrans.fromBranchId})</p>
+              </div>
+              <div>
+                <span className="font-bold uppercase text-[9px] text-zinc-600 block">TARGET DESTINATION:</span>
+                <p className="text-xs font-bold mt-0.5">{getBranchName(activeTrans.toBranchId)} (ID: {activeTrans.toBranchId})</p>
+              </div>
+              <div>
+                <span className="font-bold uppercase text-[9px] text-zinc-600 block">AUTHORIZED ISSUED BY:</span>
+                <p className="text-xs font-bold mt-0.5">{activeTrans.submittedBy}</p>
+              </div>
+              <div>
+                <span className="font-bold uppercase text-[9px] text-zinc-600 block">SYSTEM DISPATCH DATE:</span>
+                <p className="text-xs font-mono mt-0.5">{new Date(activeTrans.submittedAt).toLocaleString()}</p>
+              </div>
+            </div>
+
+            {/* Notes Section */}
+            {activeTrans.notes && (
+              <div className="bg-zinc-100 p-2.5 border border-zinc-300 rounded-lg">
+                <span className="font-bold underline uppercase text-[8px] block">Dispatcher Memo Notes:</span>
+                <p className="text-xs italic mt-0.5">"{activeTrans.notes}"</p>
+              </div>
+            )}
+
+            {/* Parsed List Items Section */}
+            <div className="pt-1">
+              {(() => {
+                try {
+                  return renderPayloadPrintTable(JSON.parse(activeTrans.payloadJson));
+                } catch (err) {
+                  return <p className="text-rose-500 font-mono text-[9px]">Error parsing transmittal JSON payload.</p>;
+                }
+              })()}
+            </div>
+
+            {/* Handover Signature Signoffs */}
+            <div className="grid grid-cols-2 gap-x-12 pt-16">
+              <div className="text-center space-y-8">
+                <div className="border-t border-black pt-2 text-[10px] font-bold uppercase">
+                  DISPATCHER SIGNATURE / DATE
+                  <p className="text-[8px] font-normal text-zinc-400 mt-1">EMBEDDED SIGNATURE: {activeTrans.submittedBy}</p>
+                </div>
+              </div>
+              <div className="text-center space-y-8">
+                <div className="border-t border-black pt-2 text-[10px] font-bold uppercase">
+                  RECIPIENT RECEIVING SIGN-OFF
+                  <p className="text-[8px] font-normal text-zinc-400 mt-1">CONFIRMS TOTAL CARGO RECONCILIATION</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer stamp */}
+            <div className="text-center pt-6 border-t border-black border-dashed mt-6">
+              <p className="text-[9px] text-zinc-500 font-sans leading-relaxed">
+                This digital transmittal slip was auto-compiled directly from live Tilepoint Inventory ledger registers.
+              </p>
+              <p className="text-[8px] text-zinc-400 font-mono mt-0.5">
+                TRANSMITTAL TRANSACTION STAMP ID: {activeTrans.id}-{activeTrans.fromBranchId}-{activeTrans.toBranchId}-{Date.now()}
+              </p>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Custom print CSS rule injection to completely cover user intent */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          /* Hide background UI, sidebars, headers, action indicators */
+          #root, .no-print, header, aside, nav, button, input, select, textarea, .bir-report-no-print {
+            display: none !important;
+            visibility: hidden !important;
+          }
+          /* Override styles heavily to guarantee high fidelity portrait print page */
+          #printable-transmittal-slip {
+            display: block !important;
+            visibility: visible !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            background: white !important;
+            color: black !important;
+            padding: 0px !important;
+            margin: 0px !important;
+          }
+          @page {
+            margin: 1.5cm !important;
+            size: portrait !important;
+          }
+        }
+      `}} />
 
       {/* MODAL 3: Visual JSON import form (replacing prompt window popup) */}
       {showImportModal && (
