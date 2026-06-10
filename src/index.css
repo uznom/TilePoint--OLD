@@ -610,29 +610,31 @@ html.accessibility-enhanced-outlines *:focus {
 
 /* 5. Clean, Professional @media print System for BIR ledger compliance sheets & slips */
 @media print {
-  /* Hide the entire system interface (sidebars, dialog backdrops, headers, main wrappers, etc.) */
-  body {
-    background: #ffffff !important;
-    color: #000000 !important;
-  }
-
-  body * {
+  /* Hide standard non-printed blocks specifically */
+  header, 
+  aside, 
+  nav, 
+  button, 
+  input, 
+  select,
+  .bir-report-no-print,
+  #sidebar-tutorials-btn,
+  #mobile-sidebar-tutorials-btn {
+    display: none !important;
     visibility: hidden !important;
   }
-  
-  /* Selectively make only the targeted BIR reports or dynamic slip modals visible */
-  .bir-report-container, 
-  .bir-report-container *,
-  .bir-receipt-container,
-  .bir-receipt-container * {
-    visibility: visible !important;
+
+  /* Reset standard page variables for high fidelity print execution */
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    height: auto !important;
+    font-size: 11px !important;
   }
-  
-  /* Set exact positioning for the printable report/receipt to avoid blank margins */
+
+  /* Make sure container covers full width and has zero offset margins */
   .bir-report-container {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+    display: block !important;
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
@@ -641,15 +643,13 @@ html.accessibility-enhanced-outlines *:focus {
     box-shadow: none !important;
     background: #ffffff !important;
     color: #000000 !important;
-    font-size: 11px !important;
   }
 
+  /* Dedicated 80mm format centering layout for thermal receipt rolls */
   .bir-receipt-container {
-    position: absolute !important;
-    left: 50% !important;
-    top: 1cm !important;
-    transform: translateX(-50%) !important;
-    width: 80mm !important; /* Standard POS thermal slip width */
+    display: block !important;
+    position: relative !important;
+    width: 80mm !important;
     max-width: 80mm !important;
     margin: 0 auto !important;
     padding: 10px !important;
@@ -657,30 +657,12 @@ html.accessibility-enhanced-outlines *:focus {
     box-shadow: none !important;
     background: #ffffff !important;
     color: #000000 !important;
-    font-size: 11px !important;
-    line-height: 1.4 !important;
   }
 
-  /* Force background colors to print beautifully, disable dark mode color adaptations */
-  html {
-    background: #ffffff !important;
-    color: #000000 !important;
-    height: auto !important;
-  }
-
-  /* Completely eliminate non-printable navigation, download, and trigger buttons */
-  .bir-report-no-print,
-  .bir-report-no-print * {
-    display: none !important;
-    visibility: hidden !important;
-  }
-
-  /* Optimize layout for maximum page width */
   table {
     width: 100% !important;
     border-collapse: collapse !important;
     font-size: 10px !important;
-    background: #ffffff !important;
   }
 
   th {
@@ -692,11 +674,6 @@ html.accessibility-enhanced-outlines *:focus {
 
   td {
     border-bottom: 1px solid #cccccc !important;
-    color: #000000 !important;
-  }
-
-  /* Ensure standard text colors render black on white print */
-  .text-m3-on-surface, .text-m3-on-surface-variant, .text-zinc-400, .text-emerald-500, .text-amber-500 {
     color: #000000 !important;
   }
 
