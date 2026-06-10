@@ -216,7 +216,7 @@ export interface AuditLog {
   recordId: string;
 }
 
-export type TransferStatus = 'Pending' | 'Approved' | 'In Transit' | 'Received';
+export type TransferStatus = 'Pending' | 'Approved' | 'In Transit' | 'Received' | 'Declined' | 'Cancelled';
 export type TransferType = 'Replenishment' | 'Pull Out' | 'Redistribution' | 'Return to Warehouse';
 
 export interface StockTransferItem {

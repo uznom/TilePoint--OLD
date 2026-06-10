@@ -2452,20 +2452,35 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         
         // Only run transition logic if status changed
         if (prevStatus !== status) {
-          // 1. If moving to 'In Transit', deduct from fromBranchId
-          if (status === 'In Transit' || (status === 'Approved' && prevStatus === 'Pending')) {
-            setBranchStock(bStock => bStock.map(bs => {
-              const matchedItem = t.items.find(item => item.productId === bs.productId && bs.branchId === t.fromBranchId);
-              if (matchedItem) {
-                const nextQty = Math.max(0, bs.quantity - matchedItem.quantity);
-                // If this is Main Branch B1, synchronize the global product quantity too!
-                if (t.fromBranchId === 'B1') {
-                  setProducts(prods => prods.map(prod => prod.id === bs.productId ? { ...prod, stockQuantity: nextQty } : prod));
+          // 1. If moving from 'Pending' to 'Approved' or 'In Transit', deduct from fromBranchId exactly once
+          if ((status === 'In Transit' || status === 'Approved') && prevStatus === 'Pending') {
+            setBranchStock(bStock => {
+              const updatedStock = [...bStock];
+              t.items.forEach(item => {
+                const idx = updatedStock.findIndex(bs => bs.productId === item.productId && bs.branchId === t.fromBranchId);
+                const deductionQty = item.quantity;
+                if (idx !== -1) {
+                  const bs = updatedStock[idx];
+                  const nextQty = Math.max(0, bs.quantity - deductionQty);
+                  updatedStock[idx] = { ...bs, quantity: nextQty };
+                  if (t.fromBranchId === 'B1') {
+                    setProducts(prods => prods.map(prod => prod.id === bs.productId ? { ...prod, stockQuantity: nextQty } : prod));
+                  }
+                } else {
+                  const newBs: InventoryLocationStock = {
+                    id: `${t.fromBranchId}_${item.productId}`,
+                    branchId: t.fromBranchId,
+                    productId: item.productId,
+                    quantity: 0
+                  };
+                  updatedStock.push(newBs);
+                  if (t.fromBranchId === 'B1') {
+                    setProducts(prods => prods.map(prod => prod.id === item.productId ? { ...prod, stockQuantity: 0 } : prod));
+                  }
                 }
-                return { ...bs, quantity: nextQty };
-              }
-              return bs;
-            }));
+              });
+              return updatedStock;
+            });
 
             // Record Ledger / Movements for dispatch
             t.items.forEach(item => {
@@ -2502,20 +2517,36 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
             });
           }
 
-          // 2. If moving to 'Received', add to toBranchId
+          // 2. If moving to 'Received', add to toBranchId (create record if it does not exist)
           if (status === 'Received') {
-            setBranchStock(bStock => bStock.map(bs => {
-              const matchedItem = t.items.find(item => item.productId === bs.productId && bs.branchId === t.toBranchId);
-              if (matchedItem) {
-                const nextQty = bs.quantity + matchedItem.quantity;
-                // If this is Main Branch B1, synchronize global product quantity!
-                if (t.toBranchId === 'B1') {
-                  setProducts(prods => prods.map(prod => prod.id === bs.productId ? { ...prod, stockQuantity: nextQty } : prod));
+            setBranchStock(bStock => {
+              const updatedStock = [...bStock];
+              t.items.forEach(item => {
+                const idx = updatedStock.findIndex(bs => bs.productId === item.productId && bs.branchId === t.toBranchId);
+                const additionQty = item.quantity;
+                if (idx !== -1) {
+                  const bs = updatedStock[idx];
+                  const nextQty = bs.quantity + additionQty;
+                  updatedStock[idx] = { ...bs, quantity: nextQty };
+                  if (t.toBranchId === 'B1') {
+                    setProducts(prods => prods.map(prod => prod.id === bs.productId ? { ...prod, stockQuantity: nextQty } : prod));
+                  }
+                } else {
+                  const nextQty = additionQty;
+                  const newBs: InventoryLocationStock = {
+                    id: `${t.toBranchId}_${item.productId}`,
+                    branchId: t.toBranchId,
+                    productId: item.productId,
+                    quantity: nextQty
+                  };
+                  updatedStock.push(newBs);
+                  if (t.toBranchId === 'B1') {
+                    setProducts(prods => prods.map(prod => prod.id === item.productId ? { ...prod, stockQuantity: nextQty } : prod));
+                  }
                 }
-                return { ...bs, quantity: nextQty };
-              }
-              return bs;
-            }));
+              });
+              return updatedStock;
+            });
 
             // Record Ledger / Movements for receipt
             t.items.forEach(item => {

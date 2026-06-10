@@ -2373,6 +2373,231 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode }) =>
         </div>
       )}
 
+      {/* MODAL 5: Create Stock Transfer Request Modal */}
+      {showCreateTransfer && (
+        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm shadow-xl" onClick={() => setShowCreateTransfer(false)} />
+          <div className="relative w-full max-w-2xl rounded-[32px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-2.5">
+              <h3 className="text-sm font-black text-m3-primary uppercase tracking-wider flex items-center gap-2">
+                <ArrowRightLeft className="h-5 w-5" /> Formulate Stock Transfer Request
+              </h3>
+              <button type="button" onClick={() => setShowCreateTransfer(false)} className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Dispatch branch assignment */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 block select-none">Dispensing Branch (Source)</label>
+                <select
+                  disabled={currentUser.role !== 'Admin'}
+                  value={transferSource}
+                  onChange={e => {
+                    const src = e.target.value;
+                    setTransferSource(src);
+                    if (src === transferDest) {
+                      setTransferDest(branches.find(b => b.id !== src)?.id || '');
+                    }
+                  }}
+                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary p-2.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans"
+                >
+                  {branches.filter(b => !b.isDeleted).map(b => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+                {currentUser.role !== 'Admin' && (
+                  <span className="text-[9px] text-zinc-400 pl-1">Locked to current branch assignment</span>
+                )}
+              </div>
+
+              {/* Destination branch assignment */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 block select-none">Receiving Branch (Destination)</label>
+                <select
+                  value={transferDest}
+                  onChange={e => setTransferDest(e.target.value)}
+                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary p-2.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans"
+                >
+                  <option value="" disabled>Select target branch...</option>
+                  {branches.filter(b => !b.isDeleted && b.id !== transferSource).map(b => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Transfer Type Selection */}
+              <div className="space-y-1 md:col-span-2">
+                <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 block select-none">Transfer Type Category</label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {(['Replenishment', 'Pull Out', 'Redistribution', 'Return to Warehouse'] as TransferType[]).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setTransferTypeSelect(type)}
+                      className={`py-2 px-3 text-2xs font-extrabold uppercase rounded-lg border text-center transition-all cursor-pointer ${
+                        transferTypeSelect === type
+                          ? 'bg-m3-primary/10 border-m3-primary text-m3-primary'
+                          : 'bg-m3-surface border-m3-outline-variant/15 text-m3-on-surface-variant hover:bg-m3-surface-high'
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* NESTED BUILDER CAROUSEL */}
+            <div className="bg-m3-surface p-4 rounded-2xl border border-m3-outline-variant/15 space-y-3.5">
+              <span className="text-[10px] font-extrabold text-m3-secondary uppercase tracking-wider block">Add Items to Transfer Order</span>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1 space-y-1">
+                  <span className="text-[9px] text-zinc-500 font-bold block">Select Ceramic Product</span>
+                  <select
+                    value={tempProductId}
+                    onChange={e => setTempProductId(e.target.value)}
+                    className="w-full bg-m3-surface-lowest border border-m3-outline-variant/20 focus:border-m3-primary px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-lg font-sans"
+                  >
+                    <option value="">Choose a product...</option>
+                    {products.filter(p => !p.isDeleted).map(p => {
+                      const stockInBranch = branchStock.find(bs => bs.productId === p.id && bs.branchId === transferSource)?.quantity || 0;
+                      return (
+                        <option key={p.id} value={p.id}>
+                          {p.productName} ({p.size}) [&nbsp;Stock: {stockInBranch} {p.unit || 'Boxes'}&nbsp;]
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+                <div className="w-full sm:w-28 space-y-1">
+                  <span className="text-[9px] text-zinc-500 font-bold block">Request Qty (Boxes)</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={tempQty}
+                    onChange={e => setTempQty(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-full bg-m3-surface-lowest border border-m3-outline-variant/20 focus:border-m3-primary px-3 py-1.5 text-xs text-m3-on-surface text-center focus:outline-none transition-colors rounded-lg font-mono"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!tempProductId) {
+                        showToast('Please select a product from the list first.');
+                        return;
+                      }
+                      const matchedProd = products.find(prod => prod.id === tempProductId);
+                      if (!matchedProd) return;
+
+                      const stockInBranch = branchStock.find(bs => bs.productId === tempProductId && bs.branchId === transferSource)?.quantity || 0;
+                      if (tempQty > stockInBranch) {
+                        showToast(`Warning: Dispatch branch only holds ${stockInBranch} boxes. Request exceeds available stock.`);
+                      }
+
+                      // Check if product is already in the transfer items cart
+                      const existingIdx = transferItems.findIndex(it => it.productId === tempProductId);
+                      if (existingIdx !== -1) {
+                        setTransferItems(prev => prev.map((it, idx) => {
+                          if (idx === existingIdx) {
+                            return { ...it, quantity: it.quantity + tempQty };
+                          }
+                          return it;
+                        }));
+                      } else {
+                        setTransferItems(prev => [...prev, { productId: tempProductId, quantity: tempQty }]);
+                      }
+                      
+                      showToast(`Added ${tempQty} units of "${matchedProd.productName}"`);
+                      setTempProductId('');
+                    }}
+                    className="w-full bg-m3-secondary hover:bg-m3-secondary/90 text-m3-on-secondary px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider cursor-pointer"
+                  >
+                    Add Line
+                  </button>
+                </div>
+              </div>
+
+              {/* Added product items card view */}
+              {transferItems.length > 0 ? (
+                <div className="bg-m3-surface-low border border-m3-outline-variant/10 rounded-xl divide-y divide-m3-outline-variant/10">
+                  {transferItems.map((item, idx) => {
+                    const prodDetails = products.find(p => p.id === item.productId);
+                    return (
+                      <div key={idx} className="flex justify-between items-center p-2.5 text-xs text-m3-on-surface">
+                        <div className="flex flex-col">
+                          <span className="font-extrabold">{prodDetails ? prodDetails.productName : 'Unknown Tile'}</span>
+                          <span className="text-[10px] text-zinc-400 font-mono">Product Code: {prodDetails ? prodDetails.productCode : item.productId}</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="font-mono font-black text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-md">{item.quantity} boxes</span>
+                          <button
+                            type="button"
+                            onClick={() => setTransferItems(prev => prev.filter((_, i) => i !== idx))}
+                            className="text-zinc-400 hover:text-rose-500 p-1 cursor-pointer transition-colors hover:bg-rose-500/10 rounded-full"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-zinc-400 text-xs italic bg-m3-surface-low rounded-xl border border-dashed border-m3-outline-variant/20">
+                  Item queue empty. Select tile and request quantity to populate list.
+                </div>
+              )}
+            </div>
+
+            {/* Purpose input */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 block select-none">Justification Remarks / Transfer Motivation</label>
+              <textarea
+                rows={2}
+                value={transferReasonInput}
+                onChange={e => setTransferReasonInput(e.target.value)}
+                placeholder="e.g., showroom display replenishment, customer pre-purchase balance delivery..."
+                className="w-full bg-m3-surface-lowest border border-m3-outline-variant/20 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-sans"
+              />
+            </div>
+
+            {/* Submit Actions */}
+            <div className="flex justify-end gap-2 border-t border-m3-outline-variant/15 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowCreateTransfer(false)}
+                className="px-4 py-2.5 text-xs font-black uppercase tracking-wider rounded-full hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
+              >
+                Refuse
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (transferSource === transferDest || !transferDest) {
+                    showToast('Invalid Route: Source and Destination branch must be distinct.');
+                    return;
+                  }
+                  if (transferItems.length === 0) {
+                    showToast('Catalog Empty: Add at least one tile product to the queue before executing dispatch request.');
+                    return;
+                  }
+                  const reason = transferReasonInput.trim() || `Inter-branch stock transfer of ${transferItems.length} products`;
+                  createStockTransfer(transferSource, transferDest, transferTypeSelect, transferItems, reason);
+                  setShowCreateTransfer(false);
+                  showToast('Stock Transfer Request successfully formulated and placed in Pending approval pipe!');
+                }}
+                className="m3-btn-primary px-5 py-2.5 text-xs shadow-md border animate-scale-up"
+              >
+                File Request
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Success toast alert bar */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 bg-m3-on-surface text-m3-surface text-xs font-bold py-3 px-5 rounded-2xl shadow-2xl z-50 border border-m3-outline-variant/30 flex items-center gap-2 animate-bounce max-w-[280px]">
