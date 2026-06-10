@@ -66,6 +66,7 @@ interface DbContextType {
       name: string;
       address: string;
       phone: string;
+      storeLogo?: string;
     }
   ) => void;
   isRateLimited: boolean;
@@ -1035,6 +1036,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       name: string;
       address: string;
       phone: string;
+      storeLogo?: string;
     }
   ) => {
     // 1. Create first branches list
@@ -1077,6 +1079,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
     localStorage.setItem('tp_users', JSON.stringify(newUsers));
     localStorage.setItem('tp_branches', JSON.stringify(newBranches));
+
+    if (branchData.storeLogo) {
+      localStorage.setItem('tilepoint_store_logo_v1', branchData.storeLogo);
+    }
+    localStorage.setItem('tilepoint_company_name_v1', branchData.name);
 
     // Mark as configured
     setIsConfigured(true);
@@ -1864,7 +1871,19 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   // PURCHASE ORDERS
   const createPO = (supplierId: string, branchId: string, itemInputs: { productId: string; costPrice: number; quantityRequested: number }[], notes?: string) => {
     const poId = `PO-${Date.now()}`;
-    const poNum = `PO-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000).toString().padStart(3, '0')}`;
+    
+    // Find maximum numeric sequence suffix or total count of existing purchase orders to increment
+    let nextNum = purchaseOrders.length + 1;
+    purchaseOrders.forEach(p => {
+      const parts = p.poNumber.split('-');
+      const lastPart = parts[parts.length - 1];
+      const parsedNum = parseInt(lastPart, 10);
+      if (!isNaN(parsedNum) && parsedNum >= nextNum) {
+        nextNum = parsedNum + 1;
+      }
+    });
+
+    const poNum = `PO-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${nextNum.toString().padStart(4, '0')}`;
 
     const newPO: PurchaseOrder = {
       id: poId,

@@ -60,7 +60,8 @@ import {
   Truck,
   BookOpen,
   Accessibility,
-  Shield
+  Shield,
+  CalendarDays
 } from 'lucide-react';
 
 function AppContent() {
@@ -388,8 +389,9 @@ function AppContent() {
     { id: 'expenses-add', name: 'Add Expenses', icon: DollarSign, roles: [UserRole.ADMIN, UserRole.MANAGER] },
     { id: 'expenses-search', name: 'Search Expenses', icon: DollarSign, roles: [UserRole.ADMIN, UserRole.MANAGER] },
 
-    { id: 'suppliers-manage', name: 'Manage Suppliers', icon: Building2, roles: [UserRole.ADMIN, UserRole.MANAGER] },
+    { id: 'suppliers-manage', name: 'Manage Suppliers', icon: Building2, roles: [UserRole.ADMIN] },
     { id: 'suppliers-credits', name: 'Active Credits', icon: Building2, roles: [UserRole.ADMIN, UserRole.MANAGER] },
+    { id: 'suppliers-calendar', name: 'Payment Calendar', icon: CalendarDays, roles: [UserRole.ADMIN] },
 
     { id: 'bir-xz', name: 'Search X&Z Reading', icon: FileText, roles: [UserRole.ADMIN, UserRole.MANAGER] },
     { id: 'bir-summary', name: 'BIR Summary Report', icon: FileText, roles: [UserRole.ADMIN, UserRole.MANAGER] },
@@ -452,7 +454,8 @@ function AppContent() {
       icon: Building2,
       subItems: [
         { id: 'suppliers-manage', name: 'Manage Suppliers' },
-        { id: 'suppliers-credits', name: 'Active Credits' }
+        { id: 'suppliers-credits', name: 'Active Credits' },
+        { id: 'suppliers-calendar', name: 'Payment Calendar' }
       ]
     },
     {

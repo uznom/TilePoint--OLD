@@ -34,7 +34,9 @@ import {
   Activity,
   History,
   FileText,
-  Database
+  Database,
+  Upload,
+  Image
 } from 'lucide-react';
 import { UserRole } from '../types/db';
 
@@ -103,6 +105,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
   const [customCompanyName, setCustomCompanyName] = useState<string>(() => {
     return localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center';
   });
+  const [customStoreLogo, setCustomStoreLogo] = useState<string>(() => {
+    return localStorage.getItem('tilepoint_store_logo_v1') || '';
+  });
   const [customTaxRate, setCustomTaxRate] = useState<number>(12);
   const [customCurrency, setCustomCurrency] = useState<string>('₱');
   const [customTargets, setCustomTargets] = useState<Record<string, number>>({
@@ -125,6 +130,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
     setTimeout(() => {
       setToast(null);
     }, 4500);
+  };
+
+  const handleWizardLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 1.5 * 1024 * 1024) {
+        showToastMsg('Store Logo size must be less than 1.5MB.', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCustomStoreLogo(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   // Resolve current active branch filter based on user role and Admin select choice
@@ -524,6 +544,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
     try {
       localStorage.setItem('tilepoint_setup_completed', 'true');
       localStorage.setItem('tilepoint_company_name_v1', customCompanyName);
+      localStorage.setItem('tilepoint_store_logo_v1', customStoreLogo);
       localStorage.setItem('tilepoint_tax_rate_v1', String(customTaxRate));
       localStorage.setItem('tilepoint_currency_v1', customCurrency);
 
@@ -613,6 +634,44 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                       placeholder="e.g. Diamond Tile Emporium"
                       className="bg-zinc-800/80 border border-m3-outline-variant/35 rounded-2xl text-xs font-bold p-3 w-full text-white focus:border-m3-primary outline-none transition-colors"
                     />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5 bg-zinc-800/20 border border-m3-outline-variant/15 p-4 rounded-2xl">
+                    <label className="text-xs font-black text-m3-primary uppercase font-mono pl-1">Store Corporate Logo:</label>
+                    <div className="flex items-center gap-4">
+                      <div className="relative w-16 h-16 rounded-xl border border-dashed border-zinc-750 bg-zinc-950/20 flex items-center justify-center overflow-hidden shrink-0">
+                        {customStoreLogo ? (
+                          <img src={customStoreLogo} alt="Corporate logo" className="w-full h-full object-contain" />
+                        ) : (
+                          <Image className="h-6 w-6 text-zinc-650" />
+                        )}
+                      </div>
+                      <div className="flex-1 space-y-1.5 text-left">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleWizardLogoChange}
+                          className="hidden"
+                          id="wizard-logo-upload"
+                        />
+                        <label
+                          htmlFor="wizard-logo-upload"
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-[10px] font-black uppercase tracking-wider text-white border border-zinc-700/60 rounded-xl cursor-pointer transition-colors"
+                        >
+                          <Upload className="h-3.5 w-3.5" /> Upload Brand Logo
+                        </label>
+                        <p className="text-[10px] text-zinc-500">Suggested: Square aspect ratio, PNG/JPG under 1.5MB.</p>
+                        {customStoreLogo && (
+                          <button
+                            type="button"
+                            onClick={() => setCustomStoreLogo('')}
+                            className="block text-[10px] text-red-500 hover:underline font-bold"
+                          >
+                            Remove Logo File
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">

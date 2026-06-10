@@ -21,7 +21,9 @@ import {
   Phone,
   ShieldCheck,
   Cpu,
-  RefreshCw
+  RefreshCw,
+  Upload,
+  Image
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { createSaltedHash, formatHashToken } from '../lib/crypto';
@@ -49,6 +51,23 @@ export const SetupModule: React.FC = () => {
   const [branchName, setBranchName] = useState('');
   const [branchAddress, setBranchAddress] = useState('');
   const [branchPhone, setBranchPhone] = useState('');
+  const [storeLogo, setStoreLogo] = useState('');
+
+  // Convert selected files to base64
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 1.5 * 1024 * 1024) {
+        setErrorMsg('Store Logo size must be less than 1.5MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setStoreLogo(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Deployment States
   const [isDeploying, setIsDeploying] = useState(false);
@@ -162,7 +181,8 @@ export const SetupModule: React.FC = () => {
         {
           name: branchName.trim(),
           address: branchAddress.trim(),
-          phone: branchPhone.trim()
+          phone: branchPhone.trim(),
+          storeLogo: storeLogo || undefined
         }
       );
     });
@@ -353,6 +373,45 @@ export const SetupModule: React.FC = () => {
                           className="w-full bg-[#181a24] border border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/80 transition-colors font-mono"
                         />
                       </div>
+
+                      {/* Store Corporate Logo upload */}
+                      <div className="space-y-1 pt-1">
+                        <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-400 pl-0.5">Store Brand Logo</label>
+                        <div className="flex items-center gap-4 bg-[#181a24] border border-zinc-800/80 rounded-xl p-3">
+                          <div className="relative w-14 h-14 rounded-lg border border-dashed border-zinc-800 bg-[#11131c] flex items-center justify-center overflow-hidden shrink-0">
+                            {storeLogo ? (
+                              <img src={storeLogo} alt="Preview" className="w-full h-full object-contain" />
+                            ) : (
+                              <Image className="h-5 w-5 text-zinc-600" />
+                            )}
+                          </div>
+                          <div className="flex-1 text-left space-y-1">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleLogoChange}
+                              className="hidden"
+                              id="logo-upload"
+                            />
+                            <label
+                              htmlFor="logo-upload"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-850 hover:bg-zinc-800 text-[9px] font-extrabold uppercase tracking-widest text-white border border-zinc-800 rounded-lg cursor-pointer transition-all hover:scale-102"
+                            >
+                              <Upload className="h-3 w-3" /> Select Image
+                            </label>
+                            <p className="text-[8px] text-zinc-500 font-sans">Supports PNG, JPG, WEBP. Max 1.5MB.</p>
+                            {storeLogo && (
+                              <button
+                                type="button"
+                                onClick={() => setStoreLogo('')}
+                                className="block text-[8.5px] text-red-500 hover:underline font-bold"
+                              >
+                                Remove uploader logo
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -387,6 +446,14 @@ export const SetupModule: React.FC = () => {
                           <span className="text-zinc-500 font-sans">First Assigned Hub:</span>
                           <span className="text-zinc-200 text-right truncate max-w-[200px]">{branchName}</span>
                         </div>
+                        {storeLogo && (
+                          <div className="flex justify-between items-center text-[11px]">
+                            <span className="text-zinc-500 font-sans">Corporate Logo:</span>
+                            <div className="w-8 h-8 rounded border border-zinc-800 overflow-hidden bg-white/5 flex items-center justify-center p-0.5">
+                              <img src={storeLogo} alt="Logo preview" className="w-full h-full object-contain" />
+                            </div>
+                          </div>
+                        )}
                         <div className="flex justify-between items-center text-[11px]">
                           <span className="text-zinc-500 font-sans">System Access Key:</span>
                           <span className="text-zinc-400">•••••••• (min 2,500 PBKDF2 stretching rounds)</span>
