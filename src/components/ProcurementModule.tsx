@@ -43,6 +43,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
     createSupplier,
     updateSupplier,
     deleteSupplier,
+    createProduct,
     currentUser
   } = useDb();
 
@@ -91,6 +92,17 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
   // Item selector helpers
   const [selectedProdId, setSelectedProdId] = useState('');
   const [qtyRequestedInput, setQtyRequestedInput] = useState('100');
+
+  // Inline Manual Add Item for PO
+  const [showManualItemForm, setShowManualItemForm] = useState(false);
+  const [manualProdName, setManualProdName] = useState('');
+  const [manualCategory, setManualCategory] = useState('Ceramic Tiles');
+  const [manualBrand, setManualBrand] = useState('');
+  const [manualSize, setManualSize] = useState('60x60 cm');
+  const [manualCostPrice, setManualCostPrice] = useState('300');
+  const [manualSellingPrice, setManualSellingPrice] = useState('450');
+  const [manualQtyRequested, setManualQtyRequested] = useState('100');
+  const [manualOrigin, setManualOrigin] = useState('');
 
   // Receiving state
   const [activePo, setActivePo] = useState<PurchaseOrder | null>(null);
@@ -228,6 +240,79 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
     showToast(`Removed ${pName} from draft list.`);
   };
 
+  const handleRegisterAndAddManualItem = () => {
+    if (!manualProdName.trim()) {
+      showToast('Validation Error: Product Name is required for manual addition.');
+      return;
+    }
+
+    const cost = Number(manualCostPrice) || 0;
+    const sell = Number(manualSellingPrice) || 0;
+    const qty = Number(manualQtyRequested) || 0;
+
+    if (cost <= 0 || sell <= 0) {
+      showToast('Price Error: Cost and retail selling prices must be greater than zero.');
+      return;
+    }
+    if (qty <= 0) {
+      showToast('Quantity Error: Ordered quantity must be greater than zero.');
+      return;
+    }
+
+    // Generate compliant code, SKU, Barcode
+    const generatedCode = `TL-PR-M${Date.now().toString().slice(-4)}`;
+    const generatedSku = `SKU-TPL-M${Math.floor(Math.random()*10000)}`;
+    const generatedBarcode = `480${Math.floor(1000000000 + Math.random()*9000000000)}`;
+
+    const newProdPayload = {
+      productCode: generatedCode,
+      sku: generatedSku,
+      barcode: generatedBarcode,
+      designName: 'Manual Entry Lot',
+      productName: manualProdName.trim(),
+      category: manualCategory,
+      brand: manualBrand.trim() || 'Generic/Manual Importer',
+      supplierId: selectedSupplierId,
+      unit: 'Box',
+      size: manualSize,
+      boxQuantity: 4,
+      coveragePerBox: 1.44,
+      image: '',
+      costPrice: cost,
+      sellingPrice: sell,
+      stockQuantity: 0, // initially 0 since PO is only requested
+      minimumStock: 20,
+      origin: manualOrigin.trim(),
+    };
+
+    try {
+      const created = createProduct(newProdPayload);
+      
+      // Add to draft list
+      setDraftItems(prev => [
+        ...prev,
+        {
+          productId: created.id,
+          costPrice: cost,
+          quantityRequested: qty,
+        }
+      ]);
+
+      // Reset form & state
+      setManualProdName('');
+      setManualBrand('');
+      setManualCostPrice('300');
+      setManualSellingPrice('450');
+      setManualQtyRequested('100');
+      setManualOrigin('');
+      setShowManualItemForm(false);
+      showToast(`Registered "${newProdPayload.productName}" and added to draft Requisition list.`);
+    } catch (err) {
+      console.error(err);
+      showToast('Process Error: Failsafe product instantiation crashed.');
+    }
+  };
+
   const handleSavePO = () => {
     if (draftItems.length === 0) {
       showToast('Blank Order: Requisition catalog list cannot be empty.');
@@ -318,27 +403,29 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
       </div>
 
       {/* Submodule Level Navigation Tabs */}
-      <div className="flex border-b border-m3-outline-variant/15 gap-4">
+      <div className="flex flex-wrap gap-1 md:gap-2 border-b border-m3-outline-variant/20 pb-px items-center sticky top-0 bg-m3-surface/90 backdrop-blur-md z-30 pt-2 pb-2 rounded-b-xl px-2 shadow-sm mb-4">
         <button
           onClick={() => setActiveSubTab('po')}
-          className={`pb-2 px-3 font-bold text-xs uppercase tracking-wider relative transition-all cursor-pointer ${
+          className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
             activeSubTab === 'po'
-              ? 'text-m3-primary border-b-2 border-m3-primary'
-              : 'text-zinc-400 hover:text-m3-primary'
+              ? 'border-m3-primary text-m3-primary font-black scale-102 font-bold'
+              : 'border-transparent text-m3-on-surface-variant'
           }`}
         >
-          Requisitions (PO)
+          <FileText className="h-4 w-4" />
+          <span>Requisitions (PO)</span>
         </button>
         {currentUser.role === UserRole.ADMIN && (
           <button
             onClick={() => setActiveSubTab('suppliers')}
-            className={`pb-2 px-3 font-bold text-xs uppercase tracking-wider relative transition-all cursor-pointer ${
+            className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
               activeSubTab === 'suppliers'
-                ? 'text-m3-primary border-b-2 border-m3-primary'
-                : 'text-zinc-400 hover:text-m3-primary'
+                ? 'border-m3-primary text-m3-primary font-black scale-102 font-bold'
+                : 'border-transparent text-m3-on-surface-variant'
             }`}
           >
-            Enterprise Suppliers ({suppliers.filter(s => !s.isDeleted).length})
+            <Truck className="h-4 w-4" />
+            <span>Enterprise Suppliers ({suppliers.filter(s => !s.isDeleted).length})</span>
           </button>
         )}
       </div>
@@ -666,44 +753,170 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
                 );
               }
               return null;
-            })()}
+            })()}            {/* Toggle header for adding items */}
+            <div className="md:col-span-2 flex items-center justify-between px-1 border-t border-m3-outline-variant/15 pt-3">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-m3-primary font-mono">Order compilation workspace</span>
+              <button
+                type="button"
+                onClick={() => setShowManualItemForm(!showManualItemForm)}
+                className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:text-amber-500 bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/15 px-3.5 py-1.5 rounded-full flex items-center gap-1.5 transition-all cursor-pointer shadow-3xs"
+              >
+                {showManualItemForm ? '← Use Standard lookup' : '+ Add New Manual Item'}
+              </button>
+            </div>
 
-            {/* Item selector widget within drafting panel */}
-            <div className="md:col-span-2 bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/30 my-1 grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
-              <div className="space-y-1 relative text-left">
-                <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">Product catalog Lookup</label>
-                <select
-                  value={selectedProdId}
-                  onChange={e => setSelectedProdId(e.target.value)}
-                  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-md cursor-pointer"
-                >
-                  <option value="">-- Choose active catalog item --</option>
-                  {activeProductsForSupplier.map(p => (
-                    <option key={p.id} value={p.id}>{p.productName} (Code: {p.productCode})</option>
-                  ))}
-                </select>
-              </div>
+            {showManualItemForm ? (
+              /* Inline Manual Add Item form */
+              <div className="md:col-span-2 bg-amber-500/5 p-4 rounded-3xl border border-amber-500/15 my-1 space-y-4 animate-scale-up text-left">
+                <div className="flex justify-between items-center border-b border-amber-500/10 pb-2">
+                  <h4 className="text-[11px] font-black tracking-wider uppercase text-amber-600 dark:text-amber-400">Register &amp; Add uncataloged Item Details</h4>
+                  <span className="text-[9px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full">New Product</span>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className="space-y-1 bg-transparent">
+                    <label className="text-[9px] font-bold uppercase text-amber-600 dark:text-amber-400 block pl-1">Product Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={manualProdName}
+                      onChange={e => setManualProdName(e.target.value)}
+                      placeholder="e.g. Premium Fujian Polished Tile"
+                      className="w-full bg-m3-surface border-b border-amber-500/30 px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 rounded-t-lg font-sans font-bold"
+                    />
+                  </div>
 
-              <div className="flex gap-2">
-                <div className="space-y-1 relative text-left flex-1">
-                  <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">Volume requested</label>
-                  <input
-                    type="number"
-                    value={qtyRequestedInput}
-                    onChange={e => setQtyRequestedInput(e.target.value)}
-                    className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors font-mono font-black rounded-t-md"
-                  />
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold uppercase text-amber-600 dark:text-amber-400 block pl-1">Category</label>
+                    <select
+                      value={manualCategory}
+                      onChange={e => setManualCategory(e.target.value)}
+                      className="w-full bg-m3-surface border-b-2 border-amber-500/30 px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 rounded-t-lg font-sans font-bold cursor-pointer"
+                    >
+                      <option value="Ceramic Tiles">Ceramic Tiles</option>
+                      <option value="Porcelain Tiles">Porcelain Tiles</option>
+                      <option value="Wall Tiles">Wall Tiles</option>
+                      <option value="Premium Accents">Premium Accents</option>
+                      <option value="Grout & Adhesives">Grout & Adhesives</option>
+                      <option value="Tools">Tools</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold uppercase text-amber-600 dark:text-amber-400 block pl-1">Brand Name / Manufacturer</label>
+                    <input
+                      type="text"
+                      value={manualBrand}
+                      onChange={e => setManualBrand(e.target.value)}
+                      placeholder="e.g. Fujian Tiles Ltd"
+                      className="w-full bg-m3-surface border-b border-amber-500/30 px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 rounded-t-lg font-sans font-semibold"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold uppercase text-amber-600 dark:text-amber-400 block pl-1">Size / Weight</label>
+                    <input
+                      type="text"
+                      value={manualSize}
+                      onChange={e => setManualSize(e.target.value)}
+                      placeholder="e.g. 60x60 cm"
+                      className="w-full bg-m3-surface border-b border-amber-500/30 px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 rounded-t-lg font-mono font-bold"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold uppercase text-amber-600 dark:text-amber-400 block pl-1">Acquired From (Where it did come from)</label>
+                    <input
+                      type="text"
+                      value={manualOrigin}
+                      onChange={e => setManualOrigin(e.target.value)}
+                      placeholder="e.g. Fujian Sea Port Lot B"
+                      className="w-full bg-m3-surface border-b border-amber-500/30 px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 rounded-t-lg font-sans font-bold"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1 col-span-1">
+                      <label className="text-[9px] font-bold uppercase text-amber-600 dark:text-amber-400 block pl-1">Cost (₱)</label>
+                      <input
+                        type="number"
+                        required
+                        value={manualCostPrice}
+                        onChange={e => setManualCostPrice(e.target.value)}
+                        className="w-full bg-m3-surface border-b border-amber-500/30 px-2 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 rounded-t-lg font-mono font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1 col-span-1">
+                      <label className="text-[9px] font-bold uppercase text-amber-600 dark:text-amber-400 block pl-1">Sell Price (₱)</label>
+                      <input
+                        type="number"
+                        required
+                        value={manualSellingPrice}
+                        onChange={e => setManualSellingPrice(e.target.value)}
+                        className="w-full bg-m3-surface border-b border-amber-500/30 px-2 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 rounded-t-lg font-mono font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1 col-span-1">
+                      <label className="text-[9px] font-bold uppercase text-amber-600 dark:text-amber-400 block pl-1">PO Qty</label>
+                      <input
+                        type="number"
+                        required
+                        value={manualQtyRequested}
+                        onChange={e => setManualQtyRequested(e.target.value)}
+                        className="w-full bg-m3-surface border-b border-amber-500/30 px-2 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 rounded-t-lg font-mono font-bold"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={addDraftItem}
-                  className="px-5 py-2 text-xs font-black bg-m3-primary text-m3-surface hover:bg-m3-primary/95 shadow-sm rounded-full cursor-pointer h-9 shrink-0 self-end transition-transform active:scale-95"
-                >
-                  Insert Item
-                </button>
+                <div className="flex justify-end pt-2 border-t border-amber-500/10">
+                  <button
+                    type="button"
+                    onClick={handleRegisterAndAddManualItem}
+                    className="px-6 py-2.5 text-xs font-black bg-amber-500 hover:bg-amber-600 text-gray-950 shadow-md rounded-full transition-transform active:scale-95 cursor-pointer flex items-center gap-1"
+                  >
+                    Register Product &amp; Append to PO Draft
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              /* Item selector widget within drafting panel */
+              <div className="md:col-span-2 bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/30 my-1 grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                <div className="space-y-1 relative text-left">
+                  <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">Product catalog Lookup</label>
+                  <select
+                    value={selectedProdId}
+                    onChange={e => setSelectedProdId(e.target.value)}
+                    className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-md cursor-pointer"
+                  >
+                    <option value="">-- Choose active catalog item --</option>
+                    {activeProductsForSupplier.map(p => (
+                      <option key={p.id} value={p.id}>{p.productName} (Code: {p.productCode})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex gap-2">
+                  <div className="space-y-1 relative text-left flex-1">
+                    <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">Volume requested</label>
+                    <input
+                      type="number"
+                      value={qtyRequestedInput}
+                      onChange={e => setQtyRequestedInput(e.target.value)}
+                      className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors font-mono font-black rounded-t-md"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={addDraftItem}
+                    className="px-5 py-2 text-xs font-black bg-m3-primary text-m3-surface hover:bg-m3-primary/95 shadow-sm rounded-full cursor-pointer h-9 shrink-0 self-end transition-transform active:scale-95"
+                  >
+                    Insert Item
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Added Draft items table */}
             <div className="md:col-span-2 space-y-2 border-t border-m3-outline-variant/15 pt-3 max-h-[160px] overflow-y-auto">

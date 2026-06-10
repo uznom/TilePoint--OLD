@@ -79,6 +79,7 @@ export interface Product {
   updatedAt: string;
   createdBy: string;
   updatedBy: string;
+  origin?: string; // where the product/stock came from
 }
 
 export type POStatus =

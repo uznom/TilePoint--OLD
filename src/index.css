@@ -25,6 +25,7 @@
   --color-m3-on-surface: var(--m3-on-surface);
   --color-m3-on-surface-variant: var(--m3-on-surface-variant);
   
+  --color-m3-surface-lowest: var(--m3-surface-container-lowest);
   --color-m3-surface-low: var(--m3-surface-container-low);
   --color-m3-surface-container: var(--m3-surface-container);
   --color-m3-surface-high: var(--m3-surface-container-high);
@@ -57,15 +58,16 @@
   --m3-tertiary-container: #F0FDF9;
   --m3-on-tertiary-container: #0F6357;
   
-  --m3-surface: #F2F4F7;          /* Anti-glare soft slate-cement underlay background */
+  --m3-surface: #EBF0F6;          /* Anti-glare eye-safe soft slate-blue-gray underlay */
   --m3-on-surface: #101828;       /* Charcoal Black text for top-grade readability (18.2:1 contrast ratio) */
   --m3-on-surface-variant: #344054; /* Highly legible variant copy (10.4:1 contrast ratio) */
-  --m3-surface-container-low: #FFFFFF; /* Crispy solid pure white card layout for perfect separation over surface */
-  --m3-surface-container: #F2F4F7;
-  --m3-surface-container-high: #E4E7EC;
+  --m3-surface-container-lowest: #FAFBFD; /* Super-soft luxurious ivory-blue eggshell white for input backgrounds */
+  --m3-surface-container-low: #F3F6FA; /* Soft, restful slate-gray card layout (no pure white blinding lights) */
+  --m3-surface-container: #E4E8F0;
+  --m3-surface-container-high: #D0D7E2;
   
   --m3-outline: #475467;          /* Eye-safe secondary elements and inputs boundary borders */
-  --m3-outline-variant: #D0D5DD;  /* Explicit card & structural layout grid grid lines */
+  --m3-outline-variant: #C2CBD6;  /* Explicit card & structural layout grid grid lines */
 }
 
 /* We also apply variables to .dark class when state has darkMode=true */
@@ -88,6 +90,7 @@
   --m3-surface: #0B0F13;          /* Deep Carbon / Midnight Slate */
   --m3-on-surface: #F8FAFC;
   --m3-on-surface-variant: #94A3B8;
+  --m3-surface-container-lowest: #070B0E;
   --m3-surface-container-low: #131A22;
   --m3-surface-container: #1E293B;
   --m3-surface-container-high: #334155;
@@ -682,6 +685,22 @@ html.accessibility-enhanced-outlines *:focus {
     size: portrait;
   }
 }
+
+/* Ensure all dropdown select elements and options respect the dark mode colors explicitly */
+select, option {
+  background-color: var(--m3-surface-container-low);
+  color: var(--m3-on-surface);
+}
+
+.dark select, .dark option {
+  background-color: #131A22 !important;
+  color: #F8FAFC !important;
+}
+
+select:focus {
+  outline: none;
+}
+
 
 
 

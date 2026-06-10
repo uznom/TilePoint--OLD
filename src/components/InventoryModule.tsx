@@ -41,7 +41,7 @@ import {
 
 interface InventoryModuleProps {
   darkMode: boolean;
-  initialSubTab?: 'catalog' | 'movements' | 'transfers' | 'ledger';
+  initialSubTab?: 'catalog' | 'movements' | 'transfers' | 'ledger' | 'import';
 }
 
 // Visual Barcode Component utilizing custom styled SVG lines for absolute accuracy
@@ -141,8 +141,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     updateStockTransferStatus
   } = useDb();
 
-  // Primary navigation sub-tabs: "catalog" | "movements" | "transfers" | "ledger"
-  const [activeSubTab, setActiveSubTab] = useState<'catalog' | 'movements' | 'transfers' | 'ledger'>(initialSubTab || 'catalog');
+  // Primary navigation sub-tabs: "catalog" | "movements" | "transfers" | "ledger" | "import"
+  const [activeSubTab, setActiveSubTab] = useState<'catalog' | 'movements' | 'transfers' | 'ledger' | 'import'>(initialSubTab || 'catalog');
 
   // Table layout optimization states
   const [isCompactColumns, setIsCompactColumns] = useState(false);
@@ -220,6 +220,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   const [sellingPrice, setSellingPrice] = useState<number>(450);
   const [stockQuantity, setStockQuantity] = useState<number>(100);
   const [minimumStock, setMinimumStock] = useState<number>(25);
+  const [origin, setOrigin] = useState('');
 
   // Manual Stock Adjustment state
   const [showAdjustModal, setShowAdjustModal] = useState(false);
@@ -527,6 +528,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     setSellingPrice(450);
     setStockQuantity(50);
     setMinimumStock(20);
+    setOrigin('');
 
     setIsEditMode(false);
     setShowModal(true);
@@ -551,6 +553,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     setSellingPrice(p.sellingPrice);
     setStockQuantity(p.stockQuantity);
     setMinimumStock(p.minimumStock);
+    setOrigin(p.origin || '');
 
     setIsEditMode(true);
     setShowModal(true);
@@ -582,6 +585,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
       sellingPrice: Number(sellingPrice),
       stockQuantity: Number(stockQuantity),
       minimumStock: Number(minimumStock),
+      origin,
     };
 
     if (isEditMode) {
@@ -692,63 +696,73 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     <div className="space-y-6 animate-fade-in text-m3-on-surface">
       
       {/* SUB-HEADER TAB NAVIGATION */}
-      <div className="flex border-b border-m3-outline-variant/20 pb-px items-center justify-between sticky top-0 bg-m3-surface/90 backdrop-blur-md z-30 pt-2 pb-2 rounded-b-xl px-2 shadow-sm">
-        <div className="flex flex-wrap gap-1 md:gap-2">
-          <button
-            onClick={() => setActiveSubTab('catalog')}
-            className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
-              activeSubTab === 'catalog'
-                ? 'border-m3-primary text-m3-primary font-black scale-102'
-                : 'border-transparent text-m3-on-surface-variant'
-            }`}
-          >
-            <Package className="h-4 w-4" />
-            <span>Catalog Stock Ledger</span>
-          </button>
-          
-          <button
-            onClick={() => setActiveSubTab('movements')}
-            className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
-              activeSubTab === 'movements'
-                ? 'border-m3-primary text-m3-primary font-black scale-102'
-                : 'border-transparent text-m3-on-surface-variant'
-            }`}
-          >
-            <Activity className="h-4 w-4" />
-            <span>Adjustments Logs</span>
-          </button>
+      <div className="flex flex-wrap gap-1 md:gap-2 border-b border-m3-outline-variant/20 pb-px items-center sticky top-0 bg-m3-surface/90 backdrop-blur-md z-30 pt-2 pb-2 rounded-b-xl px-2 shadow-sm">
+        <button
+          onClick={() => setActiveSubTab('catalog')}
+          className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
+            activeSubTab === 'catalog'
+              ? 'border-m3-primary text-m3-primary font-black scale-102'
+              : 'border-transparent text-m3-on-surface-variant'
+          }`}
+        >
+          <Package className="h-4 w-4" />
+          <span>Catalog Stock Ledger</span>
+        </button>
+        
+        <button
+          onClick={() => setActiveSubTab('movements')}
+          className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
+            activeSubTab === 'movements'
+              ? 'border-m3-primary text-m3-primary font-black scale-102'
+              : 'border-transparent text-m3-on-surface-variant'
+          }`}
+        >
+          <Activity className="h-4 w-4" />
+          <span>Adjustments Logs</span>
+        </button>
 
-          <button
-            onClick={() => setActiveSubTab('transfers')}
-            className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl relative ${
-              activeSubTab === 'transfers'
-                ? 'border-m3-primary text-m3-primary font-black scale-102'
-                : 'border-transparent text-m3-on-surface-variant'
-            }`}
-          >
-            <ArrowRightLeft className="h-4 w-4" />
-            <span>Stock Transfers</span>
-            {stockTransfers.filter(t => t.status === 'Pending').length > 0 && (
-              <span className="absolute -top-1 right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black leading-none text-white animate-pulse shadow-md">
-                {stockTransfers.filter(t => t.status === 'Pending').length}
-              </span>
-            )}
-          </button>
+        <button
+          onClick={() => setActiveSubTab('transfers')}
+          className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl relative ${
+            activeSubTab === 'transfers'
+              ? 'border-m3-primary text-m3-primary font-black scale-102'
+              : 'border-transparent text-m3-on-surface-variant'
+          }`}
+        >
+          <ArrowRightLeft className="h-4 w-4" />
+          <span>Stock Transfers</span>
+          {stockTransfers.filter(t => t.status === 'Pending').length > 0 && (
+            <span className="absolute -top-1 right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black leading-none text-white animate-pulse shadow-md">
+              {stockTransfers.filter(t => t.status === 'Pending').length}
+            </span>
+          )}
+        </button>
 
-          <button
-            onClick={() => setActiveSubTab('ledger')}
-            className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
-              activeSubTab === 'ledger'
-                ? 'border-m3-primary text-m3-primary font-black scale-102'
-                : 'border-transparent text-m3-on-surface-variant'
-            }`}
-          >
-            <Sliders className="h-4 w-4" />
-            <span>Logistics Ledger & Heatmap</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setActiveSubTab('ledger')}
+          className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
+            activeSubTab === 'ledger'
+              ? 'border-m3-primary text-m3-primary font-black scale-102'
+              : 'border-transparent text-m3-on-surface-variant'
+          }`}
+        >
+          <Sliders className="h-4 w-4" />
+          <span>Logistics Ledger & Heatmap</span>
+        </button>
 
-        <div className="hidden lg:flex items-center gap-2 text-[10px] uppercase font-black tracking-widest text-m3-on-surface-variant bg-m3-surface-low py-1.5 px-3 rounded-full border border-m3-outline-variant/25">
+        <button
+          onClick={() => setActiveSubTab('import')}
+          className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
+            activeSubTab === 'import'
+              ? 'border-m3-primary text-m3-primary font-black scale-102'
+              : 'border-transparent text-m3-on-surface-variant'
+          }`}
+        >
+          <Upload className="h-4 w-4 text-emerald-500 animate-pulse" />
+          <span>Old POS Migration</span>
+        </button>
+
+        <div className="hidden lg:flex lg:ml-auto items-center gap-2 text-[10px] uppercase font-black tracking-widest text-m3-on-surface-variant bg-m3-surface-low py-1.5 px-3 rounded-full border border-m3-outline-variant/25">
           <Sliders className="h-3.5 w-3.5 text-m3-primary" />
           <span>Section: Inventory Operations v2.0</span>
         </div>
@@ -1022,7 +1036,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                           <strong className="text-m3-on-surface text-xs block truncate max-w-[240px]" title={p.productName}>
                             {p.productName}
                           </strong>
-                          <div className="flex items-center gap-2 mt-0.5 whitespace-nowrap">
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                             {p.designName && (
                               <span className="text-[10px] text-m3-on-surface-variant font-medium bg-m3-surface-lowest px-1.5 py-0.5 rounded border border-m3-outline-variant/15 font-sans">
                                 Design: {p.designName}
@@ -1033,6 +1047,11 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                                 Coverage: {p.coveragePerBox} m²
                               </span>
                             ) : null}
+                            {p.origin && (
+                              <span className="text-[10px] text-amber-600 dark:text-amber-400 font-black bg-amber-500/5 px-1.5 py-0.5 rounded border border-amber-500/10 font-sans" title={`Origin/Source: ${p.origin}`}>
+                                Source: {p.origin}
+                              </span>
+                            )}
                           </div>
                         </td>
 
@@ -1208,6 +1227,12 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                                       <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Selling Retail</span>
                                       <span className="text-m3-primary font-mono text-xs font-extrabold">₱{p.sellingPrice.toFixed(2)}</span>
                                     </div>
+                                    {p.origin && (
+                                      <div className="col-span-2 pt-2 border-t border-m3-outline-variant/10">
+                                        <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Acquired From / Origin</span>
+                                        <span className="text-amber-500 dark:text-amber-400 font-bold text-[11px] block">{p.origin}</span>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -2063,6 +2088,139 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
         </div>
       )}
 
+      {/* VIEW 5: LEGACY POS DATA MIGRATION ENGINE */}
+      {activeSubTab === 'import' && (
+        <div className="space-y-6 animate-fade-in text-left">
+          <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] p-6 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-m3-outline-variant/15 pb-4">
+              <div>
+                <h3 className="text-base font-black text-m3-primary uppercase tracking-wider flex items-center gap-2">
+                  <Upload className="h-5 w-5 text-emerald-500" />
+                  <span>Legacy POS Data Migration Hub &amp; Smart Import Engine</span>
+                </h3>
+                <p className="text-xs text-m3-on-surface-variant font-medium mt-1">
+                  Import inventory stock, prices, SKUs, and categories directly from your legacy point-of-sale systems.
+                </p>
+              </div>
+              <span className="bg-emerald-500 text-white font-black text-[9px] tracking-widest px-2.5 py-1 rounded-full uppercase">
+                Active Integration Unit
+              </span>
+            </div>
+
+            {/* Instruction units */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
+                <span className="text-[10px] font-black text-indigo-500 uppercase tracking-wider block">STEP 1: Legacy Extraction</span>
+                <p className="text-xs text-m3-on-surface-variant font-medium">
+                  Export your old products list from your older checkout apps in <strong>JSON</strong> or copy your product inventory rows.
+                </p>
+              </div>
+              <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
+                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-wider block">STEP 2: Map Fields</span>
+                <p className="text-xs text-m3-on-surface-variant font-medium">
+                  Paste the data array into the migration zone. The smart importer automatically maps keys like codes, costs, and brands.
+                </p>
+              </div>
+              <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
+                <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider block">STEP 3: Commit Import</span>
+                <p className="text-xs text-m3-on-surface-variant font-medium">
+                  Verify the parsed dry-run entries on the interactive table layout, then commit the transfer to register them.
+                </p>
+              </div>
+            </div>
+
+            {/* Paste Space */}
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <label className="text-xs font-black uppercase text-m3-primary tracking-wider">Paste raw older POS JSON data here</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sample = [
+                      {
+                        "productName": "Heritage White Glazed Porcelain",
+                        "productCode": "HW-GL-80",
+                        "skuCode": "SKU-HW-80",
+                        "barcode": "4801122334455",
+                        "category": "Porcelain Tiles",
+                        "brand": "Heritage Slabs",
+                        "costPrice": 420,
+                        "sellingPrice": 650,
+                        "size": "80x80 cm",
+                        "stockQuantity": 150
+                      },
+                      {
+                        "productName": "EcoSlate Anti-Slip Terracotta",
+                        "productCode": "ES-AS-30",
+                        "skuCode": "SKU-ES-30",
+                        "barcode": "4805566778899",
+                        "category": "Ceramic Tiles",
+                        "brand": "EcoStone",
+                        "costPrice": 180,
+                        "sellingPrice": 280,
+                        "size": "30x30 cm",
+                        "stockQuantity": 320
+                      }
+                    ];
+                    setRawImportText(JSON.stringify(sample, null, 2));
+                    showToast("Loaded high-fidelity Sample older POS Dataset into migration zone!");
+                  }}
+                  className="text-[11px] font-bold text-m3-primary hover:text-m3-primary/80 bg-m3-primary/10 px-3.5 py-1.5 rounded-full transition-all cursor-pointer"
+                >
+                  ⚡ Load High-Fidelity POS Sample
+                </button>
+              </div>
+
+              <textarea
+                value={rawImportText}
+                onChange={(e) => setRawImportText(e.target.value)}
+                rows={8}
+                placeholder={`[
+  {
+    "productName": "Old POS Ceramic Tile x5",
+    "productCode": "OP-CER-01",
+    "costPrice": 120,
+    "sellingPrice": 190,
+    "stockQuantity": 80
+  }
+]`}
+                className="w-full bg-m3-surface-lowest border border-m3-outline-variant/40 focus:border-m3-primary p-4 text-xs font-mono text-m3-on-surface rounded-3xl focus:outline-none transition-colors"
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2 pt-2">
+              <button
+                type="button"
+                onClick={executeBulkImport}
+                className="px-6 py-3 bg-m3-primary hover:bg-m3-primary/95 text-white font-black text-xs uppercase tracking-wider rounded-full shadow-lg transition-all active:scale-95 cursor-pointer flex items-center gap-2"
+              >
+                <Check className="h-4 w-4" />
+                <span>Run Importer &amp; Commit Data</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRawImportText('')}
+                className="px-5 py-3 bg-m3-surface-high/30 hover:bg-m3-surface-high/60 text-m3-on-surface font-black text-xs uppercase tracking-wide rounded-full transition-all cursor-pointer"
+              >
+                Clear zone
+              </button>
+            </div>
+
+            {/* Smart Import Template Guidelines */}
+            <div className="bg-amber-500/5 border border-amber-500/20 p-4 rounded-3xl space-y-2 text-xs font-medium">
+              <h4 className="font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+                <AlertCircle className="h-4 w-4" />
+                <span>Auto-Mapping &amp; Validation Compliance</span>
+              </h4>
+              <p className="text-m3-on-surface-variant leading-relaxed">
+                Our legacy sync engine maps key fields from other systems. 
+                If any fields such as <code>barcode</code>, <code>size</code> or <code>sku</code> are missing, the importer generates clean defaults dynamically to maintain full database integrity.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL 1: ADD & EDIT PRODUCT DIALOG */}
       {showModal && (
         <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
@@ -2335,6 +2493,18 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
                 />
               </div>
+            </div>
+
+            {/* Custom Origin / Source of Stock */}
+            <div className="space-y-1 relative col-span-2 md:col-span-1">
+              <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Acquired From / Stock Source (Where did it come from)</label>
+              <input
+                type="text"
+                value={origin}
+                onChange={e => setOrigin(e.target.value)}
+                placeholder="e.g. Main Cebu Yard, China Lot B-12, Local Consignment Importer"
+                className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans font-bold"
+              />
             </div>
 
             {/* Command Save Button Footer */}

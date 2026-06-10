@@ -105,7 +105,7 @@ interface DbContextType {
   deleteSupplier: (id: string) => void;
 
   // Actions - Products
-  createProduct: (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'qrCode' | 'createdBy' | 'updatedBy'>) => void;
+  createProduct: (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'qrCode' | 'createdBy' | 'updatedBy'>) => Product;
   updateProduct: (id: string, updates: Partial<Product>, customLogReason?: string) => void;
   deleteProduct: (id: string) => void;
   importProducts: (imported: Product[]) => { success: boolean; count: number; error?: string };
@@ -1894,7 +1894,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       quantity: prodFields.stockQuantity,
       destinationBranchId: currentUser.branchAssignmentId,
       referenceId: 'INITIAL_STOCK',
-      notes: 'Initial stock intake upon product registration',
+      notes: prodFields.origin 
+        ? `Initial stock intake. Origin/Source: ${prodFields.origin}` 
+        : 'Initial stock intake upon product registration',
       timestamp: new Date().toISOString(),
       userId: currentUser.id,
       username: currentUser.username,
@@ -1902,6 +1904,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     setMovements(prev => [initMove, ...prev]);
 
     addAuditLog('PRODUCT_CREATE', `Created product ${newProd.productName}`, 'Products', newProd.id);
+    return newProd;
   };
 
   const updateProduct = (id: string, updates: Partial<Product>, customLogReason?: string) => {
