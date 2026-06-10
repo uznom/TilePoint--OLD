@@ -1084,6 +1084,225 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     setActiveShift(openShift || null);
   }, [shifts, currentUser]);
 
+  // Sync state with server datastore helpers
+  const syncKeyWithServer = (key: string, value: any) => {
+    fetch('/api/db/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, value })
+    }).catch(err => console.error("Error setting online key sync:", err));
+  };
+
+  // Initial database load from server on boot
+  useEffect(() => {
+    const syncInitial = async () => {
+      try {
+        const res = await fetch('/api/db');
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        // If the server database is already configured, boot with its live persistent contents
+        if (data && data.tp_is_configured === 'true') {
+          if (data.tp_is_configured !== undefined) setIsConfigured(data.tp_is_configured === 'true');
+          if (data.tp_current_user !== undefined) setCurrentUser(data.tp_current_user);
+          if (data.tp_is_logged_in !== undefined) setIsLoggedIn(data.tp_is_logged_in === 'true');
+          if (data.tp_users !== undefined) setUsers(data.tp_users);
+          if (data.tp_branches !== undefined) setBranches(data.tp_branches);
+          if (data.tp_suppliers !== undefined) setSuppliers(data.tp_suppliers);
+          if (data.tp_products !== undefined) setProducts(data.tp_products);
+          if (data.tp_purchase_orders !== undefined) setPurchaseOrders(data.tp_purchase_orders);
+          if (data.tp_po_items !== undefined) setPoItems(data.tp_po_items);
+          if (data.tp_transmittals !== undefined) setTransmittals(data.tp_transmittals);
+          if (data.tp_shifts !== undefined) setShifts(data.tp_shifts);
+          if (data.tp_sales !== undefined) setSales(data.tp_sales);
+          if (data.tp_sale_items !== undefined) setSaleItems(data.tp_sale_items);
+          if (data.tp_movements !== undefined) setMovements(data.tp_movements);
+          if (data.tp_audit_logs !== undefined) setAuditLogs(data.tp_audit_logs);
+          if (data.tp_parked_sales !== undefined) setParkedSales(data.tp_parked_sales);
+          if (data.tp_stock_transfers !== undefined) setStockTransfers(data.tp_stock_transfers);
+          if (data.tp_branch_stock !== undefined) setBranchStock(data.tp_branch_stock);
+          if (data.tp_ledger_entries !== undefined) setLedgerEntries(data.tp_ledger_entries);
+          if (data.tp_branch_sales_reports !== undefined) setBranchSalesReports(data.tp_branch_sales_reports);
+          if (data.tp_deliveries !== undefined) setDeliveries(data.tp_deliveries);
+          
+          // Populate localstorage immediately
+          Object.entries(data).forEach(([key, val]) => {
+            localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val));
+          });
+        } else {
+          // Fresh server, let's export our current seeds/localStorage state to bootstrap the server database!
+          const localPayload: Record<string, any> = {};
+          const keysToGather = [
+            'tp_is_configured', 'tp_current_user', 'tp_is_logged_in', 'tp_users', 'tp_branches', 
+            'tp_suppliers', 'tp_products', 'tp_purchase_orders', 'tp_po_items', 'tp_transmittals', 
+            'tp_shifts', 'tp_sales', 'tp_sale_items', 'tp_movements', 'tp_audit_logs', 'tp_parked_sales', 
+            'tp_stock_transfers', 'tp_branch_stock', 'tp_ledger_entries', 'tp_branch_sales_reports', 'tp_deliveries'
+          ];
+          keysToGather.forEach(key => {
+            const cached = localStorage.getItem(key);
+            if (cached) {
+              try {
+                localPayload[key] = JSON.parse(cached);
+              } catch {
+                localPayload[key] = cached;
+              }
+            }
+          });
+          
+          if (Object.keys(localPayload).length > 0) {
+            await fetch('/api/db', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(localPayload),
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Failed initial server DB sync:", e);
+      }
+    };
+    
+    syncInitial();
+  }, []);
+
+  // Periodic active background database pulling routine (runs every 2.5 seconds)
+  useEffect(() => {
+    let active = true;
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/db');
+        if (!res.ok || !active) return;
+        const data = await res.json();
+        
+        if (data && data.tp_is_configured === 'true') {
+          // Compare and apply changes defensively to avoid triggering redundant re-renders
+          if (data.tp_users !== undefined) {
+            const dataStr = JSON.stringify(data.tp_users);
+            if (JSON.stringify(users) !== dataStr) {
+              setUsers(data.tp_users);
+              localStorage.setItem('tp_users', dataStr);
+            }
+          }
+          if (data.tp_products !== undefined) {
+            const dataStr = JSON.stringify(data.tp_products);
+            if (JSON.stringify(products) !== dataStr) {
+              setProducts(data.tp_products);
+              localStorage.setItem('tp_products', dataStr);
+            }
+          }
+          if (data.tp_parked_sales !== undefined) {
+            const dataStr = JSON.stringify(data.tp_parked_sales);
+            if (JSON.stringify(parkedSales) !== dataStr) {
+              setParkedSales(data.tp_parked_sales);
+              localStorage.setItem('tp_parked_sales', dataStr);
+            }
+          }
+          if (data.tp_sales !== undefined) {
+            const dataStr = JSON.stringify(data.tp_sales);
+            if (JSON.stringify(sales) !== dataStr) {
+              setSales(data.tp_sales);
+              localStorage.setItem('tp_sales', dataStr);
+            }
+          }
+          if (data.tp_sale_items !== undefined) {
+            const dataStr = JSON.stringify(data.tp_sale_items);
+            if (JSON.stringify(saleItems) !== dataStr) {
+              setSaleItems(data.tp_sale_items);
+              localStorage.setItem('tp_sale_items', dataStr);
+            }
+          }
+          if (data.tp_is_configured !== undefined) {
+            const parsed = data.tp_is_configured === 'true';
+            if (isConfigured !== parsed) {
+              setIsConfigured(parsed);
+              localStorage.setItem('tp_is_configured', String(parsed));
+            }
+          }
+          if (data.tp_branches !== undefined) {
+            const dataStr = JSON.stringify(data.tp_branches);
+            if (JSON.stringify(branches) !== dataStr) {
+              setBranches(data.tp_branches);
+              localStorage.setItem('tp_branches', dataStr);
+            }
+          }
+          if (data.tp_suppliers !== undefined) {
+            const dataStr = JSON.stringify(data.tp_suppliers);
+            if (JSON.stringify(suppliers) !== dataStr) {
+              setSuppliers(data.tp_suppliers);
+              localStorage.setItem('tp_suppliers', dataStr);
+            }
+          }
+          if (data.tp_shifts !== undefined) {
+            const dataStr = JSON.stringify(data.tp_shifts);
+            if (JSON.stringify(shifts) !== dataStr) {
+              setShifts(data.tp_shifts);
+              localStorage.setItem('tp_shifts', dataStr);
+            }
+          }
+          if (data.tp_movements !== undefined) {
+            const dataStr = JSON.stringify(data.tp_movements);
+            if (JSON.stringify(movements) !== dataStr) {
+              setMovements(data.tp_movements);
+              localStorage.setItem('tp_movements', dataStr);
+            }
+          }
+          if (data.tp_audit_logs !== undefined) {
+            const dataStr = JSON.stringify(data.tp_audit_logs);
+            if (JSON.stringify(auditLogs) !== dataStr) {
+              setAuditLogs(data.tp_audit_logs);
+              localStorage.setItem('tp_audit_logs', dataStr);
+            }
+          }
+          if (data.tp_stock_transfers !== undefined) {
+            const dataStr = JSON.stringify(data.tp_stock_transfers);
+            if (JSON.stringify(stockTransfers) !== dataStr) {
+              setStockTransfers(data.tp_stock_transfers);
+              localStorage.setItem('tp_stock_transfers', dataStr);
+            }
+          }
+          if (data.tp_ledger_entries !== undefined) {
+            const dataStr = JSON.stringify(data.tp_ledger_entries);
+            if (JSON.stringify(ledgerEntries) !== dataStr) {
+              setLedgerEntries(data.tp_ledger_entries);
+              localStorage.setItem('tp_ledger_entries', dataStr);
+            }
+          }
+          if (data.tp_branch_stock !== undefined) {
+            const dataStr = JSON.stringify(data.tp_branch_stock);
+            if (JSON.stringify(branchStock) !== dataStr) {
+              setBranchStock(data.tp_branch_stock);
+              localStorage.setItem('tp_branch_stock', dataStr);
+            }
+          }
+          if (data.tp_branch_sales_reports !== undefined) {
+            const dataStr = JSON.stringify(data.tp_branch_sales_reports);
+            if (JSON.stringify(branchSalesReports) !== dataStr) {
+              setBranchSalesReports(data.tp_branch_sales_reports);
+              localStorage.setItem('tp_branch_sales_reports', dataStr);
+            }
+          }
+          if (data.tp_deliveries !== undefined) {
+            const dataStr = JSON.stringify(data.tp_deliveries);
+            if (JSON.stringify(deliveries) !== dataStr) {
+              setDeliveries(data.tp_deliveries);
+              localStorage.setItem('tp_deliveries', dataStr);
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Failed polling server DB sync:", e);
+      }
+    }, 2500);
+
+    return () => {
+      active = false;
+      clearInterval(pollInterval);
+    };
+  }, [
+    isConfigured, users, products, parkedSales, sales, saleItems, 
+    branches, suppliers, shifts, movements, auditLogs, stockTransfers, ledgerEntries, branchStock, branchSalesReports, deliveries
+  ]);
+
   // DB Tuning debouncer settings & stats
   const [debounceDelay, setDebounceDelay] = useState<number>(() => {
     const cached = localStorage.getItem('tp_debounce_delay');
@@ -1114,6 +1333,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
     if (bypassDebounce || debounceDelay === 0) {
       localStorage.setItem(key, dataStr);
+      syncKeyWithServer(key, value);
       setDbSyncStatus('syncing');
       setTimeout(() => setDbSyncStatus('idle'), 150);
       return;
@@ -1134,6 +1354,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
     timeoutRefs.current[key] = setTimeout(() => {
       localStorage.setItem(key, dataStr);
+      syncKeyWithServer(key, value);
       delete timeoutRefs.current[key];
       
       const pendingKeys = Object.keys(timeoutRefs.current);
