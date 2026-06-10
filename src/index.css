@@ -42,35 +42,35 @@
 
 /* Base definitions for light / dark modes */
 :root {
-  --m3-primary: #1C64F2;          /* Custom Professional Blue Accent */
+  --m3-primary: #155EEF;          /* Eye-safe Professional Royal Sapphire Blue */
   --m3-on-primary: #FFFFFF;
-  --m3-primary-container: #EBF5FF; /* Soft Blue tinted container */
-  --m3-on-primary-container: #1E429F;
+  --m3-primary-container: #EFF8FF; /* Softest, calming pastel blue container background */
+  --m3-on-primary-container: #175CD3; /* Balanced high-contrast deep marine blue */
   
-  --m3-secondary: #475569;        /* Industrial Slate Steel */
+  --m3-secondary: #344054;        /* Deep Steel Slate Gray for high semantic hierarchy */
   --m3-on-secondary: #FFFFFF;
-  --m3-secondary-container: #F1F5F9;
-  --m3-on-secondary-container: #1E293B;
+  --m3-secondary-container: #F2F4F7; /* Calming ash container background */
+  --m3-on-secondary-container: #1D2939; /* Rich charcoal text secondary container */
   
-  --m3-tertiary: #0D9488;         /* High-Vis Turquoise/Safety Cyan */
+  --m3-tertiary: #0E9384;         /* Soft emerald teal, eye soothing and fresh */
   --m3-on-tertiary: #FFFFFF;
-  --m3-tertiary-container: #CCFBF1;
-  --m3-on-tertiary-container: #115E59;
+  --m3-tertiary-container: #F0FDF9;
+  --m3-on-tertiary-container: #0F6357;
   
-  --m3-surface: #F8FAFC;          /* Clean Slate / Light Cement */
-  --m3-on-surface: #0F172A;       /* Deep Charcoal Coal Text */
-  --m3-on-surface-variant: #475569;
-  --m3-surface-container-low: #F1F5F9;
-  --m3-surface-container: #E2E8F0;
-  --m3-surface-container-high: #CBD5E1;
+  --m3-surface: #F2F4F7;          /* Anti-glare soft slate-cement underlay background */
+  --m3-on-surface: #101828;       /* Charcoal Black text for top-grade readability (18.2:1 contrast ratio) */
+  --m3-on-surface-variant: #344054; /* Highly legible variant copy (10.4:1 contrast ratio) */
+  --m3-surface-container-low: #FFFFFF; /* Crispy solid pure white card layout for perfect separation over surface */
+  --m3-surface-container: #F2F4F7;
+  --m3-surface-container-high: #E4E7EC;
   
-  --m3-outline: #64748B;
-  --m3-outline-variant: #CBD5E1;
+  --m3-outline: #475467;          /* Eye-safe secondary elements and inputs boundary borders */
+  --m3-outline-variant: #D0D5DD;  /* Explicit card & structural layout grid grid lines */
 }
 
 /* We also apply variables to .dark class when state has darkMode=true */
 .dark {
-  --m3-primary: #3B82F6;          /* Glowing Professional Blue */
+  --m3-primary: #3B82F6;          /* Glowing Professional Royal Blue */
   --m3-on-primary: #041D3B;
   --m3-primary-container: #1E40AF;
   --m3-on-primary-container: #EBF5FF;
@@ -119,24 +119,35 @@ body {
   background: var(--m3-outline);
 }
 
-/* Material 3 Card Bases with Android 17 Glassmorphism & Translucency */
+/* Material 3 Card Bases - Solid and comfortable in Light Mode, Glassmorphic in Dark Mode */
 .m3-card {
   border-radius: 28px; /* Extra Large Shape for Core Containers */
-  background-color: color-mix(in srgb, var(--m3-surface-container-low) 55%, transparent);
-  backdrop-filter: blur(20px) saturate(120%);
-  -webkit-backdrop-filter: blur(20px) saturate(120%);
+  background-color: var(--m3-surface-container-low);
   padding: 1.5rem;
-  border: 1px solid color-mix(in srgb, var(--m3-outline-variant) 25%, transparent);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.02);
+  border: 1px solid var(--m3-outline-variant);
+  box-shadow: 0 4px 20px -2px rgba(16, 24, 40, 0.03);
   transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   overflow: hidden;
 }
 .m3-card:hover {
+  background-color: var(--m3-surface-container-low);
+  border-color: var(--m3-outline);
+  box-shadow: 0 10px 30px -4px rgba(16, 24, 40, 0.06);
+  transform: translateY(-2px);
+}
+
+.dark .m3-card {
+  background-color: color-mix(in srgb, var(--m3-surface-container-low) 55%, transparent);
+  backdrop-filter: blur(20px) saturate(120%);
+  -webkit-backdrop-filter: blur(20px) saturate(120%);
+  border: 1px solid color-mix(in srgb, var(--m3-outline-variant) 25%, transparent);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.02);
+}
+.dark .m3-card:hover {
   background-color: color-mix(in srgb, var(--m3-surface-container) 70%, transparent);
   border-color: color-mix(in srgb, var(--m3-outline) 45%, transparent);
   box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.05);
-  transform: translateY(-2px);
 }
 
 /* Base style for glowing hover cards to support relative layout and bounds clamping */
@@ -260,7 +271,7 @@ body {
   border: none;
 }
 .m3-btn-primary:hover {
-  box-shadow: 0 4px 10px rgba(242, 90, 27, 0.25);
+  box-shadow: 0 4px 10px rgba(21, 94, 239, 0.25);
   transform: translateY(-1px);
   filter: brightness(1.08);
 }
@@ -282,11 +293,11 @@ body {
   border-radius: 14px; /* Avoid ovals */
   transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
   cursor: pointer;
-  box-shadow: 0 2px 5px rgba(242, 90, 27, 0.2);
+  box-shadow: 0 2px 5px rgba(21, 94, 239, 0.2);
   border: none;
 }
 .m3-btn-sub:hover {
-  box-shadow: 0 6px 14px rgba(242, 90, 27, 0.35);
+  box-shadow: 0 6px 14px rgba(21, 94, 239, 0.35);
   transform: translateY(-1px);
   filter: brightness(1.1);
 }
@@ -378,45 +389,76 @@ body {
   border-bottom-left-radius: 12px;
 }
 
-/* Android 17 Expressive Glassmorphism & Translucency System */
+/* Android 17 Expressive Glassmorphism & Translucency System - Solid & Comfort in Light Mode, Glassmorphic in Dark Mode */
 .android-glass {
+  background-color: var(--m3-surface-container-low);
+  border: 1px solid var(--m3-outline-variant);
+}
+
+.android-glass-header {
+  background-color: var(--m3-surface-container-low);
+}
+
+.android-glass-sidebar {
+  background-color: var(--m3-surface);
+}
+
+.android-glass-card {
+  border-radius: 28px;
+  background-color: var(--m3-surface-container-low);
+  padding: 1.5rem;
+  border: 1px solid var(--m3-outline-variant);
+  box-shadow: 0 4px 20px -2px rgba(16, 24, 40, 0.03);
+  transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.android-glass-card:hover {
+  background-color: var(--m3-surface-container-low);
+  border-color: var(--m3-outline);
+  box-shadow: 0 10px 30px -4px rgba(16, 24, 40, 0.06);
+  transform: translateY(-2px);
+}
+
+.android-glass-modal {
+  background-color: var(--m3-surface-container-low);
+  border: 1px solid var(--m3-outline-variant);
+  box-shadow: 0 24px 64px -12px rgba(16, 24, 40, 0.12);
+}
+
+.dark .android-glass {
   background-color: color-mix(in srgb, var(--m3-surface-container-low) 60%, transparent);
   backdrop-filter: blur(24px) saturate(120%);
   -webkit-backdrop-filter: blur(24px) saturate(120%);
   border: 1px solid color-mix(in srgb, var(--m3-outline-variant) 30%, transparent);
 }
 
-.android-glass-header {
+.dark .android-glass-header {
   background-color: color-mix(in srgb, var(--m3-surface-container) 65%, transparent);
   backdrop-filter: blur(30px) saturate(130%);
   -webkit-backdrop-filter: blur(30px) saturate(130%);
 }
 
-.android-glass-sidebar {
+.dark .android-glass-sidebar {
   background-color: color-mix(in srgb, var(--m3-surface-low) 55%, transparent);
   backdrop-filter: blur(32px);
   -webkit-backdrop-filter: blur(32px);
 }
 
-.android-glass-card {
-  border-radius: 28px;
+.dark .android-glass-card {
   background-color: color-mix(in srgb, var(--m3-surface-container-low) 45%, transparent);
   backdrop-filter: blur(20px) saturate(115%);
   -webkit-backdrop-filter: blur(20px) saturate(115%);
-  padding: 1.5rem;
   border: 1px solid color-mix(in srgb, var(--m3-outline-variant) 25%, transparent);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.03);
-  transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.android-glass-card:hover {
+.dark .android-glass-card:hover {
   background-color: color-mix(in srgb, var(--m3-surface-container) 65%, transparent);
   border-color: color-mix(in srgb, var(--m3-outline) 45%, transparent);
   box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.06);
-  transform: translateY(-2px);
 }
 
-.android-glass-modal {
+.dark .android-glass-modal {
   background-color: color-mix(in srgb, var(--m3-surface-container-low) 75%, transparent);
   backdrop-filter: blur(28px) saturate(125%);
   -webkit-backdrop-filter: blur(28px) saturate(125%);
