@@ -35,7 +35,7 @@ interface LogLine {
 }
 
 export const SetupModule: React.FC = () => {
-  const { setupSystem } = useDb();
+  const { setupSystem, triggerSystemProcessing } = useDb();
 
   const [step, setStep] = useState(1);
 
@@ -168,8 +168,15 @@ export const SetupModule: React.FC = () => {
   const handleLaunchApp = () => {
     // Generate secure hash token
     const salt = username.trim() + '_salt_tok';
-    createSaltedHash(password, salt, 2500).then(hashed => {
+    createSaltedHash(password, salt, 2500).then(async (hashed) => {
       const token = formatHashToken(salt, hashed, 2500);
+      await triggerSystemProcessing(
+        'Provisioning Branch & Superadmin Account...',
+        1600,
+        'db',
+        undefined,
+        'Deploying secure relational schema matrices...'
+      );
       setupSystem(
         {
           fullName: fullName.trim(),

@@ -39,7 +39,7 @@ interface TableSchema {
 }
 
 export const ArchitectureModule: React.FC = () => {
-  const { auditLogs, addAuditLog, currentUser, truncateDatabase, products, sales, stockTransfers, suppliers } = useDb();
+  const { auditLogs, addAuditLog, currentUser, truncateDatabase, products, sales, stockTransfers, suppliers, triggerSystemProcessing } = useDb();
   const [selectedTable, setSelectedTable] = useState<string>('Users');
   const [activeTab, setActiveTab] = useState<'erd' | 'rbac' | 'topology' | 'operations'>('operations');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -62,7 +62,7 @@ export const ArchitectureModule: React.FC = () => {
     setConfirmStep({ mode, inputVal: '' });
   };
 
-  const executeConfirmedTruncate = () => {
+  const executeConfirmedTruncate = async () => {
     const mode = confirmStep.mode;
     if (!mode) return;
 
@@ -72,6 +72,16 @@ export const ArchitectureModule: React.FC = () => {
     }
 
     try {
+      await triggerSystemProcessing(
+        mode === 'seeds'
+          ? 'Re-populating Seeds & Cleaning Schemas...'
+          : 'Purging Relational Tables (Truncate Cascade)...',
+        1800,
+        'db',
+        undefined,
+        'Dropping key foreign key indexing triggers and clearing local row stores...'
+      );
+
       truncateDatabase(mode);
       setConfirmStep({ mode: null, inputVal: '' });
       if (mode === 'seeds') {

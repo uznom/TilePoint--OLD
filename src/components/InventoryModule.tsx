@@ -142,7 +142,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     ledgerEntries,
     createStockTransfer,
     updateStockTransferStatus,
-    createSupplier
+    createSupplier,
+    triggerSystemProcessing
   } = useDb();
 
   // Primary navigation sub-tabs: "catalog" | "movements" | "transfers" | "ledger" | "import"
@@ -183,9 +184,26 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     }
   }, [initialSubTab]);
 
+  // Search & Filters
+  const [term, setTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('All');
+
   // Pagination State for lists inside Inventory
   const [prodPage, setProdPage] = useState(1);
   const [ledgerPage, setLedgerPage] = useState(1);
+  const [prodsPerPage, setProdsPerPage] = useState<number>(50);
+  const [ledgerPerPage, setLedgerPerPage] = useState<number>(100);
+
+  // Reset prodPage when filters or page size changes
+  useEffect(() => {
+    setProdPage(1);
+  }, [term, categoryFilter, statusFilter, prodsPerPage]);
+
+  // Reset ledgerPage when sub-tab or page size changes
+  useEffect(() => {
+    setLedgerPage(1);
+  }, [activeSubTab, ledgerPerPage]);
 
   // Stock Transfer Creation Form States
   const [showCreateTransfer, setShowCreateTransfer] = useState(false);
@@ -197,21 +215,6 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   const [tempProductId, setTempProductId] = useState('');
   const [tempQty, setTempQty] = useState(15);
   const [transferFilterStatus, setTransferFilterStatus] = useState<string>('All');
-
-  // Search & Filters
-  const [term, setTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('All');
-  const [statusFilter, setStatusFilter] = useState('All');
-
-  // Reset prodPage when filters change
-  useEffect(() => {
-    setProdPage(1);
-  }, [term, categoryFilter, statusFilter]);
-
-  // Reset ledgerPage when sub-tab changes
-  useEffect(() => {
-    setLedgerPage(1);
-  }, [activeSubTab]);
 
   // Add/Edit Modals state
   const [showModal, setShowModal] = useState(false);
@@ -445,17 +448,15 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     return matchSearch && matchCategory && matchStatus;
   });
 
-  const PRODS_PER_PAGE = 50;
-  const totalProdPages = Math.ceil(filteredProducts.length / PRODS_PER_PAGE) || 1;
+  const totalProdPages = Math.ceil(filteredProducts.length / prodsPerPage) || 1;
   const paginatedProducts = React.useMemo(() => {
-    return filteredProducts.slice((prodPage - 1) * PRODS_PER_PAGE, prodPage * PRODS_PER_PAGE);
-  }, [filteredProducts, prodPage]);
+    return filteredProducts.slice((prodPage - 1) * prodsPerPage, prodPage * prodsPerPage);
+  }, [filteredProducts, prodPage, prodsPerPage]);
 
-  const LEDGER_PER_PAGE = 100;
-  const totalLedgerPages = Math.ceil(ledgerEntries.length / LEDGER_PER_PAGE) || 1;
+  const totalLedgerPages = Math.ceil(ledgerEntries.length / ledgerPerPage) || 1;
   const paginatedLedger = React.useMemo(() => {
-    return ledgerEntries.slice((ledgerPage - 1) * LEDGER_PER_PAGE, ledgerPage * LEDGER_PER_PAGE);
-  }, [ledgerEntries, ledgerPage]);
+    return ledgerEntries.slice((ledgerPage - 1) * ledgerPerPage, ledgerPage * ledgerPerPage);
+  }, [ledgerEntries, ledgerPage, ledgerPerPage]);
 
   // Calculate Key Inventory Performance Indicators (Dashboard Statistics)
   const stats = React.useMemo(() => {
@@ -720,7 +721,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     setShowImportModal(true);
   };
 
-  const executeBulkImport = () => {
+  const executeBulkImport = async () => {
     if (!rawImportText.trim()) {
       showToast('Error: Please input a valid JSON array text block.');
       return;
@@ -729,6 +730,14 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     try {
       const parsed = JSON.parse(rawImportText);
       if (Array.isArray(parsed)) {
+        await triggerSystemProcessing(
+          'Executing Legacy POS Data Importer...',
+          1600,
+          'db',
+          undefined,
+          'Parsing JSON, validating product columns, and updating regional catalog tables...'
+        );
+
         const result = importProducts(parsed);
         if (result.success) {
           setShowImportModal(false);
@@ -1356,9 +1365,27 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
             {/* Pagination Controls bar */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-m3-surface-low/80 border-t border-m3-outline-variant/30 text-xs">
-              <span className="font-medium text-m3-on-surface-variant font-mono">
-                Showing {Math.min(filteredProducts.length, (prodPage - 1) * PRODS_PER_PAGE + 1)}-{Math.min(filteredProducts.length, prodPage * PRODS_PER_PAGE)} of {filteredProducts.length} entries
-              </span>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="font-medium text-m3-on-surface-variant font-mono">
+                  Showing {filteredProducts.length === 0 ? 0 : Math.min(filteredProducts.length, (prodPage - 1) * prodsPerPage + 1)}-{Math.min(filteredProducts.length, prodPage * prodsPerPage)} of {filteredProducts.length} entries
+                </span>
+                <span className="text-zinc-400">|</span>
+                <div className="flex items-center gap-1.5 font-sans">
+                  <span className="text-zinc-500 text-[11px]">Show</span>
+                  <select
+                    value={prodsPerPage}
+                    onChange={(e) => setProdsPerPage(Number(e.target.value))}
+                    className="bg-m3-surface-lowest text-m3-on-surface border border-m3-outline-variant/35 rounded-md px-1.5 py-1 text-xs focus:outline-none focus:border-m3-primary font-mono cursor-pointer"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                  <span className="text-zinc-500 text-[11px]">entries per page</span>
+                </div>
+              </div>
               <div className="flex items-center gap-1.5 select-none">
                 <button
                   type="button"
@@ -2027,9 +2054,28 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
                 {/* Pagination Controls bar */}
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-m3-surface-low/80 border-t border-m3-outline-variant/30 text-xs font-sans">
-                  <span className="font-medium text-m3-on-surface-variant font-mono">
-                    Showing {Math.min(ledgerEntries.length, (ledgerPage - 1) * LEDGER_PER_PAGE + 1)}-{Math.min(ledgerEntries.length, ledgerPage * LEDGER_PER_PAGE)} of {ledgerEntries.length} movements
-                  </span>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="font-medium text-m3-on-surface-variant font-mono">
+                      Showing {ledgerEntries.length === 0 ? 0 : Math.min(ledgerEntries.length, (ledgerPage - 1) * ledgerPerPage + 1)}-{Math.min(ledgerEntries.length, ledgerPage * ledgerPerPage)} of {ledgerEntries.length} movements
+                    </span>
+                    <span className="text-zinc-400">|</span>
+                    <div className="flex items-center gap-1.5 font-sans">
+                      <span className="text-zinc-500 text-[11px]">Show</span>
+                      <select
+                        value={ledgerPerPage}
+                        onChange={(e) => setLedgerPerPage(Number(e.target.value))}
+                        className="bg-m3-surface-lowest text-m3-on-surface border border-m3-outline-variant/35 rounded-md px-1.5 py-1 text-xs focus:outline-none focus:border-m3-primary font-mono cursor-pointer"
+                      >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                        <option value={250}>250</option>
+                      </select>
+                      <span className="text-zinc-500 text-[11px]">movements per page</span>
+                    </div>
+                  </div>
                   <div className="flex items-center gap-1.5 select-none">
                     <button
                       type="button"

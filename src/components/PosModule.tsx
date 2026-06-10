@@ -53,7 +53,8 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     users,
     addAuditLog,
     currentUser,
-    createDelivery
+    createDelivery,
+    triggerSystemProcessing
   } = useDb();
 
   // Active cashier shift states
@@ -423,7 +424,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     }
   };
 
-  function clientCheckout() {
+  async function clientCheckout() {
     if (cart.length === 0) return;
 
     if (currentUser.role === UserRole.STAFF) {
@@ -445,6 +446,14 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     }
 
     try {
+      await triggerSystemProcessing(
+        'Processing Client POS Checkout...',
+        1500,
+        'progress',
+        undefined,
+        'Deducting products from branch stock and computing taxes...'
+      );
+
       const completedInvoice = checkoutSale(
         cart,
         customerName,

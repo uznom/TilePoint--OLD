@@ -179,6 +179,18 @@ interface DbContextType {
   setBackupIntervalHours: (val: number) => void;
   lastAutoBackupTime: string | null;
   setLastAutoBackupTime: (val: string | null) => void;
+
+  // Global System Processing Loader state
+  isSystemProcessing: boolean;
+  systemProcessingMessage: string;
+  systemProcessingSubtext: string;
+  systemProcessingType: 'spinner' | 'progress' | 'verification' | 'db';
+  systemProcessingProgress: number;
+  triggerSystemProcessing: (message: string, durationMs?: number, type?: 'spinner' | 'progress' | 'verification' | 'db', onComplete?: () => void, subtext?: string) => Promise<void>;
+  setSystemProcessingProgress: (progress: number) => void;
+  setIsSystemProcessing: (val: boolean) => void;
+  setSystemProcessingMessage: (msg: string) => void;
+  setSystemProcessingSubtext: (sub: string) => void;
 }
 
 export interface DbSnapshot {
@@ -1119,6 +1131,53 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const [lastAutoBackupTime, setLastAutoBackupTime] = useState<string | null>(() => {
     return localStorage.getItem('tp_autobackup_last_time');
   });
+
+  // Global System Processing States
+  const [isSystemProcessing, setIsSystemProcessing] = useState(false);
+  const [systemProcessingMessage, setSystemProcessingMessage] = useState('');
+  const [systemProcessingSubtext, setSystemProcessingSubtext] = useState('');
+  const [systemProcessingType, setSystemProcessingType] = useState<'spinner' | 'progress' | 'verification' | 'db'>('spinner');
+  const [systemProcessingProgress, setSystemProcessingProgress] = useState(0);
+
+  const triggerSystemProcessing = (
+    message: string,
+    durationMs = 1500,
+    type: 'spinner' | 'progress' | 'verification' | 'db' = 'spinner',
+    onComplete?: () => void,
+    subtext = ''
+  ): Promise<void> => {
+    setIsSystemProcessing(true);
+    setSystemProcessingMessage(message);
+    setSystemProcessingSubtext(subtext || '');
+    setSystemProcessingType(type);
+    setSystemProcessingProgress(0);
+
+    return new Promise<void>((resolve) => {
+      let interval: any;
+      if (type === 'progress') {
+        const step = 100 / (durationMs / 100);
+        let curr = 0;
+        interval = setInterval(() => {
+          curr += step;
+          if (curr >= 100) {
+            curr = 100;
+            clearInterval(interval);
+          }
+          setSystemProcessingProgress(Math.min(100, Math.round(curr)));
+        }, 100);
+      }
+
+      setTimeout(() => {
+        if (interval) clearInterval(interval);
+        setIsSystemProcessing(false);
+        setSystemProcessingMessage('');
+        setSystemProcessingSubtext('');
+        setSystemProcessingProgress(0);
+        if (onComplete) onComplete();
+        resolve();
+      }, durationMs);
+    });
+  };
 
   // Persist auto backup settings
   useEffect(() => {
@@ -2846,6 +2905,16 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         setBackupIntervalHours,
         lastAutoBackupTime,
         setLastAutoBackupTime,
+        isSystemProcessing,
+        systemProcessingMessage,
+        systemProcessingSubtext,
+        systemProcessingType,
+        systemProcessingProgress,
+        triggerSystemProcessing,
+        setSystemProcessingProgress,
+        setIsSystemProcessing,
+        setSystemProcessingMessage,
+        setSystemProcessingSubtext,
       }}
     >
       {children}

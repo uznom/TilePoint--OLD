@@ -33,21 +33,36 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
     addAuditLog,
     branchStock,
     products,
-    sales
+    sales,
+    users,
+    shifts,
+    saleItems,
+    movements,
+    stockTransfers,
+    triggerSystemProcessing
   } = useDb();
 
   // Create Modal state
   const [showModal, setShowModal] = useState(false);
-  const [selectedDocType, setSelectedDocType] = useState<TransmittalDocType>('Daily Sales Report');
+  const [selectedDocType, setSelectedDocType] = useState<TransmittalDocType>('Full Branch State Snapshot');
   const [toBranchId, setToBranchId] = useState('B2');
-  const [payloadText, setPayloadText] = useState('{\n  "totalSales": 35400,\n  "discrepancies": 0,\n  "countVerified": true\n}');
+  const [payloadText, setPayloadText] = useState('');
   const [notes, setNotes] = useState('');
 
-  const compileBranchData = (docType: TransmittalDocType) => {
+  const compileBranchData = async (docType: TransmittalDocType) => {
     const currentBranchId = currentUser.branchAssignmentId || 'B1';
     const bName = getBranchName(currentBranchId);
 
+    await triggerSystemProcessing(
+      `Compiling ${docType}...`,
+      1200,
+      'db',
+      undefined,
+      'Querying branch stock allocation indices and compiling tax invoice registries...'
+    );
+
     if (docType === 'Full Branch State Snapshot') {
+      // 1. Live Branch Inventory Stock Allocations
       const filteredStocks = branchStock.filter(bs => bs.branchId === currentBranchId).map(bs => {
         const p = products.find(prod => prod.id === bs.productId);
         return {
@@ -58,7 +73,58 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
         };
       });
 
-      const branchSales = sales.filter(s => s.branchId === currentBranchId && !s.isDeleted);
+      // 2. Clear Cashiers & Employee Directory belonging to this branch
+      const branchStaff = users.filter(u => u.branchAssignmentId === currentBranchId).map(u => ({
+        id: u.id,
+        fullName: u.fullName,
+        username: u.username,
+        email: u.email,
+        role: u.role,
+        status: u.status
+      }));
+
+      // 3. Complete Cashier Shift Audits logged for this branch
+      const branchShifts = shifts.filter(sh => sh.branchId === currentBranchId);
+
+      // 4. Detailed Cashier Sales Invoices & itemized products
+      const branchSales = sales.filter(s => s.branchId === currentBranchId && !s.isDeleted).map(s => {
+        const items = saleItems.filter(si => si.saleId === s.id && !si.isDeleted);
+        return {
+          id: s.id,
+          saleNumber: s.saleNumber,
+          shiftId: s.shiftId,
+          cashierId: s.cashierId,
+          cashierName: s.cashierName,
+          customerName: s.customerName,
+          subtotal: s.subtotal,
+          vat: s.vat,
+          discount: s.discount,
+          grandTotal: s.grandTotal,
+          paymentMethod: s.paymentMethod,
+          amountTendered: s.amountTendered,
+          changeAmount: s.changeAmount,
+          notes: s.notes,
+          createdAt: s.createdAt,
+          itemizedProducts: items.map(it => ({
+            productId: it.productId,
+            productName: it.productName,
+            unitPrice: it.unitPrice,
+            quantity: it.quantity,
+            total: it.total
+          }))
+        };
+      });
+
+      // 5. Operating Petty Cash Expenses registered under this branch from standard LocalStorage
+      const cachedExpenses = localStorage.getItem('atpos_v2_expenses');
+      const allExpenses = cachedExpenses ? JSON.parse(cachedExpenses) : [];
+      const branchExpenses = allExpenses.filter((ex: any) => ex.branchId === currentBranchId);
+
+      // 6. Local Inventory Movements logged for this branch
+      const branchMovements = movements.filter(m => m.sourceBranchId === currentBranchId || m.destinationBranchId === currentBranchId);
+
+      // 7. Dynamic Inter-Branch Stocks Transfers
+      const branchTransfers = stockTransfers.filter(st => st.fromBranchId === currentBranchId || st.toBranchId === currentBranchId);
 
       const packet = {
         compiledAt: new Date().toISOString(),
@@ -67,15 +133,25 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
         operatorName: currentUser.fullName,
         recordCounts: {
           inventoryStocksCount: filteredStocks.length,
-          salesTrackerCount: branchSales.length,
+          salesTransactionsCount: branchSales.length,
+          expensesDisbursementsCount: branchExpenses.length,
+          cashierShiftsCount: branchShifts.length,
+          registeredCashiersCount: branchStaff.length,
+          inventoryMovementsHistory: branchMovements.length,
+          interBranchTransfers: branchTransfers.length
         },
         inventoryStocks: filteredStocks,
+        cashierDirectory: branchStaff,
+        cashierShifts: branchShifts,
         salesHistory: branchSales,
+        expenseLedger: branchExpenses,
+        inventoryMovements: branchMovements,
+        stockTransfers: branchTransfers,
         authSignature: `TP-SECURE-STAMP-${currentBranchId}-${Math.floor(Math.random() * 90000 + 10000)}`
       };
 
       setPayloadText(JSON.stringify(packet, null, 2));
-      setNotes(`Automated snapshot compilation: ${filteredStocks.length} stocks, ${branchSales.length} sales records.`);
+      setNotes(`Automated Full Audit Snapshot compiled: ${filteredStocks.length} Stocks, ${branchSales.length} Invoices, ${branchExpenses.length} Expenses.`);
       showToast('Full core database of branch compiled into snapshot packet!');
     } else if (docType === 'Daily Sales Report') {
       const branchSales = sales.filter(s => s.branchId === currentBranchId && !s.isDeleted);
@@ -147,7 +223,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
     return b ? b.name : 'Unknown Branch';
   };
 
-  const handleCreateTrans = (e: React.FormEvent) => {
+  const handleCreateTrans = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validate payload shape JSON
@@ -157,6 +233,14 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
       showToast('JSON Syntax Error: Payload must be properly structured.');
       return;
     }
+
+    await triggerSystemProcessing(
+      'Transmitting Snapshot Packet to Branch...',
+      1400,
+      'progress',
+      undefined,
+      'Opening secure tunnel streams and broadcasting encrypted transmittal payload...'
+    );
 
     const newId = createTransmittal(selectedDocType, toBranchId, payloadText, notes);
 
@@ -238,6 +322,202 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
 
   const renderPayloadPrintTable = (data: any) => {
     if (!data) return <p className="italic text-[10px] text-zinc-400">Empty payload contents.</p>;
+
+    // Case 0: Full Branch State Snapshot
+    if (data.recordCounts) {
+      const summary = data.recordCounts;
+      const stocks = data.inventoryStocks || [];
+      const staffList = data.cashierDirectory || [];
+      const shiftsList = data.cashierShifts || [];
+      const salesList = data.salesHistory || [];
+      const expensesList = data.expenseLedger || [];
+      const movementsList = data.inventoryMovements || [];
+      const transfersList = data.stockTransfers || [];
+
+      return (
+        <div className="space-y-4 text-xs animate-fade-in print:text-black">
+          {/* Quick Metrics Grid */}
+          <div className="grid grid-cols-2 shadow-sm rounded-xl overflow-hidden sm:grid-cols-4 gap-px bg-m3-outline-variant/20 border border-m3-outline-variant/15 p-px print:border-zinc-400 print:bg-transparent">
+            <div className="p-3 bg-m3-surface-low text-center print:bg-white">
+              <span className="text-[10px] text-zinc-400 font-bold uppercase block print:text-zinc-700">Stock Catalog</span>
+              <span className="font-mono text-base font-black text-m3-primary print:text-black">{summary.inventoryStocksCount || 0} Products</span>
+            </div>
+            <div className="p-3 bg-m3-surface-low text-center print:bg-white">
+              <span className="text-[10px] text-zinc-400 font-bold uppercase block print:text-zinc-700">Cashier Transactions</span>
+              <span className="font-mono text-base font-black text-emerald-500 print:text-black">{summary.salesTransactionsCount || 0} Invoices</span>
+            </div>
+            <div className="p-3 bg-m3-surface-low text-center print:bg-white">
+              <span className="text-[10px] text-zinc-400 font-bold uppercase block print:text-zinc-700">Operating Expenses</span>
+              <span className="font-mono text-base font-black text-rose-500 print:text-black">{summary.expensesDisbursementsCount || 0} Logs</span>
+            </div>
+            <div className="p-3 bg-m3-surface-low text-center print:bg-white">
+              <span className="text-[10px] text-zinc-400 font-bold uppercase block print:text-zinc-700">Shifts Logged</span>
+              <span className="font-mono text-base font-black text-amber-500 print:text-black">{summary.cashierShiftsCount || 0} Audits</span>
+            </div>
+          </div>
+
+          <div className="space-y-5">
+            {/* 1. Stocks Ledger Block */}
+            {stocks.length > 0 && (
+              <div className="p-3.5 rounded-2xl bg-m3-surface-low/30 border border-m3-outline-variant/15 space-y-2 print:border-zinc-400 print:bg-transparent">
+                <p className="font-black uppercase text-[10px] text-m3-primary border-b border-m3-outline-variant/20 pb-1.5 tracking-wider flex justify-between items-center print:text-black print:border-black">
+                  <span>I. Branch Stock Catalog Ledger</span>
+                  <span className="font-mono font-bold text-[9px] bg-m3-outline-variant/20 text-zinc-400 px-1.5 py-0.2 rounded print:text-black">{stocks.length} items</span>
+                </p>
+                <div className="max-h-[160px] overflow-y-auto pr-1">
+                  <table className="w-full text-left text-[10px] border-collapse print:text-black">
+                    <thead>
+                      <tr className="border-b border-m3-outline-variant/20 font-bold text-zinc-500 text-[9px] print:text-black">
+                        <th className="py-1">Product Description</th>
+                        <th className="py-1 text-center font-mono">SKU Code</th>
+                        <th className="py-1 text-right">Qty</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-m3-outline-variant/10 print:divide-zinc-300">
+                      {stocks.map((item: any, i: number) => (
+                        <tr key={i} className="hover:bg-m3-surface-low/30">
+                          <td className="py-1.5 font-bold text-m3-on-surface print:text-black">{item.productName || item.productId}</td>
+                          <td className="py-1.5 text-center font-mono text-zinc-500 print:text-black">{item.sku || 'N/A'}</td>
+                          <td className="py-1.5 text-right font-mono font-black text-emerald-500 print:text-black">{item.quantity} pcs</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* 2. Detailed Cashier Sales Invoices Block */}
+            {salesList.length > 0 && (
+              <div className="p-3.5 rounded-2xl bg-m3-surface-low/30 border border-m3-outline-variant/15 space-y-3 print:border-zinc-400 print:bg-transparent">
+                <p className="font-black uppercase text-[10px] text-m3-primary border-b border-m3-outline-variant/20 pb-1.5 tracking-wider flex justify-between items-center print:text-black print:border-black">
+                  <span>II. Cashier Transactions History Ledger</span>
+                  <span className="font-mono font-bold text-[9px] bg-m3-outline-variant/20 text-zinc-400 px-1.5 py-0.2 rounded print:text-black">{salesList.length} sales</span>
+                </p>
+                <div className="max-h-[220px] overflow-y-auto space-y-3 pr-1">
+                  {salesList.map((sale: any, i: number) => (
+                    <div key={i} className="p-2.5 border border-m3-outline-variant/10 bg-m3-surface-lowest rounded-xl space-y-1.5 text-[10.5px] print:border-zinc-400 print:mb-2 print:break-inside-avoid">
+                      <div className="flex justify-between items-center bg-m3-outline-variant/15 p-1 px-2 rounded-lg print:border-zinc-400">
+                        <span className="font-mono font-black text-m3-primary print:text-black">{sale.saleNumber}</span>
+                        <span className="font-mono text-[9px] text-zinc-400 print:text-black">{new Date(sale.createdAt).toLocaleString()}</span>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] text-zinc-400 pr-1">
+                        <div>Cashier: <strong className="text-m3-on-surface font-bold print:text-black">{sale.cashierName}</strong></div>
+                        <div>Customer: <strong className="text-m3-on-surface font-bold print:text-black">{sale.customerName || 'Walk-in'}</strong></div>
+                        <div>Pay Mode: <strong className="text-amber-500 font-bold uppercase print:text-black">{sale.paymentMethod}</strong></div>
+                        <div className="text-right">Grand Total: <strong className="text-emerald-500 font-black print:text-black">₱{(sale.grandTotal || 0).toLocaleString()}</strong></div>
+                      </div>
+
+                      {/* Sold items breakdown */}
+                      {Array.isArray(sale.itemizedProducts) && sale.itemizedProducts.length > 0 && (
+                        <div className="mt-1.5 pt-1.5 border-t border-m3-outline-variant/10">
+                          <table className="w-full text-left text-[9px]">
+                            <thead>
+                              <tr className="text-zinc-500 font-bold border-b border-m3-outline-variant/10">
+                                <th>Tile Sold Description</th>
+                                <th className="text-center">Price</th>
+                                <th className="text-center">Qty</th>
+                                <th className="text-right">Sum</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sale.itemizedProducts.map((p: any, idx: number) => (
+                                <tr key={idx} className="border-b border-m3-outline-variant/5 border-dashed">
+                                  <td className="py-0.5 text-zinc-300 font-medium print:text-black">{p.productName}</td>
+                                  <td className="py-0.5 text-center font-mono print:text-black">₱{(p.unitPrice || 0).toLocaleString()}</td>
+                                  <td className="py-0.5 text-center font-mono font-bold text-m3-primary print:text-black">{p.quantity} pcs</td>
+                                  <td className="py-0.5 text-right font-mono font-bold text-emerald-500 print:text-black">₱{(p.total || 0).toLocaleString()}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 3. Operational Expenses Block */}
+            {expensesList.length > 0 && (
+              <div className="p-3.5 rounded-2xl bg-m3-surface-low/30 border border-m3-outline-variant/15 space-y-2 print:border-zinc-400 print:bg-transparent">
+                <p className="font-black uppercase text-[10px] text-m3-primary border-b border-m3-outline-variant/20 pb-1.5 tracking-wider flex justify-between items-center print:text-black print:border-black">
+                  <span>III. Branch Expenses & Cash Disbursements</span>
+                  <span className="font-mono font-bold text-[9px] bg-m3-outline-variant/20 text-zinc-400 px-1.5 py-0.2 rounded print:text-black">₱{expensesList.reduce((acc: number, current: any) => acc + (current.amount || 0), 0).toLocaleString()} total</span>
+                </p>
+                <div className="max-h-[160px] overflow-y-auto pr-1">
+                  <table className="w-full text-left text-[10px] border-collapse print:text-black">
+                    <thead>
+                      <tr className="border-b border-m3-outline-variant/20 font-bold text-zinc-500 text-[9px] print:text-black">
+                        <th className="py-1">Category</th>
+                        <th className="py-1">Memo Notes</th>
+                        <th className="py-1 text-center">Audited By</th>
+                        <th className="py-1 text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-m3-outline-variant/10 print:divide-zinc-300">
+                      {expensesList.map((ex: any, i: number) => (
+                        <tr key={i} className="hover:bg-m3-surface-low/30">
+                          <td className="py-1.5 font-bold text-rose-500 print:text-black">{ex.category}</td>
+                          <td className="py-1.5 text-zinc-400 italic max-w-[120px] truncate print:text-black print:max-w-none print:whitespace-normal" title={ex.notes}>{ex.notes}</td>
+                          <td className="py-1.5 text-center font-mono text-zinc-500 print:text-black">{ex.recordedBy}</td>
+                          <td className="py-1.5 text-right font-mono font-black text-rose-500 print:text-black">₱{(ex.amount || 0).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* 4. Cashier Shift Audits Block */}
+            {shiftsList.length > 0 && (
+              <div className="p-3.5 rounded-2xl bg-m3-surface-low/30 border border-m3-outline-variant/15 space-y-2 print:border-zinc-400 print:bg-transparent">
+                <p className="font-black uppercase text-[10px] text-m3-primary border-b border-m3-outline-variant/20 pb-1.5 tracking-wider flex justify-between items-center print:text-black print:border-black">
+                  <span>V. Cashier Shift & Register Drawer Audits</span>
+                  <span className="font-mono font-bold text-[9px] bg-m3-outline-variant/20 text-zinc-400 px-1.5 py-0.2 rounded print:text-black">{shiftsList.length} shifts</span>
+                </p>
+                <div className="max-h-[160px] overflow-y-auto pr-1">
+                  <table className="w-full text-left text-[10px] border-collapse print:text-black">
+                    <thead>
+                      <tr className="border-b border-m3-outline-variant/20 font-bold text-zinc-500 text-[9px] print:text-black">
+                        <th className="py-1">Logged Cashier</th>
+                        <th className="py-1 text-center font-mono">Status</th>
+                        <th className="py-1 text-right">Open Balance</th>
+                        <th className="py-1 text-right">Drawer Close</th>
+                        <th className="py-1 text-right">Discrepancy</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-m3-outline-variant/10 print:divide-zinc-300">
+                      {shiftsList.map((sh: any, i: number) => {
+                        const hasVariance = sh.variance !== 0;
+                        return (
+                          <tr key={i} className="hover:bg-m3-surface-low/30">
+                            <td className="py-1.5 font-bold text-m3-on-surface print:text-black">{sh.cashierName}</td>
+                            <td className="py-1.5 text-center font-mono text-zinc-500">
+                              <span className={`px-1 rounded text-[8.5px] font-black uppercase ${sh.status === 'Open' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-zinc-500/15 text-zinc-400'}`}>
+                                {sh.status}
+                              </span>
+                            </td>
+                            <td className="py-1.5 text-right font-mono print:text-black">₱{(sh.startCash || 0).toLocaleString()}</td>
+                            <td className="py-1.5 text-right font-mono font-black print:text-black">₱{(sh.cashCount || sh.endCash || 0).toLocaleString()}</td>
+                            <td className={`py-1.5 text-right font-mono font-black ${hasVariance ? 'text-rose-500' : 'text-emerald-500'}`}>
+                              {sh.variance > 0 ? `+₱${sh.variance.toLocaleString()}` : sh.variance < 0 ? `-₱${Math.abs(sh.variance).toLocaleString()}` : '₱0 (Balanced)'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
 
     // Case 1: Has stocks/inventoryStocks list
     const items = data.stocks || data.inventoryStocks;
@@ -367,7 +647,11 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
           <button
             onClick={() => {
               setToBranchId(branches.find(b => b.id !== currentUser.branchAssignmentId)?.id || 'B2');
+              setSelectedDocType('Full Branch State Snapshot');
               setShowModal(true);
+              setTimeout(() => {
+                compileBranchData('Full Branch State Snapshot');
+              }, 50);
             }}
             className="m3-btn-primary flex items-center gap-1.5 cursor-pointer shadow-sm text-xs shrink-0"
           >
@@ -494,10 +778,14 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
               </div>
               <select
                 value={selectedDocType}
-                onChange={e => setSelectedDocType(e.target.value as TransmittalDocType)}
+                onChange={e => {
+                  const val = e.target.value as TransmittalDocType;
+                  setSelectedDocType(val);
+                  compileBranchData(val);
+                }}
                 className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md cursor-pointer"
               >
-                <option value="Full Branch State Snapshot">Full Branch State Snapshot (All Sales & Stocks)</option>
+                <option value="Full Branch State Snapshot">Full Branch State Snapshot (All Sales, Stocks, Shifts & Expenses)</option>
                 <option value="Daily Sales Report">Daily Sales Report</option>
                 <option value="Inventory Count Report">Inventory Count Report</option>
                 <option value="Purchase Order">Purchase Order</option>

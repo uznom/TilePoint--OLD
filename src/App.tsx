@@ -29,6 +29,7 @@ import { SalesTransmissionModule } from './components/SalesTransmissionModule';
 import { DeliveriesModule } from './components/DeliveriesModule';
 import { TutorialOnboarding } from './components/TutorialOnboarding';
 import { PrivacyAccessibilityHub } from './components/PrivacyAccessibilityHub';
+import { SystemLoadingOverlay } from './components/SystemLoadingOverlay';
 
 import {
   LayoutDashboard,
@@ -88,6 +89,7 @@ function AppContent() {
     setBackupIntervalHours,
     lastAutoBackupTime,
     setLastAutoBackupTime,
+    triggerSystemProcessing,
     dbSyncStatus,
     writeStatsCount,
     resetWriteStats,
@@ -602,25 +604,6 @@ function AppContent() {
 
         {/* Right side controls with Dropdown Menu following strict user intent */}
         <div className="flex items-center gap-3 relative">
-          {/* Dynamic Density Toggle Button */}
-          <button
-            type="button"
-            onClick={() => {
-              const newVal = !isCompactColumns;
-              setIsCompactColumns(newVal);
-              localStorage.setItem('tilepoint_inventory_compact_columns', JSON.stringify(newVal));
-            }}
-            className={`hidden md:flex p-2 px-3 hover:bg-m3-primary/10 text-xs font-black uppercase tracking-wider items-center gap-1.5 cursor-pointer rounded-xl transition-all border ${
-              !isCompactColumns
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500'
-                : 'bg-amber-500/10 border-amber-500/30 text-amber-500'
-            }`}
-            title={!isCompactColumns ? "Currently in Comfortable Mode. Click to switch to Compact Fit." : "Currently in Compact Fit. Click to switch to Comfortable Mode."}
-          >
-            <Sliders className="h-4 w-4" />
-            <span>{!isCompactColumns ? "Comfortable" : "Compact Fit"}</span>
-          </button>
-
           <div className="relative animate-fade-in">
             <button
               id="account-dropdown-trigger"
@@ -1356,8 +1339,15 @@ function AppContent() {
                       />
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
                           const name = manualSnapshotName.trim() || `Manual Snapshot - ${new Date().toLocaleTimeString()}`;
+                          await triggerSystemProcessing(
+                            `Compiling ${name}...`,
+                            1400,
+                            'db',
+                            undefined,
+                            'Compressing tables, locking databases, and serializing snapshot packet...'
+                          );
                           createDbSnapshot(name);
                           setManualSnapshotName('');
                           showToast(`Successfully registered database snapshot: "${name}"`);
@@ -1414,13 +1404,20 @@ function AppContent() {
                           <div className="flex items-center gap-1.5">
                             <button
                               type="button"
-                              onClick={() => {
+                              onClick={async () => {
                                 const ok = confirm(`CRITICAL CONTEXT DISPATCH CONFLICT!\n\nAre you sure you want to restore all tables to the state in snap "${snap.name}"?\nThis replaces current data in local browser storage.`);
                                 if (ok) {
+                                  await triggerSystemProcessing(
+                                    `Restoring Database State: ${snap.name}...`,
+                                    1800,
+                                    'db',
+                                    undefined,
+                                    'Shutting down write engines, swapping table pointers, and updating local indices...'
+                                  );
                                   const success = restoreDbSnapshot(snap.id);
                                   if (success) {
                                     showToast(`Snapshot ${snap.id} restored successfully! Reloading UI...`);
-                                    setTimeout(() => window.location.reload(), 1500);
+                                    setTimeout(() => window.location.reload(), 250);
                                   } else {
                                     showToast("Corruption Error: Snapshot load failure!");
                                   }
@@ -1801,6 +1798,9 @@ function AppContent() {
 
       {/* PRIVACY SHIELD & ACCESSIBILITY HUB FLOATING SUITE */}
       <PrivacyAccessibilityHub darkMode={darkMode} hideFloatingButton={true} />
+
+      {/* GLOBAL SYSTEM PROCESSING OVERLAY */}
+      <SystemLoadingOverlay />
     </div>
   );
 }
