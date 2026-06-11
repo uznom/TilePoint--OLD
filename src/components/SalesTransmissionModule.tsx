@@ -69,6 +69,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
   // Selected report for viewing details
   const [selectedReport, setSelectedReport] = useState<BranchSalesReport | null>(null);
   const [auditNotes, setAuditNotes] = useState('');
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
 
   // Toast notification
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -600,160 +601,288 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
         </div>
       </div>
 
-      {/* EXPANDED INTERACTIVE AUDITOR AND TRANSACTION ITEMS DRAWER */}
+      {/* EXPANDED INTERACTIVE AUDITOR AND TRANSACTION ITEMS DRAWER (MODAL OVERLAY) */}
       <AnimatePresence>
         {selectedReport && (
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 30 }}
-            className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[28px] p-6 space-y-6 text-left shadow-lg"
-          >
-            <div className="flex justify-between items-start border-b border-m3-outline-variant/20 pb-4">
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-widest font-mono text-zinc-400">Enclosed Sales Report Package Details</span>
-                <h3 className="text-sm font-black uppercase text-m3-primary flex items-center gap-1.5">
-                  <FileJson className="h-4.5 w-4.5 text-amber-500" />
-                  Audit Inspection Matrix for {selectedReport.branchName} ({selectedReport.reportingDate})
-                </h3>
-              </div>
-              <button
-                onClick={() => setSelectedReport(null)}
-                className="p-1.5 hover:bg-m3-primary/10 hover:text-rose-500 rounded-xl cursor-pointer"
-                title="Dismiss details drawer"
-              >
-                <XIcon className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              {/* Report summary grid metrics */}
-              <div className="lg:col-span-4 space-y-5">
-                <div className="bg-m3-surface border border-m3-outline-variant/15 rounded-2xl p-4.5 space-y-4 font-mono text-xs">
-                  <div className="text-[10.5px] text-zinc-400 font-extrabold pb-2 border-b border-m3-outline-variant/15 uppercase tracking-wider">
-                    General Properties
-                  </div>
-
-                  <div className="space-y-2 leading-relaxed">
-                    <div className="flex justify-between">
-                      <span className="text-zinc-500">Report ID:</span>
-                      <span className="text-white font-bold">{selectedReport.id}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-zinc-500">Transferred At:</span>
-                      <span className="text-zinc-300">{new Date(selectedReport.transferredAt).toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-zinc-500">Sales Transactions:</span>
-                      <span className="text-white font-bold">{selectedReport.totalSalesCount} entries</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-zinc-500">Sum Flat Discounts:</span>
-                      <span className="text-zinc-300">₱{selectedReport.totalDiscountAmount.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-zinc-500">Calculated VAT:</span>
-                      <span className="text-zinc-300">₱{selectedReport.totalVatAmount.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between border-t border-m3-outline-variant/10 pt-2 text-[12.5px]">
-                      <span className="text-m3-primary font-bold">Grand Settled total:</span>
-                      <span className="text-emerald-400 font-black">₱{selectedReport.totalSalesAmount.toLocaleString()}</span>
-                    </div>
-                  </div>
+          <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in text-left font-sans">
+            <div className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm shadow-xl" onClick={() => setSelectedReport(null)} />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 30 }}
+              className="relative w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-[32px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-6 flex flex-col"
+            >
+              <div className="flex justify-between items-start border-b border-m3-outline-variant/20 pb-4">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest font-mono text-zinc-400">Enclosed Sales Report Package Details</span>
+                  <h3 className="text-sm font-black uppercase text-m3-primary flex items-center gap-1.5">
+                    <FileJson className="h-4.5 w-4.5 text-amber-500" />
+                    Audit Inspection Matrix for {selectedReport.branchName} ({selectedReport.reportingDate})
+                  </h3>
                 </div>
+                <button
+                  onClick={() => setSelectedReport(null)}
+                  className="p-1.5 hover:bg-m3-primary/10 hover:text-rose-500 rounded-xl cursor-pointer"
+                  title="Dismiss details drawer"
+                >
+                  <XIcon className="h-5 w-5" />
+                </button>
+              </div>
 
-                {/* Audit Actions Panel (Only visible/interactable by Managers or Admins) */}
-                <div className="bg-m3-surface border border-m3-outline-variant/20 rounded-2xl p-4.5 space-y-4">
-                  <div className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider border-b border-m3-outline-variant/15 pb-2 flex items-center gap-1">
-                    <ShieldAlert className="h-4 w-4 text-amber-500 shrink-0" />
-                    <span>Auditor Command Module</span>
-                  </div>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* Report summary grid metrics */}
+                <div className="lg:col-span-4 space-y-5">
+                  <div className="bg-m3-surface border border-m3-outline-variant/15 rounded-2xl p-4.5 space-y-4 font-mono text-xs">
+                    <div className="text-[10.5px] text-zinc-400 font-extrabold pb-2 border-b border-m3-outline-variant/15 uppercase tracking-wider">
+                      General Properties
+                    </div>
 
-                  <div className="space-y-3 font-sans">
-                    {selectedReport.auditedBy && (
-                      <div className="p-3 bg-emerald-500/5 text-emerald-400 border border-emerald-500/15 rounded-xl text-[10.5px] leading-relaxed">
-                        <span className="font-extrabold uppercase block text-[9.5px] tracking-wider mb-0.5">Audited & approved</span>
-                        Verified by <strong className="text-white font-bold">{selectedReport.auditedBy}</strong> on <span className="font-mono text-zinc-200">{new Date(selectedReport.auditedAt!).toLocaleString()}</span>.
+                    <div className="space-y-2 leading-relaxed">
+                      <div className="flex justify-between">
+                        <span className="text-zinc-500">Report ID:</span>
+                        <span className="text-white font-bold">{selectedReport.id}</span>
                       </div>
-                    )}
-
-                    <div className="space-y-1.5">
-                      <label className="text-[9.5px] font-black uppercase tracking-widest text-zinc-400 pl-0.5">Auditor Verification notes:</label>
-                      <textarea
-                        value={auditNotes}
-                        onChange={(e) => setAuditNotes(e.target.value)}
-                        placeholder="Log notes about physical cash counting, discrepancies or VAT ledger checks..."
-                        rows={3}
-                        className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl p-2.5 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary text-sans"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2.5 pt-2">
-                      <button
-                        onClick={() => handleSetAuditStatus('Verified')}
-                        disabled={selectedReport.status === 'Verified'}
-                        className="py-2.5 px-3 bg-emerald-500 text-black hover:bg-emerald-400 transition-all text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-center shadow-md shadow-emerald-500/10 flex items-center justify-center gap-1.5"
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        Verify OK
-                      </button>
-
-                      <button
-                        onClick={() => handleSetAuditStatus('Pending Audit')}
-                        className="py-2.5 px-3 bg-m3-surface border border-m3-outline-variant/40 hover:bg-rose-500/10 hover:text-rose-400 text-m3-on-surface transition-all text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer text-center"
-                      >
-                        Set Pending
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* itemized transaction details included in report */}
-              <div className="lg:col-span-8 space-y-4">
-                <div className="bg-m3-surface border border-m3-outline-variant/15 rounded-2xl overflow-hidden">
-                  <div className="bg-[#11131c]/60 px-4 py-3 border-b border-m3-outline-variant/15 text-[10.5px] font-mono text-zinc-400 font-extrabold uppercase tracking-widest flex justify-between">
-                    <span>Enclosed Sale Records list</span>
-                    <span className="text-amber-500">{selectedReport.sales.length} Sales</span>
-                  </div>
-
-                  <div className="p-1 max-h-[360px] overflow-y-auto divide-y divide-m3-outline-variant/10">
-                    {selectedReport.sales.map((sale) => (
-                      <div key={sale.id} className="p-3 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-m3-surface-low rounded-xl">
-                        <div className="space-y-1 text-left">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-m3-primary font-bold">{sale.saleNumber}</span>
-                            <span className="px-2 py-0.5 rounded-[5px] bg-m3-secondary-container text-m3-on-secondary-container text-[9px] font-mono font-bold uppercase">
-                              {sale.paymentMethod}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-zinc-400">
-                            Cashier: <strong className="text-zinc-300 font-bold">{sale.cashierName}</strong> • Date: <span className="font-mono">{new Date(sale.createdAt).toLocaleTimeString()}</span>
-                          </p>
-                          <p className="text-[11px] text-zinc-400">
-                            Customer: <strong className="text-zinc-300 font-semibold">{sale.customerName || 'Walk-in'}</strong>
-                          </p>
-                        </div>
-
-                        <div className="text-right font-mono self-start sm:self-center">
-                          <div className="text-[11px] font-bold text-zinc-400 flex flex-col sm:items-end">
-                            {sale.discount > 0 && (
-                              <span className="text-[10px] text-zinc-500">Disc: -₱{sale.discount.toLocaleString()}</span>
-                            )}
-                            <span className="text-emerald-400 font-black text-sm">₱{sale.grandTotal.toLocaleString()}</span>
-                          </div>
-                        </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-500">Transferred At:</span>
+                        <span className="text-zinc-300">{new Date(selectedReport.transferredAt).toLocaleString()}</span>
                       </div>
-                    ))}
+                      <div className="flex justify-between">
+                        <span className="text-zinc-500">Sales Transactions:</span>
+                        <span className="text-white font-bold">{selectedReport.totalSalesCount} entries</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-500">Sum Flat Discounts:</span>
+                        <span className="text-zinc-300">₱{selectedReport.totalDiscountAmount.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-500">Calculated VAT:</span>
+                        <span className="text-zinc-300">₱{selectedReport.totalVatAmount.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between border-t border-m3-outline-variant/10 pt-2 text-[12.5px]">
+                        <span className="text-m3-primary font-bold">Grand Settled total:</span>
+                        <span className="text-emerald-400 font-black">₱{selectedReport.totalSalesAmount.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
 
-                    {selectedReport.sales.length === 0 && (
-                      <p className="py-8 text-center text-zinc-500 font-medium font-sans">No enclosed transaction receipts registered inside this report vector.</p>
-                    )}
+                  {/* Audit Actions Panel (Only visible/interactable by Managers or Admins) */}
+                  <div className="bg-m3-surface border border-m3-outline-variant/20 rounded-2xl p-4.5 space-y-4">
+                    <div className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider border-b border-m3-outline-variant/15 pb-2 flex items-center gap-1">
+                      <ShieldAlert className="h-4 w-4 text-amber-500 shrink-0" />
+                      <span>Auditor Command Module</span>
+                    </div>
+
+                    <div className="space-y-3 font-sans">
+                      {selectedReport.auditedBy && (
+                        <div className="p-3 bg-emerald-500/5 text-emerald-400 border border-emerald-500/15 rounded-xl text-[10.5px] leading-relaxed">
+                          <span className="font-extrabold uppercase block text-[9.5px] tracking-wider mb-0.5">Audited & approved</span>
+                          Verified by <strong className="text-white font-bold">{selectedReport.auditedBy}</strong> on <span className="font-mono text-zinc-200">{new Date(selectedReport.auditedAt!).toLocaleString()}</span>.
+                        </div>
+                      )}
+
+                      <div className="space-y-1.5">
+                        <label className="text-[9.5px] font-black uppercase tracking-widest text-zinc-400 pl-0.5">Auditor Verification notes:</label>
+                        <textarea
+                          value={auditNotes}
+                          onChange={(e) => setAuditNotes(e.target.value)}
+                          placeholder="Log notes about physical cash counting, discrepancies or VAT ledger checks..."
+                          rows={3}
+                          className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl p-2.5 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary text-sans"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2.5 pt-2">
+                        <button
+                          onClick={() => handleSetAuditStatus('Verified')}
+                          disabled={selectedReport.status === 'Verified'}
+                          className="py-2.5 px-3 bg-emerald-500 text-black hover:bg-emerald-400 transition-all text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-center shadow-md shadow-emerald-500/10 flex items-center justify-center gap-1.5"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Verify OK
+                        </button>
+
+                        <button
+                          onClick={() => handleSetAuditStatus('Pending Audit')}
+                          className="py-2.5 px-3 bg-m3-surface border border-m3-outline-variant/40 hover:bg-rose-500/10 hover:text-rose-400 text-m3-on-surface transition-all text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer text-center"
+                        >
+                          Set Pending
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* itemized transaction details included in report */}
+                <div className="lg:col-span-8 space-y-4">
+                  <div className="bg-m3-surface border border-m3-outline-variant/15 rounded-2xl overflow-hidden">
+                    <div className="bg-[#11131c]/60 px-4 py-3 border-b border-m3-outline-variant/15 text-[10.5px] font-mono text-zinc-400 font-extrabold uppercase tracking-widest flex justify-between">
+                      <span>Enclosed Sale Records list</span>
+                      <span className="text-amber-500">{selectedReport.sales.length} Sales</span>
+                    </div>
+
+                    <div className="p-1 max-h-[360px] overflow-y-auto divide-y divide-m3-outline-variant/10">
+                      {selectedReport.sales.map((sale) => (
+                        <div
+                          key={sale.id}
+                          onClick={() => setSelectedSale(sale)}
+                          className="p-3 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-m3-surface-low rounded-xl cursor-pointer transition-all border border-transparent hover:border-m3-outline-variant/30 hover:scale-[1.005] select-none"
+                          title="Click to view detailed itemized sale receipt and tile metrics"
+                        >
+                          <div className="space-y-1 text-left">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-m3-primary font-bold">{sale.saleNumber}</span>
+                              <span className="px-2 py-0.5 rounded-[5px] bg-m3-secondary-container text-m3-on-secondary-container text-[9px] font-mono font-bold uppercase">
+                                {sale.paymentMethod}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-zinc-400">
+                              Cashier: <strong className="text-zinc-300 font-bold">{sale.cashierName}</strong> • Date: <span className="font-mono">{new Date(sale.createdAt).toLocaleTimeString()}</span>
+                            </p>
+                            <p className="text-[11px] text-zinc-400">
+                              Customer: <strong className="text-zinc-300 font-semibold">{sale.customerName || 'Walk-in'}</strong>
+                            </p>
+                          </div>
+
+                          <div className="text-right font-mono self-start sm:self-center">
+                            <div className="text-[11px] font-bold text-zinc-400 flex flex-col sm:items-end">
+                              {sale.discount > 0 && (
+                                <span className="text-[10px] text-zinc-500">Disc: -₱{sale.discount.toLocaleString()}</span>
+                              )}
+                              <span className="text-emerald-400 font-black text-sm">₱{sale.grandTotal.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {selectedReport.sales.length === 0 && (
+                        <p className="py-8 text-center text-zinc-500 font-medium font-sans">No enclosed transaction receipts registered inside this report vector.</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* POPUP: ITEMISED SALE RECORD DETAILS */}
+      <AnimatePresence>
+        {selectedSale && selectedReport && (
+          <div className="fixed inset-0 bg-transparent flex items-center justify-center z-55 p-4 animate-fade-in text-left">
+            <div className="absolute inset-0 bg-black/75 backdrop-blur-md" onClick={() => setSelectedSale(null)} />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[28px] max-w-lg w-full text-left overflow-hidden shadow-2xl relative z-60 font-sans"
+            >
+              <div className="px-6 py-4.5 bg-gradient-to-r from-zinc-900 to-zinc-800 border-b border-m3-outline-variant/20 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-wider font-mono flex items-center gap-2">
+                    <FileText className="h-4.5 w-4.5 text-m3-primary" />
+                    <span>Transaction Invoice: {selectedSale.saleNumber}</span>
+                  </h3>
+                  <span className="text-[9px] font-mono text-zinc-400 font-bold uppercase tracking-widest block mt-0.5">
+                    Branch Sale Auditor Checkpoint
+                  </span>
+                </div>
+                <button
+                  onClick={() => setSelectedSale(null)}
+                  className="p-1.5 text-zinc-400 hover:text-white rounded-xl hover:bg-white/10 cursor-pointer"
+                >
+                  <XIcon className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-3 bg-m3-surface p-3.5 rounded-2xl border border-m3-outline-variant/10 text-xs font-sans">
+                  <div>
+                    <span className="block text-[10px] uppercase font-bold text-zinc-400 tracking-wider font-mono">Customer / Buyer</span>
+                    <span className="font-extrabold text-sm text-m3-primary mt-0.5 block">{selectedSale.customerName || 'Walk-in'}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] uppercase font-bold text-zinc-400 tracking-wider font-mono">Date Settled</span>
+                    <span className="font-mono mt-0.5 block text-zinc-350">{new Date(selectedSale.createdAt).toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] uppercase font-bold text-zinc-400 tracking-wider font-mono">Cashier on Duty</span>
+                    <span className="font-bold mt-0.5 block text-zinc-350">{selectedSale.cashierName}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] uppercase font-bold text-zinc-400 tracking-wider font-mono">Payment Mode</span>
+                    <span className="font-extrabold mt-0.5 block text-emerald-400 font-mono tracking-wide">{selectedSale.paymentMethod}</span>
+                  </div>
+                </div>
+
+                <div className="border border-m3-outline-variant/15 rounded-2xl overflow-hidden bg-m3-surface">
+                  <table className="w-full text-left text-[11px] border-collapse">
+                    <thead className="bg-[#11131c] font-mono text-[9px] uppercase tracking-wider text-zinc-400 border-b border-m3-outline-variant/15">
+                      <tr>
+                        <th className="py-2.5 px-3">TILE SPECIFICATION</th>
+                        <th className="py-2.5 px-3 text-right">UNIT PRICE</th>
+                        <th className="py-2.5 px-3 text-center font-bold">QTY</th>
+                        <th className="py-2.5 px-3 text-right">TOTAL</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-m3-outline-variant/10 font-sans text-zinc-300">
+                      {selectedReport.saleItems
+                        .filter(item => item.saleId === selectedSale.id)
+                        .map((item, idx) => (
+                          <tr key={idx} className="hover:bg-m3-surface-low/35 transition-colors">
+                            <td className="py-2.5 px-3 font-semibold text-zinc-150">{item.productName}</td>
+                            <td className="py-2.5 px-3 text-right font-mono">₱{item.unitPrice.toLocaleString()}</td>
+                            <td className="py-2.5 px-3 text-center font-bold text-zinc-100">{item.quantity}</td>
+                            <td className="py-2.5 px-3 text-right font-mono text-white">₱{item.total.toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      {selectedReport.saleItems.filter(item => item.saleId === selectedSale.id).length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="py-6 text-center text-zinc-500 italic">No itemized products found in this transaction record.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="p-3.5 bg-m3-surface border border-m3-outline-variant/10 rounded-2xl space-y-1.5 text-[11px] font-mono">
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Retail Subtotal:</span>
+                    <span className="font-bold text-zinc-200">₱{selectedSale.subtotal.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">VAT (12% Included):</span>
+                    <span className="font-bold text-zinc-400">₱{selectedSale.vat.toLocaleString()}</span>
+                  </div>
+                  {selectedSale.discount > 0 && (
+                    <div className="flex justify-between text-rose-450">
+                      <span>Applied Flat Discount:</span>
+                      <span className="font-bold">-₱{selectedSale.discount.toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between border-t border-m3-outline-variant/10 pt-2 text-xs font-sans text-emerald-400 font-bold">
+                    <span>Grand Total:</span>
+                    <span className="font-black font-mono">₱{selectedSale.grandTotal.toLocaleString()}</span>
+                  </div>
+                </div>
+
+                {selectedSale.notes && (
+                  <div className="p-2.5 bg-amber-500/5 text-amber-500 border border-amber-500/10 rounded-xl text-[10.5px]">
+                    <strong>Auditor Reference Notes:</strong> {selectedSale.notes}
+                  </div>
+                )}
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={() => setSelectedSale(null)}
+                    className="px-5 py-2.5 bg-m3-surface hover:bg-m3-primary/10 border border-m3-outline-variant/30 text-m3-on-surface hover:text-m3-primary text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+                  >
+                    Close Invoice
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

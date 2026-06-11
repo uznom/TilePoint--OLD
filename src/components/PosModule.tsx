@@ -54,7 +54,8 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     addAuditLog,
     currentUser,
     createDelivery,
-    triggerSystemProcessing
+    triggerSystemProcessing,
+    branches
   } = useDb();
 
   // Active cashier shift states
@@ -64,6 +65,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
   // Pagination State for Ledger Sales
   const [salesPage, setSalesPage] = useState(1);
   const [selectedSaleDetail, setSelectedSaleDetail] = useState<Sale | null>(null);
+  const [selectedPoolBranchId, setSelectedPoolBranchId] = useState<string>(currentUser.branchAssignmentId || 'All');
 
   // Cart & POS Screen States
   const [cart, setCart] = useState<{ product: Product; quantity: number; overridePrice?: number }[]>([]);
@@ -75,7 +77,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
   // Reset salesPage when filters change
   useEffect(() => {
     setSalesPage(1);
-  }, [searchTerm, currentUser.branchAssignmentId]);
+  }, [searchTerm, selectedPoolBranchId]);
 
   // Surcharges, limits and discounts
   const [discountValue, setDiscountValue] = useState(0); // in PHP
@@ -786,8 +788,11 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
   };
 
   const filteredSales = React.useMemo(() => {
-    return sales.filter(s => s.branchId === currentUser.branchAssignmentId);
-  }, [sales, currentUser.branchAssignmentId]);
+    return sales.filter(s => {
+      if (selectedPoolBranchId === 'All') return true;
+      return s.branchId === selectedPoolBranchId;
+    });
+  }, [sales, selectedPoolBranchId]);
 
   const SALES_PER_PAGE = 50;
   const totalSalesPages = Math.ceil(filteredSales.length / SALES_PER_PAGE) || 1;
@@ -1343,9 +1348,21 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                 Centralized accounting sub-module. Action control operations such as <strong className="text-rose-500 font-black">Invoice Voiding</strong> or <strong className="text-m3-primary font-black">Ticket Reprinting</strong> are strictly guarded and require a Manager PIN validation.
               </p>
             </div>
-            <div className="text-[10px] font-mono bg-m3-surface border border-m3-outline-variant/35 px-4 py-2 rounded-full text-zinc-400 font-black flex items-center gap-1.5 shrink-0 uppercase tracking-widest">
-              <span className="h-1.5 w-1.5 bg-[#10B981] rounded-full" />
-              <span>Pool: {activeBranch ? activeBranch.branchName : 'Central HQ'}</span>
+            <div className="flex items-center gap-2.5 shrink-0">
+              <span className="text-[10.5px] font-mono text-zinc-400 font-black uppercase tracking-widest flex items-center gap-1.5">
+                <span className="h-2 w-2 bg-[#10B981] rounded-full animate-pulse" />
+                <span>Active Pool:</span>
+              </span>
+              <select
+                value={selectedPoolBranchId}
+                onChange={e => setSelectedPoolBranchId(e.target.value)}
+                className="text-[11px] font-sans font-black bg-m3-surface border border-m3-outline-variant/40 focus:border-m3-primary px-3 py-2 rounded-xl text-m3-primary focus:outline-none uppercase tracking-wider transition-colors cursor-pointer shadow-sm"
+              >
+                <option value="All">All Pools (Corporate)</option>
+                {branches.map(b => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
             </div>
           </div>
 

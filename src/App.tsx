@@ -920,7 +920,7 @@ function AppContent() {
         )}
 
         {/* DYNAMIC COMPONENT PANEL AREA */}
-        <main className={`flex-1 p-4 md:p-6 pb-26 md:pb-6 overflow-y-auto relative z-10 flex flex-col ${isCompactColumns ? 'compact-fit' : ''}`}>
+        <main className={`flex-1 p-4 md:p-6 pb-26 md:pb-6 overflow-y-auto relative flex flex-col ${isCompactColumns ? 'compact-fit' : ''}`}>
           {/* Elegant Collapsible Horizontal Sub-menu Navigation Pill Bar with Dynamic RBAC */}
           {(() => {
             const activeCategory = sidebarCategoryTree.find(cat => 
