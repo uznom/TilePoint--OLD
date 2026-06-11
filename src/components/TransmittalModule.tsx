@@ -269,24 +269,263 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
   };
 
   const handleExportTransmittal = (t: Transmittal) => {
+    const fromBranchId = t.fromBranchId;
+    const fromBranchName = getBranchName(fromBranchId);
+
+    // 1. Gather all data filtered by the specific source branch
+    const bSales = sales.filter((s) => s.branchId === fromBranchId && !s.isDeleted);
+    const bSaleIds = bSales.map(s => s.id);
+    const bSaleItems = saleItems.filter((it) => bSaleIds.includes(it.saleId) && !it.isDeleted);
+    const bStock = branchStock.filter((bs) => bs.branchId === fromBranchId);
+    const bShifts = shifts.filter((sh) => sh.branchId === fromBranchId);
+
+    // Get Petty cash expenses from standard LocalStorage
+    let bExpenses: any[] = [];
+    try {
+      const cachedExpenses = localStorage.getItem('atpos_v2_expenses');
+      if (cachedExpenses) {
+        bExpenses = JSON.parse(cachedExpenses).filter((ex: any) => ex.branchId === fromBranchId);
+      }
+    } catch(err) {
+      console.warn("Could not read expenses for BI export", err);
+    }
+
+    // 2. Financial KPIs
+    const totalRevenue = bSales.reduce((sum, s) => sum + s.grandTotal, 0);
+    const totalCostOfGoods = bSaleItems.reduce((sum, item) => {
+      const prod = products.find((p) => p.id === item.productId);
+      const cost = prod ? prod.costPrice : 0;
+      return sum + (cost * item.quantity);
+    }, 0);
+    const totalExpenses = bExpenses.reduce((sum, ex) => sum + (Number(ex.amount) || 0), 0);
+    const grossProfit = totalRevenue - totalCostOfGoods;
+    const netProfit = grossProfit - totalExpenses;
+    const profitMarginPercent = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+
+    const totalVat = bSales.reduce((sum, s) => sum + s.vat, 0);
+    const totalDiscounts = bSales.reduce((sum, s) => sum + s.discount, 0);
+
+    const paymentMethodBreakdown = bSales.reduce((acc: Record<string, number>, s) => {
+      acc[s.paymentMethod] = (acc[s.paymentMethod] || 0) + s.grandTotal;
+      return acc;
+    }, {});
+
+    const avgOrderValue = bSales.length > 0 ? totalRevenue / bSales.length : 0;
+
+    // 3. Product & Inventory Stats
+    const totalStockQty = bStock.reduce((sum, bs) => sum + bs.quantity, 0);
+    const uniqueSkusCount = bStock.length;
+    const totalAssetValue = bStock.reduce((sum, bs) => {
+      const prod = products.find((p) => p.id === bs.productId);
+      return sum + (bs.quantity * (prod ? prod.sellingPrice : 0));
+    }, 0);
+    const totalAssetCostValue = bStock.reduce((sum, bs) => {
+      const prod = products.find((p) => p.id === bs.productId);
+      return sum + (bs.quantity * (prod ? prod.costPrice : 0));
+    }, 0);
+
+    // Catalog low and critical stocks
+    const lowStockAlerts = bStock.filter(bs => {
+      const prod = products.find(p => p.id === bs.productId);
+      const min = prod ? prod.minimumStock : 10;
+      return bs.quantity > 0 && bs.quantity <= min;
+    }).map(bs => {
+      const prod = products.find(p => p.id === bs.productId);
+      return {
+        productId: bs.productId,
+        productName: prod ? prod.productName : 'Tile SKU',
+        sku: prod ? prod.sku : '',
+        category: prod ? prod.category : '',
+        quantity: bs.quantity,
+        minimumRequired: prod ? prod.minimumStock : 10
+      };
+    });
+
+    const outOfStockAlerts = bStock.filter(bs => bs.quantity <= 0).map(bs => {
+      const prod = products.find(p => p.id === bs.productId);
+      return {
+        productId: bs.productId,
+        productName: prod ? prod.productName : 'Tile SKU',
+        sku: prod ? prod.sku : '',
+        category: prod ? prod.category : ''
+      };
+    });
+
+    // 4. Product Sales Standings & Volume Rank
+    const productSalesVolume: Record<string, { id: string; name: string; sku: string; qty: number; revenue: number }> = {};
+    bSaleItems.forEach(item => {
+      if (!productSalesVolume[item.productId]) {
+        productSalesVolume[item.productId] = {
+          id: item.productId,
+          name: item.productName || 'Unknown Product',
+          sku: products.find(p => p.id === item.productId)?.sku || '',
+          qty: 0,
+          revenue: 0
+        };
+      }
+      productSalesVolume[item.productId].qty += item.quantity;
+      productSalesVolume[item.productId].revenue += item.total;
+    });
+
+    const topProductsByRevenue = Object.values(productSalesVolume)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10);
+
+    const topProductsByQuantity = Object.values(productSalesVolume)
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 10);
+
+    // 5. Category Breakdown Analysis
+    const categoryBreakdown: Record<string, { stockQty: number; revenue: number; uniqueProductsCount: number }> = {};
+    
+    // Seed with inventory categories
+    bStock.forEach(bs => {
+      const prod = products.find(p => p.id === bs.productId);
+      if (prod) {
+        const cat = prod.category || 'General';
+        if (!categoryBreakdown[cat]) {
+          categoryBreakdown[cat] = { stockQty: 0, revenue: 0, uniqueProductsCount: 0 };
+        }
+        categoryBreakdown[cat].stockQty += bs.quantity;
+      }
+    });
+
+    // Add revenue categories
+    bSaleItems.forEach(item => {
+      const prod = products.find(p => p.id === item.productId);
+      const cat = prod ? (prod.category || 'General') : 'General';
+      if (!categoryBreakdown[cat]) {
+        categoryBreakdown[cat] = { stockQty: 0, revenue: 0, uniqueProductsCount: 0 };
+      }
+      categoryBreakdown[cat].revenue += item.total;
+    });
+
+    // Unique products per category
+    Object.keys(categoryBreakdown).forEach(cat => {
+      const pCount = products.filter(p => p.category === cat && !p.isDeleted).length;
+      categoryBreakdown[cat].uniqueProductsCount = pCount;
+    });
+
+    // 6. Day-Of-Week & Hourly Sales Distribution Profiles (BI Pattern Analysis)
+    const dayOfWeekDistribution: Record<string, { count: number; value: number }> = {
+      'Sunday': { count: 0, value: 0 },
+      'Monday': { count: 0, value: 0 },
+      'Tuesday': { count: 0, value: 0 },
+      'Wednesday': { count: 0, value: 0 },
+      'Thursday': { count: 0, value: 0 },
+      'Friday': { count: 0, value: 0 },
+      'Saturday': { count: 0, value: 0 },
+    };
+
+    const hourOfDayDistribution: Record<number, { count: number; value: number }> = {};
+    for (let h = 0; h < 24; h++) {
+      hourOfDayDistribution[h] = { count: 0, value: 0 };
+    }
+
+    const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    bSales.forEach(s => {
+      const date = new Date(s.createdAt);
+      const dayName = weekdays[date.getDay()];
+      const hour = date.getHours();
+
+      if (dayName) {
+        dayOfWeekDistribution[dayName].count++;
+        dayOfWeekDistribution[dayName].value += s.grandTotal;
+      }
+
+      if (hour >= 0 && hour < 24) {
+        hourOfDayDistribution[hour].count++;
+        hourOfDayDistribution[hour].value += s.grandTotal;
+      }
+    });
+
+    // 7. Shifts Analysis
+    const totalShiftsLogged = bShifts.length;
+    const uniqueCashiersCount = [...new Set(bShifts.map(s => s.cashierName))].length;
+
+    const biDashboardMetrics = {
+      executiveSummary: {
+        exportTimestamp: new Date().toISOString(),
+        reportingBranchId: fromBranchId,
+        reportingBranchName: fromBranchName,
+        curatorName: currentUser.fullName,
+        curatorRole: currentUser.role,
+        notes: t.notes || 'Integrated Branch BI analytical packet.'
+      },
+      financialKpiIndicators: {
+        revenueGrossPhp: totalRevenue,
+        costOfGoodsSoldPhp: totalCostOfGoods,
+        operatingExpensesPhp: totalExpenses,
+        grossProfitMarginPhp: grossProfit,
+        netOperatingIncomePhp: netProfit,
+        profitMarginRatioRatio: profitMarginPercent,
+        vatCollectedTaxPhp: totalVat,
+        flatDiscountsDeductedPhp: totalDiscounts,
+        averageTransactionSizePhp: avgOrderValue,
+        totalSalesInvoicesCount: bSales.length,
+        paymentSegmentsShare: paymentMethodBreakdown
+      },
+      inventoryAssetTelemetry: {
+        totalPhysicalUnitsOnHandCount: totalStockQty,
+        uniqueSkusTrackedCount: uniqueSkusCount,
+        assetValueAtRetailPricePhp: totalAssetValue,
+        assetValueAtCostBasisPhp: totalAssetCostValue,
+        lowStockItemsCounter: lowStockAlerts.length,
+        outOfStockItemsCounter: outOfStockAlerts.length,
+        lowStockAlertsCatalog: lowStockAlerts,
+        outOfStockAlertsCatalog: outOfStockAlerts
+      },
+      bestsellersStandingList: {
+        topTenByRevenueYield: topProductsByRevenue,
+        topTenByVolumeUnits: topProductsByQuantity
+      },
+      categorySegmentationMetrics: categoryBreakdown,
+      temporalPeakWaveAnalysis: {
+        dayOfWeekMetrics: dayOfWeekDistribution,
+        hourlyPeakMetrics: hourOfDayDistribution
+      },
+      staffOperationsAudit: {
+        totalShiftsTrackedCount: totalShiftsLogged,
+        activeCashiersInReportingPeriod: uniqueCashiersCount,
+        shiftsLog: bShifts.map(sh => ({
+          shiftId: sh.id,
+          cashierName: sh.cashierName,
+          startedAt: sh.startedAt,
+          endedAt: sh.endedAt,
+          expectedCash: sh.expectedCash,
+          actualCash: sh.actualCash,
+          difference: sh.difference
+        }))
+      }
+    };
+
+    let contentsParsed: any = {};
+    try {
+      contentsParsed = JSON.parse(t.payloadJson);
+    } catch(err) {
+      contentsParsed = { rawContent: t.payloadJson };
+    }
+
     const slip = {
       transmittalId: t.id,
       docType: t.documentType,
-      sentFrom: getBranchName(t.fromBranchId),
+      sentFrom: fromBranchName,
       sentTo: getBranchName(t.toBranchId),
       submittedBy: t.submittedBy,
       submittedAt: t.submittedAt,
-      contents: JSON.parse(t.payloadJson),
-      notes: t.notes
+      contents: contentsParsed,
+      notes: t.notes,
+      businessIntelligenceDashboard: biDashboardMetrics
     };
 
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(slip, null, 2));
     const dlAnchorElem = document.createElement('a');
     dlAnchorElem.setAttribute('href', dataStr);
-    dlAnchorElem.setAttribute('download', `TilePoint_Transmittal_${t.id}.json`);
+    dlAnchorElem.setAttribute('download', `TilePoint_BI_Transmittal_Package_${t.id}.json`);
     dlAnchorElem.click();
-    addAuditLog('TRANSMITTAL_EXPORT', `Downloaded transmittal slip JSON for ${t.id}`, 'Transmittals', t.id);
-    showToast(`Slip downloaded to TilePoint_Transmittal_${t.id}.json successfully.`);
+    addAuditLog('TRANSMITTAL_EXPORT', `Downloaded comprehensive BI transmittal slip JSON for ${t.id}`, 'Transmittals', t.id);
+    showToast(`BI Data Packet downloaded successfully to TilePoint_BI_Transmittal_Package_${t.id}.json!`);
   };
 
   const handleOpenImport = () => {
