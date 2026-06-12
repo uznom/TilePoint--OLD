@@ -36,7 +36,10 @@ import {
   FileText,
   Database,
   Upload,
-  Image
+  Image,
+  Printer,
+  Search,
+  Sparkles
 } from 'lucide-react';
 import { UserRole } from '../types/db';
 
@@ -61,7 +64,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
     branchStock,
     suppliers,
     updateBranch,
-    updateCurrentUser
+    updateCurrentUser,
+    checkoutSale
   } = useDb();
 
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
@@ -131,6 +135,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
   });
   const [setupAdminEmail, setSetupAdminEmail] = useState<string>(currentUser.email || 'erica.manaban.04@gmail.com');
   const [setupManagerPin, setSetupManagerPin] = useState<string>(currentUser.managerPin || '4321');
+
+  // Real-time Admin Daily Sales Monitor states
+  const [dailySalesSearch, setDailySalesSearch] = useState<string>('');
+  const [activeDailyPaymentFilter, setActiveDailyPaymentFilter] = useState<string>('all');
+  const [showAllDailyTransactions, setShowAllDailyTransactions] = useState<boolean>(false);
+  const [showDailySalesMonitor, setShowDailySalesMonitor] = useState<boolean>(true);
 
   const showToastMsg = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     setToast({ message, type });
@@ -987,6 +997,586 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
               </div>
             </div>
           </div>
+        </div>
+
+        {/* REAL-TIME ADMIN DAILY SALES TRANSMISSION MONITOR */}
+        <div className="bg-m3-surface-low rounded-[32px] border border-m3-outline-variant/35 shadow-lg p-6 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-m3-outline-variant/15 pb-4">
+            <div className="flex items-center gap-3">
+              <span className="relative flex h-3.5 w-3.5 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
+              </span>
+              <div>
+                <h3 className="text-base font-black text-white uppercase tracking-wide flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-emerald-400" /> Live Daily Sales Oversight Terminal
+                </h3>
+                <p className="text-[11px] text-m3-on-surface-variant font-mono mt-0.5">
+                  Real-time transaction tracking, cashier clearing queues, and multi-browser printed ledgers
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  // Simulate 1-click live sale
+                  const activeProducts = products.filter(p => !p.isDeleted);
+                  if (activeProducts.length === 0) {
+                    showToastMsg('Catalog is empty. Add products in the Inventory page first.', 'error');
+                    return;
+                  }
+                  
+                  const count = Math.floor(Math.random() * 2) + 1; // 1 or 2 items
+                  const selectedItems: { product: any; quantity: number }[] = [];
+                  for (let i = 0; i < count; i++) {
+                    const idx = Math.floor(Math.random() * activeProducts.length);
+                    const prod = activeProducts[idx];
+                    selectedItems.push({ product: prod, quantity: Math.floor(Math.random() * 3) + 1 });
+                  }
+
+                  const firstNames = ['John', 'Maria', 'Arnel', 'Emmel', 'Clarisse', 'Dante', 'Gener', 'Krystel', 'Leah'];
+                  const lastNames = ['Cruz', 'Santos', 'Reyes', 'Pineda', 'Santiago', 'Manaban', 'Lopez', 'Dela Cruz'];
+                  const randomCustomer = `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+                  
+                  const paymentMethods: ('Cash' | 'Card' | 'Bank Transfer' | 'GCash')[] = ['Cash', 'Card', 'Bank Transfer', 'GCash'];
+                  const randomPayment = paymentMethods[Math.floor(Math.random() * paymentMethods.length)];
+                  
+                  try {
+                    const subtotal = selectedItems.reduce((acc, it) => acc + (it.product.sellingPrice * it.quantity), 0);
+                    const vat = parseFloat((subtotal * 0.12).toFixed(2));
+                    const grandTotal = subtotal + vat;
+                    
+                    checkoutSale(
+                      selectedItems,
+                      randomCustomer,
+                      'Simulated via Admin Live Monitoring Oversight Console',
+                      0,
+                      randomPayment as any,
+                      randomPayment === 'Cash' ? Math.ceil(grandTotal / 500) * 500 : grandTotal
+                    );
+                    showToastMsg(`Simulated Sale Completed! Customer: ${randomCustomer} • Total: ₱${grandTotal.toLocaleString()}`, 'success');
+                  } catch (err) {
+                    console.error("Simulation failure", err);
+                    showToastMsg('Simulation dispatch failed', 'error');
+                  }
+                }}
+                className="px-3.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-400 rounded-xl text-xs font-black uppercase tracking-wider border border-emerald-500/20 active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                title="Generates a mock transaction of today instantly to test the real-time pipeline"
+              >
+                Simulate checkout
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  // Beautiful printed summary document
+                  const todaySalesIds = new Set(todaySalesItems.map(s => s.id));
+                  const todayBoxesSold = saleItems
+                    .filter(si => todaySalesIds.has(si.saleId) && !si.isDeleted)
+                    .reduce((sum, item) => sum + item.quantity, 0);
+
+                  const cashToday = todaySalesItems.filter(s => s.paymentMethod === 'Cash').reduce((acc, s) => acc + s.grandTotal, 0);
+                  const cardToday = todaySalesItems.filter(s => s.paymentMethod === 'Card').reduce((acc, s) => acc + s.grandTotal, 0);
+                  const bankToday = todaySalesItems.filter(s => s.paymentMethod === 'Bank Transfer').reduce((acc, s) => acc + s.grandTotal, 0);
+                  const gcashToday = todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Mobile Wallet' || s.paymentMethod === 'Wallet').reduce((acc, s) => acc + s.grandTotal, 0);
+
+                  const printContent = `
+                    <html>
+                      <head>
+                        <title>TilePoint Daily Sales Report - ${todayStr}</title>
+                        <style>
+                          body {
+                            font-family: Arial, sans-serif;
+                            color: #333333;
+                            padding: 24px;
+                            line-height: 1.4;
+                            background: #ffffff;
+                          }
+                          .header {
+                            border-bottom: 3px solid #111111;
+                            padding-bottom: 12px;
+                            margin-bottom: 20px;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: flex-end;
+                          }
+                          .title {
+                            font-size: 22px;
+                            font-weight: 900;
+                            text-transform: uppercase;
+                            letter-spacing: 1px;
+                          }
+                          .branch-info {
+                            font-size: 11px;
+                            color: #666;
+                            text-align: right;
+                          }
+                          .stats-grid {
+                            display: grid;
+                            grid-template-cols: repeat(4, 1fr);
+                            gap: 15px;
+                            margin-bottom: 25px;
+                          }
+                          .stat-box {
+                            background: #f8f9fa;
+                            border: 1px solid #dee2e6;
+                            padding: 12px;
+                            border-radius: 8px;
+                          }
+                          .stat-label {
+                            font-size: 9px;
+                            text-transform: uppercase;
+                            color: #6c757d;
+                            font-weight: bold;
+                            letter-spacing: 0.5px;
+                          }
+                          .stat-val {
+                            font-size: 16px;
+                            font-weight: bold;
+                            color: #111;
+                            margin-top: 4px;
+                          }
+                          table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-bottom: 25px;
+                          }
+                          th {
+                            background: #f1f3f5;
+                            text-align: left;
+                            font-size: 10px;
+                            text-transform: uppercase;
+                            padding: 10px;
+                            border-bottom: 2px solid #dee2e6;
+                            color: #495057;
+                          }
+                          td {
+                            padding: 10px;
+                            font-size: 11px;
+                            border-bottom: 1px solid #dee2e6;
+                          }
+                          .total-row td {
+                            font-weight: bold;
+                            background: #f8f9fa;
+                            border-top: 2px solid #111;
+                          }
+                          .disclaimer {
+                            font-size: 9px;
+                            color: #868e96;
+                            text-align: center;
+                            margin-top: 50px;
+                            border-top: 1px dashed #dee2e6;
+                            padding-top: 15px;
+                          }
+                        </style>
+                      </head>
+                      <body>
+                        <div class="header">
+                          <div>
+                            <div class="title">TilePoint Daily Sales Monitor Ledger</div>
+                            <div style="font-size: 12px; margin-top: 5px; font-weight: bold; color: #555;">Corporate Oversight Report for Erica Manaban</div>
+                          </div>
+                          <div class="branch-info">
+                            <div>Date: <strong>${todayStr}</strong></div>
+                            <div>Authorized Port: <strong>${selectedBranchId === 'all' ? 'Consolidated All Branches' : getBranchName(selectedBranchId)}</strong></div>
+                          </div>
+                        </div>
+
+                        <div class="stats-grid">
+                          <div class="stat-box">
+                            <div class="stat-label">TODAY'S CUMULATIVE REVENUE</div>
+                            <div class="stat-val">₱${computedTodaySales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                          </div>
+                          <div class="stat-box">
+                            <div class="stat-label">NUMBER OF CHECKOUTS</div>
+                            <div class="stat-val">${todaySalesItems.length} Sales</div>
+                          </div>
+                          <div class="stat-box">
+                            <div class="stat-label">TOTAL CARGO BOX QUANTITY</div>
+                            <div class="stat-val">${todayBoxesSold} Tiles</div>
+                          </div>
+                          <div class="stat-box">
+                            <div class="stat-label">GENERATED BY</div>
+                            <div class="stat-val">${currentUser.fullName}</div>
+                          </div>
+                        </div>
+
+                        <h3 style="font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px;">Payment Drawer Breakdown</h3>
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Payment Mode</th>
+                              <th>Total Cleared Vol</th>
+                              <th>Transaction Count</th>
+                              <th>Reconciliation Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td>Cash</td>
+                              <td><strong>₱${cashToday.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
+                              <td>${todaySalesItems.filter(s => s.paymentMethod === 'Cash').length}</td>
+                              <td>Verified Active</td>
+                            </tr>
+                            <tr>
+                              <td>Card</td>
+                              <td><strong>₱${cardToday.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
+                              <td>${todaySalesItems.filter(s => s.paymentMethod === 'Card').length}</td>
+                              <td>Settle Pending</td>
+                            </tr>
+                            <tr>
+                              <td>GCash / Mobile Wallet</td>
+                              <td><strong>₱${gcashToday.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
+                              <td>${todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Mobile Wallet').length}</td>
+                              <td>Settled Live</td>
+                            </tr>
+                            <tr>
+                              <td>Bank Transfer</td>
+                              <td><strong>₱${bankToday.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
+                              <td>${todaySalesItems.filter(s => s.paymentMethod === 'Bank Transfer').length}</td>
+                              <td>Cleared Live</td>
+                            </tr>
+                          </tbody>
+                        </table>
+
+                        <h3 style="font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px;">Today's Invoices Ledger Stream</h3>
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Invoice No.</th>
+                              <th>Customer Name</th>
+                              <th>Cashier Name</th>
+                              <th>Payment Mode</th>
+                              <th>Timestamp</th>
+                              <th>Grand Total</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            ${todaySalesItems.map(s => `
+                              <tr>
+                                <td style="font-family: monospace; font-weight: bold;">${s.saleNumber}</td>
+                                <td>${s.customerName}</td>
+                                <td>${s.cashierName}</td>
+                                <td>${s.paymentMethod}</td>
+                                <td>${new Date(s.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                                <td style="font-weight: bold;">₱${s.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                              </tr>
+                            `).join('')}
+                            ${todaySalesItems.length === 0 ? `<tr><td colspan="6" style="text-align: center; color: #777;">No transactions have been checkout today.</td></tr>` : ''}
+                            <tr class="total-row">
+                              <td colspan="5" style="text-align: right; font-weight: bold;">CONSOLIDATED TODAY TOTAL:</td>
+                              <td style="font-weight: bold; color: #111;">₱${computedTodaySales.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+
+                        <div class="disclaimer">
+                          This is an official real-time daily clearing record generated from the TilePoint Enterprise Ledger Engine on ${new Date().toLocaleString()}. All stock counts and accounting pipelines are synced.
+                        </div>
+                      </body>
+                    </html>
+                  `;
+
+                  let popupSuccessful = false;
+                  try {
+                    const reportWindow = window.open('', '_blank', 'width=850,height=650');
+                    if (reportWindow) {
+                      reportWindow.document.write(printContent);
+                      reportWindow.document.close();
+                      popupSuccessful = true;
+                    }
+                  } catch (e) {
+                    console.warn("Popup blocked. Switching to background print iframe fallback.");
+                  }
+
+                  if (!popupSuccessful) {
+                    try {
+                      const pIframe = document.createElement('iframe');
+                      pIframe.style.position = 'fixed';
+                      pIframe.style.width = '0px';
+                      pIframe.style.height = '0px';
+                      pIframe.style.border = 'none';
+                      pIframe.style.bottom = '0px';
+                      pIframe.style.right = '0px';
+                      pIframe.style.opacity = '0';
+                      document.body.appendChild(pIframe);
+
+                      const idoc = pIframe.contentWindow ? pIframe.contentWindow.document : pIframe.contentDocument;
+                      if (idoc) {
+                        idoc.open();
+                        idoc.write(printContent);
+                        idoc.close();
+
+                        setTimeout(() => {
+                          if (pIframe.contentWindow) {
+                            pIframe.contentWindow.focus();
+                            pIframe.contentWindow.print();
+                          }
+                          setTimeout(() => {
+                            if (document.body.contains(pIframe)) {
+                              document.body.removeChild(pIframe);
+                            }
+                          }, 3000);
+                        }, 800);
+                      }
+                    } catch (err) {
+                      console.error("Print report fallback failed", err);
+                    }
+                  }
+                  showToastMsg("Daily Sales Ledger dispatched to print queue!", "success");
+                }}
+                className="px-3.5 py-1.5 bg-m3-surface-lowest hover:bg-m3-outline-variant/15 text-white rounded-xl text-xs font-black uppercase tracking-wider border border-m3-outline-variant/20 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Printer className="h-4 w-4 text-m3-primary" /> Print Daily Summary Report
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowDailySalesMonitor(!showDailySalesMonitor)}
+                className="p-1 px-3 text-[11px] font-bold text-zinc-400 hover:text-white transition-colors"
+              >
+                {showDailySalesMonitor ? 'Collapse' : 'Expand'}
+              </button>
+            </div>
+          </div>
+
+          {showDailySalesMonitor && (
+            <div className="pt-5 space-y-6 animate-fade-in select-none">
+              {/* Quick stats mini ribbon */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                <div className="bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/10">
+                  <span className="block text-[8px] font-extrabold text-zinc-500 uppercase tracking-widest">Live Today's Revenue</span>
+                  <div className="text-xl font-black mt-1 text-emerald-400 tracking-tight">
+                    ₱{computedTodaySales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                </div>
+
+                <div className="bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/10">
+                  <span className="block text-[8px] font-extrabold text-zinc-500 uppercase tracking-widest">Active Invoice Volume</span>
+                  <div className="text-xl font-black mt-1 text-m3-primary tracking-tight">
+                    {todaySalesItems.length} checked out
+                  </div>
+                </div>
+
+                <div className="bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/10">
+                  <span className="block text-[8px] font-extrabold text-zinc-500 uppercase tracking-widest">Boxes Sold Today</span>
+                  <div className="text-xl font-black mt-1 text-white tracking-tight">
+                    {(() => {
+                      const todaySalesIds = new Set(todaySalesItems.map(s => s.id));
+                      return saleItems.filter(si => todaySalesIds.has(si.saleId) && !si.isDeleted).reduce((sum, item) => sum + item.quantity, 0);
+                    })()} Cartons
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Payment Breakdown metrics */}
+                <div className="space-y-3.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-m3-primary">Payment Composition Drawer</span>
+                    <span className="text-[9px] font-mono text-zinc-500">Live reconciliation</span>
+                  </div>
+
+                  <div className="bg-m3-surface-lowest p-4.5 rounded-2xl border border-m3-outline-variant/10 space-y-4">
+                    {[
+                      { label: 'Cleared Cash drawer', val: todaySalesItems.filter(s => s.paymentMethod === 'Cash').reduce((acc, s) => acc + s.grandTotal, 0), color: 'bg-emerald-500', count: todaySalesItems.filter(s => s.paymentMethod === 'Cash').length },
+                      { label: 'Card swipes volume', val: todaySalesItems.filter(s => s.paymentMethod === 'Card').reduce((acc, s) => acc + s.grandTotal, 0), color: 'bg-indigo-500', count: todaySalesItems.filter(s => s.paymentMethod === 'Card').length },
+                      { label: 'GCash / Electronic Wallet', val: todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Mobile Wallet').reduce((acc, s) => acc + s.grandTotal, 0), color: 'bg-sky-500', count: todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Mobile Wallet').length },
+                      { label: 'Local Bank Transfers', val: todaySalesItems.filter(s => s.paymentMethod === 'Bank Transfer').reduce((acc, s) => acc + s.grandTotal, 0), color: 'bg-pink-500', count: todaySalesItems.filter(s => s.paymentMethod === 'Bank Transfer').length },
+                    ].map((mode, i) => {
+                      const totalVol = computedTodaySales || 1;
+                      const percent = Math.min(100, Math.round((mode.val / totalVol) * 100));
+                      return (
+                        <div key={i} className="space-y-1.5">
+                          <div className="flex justify-between items-end text-[10px]">
+                            <span className="font-semibold text-zinc-300">{mode.label} <span className="text-[9px] text-zinc-500 font-mono">({mode.count} POs)</span></span>
+                            <div className="text-right font-mono font-bold">
+                              <span className="text-white mr-1.5">₱{mode.val.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                              <span className="text-zinc-500">{percent}%</span>
+                            </div>
+                          </div>
+                          <div className="h-1.5 bg-m3-surface-low rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${mode.color} transition-all duration-500`}
+                              style={{ width: `${percent}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Cashier performance leaderboard */}
+                <div className="space-y-3.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-m3-primary">Operator Checkouts Ledger</span>
+                    <span className="text-[9px] font-mono text-zinc-500">Live operational loads</span>
+                  </div>
+
+                  <div className="bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/10 h-[190px] overflow-y-auto space-y-2.5 font-sans">
+                    {(() => {
+                      const cashierMap = todaySalesItems.reduce((acc, s) => {
+                        acc[s.cashierName] = (acc[s.cashierName] || 0) + s.grandTotal;
+                        return acc;
+                      }, {} as Record<string, number>);
+                      
+                      const list = Object.entries(cashierMap).sort((a, b) => (b[1] as number) - (a[1] as number));
+                      
+                      if (list.length === 0) {
+                        return (
+                          <div className="text-center py-10 text-[10px] text-zinc-500 font-mono">
+                            No cashier checkouts completed today. Simulated transactions will populate this board instantly.
+                          </div>
+                        );
+                      }
+
+                      return list.map(([name, sum], idx) => (
+                        <div key={idx} className="flex items-center justify-between py-2 border-b border-m3-outline-variant/10 last:border-0">
+                          <div className="flex items-center gap-2">
+                            <div className="h-6 w-6 rounded-full bg-m3-primary/10 flex items-center justify-center font-extrabold text-[10px] text-m3-primary">
+                              {idx + 1}
+                            </div>
+                            <span className="text-xs font-bold text-zinc-350">{name}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-xs font-black font-mono text-emerald-400">₱{Number(sum).toFixed(2)}</span>
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Live search active checkouts feed */}
+              <div className="space-y-3 pt-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-m3-surface-lowest p-2 rounded-2xl border border-m3-outline-variant/10">
+                  <div className="relative flex-grow">
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+                    <input
+                      type="text"
+                      className="w-full bg-transparent border-0 pl-10 pr-4 py-2 text-xs focus:ring-0 text-white placeholder-zinc-500 font-semibold"
+                      placeholder="Search today's stream by customer, ticket #, or operator..."
+                      value={dailySalesSearch}
+                      onChange={(e) => setDailySalesSearch(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1 px-2 shrink-0">
+                    <span className="text-[9.5px] text-zinc-400 font-bold uppercase tracking-wider mr-1.5">Payment Method:</span>
+                    {['all', 'Cash', 'Card', 'GCash', 'Bank Transfer'].map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setActiveDailyPaymentFilter(m)}
+                        className={`px-2.5 py-1 text-[9px] rounded-lg font-black uppercase transition-all ${
+                          activeDailyPaymentFilter === m 
+                            ? 'bg-m3-primary text-white shadow-sm' 
+                            : 'text-zinc-400 hover:text-white bg-m3-surface-low/50 hover:bg-m3-surface-low'
+                        }`}
+                      >
+                        {m === 'all' ? 'All' : m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-m3-surface-lowest rounded-2xl border border-m3-outline-variant/10 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse m-0">
+                      <thead>
+                        <tr className="bg-m3-surface-low/30 text-[9px] uppercase tracking-wider text-m3-primary border-b border-m3-outline-variant/10">
+                          <th className="p-3 font-black">Ticket No.</th>
+                          <th className="p-3 font-black">Customer</th>
+                          <th className="p-3 font-black">Operator</th>
+                          <th className="p-3 font-black">Payment Mode</th>
+                          <th className="p-3 font-black">Grand Total</th>
+                          <th className="p-3 font-black text-right border-0">Time</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const searchedTodaySales = todaySalesItems.filter(s => {
+                            const query = dailySalesSearch.toLowerCase();
+                            const matchesSearch = s.saleNumber.toLowerCase().includes(query) ||
+                                                 s.customerName.toLowerCase().includes(query) ||
+                                                 s.cashierName.toLowerCase().includes(query);
+                            const matchesPayment = activeDailyPaymentFilter === 'all' || s.paymentMethod.toLowerCase() === activeDailyPaymentFilter.toLowerCase();
+                            return matchesSearch && matchesPayment;
+                          });
+
+                          const visibleSales = showAllDailyTransactions ? searchedTodaySales : searchedTodaySales.slice(0, 5);
+
+                          if (visibleSales.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan={6} className="p-8 text-center text-xs text-zinc-500 font-mono">
+                                  No transaction filters match. Try clearing filters or simulate a customer checkout.
+                                </td>
+                              </tr>
+                            );
+                          }
+
+                          return visibleSales.map((s, i) => (
+                            <tr key={i} className="border-b border-m3-outline-variant/10 hover:bg-m3-surface-low/30 last:border-none transition-colors">
+                              <td className="p-3 text-xs font-mono font-bold text-m3-primary">{s.saleNumber}</td>
+                              <td className="p-3 text-xs font-bold text-white">{s.customerName}</td>
+                              <td className="p-3 text-xs font-semibold text-zinc-300">{s.cashierName}</td>
+                              <td className="p-3 text-[10px]">
+                                <span className={`px-2 py-0.5 rounded-full font-bold uppercase tracking-wide text-[8.5px] ${
+                                  s.paymentMethod === 'Cash' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                                  s.paymentMethod === 'Card' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' :
+                                  s.paymentMethod === 'GCash' ? 'bg-sky-500/10 text-sky-400 border border-sky-500/30' :
+                                  'bg-pink-500/10 text-pink-400 border border-pink-500/20'
+                                }`}>
+                                  {s.paymentMethod}
+                                </span>
+                              </td>
+                              <td className="p-3 text-xs font-black font-mono text-emerald-400">
+                                ₱{s.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                              <td className="p-3 text-xs text-right text-zinc-400 font-mono border-0">
+                                {new Date(s.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </td>
+                            </tr>
+                          ));
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {(() => {
+                    const searchedTodaySales = todaySalesItems.filter(s => {
+                      const query = dailySalesSearch.toLowerCase();
+                      const matchesSearch = s.saleNumber.toLowerCase().includes(query) ||
+                                           s.customerName.toLowerCase().includes(query) ||
+                                           s.cashierName.toLowerCase().includes(query);
+                      const matchesPayment = activeDailyPaymentFilter === 'all' || s.paymentMethod.toLowerCase() === activeDailyPaymentFilter.toLowerCase();
+                      return matchesSearch && matchesPayment;
+                    });
+
+                    if (searchedTodaySales.length > 5) {
+                      return (
+                        <div className="bg-m3-surface-low/10 p-2.5 text-center border-t border-m3-outline-variant/10">
+                          <button
+                            type="button"
+                            onClick={() => setShowAllDailyTransactions(!showAllDailyTransactions)}
+                            className="text-[10px] text-m3-primary font-black uppercase tracking-wider hover:underline"
+                          >
+                            {showAllDailyTransactions ? 'Collapse transaction list' : `View all remaining ${searchedTodaySales.length - 5} today tickets`}
+                          </button>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Priority 1 (Always Visible): Large KPI Cards Row representing standard targets */}

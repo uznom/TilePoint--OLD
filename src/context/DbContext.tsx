@@ -882,7 +882,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
           const defaultPassword = u.username === 'erica_admin' ? 'admin123' :
                                   u.username === 'juan_mgr' ? 'manager123' :
                                   u.username === 'tomas_mgr' ? 'manager123' :
-                                  u.username === 'carla_cashier' ? 'cashier123' : 'staff123';
+                                  u.username === 'carla_cashier' ? 'cashier123' : 'tilepoint';
           const salt = u.username + '_salt_tok';
           const hashedVal = await createSaltedHash(defaultPassword, salt, 2500);
           const formattedToken = formatHashToken(salt, hashedVal, 2500);
@@ -2089,7 +2089,21 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   const resetPassword = (id: string) => {
-    addAuditLog('USER_RESET_PASSWORD', `Reset password request for user ID ${id}`, 'Users', id);
+    const target = users.find(u => u.id === id);
+    if (target) {
+      const runReset = async () => {
+        const salt = target.username + '_salt_tok';
+        const hashedVal = await createSaltedHash('tilepoint', salt, 2500);
+        const formattedToken = formatHashToken(salt, hashedVal, 2500);
+        setUsers(prev => {
+          const updated = prev.map(u => u.id === id ? { ...u, passwordHash: formattedToken } : u);
+          localStorage.setItem('tp_users', JSON.stringify(updated));
+          return updated;
+        });
+        addAuditLog('USER_RESET_PASSWORD', `Reset password for user ${target.fullName} to default (tilepoint)`, 'Users', id);
+      };
+      runReset();
+    }
   };
 
   // BRANCHES

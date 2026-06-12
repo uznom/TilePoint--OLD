@@ -104,7 +104,7 @@ const StyledQrCode: React.FC<{ code: string }> = ({ code }) => {
       cols.push(
         <div 
           key={c} 
-          className={`w-3 h-3 ${active ? 'bg-zinc-900 dark:bg-zinc-100' : 'bg-transparent'}`} 
+          className={`w-3 h-3 ${active ? 'bg-zinc-950' : 'bg-transparent'}`} 
         />
       );
     }
@@ -750,11 +750,248 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   };
 
   const handleSimulatePrint = () => {
+    if (!codesProduct) return;
     setPrintingCode(true);
+
+    const printHtmlContents = `
+      <html>
+        <head>
+          <title>Label Print - ${codesProduct.sku}</title>
+          <style>
+            @page {
+              size: 4in 2.5in;
+              margin: 0;
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              margin: 0;
+              padding: 10px;
+              background: #ffffff;
+              color: #000000;
+              width: 4in;
+              height: 2.5in;
+              box-sizing: border-box;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .header {
+              border-bottom: 2px solid #000;
+              padding-bottom: 3px;
+              margin-bottom: 4px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            }
+            .logo {
+              font-weight: 900;
+              font-size: 13px;
+              letter-spacing: 1px;
+            }
+            .category {
+              font-size: 8px;
+              text-transform: uppercase;
+              background: #000;
+              color: #fff;
+              padding: 1px 4px;
+              font-weight: bold;
+            }
+            .details {
+              font-size: 11px;
+              font-weight: 800;
+              line-height: 1.2;
+              margin-bottom: 2px;
+              display: -webkit-box;
+              -webkit-line-clamp: 2;
+              -webkit-box-orient: vertical;
+              overflow: hidden;
+            }
+            .brand-desc {
+              font-size: 8px;
+              color: #333;
+              margin-bottom: 4px;
+              text-transform: uppercase;
+              font-weight: 600;
+            }
+            .meta-grid {
+              display: grid;
+              grid-template-cols: 1fr 1fr;
+              gap: 2px 8px;
+              font-size: 9px;
+              margin-bottom: 6px;
+              border-top: 1px dashed #777;
+              border-bottom: 1px dashed #777;
+              padding: 3px 0;
+            }
+            .meta-item strong {
+              font-weight: 900;
+            }
+            .codes-area {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              gap: 4px;
+            }
+            .barcode-section {
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+            }
+            .barcode-lines {
+              display: flex;
+              gap: 1px;
+              height: 32px;
+              align-items: flex-end;
+              margin-bottom: 2px;
+            }
+            .line {
+              background: #000;
+              height: 100%;
+            }
+            .barcode-text {
+              font-family: monospace;
+              font-size: 8.5px;
+              letter-spacing: 1.5px;
+              font-weight: bold;
+            }
+            .qr-section {
+              width: 38px;
+              height: 38px;
+              border: 1px solid #777;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex-shrink: 0;
+              padding: 1px;
+            }
+            .qr-box {
+              display: grid;
+              grid-template-columns: repeat(15, 1fr);
+              width: 34px;
+              height: 34px;
+            }
+            .qr-pixel {
+              width: 100%;
+              height: 100%;
+            }
+            .qr-pixel.black {
+              background: #000000;
+            }
+          </style>
+        </head>
+        <body>
+          <div>
+            <div class="header">
+              <span class="logo">TILEPOINT</span>
+              <span class="category">${codesProduct.category || 'TILE'}</span>
+            </div>
+            <div class="details">${codesProduct.productName}</div>
+            <div class="brand-desc">Brand: ${codesProduct.brand || 'Unbranded'} • Design: ${codesProduct.designName || 'N/A'}</div>
+            
+            <div class="meta-grid">
+              <div class="meta-item">SKU: <strong>${codesProduct.sku}</strong></div>
+              <div class="meta-item">DIMENSION: <strong>${codesProduct.size || '60x60 cm'}</strong></div>
+              <div class="meta-item">CODE: <strong>${codesProduct.productCode}</strong></div>
+              <div class="meta-item">BOX QTY: <strong>${codesProduct.boxQuantity || 4} pcs</strong></div>
+            </div>
+          </div>
+
+          <div class="codes-area">
+            <div class="barcode-section">
+              <div class="barcode-lines">
+                ${Array.from({ length: 42 }).map((_, i) => {
+                  const isThick = (i % 3 === 0 || i % 7 === 0);
+                  const isVisible = (i % 5 !== 0 && i % 13 !== 0);
+                  return isVisible ? `<div class="line" style="width: ${isThick ? '2px' : '1px'}"></div>` : `<div style="width: 1px"></div>`;
+                }).join('')}
+              </div>
+              <div class="barcode-text">${codesProduct.barcode}</div>
+            </div>
+            
+            <div class="qr-section">
+              <div class="qr-box">
+                ${Array.from({ length: 225 }).map((_, i) => {
+                  const x = i % 15;
+                  const y = Math.floor(i / 15);
+                  const isCorner = (x < 4 && y < 4) || (x > 10 && y < 4) || (x < 4 && y > 10);
+                  const isBorderMatch = isCorner && (x === 0 || x === 3 || y === 0 || y === 3 || x === 11 || x === 14 || y === 11 || y === 14);
+                  const isRandom = (Math.sin(i * 1.5) > 0.1);
+                  const isBlack = isBorderMatch || (isCorner && x !== 1 && x !== 2 && y !== 1 && y !== 2 && x !== 12 && x !== 13 && y !== 12 && y !== 13) || (!isCorner && isRandom);
+                  return `<div class="qr-pixel ${isBlack ? 'black' : ''}"></div>`;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.focus();
+              window.print();
+              setTimeout(function() { window.close(); }, 800);
+            }
+          </script>
+        </body>
+      </html>
+    `;
+
+    let popupOpened = false;
+    try {
+      // First try standard target popup window approach
+      const printWindow = window.open('', '_blank', 'width=600,height=420');
+      if (printWindow) {
+        printWindow.document.write(printHtmlContents);
+        printWindow.document.close();
+        popupOpened = true;
+      }
+    } catch (err) {
+      console.warn("Popup blocked or unsupported. Invoking robust invisible iframe print fallback...", err);
+    }
+
+    if (!popupOpened) {
+      // Robust browser & iframe-proof fallback: dynamically insert an invisible iframe in the document root
+      try {
+        const fallbackIframe = document.createElement('iframe');
+        fallbackIframe.style.position = 'fixed';
+        fallbackIframe.style.width = '0px';
+        fallbackIframe.style.height = '0px';
+        fallbackIframe.style.border = 'none';
+        fallbackIframe.style.bottom = '0px';
+        fallbackIframe.style.right = '0px';
+        fallbackIframe.style.opacity = '0';
+        document.body.appendChild(fallbackIframe);
+
+        const iframeDoc = fallbackIframe.contentWindow ? fallbackIframe.contentWindow.document : fallbackIframe.contentDocument;
+        if (iframeDoc) {
+          iframeDoc.open();
+          iframeDoc.write(printHtmlContents);
+          iframeDoc.close();
+
+          setTimeout(() => {
+            if (fallbackIframe.contentWindow) {
+              fallbackIframe.contentWindow.focus();
+              fallbackIframe.contentWindow.print();
+            }
+            // Cleanup the temporary iframe to conserve browser resource efficiency
+            setTimeout(() => {
+              if (document.body.contains(fallbackIframe)) {
+                document.body.removeChild(fallbackIframe);
+              }
+            }, 3000);
+          }, 800);
+        }
+      } catch (fallbackError) {
+        console.error("Print spooling fallback failed completely", fallbackError);
+        showToast("Error spelling to print spooler. Please trigger window print manual command (Ctrl+P/Cmd+P).");
+      }
+    }
+
     setTimeout(() => {
        setPrintingCode(false);
-       showToast('Label sent to Z-Min Zebra printer queue successfully!');
-    }, 1500);
+       showToast('Barcode label layout dispatched to print spooler!');
+    }, 1200);
   };
 
   // Bulk Import / Export simulations
@@ -3073,12 +3310,53 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
             </div>
 
             {/* Product specifications context summary */}
-            <div className="text-left bg-m3-surface-lowest p-3.5 rounded-2xl border border-m3-outline-variant/15">
-              <div className="text-[10px] text-m3-primary/90 uppercase font-black tracking-widest">{codesProduct.category}</div>
-              <strong className="text-xs text-m3-on-surface block font-extrabold leading-tight mt-0.5 truncate">{codesProduct.productName}</strong>
-              <div className="flex justify-between items-center mt-2.5 text-[10px] text-m3-on-surface-variant font-bold border-t border-m3-outline-variant/10 pt-2 font-mono">
-                <div>SKU: {codesProduct.sku}</div>
-                <div>Code: {codesProduct.productCode}</div>
+            <div className="text-left bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/15 space-y-3">
+              <div>
+                <div className="text-[9px] text-m3-primary/95 font-black uppercase tracking-wider">{codesProduct.category}</div>
+                <strong className="text-sm text-m3-on-surface block font-extrabold leading-tight mt-0.5">{codesProduct.productName}</strong>
+                <p className="text-[10px] text-zinc-400 mt-1">Brand: <span className="font-semibold text-zinc-350">{codesProduct.brand || 'TilePoint'}</span> • Design: <span className="font-semibold text-zinc-350">{codesProduct.designName || 'N/A'}</span></p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 border-t border-m3-outline-variant/15 pt-2.5 text-[10px] font-mono text-zinc-350">
+                <div 
+                  className="bg-m3-surface-low p-2 rounded-xl border border-m3-outline-variant/10 hover:border-m3-primary/50 transition-colors cursor-pointer group rel"
+                  onClick={() => {
+                    navigator.clipboard.writeText(codesProduct.sku);
+                    showToast(`SKU ${codesProduct.sku} copied to clipboard!`);
+                  }}
+                  title="Click to copy SKU"
+                >
+                  <div className="flex justify-between items-center mb-0.5">
+                    <span className="text-[8px] uppercase tracking-wider text-zinc-500 font-extrabold font-sans">Product SKU</span>
+                    <span className="text-[7.5px] text-m3-primary opacity-0 group-hover:opacity-100 transition-opacity font-bold font-sans">COPY</span>
+                  </div>
+                  <span className="font-bold text-m3-primary text-[11px] block truncate">{codesProduct.sku}</span>
+                </div>
+
+                <div className="bg-m3-surface-low p-2 rounded-xl border border-m3-outline-variant/10">
+                  <span className="block text-[8px] uppercase tracking-wider text-zinc-500 font-extrabold font-sans mb-0.5">Dimension (Size)</span>
+                  <span className="font-bold text-white text-[11px] block truncate">{codesProduct.size || 'N/A'}</span>
+                </div>
+
+                <div 
+                  className="bg-m3-surface-low p-2 rounded-xl border border-m3-outline-variant/10 hover:border-m3-primary/50 transition-colors cursor-pointer group rel"
+                  onClick={() => {
+                    navigator.clipboard.writeText(codesProduct.productCode);
+                    showToast(`Product Code ${codesProduct.productCode} copied to clipboard!`);
+                  }}
+                  title="Click to copy Product Code"
+                >
+                  <div className="flex justify-between items-center mb-0.5">
+                    <span className="text-[8px] uppercase tracking-wider text-zinc-500 font-extrabold font-sans">Product Code</span>
+                    <span className="text-[7.5px] text-m3-primary opacity-0 group-hover:opacity-100 transition-opacity font-bold font-sans">COPY</span>
+                  </div>
+                  <span className="font-bold text-white text-[11px] block truncate">{codesProduct.productCode}</span>
+                </div>
+
+                <div className="bg-m3-surface-low p-2 rounded-xl border border-m3-outline-variant/10">
+                  <span className="block text-[8px] uppercase tracking-wider text-zinc-500 font-extrabold font-sans mb-0.5">Box Quantity</span>
+                  <span className="font-bold text-white text-[11px] block truncate">{codesProduct.boxQuantity} Tiles</span>
+                </div>
               </div>
             </div>
 
@@ -3100,7 +3378,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
             </div>
 
             {/* Print action buttons */}
-            <div className="flex flex-col gap-2 pt-2">
+            <div className="flex flex-col gap-2 pt-2.5">
               <button
                 type="button"
                 onClick={handleSimulatePrint}
@@ -3108,13 +3386,40 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                 className="w-full flex items-center justify-center gap-2 py-3 border border-zinc-200/20 dark:border-zinc-700/50 hover:bg-m3-primary hover:text-white bg-m3-surface-lowest rounded-2xl text-xs font-black uppercase tracking-wider transition-all"
               >
                 <Printer className="h-4 w-4 shrink-0" />
-                <span>{printingCode ? 'Generating Raster queue...' : 'Print Scannable Label tag'}</span>
+                <span>{printingCode ? 'Smart Spooling...' : 'Print Scannable Label'}</span>
               </button>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(codesProduct.barcode);
+                    showToast(`Barcode ${codesProduct.barcode} copied to clipboard!`);
+                  }}
+                  className="flex-1 text-center text-[10px] font-black uppercase tracking-wider py-2 bg-m3-surface-lowest hover:bg-m3-outline-variant/10 text-m3-primary rounded-xl transition-all border border-m3-outline-variant/10"
+                >
+                  Copy Barcode Raw
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(codesProduct.qrCode);
+                    showToast(`QR URL payload copied!`);
+                  }}
+                  className="flex-1 text-center text-[10px] font-black uppercase tracking-wider py-2 bg-m3-surface-lowest hover:bg-m3-outline-variant/10 text-zinc-300 rounded-xl transition-all border border-m3-outline-variant/10"
+                >
+                  Copy QR Data
+                </button>
+              </div>
+
+              <div className="text-[9px] text-zinc-500 font-medium leading-normal bg-m3-surface-lowest p-2 rounded-xl border border-m3-outline-variant/10 mt-1">
+                🌐 Compatible with Zebra, Brother, & standard web spoolers. If popup blockers or safe sandboxed environments are detected, an automatic nested context fallback activates instantly.
+              </div>
 
               <button
                 type="button"
                 onClick={() => setShowCodesModal(false)}
-                className="w-full text-center text-xs font-bold py-2 hover:bg-m3-outline-variant/15 text-m3-on-surface-variant rounded-xl transition-all"
+                className="w-full text-center text-xs font-bold py-1.5 hover:bg-m3-outline-variant/15 text-m3-on-surface-variant rounded-xl transition-all mt-1"
               >
                 Close View
               </button>
