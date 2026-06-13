@@ -55,8 +55,16 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     currentUser,
     createDelivery,
     triggerSystemProcessing,
-    branches
+    branches,
+    branchStock
   } = useDb();
+
+  const getBranchPrice = (p: Product) => {
+    const branchStockItem = branchStock.find(bs => bs.productId === p.id && bs.branchId === currentUser.branchAssignmentId);
+    return (branchStockItem && branchStockItem.sellingPriceOverride !== undefined && branchStockItem.sellingPriceOverride > 0)
+      ? branchStockItem.sellingPriceOverride
+      : p.sellingPrice;
+  };
 
   // Active cashier shift states
   const [startCashInput, setStartCashInput] = useState('3000');
@@ -184,7 +192,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
 
   // Dynamic Surcharges, VAT (12%), and Discounts compliant with Philippine and contractor standards
   const subtotal = cart.reduce((acc, item) => {
-    const unitPrice = item.overridePrice !== undefined ? item.overridePrice : item.product.sellingPrice;
+    const unitPrice = item.overridePrice !== undefined ? item.overridePrice : getBranchPrice(item.product);
     return acc + unitPrice * item.quantity;
   }, 0);
   
@@ -601,7 +609,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
   const handleTriggerPriceOverride = (index: number) => {
     const item = cart[index];
     setOverrideItemIndex(index);
-    setOverridePriceInput((item.overridePrice !== undefined ? item.overridePrice : item.product.sellingPrice).toString());
+    setOverridePriceInput((item.overridePrice !== undefined ? item.overridePrice : getBranchPrice(item.product)).toString());
     setOverrideModalOpen(true);
   };
 
@@ -630,7 +638,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
       setPendingApproval({
         type: 'PRICE_OVERRIDE',
         productId: item.product.id,
-        originalPrice: item.product.sellingPrice,
+        originalPrice: getBranchPrice(item.product),
         overridePrice: targetPrice,
         tempCartItemIndex: overrideItemIndex,
         requiredRole: UserRole.MANAGER, // Manager or Admin can verify
@@ -1026,7 +1034,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                                         </div>
                                       </div>
                                       <div className="text-right">
-                                        <div className="font-black text-emerald-400 text-xs">₱{p.sellingPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                        <div className="font-black text-emerald-400 text-xs">₱{getBranchPrice(p).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                                         <div className="text-[9px] text-zinc-500 uppercase font-mono">{p.unit}</div>
                                       </div>
                                     </div>
@@ -1074,11 +1082,11 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                         <div className="text-[10px] text-zinc-400 flex flex-wrap items-center gap-1.5 font-mono font-bold">
                           {item.overridePrice !== undefined ? (
                             <>
-                              <span className="text-zinc-500 line-through">₱{item.product.sellingPrice.toFixed(2)}</span>
+                              <span className="text-zinc-500 line-through">₱{getBranchPrice(item.product).toFixed(2)}</span>
                               <span className="text-emerald-500 font-extrabold bg-emerald-500/10 px-1 rounded">₱{item.overridePrice.toFixed(2)}</span>
                             </>
                           ) : (
-                            <span className="text-zinc-300">₱{item.product.sellingPrice.toFixed(2)}</span>
+                            <span className="text-zinc-300">₱{getBranchPrice(item.product).toFixed(2)}</span>
                           )}
                           <span>/{item.product.unit}</span>
                           <span>•</span>
@@ -1116,7 +1124,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                         </div>
 
                         <span className="text-xs font-black font-mono min-w-[90px] text-right text-m3-on-surface">
-                          ₱{((item.overridePrice !== undefined ? item.overridePrice : item.product.sellingPrice) * item.quantity).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          ₱{((item.overridePrice !== undefined ? item.overridePrice : getBranchPrice(item.product)) * item.quantity).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </span>
 
                         <button
@@ -1700,7 +1708,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                   cart.map((it, idx) => (
                     <div key={idx} className="flex justify-between text-m3-on-surface">
                       <span className="truncate max-w-[200px]">{it.product.productName} (x{it.quantity})</span>
-                      <span className="font-bold">₱{(it.product.sellingPrice * it.quantity).toFixed(2)}</span>
+                      <span className="font-bold">₱{((it.overridePrice !== undefined ? it.overridePrice : getBranchPrice(it.product)) * it.quantity).toFixed(2)}</span>
                     </div>
                   ))
                 ) : (
@@ -1920,7 +1928,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
 
             <div className="space-y-1 leading-normal pl-1 text-[11px] font-medium text-m3-on-surface-variant">
               <div><strong>Product:</strong> {cart[overrideItemIndex].product.productName}</div>
-              <div><strong>Default Unit Price:</strong> ₱{cart[overrideItemIndex].product.sellingPrice.toFixed(2)}</div>
+              <div><strong>Default Unit Price:</strong> ₱{getBranchPrice(cart[overrideItemIndex].product).toFixed(2)}</div>
             </div>
 
             <div className="space-y-1">

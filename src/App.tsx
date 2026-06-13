@@ -30,6 +30,7 @@ import { DeliveriesModule } from './components/DeliveriesModule';
 import { TutorialOnboarding } from './components/TutorialOnboarding';
 import { PrivacyAccessibilityHub } from './components/PrivacyAccessibilityHub';
 import { SystemLoadingOverlay } from './components/SystemLoadingOverlay';
+import { DamageRegisterModule } from './components/DamageRegisterModule';
 
 import {
   LayoutDashboard,
@@ -66,7 +67,8 @@ import {
   Trash2,
   Download,
   Upload,
-  Sliders
+  Sliders,
+  AlertTriangle
 } from 'lucide-react';
 
 function AppContent() {
@@ -439,6 +441,7 @@ function AppContent() {
     { id: 'inventory-transfer', name: 'Stock Transfers', icon: Send, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF] },
     { id: 'inventory-logistics', name: 'Logistics Ledger & Heatmap', icon: Layers, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF] },
     { id: 'inventory-import', name: 'Old POS Migration', icon: Layers, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF] },
+    { id: 'inventory-damage', name: 'Broken & BOA Register', icon: AlertTriangle, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF] },
 
     { id: 'adjustments-void', name: 'Search Voided Sales', icon: History, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER] },
     { id: 'adjustments-return', name: 'Search Returned Products', icon: RefreshCw, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER] },
@@ -450,7 +453,7 @@ function AppContent() {
     { id: 'expenses-search', name: 'Search Expenses', icon: DollarSign, roles: [UserRole.ADMIN, UserRole.MANAGER] },
 
     { id: 'suppliers-manage', name: 'Manage Suppliers', icon: Building2, roles: [UserRole.ADMIN] },
-    { id: 'suppliers-credits', name: 'Active Credits', icon: Building2, roles: [UserRole.ADMIN, UserRole.MANAGER] },
+    { id: 'suppliers-credits', name: 'Active Credits', icon: Building2, roles: [UserRole.ADMIN] },
     { id: 'suppliers-calendar', name: 'Payment Calendar', icon: CalendarDays, roles: [UserRole.ADMIN] },
 
     { id: 'bir-xz', name: 'Search X&Z Reading', icon: FileText, roles: [UserRole.ADMIN, UserRole.MANAGER] },
@@ -480,7 +483,8 @@ function AppContent() {
         { id: 'inventory-adjustments', name: 'Adjustments Logs' },
         { id: 'inventory-transfer', name: 'Stock Transfers' },
         { id: 'inventory-logistics', name: 'Logistics Ledger & Heatmap' },
-        { id: 'inventory-import', name: 'Old POS Migration' }
+        { id: 'inventory-import', name: 'Old POS Migration' },
+        { id: 'inventory-damage', name: 'Broken & BOA Register' }
       ]
     },
     {
@@ -1020,6 +1024,7 @@ function AppContent() {
                 {activeTab === 'users' && <UsersModule darkMode={darkMode} />}
                 {activeTab === 'reports-transmission' && <SalesTransmissionModule darkMode={darkMode} />}
                 {activeTab === 'deliveries-panel' && <DeliveriesModule darkMode={darkMode} />}
+                {activeTab === 'inventory-damage' && <DamageRegisterModule darkMode={darkMode} />}
 
                 {/* ATPOS v2 Sub-items routing to standard Core Modules */}
                 {activeTab.startsWith('inventory-') && (() => {

@@ -30,7 +30,8 @@ import {
   LedgerEntry,
   BranchSalesReport,
   Delivery,
-  DeliveryStatus
+  DeliveryStatus,
+  DamageLog
 } from '../types/db';
 
 interface SummaryStats {
@@ -169,6 +170,13 @@ interface DbContextType {
   updateDeliveryStatus: (id: string, status: DeliveryStatus, notes?: string) => void;
   assignDeliveryPersonnel: (id: string, truck: string, driver: string, helper: string) => void;
   completeDelivery: (id: string, proofPhotoUrl?: string, customerSignature?: string, receiverName?: string) => void;
+
+  // Actions - Broken & Broken-on-Arrival (BOA) Damage Register
+  damageLogs: DamageLog[];
+  createDamageLog: (log: Omit<DamageLog, 'id' | 'reportedAt' | 'reportedBy'>) => void;
+
+  updateBranchPriceOverride: (productId: string, branchId: string, price: number) => void;
+  updateBranchLowStockThreshold: (productId: string, branchId: string, threshold: number) => void;
 
   // DB Performance Tuning & Backup Snapshots Properties
   debounceDelay: number;
@@ -1094,6 +1102,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     return cached ? JSON.parse(cached) : [];
   });
 
+  const [damageLogs, setDamageLogs] = useState<DamageLog[]>(() => {
+    const cached = localStorage.getItem('tp_damage_logs');
+    return cached ? JSON.parse(cached) : [];
+  });
+
   // Derived Active Branch
   const [activeBranch, setActiveBranch] = useState<Branch | null>(null);
 
@@ -1343,6 +1356,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     localStorage.setItem('tp_ledger_entries', JSON.stringify(ledgerEntries));
     localStorage.setItem('tp_branch_sales_reports', JSON.stringify(branchSalesReports));
     localStorage.setItem('tp_deliveries', JSON.stringify(deliveries));
+    localStorage.setItem('tp_damage_logs', JSON.stringify(damageLogs));
     
     // Clear all timeouts
     Object.values(timeoutRefs.current).forEach(t => clearTimeout(t as any));
@@ -1421,6 +1435,13 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       if (payload.ledgerEntries) setLedgerEntries(payload.ledgerEntries);
       if (payload.branchSalesReports) setBranchSalesReports(payload.branchSalesReports);
       if (payload.deliveries) setDeliveries(payload.deliveries);
+      if (payload.damageLogs) {
+        setDamageLogs(payload.damageLogs);
+      } else if (payload.tp_damage_logs) {
+        setDamageLogs(payload.tp_damage_logs);
+      } else {
+        setDamageLogs([]);
+      }
       if (payload.isConfigured !== undefined) setIsConfigured(payload.isConfigured);
 
       // Immediately save back to avoid delays during system transitions
@@ -1443,6 +1464,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         'tp_ledger_entries': payload.ledgerEntries,
         'tp_branch_sales_reports': payload.branchSalesReports,
         'tp_deliveries': payload.deliveries,
+        'tp_damage_logs': payload.damageLogs || payload.tp_damage_logs || [],
         'tp_is_configured': String(payload.isConfigured)
       };
 
@@ -1553,6 +1575,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   useEffect(() => {
     saveToStorageWithDebounce('tp_deliveries', deliveries);
   }, [deliveries]);
+
+  useEffect(() => {
+    saveToStorageWithDebounce('tp_damage_logs', damageLogs);
+  }, [damageLogs]);
 
   // General Audit Log function
   const addAuditLog = (action: string, description: string, tableAffected: string, recordId: string) => {
@@ -1778,6 +1804,71 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       return updated;
     });
 
+    // Deduct sold items from branch stock when sales report is transmitted
+    if (report.saleItems && report.saleItems.length > 0) {
+      setBranchStock(prevList => {
+        const nextList = [...prevList];
+        report.saleItems.forEach(item => {
+          const matchIdx = nextList.findIndex(bs => bs.productId === item.productId && bs.branchId === report.branchId);
+          if (matchIdx !== -1) {
+            nextList[matchIdx] = {
+              ...nextList[matchIdx],
+              quantity: Math.max(0, nextList[matchIdx].quantity - item.quantity)
+            };
+          } else {
+            nextList.push({
+              id: `${report.branchId}_${item.productId}`,
+              branchId: report.branchId,
+              productId: item.productId,
+              quantity: 0
+            });
+          }
+        });
+        localStorage.setItem('tp_branch_stock', JSON.stringify(nextList));
+        return nextList;
+      });
+
+      // Also ensure that the products master stock matches consolidated or is also deducted
+      setProducts(prev => {
+        const nextProds = [...prev];
+        report.saleItems.forEach(item => {
+          const prodIdx = nextProds.findIndex(p => p.id === item.productId);
+          if (prodIdx !== -1) {
+            nextProds[prodIdx] = {
+              ...nextProds[prodIdx],
+              stockQuantity: Math.max(0, nextProds[prodIdx].stockQuantity - item.quantity),
+              updatedAt: new Date().toISOString()
+            };
+          }
+        });
+        localStorage.setItem('tp_products', JSON.stringify(nextProds));
+        return nextProds;
+      });
+
+      // Write safety log movements
+      report.saleItems.forEach(item => {
+        const movementNum = `M-TRANS-SALE-${newReport.id}-${item.productId}`;
+        const newMovement: InventoryMovement = {
+          id: movementNum,
+          productId: item.productId,
+          type: 'OUT',
+          quantity: -item.quantity,
+          sourceBranchId: report.branchId,
+          referenceId: newReport.id,
+          notes: `Transmitted daily sales report inventory deduction for ${report.branchName}`,
+          timestamp: new Date().toISOString(),
+          userId: currentUser?.id || 'SYSTEM',
+          username: currentUser?.username || 'SYSTEM'
+        };
+        setMovements(prevMovements => {
+          if (prevMovements.some(m => m.id === movementNum)) return prevMovements;
+          const nextMovements = [newMovement, ...prevMovements];
+          localStorage.setItem('tp_movements', JSON.stringify(nextMovements));
+          return nextMovements;
+        });
+      });
+    }
+
     addAuditLog(
       'SALES_TRANSMISSION',
       `Sales report for branch ${report.branchName} (${report.reportingDate}) transmitted successfully via ${report.transmissionType} channel. Total Grand Total: ₱${report.totalSalesAmount.toLocaleString()}`,
@@ -1821,6 +1912,71 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         localStorage.setItem('tp_branch_sales_reports', JSON.stringify(updated));
         return updated;
       });
+
+      // Deduct sold items from branch stock when sales report is manually imported
+      if (newReport.saleItems && newReport.saleItems.length > 0) {
+        setBranchStock(prevList => {
+          const nextList = [...prevList];
+          newReport.saleItems.forEach(item => {
+            const matchIdx = nextList.findIndex(bs => bs.productId === item.productId && bs.branchId === newReport.branchId);
+            if (matchIdx !== -1) {
+              nextList[matchIdx] = {
+                ...nextList[matchIdx],
+                quantity: Math.max(0, nextList[matchIdx].quantity - item.quantity)
+              };
+            } else {
+              nextList.push({
+                id: `${newReport.branchId}_${item.productId}`,
+                branchId: newReport.branchId,
+                productId: item.productId,
+                quantity: 0
+              });
+            }
+          });
+          localStorage.setItem('tp_branch_stock', JSON.stringify(nextList));
+          return nextList;
+        });
+
+        // Also ensure that the products master stock matches consolidated or is also deducted
+        setProducts(prev => {
+          const nextProds = [...prev];
+          newReport.saleItems.forEach(item => {
+            const prodIdx = nextProds.findIndex(p => p.id === item.productId);
+            if (prodIdx !== -1) {
+              nextProds[prodIdx] = {
+                ...nextProds[prodIdx],
+                stockQuantity: Math.max(0, nextProds[prodIdx].stockQuantity - item.quantity),
+                updatedAt: new Date().toISOString()
+              };
+            }
+          });
+          localStorage.setItem('tp_products', JSON.stringify(nextProds));
+          return nextProds;
+        });
+
+        // Write safety log movements
+        newReport.saleItems.forEach(item => {
+          const movementNum = `M-TRANS-SALE-${newReport.id}-${item.productId}`;
+          const newMovement: InventoryMovement = {
+            id: movementNum,
+            productId: item.productId,
+            type: 'OUT',
+            quantity: -item.quantity,
+            sourceBranchId: newReport.branchId,
+            referenceId: newReport.id,
+            notes: `Imported sales report inventory deduction for ${newReport.branchName}`,
+            timestamp: new Date().toISOString(),
+            userId: currentUser?.id || 'SYSTEM',
+            username: currentUser?.username || 'SYSTEM'
+          };
+          setMovements(prevMovements => {
+            if (prevMovements.some(m => m.id === movementNum)) return prevMovements;
+            const nextMovements = [newMovement, ...prevMovements];
+            localStorage.setItem('tp_movements', JSON.stringify(nextMovements));
+            return nextMovements;
+          });
+        });
+      }
 
       addAuditLog(
         'SALES_IMPORT',
@@ -1968,6 +2124,155 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       'Delivery',
       id
     );
+  };
+
+  const createDamageLog = (log: Omit<DamageLog, 'id' | 'reportedAt' | 'reportedBy'>) => {
+    const newId = `DMG-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const newLog: DamageLog = {
+      ...log,
+      id: newId,
+      reportedBy: currentUser.fullName,
+      reportedAt: new Date().toISOString()
+    };
+
+    setDamageLogs(prev => [newLog, ...prev]);
+
+    // Deduct stock quantity
+    const changeValue = -Math.abs(log.quantity);
+
+    // 1. Update product centrally
+    setProducts(prods => prods.map(p => {
+      if (p.id === log.productId) {
+        return {
+          ...p,
+          stockQuantity: Math.max(0, p.stockQuantity + changeValue),
+          updatedAt: new Date().toISOString(),
+          updatedBy: currentUser.fullName
+        };
+      }
+      return p;
+    }));
+
+    // 2. Update branch-specific quantity
+    setBranchStock(stockList => {
+      const idx = stockList.findIndex(bs => bs.productId === log.productId && bs.branchId === log.branchId);
+      if (idx !== -1) {
+        const updated = [...stockList];
+        const nextQty = Math.max(0, updated[idx].quantity + changeValue);
+        updated[idx] = { ...updated[idx], quantity: nextQty };
+        return updated;
+      } else {
+        return stockList;
+      }
+    });
+
+    // 3. Create movement log
+    const newMove: InventoryMovement = {
+      id: `IM-DMG-${Date.now()}`,
+      productId: log.productId,
+      type: 'ADJUST',
+      quantity: changeValue,
+      sourceBranchId: log.branchId,
+      referenceId: newId,
+      notes: `[Damage: ${log.category}] ${log.actionTaken}. Notes: ${log.notes}`,
+      timestamp: new Date().toISOString(),
+      userId: currentUser.id,
+      username: currentUser.username,
+    };
+    setMovements(prev => [newMove, ...prev]);
+
+    // 4. Create ledger entry
+    const newLedgerId = `L-DMG-${Date.now()}`;
+    const newEntry: LedgerEntry = {
+      id: newLedgerId,
+      date: new Date().toISOString(),
+      productId: log.productId,
+      productName: log.productName,
+      branchId: log.branchId,
+      movementType: 'ADJUST',
+      quantity: changeValue,
+      referenceNo: newId,
+      remarks: `[${log.category} - ${log.actionTaken}] ${log.notes}`
+    };
+    setLedgerEntries(prev => [newEntry, ...prev]);
+
+    // 5. Audit
+    addAuditLog(
+      'DAMAGE_REPORT',
+      `Logged ${log.quantity} unit(s) of broken/damaged ${log.productName} for ${log.branchName} (${log.category}). Status: ${log.actionTaken}.`,
+      'Products',
+      log.productId
+    );
+  };
+
+  const updateBranchPriceOverride = (productId: string, branchId: string, price: number) => {
+    setBranchStock(prevList => {
+      const matchIndex = prevList.findIndex(bs => bs.productId === productId && bs.branchId === branchId);
+      if (matchIndex !== -1) {
+        const nextList = [...prevList];
+        nextList[matchIndex] = {
+          ...nextList[matchIndex],
+          sellingPriceOverride: price > 0 ? price : undefined
+         };
+        return nextList;
+      } else {
+        const newRecord: InventoryLocationStock = {
+          id: `${branchId}_${productId}`,
+          branchId,
+          productId,
+          quantity: 0,
+          sellingPriceOverride: price > 0 ? price : undefined
+        };
+        return [...prevList, newRecord];
+      }
+    });
+
+    // Capture in audit log
+    const prod = products.find(p => p.id === productId);
+    const branchMeta = branches.find(b => b.id === branchId);
+    if (prod && branchMeta) {
+      addAuditLog(
+        'PRICE_ADJUSTMENT',
+        `Adjusted retail selling price for "${prod.productName}" at branch "${branchMeta.name}" to ₱${price.toFixed(2)}.`,
+        'BranchStock',
+        productId
+      );
+    }
+  };
+
+  const updateBranchLowStockThreshold = (productId: string, branchId: string, threshold: number) => {
+    setBranchStock(prevList => {
+      const matchIndex = prevList.findIndex(bs => bs.productId === productId && bs.branchId === branchId);
+      if (matchIndex !== -1) {
+        const nextList = [...prevList];
+        nextList[matchIndex] = {
+          ...nextList[matchIndex],
+          lowStockThresholdOverride: threshold >= 0 ? threshold : undefined
+        };
+        return nextList;
+      } else {
+        const newRecord: InventoryLocationStock = {
+          id: `${branchId}_${productId}`,
+          branchId,
+          productId,
+          quantity: 0,
+          lowStockThresholdOverride: threshold >= 0 ? threshold : undefined
+        };
+        return [...prevList, newRecord];
+      }
+    });
+
+    // Capture in audit log
+    const prod = products.find(p => p.id === productId);
+    const branchMeta = branches.find(b => b.id === branchId);
+    if (prod && branchMeta) {
+      addAuditLog(
+        'THRESHOLD_ADJUSTMENT',
+        `Adjusted localized branch safety alarm threshold for "${prod.productName}" at branch "${branchMeta.name}" to ${threshold} units.`,
+        'BranchStock',
+        productId
+      );
+    }
   };
 
   // --- DATABASE FACTORY TRUNCATE & RE-SEED ENGINE ---
@@ -2283,7 +2588,15 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     const saleNum = `SL-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
 
     // Totals calculations
-    const subtotal = cartItems.reduce((acc, item) => acc + (item.product.sellingPrice * item.quantity), 0);
+    const subtotal = cartItems.reduce((acc, item) => {
+      const branchStockRec = branchStock.find(bs => bs.productId === item.product.id && bs.branchId === currentUser.branchAssignmentId);
+      const basePrice = (branchStockRec && branchStockRec.sellingPriceOverride !== undefined && branchStockRec.sellingPriceOverride > 0)
+        ? branchStockRec.sellingPriceOverride
+        : item.product.sellingPrice;
+      const unitPrice = (item as any).overridePrice !== undefined ? (item as any).overridePrice : basePrice;
+      return acc + (unitPrice * item.quantity);
+    }, 0);
+
     const vat = customVat !== undefined ? customVat : parseFloat((subtotal * 0.12).toFixed(2));
     const grandTotal = parseFloat((subtotal + vat - discountAmount).toFixed(2));
     const changeAmount = paymentMethod === 'Cash' ? parseFloat((amountTendered - grandTotal).toFixed(2)) : 0.0;
@@ -2310,7 +2623,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
     // Save sale items
     const newSaleItems: SaleItem[] = cartItems.map((item, idx) => {
-      const unitPrice = (item as any).overridePrice !== undefined ? (item as any).overridePrice : item.product.sellingPrice;
+      const branchStockRec = branchStock.find(bs => bs.productId === item.product.id && bs.branchId === currentUser.branchAssignmentId);
+      const basePrice = (branchStockRec && branchStockRec.sellingPriceOverride !== undefined && branchStockRec.sellingPriceOverride > 0)
+        ? branchStockRec.sellingPriceOverride
+        : item.product.sellingPrice;
+      const unitPrice = (item as any).overridePrice !== undefined ? (item as any).overridePrice : basePrice;
       return {
         id: `SLI-${saleId}-${idx}`,
         saleId,
@@ -2326,6 +2643,28 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     // Save and Deduct inventory
     setSales(prev => [newSale, ...prev]);
     setSaleItems(prev => [...prev, ...newSaleItems]);
+
+    // Update branchStock for local branch
+    setBranchStock(prevList => {
+      const nextList = [...prevList];
+      cartItems.forEach(item => {
+        const matchIdx = nextList.findIndex(bs => bs.productId === item.product.id && bs.branchId === currentUser.branchAssignmentId);
+        if (matchIdx !== -1) {
+          nextList[matchIdx] = {
+            ...nextList[matchIdx],
+            quantity: Math.max(0, nextList[matchIdx].quantity - item.quantity)
+          };
+        } else {
+          nextList.push({
+            id: `${currentUser.branchAssignmentId}_${item.product.id}`,
+            branchId: currentUser.branchAssignmentId || 'HQ',
+            productId: item.product.id,
+            quantity: 0
+          });
+        }
+      });
+      return nextList;
+    });
 
     // Update Product stocks & write movements
     setProducts(prev => {
@@ -3000,6 +3339,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         updateDeliveryStatus,
         assignDeliveryPersonnel,
         completeDelivery,
+        damageLogs,
+        createDamageLog,
+        updateBranchPriceOverride,
+        updateBranchLowStockThreshold,
         debounceDelay,
         setDebounceDelay,
         dbSyncStatus,

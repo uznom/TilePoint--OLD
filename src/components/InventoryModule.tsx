@@ -144,11 +144,13 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     updateStockTransferStatus,
     createSupplier,
     triggerSystemProcessing,
-    createManualLedgerEntry
+    createManualLedgerEntry,
+    updateBranchPriceOverride,
+    updateBranchLowStockThreshold
   } = useDb();
 
-  // Primary navigation sub-tabs: "catalog" | "movements" | "transfers" | "ledger" | "import"
-  const [activeSubTab, setActiveSubTab] = useState<'catalog' | 'movements' | 'transfers' | 'ledger' | 'import'>(initialSubTab || 'catalog');
+  // Primary navigation sub-tabs: "catalog" | "movements" | "transfers" | "ledger" | "import" | "branch-prices"
+  const [activeSubTab, setActiveSubTab] = useState<'catalog' | 'movements' | 'transfers' | 'ledger' | 'import' | 'branch-prices'>(initialSubTab || 'catalog');
 
   // Table layout optimization states
   const [isCompactColumnsLocal, setIsCompactColumnsLocal] = useState<boolean>(() => {
@@ -172,7 +174,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     setCollapsedSections(prev => ({ ...prev, [sectionId]: !prev[sectionId] }));
   };
 
-  const changeActiveSubTab = (tab: 'catalog' | 'movements' | 'transfers' | 'ledger' | 'import') => {
+  const changeActiveSubTab = (tab: 'catalog' | 'movements' | 'transfers' | 'ledger' | 'import' | 'branch-prices') => {
     setActiveSubTab(tab);
     if (onSubTabChange) {
       onSubTabChange(tab);
@@ -189,6 +191,14 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   const [term, setTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [selectedViewBranchId, setSelectedViewBranchId] = useState<string>('consolidated');
+  const [showPortabilityHubModal, setShowPortabilityHubModal] = useState<boolean>(false);
+
+  const canSeeFinancialCostsAndSources = currentUser.role === 'Admin';
+
+  // Branch Specific pricing filter states
+  const [branchPriceSearch, setBranchPriceSearch] = useState('');
+  const [selectedPoolBranchId, setSelectedPoolBranchId] = useState<string>(currentUser?.branchAssignmentId || (branches[0]?.id || ''));
 
   // Pagination State for lists inside Inventory
   const [prodPage, setProdPage] = useState(1);
@@ -425,38 +435,48 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   }, [size, boxQuantity, category]);
 
   // Catalog Filtration
-  const filteredProducts = products.filter(p => {
-    if (p.isDeleted) return false;
+  const filteredProducts = React.useMemo(() => {
+    return products.filter(p => {
+      if (p.isDeleted) return false;
 
-    const matchSearch =
-      p.productName.toLowerCase().includes(term.toLowerCase()) ||
-      p.productCode.toLowerCase().includes(term.toLowerCase()) ||
-      p.barcode.toLowerCase().includes(term.toLowerCase()) ||
-      p.sku.toLowerCase().includes(term.toLowerCase()) ||
-      p.brand.toLowerCase().includes(term.toLowerCase()) ||
-      (p.designName && p.designName.toLowerCase().includes(term.toLowerCase()));
+      const matchSearch =
+        p.productName.toLowerCase().includes(term.toLowerCase()) ||
+        p.productCode.toLowerCase().includes(term.toLowerCase()) ||
+        p.barcode.toLowerCase().includes(term.toLowerCase()) ||
+        p.sku.toLowerCase().includes(term.toLowerCase()) ||
+        p.brand.toLowerCase().includes(term.toLowerCase()) ||
+        (p.designName && p.designName.toLowerCase().includes(term.toLowerCase()));
 
-    const matchCategory = categoryFilter === 'All' || p.category === categoryFilter;
+      const matchCategory = categoryFilter === 'All' || p.category === categoryFilter;
 
-    // Stock Status evaluations
-    let currentStatus = 'In Stock';
-    if (p.stockQuantity === 0) {
-      currentStatus = 'Out of Stock';
-    } else if (p.stockQuantity <= p.minimumStock * 0.5) {
-      currentStatus = 'Critical';
-    } else if (p.stockQuantity <= p.minimumStock) {
-      currentStatus = 'Low Stock';
-    }
+      // Stock Status evaluations based on selected branch/consolidated view mode
+      const qty = selectedViewBranchId === 'consolidated'
+        ? p.stockQuantity
+        : (branchStock.find(bs => bs.productId === p.id && bs.branchId === selectedViewBranchId)?.quantity ?? 0);
 
-    const matchStatus =
-      statusFilter === 'All' ||
-      (statusFilter === 'In Stock' && currentStatus === 'In Stock') ||
-      (statusFilter === 'Low Stock' && currentStatus === 'Low Stock') ||
-      (statusFilter === 'Critical' && currentStatus === 'Critical') ||
-      (statusFilter === 'Out of Stock' && currentStatus === 'Out of Stock');
+      const threshold = selectedViewBranchId === 'consolidated'
+        ? p.minimumStock
+        : (branchStock.find(bs => bs.productId === p.id && bs.branchId === selectedViewBranchId)?.lowStockThresholdOverride ?? p.minimumStock);
 
-    return matchSearch && matchCategory && matchStatus;
-  });
+      let currentStatus = 'In Stock';
+      if (qty === 0) {
+        currentStatus = 'Out of Stock';
+      } else if (qty <= threshold * 0.5) {
+        currentStatus = 'Critical';
+      } else if (qty <= threshold) {
+        currentStatus = 'Low Stock';
+      }
+
+      const matchStatus =
+        statusFilter === 'All' ||
+        (statusFilter === 'In Stock' && currentStatus === 'In Stock') ||
+        (statusFilter === 'Low Stock' && currentStatus === 'Low Stock') ||
+        (statusFilter === 'Critical' && currentStatus === 'Critical') ||
+        (statusFilter === 'Out of Stock' && currentStatus === 'Out of Stock');
+
+      return matchSearch && matchCategory && matchStatus;
+    });
+  }, [products, branchStock, term, categoryFilter, statusFilter, selectedViewBranchId]);
 
   const totalProdPages = Math.ceil(filteredProducts.length / prodsPerPage) || 1;
   const paginatedProducts = React.useMemo(() => {
@@ -477,12 +497,20 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     let outOfStock = 0;
 
     nonDeleted.forEach(p => {
-      totalValue += p.stockQuantity * p.costPrice;
-      if (p.stockQuantity === 0) {
+      const qty = selectedViewBranchId === 'consolidated'
+        ? p.stockQuantity
+        : (branchStock.find(bs => bs.productId === p.id && bs.branchId === selectedViewBranchId)?.quantity ?? 0);
+
+      const threshold = selectedViewBranchId === 'consolidated'
+        ? p.minimumStock
+        : (branchStock.find(bs => bs.productId === p.id && bs.branchId === selectedViewBranchId)?.lowStockThresholdOverride ?? p.minimumStock);
+
+      totalValue += qty * p.costPrice;
+      if (qty === 0) {
         outOfStock++;
-      } else if (p.stockQuantity <= p.minimumStock * 0.5) {
+      } else if (qty <= threshold * 0.5) {
         criticalStock++;
-      } else if (p.stockQuantity <= p.minimumStock) {
+      } else if (qty <= threshold) {
         lowStock++;
       }
     });
@@ -494,7 +522,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
       criticalStockCount: criticalStock,
       outOfStockCount: outOfStock
     };
-  }, [products]);
+  }, [products, branchStock, selectedViewBranchId]);
 
   // Movemet logs filtering logic
   const filteredMovements = movements.filter(m => {
@@ -1101,16 +1129,18 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
             <span>Logistics Ledger & Heatmap</span>
           </button>
 
+
+
           <button
-            onClick={() => changeActiveSubTab('import')}
+            onClick={() => changeActiveSubTab('branch-prices')}
             className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
-              activeSubTab === 'import'
+              activeSubTab === 'branch-prices'
                 ? 'border-m3-primary text-m3-primary font-black scale-102'
                 : 'border-transparent text-m3-on-surface-variant'
             }`}
           >
-            <Upload className="h-4 w-4 text-emerald-500 animate-pulse" />
-            <span>Old POS Migration</span>
+            <DollarSign className="h-4 w-4 text-m3-primary" />
+            <span>Branch MSRP & SRP Suggestions</span>
           </button>
 
           <div className="ml-auto flex items-center gap-2 pl-4 py-1.5">
@@ -1237,6 +1267,19 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
               {/* Advanced catalog filters and commands */}
               <div className="flex flex-wrap gap-2 w-full justify-start xl:justify-end items-center">
                 
+                {/* Branch view select / consolidated */}
+                <span className="text-[10px] uppercase font-black tracking-widest text-m3-on-surface-variant/70 pl-2">View scope:</span>
+                <select
+                  value={selectedViewBranchId}
+                  onChange={e => setSelectedViewBranchId(e.target.value)}
+                  className="p-2 border-b-2 border-emerald-500 bg-m3-surface-lowest text-xs text-m3-on-surface focus:outline-none rounded-t-md cursor-pointer transition-colors font-extrabold text-emerald-500"
+                >
+                  <option value="consolidated">HQ Consolidated (HQ Master)</option>
+                  {branches.filter(b => !b.isDeleted).map((b) => (
+                    <option key={b.id} value={b.id}>{b.name.replace('Emman Tile Center ', 'Branch: ')}</option>
+                  ))}
+                </select>
+
                 {/* Category select */}
                 <select
                   value={categoryFilter}
@@ -1262,38 +1305,14 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   <option value="Out of Stock">● Out of Stock</option>
                 </select>
 
-                <button
-                  onClick={handleExportJSON}
-                  className="p-2 px-3.5 text-m3-primary hover:bg-m3-outline-variant/25 text-xs font-bold flex items-center gap-1.5 cursor-pointer rounded-full transition-colors border border-m3-outline-variant/10"
-                  title="Export catalog data as standardized JSON"
-                >
-                  <Download className="h-4 w-4" /> JSON Export
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newValue = !isCompactColumns;
-                    setIsCompactColumnsLocal(newValue);
-                    localStorage.setItem('tilepoint_inventory_compact_columns', JSON.stringify(newValue));
-                  }}
-                  className={`p-2 px-3.5 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer rounded-full transition-all border ${
-                    !isCompactColumns
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500 font-extrabold'
-                      : 'bg-amber-500/10 border-amber-500/30 text-amber-500 font-extrabold'
-                  }`}
-                  title={!isCompactColumns ? "Currently in Comfortable Mode. Click to switch to Compact Fit." : "Currently in Compact Fit. Click to switch to Comfortable Mode."}
-                >
-                  <Sliders className="h-3.5 w-3.5" /> {!isCompactColumns ? "Comfortable Mode" : "Compact Fit"}
-                </button>
-
                 {allowedToModify && (
                   <>
                     <button
-                      onClick={handleOpenImport}
-                      className="p-2 px-3.5 text-m3-primary hover:bg-m3-outline-variant/25 text-xs font-bold flex items-center gap-1.5 cursor-pointer rounded-full transition-colors border border-m3-outline-variant/10"
+                      onClick={() => setShowPortabilityHubModal(true)}
+                      className="p-2 px-3.5 text-m3-primary hover:bg-m3-outline-variant/25 text-xs font-black flex items-center gap-1.5 cursor-pointer rounded-full transition-colors border border-m3-outline-variant/15 hover:border-m3-primary/30"
+                      title="Open JSON Import/Export Portability Modal Hub"
                     >
-                      <Upload className="h-4 w-4" /> JSON Import
+                      <Upload className="h-4 w-4 text-emerald-500 animate-pulse" /> Data Portability Hub
                     </button>
 
                     <button
@@ -1320,7 +1339,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   <th className="py-3 px-4">Product Details</th>
                   {!isCompactColumns && <th className="py-3 px-4">Category / Brand</th>}
                   {!isCompactColumns && <th className="py-3 px-4 text-center">Packaging dimensions</th>}
-                  {!isCompactColumns && <th className="py-3 px-4 text-right">Unit cost</th>}
+                  {!isCompactColumns && canSeeFinancialCostsAndSources && <th className="py-3 px-4 text-right">Unit cost</th>}
                   <th className="py-3 px-4 text-right">Sale Price</th>
                   <th className="py-3 px-4 text-center">Current Stock</th>
                   {!isCompactColumns && <th className="py-3 px-2 text-center">Threshold</th>}
@@ -1330,17 +1349,25 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
               </thead>
               <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
                 {paginatedProducts.map((p) => {
-                  // Determine status indicators
+                  // Determine status indicators based on selected branch scope or consolidated HQ view
+                  const qty = selectedViewBranchId === 'consolidated'
+                    ? p.stockQuantity
+                    : (branchStock.find(bs => bs.productId === p.id && bs.branchId === selectedViewBranchId)?.quantity ?? 0);
+
+                  const threshold = selectedViewBranchId === 'consolidated'
+                    ? p.minimumStock
+                    : (branchStock.find(bs => bs.productId === p.id && bs.branchId === selectedViewBranchId)?.lowStockThresholdOverride ?? p.minimumStock);
+
                   let statusLabel = 'In Stock';
                   let statusClass = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/25';
 
-                  if (p.stockQuantity === 0) {
+                  if (qty === 0) {
                     statusLabel = 'Out of Stock';
                     statusClass = 'bg-m3-outline-variant/15 text-m3-on-surface-variant/75 border-transparent';
-                  } else if (p.stockQuantity <= p.minimumStock * 0.5) {
+                  } else if (qty <= threshold * 0.5) {
                     statusLabel = 'Critical';
                     statusClass = 'bg-rose-500/10 text-rose-500 border-rose-500/25 font-black animate-pulse';
-                  } else if (p.stockQuantity <= p.minimumStock) {
+                  } else if (qty <= threshold) {
                     statusLabel = 'Low Stock';
                     statusClass = 'bg-amber-500/10 text-amber-500 border-amber-500/25';
                   }
@@ -1419,7 +1446,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                                 Coverage: {p.coveragePerBox} m²
                               </span>
                             ) : null}
-                            {p.origin && (
+                            {p.origin && canSeeFinancialCostsAndSources && (
                               <span className="text-[10px] text-amber-600 dark:text-amber-400 font-black bg-amber-500/5 px-1.5 py-0.5 rounded border border-amber-500/10 font-sans" title={`Origin/Source: ${p.origin}`}>
                                 Source: {p.origin}
                               </span>
@@ -1450,7 +1477,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                         )}
 
                         {/* Financial unit cost */}
-                        {!isCompactColumns && (
+                        {!isCompactColumns && canSeeFinancialCostsAndSources && (
                           <td className="py-3.5 px-4 text-right font-mono font-bold text-m3-on-surface">
                             ₱{p.costPrice.toFixed(2)}
                           </td>
@@ -1464,20 +1491,20 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                         {/* Current physical warehouse qty */}
                         <td className="py-3.5 px-4 text-center font-mono text-sm font-extrabold">
                           <div className={
-                            p.stockQuantity === 0 
+                            qty === 0 
                               ? 'text-zinc-400 dark:text-zinc-600' 
-                              : p.stockQuantity <= p.minimumStock 
+                              : qty <= threshold 
                                 ? 'text-m3-primary tracking-wide' 
                                 : 'text-m3-on-surface'
                           }>
-                            {p.stockQuantity}
+                            {qty}
                           </div>
                         </td>
 
                         {/* Threshold warnings trigger limit */}
                         {!isCompactColumns && (
                           <td className="py-3.5 px-2 text-center font-mono text-m3-on-surface-variant font-bold">
-                            {p.minimumStock}
+                            {threshold}
                           </td>
                         )}
 
@@ -1591,15 +1618,17 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                                     <span className="text-amber-500 font-mono">{p.minimumStock} {p.unit}</span>
                                   </div>
                                   <div className="border-t border-m3-outline-variant/10 pt-2 col-span-2 grid grid-cols-2 gap-2">
-                                    <div>
-                                      <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Unit Cost</span>
-                                      <span className="text-zinc-500 font-mono text-xs">₱{p.costPrice.toFixed(2)}</span>
-                                    </div>
+                                    {canSeeFinancialCostsAndSources && (
+                                      <div>
+                                        <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Unit Cost</span>
+                                        <span className="text-zinc-500 font-mono text-xs">₱{p.costPrice.toFixed(2)}</span>
+                                      </div>
+                                    )}
                                     <div>
                                       <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Selling Retail</span>
                                       <span className="text-m3-primary font-mono text-xs font-extrabold">₱{p.sellingPrice.toFixed(2)}</span>
                                     </div>
-                                    {p.origin && (
+                                    {p.origin && canSeeFinancialCostsAndSources && (
                                       <div className="col-span-2 pt-2 border-t border-m3-outline-variant/10">
                                         <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Acquired From / Origin</span>
                                         <span className="text-amber-500 dark:text-amber-400 font-bold text-[11px] block">{p.origin}</span>
@@ -1614,20 +1643,43 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                                 <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest block">Live Multi-Branch Stock balance</span>
                                 <div className="space-y-2">
                                   {branches.filter(b => !b.isDeleted).map((b) => {
-                                    const qty = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id)?.quantity || 0;
+                                    const branchRecord = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id);
+                                    const qty = branchRecord?.quantity || 0;
+                                    const overrideLimit = branchRecord?.lowStockThresholdOverride !== undefined
+                                      ? branchRecord.lowStockThresholdOverride
+                                      : p.minimumStock;
+
                                     let statusBg = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/10';
                                     if (qty === 0) statusBg = 'bg-rose-500/10 text-rose-500 border-rose-500/10';
-                                    else if (qty <= p.minimumStock / 4) statusBg = 'bg-amber-500/10 text-amber-500 border-amber-500/10';
+                                    else if (qty <= overrideLimit) statusBg = 'bg-amber-500/10 text-amber-500 border-amber-500/10';
 
                                     return (
-                                      <div key={b.id} className="flex justify-between items-center text-xs p-2.5 rounded-xl bg-m3-surface border border-m3-outline-variant/10 shadow-3xs">
+                                      <div key={b.id} className="flex flex-col md:flex-row justify-between md:items-center gap-2 text-xs p-3 rounded-xl bg-m3-surface border border-m3-outline-variant/10 shadow-3xs">
                                         <div className="flex flex-col">
                                           <span className="font-extrabold text-[10px] text-m3-on-surface uppercase tracking-tight">{b.name.replace('Emman Tile Center ', '')}</span>
-                                          <span className="text-[8px] text-zinc-400 font-mono uppercase">{b.id} - Location ID</span>
+                                          <span className="text-[8px] text-zinc-400 font-mono uppercase">Current Balance: <strong className="text-m3-on-surface">{qty} {p.unit || 'Boxes'}</strong></span>
                                         </div>
-                                        <span className={`font-mono font-black text-xs px-2.5 py-1 rounded-lg border ${statusBg}`}>
-                                          {qty} {p.unit || 'Boxes'}
-                                        </span>
+
+                                        <div className="flex items-center gap-2">
+                                          {/* Alert limit settings for each branch */}
+                                          <div className="flex items-center gap-1 bg-m3-surface-low px-2 py-1 rounded-lg border border-m3-outline-variant/20">
+                                            <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider">Alert Threshold:</span>
+                                            <input
+                                              type="number"
+                                              className="w-12 bg-m3-surface-lowest text-xs font-mono font-bold text-center border-b border-m3-outline-variant text-m3-on-surface py-0.5"
+                                              value={overrideLimit}
+                                              onChange={(e) => {
+                                                const val = parseInt(e.target.value);
+                                                updateBranchLowStockThreshold(p.id, b.id, isNaN(val) ? p.minimumStock : val);
+                                              }}
+                                              min={0}
+                                            />
+                                          </div>
+
+                                          <span className={`font-mono font-black text-xs px-2.5 py-1 rounded-lg border ${statusBg}`}>
+                                            {qty} {p.unit || 'Boxes'}
+                                          </span>
+                                        </div>
                                       </div>
                                     );
                                   })}
@@ -2534,7 +2586,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
       )}
 
       {/* VIEW 5: LEGACY POS DATA MIGRATION ENGINE */}
-      {activeSubTab === 'import' && (
+      {activeSubTab === 'import' && false && (
         <div className="space-y-6 animate-fade-in text-left">
           <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] p-6 shadow-sm space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-m3-outline-variant/15 pb-4">
@@ -2662,6 +2714,177 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                 If any fields such as <code>barcode</code>, <code>size</code> or <code>sku</code> are missing, the importer generates clean defaults dynamically to maintain full database integrity.
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW 6: BRANCH MSRP & SRP OVERRIDES Tab */}
+      {activeSubTab === 'branch-prices' && (
+        <div className="space-y-6 animate-fade-in text-left">
+          <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] p-6 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-m3-outline-variant/15 pb-4">
+              <div>
+                <h3 className="text-base font-black text-m3-primary uppercase tracking-wider flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-emerald-500" />
+                  <span>Branch MSRP &amp; Localized SRP Suggestions</span>
+                </h3>
+                <p className="text-xs text-m3-on-surface-variant font-medium mt-1">
+                  Adjust product retail prices dynamically. Transport, freight, and logistics added cost vary by branch. Set overrides here to customize POS selling prices.
+                </p>
+              </div>
+            </div>
+
+            {/* Selection profile & transport cost explanation block */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-m3-surface p-4 rounded-2xl border border-m3-outline-variant/15 space-y-2">
+                <span className="text-[10px] font-black text-m3-primary uppercase tracking-widest block font-sans">Role Assignment Profile</span>
+                <div className="text-xs space-y-1.5 font-medium">
+                  <div><strong>Your Account:</strong> {currentUser?.fullName}</div>
+                  <div><strong>Role:</strong> <span className="bg-m3-primary/10 text-m3-primary px-1.5 py-0.5 rounded font-black uppercase text-[9px]">{currentUser?.role}</span></div>
+                  <div><strong>Branch:</strong> {branches.find(b => b.id === currentUser?.branchAssignmentId)?.name || 'Central Head Office'}</div>
+                </div>
+              </div>
+
+              <div className="bg-m3-surface p-4 rounded-2xl border border-m3-outline-variant/15 space-y-2 col-span-2">
+                <span className="text-[10px] font-black text-m3-primary uppercase tracking-widest block font-sans">Logistical Surcharge Guide</span>
+                <p className="text-xs text-m3-on-surface-variant font-medium leading-relaxed font-sans">
+                  Admins have universal permissions to set Suggested Retail Price (SRP) overrides for any branch. Managers possess authority to make localized price adjustments specifically for their assigned branch to offset dynamic port fees, terminal logistics, and localized trucking tariffs.
+                </p>
+              </div>
+            </div>
+
+            {/* Filter controls */}
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-m3-surface/40 p-4 rounded-2xl border border-m3-outline-variant/10">
+              <div className="w-full md:w-1/3 space-y-1">
+                <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 block font-sans">Quick Find Product</label>
+                <input
+                  type="text"
+                  placeholder="Filter by name, code or sku..."
+                  value={branchPriceSearch}
+                  onChange={(e) => setBranchPriceSearch(e.target.value)}
+                  className="w-full bg-m3-surface px-4 py-2 text-xs border border-m3-outline-variant/20 rounded-xl focus:outline-none focus:border-m3-primary font-bold"
+                />
+              </div>
+
+              <div className="w-full md:w-1/3 space-y-1">
+                <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 block font-sans">Active Branch Zone</label>
+                {currentUser?.role === UserRole.ADMIN ? (
+                  <select
+                    value={selectedPoolBranchId}
+                    onChange={(e) => setSelectedPoolBranchId(e.target.value)}
+                    className="w-full bg-m3-surface px-3 py-2 text-xs border border-m3-outline-variant/25 rounded-xl focus:outline-none focus:border-m3-primary font-bold"
+                  >
+                    {branches.map(b => (
+                      <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="w-full bg-m3-surface/60 px-3 py-2 text-xs border border-m3-outline-variant/15 rounded-xl font-bold font-mono text-zinc-400">
+                    {branches.find(b => b.id === currentUser?.branchAssignmentId)?.name || 'N/A'} (Self-Lock)
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Table of products */}
+            <div className="overflow-x-auto rounded-3xl border border-m3-outline-variant/15 bg-m3-surface">
+              <table className="w-full min-w-[700px] text-xs text-left">
+                <thead className="bg-m3-surface-low text-m3-on-surface-variant font-black uppercase text-[10px] tracking-wider border-b border-m3-outline-variant/20">
+                  <tr>
+                    <th className="py-4 px-4 font-sans">Product Name / Unit</th>
+                    <th className="py-4 px-4 font-sans">Core SKU</th>
+                    <th className="py-4 px-4 text-right font-sans">Default SRP Price</th>
+                    <th className="py-4 px-4 text-center font-sans">Branch SRP Overrides</th>
+                    <th className="py-4 px-4 text-center font-sans">Action Adjustments</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-m3-outline-variant/10">
+                  {products
+                    .filter(p => !p.isDeleted && (
+                      p.productName.toLowerCase().includes(branchPriceSearch.toLowerCase()) ||
+                      p.productCode.toLowerCase().includes(branchPriceSearch.toLowerCase()) ||
+                      p.sku.toLowerCase().includes(branchPriceSearch.toLowerCase())
+                    ))
+                    .map(p => {
+                      const activeBranchId = currentUser?.role === UserRole.ADMIN ? selectedPoolBranchId : currentUser?.branchAssignmentId;
+                      const branchStockRec = branchStock.find(bs => bs.productId === p.id && bs.branchId === activeBranchId);
+                      const currentOverride = branchStockRec?.sellingPriceOverride || 0;
+
+                      // Local input state key
+                      const stateKey = `${p.id}-${activeBranchId}`;
+
+                      return (
+                        <tr key={p.id} className="hover:bg-m3-outline-variant/5 transition-colors font-medium">
+                          <td className="py-3.5 px-4 font-sans">
+                            <div className="font-extrabold text-m3-on-surface">{p.productName}</div>
+                            <span className="text-[10px] text-zinc-400 uppercase font-mono font-bold">{p.unit}</span>
+                          </td>
+                          <td className="py-3.5 px-4 font-mono font-bold text-m3-primary">{p.sku}</td>
+                          <td className="py-3.5 px-4 font-mono font-black text-right text-m3-on-surface">₱{p.sellingPrice.toFixed(2)}</td>
+                          <td className="py-3.5 px-4 text-center">
+                            {currentOverride > 0 ? (
+                              <span className="bg-emerald-500/15 text-emerald-500 font-extrabold px-2 py-0.5 rounded-full font-mono text-[10px]">
+                                ₱{currentOverride.toFixed(2)}
+                              </span>
+                            ) : (
+                              <span className="text-zinc-500 italic font-mono font-bold text-[10px]">
+                                Use Default SRP (₱{p.sellingPrice.toFixed(2)})
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center justify-center gap-2">
+                              <input
+                                id={`input-price-${stateKey}`}
+                                type="number"
+                                placeholder={p.sellingPrice.toString()}
+                                defaultValue={currentOverride > 0 ? currentOverride : ''}
+                                className="w-24 bg-m3-surface-low border border-m3-outline-variant/30 hover:border-m3-primary focus:border-m3-primary text-center px-2 py-1 text-xs rounded-lg font-bold font-mono focus:outline-none focus:ring-1 focus:ring-m3-primary text-m3-on-surface"
+                              />
+                              <button
+                                onClick={() => {
+                                  if (!activeBranchId) {
+                                    showToast("Error: No branch selected or assigned!");
+                                    return;
+                                  }
+                                  const inputEl = document.getElementById(`input-price-${stateKey}`) as HTMLInputElement;
+                                  if (!inputEl) return;
+                                  const priceVal = parseFloat(inputEl.value);
+                                  if (isNaN(priceVal) || priceVal < 0) {
+                                    showToast("Error: Please provide a valid positive price override value.");
+                                    return;
+                                  }
+                                  updateBranchPriceOverride(p.id, activeBranchId, priceVal);
+                                  showToast(`Committed SRP override of ₱${priceVal.toFixed(2)} for ${p.productName} in branch!`);
+                                }}
+                                className="px-3 py-1 bg-m3-primary text-white text-[10px] font-black uppercase tracking-wider rounded-lg hover:shadow-xs transition-colors cursor-pointer"
+                              >
+                                Commit
+                              </button>
+                              {currentOverride > 0 && (
+                                <button
+                                  onClick={() => {
+                                    if (!activeBranchId) return;
+                                    updateBranchPriceOverride(p.id, activeBranchId, 0);
+                                    const inputEl = document.getElementById(`input-price-${stateKey}`) as HTMLInputElement;
+                                    if (inputEl) inputEl.value = '';
+                                    showToast(`Reset SRP suggestion for ${p.productName} back to basic catalog price.`);
+                                  }}
+                                  className="text-zinc-400 hover:text-rose-500 p-1 rounded-full hover:bg-rose-500/10 transition-colors"
+                                  title="Revert override"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+
           </div>
         </div>
       )}
@@ -3465,45 +3688,130 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
         </div>
       )}
 
-      {/* MODAL 4: Bulk JSON import form */}
-      {showImportModal && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm shadow-xl" onClick={() => setShowImportModal(false)} />
-          <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[32px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4">
-            <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-2.5">
-              <h3 className="text-sm font-black text-m3-primary uppercase tracking-wider flex items-center gap-2">
-                <Upload className="h-5 w-5" /> Batch JSON Import Catalog
-              </h3>
-              <button type="button" onClick={() => setShowImportModal(false)} className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full">
-                <X className="h-5 w-5" />
+      {/* MODAL 4: Bulk JSON Data Portability Hub and Import/Migration Modal */}
+      {showPortabilityHubModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-m3-scrim/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[28px] p-6 shadow-2xl space-y-6 w-full max-w-2xl animate-scale-up text-left max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-4">
+              <div>
+                <h3 className="text-base font-black text-m3-primary uppercase tracking-wider flex items-center gap-2">
+                  <Upload className="h-5 w-5 text-emerald-500 animate-pulse" />
+                  <span>Administrative Data Portability Hub</span>
+                </h3>
+                <p className="text-xs text-m3-on-surface-variant font-medium mt-1">
+                  Export standard inventory catalog data or import tiles and old legacy POS rosters.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPortabilityHubModal(false)}
+                className="text-zinc-500 hover:text-rose-500 p-2 hover:bg-rose-500/10 rounded-full transition-all text-xl cursor-pointer font-black"
+              >
+                ✕
               </button>
             </div>
 
-            <div className="space-y-1">
-              <span className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 block select-none">Paste Standard JSON Array representation</span>
-              <textarea
-                rows={6}
-                value={rawImportText}
-                onChange={e => setRawImportText(e.target.value)}
-                placeholder='[{"productCode": "TL-CER-XX", "productName": "..."}]'
-                className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono"
-              />
-            </div>
+            <div className="space-y-4">
+              {/* Informative Step banner */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
+                  <span className="text-[10px] font-black text-emerald-500 uppercase tracking-wider block">Standardized Export</span>
+                  <p className="text-xs text-m3-on-surface-variant font-medium">
+                    Save the current live catalog stock listings as a standard corporate JSON database backup copy.
+                  </p>
+                  <button
+                    onClick={() => {
+                      handleExportJSON();
+                      showToast("Standardized catalog export processed!");
+                    }}
+                    className="w-full py-2 bg-m3-primary hover:bg-m3-primary/95 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Download className="h-4 w-4" /> Download catalog.json
+                  </button>
+                </div>
 
-            <div className="flex justify-end gap-2 border-t border-m3-outline-variant/15 pt-4">
-              <button
-                type="button"
-                onClick={() => setShowImportModal(false)}
-                className="px-4 py-2.5 text-xs font-black uppercase tracking-wider rounded-full hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={executeBulkImport}
-                className="m3-btn-primary px-5 py-2.5 text-xs shadow-md border animate-scale-up"
-              >
-                Import Roster
-              </button>
+                <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
+                  <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider block">Dry-Run Test Roster</span>
+                  <p className="text-xs text-m3-on-surface-variant font-medium">
+                    Populate the migration pasting zone with demo offline tile records to test structural syntax.
+                  </p>
+                  <button
+                    onClick={() => {
+                      const sample = [
+                        {
+                          "productName": "Heritage White Glazed Porcelain",
+                          "productCode": "HW-GL-80",
+                          "skuCode": "SKU-HW-80",
+                          "barcode": "4801122334455",
+                          "category": "Porcelain Tiles",
+                          "brand": "Heritage Slabs",
+                          "costPrice": 420,
+                          "sellingPrice": 650,
+                          "size": "80x80 cm",
+                          "stockQuantity": 150
+                        },
+                        {
+                          "productName": "EcoSlate Anti-Slip Terracotta",
+                          "productCode": "ES-AS-30",
+                          "skuCode": "SKU-ES-30",
+                          "barcode": "4805566778899",
+                          "category": "Ceramic Tiles",
+                          "brand": "EcoStone",
+                          "costPrice": 180,
+                          "sellingPrice": 280,
+                          "size": "30x30 cm",
+                          "stockQuantity": 320
+                        }
+                      ];
+                      setRawImportText(JSON.stringify(sample, null, 2));
+                      showToast("Loaded trial POS dataset to workspace!");
+                    }}
+                    className="w-full py-2 bg-m3-surface-low hover:bg-m3-outline-variant/15 text-m3-primary font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 border border-m3-outline-variant/10"
+                  >
+                    ⚡ Load TRIAL POS Roster
+                  </button>
+                </div>
+              </div>
+
+              {/* Paste Space */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider block">Paste JSON import array data block</label>
+                <textarea
+                  value={rawImportText}
+                  onChange={(e) => setRawImportText(e.target.value)}
+                  rows={8}
+                  placeholder={`[
+  {
+    "productName": "Old POS Ceramic Tile x5",
+    "productCode": "OP-CER-01",
+    "costPrice": 120,
+    "sellingPrice": 190,
+    "stockQuantity": 80
+  }
+]`}
+                  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 focus:border-m3-primary p-3.5 text-xs font-mono text-m3-on-surface rounded-2xl focus:outline-none transition-colors"
+                />
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex justify-end gap-2 border-t border-m3-outline-variant/15 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowPortabilityHubModal(false)}
+                  className="px-4 py-2.5 text-xs font-black uppercase tracking-wider rounded-full hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    executeBulkImport();
+                    setShowPortabilityHubModal(false);
+                  }}
+                  className="px-6 py-2.5 bg-m3-primary hover:bg-m3-primary/95 text-white font-black text-xs uppercase tracking-wider rounded-full shadow transition-all active:scale-95 cursor-pointer flex items-center gap-2"
+                >
+                  <Check className="h-4 w-4" />
+                  <span>Verify & Commit Import</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

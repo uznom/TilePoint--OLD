@@ -248,6 +248,8 @@ export interface InventoryLocationStock {
   branchId: string;
   productId: string;
   quantity: number;
+  sellingPriceOverride?: number;
+  lowStockThresholdOverride?: number;
 }
 
 export interface LedgerEntry {
@@ -311,6 +313,26 @@ export interface Delivery {
   branchId: string;
   branchName: string;
 }
+
+export type DamageCategory = 'BOA' | 'Warehouse Breakage' | 'Showroom Casualty' | 'Delivery Transit';
+export type DamageActionTaken = 'Disposed / Scrapped' | 'Saved for Mosaic' | 'Claimed from Supplier / Insurance Code' | 'Returned for Credit';
+
+export interface DamageLog {
+  id: string;
+  productId: string;
+  productName: string;
+  productSku: string;
+  branchId: string;
+  branchName: string;
+  quantity: number;
+  unitType: 'Box' | 'Piece';
+  category: DamageCategory;
+  actionTaken: DamageActionTaken;
+  reportedBy: string;
+  notes: string;
+  reportedAt: string;
+}
+
 
 
 
