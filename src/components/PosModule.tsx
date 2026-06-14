@@ -37,9 +37,10 @@ interface PosModuleProps {
   darkMode: boolean;
   onNavigate: (tab: string) => void;
   viewMode?: 'checkout' | 'ledger';
+  showImmersiveControls?: boolean;
 }
 
-export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, viewMode }) => {
+export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, viewMode, showImmersiveControls = true }) => {
   const {
     products,
     activeShift,
@@ -867,7 +868,9 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
       </div>
 
       {activeSubModule === 'checkout' ? (
-        <div className="space-y-4 lg:space-y-0 lg:h-[calc(100vh-140px)] lg:flex lg:flex-col lg:justify-between gap-4">
+        <div className={`space-y-4 lg:space-y-0 lg:flex lg:flex-col lg:justify-between gap-4 w-full ${
+          showImmersiveControls ? 'lg:h-[calc(100vh-140px)]' : 'lg:h-[calc(100vh-76px)]'
+        }`}>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 animate-fade-in text-m3-on-surface items-stretch lg:flex-1 lg:overflow-hidden lg:min-h-0">
             
             {/* LEFT COLUMN: YARD STAFF TRANSACTIONS HOLD QUEUE */}

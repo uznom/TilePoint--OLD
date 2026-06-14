@@ -167,13 +167,10 @@ function AppContent() {
   });
   const [isSubMenuCollapsed, setIsSubMenuCollapsed] = useState(false);
 
-  // Auto-minimize the sale sub-navigation and sidebar when tab is POS Mode
+  // Auto-minimize the sidebar when tab is POS Mode
   useEffect(() => {
     if (activeTab === 'pos') {
-      setIsSubMenuCollapsed(true);
       setIsSidebarMinimized(true);
-    } else {
-      setIsSubMenuCollapsed(false);
     }
   }, [activeTab]);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -782,10 +779,10 @@ function AppContent() {
       )}
 
       {/* HEADER SECTION with custom horizontal glowing accent bar & ambient overlay tint */}
-      <header className={`py-4 px-6 border-b border-m3-outline-variant/15 flex justify-between items-center z-[60] android-glass-header shadow-sm bg-m3-surface/75 dark:bg-m3-surface-low/80 backdrop-blur-md transition-all duration-300 relative overflow-visible ${
+      <header className={`py-4 px-6 border-b border-m3-outline-variant/15 flex justify-between items-center z-[60] android-glass-header shadow-sm bg-m3-surface/75 dark:bg-m3-surface-low/80 backdrop-blur-md transition-all duration-300 overflow-visible ${
         activeTab === 'pos' 
-          ? `fixed top-0 left-0 right-0 z-[60] transform ${showImmersiveControls ? 'translate-y-0 opacity-100 shadow-xl' : '-translate-y-full opacity-0 pointer-events-none'}` 
-          : 'sticky top-0 translate-y-0 opacity-100'
+          ? `fixed top-0 left-0 right-0 transform ${showImmersiveControls ? 'translate-y-0 opacity-100 shadow-xl' : '-translate-y-full opacity-0 pointer-events-none'}` 
+          : 'sticky top-0 translate-y-0 opacity-100 relative'
       }`}>
         {/* Subtle header brand overlay reflecting user custom color choice */}
         <div className="absolute inset-0 bg-gradient-to-b from-m3-primary/[0.03] to-transparent pointer-events-none z-[-1]" />
@@ -1167,7 +1164,7 @@ function AppContent() {
               return masterItem ? masterItem.roles.includes(currentUser.role) : false;
             });
 
-            if (authorizedSubItems.length <= 1 || activeTab === 'pos') return null;
+            if (authorizedSubItems.length <= 1 || (activeTab === 'pos' && !showImmersiveControls)) return null;
 
             return (
               <div className="mb-4 bg-m3-surface-low border border-m3-outline-variant/15 rounded-2xl p-2.5 flex flex-col shrink-0">
@@ -1242,8 +1239,8 @@ function AppContent() {
                 {activeTab === 'tutorials' && <TutorialOnboarding />}
                 {activeTab === 'dashboard' && <Dashboard darkMode={darkMode} onNavigate={changeTab} />}
                 {activeTab === 'architecture' && <ArchitectureModule />}
-                {activeTab === 'pos' && <PosModule darkMode={darkMode} onNavigate={changeTab} viewMode="checkout" />}
-                {activeTab === 'ledger' && <PosModule darkMode={darkMode} onNavigate={changeTab} viewMode="ledger" />}
+                {activeTab === 'pos' && <PosModule darkMode={darkMode} onNavigate={changeTab} viewMode="checkout" showImmersiveControls={showImmersiveControls} />}
+                {activeTab === 'ledger' && <PosModule darkMode={darkMode} onNavigate={changeTab} viewMode="ledger" showImmersiveControls={showImmersiveControls} />}
                 {activeTab === 'inventory' && <InventoryModule darkMode={darkMode} isCompactGlobal={isCompactColumns} />}
                 {activeTab === 'procurement' && <ProcurementModule darkMode={darkMode} />}
                 {activeTab === 'transmittal' && <TransmittalModule darkMode={darkMode} />}
