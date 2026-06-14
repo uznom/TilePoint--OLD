@@ -1347,7 +1347,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
                             <tr key={item.id} className="hover:bg-zinc-50/50 text-zinc-800">
                               <td className="py-2.5 px-3 font-mono font-bold text-zinc-900 text-[10px]">{product?.sku || item.productId}</td>
                               <td className="py-2.5 px-3">
-                                <span className="font-bold text-zinc-900">{product?.name || 'Unknown Tile Material'}</span>
+                                <span className="font-bold text-zinc-900">{product?.productName || 'Unknown Tile Material'}</span>
                                 {product?.category && <span className="text-[9px] text-zinc-400 block font-mono">{product.category}</span>}
                               </td>
                               <td className="py-2.5 px-3 text-center font-mono font-bold">{item.quantityRequested} pcs</td>

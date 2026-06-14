@@ -1008,8 +1008,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                 <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
               </span>
               <div>
-                <h3 className="text-base font-black text-white uppercase tracking-wide flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-emerald-400" /> Live Daily Sales Oversight Terminal
+                <h3 className="text-base font-black text-m3-on-surface uppercase tracking-wide flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-emerald-600 dark:text-emerald-400" /> Live Daily Sales Oversight Terminal
                 </h3>
                 <p className="text-[11px] text-m3-on-surface-variant font-mono mt-0.5">
                   Real-time transaction tracking, cashier clearing queues, and multi-browser printed ledgers
@@ -1062,7 +1062,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                     showToastMsg('Simulation dispatch failed', 'error');
                   }
                 }}
-                className="px-3.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-400 rounded-xl text-xs font-black uppercase tracking-wider border border-emerald-500/20 active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                className="px-3.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded-xl text-xs font-black uppercase tracking-wider border border-emerald-500/30 active:scale-95 transition-all flex items-center gap-1 cursor-pointer shadow-sm"
                 title="Generates a mock transaction of today instantly to test the real-time pipeline"
               >
                 Simulate checkout
@@ -1078,9 +1078,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                     .reduce((sum, item) => sum + item.quantity, 0);
 
                   const cashToday = todaySalesItems.filter(s => s.paymentMethod === 'Cash').reduce((acc, s) => acc + s.grandTotal, 0);
-                  const cardToday = todaySalesItems.filter(s => s.paymentMethod === 'Card').reduce((acc, s) => acc + s.grandTotal, 0);
+                  const cardToday = todaySalesItems.filter(s => s.paymentMethod === 'Credit Card').reduce((acc, s) => acc + s.grandTotal, 0);
                   const bankToday = todaySalesItems.filter(s => s.paymentMethod === 'Bank Transfer').reduce((acc, s) => acc + s.grandTotal, 0);
-                  const gcashToday = todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Mobile Wallet' || s.paymentMethod === 'Wallet').reduce((acc, s) => acc + s.grandTotal, 0);
+                  const gcashToday = todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Maya').reduce((acc, s) => acc + s.grandTotal, 0);
 
                   const printContent = `
                     <html>
@@ -1223,13 +1223,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                             <tr>
                               <td>Card</td>
                               <td><strong>₱${cardToday.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
-                              <td>${todaySalesItems.filter(s => s.paymentMethod === 'Card').length}</td>
+                              <td>${todaySalesItems.filter(s => s.paymentMethod === 'Credit Card').length}</td>
                               <td>Settle Pending</td>
                             </tr>
                             <tr>
                               <td>GCash / Mobile Wallet</td>
                               <td><strong>₱${gcashToday.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
-                              <td>${todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Mobile Wallet').length}</td>
+                              <td>${todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Maya').length}</td>
                               <td>Settled Live</td>
                             </tr>
                             <tr>
@@ -1327,15 +1327,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                   }
                   showToastMsg("Daily Sales Ledger dispatched to print queue!", "success");
                 }}
-                className="px-3.5 py-1.5 bg-m3-surface-lowest hover:bg-m3-outline-variant/15 text-white rounded-xl text-xs font-black uppercase tracking-wider border border-m3-outline-variant/20 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+                className="m3-btn-primary px-4 py-2 text-xs font-black uppercase tracking-wider active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
               >
-                <Printer className="h-4 w-4 text-m3-primary" /> Print Daily Summary Report
+                <Printer className="h-4 w-4" /> Print Daily Summary Report
               </button>
 
               <button
                 type="button"
                 onClick={() => setShowDailySalesMonitor(!showDailySalesMonitor)}
-                className="p-1 px-3 text-[11px] font-bold text-zinc-400 hover:text-white transition-colors"
+                className="p-1 px-3 text-[11px] font-bold text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-hover-overlay rounded-lg transition-all"
               >
                 {showDailySalesMonitor ? 'Collapse' : 'Expand'}
               </button>
@@ -1346,23 +1346,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
             <div className="pt-5 space-y-6 animate-fade-in select-none">
               {/* Quick stats mini ribbon */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                <div className="bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/10">
-                  <span className="block text-[8px] font-extrabold text-zinc-500 uppercase tracking-widest">Live Today's Revenue</span>
-                  <div className="text-xl font-black mt-1 text-emerald-400 tracking-tight">
+                <div className="bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/10 shadow-sm">
+                  <span className="block text-[8px] font-extrabold text-m3-on-surface-variant/80 uppercase tracking-widest">Live Today's Revenue</span>
+                  <div className="text-xl font-black mt-1 text-emerald-600 dark:text-emerald-400 tracking-tight">
                     ₱{computedTodaySales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                 </div>
 
-                <div className="bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/10">
-                  <span className="block text-[8px] font-extrabold text-zinc-500 uppercase tracking-widest">Active Invoice Volume</span>
+                <div className="bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/10 shadow-sm">
+                  <span className="block text-[8px] font-extrabold text-m3-on-surface-variant/80 uppercase tracking-widest">Active Invoice Volume</span>
                   <div className="text-xl font-black mt-1 text-m3-primary tracking-tight">
                     {todaySalesItems.length} checked out
                   </div>
                 </div>
 
-                <div className="bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/10">
-                  <span className="block text-[8px] font-extrabold text-zinc-500 uppercase tracking-widest">Boxes Sold Today</span>
-                  <div className="text-xl font-black mt-1 text-white tracking-tight">
+                <div className="bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/10 shadow-sm">
+                  <span className="block text-[8px] font-extrabold text-m3-on-surface-variant/80 uppercase tracking-widest">Boxes Sold Today</span>
+                  <div className="text-xl font-black mt-1 text-m3-on-surface tracking-tight">
                     {(() => {
                       const todaySalesIds = new Set(todaySalesItems.map(s => s.id));
                       return saleItems.filter(si => todaySalesIds.has(si.saleId) && !si.isDeleted).reduce((sum, item) => sum + item.quantity, 0);
@@ -1382,8 +1382,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                   <div className="bg-m3-surface-lowest p-4.5 rounded-2xl border border-m3-outline-variant/10 space-y-4">
                     {[
                       { label: 'Cleared Cash drawer', val: todaySalesItems.filter(s => s.paymentMethod === 'Cash').reduce((acc, s) => acc + s.grandTotal, 0), color: 'bg-emerald-500', count: todaySalesItems.filter(s => s.paymentMethod === 'Cash').length },
-                      { label: 'Card swipes volume', val: todaySalesItems.filter(s => s.paymentMethod === 'Card').reduce((acc, s) => acc + s.grandTotal, 0), color: 'bg-indigo-500', count: todaySalesItems.filter(s => s.paymentMethod === 'Card').length },
-                      { label: 'GCash / Electronic Wallet', val: todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Mobile Wallet').reduce((acc, s) => acc + s.grandTotal, 0), color: 'bg-sky-500', count: todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Mobile Wallet').length },
+                      { label: 'Card swipes volume', val: todaySalesItems.filter(s => s.paymentMethod === 'Credit Card').reduce((acc, s) => acc + s.grandTotal, 0), color: 'bg-indigo-500', count: todaySalesItems.filter(s => s.paymentMethod === 'Credit Card').length },
+                      { label: 'GCash / Electronic Wallet', val: todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Maya').reduce((acc, s) => acc + s.grandTotal, 0), color: 'bg-sky-500', count: todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Maya').length },
                       { label: 'Local Bank Transfers', val: todaySalesItems.filter(s => s.paymentMethod === 'Bank Transfer').reduce((acc, s) => acc + s.grandTotal, 0), color: 'bg-pink-500', count: todaySalesItems.filter(s => s.paymentMethod === 'Bank Transfer').length },
                     ].map((mode, i) => {
                       const totalVol = computedTodaySales || 1;
@@ -1391,10 +1391,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                       return (
                         <div key={i} className="space-y-1.5">
                           <div className="flex justify-between items-end text-[10px]">
-                            <span className="font-semibold text-zinc-300">{mode.label} <span className="text-[9px] text-zinc-500 font-mono">({mode.count} POs)</span></span>
+                            <span className="font-bold text-m3-on-surface-variant">{mode.label} <span className="text-[9px] text-m3-on-surface-variant/70 font-mono">({mode.count} POs)</span></span>
                             <div className="text-right font-mono font-bold">
-                              <span className="text-white mr-1.5">₱{mode.val.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                              <span className="text-zinc-500">{percent}%</span>
+                              <span className="text-m3-on-surface mr-1.5">₱{mode.val.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                              <span className="text-m3-on-surface-variant/80">{percent}%</span>
                             </div>
                           </div>
                           <div className="h-1.5 bg-m3-surface-low rounded-full overflow-hidden">
@@ -1439,10 +1439,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                             <div className="h-6 w-6 rounded-full bg-m3-primary/10 flex items-center justify-center font-extrabold text-[10px] text-m3-primary">
                               {idx + 1}
                             </div>
-                            <span className="text-xs font-bold text-zinc-350">{name}</span>
+                            <span className="text-xs font-bold text-m3-on-surface">{name}</span>
                           </div>
                           <div className="text-right">
-                            <span className="text-xs font-black font-mono text-emerald-400">₱{Number(sum).toFixed(2)}</span>
+                            <span className="text-xs font-black font-mono text-emerald-600 dark:text-emerald-400">₱{Number(sum).toFixed(2)}</span>
                           </div>
                         </div>
                       ));
@@ -1455,10 +1455,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
               <div className="space-y-3 pt-2">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-m3-surface-lowest p-2 rounded-2xl border border-m3-outline-variant/10">
                   <div className="relative flex-grow">
-                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-m3-on-surface-variant/75" />
                     <input
                       type="text"
-                      className="w-full bg-transparent border-0 pl-10 pr-4 py-2 text-xs focus:ring-0 text-white placeholder-zinc-500 font-semibold"
+                      className="w-full bg-transparent border-0 pl-10 pr-4 py-2 text-xs focus:ring-0 text-m3-on-surface placeholder-m3-on-surface-variant/55 font-semibold"
                       placeholder="Search today's stream by customer, ticket #, or operator..."
                       value={dailySalesSearch}
                       onChange={(e) => setDailySalesSearch(e.target.value)}
@@ -1466,16 +1466,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                   </div>
 
                   <div className="flex items-center gap-1 px-2 shrink-0">
-                    <span className="text-[9.5px] text-zinc-400 font-bold uppercase tracking-wider mr-1.5">Payment Method:</span>
+                    <span className="text-[9.5px] text-m3-on-surface-variant font-bold uppercase tracking-wider mr-1.5">Payment Method:</span>
                     {['all', 'Cash', 'Card', 'GCash', 'Bank Transfer'].map((m) => (
                       <button
                         key={m}
                         type="button"
                         onClick={() => setActiveDailyPaymentFilter(m)}
-                        className={`px-2.5 py-1 text-[9px] rounded-lg font-black uppercase transition-all ${
+                        className={`px-2.5 py-1 text-[9px] rounded-lg font-black uppercase transition-all border border-m3-outline-variant/15 cursor-pointer ${
                           activeDailyPaymentFilter === m 
-                            ? 'bg-m3-primary text-white shadow-sm' 
-                            : 'text-zinc-400 hover:text-white bg-m3-surface-low/50 hover:bg-m3-surface-low'
+                            ? 'bg-m3-primary text-white shadow-sm font-bold' 
+                            : 'text-m3-on-surface-variant hover:text-m3-primary bg-m3-surface-low/60 hover:bg-m3-hover-overlay'
                         }`}
                       >
                         {m === 'all' ? 'All' : m}
@@ -1523,22 +1523,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                           return visibleSales.map((s, i) => (
                             <tr key={i} className="border-b border-m3-outline-variant/10 hover:bg-m3-surface-low/30 last:border-none transition-colors">
                               <td className="p-3 text-xs font-mono font-bold text-m3-primary">{s.saleNumber}</td>
-                              <td className="p-3 text-xs font-bold text-white">{s.customerName}</td>
-                              <td className="p-3 text-xs font-semibold text-zinc-300">{s.cashierName}</td>
+                              <td className="p-3 text-xs font-bold text-m3-on-surface">{s.customerName}</td>
+                              <td className="p-3 text-xs font-semibold text-m3-on-surface-variant">{s.cashierName}</td>
                               <td className="p-3 text-[10px]">
                                 <span className={`px-2 py-0.5 rounded-full font-bold uppercase tracking-wide text-[8.5px] ${
-                                  s.paymentMethod === 'Cash' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                                  s.paymentMethod === 'Card' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' :
-                                  s.paymentMethod === 'GCash' ? 'bg-sky-500/10 text-sky-400 border border-sky-500/30' :
-                                  'bg-pink-500/10 text-pink-400 border border-pink-500/20'
+                                  s.paymentMethod === 'Cash' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' :
+                                  s.paymentMethod === 'Credit Card' ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20' :
+                                  s.paymentMethod === 'GCash' ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/30' :
+                                  'bg-pink-500/10 text-pink-600 dark:text-pink-400 border border-pink-500/20'
                                 }`}>
                                   {s.paymentMethod}
                                 </span>
                               </td>
-                              <td className="p-3 text-xs font-black font-mono text-emerald-400">
+                              <td className="p-3 text-xs font-black font-mono text-emerald-600 dark:text-emerald-400">
                                 ₱{s.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </td>
-                              <td className="p-3 text-xs text-right text-zinc-400 font-mono border-0">
+                              <td className="p-3 text-xs text-right text-m3-on-surface-variant font-mono border-0">
                                 {new Date(s.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </td>
                             </tr>
@@ -2973,16 +2973,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
       {(lowStockProducts.length > 0 || outOfStockProducts.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {outOfStockProducts.length > 0 && (
-            <div className="bg-m3-surface-container border-l-4 border-m3-primary p-5 rounded-[24px] rounded-l-none flex items-start gap-4 shadow-sm">
-              <XCircle className="text-m3-primary h-5 w-5 shrink-0 mt-0.5" />
+            <div className="bg-rose-500/10 dark:bg-rose-950/30 border border-rose-500/20 dark:border-rose-500/10 border-l-4 border-l-rose-600 dark:border-l-rose-400 p-5 rounded-[24px] rounded-l-none flex items-start gap-4 shadow-md duration-250 hover:shadow-lg transition-all">
+              <XCircle className="text-rose-600 dark:text-rose-400 h-5 w-5 shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-sm font-extrabold text-m3-primary">Out of Stock Alert</h4>
-                <p className="text-xs text-m3-on-surface-variant mt-1.5 leading-relaxed">
-                  There are <span className="font-extrabold text-m3-primary">{outOfStockProducts.length}</span> items completely depleted in local store records.
+                <h4 className="text-sm font-extrabold text-rose-800 dark:text-rose-200">Out of Stock Alert</h4>
+                <p className="text-xs text-rose-700 dark:text-rose-300 mt-1.5 leading-relaxed font-semibold">
+                  There are <span className="font-extrabold text-rose-900 dark:text-white bg-rose-500/10 dark:bg-rose-500/20 px-1.5 py-0.5 rounded-md">{outOfStockProducts.length}</span> items completely depleted in local store records.
                 </p>
                 <button
                   onClick={() => onNavigate('inventory')}
-                  className="mt-3 text-xs font-bold text-m3-primary hover:underline flex items-center gap-1 cursor-pointer"
+                  className="mt-3 text-xs font-bold text-rose-800 dark:text-rose-300 hover:underline flex items-center gap-1 cursor-pointer text-left border-0 bg-transparent p-0"
                 >
                   View depleted items <ArrowRight className="h-3 w-3" />
                 </button>
@@ -2991,16 +2991,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
           )}
 
           {lowStockProducts.length > 0 && (
-            <div className="bg-m3-surface-container border-l-4 border-m3-tertiary p-5 rounded-[24px] rounded-l-none flex items-start gap-4 shadow-sm">
-              <AlertTriangle className="text-m3-tertiary h-5 w-5 shrink-0 mt-0.5" />
+            <div className="bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/20 dark:border-amber-500/10 border-l-4 border-l-amber-600 dark:border-l-amber-400 p-5 rounded-[24px] rounded-l-none flex items-start gap-4 shadow-md duration-250 hover:shadow-lg transition-all">
+              <AlertTriangle className="text-amber-600 dark:text-amber-400 h-5 w-5 shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-sm font-extrabold text-m3-tertiary">Low Stock Alert</h4>
-                <p className="text-xs text-m3-on-surface-variant mt-1.5 leading-relaxed">
-                  Local stock for <span className="font-extrabold text-m3-tertiary">{lowStockProducts.length}</span> items have fallen below safety limits. Restock required.
+                <h4 className="text-sm font-extrabold text-amber-800 dark:text-amber-200">Low Stock Alert</h4>
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-1.5 leading-relaxed font-semibold">
+                  Local stock for <span className="font-extrabold text-amber-900 dark:text-white bg-amber-500/10 dark:bg-amber-500/20 px-1.5 py-0.5 rounded-md">{lowStockProducts.length}</span> items have fallen below safety limits. Restock required.
                 </p>
                 <button
                   onClick={() => onNavigate('procurement')}
-                  className="mt-3 text-xs font-bold text-m3-tertiary hover:underline flex items-center gap-1 cursor-pointer"
+                  className="mt-3 text-xs font-bold text-amber-800 dark:text-amber-300 hover:underline flex items-center gap-1 cursor-pointer text-left border-0 bg-transparent p-0"
                 >
                   Create purchase order <ArrowRight className="h-3 w-3" />
                 </button>

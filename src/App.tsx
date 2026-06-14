@@ -31,6 +31,7 @@ import { TutorialOnboarding } from './components/TutorialOnboarding';
 import { PrivacyAccessibilityHub } from './components/PrivacyAccessibilityHub';
 import { SystemLoadingOverlay } from './components/SystemLoadingOverlay';
 import { DamageRegisterModule } from './components/DamageRegisterModule';
+import { generateThemeFromSeed, applyM3ThemeToDOM, resetM3ThemeOverride } from './lib/themeGenerator';
 
 import {
   LayoutDashboard,
@@ -68,7 +69,8 @@ import {
   Download,
   Upload,
   Sliders,
-  AlertTriangle
+  AlertTriangle,
+  Palette
 } from 'lucide-react';
 
 function AppContent() {
@@ -124,6 +126,14 @@ function AppContent() {
     return 'dashboard';
   });
 
+  const [previousTab, setPreviousTab] = useState('dashboard');
+
+  useEffect(() => {
+    if (activeTab !== 'pos') {
+      setPreviousTab(activeTab);
+    }
+  }, [activeTab]);
+
   // Dynamic automatic routing on login/identity-switch to ensure Admin sees dashboard first
   useEffect(() => {
     if (isLoggedIn && currentUser) {
@@ -156,6 +166,16 @@ function AppContent() {
     return saved !== null ? saved === 'true' : true;
   });
   const [isSubMenuCollapsed, setIsSubMenuCollapsed] = useState(false);
+
+  // Auto-minimize the sale sub-navigation and sidebar when tab is POS Mode
+  useEffect(() => {
+    if (activeTab === 'pos') {
+      setIsSubMenuCollapsed(true);
+      setIsSidebarMinimized(true);
+    } else {
+      setIsSubMenuCollapsed(false);
+    }
+  }, [activeTab]);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // ATPOS v2 Collapsible Folder States
@@ -181,12 +201,58 @@ function AppContent() {
 
   // Account settings states & Logout confirmatory dialogs
   const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
+  const [colorContrast, setColorContrast] = useState<'default' | 'medium' | 'high'>(() => {
+    return (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'default';
+  });
+
+  const [maximizeTextContrast, setMaximizeTextContrast] = useState<boolean>(() => {
+    return localStorage.getItem('tilepoint-maximize-text-contrast') === 'true';
+  });
+
+  useEffect(() => {
+    const handleSync = () => {
+      const contrast = (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'default';
+      const maxText = localStorage.getItem('tilepoint-maximize-text-contrast') === 'true';
+      const savedSeed = localStorage.getItem('tilepoint_custom_theme_primary');
+
+      setColorContrast(contrast);
+      setMaximizeTextContrast(maxText);
+
+      // Apply the theme with latest contrast settings
+      if (savedSeed) {
+        try {
+          const scheme = generateThemeFromSeed(savedSeed, darkMode, contrast);
+          applyM3ThemeToDOM(scheme);
+        } catch (err) {
+          console.error('[M3 Dynamic Theme] Failed to auto-apply saved color theme:', err);
+        }
+      } else {
+        resetM3ThemeOverride();
+      }
+
+      // Sync CSS accessibility high contrast and maximize text contrast flag classes
+      if (contrast === 'high') {
+        document.documentElement.classList.add('accessibility-high-contrast');
+      } else {
+        document.documentElement.classList.remove('accessibility-high-contrast');
+      }
+
+      if (maxText) {
+        document.documentElement.classList.add('accessibility-maximize-text-contrast');
+      } else {
+        document.documentElement.classList.remove('accessibility-maximize-text-contrast');
+      }
+    };
+    window.addEventListener('tilepoint-theme-updated', handleSync);
+    handleSync();
+    return () => {
+      window.removeEventListener('tilepoint-theme-updated', handleSync);
+    };
+  }, [darkMode]);
+
   const [showLogoutConfirmModal, setShowLogoutConfirmModal] = useState(false);
   const [showAccountSettingsModal, setShowAccountSettingsModal] = useState(false);
-  const [isCompactColumns, setIsCompactColumns] = useState<boolean>(() => {
-    const saved = localStorage.getItem('tilepoint_inventory_compact_columns');
-    return saved ? JSON.parse(saved) : false;
-  });
+  const isCompactColumns = true;
   const [showDatabaseCoreModal, setShowDatabaseCoreModal] = useState(false);
   const [dbCoreTab, setDbCoreTab] = useState<'scheduler' | 'ledger' | 'import-export'>('scheduler');
   const [manualSnapshotName, setManualSnapshotName] = useState('');
@@ -221,6 +287,124 @@ function AppContent() {
     setTimeout(() => {
       setToastMessage(null);
     }, 4000);
+  };
+
+  // Immersive POS terminal distraction-free mode state
+  const [showImmersiveControls, setShowImmersiveControls] = useState(false);
+  const [dragStartX, setDragStartX] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (activeTab !== 'pos') {
+      setShowImmersiveControls(true);
+      return;
+    }
+    
+    // Default distraction free mode on load/pos selection, unless account dropdown is active
+    if (isAccountDropdownOpen) {
+      setShowImmersiveControls(true);
+    } else {
+      setShowImmersiveControls(false);
+    }
+
+    // 1. Automatic fullscreen trigger on browser when in POS checkout mode.
+    // (This runs when tab changes, triggered by a click/keypress gesture in the application)
+    const requestFullscreenSafely = async () => {
+      if (!document.fullscreenElement) {
+        try {
+          await document.documentElement.requestFullscreen();
+        } catch (err) {
+          console.warn('[Fullscreen POS Mode] Programmatic fullscreen request was ignored or blocked by the browser. Interaction captures will handle it.', err);
+        }
+      }
+    };
+
+    requestFullscreenSafely();
+
+    // 2. Gesture fallback so if initial request is blocked, any click/key interaction in POS immediately triggers fullscreen
+    const handleGestureFullscreen = async () => {
+      if (activeTab === 'pos' && !document.fullscreenElement) {
+        try {
+          await document.documentElement.requestFullscreen();
+        } catch (err) {
+          console.error('[Fullscreen POS Mode] Failed to set fullscreen on user interaction:', err);
+        }
+      }
+    };
+
+    window.addEventListener('click', handleGestureFullscreen, { capture: true, once: true });
+    window.addEventListener('keydown', handleGestureFullscreen, { capture: true, once: true });
+
+    // 3. Keep mousemove listener for immersive distraction-free navigation menu
+    const handleMouseMove = (e: MouseEvent) => {
+      // Show modules if mouse approaches the left edge (<= 45px) or top edge (<= 45px)
+      if (e.clientX <= 45 || e.clientY <= 45) {
+        setShowImmersiveControls(true);
+      } else {
+        // Only collapse if the cursor is sufficiently far away from both the sidebar (width ~288px) and top header (height ~75px)
+        // And NOT if the account dropdown is active
+        if (e.clientX > 325 && e.clientY > 100 && !isAccountDropdownOpen) {
+          setShowImmersiveControls(false);
+        }
+      }
+    };
+
+    // 4. Alt + Escape Key down listener to exit both browser full screen AND the distraction-free system
+    const handleAltEscExit = (e: KeyboardEvent) => {
+      if (e.altKey && (e.key === 'Escape' || e.key === 'Esc')) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Exit browser full screen if active
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(err => console.warn('Exit fullscreen rejected:', err));
+        }
+
+        // Exit system POS terminal distraction-free mode back to previous tab
+        setActiveTab(previousTab !== 'pos' ? previousTab : 'dashboard');
+        showToast('Exited POS terminal and Fullscreen mode.');
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('keydown', handleAltEscExit, { capture: true });
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('keydown', handleAltEscExit, { capture: true });
+      window.removeEventListener('click', handleGestureFullscreen, { capture: true });
+      window.removeEventListener('keydown', handleGestureFullscreen, { capture: true });
+    };
+  }, [activeTab, previousTab, isAccountDropdownOpen]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setDragStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (dragStartX === null) return;
+    const currentX = e.touches[0].clientX;
+    const diffX = currentX - dragStartX;
+    if (diffX > 40) { // Dragged to the right by more than 40px
+      setShowImmersiveControls(true);
+      setDragStartX(null);
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setDragStartX(e.clientX);
+  };
+
+  const handleMouseMoveDrag = (e: React.MouseEvent) => {
+    if (dragStartX === null) return;
+    const diffX = e.clientX - dragStartX;
+    if (diffX > 40) { // Dragged to the right by more than 40px
+      setShowImmersiveControls(true);
+      setDragStartX(null);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setDragStartX(null);
   };
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
@@ -319,6 +503,20 @@ function AppContent() {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
+    }
+
+    // Auto-apply saved custom dynamic M3 theme color seed if exists
+    const savedSeed = localStorage.getItem('tilepoint_custom_theme_primary');
+    if (savedSeed) {
+      try {
+        const contrast = (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'default';
+        const scheme = generateThemeFromSeed(savedSeed, darkMode, contrast);
+        applyM3ThemeToDOM(scheme);
+      } catch (err) {
+        console.error('[M3 Dynamic Theme] Failed to auto-apply saved color theme:', err);
+      }
+    } else {
+      resetM3ThemeOverride();
     }
   }, [darkMode]);
 
@@ -568,9 +766,13 @@ function AppContent() {
   };
 
   return (
-    <div className={`h-screen overflow-hidden flex flex-col font-sans transition-all duration-300 ${
+    <div className={`h-screen overflow-hidden flex flex-col font-sans transition-all duration-300 relative ${
       darkMode ? 'dark bg-m3-surface text-m3-on-surface' : 'bg-m3-surface text-m3-on-surface'
     }`}>
+      {/* Dynamic Ambient Background Color Accent Glow using core M3 primary color token */}
+      <div className="absolute top-[-10%] right-[-10%] w-[55vw] h-[55vw] rounded-full bg-m3-primary/[0.04] dark:bg-m3-primary/[0.07] blur-[130px] pointer-events-none z-0 transition-colors duration-500" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[48vw] h-[48vw] rounded-full bg-m3-primary/[0.03] dark:bg-m3-primary/[0.05] blur-[110px] pointer-events-none z-0 transition-colors duration-500" />
+
       {/* TOP LINEAR HIGH-VIS PROGRESS BAR */}
       {percentProgress > 0 && (
         <div 
@@ -579,8 +781,16 @@ function AppContent() {
         />
       )}
 
-      {/* HEADER SECTION */}
-      <header className="py-4 px-6 border-b border-m3-outline-variant/20 flex justify-between items-center sticky top-0 z-40 android-glass-header shadow-sm bg-m3-surface/80 backdrop-blur-md">
+      {/* HEADER SECTION with custom horizontal glowing accent bar & ambient overlay tint */}
+      <header className={`py-4 px-6 border-b border-m3-outline-variant/15 flex justify-between items-center z-[60] android-glass-header shadow-sm bg-m3-surface/75 dark:bg-m3-surface-low/80 backdrop-blur-md transition-all duration-300 relative overflow-visible ${
+        activeTab === 'pos' 
+          ? `fixed top-0 left-0 right-0 z-[60] transform ${showImmersiveControls ? 'translate-y-0 opacity-100 shadow-xl' : '-translate-y-full opacity-0 pointer-events-none'}` 
+          : 'sticky top-0 translate-y-0 opacity-100'
+      }`}>
+        {/* Subtle header brand overlay reflecting user custom color choice */}
+        <div className="absolute inset-0 bg-gradient-to-b from-m3-primary/[0.03] to-transparent pointer-events-none z-[-1]" />
+        {/* Horizontal glowing accent line reflecting selected color */}
+        <div className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-m3-primary/35 via-m3-primary/10 to-transparent pointer-events-none" />
         <div className="flex items-center gap-3">
           {/* Mobile menu toggle */}
           <button
@@ -646,125 +856,113 @@ function AppContent() {
               </svg>
             </button>
 
-            {isAccountDropdownOpen && (
-              <>
-                {/* Backdrop overlay for dismissing dropdown on click-away */}
-                <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsAccountDropdownOpen(false)} />
-                <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-m3-surface-low border border-m3-outline-variant/40 text-m3-on-surface shadow-2xl z-50 p-2 space-y-1.5 animate-fade-in font-sans">
-                  <div className="px-3 py-2 border-b border-m3-outline-variant/15 bg-m3-surface-high/10 rounded-xl">
-                    <div className="text-xs font-black text-m3-on-surface truncate">{currentUser.fullName}</div>
-                    <div className="text-[9.5px] text-zinc-400 font-mono font-bold mt-0.5 uppercase tracking-wider">{currentUser.role} Mode</div>
-                  </div>
-
-                  {/* Dark / Light Toggle */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDarkMode(!darkMode);
-                      setIsAccountDropdownOpen(false);
-                    }}
-                    className="w-full flex items-center justify-between text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+            <AnimatePresence>
+              {isAccountDropdownOpen && (
+                <>
+                  {/* Backdrop overlay for dismissing dropdown on click-away */}
+                  <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsAccountDropdownOpen(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -8 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                    className="absolute right-0 mt-2 w-56 rounded-2xl bg-m3-surface-low border border-m3-outline-variant/40 text-m3-on-surface shadow-2xl z-50 p-2 space-y-1.5 font-sans"
                   >
-                    <div className="flex items-center gap-2">
-                      {darkMode ? <Sun className="h-4 w-4 text-amber-500" /> : <Moon className="h-4 w-4 text-m3-primary" />}
-                      <span>{darkMode ? 'Light Theme' : 'Dark Theme'}</span>
+                    <div className="px-3 py-2 border-b border-m3-outline-variant/15 bg-m3-surface-high/10 rounded-xl">
+                      <div className="text-xs font-black text-m3-on-surface truncate">{currentUser.fullName}</div>
+                      <div className="text-[9.5px] text-zinc-400 font-mono font-bold mt-0.5 uppercase tracking-wider">{currentUser.role} Mode</div>
                     </div>
-                    <span className="text-[9px] font-black uppercase text-zinc-400 px-1.5 py-0.5 bg-m3-outline-variant/20 rounded font-mono">
-                      {darkMode ? 'LIGHT' : 'DARK'}
-                    </span>
-                  </button>
 
-                  {/* Compact / Comfort Density Toggle */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newVal = !isCompactColumns;
-                      setIsCompactColumns(newVal);
-                      localStorage.setItem('tilepoint_inventory_compact_columns', JSON.stringify(newVal));
-                      setIsAccountDropdownOpen(false);
-                    }}
-                    className="w-full flex items-center justify-between text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Sliders className="h-4 w-4 text-m3-primary" />
-                      <span>{!isCompactColumns ? 'Comfort Mode' : 'Compact Fit'}</span>
-                    </div>
-                    <span className="text-[9px] font-black uppercase text-zinc-400 px-1.5 py-0.5 bg-m3-outline-variant/20 rounded font-mono">
-                      {!isCompactColumns ? 'COMFORT' : 'COMPACT'}
-                    </span>
-                  </button>
+                    {/* Dark / Light Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDarkMode(!darkMode);
+                        setIsAccountDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center justify-between text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        {darkMode ? <Sun className="h-4 w-4 text-amber-500" /> : <Moon className="h-4 w-4 text-m3-primary" />}
+                        <span>{darkMode ? 'Light Theme' : 'Dark Theme'}</span>
+                      </div>
+                      <span className="text-[9px] font-black uppercase text-zinc-400 px-1.5 py-0.5 bg-m3-outline-variant/20 rounded font-mono">
+                        {darkMode ? 'LIGHT' : 'DARK'}
+                      </span>
+                    </button>
 
-                  {/* Account Settings (Guarded password change Only) */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsAccountDropdownOpen(false);
-                      setShowAccountSettingsModal(true);
-                    }}
-                    className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
-                  >
-                    <LockKeyhole className="h-4 w-4 text-amber-500" />
-                    <span>Account Settings</span>
-                  </button>
+                    {/* Account Settings (Guarded password change Only) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAccountDropdownOpen(false);
+                        setShowAccountSettingsModal(true);
+                      }}
+                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                    >
+                      <LockKeyhole className="h-4 w-4 text-amber-500" />
+                      <span>Account Settings</span>
+                    </button>
 
-                  {/* Operational Walkthrough */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsAccountDropdownOpen(false);
-                      changeTab('tutorials');
-                    }}
-                    className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
-                  >
-                    <BookOpen className="h-4 w-4 text-m3-primary" />
-                    <span>Operational Walkthrough</span>
-                  </button>
+                    {/* Operational Walkthrough */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAccountDropdownOpen(false);
+                        changeTab('tutorials');
+                      }}
+                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                    >
+                      <BookOpen className="h-4 w-4 text-m3-primary" />
+                      <span>Operational Walkthrough</span>
+                    </button>
 
-                  {/* Database Core & Backups Settings (Other Settings) */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsAccountDropdownOpen(false);
-                      setShowDatabaseCoreModal(true);
-                    }}
-                    className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
-                  >
-                    <Database className="h-4 w-4 text-emerald-500" />
-                    <span>Database Core & Backups</span>
-                  </button>
+                    {/* Database Core & Backups Settings (Other Settings) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAccountDropdownOpen(false);
+                        setShowDatabaseCoreModal(true);
+                      }}
+                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                    >
+                      <Database className="h-4 w-4 text-emerald-500" />
+                      <span>Database Core & Backups</span>
+                    </button>
 
-                  <div className="h-px bg-m3-outline-variant/10 !my-1" />
+                    <div className="h-px bg-m3-outline-variant/10 !my-1" />
 
-                  {/* Accessibility & Policy trigger */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsAccountDropdownOpen(false);
-                      window.dispatchEvent(new Event('open-privacy-hub'));
-                    }}
-                    className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
-                  >
-                    <img src="/images/accessibility_icon.svg" alt="Accessibility & Policy" className="h-4.5 w-4.5 object-contain" referrerPolicy="no-referrer" />
-                    <span>Accessibility & Policy</span>
-                  </button>
+                    {/* Accessibility & Policy trigger */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAccountDropdownOpen(false);
+                        window.dispatchEvent(new Event('open-privacy-hub'));
+                      }}
+                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                    >
+                      <img src="/images/accessibility_icon.svg" alt="Accessibility & Policy" className="h-4.5 w-4.5 object-contain" referrerPolicy="no-referrer" />
+                      <span>Accessibility & Policy</span>
+                    </button>
 
-                  <div className="h-px bg-m3-outline-variant/10 !my-1" />
+                    <div className="h-px bg-m3-outline-variant/10 !my-1" />
 
-                  {/* Logout command trigger */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsAccountDropdownOpen(false);
-                      setShowLogoutConfirmModal(true);
-                    }}
-                    className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-rose-500/10 text-rose-500 cursor-pointer transition-colors"
-                  >
-                    <Power className="h-4 w-4 text-rose-500" />
-                    <span>Logout Account</span>
-                  </button>
-                </div>
-              </>
-            )}
+                    {/* Logout command trigger */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAccountDropdownOpen(false);
+                        setShowLogoutConfirmModal(true);
+                      }}
+                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-rose-500/10 text-rose-500 cursor-pointer transition-colors"
+                    >
+                      <Power className="h-4 w-4 text-rose-500" />
+                      <span>Logout Account</span>
+                    </button>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </header>
@@ -772,8 +970,16 @@ function AppContent() {
       {/* BODY CONTENT: Sidebar + Dynamic tab target */}
       <div className="flex-1 flex overflow-hidden">
         {/* SIDEBAR NAVIGATION: Desktop */}
-        <aside className={`border-r border-m3-outline-variant/15 sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto hidden md:block select-none android-glass-sidebar py-6 transition-all duration-300 ease-in-out ${
-          isSidebarMinimized ? 'w-20 px-2' : 'w-72 px-4'
+        <aside className={`border-r border-m3-outline-variant/15 select-none android-glass-sidebar py-6 transition-all duration-300 ease-in-out ${
+          activeTab === 'pos'
+            ? `fixed left-0 top-0 bottom-0 z-49 transform bg-m3-surface-low border-r border-m3-primary/25 backdrop-blur-xl md:block ${
+                isSidebarMinimized ? 'w-20 px-2' : 'w-72 px-4'
+              } ${
+                showImmersiveControls ? 'translate-x-0 opacity-100 shadow-2xl' : '-translate-x-full opacity-0 pointer-events-none'
+              }`
+            : `sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto hidden md:block ${
+                isSidebarMinimized ? 'w-20 px-2' : 'w-72 px-4'
+              }`
         }`}>
           <div className="space-y-5">
             {/* Modular indicator trigger */}
@@ -859,72 +1065,95 @@ function AppContent() {
         </aside>
 
         {/* SIDEBAR NAVIGATION: Mobile Drawer overlay and sidebar content */}
-        {mobileSidebarOpen && (
-          <div className="fixed inset-0 z-45 flex md:hidden">
-            <div className="absolute inset-0 bg-m3-on-surface/40 backdrop-blur-sm" onClick={() => setMobileSidebarOpen(false)} />
-            <aside className="relative w-64 h-full flex flex-col p-5 space-y-5 shadow-2xl z-10 animate-slide-right android-glass-modal text-m3-on-surface">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase tracking-widest text-m3-on-surface-variant font-mono">Menu List</span>
-                <button onClick={() => setMobileSidebarOpen(false)} className="text-m3-on-surface-variant hover:text-m3-primary p-1.5 rounded-xl hover:bg-m3-primary/10">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
+        <AnimatePresence>
+          {mobileSidebarOpen && (
+            <div className="fixed inset-0 z-45 flex md:hidden">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                className="absolute inset-0 bg-m3-on-surface/40 backdrop-blur-sm"
+                onClick={() => setMobileSidebarOpen(false)}
+              />
+              <motion.aside
+                initial={{ x: "-100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "-100%" }}
+                transition={{ type: "spring", damping: 24, stiffness: 220 }}
+                className="relative w-64 h-full flex flex-col p-5 space-y-5 shadow-2xl z-10 android-glass-modal text-m3-on-surface"
+              >
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-m3-on-surface-variant font-mono">Menu List</span>
+                  <button onClick={() => setMobileSidebarOpen(false)} className="text-m3-on-surface-variant hover:text-m3-primary p-1.5 rounded-xl hover:bg-m3-primary/10">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
 
-              {/* Mobile Logout option */}
-              <div className="bg-m3-surface-container p-3 rounded-2xl border border-m3-outline-variant/30 text-center">
-                <button
-                  onClick={() => {
-                    setMobileSidebarOpen(false);
-                    setShowLogoutConfirmModal(true);
-                  }}
-                  className="w-full py-2.5 rounded-xl border border-rose-500/30 text-rose-500 bg-rose-500/5 hover:bg-rose-500/10 text-xs font-black uppercase tracking-wider cursor-pointer transition-all flex items-center justify-center gap-2"
-                >
-                  <Power className="h-4 w-4" />
-                  <span>Logout Session</span>
-                </button>
-              </div>
+                {/* Mobile Logout option */}
+                <div className="bg-m3-surface-container p-3 rounded-2xl border border-m3-outline-variant/30 text-center">
+                  <button
+                    onClick={() => {
+                      setMobileSidebarOpen(false);
+                      setShowLogoutConfirmModal(true);
+                    }}
+                    className="w-full py-2.5 rounded-xl border border-rose-500/30 text-rose-500 bg-rose-500/5 hover:bg-rose-500/10 text-xs font-black uppercase tracking-wider cursor-pointer transition-all flex items-center justify-center gap-2"
+                  >
+                    <Power className="h-4 w-4" />
+                    <span>Logout Session</span>
+                  </button>
+                </div>
 
-              <nav className="space-y-1.5 overflow-y-auto max-h-[calc(100vh-180px)] pr-1 font-sans">
+                <nav className="space-y-1.5 overflow-y-auto max-h-[calc(100vh-180px)] pr-1 font-sans">
 
-                {sidebarCategoryTree.map(category => {
-                  const CategoryIcon = category.icon;
-                  
-                  // Strong dynamic RBAC: Filter sub-items to only those this user has permission to see on mobile
-                  const authorizedSubItems = category.subItems.filter(sub => {
-                    const masterItem = menuItems.find(m => m.id === sub.id);
-                    return masterItem ? masterItem.roles.includes(currentUser.role) : false;
-                  });
+                  {sidebarCategoryTree.map(category => {
+                    const CategoryIcon = category.icon;
+                    
+                    // Strong dynamic RBAC: Filter sub-items to only those this user has permission to see on mobile
+                    const authorizedSubItems = category.subItems.filter(sub => {
+                      const masterItem = menuItems.find(m => m.id === sub.id);
+                      return masterItem ? masterItem.roles.includes(currentUser.role) : false;
+                    });
 
-                  if (authorizedSubItems.length === 0) return null;
+                    if (authorizedSubItems.length === 0) return null;
 
-                  const hasActiveSubItem = authorizedSubItems.some(sub => activeTab === sub.id) || activeTab === category.id;
+                    const hasActiveSubItem = authorizedSubItems.some(sub => activeTab === sub.id) || activeTab === category.id;
 
-                  return (
-                    <button
-                      key={category.id}
-                      onClick={() => {
-                        const firstSub = authorizedSubItems[0]?.id || category.id;
-                        changeTab(firstSub);
-                        setMobileSidebarOpen(false);
-                      }}
-                      className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                        hasActiveSubItem 
-                          ? 'bg-m3-primary text-m3-on-primary shadow-md font-black scale-[1.01]' 
-                          : 'hover:bg-m3-primary/5 text-m3-on-surface-variant hover:text-m3-primary'
-                      }`}
-                    >
-                      <CategoryIcon className={`h-4.5 w-4.5 shrink-0 ${hasActiveSubItem ? 'text-m3-on-primary' : 'text-m3-on-surface-variant'}`} />
-                      <span>{category.name}</span>
-                    </button>
-                  );
-                })}
-              </nav>
-            </aside>
-          </div>
-        )}
+                    return (
+                      <button
+                        key={category.id}
+                        onClick={() => {
+                          const firstSub = authorizedSubItems[0]?.id || category.id;
+                          changeTab(firstSub);
+                          setMobileSidebarOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          hasActiveSubItem 
+                            ? 'bg-m3-primary text-m3-on-primary shadow-md font-black scale-[1.01]' 
+                            : 'hover:bg-m3-primary/5 text-m3-on-surface-variant hover:text-m3-primary'
+                        }`}
+                      >
+                        <CategoryIcon className={`h-4.5 w-4.5 shrink-0 ${hasActiveSubItem ? 'text-m3-on-primary' : 'text-m3-on-surface-variant'}`} />
+                        <span>{category.name}</span>
+                      </button>
+                    );
+                  })}
+                </nav>
+              </motion.aside>
+            </div>
+          )}
+        </AnimatePresence>
 
         {/* DYNAMIC COMPONENT PANEL AREA */}
-        <main className={`flex-1 p-4 md:p-6 pb-26 md:pb-6 overflow-y-auto relative flex flex-col ${isCompactColumns ? 'compact-fit' : ''}`}>
+        <main className={`flex-1 relative flex flex-col ${
+          activeTab === 'pos' 
+            ? `md:overflow-hidden md:h-screen lg:max-h-screen text-m3-on-surface transition-all duration-300 ${
+                showImmersiveControls 
+                  ? `p-4 pt-[73px] md:p-4 md:pt-[73px] md:pb-4 ${isSidebarMinimized ? 'md:pl-[96px]' : 'md:pl-[304px]'}` 
+                  : 'p-0 pt-0 md:p-0'
+              }` 
+            : 'p-4 md:p-6 pb-26 md:pb-6 overflow-y-auto'
+        } ${isCompactColumns ? 'compact-fit' : ''}`}>
           {/* Elegant Collapsible Horizontal Sub-menu Navigation Pill Bar with Dynamic RBAC */}
           {(() => {
             const activeCategory = sidebarCategoryTree.find(cat => 
@@ -938,7 +1167,7 @@ function AppContent() {
               return masterItem ? masterItem.roles.includes(currentUser.role) : false;
             });
 
-            if (authorizedSubItems.length <= 1) return null;
+            if (authorizedSubItems.length <= 1 || activeTab === 'pos') return null;
 
             return (
               <div className="mb-4 bg-m3-surface-low border border-m3-outline-variant/15 rounded-2xl p-2.5 flex flex-col shrink-0">
@@ -1018,7 +1247,7 @@ function AppContent() {
                 {activeTab === 'inventory' && <InventoryModule darkMode={darkMode} isCompactGlobal={isCompactColumns} />}
                 {activeTab === 'procurement' && <ProcurementModule darkMode={darkMode} />}
                 {activeTab === 'transmittal' && <TransmittalModule darkMode={darkMode} />}
-                {activeTab === 'shift' && <ShiftModule darkMode={darkMode} onNavigate={changeTab} />}
+                {activeTab === 'shift' && <ShiftModule darkMode={darkMode} />}
                 {activeTab === 'calculator' && <CalculatorModule darkMode={darkMode} />}
                 {activeTab === 'branches' && <BranchModule darkMode={darkMode} />}
                 {activeTab === 'users' && <UsersModule darkMode={darkMode} />}
@@ -1079,7 +1308,11 @@ function AppContent() {
       </div>
 
       {/* MOBILE BOTTOM NAVIGATION BAR FOR COMFORTABLE TACTILE PWA FEEL */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 android-glass border-t border-m3-outline-variant/20 px-2 py-2 flex justify-around items-center rounded-t-[24px] shadow-lg">
+      <div className={`md:hidden fixed bottom-0 left-0 right-0 z-40 android-glass border-t border-m3-outline-variant/20 px-2 py-2 flex justify-around items-center rounded-t-[24px] shadow-lg transition-all duration-300 ease-in-out ${
+        activeTab === 'pos'
+          ? `transform ${showImmersiveControls ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'}`
+          : 'translate-y-0 opacity-100'
+      }`}>
         {menuItems.filter(item => {
           const isRoleOk = item.roles.includes(currentUser.role);
           if (!isRoleOk) return false;
@@ -1114,6 +1347,33 @@ function AppContent() {
           );
         })}
       </div>
+
+      {/* Immersive Trigger Handles for POS Terminal Mode */}
+      {activeTab === 'pos' && !showImmersiveControls && (
+        <>
+          {/* Subtle Pull handles for mouse cursor / touch slide */}
+          <div 
+            className="fixed left-0 top-1/2 -translate-y-1/2 w-2 h-24 bg-m3-primary/30 hover:bg-m3-primary/60 rounded-r-2xl z-[60] cursor-ew-resize flex items-center justify-center transition-all group scale-100 hover:w-3 border border-l-0 border-m3-primary/35 backdrop-blur-md shadow-lg animate-pulse"
+            title="Drag or slide from left to show system modules"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMoveDrag}
+            onMouseUp={handleMouseUp}
+            onClick={() => setShowImmersiveControls(true)}
+          >
+            <div className="w-1 h-8 bg-m3-primary/80 rounded-full group-hover:bg-m3-primary/100" />
+          </div>
+
+          <div 
+            className="fixed top-0 left-1/2 -translate-x-1/2 h-2 w-56 bg-m3-primary/25 hover:bg-m3-primary/55 rounded-b-2xl z-[60] cursor-ns-resize flex justify-center items-center transition-all group hover:h-4.5 border border-t-0 border-m3-primary/35 backdrop-blur-md shadow-md"
+            title="Hover or slide from top to show header controls"
+            onClick={() => setShowImmersiveControls(true)}
+          >
+            <div className="h-1 w-16 bg-m3-primary/60 rounded-full group-hover:bg-m3-primary/85" />
+          </div>
+        </>
+      )}
 
       {/* CONFIRMATORY DIALOG: Logout verification check trigger */}
       {showLogoutConfirmModal && (

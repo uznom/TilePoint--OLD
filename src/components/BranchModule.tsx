@@ -579,7 +579,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
                   checked={isEditMode && editingId === 'B1' ? true : isDistributionBranch}
                   disabled={isEditMode && editingId === 'B1'}
                   onChange={e => setIsDistributionBranch(e.target.checked)}
-                  className="h-4.5 w-4.5 text-m3-primary border-m3-outline focus:ring-m3-primary rounded cursor-pointer accent-amber-500"
+                  className="h-4.5 w-4.5 text-m3-primary border-m3-outline focus:ring-m3-primary rounded cursor-pointer accent-m3-primary"
                 />
                 <label htmlFor="isDistributionBranchCheckbox" className="text-xs font-black text-m3-on-surface cursor-pointer leading-tight">
                   {isEditMode && editingId === 'B1' ? 'Main Branch / HQ' : 'Distribution Hub Designation'}

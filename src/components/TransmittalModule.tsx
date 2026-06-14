@@ -491,11 +491,11 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
         shiftsLog: bShifts.map(sh => ({
           shiftId: sh.id,
           cashierName: sh.cashierName,
-          startedAt: sh.startedAt,
-          endedAt: sh.endedAt,
-          expectedCash: sh.expectedCash,
-          actualCash: sh.actualCash,
-          difference: sh.difference
+          startedAt: sh.openedAt,
+          endedAt: sh.closedAt || 'ACTIVE',
+          expectedCash: sh.startCash + sh.shiftSalesTotal,
+          actualCash: sh.cashCount,
+          difference: sh.variance
         }))
       }
     };

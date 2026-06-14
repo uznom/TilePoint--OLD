@@ -153,12 +153,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   const [activeSubTab, setActiveSubTab] = useState<'catalog' | 'movements' | 'transfers' | 'ledger' | 'import' | 'branch-prices'>(initialSubTab || 'catalog');
 
   // Table layout optimization states
-  const [isCompactColumnsLocal, setIsCompactColumnsLocal] = useState<boolean>(() => {
-    const saved = localStorage.getItem('tilepoint_inventory_compact_columns');
-    return saved ? JSON.parse(saved) : false;
-  });
-  
-  const isCompactColumns = isCompactGlobal !== undefined ? isCompactGlobal : isCompactColumnsLocal;
+  const isCompactColumns = isCompactGlobal !== undefined ? isCompactGlobal : true;
   const [expandedProductIds, setExpandedProductIds] = useState<Record<string, boolean>>({});
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     heatmap: false,
@@ -177,7 +172,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   const changeActiveSubTab = (tab: 'catalog' | 'movements' | 'transfers' | 'ledger' | 'import' | 'branch-prices') => {
     setActiveSubTab(tab);
     if (onSubTabChange) {
-      onSubTabChange(tab);
+      onSubTabChange(tab as any);
     }
   };
 
@@ -2266,7 +2261,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                         <tr key={p.id} className="hover:bg-m3-surface-high/30 transition-colors">
                           <td className="py-3.5 px-4 font-black">
                             <span className="block truncate max-w-[200px]" title={p.productName}>{p.productName}</span>
-                            <span className="text-[9px] font-mono font-bold text-zinc-400">SKU Code: {p.skuCode} | Category: {p.category}</span>
+                            <span className="text-[9px] font-mono font-bold text-zinc-400">SKU Code: {p.sku} | Category: {p.category}</span>
                           </td>
                           
                           {/* Branch cells with interactive alerts */}
@@ -2377,7 +2372,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                         let eventBadge = 'bg-zinc-500/10 text-zinc-500 border-zinc-500/15';
                         if (l.movementType === 'SALE') eventBadge = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/15';
                         if (l.movementType === 'TRANSFER') eventBadge = 'bg-indigo-500/10 text-indigo-500 border-indigo-500/15';
-                        if (l.movementType === 'CORRECTION') eventBadge = 'bg-yellow-500/10 text-yellow-500 border-yellow-500/15';
+                        if (l.movementType === 'ADJUST') eventBadge = 'bg-yellow-500/10 text-yellow-500 border-yellow-500/15';
 
                         return (
                           <tr key={l.id} className="hover:bg-m3-surface-high/30 transition-colors">
@@ -2557,7 +2552,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                         <tr key={p.id} className="hover:bg-m3-surface-high/30 transition-colors">
                           <td className="py-3.5 px-4 font-black">
                             {p.productName}
-                            <span className="block text-[9px] font-mono font-bold text-zinc-400">SKU Code: {p.skuCode}</span>
+                            <span className="block text-[9px] font-mono font-bold text-zinc-400">SKU Code: {p.sku}</span>
                           </td>
                           <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm text-m3-primary">
                             {totalGlobal} boxes
@@ -2775,7 +2770,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                     className="w-full bg-m3-surface px-3 py-2 text-xs border border-m3-outline-variant/25 rounded-xl focus:outline-none focus:border-m3-primary font-bold"
                   >
                     {branches.map(b => (
-                      <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
+                      <option key={b.id} value={b.id}>{b.name} ({b.id})</option>
                     ))}
                   </select>
                 ) : (
@@ -3412,7 +3407,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                 <option value="" disabled>-- Choose a product --</option>
                 {products.filter(p => !p.isDeleted).map(p => (
                   <option key={p.id} value={p.id}>
-                    {p.productName} ({p.skuCode || p.id.slice(-6)}) - Current Qty: {p.stockQuantity}
+                    {p.productName} ({p.sku || p.id.slice(-6)}) - Current Qty: {p.stockQuantity}
                   </option>
                 ))}
               </select>

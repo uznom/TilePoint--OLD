@@ -28,7 +28,9 @@ import {
   LockKeyhole,
   ShoppingBag,
   Truck,
-  FileText
+  FileText,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 interface PosModuleProps {
@@ -146,6 +148,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
 
   // Keyboard shortcut assistant status
   const [showHotkeysHelp, setShowHotkeysHelp] = useState(false);
+  const [shortcutsCollapsed, setShortcutsCollapsed] = useState(true);
 
   // Custom modal input states (replacing prompt)
   const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -266,6 +269,9 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
       } else if (e.key === 'F9' || e.key === 'F10') {
         e.preventDefault();
         onNavigate('shift');
+      } else if (e.ctrlKey && e.key === '/') {
+        e.preventDefault();
+        setShortcutsCollapsed(prev => !prev);
       } else if (e.key === 'Escape') {
         e.preventDefault();
         handleCancelSale();
@@ -861,11 +867,11 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
       </div>
 
       {activeSubModule === 'checkout' ? (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in text-m3-on-surface items-start">
+        <div className="space-y-4 lg:space-y-0 lg:h-[calc(100vh-140px)] lg:flex lg:flex-col lg:justify-between gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 animate-fade-in text-m3-on-surface items-stretch lg:flex-1 lg:overflow-hidden lg:min-h-0">
             
             {/* LEFT COLUMN: YARD STAFF TRANSACTIONS HOLD QUEUE */}
-            <div className="lg:col-span-4 bg-m3-surface-low p-5 rounded-[28px] border border-m3-outline-variant/20 shadow-sm space-y-4 text-left self-stretch flex flex-col h-full min-h-[500px]">
+            <div className="lg:col-span-4 bg-m3-surface-low p-4 rounded-[28px] border border-m3-outline-variant/20 shadow-sm space-y-4 text-left self-stretch flex flex-col lg:h-full lg:overflow-hidden lg:min-h-0">
               <div className="border-b border-m3-outline-variant/15 pb-2 cursor-default">
                 <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest flex items-center gap-1.5">
                   <span className="relative flex h-2 w-2">
@@ -879,7 +885,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                 </p>
               </div>
 
-              <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[600px] no-scrollbar">
+              <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[600px] lg:max-h-none no-scrollbar">
                 {parkedSales.length > 0 ? (
                   <div className="flex flex-col gap-3">
                     {parkedSales.map((park, idx) => (
@@ -918,8 +924,8 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
             </div>
 
             {/* RIGHT COLUMN: ACTIVE ORDER LIST OF MATERIALS */}
-            <div className="lg:col-span-8 space-y-4 text-left">
-              <div className="p-5 rounded-[28px] border border-m3-outline-variant/35 bg-m3-surface-low shadow-sm flex flex-col justify-between">
+            <div className="lg:col-span-8 text-left lg:h-full lg:flex lg:flex-col lg:overflow-hidden lg:min-h-0">
+              <div className="p-5 rounded-[28px] border border-m3-outline-variant/35 bg-m3-surface-low shadow-sm flex flex-col justify-between lg:h-full lg:overflow-hidden lg:min-h-0">
                 
                 {/* Basket Header */}
                 <div className="border-b border-m3-outline-variant/15 pb-3">
@@ -996,7 +1002,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
 
                           {/* Instant Product suggestions dropdown following strict user intent */}
                           {barcodeSearchTerm.trim().length > 0 && (
-                            <div className="absolute left-0 right-0 mt-2 bg-m3-surface-container-high border border-m3-outline-variant/40 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-m3-outline-variant/10 text-xs">
+                            <div className="absolute left-0 right-0 mt-2 bg-white dark:bg-zinc-950 border border-m3-outline-variant/60 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-m3-outline-variant/20 text-xs">
                               {products
                                 .filter(p => !p.isDeleted && (
                                   p.productName.toLowerCase().includes(barcodeSearchTerm.toLowerCase()) ||
@@ -1074,7 +1080,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                 </div>
 
                 {/* Cart item feeds */}
-                <div className="flex-1 overflow-y-auto max-h-[300px] my-3 pr-1 space-y-1.5 divide-y divide-m3-outline-variant/10">
+                <div className="flex-1 overflow-y-auto max-h-[300px] lg:max-h-none my-3 pr-1 space-y-1.5 divide-y divide-m3-outline-variant/10 no-scrollbar">
                   {cart.map((item, idx) => (
                     <div key={idx} className="flex items-center justify-between py-2 border-b border-m3-outline-variant/10 last:border-0 pl-1">
                       <div className="space-y-0.5 max-w-2xl text-left">
@@ -1215,7 +1221,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                               }}
                               className={`py-1.5 px-2 text-[10px] rounded-lg border font-black select-none cursor-pointer text-center transition-all ${
                                 paymentMethod === method
-                                  ? 'bg-m3-primary border-m3-primary text-m3-surface shadow-md'
+                                  ? 'bg-m3-primary border-m3-primary text-white shadow-md'
                                   : 'bg-m3-surface-lowest border-m3-outline-variant/40 text-m3-on-surface hover:bg-m3-outline-variant/20'
                               }`}
                             >
@@ -1257,7 +1263,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                                   const current = parseFloat(amountTendered) || 0;
                                   setAmountTendered((current + val).toString());
                                 }}
-                                className="text-[9px] font-black uppercase bg-zinc-800 text-zinc-300 hover:bg-zinc-700 px-2 py-1 rounded transition-all cursor-pointer border border-zinc-700"
+                                className="text-[9px] font-black uppercase bg-zinc-800 text-white hover:bg-zinc-700 px-2 py-1 rounded transition-all cursor-pointer border border-zinc-700 shadow-sm"
                                 title={`Add ₱${val}`}
                               >
                                 +₱{val}
@@ -1294,7 +1300,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                       <button
                         type="button"
                         onClick={handleCancelSale}
-                        className="px-4 py-2 bg-zinc-800 hover:bg-zinc-750 text-zinc-300 rounded-xl text-xs font-black uppercase tracking-wider transition-colors cursor-pointer animate-none"
+                        className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-colors cursor-pointer border border-zinc-750 shadow-sm"
                       >
                         Cancel Cart
                       </button>
@@ -1302,7 +1308,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                         type="button"
                         disabled={cart.length === 0}
                         onClick={clientCheckout}
-                        className="flex-1 py-2.5 bg-[#10B981] hover:bg-[#10B981]/90 disabled:opacity-40 disabled:cursor-not-allowed text-black text-xs font-black uppercase tracking-widest rounded-xl cursor-pointer transition-all text-center shadow-md animate-pulse shrink-0"
+                        className="flex-1 py-2.5 bg-m3-primary hover:bg-m3-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-m3-on-primary text-xs font-black uppercase tracking-widest rounded-xl cursor-pointer transition-all text-center shadow-md animate-pulse shrink-0"
                       >
                         Execute Complete Settlement (F7)
                       </button>
@@ -1315,32 +1321,48 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
           </div>
 
           {/* LOWER SECTION: PERSISTENT HIGH-CONTRAST POS SHORTCUT/HOTKEY LIST */}
-          <div className="bg-m3-surface-low p-5 rounded-[28px] border border-m3-outline-variant/20 shadow-sm text-left">
-            <h3 className="text-[11px] font-black text-m3-primary uppercase tracking-widest flex items-center gap-2 border-b border-m3-outline-variant/15 pb-2.5 mb-3.5 pl-1 select-none">
-              <Keyboard className="h-4 w-4" />
-              <span>CASHIER TERMINAL REGISTER SHORTCUTS & KEYPAD HOTKEYS</span>
-            </h3>
+          <div className="bg-m3-surface-low p-4 rounded-[28px] border border-m3-outline-variant/20 shadow-sm text-left transition-all duration-300">
+            <button
+              type="button"
+              onClick={() => setShortcutsCollapsed(!shortcutsCollapsed)}
+              className="w-full flex items-center justify-between text-left focus:outline-none group pb-2 border-b border-m3-outline-variant/15 cursor-pointer"
+            >
+              <div className="flex items-center gap-2 select-none">
+                <Keyboard className="h-4 w-4 text-m3-primary" />
+                <h3 className="text-[11px] font-black text-m3-primary uppercase tracking-widest pl-1">
+                  CASHIER TERMINAL REGISTER SHORTCUTS & KEYPAD HOTKEYS
+                </h3>
+              </div>
+              <div className="flex items-center gap-2 text-zinc-450 group-hover:text-m3-primary transition-colors text-[9.5px] font-mono font-bold tracking-wider uppercase pr-1">
+                <span>{shortcutsCollapsed ? 'Show (Ctrl + /)' : 'Hide'}</span>
+                {shortcutsCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+              </div>
+            </button>
             
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-3">
-              {[
-                { keys: ['F1', 'ESC'], desc: 'Clear/Cancel Cart' },
-                { keys: ['F3'], desc: 'Park/Hold Transaction' },
-                { keys: ['F5'], desc: 'Edit Client details' },
-                { keys: ['F6'], desc: 'Apply Discount rate' },
-                { keys: ['F7'], desc: 'Focus Payment Field' },
-                { keys: ['F8'], desc: 'Preview Last slip receipt' },
-                { keys: ['F9', 'F10'], desc: 'Drawer Float detail' }
-              ].map((shortcut, sIdx) => (
-                <div key={sIdx} className="p-2.5 bg-m3-surface rounded-xl border border-m3-outline-variant/25 flex flex-col items-center justify-between gap-2 shadow-sm font-sans select-none">
-                  <div className="flex gap-1 items-center justify-center flex-wrap">
-                    {shortcut.keys.map((k, kIdx) => (
-                      <kbd key={kIdx} className="px-1.5 py-0.5 text-[9.5px] font-mono font-black bg-m3-surface-container border-b-2 border-zinc-650 rounded text-amber-500 shadow-sm leading-none">{k}</kbd>
-                    ))}
+            {!shortcutsCollapsed && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-9 gap-3 mt-4 animate-fade-in">
+                {[
+                  { keys: ['F1', 'ESC'], desc: 'Clear/Cancel Cart' },
+                  { keys: ['F3'], desc: 'Park/Hold Transaction' },
+                  { keys: ['F5'], desc: 'Edit Client details' },
+                  { keys: ['F6'], desc: 'Apply Discount rate' },
+                  { keys: ['F7'], desc: 'Focus Payment Field' },
+                  { keys: ['F8'], desc: 'Preview Last slip receipt' },
+                  { keys: ['F9', 'F10'], desc: 'Drawer Float detail' },
+                  { keys: ['Ctrl', '/'], desc: 'Toggle Shortcuts Hint' },
+                  { keys: ['Alt', 'ESC'], desc: 'Exit Fullscreen & POS' }
+                ].map((shortcut, sIdx) => (
+                  <div key={sIdx} className="p-2.5 bg-m3-surface rounded-xl border border-m3-outline-variant/25 flex flex-col items-center justify-between gap-1.5 shadow-sm font-sans select-none">
+                    <div className="flex gap-1 items-center justify-center flex-wrap">
+                      {shortcut.keys.map((k, kIdx) => (
+                        <kbd key={kIdx} className="px-1.5 py-0.5 text-[9px] font-mono font-black bg-m3-surface-container border-b-2 border-zinc-650 rounded text-amber-500 shadow-sm leading-none">{k}</kbd>
+                      ))}
+                    </div>
+                    <span className="text-[8px] font-black text-zinc-400 tracking-tight text-center leading-tight uppercase">{shortcut.desc}</span>
                   </div>
-                  <span className="text-[8.5px] font-black text-zinc-400 tracking-tight text-center leading-normal uppercase">{shortcut.desc}</span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -2041,7 +2063,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
 
             {fulfillmentType === 'Delivery' && (
               <form onSubmit={handleFulfillmentDeliverySubmit} className="space-y-4 border-t border-m3-outline-variant/15 pt-4">
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-[10.5px] text-blue-400 font-medium leading-relaxed">
+                <div className="bg-m3-primary/10 border border-m3-primary/15 rounded-xl p-3 text-[10.5px] text-m3-primary font-medium leading-relaxed">
                   <strong>STORE DELIVERY ALLOCATION:</strong> This creates a <strong>Pending Scheduling</strong> transport ledger. Stock quantities are reserved of this location immediately.
                 </div>
 

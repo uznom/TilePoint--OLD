@@ -220,7 +220,7 @@ export const ArchitectureModule: React.FC = () => {
       return t;
     }));
 
-    addAuditLog('SCHEMA_UPDATE', `Added target attribute "${name}" (${type}) to Core Database Table [${tableName}]`);
+    addAuditLog('SCHEMA_UPDATE', `Added target attribute "${name}" (${type}) to Core Database Table [${tableName}]`, tableName, 'CUSTOM_SCHEMA');
   };
 
   const selectedTableData = customTables.find(t => t.name === selectedTable);

@@ -281,6 +281,8 @@ export interface BranchSalesReport {
   auditedBy?: string;
   auditedAt?: string;
   notes?: string;
+  importVerificationId?: string;
+  securitySignature?: string;
 }
 
 export type DeliveryStatus = 'Pending Scheduling' | 'Scheduled' | 'Out For Delivery' | 'Delivered' | 'Failed Delivery' | 'Cancelled' | 'Packed';

@@ -31,7 +31,8 @@ import {
   Trash2,
   Check,
   ChevronDown,
-  Accessibility
+  Accessibility,
+  Palette
 } from 'lucide-react';
 
 interface StaffPortalProps {
@@ -336,6 +337,15 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
             title="Privacy Policies & Accessibility Hub"
           >
             <Accessibility className="h-4 w-4" />
+          </button>
+
+          <button
+            id="theme-colors-staff"
+            onClick={() => window.dispatchEvent(new Event('open-privacy-hub'))}
+            className="p-2.5 rounded-xl border border-m3-outline-variant text-m3-primary hover:bg-m3-primary/10 transition-colors cursor-pointer"
+            title="Material Dynamic Theme Colors"
+          >
+            <Palette className="h-4 w-4" />
           </button>
 
           <button

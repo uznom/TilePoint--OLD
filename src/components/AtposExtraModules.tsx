@@ -72,8 +72,9 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
 
-  // Form states - Expense
+  // Add Expense
   const [expCategory, setExpCategory] = useState('Floor Supplies');
+  const [customCategory, setCustomCategory] = useState('');
   const [expAmount, setExpAmount] = useState('');
   const [expNotes, setExpNotes] = useState('');
   const [expenseSearch, setExpenseSearch] = useState('');
@@ -226,10 +227,14 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
       alert('Please enter a valid positive petty cash amount.');
       return;
     }
+    const finalCategory = expCategory === 'Other / Custom'
+      ? (customCategory.trim() || 'Other Custom Expense')
+      : expCategory;
+
     const entry: Expense = {
       id: 'EXP-' + (expenses.length + 1) + '-' + Math.floor(Math.random() * 900 + 100),
       dateTime: new Date().toISOString(),
-      category: expCategory,
+      category: finalCategory,
       amount: amountNum,
       recordedBy: db.currentUser?.fullName || 'Rejilyn Manaban',
       notes: expNotes || 'Casual office petty cash expense',
@@ -238,7 +243,7 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
     
     db.addAuditLog(
       'EXPENSE_LOG',
-      `Spent ₱${amountNum.toLocaleString()} on ${expCategory}: ${entry.notes}`,
+      `Spent ₱${amountNum.toLocaleString()} on ${finalCategory}: ${entry.notes}`,
       'Expenses',
       entry.id
     );
@@ -246,6 +251,7 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
     saveExpenses([entry, ...expenses]);
     setExpAmount('');
     setExpNotes('');
+    setCustomCategory('');
     alert('Monthly branch expense securely registered & deducted from general branch ledger!');
   };
 
@@ -618,8 +624,15 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
                     <option value="Office Stationery">Office Stationery</option>
                     <option value="Utility Repairs">Utility Repairs</option>
                     <option value="Showroom Lightings">Showroom Lightings</option>
+                    <option value="Other / Custom">Other / Custom (Specify Below)</option>
                   </select>
                 </div>
+                {expCategory === 'Other / Custom' && (
+                  <div className="space-y-1">
+                    <label className="font-bold text-m3-on-surface-variant">Specify Custom Classification *</label>
+                    <input required value={customCategory} onChange={e => setCustomCategory(e.target.value)} type="text" placeholder="e.g. Courier Logistics, Security services" className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary" />
+                  </div>
+                )}
                 <div className="space-y-1">
                   <label className="font-bold text-m3-on-surface-variant">Amount Disbursed (PHP) *</label>
                   <input required value={expAmount} onChange={e => setExpAmount(e.target.value)} type="number" placeholder="500" className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 font-mono outline-none focus:border-m3-primary" />

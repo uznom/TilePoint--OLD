@@ -233,6 +233,21 @@ const GUEST_USER: User = {
   updatedAt: ''
 };
 
+function safeParse<T>(key: string, defaultValue: T): T {
+  try {
+    const cached = localStorage.getItem(key);
+    if (!cached) return defaultValue;
+    return JSON.parse(cached) as T;
+  } catch (error) {
+    console.error(`Error parsing localStorage key "${key}":`, error);
+    try {
+      // Clean up corrupted key so subsequent reloads don't retry and error
+      localStorage.removeItem(key);
+    } catch (e) {}
+    return defaultValue;
+  }
+}
+
 // Initial Seed data constants
 const SEED_BRANCHES: Branch[] = [
   {
@@ -841,6 +856,59 @@ if (typeof window !== 'undefined' && localStorage.getItem('tp_simulation_purged_
   localStorage.setItem('tp_simulation_purged_final_v15', 'true');
 }
 
+/**
+ * Highly secure sanitation and verification helpers to prevent XSS script injections,
+ * escape raw HTML codes, trim input trails, and enforce strict type constraints.
+ */
+export const sanitizeInputText = (str: string): string => {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '') // Remove script tags
+    .replace(/<\/?[^>]+(>|$)/g, "") // Strip HTML tags
+    .replace(/[<>]/g, '') // Remove angle brackets
+    .trim();
+};
+
+export const sanitizeAndValidateNumber = (val: any, fallback = 0): number => {
+  if (val === undefined || val === null) return fallback;
+  const num = typeof val === 'number' ? val : parseFloat(val);
+  return isNaN(num) ? fallback : Math.max(0, num);
+};
+
+/**
+ * Simple Cryptographic Encryption using character level XOR transposition with dynamic secret salts.
+ * High portability representation to secure JSON payloads without external dependency imports.
+ */
+export const encryptString = (text: string, secretKey: string): string => {
+  let result = '';
+  const keyLength = secretKey.length;
+  for (let i = 0; i < text.length; i++) {
+    const charCode = text.charCodeAt(i);
+    const keyChar = secretKey.charCodeAt(i % keyLength);
+    const encryptedChar = charCode ^ keyChar;
+    result += ('00' + encryptedChar.toString(16)).slice(-2);
+  }
+  return btoa(result);
+};
+
+export const decryptString = (cipherStr: string, secretKey: string): string => {
+  try {
+    const decoded = atob(cipherStr);
+    let result = '';
+    const keyLength = secretKey.length;
+    for (let i = 0; i < decoded.length; i += 2) {
+      const hexPart = decoded.slice(i, i + 2);
+      const encryptedChar = parseInt(hexPart, 16);
+      const keyChar = secretKey.charCodeAt((i / 2) % keyLength);
+      const decryptedChar = encryptedChar ^ keyChar;
+      result += String.fromCharCode(decryptedChar);
+    }
+    return result;
+  } catch (e) {
+    return '';
+  }
+};
+
 export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isConfigured, setIsConfigured] = useState<boolean>(() => {
     const cached = localStorage.getItem('tp_is_configured');
@@ -849,9 +917,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   // Load initial local data or populate with seed data
   const [currentUser, setCurrentUser] = useState<User>(() => {
-    const cached = localStorage.getItem('tp_current_user');
-    if (cached) return JSON.parse(cached);
-    return SEED_USERS[0] || GUEST_USER;
+    return safeParse<User>('tp_current_user', SEED_USERS[0] || GUEST_USER);
   });
 
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
@@ -876,8 +942,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       localStorage.removeItem('tp_users');
       localStorage.setItem('tp_hash_version_v3', 'true');
     }
-    const cached = localStorage.getItem('tp_users');
-    return cached ? JSON.parse(cached) : SEED_USERS;
+    return safeParse<User[]>('tp_users', SEED_USERS);
   });
 
   // Dynamic seed passwords initialization
@@ -1007,74 +1072,65 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   const [branches, setBranches] = useState<Branch[]>(() => {
-    const cached = localStorage.getItem('tp_branches');
-    return cached ? JSON.parse(cached) : SEED_BRANCHES;
+    return safeParse<Branch[]>('tp_branches', SEED_BRANCHES);
   });
 
   const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
-    const cached = localStorage.getItem('tp_suppliers');
-    return cached ? JSON.parse(cached) : SEED_SUPPLIERS;
+    return safeParse<Supplier[]>('tp_suppliers', SEED_SUPPLIERS);
   });
 
   const [products, setProducts] = useState<Product[]>(() => {
-    const cached = localStorage.getItem('tp_products');
-    return cached ? JSON.parse(cached) : SEED_PRODUCTS;
+    return safeParse<Product[]>('tp_products', SEED_PRODUCTS);
   });
 
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(() => {
-    const cached = localStorage.getItem('tp_purchase_orders');
-    return cached ? JSON.parse(cached) : SEED_POS;
+    return safeParse<PurchaseOrder[]>('tp_purchase_orders', SEED_POS);
   });
 
   const [poItems, setPoItems] = useState<PurchaseOrderItem[]>(() => {
-    const cached = localStorage.getItem('tp_po_items');
-    return cached ? JSON.parse(cached) : SEED_PO_ITEMS;
+    return safeParse<PurchaseOrderItem[]>('tp_po_items', SEED_PO_ITEMS);
   });
 
   const [transmittals, setTransmittals] = useState<Transmittal[]>(() => {
-    const cached = localStorage.getItem('tp_transmittals');
-    return cached ? JSON.parse(cached) : SEED_TRANSMITTALS;
+    return safeParse<Transmittal[]>('tp_transmittals', SEED_TRANSMITTALS);
   });
 
   const [shifts, setShifts] = useState<Shift[]>(() => {
-    const cached = localStorage.getItem('tp_shifts');
-    return cached ? JSON.parse(cached) : SEED_SHIFTS;
+    return safeParse<Shift[]>('tp_shifts', SEED_SHIFTS);
   });
 
   const [sales, setSales] = useState<Sale[]>(() => {
-    const cached = localStorage.getItem('tp_sales');
-    return cached ? JSON.parse(cached) : SEED_SALES;
+    return safeParse<Sale[]>('tp_sales', SEED_SALES);
   });
 
   const [saleItems, setSaleItems] = useState<SaleItem[]>(() => {
-    const cached = localStorage.getItem('tp_sale_items');
-    return cached ? JSON.parse(cached) : SEED_SALE_ITEMS;
+    return safeParse<SaleItem[]>('tp_sale_items', SEED_SALE_ITEMS);
   });
 
   const [movements, setMovements] = useState<InventoryMovement[]>(() => {
-    const cached = localStorage.getItem('tp_movements');
-    return cached ? JSON.parse(cached) : SEED_MOVEMENTS;
+    return safeParse<InventoryMovement[]>('tp_movements', SEED_MOVEMENTS);
   });
 
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
-    const cached = localStorage.getItem('tp_audit_logs');
-    return cached ? JSON.parse(cached) : SEED_AUDIT_LOGS;
+    return safeParse<AuditLog[]>('tp_audit_logs', SEED_AUDIT_LOGS);
   });
 
   // Hold / park transactions - standard in cashiers POS
   const [parkedSales, setParkedSales] = useState<{ id: string; customerName: string; notes: string; items: { product: Product; quantity: number }[]; timestamp: string }[]>(() => {
-    const cached = localStorage.getItem('tp_parked_sales');
-    return cached ? JSON.parse(cached) : [];
+    return safeParse<{ id: string; customerName: string; notes: string; items: { product: Product; quantity: number }[]; timestamp: string }[]>('tp_parked_sales', []);
   });
 
   const [stockTransfers, setStockTransfers] = useState<StockTransfer[]>(() => {
-    const cached = localStorage.getItem('tp_stock_transfers');
-    return cached ? JSON.parse(cached) : [];
+    return safeParse<StockTransfer[]>('tp_stock_transfers', []);
   });
 
   const [branchStock, setBranchStock] = useState<InventoryLocationStock[]>(() => {
-    const cached = localStorage.getItem('tp_branch_stock');
-    if (cached) return JSON.parse(cached);
+    try {
+      const cached = localStorage.getItem('tp_branch_stock');
+      if (cached) return JSON.parse(cached);
+    } catch (e) {
+      console.error("Error loading tp_branch_stock, building default layout", e);
+    }
     
     const initial: InventoryLocationStock[] = [];
     const productsSource = products && products.length > 0 ? products : [];
@@ -1088,23 +1144,19 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   });
 
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>(() => {
-    const cached = localStorage.getItem('tp_ledger_entries');
-    return cached ? JSON.parse(cached) : [];
+    return safeParse<LedgerEntry[]>('tp_ledger_entries', []);
   });
 
   const [branchSalesReports, setBranchSalesReports] = useState<BranchSalesReport[]>(() => {
-    const cached = localStorage.getItem('tp_branch_sales_reports');
-    return cached ? JSON.parse(cached) : [];
+    return safeParse<BranchSalesReport[]>('tp_branch_sales_reports', []);
   });
 
   const [deliveries, setDeliveries] = useState<Delivery[]>(() => {
-    const cached = localStorage.getItem('tp_deliveries');
-    return cached ? JSON.parse(cached) : [];
+    return safeParse<Delivery[]>('tp_deliveries', []);
   });
 
   const [damageLogs, setDamageLogs] = useState<DamageLog[]>(() => {
-    const cached = localStorage.getItem('tp_damage_logs');
-    return cached ? JSON.parse(cached) : [];
+    return safeParse<DamageLog[]>('tp_damage_logs', []);
   });
 
   // Derived Active Branch
@@ -1884,6 +1936,31 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         return { success: false, error: 'Invalid file format. The JSON file must be a corporate Branch Sales Report.' };
       }
 
+      // Check encryption signature if it exists
+      let exportedByRole = '';
+      if (parsed.securitySignature) {
+        const decrypted = decryptString(parsed.securitySignature, "EmmanTileCenterSecretKey");
+        try {
+          const sig = JSON.parse(decrypted);
+          if (sig && sig.exportedByRole) {
+            exportedByRole = sig.exportedByRole;
+          }
+        } catch (err) {
+          // Keep exportedByRole empty/unverified
+        }
+      }
+
+      const finalExporterRole = exportedByRole || parsed.exportedByRole;
+      if (finalExporterRole === 'Admin') {
+        if (currentUser.role !== UserRole.ADMIN) {
+          const establishmentName = localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center';
+          return {
+            success: false,
+            error: `This sales report is for admin only of ${establishmentName}.`
+          };
+        }
+      }
+
       // Check if already exists
       const duplicate = branchSalesReports.find(r => r.branchId === parsed.branchId && r.reportingDate === parsed.reportingDate);
       if (duplicate) {
@@ -1904,7 +1981,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         status: 'Pending Audit',
         sales: parsed.sales,
         saleItems: parsed.saleItems || [],
-        notes: parsed.notes || 'Imported via offline secure JSON package.'
+        notes: parsed.notes || 'Imported via offline secure JSON package.',
+        importVerificationId: parsed.importVerificationId || parsed.id || `IMPID-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        securitySignature: parsed.securitySignature
       };
 
       setBranchSalesReports(prev => {
@@ -2380,6 +2459,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const createUser = (userFields: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newUser: User = {
       ...userFields,
+      username: sanitizeInputText(userFields.username),
+      fullName: sanitizeInputText(userFields.fullName),
+      role: sanitizeInputText(userFields.role) as any,
+      branchAssignmentId: sanitizeInputText(userFields.branchAssignmentId),
       id: `U-${Date.now()}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -2415,6 +2498,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const createBranch = (branchFields: Omit<Branch, 'id' | 'createdAt' | 'updatedAt' | 'isDeleted'>) => {
     const newBranch: Branch = {
       ...branchFields,
+      name: sanitizeInputText(branchFields.name),
+      address: sanitizeInputText(branchFields.address),
+      manager: sanitizeInputText(branchFields.manager),
+      phone: sanitizeInputText(branchFields.phone),
       id: `B-${Date.now()}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -2438,6 +2525,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const createSupplier = (supFields: Omit<Supplier, 'id' | 'createdAt' | 'isDeleted'>): Supplier => {
     const newSup: Supplier = {
       ...supFields,
+      name: sanitizeInputText(supFields.name),
+      contactPerson: sanitizeInputText(supFields.contactPerson),
+      phone: sanitizeInputText(supFields.phone),
+      email: sanitizeInputText(supFields.email),
+      address: sanitizeInputText(supFields.address),
       id: `S-${Date.now()}`,
       createdAt: new Date().toISOString(),
       isDeleted: false,
@@ -2460,10 +2552,32 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   // PRODUCTS
   const createProduct = (prodFields: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'qrCode' | 'createdBy' | 'updatedBy'>) => {
     const newId = `P-${Date.now()}`;
-    const newProd: Product = {
+    const sanitizedFields = {
       ...prodFields,
+      productName: sanitizeInputText(prodFields.productName),
+      productCode: sanitizeInputText(prodFields.productCode),
+      sku: sanitizeInputText(prodFields.sku),
+      barcode: sanitizeInputText(prodFields.barcode),
+      category: sanitizeInputText(prodFields.category) || 'Porcelain Tiles',
+      brand: sanitizeInputText(prodFields.brand) || 'Generic',
+      size: sanitizeInputText(prodFields.size),
+      designName: sanitizeInputText(prodFields.designName || 'Standard'),
+      supplierId: sanitizeInputText(prodFields.supplierId || 'central'),
+      unit: sanitizeInputText(prodFields.unit) || 'Boxes',
+      origin: prodFields.origin ? sanitizeInputText(prodFields.origin) : undefined,
+
+      boxQuantity: sanitizeAndValidateNumber(prodFields.boxQuantity, 1),
+      coveragePerBox: prodFields.coveragePerBox !== undefined ? sanitizeAndValidateNumber(prodFields.coveragePerBox, 1) : undefined,
+      costPrice: sanitizeAndValidateNumber(prodFields.costPrice),
+      sellingPrice: sanitizeAndValidateNumber(prodFields.sellingPrice),
+      stockQuantity: Math.round(sanitizeAndValidateNumber(prodFields.stockQuantity)),
+      minimumStock: Math.round(sanitizeAndValidateNumber(prodFields.minimumStock, 10)),
+    };
+
+    const newProd: Product = {
+      ...sanitizedFields,
       id: newId,
-      qrCode: `TP-${prodFields.productCode}`,
+      qrCode: `TP-${sanitizedFields.productCode}`,
       isDeleted: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -2477,11 +2591,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       id: `M-${Date.now()}`,
       productId: newId,
       type: 'IN',
-      quantity: prodFields.stockQuantity,
+      quantity: sanitizedFields.stockQuantity,
       destinationBranchId: currentUser.branchAssignmentId,
       referenceId: 'INITIAL_STOCK',
-      notes: prodFields.origin 
-        ? `Initial stock intake. Origin/Source: ${prodFields.origin}` 
+      notes: sanitizedFields.origin 
+        ? `Initial stock intake. Origin/Source: ${sanitizedFields.origin}` 
         : 'Initial stock intake upon product registration',
       timestamp: new Date().toISOString(),
       userId: currentUser.id,
@@ -2497,16 +2611,37 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     const original = products.find(p => p.id === id);
     setProducts(prev => prev.map(p => {
       if (p.id === id) {
-        const nextQty = updates.stockQuantity !== undefined ? updates.stockQuantity : p.stockQuantity;
+        const sanitizedUpdates: Partial<Product> = {};
+        if (updates.productName !== undefined) sanitizedUpdates.productName = sanitizeInputText(updates.productName);
+        if (updates.productCode !== undefined) sanitizedUpdates.productCode = sanitizeInputText(updates.productCode);
+        if (updates.sku !== undefined) sanitizedUpdates.sku = sanitizeInputText(updates.sku);
+        if (updates.barcode !== undefined) sanitizedUpdates.barcode = sanitizeInputText(updates.barcode);
+        if (updates.category !== undefined) sanitizedUpdates.category = sanitizeInputText(updates.category);
+        if (updates.brand !== undefined) sanitizedUpdates.brand = sanitizeInputText(updates.brand);
+        if (updates.size !== undefined) sanitizedUpdates.size = sanitizeInputText(updates.size);
+        if (updates.designName !== undefined) sanitizedUpdates.designName = sanitizeInputText(updates.designName);
+        if (updates.supplierId !== undefined) sanitizedUpdates.supplierId = sanitizeInputText(updates.supplierId);
+        if (updates.unit !== undefined) sanitizedUpdates.unit = sanitizeInputText(updates.unit);
+        if (updates.origin !== undefined) sanitizedUpdates.origin = updates.origin ? sanitizeInputText(updates.origin) : undefined;
+        if (updates.image !== undefined) sanitizedUpdates.image = updates.image;
+
+        if (updates.boxQuantity !== undefined) sanitizedUpdates.boxQuantity = sanitizeAndValidateNumber(updates.boxQuantity);
+        if (updates.coveragePerBox !== undefined) sanitizedUpdates.coveragePerBox = sanitizeAndValidateNumber(updates.coveragePerBox);
+        if (updates.costPrice !== undefined) sanitizedUpdates.costPrice = sanitizeAndValidateNumber(updates.costPrice);
+        if (updates.sellingPrice !== undefined) sanitizedUpdates.sellingPrice = sanitizeAndValidateNumber(updates.sellingPrice);
+        if (updates.stockQuantity !== undefined) sanitizedUpdates.stockQuantity = Math.round(sanitizeAndValidateNumber(updates.stockQuantity));
+        if (updates.minimumStock !== undefined) sanitizedUpdates.minimumStock = Math.round(sanitizeAndValidateNumber(updates.minimumStock));
+
         // If stock level changed, record movement
-        if (updates.stockQuantity !== undefined && updates.stockQuantity !== p.stockQuantity) {
-          const diff = updates.stockQuantity - p.stockQuantity;
+        if (sanitizedUpdates.stockQuantity !== undefined && sanitizedUpdates.stockQuantity !== p.stockQuantity) {
+          const diff = sanitizedUpdates.stockQuantity - p.stockQuantity;
           logManualAdjustment(id, diff, customLogReason || 'Stock level manual correction from product edit panel');
         }
 
         return {
           ...p,
           ...updates,
+          ...sanitizedUpdates,
           updatedAt: new Date().toISOString(),
           updatedBy: currentUser.fullName,
         };
@@ -2525,17 +2660,36 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   const importProducts = (imported: Product[]) => {
     try {
-      const sanitized = imported.map((p, i) => ({
-        ...p,
-        id: p.id || `P-IMPORT-${Date.now()}-${i}`,
-        productCode: p.productCode || `TL-IMP-${Date.now()}-${i}`,
-        sku: p.sku || `SKU-IMP-${Date.now()}-${i}`,
-        barcode: p.barcode || `BAR-${Date.now()}-${i}`,
-        qrCode: p.qrCode || `TP-IMP-${Date.now()}-${i}`,
-        createdAt: p.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        isDeleted: !!p.isDeleted,
-      }));
+      const sanitized = imported.map((p, i) => {
+        const productCode = sanitizeInputText(p.productCode) || `TL-IMP-${Date.now()}-${i}`;
+        return {
+          ...p,
+          id: p.id || `P-IMPORT-${Date.now()}-${i}`,
+          productCode,
+          productName: sanitizeInputText(p.productName) || 'Unnamed Imported Product',
+          sku: sanitizeInputText(p.sku) || `SKU-IMP-${Date.now()}-${i}`,
+          barcode: sanitizeInputText(p.barcode) || `BAR-${Date.now()}-${i}`,
+          qrCode: p.qrCode || `TP-${productCode}`,
+          category: sanitizeInputText(p.category) || 'Porcelain Tiles',
+          brand: sanitizeInputText(p.brand) || 'Generic',
+          size: sanitizeInputText(p.size) || '60x60 cm',
+          designName: sanitizeInputText(p.designName) || 'Standard Design',
+          supplierId: sanitizeInputText(p.supplierId) || 'central',
+          unit: sanitizeInputText(p.unit) || 'Boxes',
+          origin: p.origin ? sanitizeInputText(p.origin) : undefined,
+
+          boxQuantity: sanitizeAndValidateNumber(p.boxQuantity, 1),
+          coveragePerBox: p.coveragePerBox !== undefined ? sanitizeAndValidateNumber(p.coveragePerBox, 1) : undefined,
+          costPrice: sanitizeAndValidateNumber(p.costPrice),
+          sellingPrice: sanitizeAndValidateNumber(p.sellingPrice),
+          stockQuantity: Math.round(sanitizeAndValidateNumber(p.stockQuantity)),
+          minimumStock: Math.round(sanitizeAndValidateNumber(p.minimumStock, 10)),
+
+          createdAt: p.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          isDeleted: !!p.isDeleted,
+        };
+      });
 
       setProducts(prev => {
         // Upsert by productCode

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { useDb } from '../context/DbContext';
+import { useDb, encryptString } from '../context/DbContext';
 import { UserRole, BranchSalesReport, Sale, SaleItem } from '../types/db';
 import {
   Send,
@@ -23,7 +23,10 @@ import {
   FileJson,
   Plus,
   RefreshCw,
-  FolderOpen
+  FolderOpen,
+  Share2,
+  Copy,
+  Printer
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -74,9 +77,124 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
   // Toast notification
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
+  // Sharing states
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [sharePayloadText, setSharePayloadText] = useState('');
+  const [shareFileName, setShareFileName] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
+
   const triggerToast = (msg: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ message: msg, type });
     setTimeout(() => setToast(null), 4000);
+  };
+
+  // Printing & Exporting states
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [printData, setPrintData] = useState<any | null>(null);
+
+  // Elevated Authorization Check - Admins & Managers can trigger exports
+  const isAuthorizedToExport = useMemo(() => {
+    return currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER;
+  }, [currentUser]);
+
+  // Utility to map draft compilation data to standard report structure for exports
+  const getCommonReportData = (mode: 'compiled' | 'selected') => {
+    if (mode === 'selected' && selectedReport) {
+      return selectedReport;
+    }
+    
+    return {
+      id: `REP-DRAFT-${currentBranchMeta.id}-${reportingDate}`,
+      branchId: currentBranchMeta.id,
+      branchName: currentBranchMeta.name,
+      reportingDate,
+      totalSalesCount: compiledLocalSalesData.count,
+      totalSalesAmount: compiledLocalSalesData.grandTotal,
+      totalVatAmount: compiledLocalSalesData.vat,
+      totalDiscountAmount: compiledLocalSalesData.discount,
+      transmissionType: 'Offline (Draft)',
+      status: 'Draft (Unsubmitted)',
+      sales: compiledLocalSalesData.sales,
+      saleItems: compiledLocalSalesData.saleItems,
+      notes: 'Generated offline draft from cashier local journal sessions.'
+    };
+  };
+
+  const handleExportCSV = (mode: 'compiled' | 'selected', isExcel: boolean = false) => {
+    if (!isAuthorizedToExport) {
+      triggerToast('Security Error: Only Admins or Branch Managers are authorized to export raw sales reports.', 'error');
+      return;
+    }
+
+    const report = getCommonReportData(mode);
+    if (!report || report.totalSalesCount === 0) {
+      triggerToast('Compilation Error: Cannot export an empty report with 0 sales.', 'error');
+      return;
+    }
+
+    const establishmentName = localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center';
+    let csv = '';
+    
+    // Header
+    csv += `"${establishmentName.replace(/"/g, '""')}"\n`;
+    csv += `"OFFICIAL DAILY SALES TRANSMISSION REPORT (${isExcel ? 'EXCEL CSV MATRIX' : 'STANDARD CSV'})"\n\n`;
+    
+    // Metadata
+    csv += `"Report Matrix ID:","${report.id}"\n`;
+    csv += `"Branch Origin:","${report.branchName} (${report.branchId})"\n`;
+    csv += `"Reporting Accounting Date:","${report.reportingDate}"\n`;
+    csv += `"Link Transmission Channel:","${report.transmissionType || 'N/A'}"\n`;
+    csv += `"Authority Audit Status:","${report.status || 'Pending'}"\n`;
+    csv += `"Report Export Timestamp:","${new Date().toISOString()}"\n`;
+    csv += `"Operator Sign-Off:","${currentUser.fullName} (${currentUser.role})"\n\n`;
+    
+    // Summary Aggregates
+    csv += `"AGGREGATE REVENUE STATISTICS"\n`;
+    csv += `"Receipts Issued Count","${report.totalSalesCount}"\n`;
+    csv += `"Total Applied Discounts","PHP ${report.totalDiscountAmount.toLocaleString()}"\n`;
+    csv += `"Calculated 12% VAT Covered","PHP ${report.totalVatAmount.toLocaleString()}"\n`;
+    csv += `"GRAND SETTLED TOTAL REVENUE","PHP ${report.totalSalesAmount.toLocaleString()}"\n\n`;
+    
+    // Enclosed Receipts List
+    csv += `"ENCLOSED CUSTOMER TRANSACTIONS INVOICE LIST"\n`;
+    csv += `"Invoice Number","Customer Name","Cashier Name","Payment Mode","Subtotal","Applied Discount","Calculated VAT","Grand Total","Created Timestamp"\n`;
+    
+    if (report.sales && report.sales.length > 0) {
+      report.sales.forEach((s: any) => {
+        csv += `"${s.saleNumber}","${(s.customerName || 'Walk-in Buyer').replace(/"/g, '""')}","${s.cashierName.replace(/"/g, '""')}","${s.paymentMethod}","${s.subtotal}","${s.discount}","${s.vat}","${s.grandTotal}","${new Date(s.createdAt).toISOString()}"\n`;
+      });
+    } else {
+      csv += `"No transaction invoices attached to report vector."\n`;
+    }
+
+    // Trigger download - prepending UTF-8 BOM to force Excel to read properly in UTF-8
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' }); 
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const formatSuffix = isExcel ? 'Excel_Format' : 'CSV_Format';
+    link.download = `TilePoint_${formatSuffix}_Report_${report.branchName.replace(/\s+/g, '_')}_${report.reportingDate}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    triggerToast(`Successfully exported ${isExcel ? 'Excel' : 'CSV'} sales report for ${report.branchName}.`, 'success');
+  };
+
+  const handleOpenPrintPreview = (mode: 'compiled' | 'selected') => {
+    if (!isAuthorizedToExport) {
+      triggerToast('Security Error: Only Admins or Branch Managers are authorized to view print templates.', 'error');
+      return;
+    }
+
+    const report = getCommonReportData(mode);
+    if (!report || report.totalSalesCount === 0) {
+      triggerToast('Compilation Error: Cannot print an empty report with 0 sales.', 'error');
+      return;
+    }
+
+    setPrintData(report);
+    setShowPrintModal(true);
   };
 
   // Get current active branch metadata
@@ -157,8 +275,21 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
       return;
     }
 
+    const establishmentName = localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center';
+    const importVerificationId = `IMPID-EXP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const sigPayload = {
+      importVerificationId,
+      branchId: currentBranchMeta.id,
+      exportedByRole: currentUser.role,
+      exportedBy: currentUser.fullName,
+      establishmentName,
+      timestamp: new Date().toISOString()
+    };
+    const signature = encryptString(JSON.stringify(sigPayload), "EmmanTileCenterSecretKey");
+
     const payload = {
       id: `REP-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      importVerificationId,
       branchId: currentBranchMeta.id,
       branchName: currentBranchMeta.name,
       reportingDate,
@@ -167,15 +298,21 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
       totalVatAmount: compiledLocalSalesData.vat,
       totalDiscountAmount: compiledLocalSalesData.discount,
       transmissionType: 'Manual',
+      exportedByRole: currentUser.role,
+      securitySignature: signature,
       sales: compiledLocalSalesData.sales,
       saleItems: compiledLocalSalesData.saleItems,
-      notes: `Offline encrypted report package saved on disk by local operator.`
+      notes: `Offline encrypted sales package generated securely with validation signatures.`
     };
 
-    const str = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(payload, null, 2));
+    const payloadString = JSON.stringify(payload, null, 2);
+    const str = 'data:text/json;charset=utf-8,' + encodeURIComponent(payloadString);
+    const fileName = `TilePoint_Sales_Report_${currentBranchMeta.id}_${reportingDate}.json`;
+    
+    // Download file
     const element = document.createElement('a');
     element.setAttribute('href', str);
-    element.setAttribute('download', `TilePoint_Sales_Report_${currentBranchMeta.id}_${reportingDate}.json`);
+    element.setAttribute('download', fileName);
     element.click();
 
     addAuditLog(
@@ -184,6 +321,11 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
       'BranchSalesReport',
       payload.id
     );
+
+    // Save to state to show custom Share dialog
+    setSharePayloadText(payloadString);
+    setShareFileName(fileName);
+    setShowShareModal(true);
 
     triggerToast('Secure JSON sales report package downloaded.', 'success');
   };
@@ -451,6 +593,59 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                 <Download className="h-4 w-4 text-amber-500" />
                 <span>Download manual JSON Packet</span>
               </button>
+
+              {/* Multi-Format Corporate Exports */}
+              <div className="mt-4 pt-4 border-t border-m3-outline-variant/15 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-[#71717a] font-mono">
+                    Multi-Format Reports (Admin/Manager):
+                  </span>
+                  {!isAuthorizedToExport ? (
+                    <span className="text-[8px] font-bold text-rose-450 font-mono bg-rose-950/20 px-1.5 py-0.5 rounded border border-rose-500/20 uppercase tracking-wide">
+                      🔒 Locked (Staff Role)
+                    </span>
+                  ) : (
+                    <span className="text-[8px] font-bold text-emerald-400 font-mono bg-emerald-950/20 px-1.5 py-0.5 rounded border border-emerald-500/20 uppercase tracking-wide">
+                      ✓ Authorized
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-3 gap-1.5 pt-1">
+                  <button
+                    type="button"
+                    disabled={compiledLocalSalesData.count === 0 || !isAuthorizedToExport}
+                    onClick={() => handleExportCSV('compiled', false)}
+                    className="py-2.5 bg-[#1a1b24] border border-m3-outline-variant/20 hover:border-emerald-500/30 text-zinc-300 hover:text-emerald-400 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent"
+                    title="Export Compiled Draft Ledger as Standard CSV Raw File"
+                  >
+                    <span className="text-[8px] uppercase font-bold text-zinc-500 font-mono block">CSV</span>
+                    <span>Export</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={compiledLocalSalesData.count === 0 || !isAuthorizedToExport}
+                    onClick={() => handleExportCSV('compiled', true)}
+                    className="py-2.5 bg-[#1a1b24] border border-m3-outline-variant/20 hover:border-blue-500/30 text-zinc-300 hover:text-blue-400 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
+                    title="Export Compiled Draft Ledger as Microsoft Excel Formatted CSV Sheet"
+                  >
+                    <span className="text-[8px] uppercase font-bold text-zinc-500 font-mono block">Excel</span>
+                    <span>Spreadsheet</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={compiledLocalSalesData.count === 0 || !isAuthorizedToExport}
+                    onClick={() => handleOpenPrintPreview('compiled')}
+                    className="py-2.5 bg-[#1a1b24] border border-m3-outline-variant/20 hover:border-amber-500/30 text-zinc-300 hover:text-amber-500 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
+                    title="Open TilePoint Audit Station Print Layout and PDF Printer"
+                  >
+                    <Printer className="h-3.5 w-3.5 text-zinc-400" />
+                    <span>Print PDF</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -708,6 +903,59 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                           Set Pending
                         </button>
                       </div>
+
+                      {/* Enclosed Report Multi-Format Document Export */}
+                      <div className="pt-4 border-t border-m3-outline-variant/15 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-black uppercase tracking-widest text-[#71717a] font-mono">
+                            Multi-Format Audit Export (Admin/Manager):
+                          </span>
+                          {!isAuthorizedToExport ? (
+                            <span className="text-[8px] font-bold text-rose-450 font-mono bg-rose-950/20 px-1.5 py-0.5 rounded border border-rose-500/20 uppercase tracking-wide">
+                              🔒 Locked (Staff Role)
+                            </span>
+                          ) : (
+                            <span className="text-[8px] font-bold text-emerald-400 font-mono bg-emerald-950/20 px-1.5 py-0.5 rounded border border-emerald-500/20 uppercase tracking-wide">
+                              ✓ Allowed
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-1.5 pt-1">
+                          <button
+                            type="button"
+                            disabled={!isAuthorizedToExport}
+                            onClick={() => handleExportCSV('selected', false)}
+                            className="py-2.5 bg-[#1a1b24] border border-m3-outline-variant/20 hover:border-emerald-500/30 text-zinc-300 hover:text-emerald-400 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
+                            title="Export Selected Transmitted Report in CSV Format"
+                          >
+                            <span className="text-[8px] uppercase font-bold text-zinc-500 font-mono block">CSV</span>
+                            <span>Export</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={!isAuthorizedToExport}
+                            onClick={() => handleExportCSV('selected', true)}
+                            className="py-2.5 bg-[#1a1b24] border border-m3-outline-variant/20 hover:border-blue-500/30 text-zinc-300 hover:text-blue-400 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
+                            title="Export Selected Transmitted Report as Microsoft Excel CSV spreadsheet sheet"
+                          >
+                            <span className="text-[8px] uppercase font-bold text-zinc-500 font-mono block">Excel</span>
+                            <span>Spreadsheet</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={!isAuthorizedToExport}
+                            onClick={() => handleOpenPrintPreview('selected')}
+                            className="py-2.5 bg-[#1a1b24] border border-m3-outline-variant/20 hover:border-amber-500/30 text-zinc-300 hover:text-amber-500 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
+                            title="Open layout template and prompt printer utility"
+                          >
+                            <Printer className="h-3.5 w-3.5 text-zinc-400" />
+                            <span>Print PDF</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -918,28 +1166,68 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                   Import a manually saved branch sales report JSON file. Drag-and-drop the exported file below, select it directly from storage, or paste the raw structured JSON data inside the text area.
                 </p>
 
-                {/* File picker */}
+                {/* Drag and Drop Zone and File Picker combined */}
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-black uppercase tracking-widest text-[#71717a] font-mono">Select JSON Report file from drive:</label>
-                  <div className="flex items-center gap-3">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-[#71717a] font-mono">
+                    Select or Drag & Drop JSON Report file:
+                  </label>
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDragging(true);
+                    }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          const text = event.target?.result as string;
+                          setPastedJson(text);
+                          triggerToast('File dropped and loaded successfully.', 'info');
+                        };
+                        reader.onerror = () => triggerToast('Failed to read dropped file.', 'error');
+                        reader.readAsText(file);
+                      }
+                    }}
+                    className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all flex flex-col items-center justify-center gap-2 cursor-pointer ${
+                      isDragging
+                        ? 'border-m3-primary bg-m3-primary/10'
+                        : 'border-m3-outline-variant/40 hover:border-m3-primary/50 bg-[#16171d]'
+                    }`}
+                    onClick={() => document.getElementById('report-file-picker')?.click()}
+                  >
+                    <Upload className={`h-8 w-8 transition-transform ${isDragging ? 'scale-110 text-m3-primary' : 'text-zinc-500'}`} />
+                    <div className="text-xs font-bold text-m3-on-surface">
+                      {isDragging ? 'Drop the file here' : 'Drag & Drop .json file here, or click to browse'}
+                    </div>
+                    <span className="text-[10px] text-zinc-400 font-mono">
+                      Accepts only encrypted offline report JSONs
+                    </span>
                     <input
                       type="file"
+                      id="report-file-picker"
                       accept=".json"
                       onChange={handleFileUpload}
                       className="hidden"
-                      id="report-file-picker"
                     />
-                    <label
-                      htmlFor="report-file-picker"
-                      className="px-4 py-2.5 bg-m3-surface hover:bg-m3-primary/10 border border-m3-outline-variant/40 rounded-xl text-xs font-bold uppercase tracking-wider text-m3-on-surface shadow-sm cursor-pointer flex items-center gap-2 transition-all"
-                    >
-                      <FolderOpen className="h-4 w-4 text-m3-primary" />
-                      Browse Files
-                    </label>
-                    <span className="text-[11px] text-zinc-400 font-mono truncate max-w-[240px]">
-                      {pastedJson ? "Report loaded. Ready for import code." : "No file loaded yet."}
-                    </span>
                   </div>
+                  {pastedJson && (
+                    <div className="text-[10px] text-emerald-400 font-mono bg-emerald-900/10 border border-emerald-500/20 rounded-lg py-1.5 px-3 flex items-center justify-between">
+                      <span>✓ Report loaded & populated below</span>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPastedJson('');
+                        }} 
+                        className="text-zinc-500 hover:text-rose-400 underline cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* PASTE DIALOG */}
@@ -987,6 +1275,395 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                   className="px-5 py-2.5 bg-m3-primary text-m3-on-primary font-black text-xs uppercase tracking-wider rounded-xl hover:bg-m3-primary/95 transition-all shadow-md cursor-pointer active:scale-97"
                 >
                   Confirm & Finalize Import
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* POPUP: SALES REPORT SHARE DIALOGUE */}
+      <AnimatePresence>
+        {showShareModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-45 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[28px] max-w-lg w-full text-left overflow-hidden shadow-2xl relative z-50 font-sans"
+            >
+              <div className="px-6 py-4.5 bg-gradient-to-r from-emerald-950 to-zinc-900 border-b border-m3-outline-variant/20 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                    Share Offline Sales package
+                  </h3>
+                  <span className="text-[9px] font-mono text-emerald-400 font-bold uppercase tracking-widest block mt-0.5">
+                    Export Ready & Securely Encrypted
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowShareModal(false)}
+                  className="p-1.5 text-zinc-400 hover:text-white rounded-xl hover:bg-white/10 cursor-pointer"
+                >
+                  <XIcon className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-5">
+                <div className="p-4 rounded-2xl bg-[#16171d] border border-m3-outline-variant/20 space-y-2">
+                  <div className="flex items-center gap-2 text-emerald-400 text-xs font-black uppercase tracking-wider">
+                    <CheckCircle2 className="h-4.5 w-4.5" />
+                    <span>Report Generation Successful</span>
+                  </div>
+                  <p className="text-xs text-m3-on-surface-variant leading-relaxed">
+                    The sales report file <strong className="text-white font-mono break-all">{shareFileName}</strong> has been downloaded to your device drive. 
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-[#71717a] font-mono block">
+                    Choose Sharing Method:
+                  </span>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Share on facebook messenger */}
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(sharePayloadText);
+                        triggerToast('JSON payload copied! Redirecting to Messenger...', 'success');
+                        setTimeout(() => {
+                          window.open('https://www.messenger.com', '_blank', 'noopener,noreferrer');
+                        }, 800);
+                      }}
+                      className="p-4 bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/20 hover:border-blue-500/40 text-blue-400 rounded-2xl text-left transition-all group flex flex-col justify-between h-24 cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-[10px] font-black uppercase tracking-wider font-mono">Messenger</span>
+                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-white mb-0.5">Share to Messenger</div>
+                        <p className="text-[10px] text-zinc-400">Copies code & opens messenger chat</p>
+                      </div>
+                    </button>
+
+                    {/* Native system share screen */}
+                    <button
+                      onClick={async () => {
+                        if (navigator.share) {
+                          try {
+                            const file = new File([sharePayloadText], shareFileName, { type: 'application/json' });
+                            await navigator.share({
+                              files: [file],
+                              title: `Sales Report - ${reportingDate}`,
+                              text: `Encrypted Sales Report for ${currentBranchMeta.name} (${reportingDate})`
+                            });
+                            triggerToast('Shared successfully!', 'success');
+                          } catch (err) {
+                            console.log('Native share error or cancel:', err);
+                          }
+                        } else {
+                          navigator.clipboard.writeText(sharePayloadText);
+                          triggerToast('Copied encrypted JSON content to clipboard!', 'success');
+                        }
+                      }}
+                      className="p-4 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 rounded-2xl text-left transition-all group flex flex-col justify-between h-24 cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-[10px] font-black uppercase tracking-wider font-mono">
+                          {navigator.share ? 'System Share' : 'Clipboard'}
+                        </span>
+                        <Share2 className="h-4 w-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-white mb-0.5">
+                          {navigator.share ? 'Trigger Share Screen' : 'Copy JSON String'}
+                        </div>
+                        <p className="text-[10px] text-zinc-400">
+                          {navigator.share ? 'Opens native Android/iOS share sheet' : 'Copy string to paste manually'}
+                        </p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 bg-[#0d0e12] border border-m3-outline-variant/30 rounded-xl p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 font-mono">
+                      Secure Decryption Signature Content:
+                    </span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(sharePayloadText);
+                        triggerToast('Full report JSON copied to clipboard!', 'success');
+                      }}
+                      className="text-[9px] font-bold text-m3-primary hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Copy className="h-3 w-3" />
+                      Copy Raw JSON
+                    </button>
+                  </div>
+                  <pre className="text-[9px] font-mono text-zinc-500 select-all overflow-x-auto whitespace-pre scrollbar-thin max-h-20 max-w-full opacity-70">
+                    {sharePayloadText}
+                  </pre>
+                </div>
+              </div>
+
+              <div className="px-6 py-4 bg-m3-surface border-t border-m3-outline-variant/15 flex justify-end">
+                <button
+                  onClick={() => setShowShareModal(false)}
+                  className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer active:scale-97"
+                >
+                  Done & Close
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* POPUP: SALES REPORT CUSTOM PRINT RECONCILIATION STATION */}
+      <AnimatePresence>
+        {showPrintModal && printData && (
+          <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in text-left">
+            <div className="absolute inset-0 bg-black/85 backdrop-blur-md" onClick={() => setShowPrintModal(false)} />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[28px] max-w-4xl w-full text-left overflow-hidden shadow-2xl relative z-60 font-sans flex flex-col max-h-[90vh]"
+            >
+              {/* Style block to control printing visibility and layout */}
+              <style>{`
+                @media print {
+                  body * {
+                    visibility: hidden !important;
+                    background: transparent !important;
+                  }
+                  #tilepoint-printable-area, #tilepoint-printable-area * {
+                    visibility: visible !important;
+                    color: #000000 !important;
+                    background: #ffffff !important;
+                  }
+                  #tilepoint-printable-area {
+                    position: absolute !important;
+                    left: 0 !important;
+                    top: 0 !important;
+                    width: 100% !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    box-shadow: none !important;
+                  }
+                  .no-print {
+                    display: none !important;
+                  }
+                }
+              `}</style>
+
+              <div className="px-6 py-4.5 bg-gradient-to-r from-zinc-900 to-zinc-800 border-b border-m3-outline-variant/20 flex items-center justify-between no-print">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 bg-amber-500/10 text-amber-500 rounded-lg">
+                    <Printer className="h-4.5 w-4.5" />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-black text-white uppercase tracking-wider font-mono">
+                      Report Print Station & PDF Station
+                    </h3>
+                    <span className="text-[9px] font-mono text-zinc-400 font-bold uppercase tracking-widest block mt-0.5">
+                      Verify & trigger your local system print pipeline
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowPrintModal(false)}
+                  className="p-1.5 text-zinc-400 hover:text-white rounded-xl hover:bg-white/10 cursor-pointer"
+                >
+                  <XIcon className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Printable Area Wrapper */}
+              <div className="p-6 overflow-y-auto flex-1 bg-zinc-900/40">
+                <div className="max-w-3xl mx-auto space-y-4">
+                  {/* Informational Hint */}
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl text-[11px] leading-relaxed flex items-start gap-2.5 no-print">
+                    <Printer className="h-4.5 w-4.5 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="block font-black uppercase text-[10px] tracking-widest text-amber-300">SYSTEM PRINTING AND PDF INSTRUCTIONS:</strong>
+                      <p className="mt-0.5 opacity-90 text-zinc-300">Clicking <strong>Trigger System Print</strong> below will open the native printer setup. To save a copy as a digital document, select <strong>"Save as PDF"</strong> or <strong>"Microsoft Print to PDF"</strong> as the destination.</p>
+                    </div>
+                  </div>
+
+                  {/* actual printable white sheet of paper */}
+                  <div 
+                    id="tilepoint-printable-area" 
+                    className="p-8 sm:p-12 bg-white text-zinc-900 rounded-2xl shadow-lg border border-zinc-200 font-sans relative overflow-hidden"
+                  >
+                    {/* Watermark/Accent */}
+                    <div className="absolute top-0 left-0 right-0 h-2 bg-zinc-955 bg-indigo-900" />
+                    
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b-2 border-zinc-900">
+                      <div className="space-y-1">
+                        <span className="text-[9.5px] font-bold uppercase tracking-widest text-zinc-500 font-mono">
+                          Official Corporate Audit Record
+                        </span>
+                        <h1 className="text-2xl font-black uppercase tracking-tight text-zinc-950 font-sans">
+                          {localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center'}
+                        </h1>
+                        <p className="text-xs text-zinc-500 font-medium max-w-sm">
+                          Flagship Depot, Warehouse & Inter-Branch Audited Ledger Transmission Module
+                        </p>
+                      </div>
+
+                      <div className="sm:text-right font-mono text-xs space-y-1">
+                        <div className="px-2.5 py-1 bg-zinc-900 text-white rounded font-bold inline-block text-[10px] uppercase tracking-wider">
+                          DAILY REVENUE STATEMENT
+                        </div>
+                        <p className="text-zinc-600 pt-1 font-sans">Report Date: <strong className="text-zinc-900 font-black">{printData.reportingDate}</strong></p>
+                        <p className="text-[10px] text-zinc-500 font-mono">REPORT ID: {printData.id}</p>
+                      </div>
+                    </div>
+
+                    {/* Metadata grids */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 py-6 border-b border-zinc-200 text-xs">
+                      <div className="space-y-1.5 text-left">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 font-mono">
+                          Branch Origin & Metadata
+                        </h4>
+                        <div className="space-y-1">
+                          <p className="text-zinc-500">Branch Name: <strong className="text-zinc-900 font-bold">{printData.branchName}</strong></p>
+                          <p className="text-zinc-500">Security Signature: <span className="font-mono text-[10.5px] text-zinc-700 bg-zinc-100 rounded px-1.5 py-0.5">{printData.id}</span></p>
+                          <p className="text-zinc-500">Transmission Channel: <strong className="text-zinc-800">{printData.transmissionType || 'Manual Data Packet'}</strong></p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5 sm:text-right text-left sm:text-right">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 font-mono">
+                          Generation Profile
+                        </h4>
+                        <div className="space-y-1">
+                          <p className="text-zinc-500">Prepared By: <strong className="text-zinc-950">{currentUser.fullName} ({currentUser.role})</strong></p>
+                          <p className="text-zinc-500">Status: <span className="px-2 py-0.5 bg-semibold text-[10px] rounded uppercase font-black bg-zinc-100 text-zinc-800">{printData.status}</span></p>
+                          <p className="text-zinc-500 font-mono text-[10px]">TIMESTAMP: {new Date().toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Summary statistics matrix grids */}
+                    <div className="py-6 border-b border-zinc-200 text-left">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 font-mono mb-3">
+                        AGGREGATED FINANCIAL MATRIX
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200 space-y-0.5 text-left">
+                          <span className="text-[9px] uppercase font-bold text-zinc-400 tracking-wider font-mono">Sales Issued</span>
+                          <p className="text-lg font-black text-zinc-950">{printData.totalSalesCount} receipts</p>
+                        </div>
+
+                        <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200 space-y-0.5 text-left">
+                          <span className="text-[9px] uppercase font-bold text-zinc-400 tracking-wider font-mono">Total Discounts</span>
+                          <p className="text-lg font-bold text-zinc-800">₱{printData.totalDiscountAmount.toLocaleString()}</p>
+                        </div>
+
+                        <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200 space-y-0.5 text-left">
+                          <span className="text-[9px] uppercase font-bold text-zinc-400 tracking-wider font-mono">12% VAT Collected</span>
+                          <p className="text-lg font-bold text-zinc-800">₱{printData.totalVatAmount.toLocaleString()}</p>
+                        </div>
+
+                        <div className="p-3 bg-zinc-950 text-white rounded-xl space-y-0.5 text-left">
+                          <span className="text-[9px] uppercase font-bold text-zinc-400 tracking-wider font-mono text-zinc-300">Grand Total</span>
+                          <p className="text-lg font-black text-emerald-400 font-mono">₱{printData.totalSalesAmount.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Enclosed sales transactions receipts table list */}
+                    <div className="py-6 space-y-3 text-left">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 font-mono">
+                        ENCLOSED DETAILED TRANSACTION INVOICES
+                      </h4>
+                      <div className="border border-zinc-300 rounded-xl overflow-hidden">
+                        <table className="w-full text-left text-[11px] border-collapse">
+                          <thead className="bg-zinc-100 text-zinc-700 font-mono text-[9px] uppercase tracking-wider border-b border-zinc-300">
+                            <tr>
+                              <th className="py-2.5 px-3">INVOICE NUMBER</th>
+                              <th className="py-2.5 px-3">CUSTOMER NAME</th>
+                              <th className="py-2.5 px-3">CASHIER</th>
+                              <th className="py-2.5 px-3">PAYMENT MODE</th>
+                              <th className="py-2.5 px-3 text-right">DISCOUNT</th>
+                              <th className="py-2.5 px-3 text-right font-bold">GRAND TOTAL</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-zinc-200 font-sans text-zinc-800 bg-white">
+                            {printData.sales && printData.sales.map((sale: any, idx: number) => (
+                              <tr key={idx} className="hover:bg-zinc-50/50">
+                                <td className="py-2.5 px-3 font-mono font-bold text-zinc-950">{sale.saleNumber}</td>
+                                <td className="py-2.5 px-3 text-zinc-900">{sale.customerName || 'Walk-in'}</td>
+                                <td className="py-2.5 px-3 text-zinc-700">{sale.cashierName}</td>
+                                <td className="py-2.5 px-3">
+                                  <span className="px-1.5 py-0.5 bg-zinc-100 text-zinc-800 rounded text-[9px] font-bold uppercase font-mono">
+                                    {sale.paymentMethod}
+                                  </span>
+                                </td>
+                                <td className="py-2.5 px-3 text-right text-zinc-500 font-mono">₱{sale.discount.toLocaleString()}</td>
+                                <td className="py-2.5 px-3 text-right font-mono font-bold text-zinc-950">₱{sale.grandTotal.toLocaleString()}</td>
+                              </tr>
+                            ))}
+                            {(!printData.sales || printData.sales.length === 0) && (
+                              <tr>
+                                <td colSpan={6} className="py-6 text-center text-zinc-500 italic">No historical transaction list enclosed in this printed representation.</td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Official Sign-Off Signatures and Stamp Placement */}
+                    <div className="pt-10 grid grid-cols-2 gap-8 text-xs text-zinc-650">
+                      <div className="space-y-12 text-left">
+                        <p className="font-mono text-[9px] uppercase text-zinc-400 font-bold tracking-widest">
+                          PREPARED BY OPERATOR
+                        </p>
+                        <div className="border-t border-zinc-400 pt-1.5 w-48 text-left">
+                          <p className="font-bold text-zinc-900">{currentUser.fullName}</p>
+                          <p className="text-[10px] text-zinc-500">{currentUser.role} Signatures</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-12 flex flex-col items-end text-right">
+                        <p className="font-mono text-[9px] uppercase text-zinc-400 font-bold tracking-widest self-end">
+                          HEAD AUDITOR / BRANCH MANAGER OK
+                        </p>
+                        <div className="border-t border-zinc-400 pt-1.5 w-48 text-right">
+                          <p className="font-bold text-zinc-900">{printData.status === 'Verified' ? (printData.auditedBy || 'Verified Auditor') : '_______________________'}</p>
+                          <p className="text-[10px] text-zinc-500">Authorized Signature & Verification Stamp</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-6 py-4 bg-m3-surface border-t border-m3-outline-variant/15 flex justify-end gap-3.5 no-print">
+                <button
+                  type="button"
+                  onClick={() => setShowPrintModal(false)}
+                  className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-white rounded-xl transition-all cursor-pointer"
+                >
+                  Dismiss
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.print();
+                    triggerToast('Sent print job to local browser printer successfully.', 'success');
+                  }}
+                  className="px-6 py-2.5 bg-m3-primary hover:bg-m3-primary/95 text-m3-on-primary font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+                >
+                  <Printer className="h-4 w-4" />
+                  <span>Trigger System Print / Save PDF</span>
                 </button>
               </div>
             </motion.div>

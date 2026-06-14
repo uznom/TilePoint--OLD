@@ -68,6 +68,7 @@
   
   --m3-outline: #475467;          /* Eye-safe secondary elements and inputs boundary borders */
   --m3-outline-variant: #C2CBD6;  /* Explicit card & structural layout grid grid lines */
+  --m3-hover-overlay: rgba(21, 94, 239, 0.08); /* Professional light mode active hover */
 }
 
 /* We also apply variables to .dark class when state has darkMode=true */
@@ -97,6 +98,7 @@
   
   --m3-outline: #475569;
   --m3-outline-variant: #334155;
+  --m3-hover-overlay: rgba(59, 130, 246, 0.16); /* Bright active dark mode hover */
 }
 
 body {
@@ -127,30 +129,34 @@ body {
   border-radius: 28px; /* Extra Large Shape for Core Containers */
   background-color: var(--m3-surface-container-low);
   padding: 1.5rem;
-  border: 1px solid var(--m3-outline-variant);
-  box-shadow: 0 4px 20px -2px rgba(16, 24, 40, 0.03);
-  transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1.5px solid var(--m3-outline-variant);
+  box-shadow: 0 4px 16px -2px rgba(16, 24, 40, 0.08), 0 2px 6px -1px rgba(16, 24, 40, 0.04);
+  transition: all 250ms cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   overflow: hidden;
 }
 .m3-card:hover {
   background-color: var(--m3-surface-container-low);
   border-color: var(--m3-outline);
-  box-shadow: 0 10px 30px -4px rgba(16, 24, 40, 0.06);
-  transform: translateY(-2px);
+  box-shadow: 0 12px 28px -4px rgba(16, 24, 40, 0.15), 0 4px 10px -2px rgba(16, 24, 40, 0.07);
+  transform: translateY(-2.5px);
 }
 
 .dark .m3-card {
-  background-color: color-mix(in srgb, var(--m3-surface-container-low) 55%, transparent);
-  backdrop-filter: blur(20px) saturate(120%);
-  -webkit-backdrop-filter: blur(20px) saturate(120%);
-  border: 1px solid color-mix(in srgb, var(--m3-outline-variant) 25%, transparent);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.02);
+  background-color: rgba(19, 26, 34, 0.70);
+  background-color: color-mix(in srgb, var(--m3-surface-container-low) 70%, transparent);
+  backdrop-filter: blur(24px) saturate(120%);
+  -webkit-backdrop-filter: blur(24px) saturate(120%);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid color-mix(in srgb, var(--m3-outline-variant) 30%, transparent);
+  box-shadow: 0 10px 40px -6px rgba(0, 0, 0, 0.6);
 }
 .dark .m3-card:hover {
-  background-color: color-mix(in srgb, var(--m3-surface-container) 70%, transparent);
-  border-color: color-mix(in srgb, var(--m3-outline) 45%, transparent);
-  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.05);
+  background-color: rgba(30, 41, 59, 0.80);
+  background-color: color-mix(in srgb, var(--m3-surface-container) 80%, transparent);
+  border-color: rgba(255, 255, 255, 0.25);
+  border-color: color-mix(in srgb, var(--m3-outline) 40%, transparent);
+  box-shadow: 0 20px 50px -8px rgba(0, 0, 0, 0.8), 0 0 15px rgba(59, 130, 246, 0.15);
 }
 
 /* Base style for glowing hover cards to support relative layout and bounds clamping */
@@ -167,6 +173,11 @@ body {
   pointer-events: none;
   background: radial-gradient(
     280px circle at var(--mouse-x, 0px) var(--mouse-y, 0px),
+    rgba(21, 94, 239, 0.14),
+    transparent 80%
+  );
+  background: radial-gradient(
+    280px circle at var(--mouse-x, 0px) var(--mouse-y, 0px),
     color-mix(in srgb, var(--m3-primary) 14%, transparent),
     transparent 80%
   );
@@ -177,6 +188,11 @@ body {
 
 /* Enhanced high-contrast spotlight color mapping inside dark mode */
 .dark .m3-card::before, .dark .android-glass-card::before, .dark .glowing-card::before {
+  background: radial-gradient(
+    280px circle at var(--mouse-x, 0px) var(--mouse-y, 0px),
+    rgba(59, 130, 246, 0.22),
+    transparent 80%
+  );
   background: radial-gradient(
     280px circle at var(--mouse-x, 0px) var(--mouse-y, 0px),
     color-mix(in srgb, var(--m3-primary) 22%, transparent),
@@ -205,15 +221,24 @@ body {
   border-radius: 14px; /* Elegant rounded rectangular instead of oval */
   transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 6px rgba(21, 94, 239, 0.18), 0 1px 2px rgba(21, 94, 239, 0.1);
+  border: 1px solid rgba(21, 94, 239, 0.15);
 }
 .m3-btn-filled:hover {
-  box-shadow: 0 4px 8px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1);
-  transform: translateY(-1px);
-  filter: brightness(1.1);
+  box-shadow: 0 5px 14px rgba(21, 94, 239, 0.3), 0 2px 4px rgba(21, 94, 239, 0.12);
+  transform: translateY(-1.5px);
+  filter: brightness(0.92); /* Deepens brand color for supreme contrast in light mode */
 }
 .m3-btn-filled:active {
   transform: translateY(0);
+}
+.dark .m3-btn-filled {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.dark .m3-btn-filled:hover {
+  box-shadow: 0 0 15px var(--m3-primary), 0 4px 12px rgba(0, 0, 0, 0.5);
+  filter: brightness(1.15);
 }
 
 .m3-btn-tonal {
@@ -227,12 +252,24 @@ body {
   background-color: var(--m3-secondary-container);
   color: var(--m3-on-secondary-container);
   border-radius: 14px; /* Modern shape */
+  border: 1px solid var(--m3-outline-variant);
+  box-shadow: 0 1.5px 3px rgba(16, 24, 40, 0.05);
   transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
   cursor: pointer;
 }
 .m3-btn-tonal:hover {
-  filter: brightness(0.95);
-  transform: translateY(-0.5px);
+  background-color: var(--m3-outline-variant);
+  color: var(--m3-on-surface);
+  box-shadow: 0 4px 10px rgba(16, 24, 40, 0.1);
+  transform: translateY(-1px);
+}
+.dark .m3-btn-tonal {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.dark .m3-btn-tonal:hover {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  color: #fff !important;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
 }
 
 .m3-btn-outlined {
@@ -243,16 +280,28 @@ body {
   font-size: 0.875rem;
   font-weight: 600;
   padding: 0.625rem 1.5rem;
-  background-color: transparent;
+  background-color: var(--m3-surface-container-lowest);
   color: var(--m3-primary);
   border: 1.5px solid var(--m3-outline);
   border-radius: 14px; /* Consistent styling */
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
   transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
   cursor: pointer;
 }
 .m3-btn-outlined:hover {
-  background-color: color-mix(in srgb, var(--m3-primary) 8%, transparent);
+  background-color: color-mix(in srgb, var(--m3-primary) 10%, transparent);
   border-color: var(--m3-primary);
+  box-shadow: 0 3px 8px rgba(21, 94, 239, 0.12);
+  transform: translateY(-0.5px);
+}
+.dark .m3-btn-outlined {
+  border-color: rgba(255, 255, 255, 0.35);
+  background-color: rgba(255, 255, 255, 0.02);
+}
+.dark .m3-btn-outlined:hover {
+  background-color: rgba(59, 130, 246, 0.15);
+  border-color: var(--m3-primary);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.25);
 }
 
 /* Primary, Sub, and Tertiary button custom wrappers mapped to expressive tokens */
@@ -270,16 +319,20 @@ body {
   border-radius: 14px; /* Match responsive theme rounded specs */
   transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
-  border: none;
+  box-shadow: 0 2px 5px rgba(21, 94, 239, 0.2);
+  border: 1px solid rgba(21, 94, 239, 0.1);
 }
 .m3-btn-primary:hover {
-  box-shadow: 0 4px 10px rgba(21, 94, 239, 0.25);
-  transform: translateY(-1px);
-  filter: brightness(1.08);
+  box-shadow: 0 6px 14px rgba(21, 94, 239, 0.32);
+  transform: translateY(-1.5px);
+  filter: brightness(0.92);
 }
 .m3-btn-primary:active {
   transform: translateY(0);
+}
+.dark .m3-btn-primary:hover {
+  box-shadow: 0 0 15px var(--m3-primary), 0 4px 12px rgba(0, 0, 0, 0.4);
+  filter: brightness(1.15);
 }
 
 .m3-btn-sub {
@@ -297,12 +350,16 @@ body {
   transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
   cursor: pointer;
   box-shadow: 0 2px 5px rgba(21, 94, 239, 0.2);
-  border: none;
+  border: 1px solid rgba(21, 94, 239, 0.1);
 }
 .m3-btn-sub:hover {
   box-shadow: 0 6px 14px rgba(21, 94, 239, 0.35);
-  transform: translateY(-1px);
-  filter: brightness(1.1);
+  transform: translateY(-1.5px);
+  filter: brightness(0.92);
+}
+.dark .m3-btn-sub:hover {
+  box-shadow: 0 0 15px var(--m3-primary), 0 4px 12px rgba(0, 0, 0, 0.4);
+  filter: brightness(1.15);
 }
 
 .m3-btn-tertiary {
@@ -319,12 +376,23 @@ body {
   border-radius: 14px; /* Consistent rounded rectangular style */
   transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
   cursor: pointer;
-  border: 1px solid var(--m3-outline-variant);
+  border: 1.5px solid var(--m3-outline-variant);
+  box-shadow: 0 1px 2.5px rgba(16, 24, 40, 0.06);
 }
 .m3-btn-tertiary:hover {
   background-color: var(--m3-outline-variant);
   color: var(--m3-on-surface);
-  transform: translateY(-0.5px);
+  border-color: var(--m3-outline);
+  box-shadow: 0 4px 10px rgba(16, 24, 40, 0.1);
+  transform: translateY(-1px);
+}
+.dark .m3-btn-tertiary {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.dark .m3-btn-tertiary:hover {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
 }
 
 /* Material 3 Segmented Control or Custom Chip */
@@ -353,17 +421,28 @@ body {
   width: 100%;
   padding: 0.75rem 1rem;
   border-radius: 12px;
-  background-color: var(--m3-surface-container-low);
+  background-color: var(--m3-surface-container-lowest);
   color: var(--m3-on-surface);
-  border: 1.5px solid var(--m3-outline-variant);
+  border: 1.5px solid var(--m3-outline);
+  box-shadow: inset 0 1.5px 3px rgba(16, 24, 40, 0.04);
   font-size: 0.875rem;
   transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
 }
 .m3-input:focus {
   outline: none;
   border-color: var(--m3-primary);
-  box-shadow: 0 0 0 3px rgba(161, 64, 34, 0.15);
-  background-color: var(--m3-surface-container);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--m3-primary) 15%, transparent);
+  background-color: var(--m3-surface-container-lowest);
+}
+.dark .m3-input {
+  background-color: var(--m3-surface-container-lowest);
+  border-color: var(--m3-outline-variant);
+  box-shadow: inset 0 1.5px 3px rgba(0, 0, 0, 0.4);
+}
+.dark .m3-input:focus {
+  background-color: var(--m3-surface-container-low);
+  border-color: var(--m3-primary);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--m3-primary) 30%, transparent);
 }
 
 /* FAB (Floating Action Button) styling */
@@ -429,42 +508,52 @@ body {
 }
 
 .dark .android-glass {
+  background-color: rgba(19, 26, 34, 0.60);
   background-color: color-mix(in srgb, var(--m3-surface-container-low) 60%, transparent);
   backdrop-filter: blur(24px) saturate(120%);
   -webkit-backdrop-filter: blur(24px) saturate(120%);
+  border: 1px solid rgba(194, 203, 214, 0.30);
   border: 1px solid color-mix(in srgb, var(--m3-outline-variant) 30%, transparent);
 }
 
 .dark .android-glass-header {
+  background-color: rgba(30, 41, 59, 0.65);
   background-color: color-mix(in srgb, var(--m3-surface-container) 65%, transparent);
   backdrop-filter: blur(30px) saturate(130%);
   -webkit-backdrop-filter: blur(30px) saturate(130%);
 }
 
 .dark .android-glass-sidebar {
+  background-color: rgba(19, 26, 34, 0.55);
   background-color: color-mix(in srgb, var(--m3-surface-low) 55%, transparent);
   backdrop-filter: blur(32px);
   -webkit-backdrop-filter: blur(32px);
 }
 
 .dark .android-glass-card {
+  background-color: rgba(19, 26, 34, 0.45);
   background-color: color-mix(in srgb, var(--m3-surface-container-low) 45%, transparent);
   backdrop-filter: blur(20px) saturate(115%);
   -webkit-backdrop-filter: blur(20px) saturate(115%);
+  border: 1px solid rgba(194, 203, 214, 0.25);
   border: 1px solid color-mix(in srgb, var(--m3-outline-variant) 25%, transparent);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.03);
 }
 
 .dark .android-glass-card:hover {
+  background-color: rgba(30, 41, 59, 0.65);
   background-color: color-mix(in srgb, var(--m3-surface-container) 65%, transparent);
+  border-color: rgba(71, 84, 103, 0.45);
   border-color: color-mix(in srgb, var(--m3-outline) 45%, transparent);
   box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.06);
 }
 
 .dark .android-glass-modal {
+  background-color: rgba(19, 26, 34, 0.75);
   background-color: color-mix(in srgb, var(--m3-surface-container-low) 75%, transparent);
   backdrop-filter: blur(28px) saturate(125%);
   -webkit-backdrop-filter: blur(28px) saturate(125%);
+  border: 1px solid rgba(194, 203, 214, 0.40);
   border: 1px solid color-mix(in srgb, var(--m3-outline-variant) 40%, transparent);
   box-shadow: 0 24px 64px -12px rgba(0, 0, 0, 0.15);
 }
@@ -498,7 +587,67 @@ table tbody tr td {
 
 /* On hover, set background color on td, with first and last td having rounded corners */
 table tbody tr:hover td {
-  background-color: color-mix(in srgb, var(--m3-surface-container) 65%, transparent) !important;
+  background-color: var(--m3-hover-overlay) !important;
+}
+
+/* ========================================================
+   GLOBAL LIGHT-MODE AUTOMATIC CONTRAST SAFEGUARD
+   ======================================================== */
+html:not(.dark) .text-zinc-350,
+html:not(.dark) .text-zinc-300,
+html:not(.dark) .text-slate-300,
+html:not(.dark) .text-gray-300,
+html:not(.dark) .text-neutral-300 {
+  color: var(--m3-on-surface-variant) !important;
+}
+
+html:not(.dark) .text-zinc-200,
+html:not(.dark) .text-slate-200,
+html:not(.dark) .text-gray-200,
+html:not(.dark) .text-neutral-200 {
+  color: var(--m3-on-surface) !important;
+}
+
+html:not(.dark) .text-zinc-400,
+html:not(.dark) .text-slate-400,
+html:not(.dark) .text-gray-400,
+html:not(.dark) .text-neutral-400 {
+  color: var(--m3-on-surface-variant) !important;
+}
+
+html:not(.dark) .text-rose-300 {
+  color: #b42318 !important; /* Rich legible Dark Red in Light Mode */
+}
+html:not(.dark) .text-amber-300 {
+  color: #b54708 !important; /* Rich legible Dark Amber in Light Mode */
+}
+html:not(.dark) .text-emerald-300 {
+  color: #067647 !important; /* Rich legible Dark Emerald Green in Light Mode */
+}
+html:not(.dark) .text-indigo-300 {
+  color: #3538cd !important; /* Rich legible Dark Indigo in Light Mode */
+}
+
+/* Custom background containers tint upgrades for low-contrast alert card fallbacks in Light Mode */
+html:not(.dark) .bg-rose-500\/5,
+html:not(.dark) .bg-rose-500\/10 {
+  background-color: #fef3f2 !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
+}
+html:not(.dark) .bg-amber-500\/5,
+html:not(.dark) .bg-amber-500\/10 {
+  background-color: #fffbeb !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
+}
+html:not(.dark) .bg-indigo-500\/5,
+html:not(.dark) .bg-indigo-500\/10 {
+  background-color: #f5f3ff !important;
+  border-color: rgba(99, 102, 241, 0.25) !important;
+}
+html:not(.dark) .bg-emerald-500\/5,
+html:not(.dark) .bg-emerald-500\/10 {
+  background-color: #ecfdf3 !important;
+  border-color: rgba(16, 185, 129, 0.25) !important;
 }
 
 table tbody tr:hover td:first-child {
@@ -609,6 +758,59 @@ html.accessibility-enhanced-outlines *:focus {
   outline: 4px solid #f59e0b !important;
   outline-offset: 3px !important;
   box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.5) !important;
+}
+
+/* 4b. Maximize Text Contrast - adds backgrounds behind text */
+html.accessibility-maximize-text-contrast p,
+html.accessibility-maximize-text-contrast span:not(.lucide):not(.badge-count):not(.avatar-letters),
+html.accessibility-maximize-text-contrast label,
+html.accessibility-maximize-text-contrast h1,
+html.accessibility-maximize-text-contrast h2,
+html.accessibility-maximize-text-contrast h3,
+html.accessibility-maximize-text-contrast h4,
+html.accessibility-maximize-text-contrast h5,
+html.accessibility-maximize-text-contrast h6,
+html.accessibility-maximize-text-contrast li,
+html.accessibility-maximize-text-contrast a {
+  background-color: var(--m3-surface, #ffffff) !important;
+  color: var(--m3-on-surface, #000000) !important;
+  padding-left: 5px !important;
+  padding-right: 5px !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+  border-radius: 4px !important;
+  box-shadow: 0 0 2px 2px var(--m3-surface, #ffffff) !important;
+  text-shadow: none !important;
+  font-weight: 600 !important;
+}
+
+/* On dark mode, it inherits the dark surface background */
+html.dark.accessibility-maximize-text-contrast p,
+html.dark.accessibility-maximize-text-contrast span:not(.lucide):not(.badge-count):not(.avatar-letters),
+html.dark.accessibility-maximize-text-contrast label,
+html.dark.accessibility-maximize-text-contrast h1,
+html.dark.accessibility-maximize-text-contrast h2,
+html.dark.accessibility-maximize-text-contrast h3,
+html.dark.accessibility-maximize-text-contrast h4,
+html.dark.accessibility-maximize-text-contrast h5,
+html.dark.accessibility-maximize-text-contrast h6,
+html.dark.accessibility-maximize-text-contrast li,
+html.dark.accessibility-maximize-text-contrast a {
+  background-color: var(--m3-surface, #121212) !important;
+  color: var(--m3-on-surface, #ffffff) !important;
+  box-shadow: 0 0 2px 2px var(--m3-surface, #121212) !important;
+  text-shadow: none !important;
+  font-weight: 600 !important;
+}
+
+/* Ensure raw layouts, navigation, and functional icons are not forced to wrap */
+html.accessibility-maximize-text-contrast .lucide,
+html.accessibility-maximize-text-contrast button span,
+html.accessibility-maximize-text-contrast div[role="button"] span {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  font-weight: inherit !important;
 }
 
 /* 5. Clean, Professional @media print System for BIR ledger compliance sheets & slips */
