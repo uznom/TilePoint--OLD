@@ -1146,7 +1146,7 @@ function AppContent() {
         {/* DYNAMIC COMPONENT PANEL AREA */}
         <main className={`flex-1 relative flex flex-col ${
           activeTab === 'pos' 
-            ? `md:overflow-hidden md:h-screen lg:max-h-screen text-m3-on-surface transition-all duration-300 ${
+            ? `overflow-y-auto md:overflow-hidden md:h-screen lg:max-h-screen text-m3-on-surface transition-all duration-300 ${
                 showImmersiveControls 
                   ? `p-4 pt-[73px] pb-24 md:p-4 md:pt-[73px] md:pb-4 ${isSidebarMinimized ? 'md:pl-[96px]' : 'md:pl-[304px]'}` 
                   : 'p-0 pt-0 md:p-0'
