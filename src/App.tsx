@@ -783,8 +783,8 @@ function AppContent() {
       {/* HEADER SECTION with custom horizontal glowing accent bar & ambient overlay tint */}
       <header className={`py-4 px-6 border-b border-m3-outline-variant/15 flex justify-between items-center z-[60] android-glass-header shadow-sm bg-m3-surface/75 dark:bg-m3-surface-low/80 backdrop-blur-md transition-all duration-300 overflow-visible ${
         activeTab === 'pos' 
-          ? `fixed top-0 left-0 right-0 md:transform ${showImmersiveControls ? 'md:translate-y-0 md:opacity-100 md:shadow-xl' : 'md:-translate-y-full md:opacity-0 md:pointer-events-none'} max-md:sticky max-md:top-0 max-md:translate-y-0 max-md:opacity-100 max-md:relative`
-          : 'sticky top-0 translate-y-0 opacity-100 relative'
+          ? `sticky top-0 z-[60] md:fixed md:top-0 md:left-0 md:right-0 md:transform ${showImmersiveControls ? 'md:translate-y-0 md:opacity-100 md:shadow-xl' : 'md:-translate-y-full md:opacity-0 md:pointer-events-none'}`
+          : 'sticky top-0 z-[60]'
       }`}>
         {/* Subtle header brand overlay reflecting user custom color choice */}
         <div className="absolute inset-0 bg-gradient-to-b from-m3-primary/[0.03] to-transparent pointer-events-none z-[-1]" />
@@ -1146,13 +1146,13 @@ function AppContent() {
         </AnimatePresence>
 
         {/* DYNAMIC COMPONENT PANEL AREA */}
-        <main className={`flex-1 relative flex flex-col ${
+        <main className={`flex-1 relative flex flex-col text-m3-on-surface transition-all duration-300 ${
           activeTab === 'pos' 
-            ? `overflow-y-auto md:overflow-hidden text-m3-on-surface transition-all duration-300 ${
+            ? `overflow-y-auto md:overflow-hidden ${
                 showImmersiveControls 
-                  ? `p-4 pt-[73px] pb-24 md:h-screen md:p-4 md:pt-[73px] md:pb-4 ${isSidebarMinimized ? 'md:pl-[96px]' : 'md:pl-[304px]'}` 
-                  : 'p-4 pt-[73px] pb-24 md:h-screen md:p-0 md:pt-0 md:pl-0 md:pb-0'
-              } max-md:p-3 max-md:pb-28 max-md:pt-4 max-md:h-[calc(100vh-150px)]` 
+                  ? `p-4 pb-28 md:h-screen md:p-4 md:pt-[73px] md:pb-4 ${isSidebarMinimized ? 'md:pl-[96px]' : 'md:pl-[304px]'}` 
+                  : 'p-4 pb-28 md:h-screen md:p-0 md:pt-0 md:pl-0 md:pb-0'
+              }` 
             : 'p-4 md:p-6 pb-26 md:pb-6 overflow-y-auto'
         } ${isCompactColumns ? 'compact-fit' : ''}`}>
           {/* Elegant Collapsible Horizontal Sub-menu Navigation Pill Bar with Dynamic RBAC */}
@@ -1308,89 +1308,50 @@ function AppContent() {
       </main>
       </div>
 
-      {/* BOTTOM NAVIGATION: Dynamic adaptation based on active mode */}
-      {activeTab === 'pos' ? (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-m3-surface-low/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-m3-outline-variant/25 px-4 py-2 flex items-center justify-start gap-4 rounded-t-[24px] shadow-2xl transition-all duration-300 overflow-x-auto scrollbar-none select-none scroll-smooth">
-          {/* Brand/Mode indicator label to look highly professional */}
-          <div className="flex items-center gap-2 shrink-0 pr-3 border-r border-m3-outline-variant/25 font-sans">
-            <span className="h-2.5 w-2.5 rounded-full bg-m3-primary animate-pulse" />
-            <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest font-mono">Modules</span>
-          </div>
+      {/* BOTTOM NAVIGATION: Unified premium horizontal scrollbar across the system (Mobile Only) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-m3-surface-low/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-m3-outline-variant/25 px-4 py-2 flex items-center justify-start gap-3 rounded-t-[20px] shadow-2xl transition-all duration-300 overflow-x-auto scrollbar-none select-none scroll-smooth">
+        {/* Brand Modules badge */}
+        <div className="flex items-center gap-2 shrink-0 pr-3 border-r border-m3-outline-variant/20 font-sans">
+          <span className="h-2 w-2 rounded-full bg-m3-primary animate-pulse" />
+          <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest font-mono">Modules</span>
+        </div>
 
-          {menuItems.filter(item => {
-            const isRoleOk = item.roles.includes(currentUser.role);
-            if (!isRoleOk) return false;
-            const currentBranch = branches.find(b => b.id === currentUser.branchAssignmentId);
-            const isAuthorizedBranch = currentUser.branchAssignmentId === 'B1' || !!currentBranch?.isDistributionBranch || currentUser.role === 'Admin';
-            if (item.id === 'transmittal' && !isAuthorizedBranch) return false;
-            // Exclude tutorials here as it is accessible in the header profile menu to avoid cluttering bottom space
-            if (item.id === 'tutorials') return false;
-            return true;
-          }).map(item => {
-            const Icon = item.icon;
-            const isSelected = activeTab === item.id;
-            
-            return (
-              <button
-                key={item.id}
-                onClick={() => changeTab(item.id)}
-                className="flex flex-col items-center gap-1 focus:outline-none cursor-pointer shrink-0 py-1.5 px-3 min-w-[70px] group transition-transform active:scale-95"
-              >
-                {/* Visual state capsule indicator */}
-                <div className={`px-4.5 py-1 rounded-2xl transition-all duration-200 ${
-                  isSelected 
-                    ? 'bg-m3-primary text-m3-on-primary shadow-md shadow-m3-primary/25 scale-[1.03]' 
-                    : 'text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/5'
-                }`}>
-                  <Icon className="h-4.5 w-4.5 shrink-0 transition-transform group-hover:scale-110" />
-                </div>
-                <span className={`text-[10px] font-black tracking-tight text-center leading-none mt-0.5 whitespace-nowrap ${
-                  isSelected ? 'text-m3-primary font-black' : 'text-zinc-400 group-hover:text-m3-primary'
-                }`}>
-                  {item.id === 'dashboard' ? 'Dash' : item.id === 'architecture' ? 'ERD' : item.id === 'pos' ? 'Checkout' : item.id === 'ledger' ? 'Ledger' : item.id === 'inventory-stocks' ? 'Stock' : item.id === 'procurement' ? 'Purchase' : item.id === 'transmittal' ? 'Send' : item.id === 'shift' ? 'Shift' : item.id === 'calculator' ? 'Calc' : item.name.split(' ')[0]}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        /* STANDARD MOBILE BOTTOM NAVIGATION BAR FOR COMFORTABLE TACTILE PWA FEEL */
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 android-glass border-t border-m3-outline-variant/20 px-2 py-2 flex justify-around items-center rounded-t-[24px] shadow-lg transition-all duration-300 ease-in-out">
-          {menuItems.filter(item => {
-            const isRoleOk = item.roles.includes(currentUser.role);
-            if (!isRoleOk) return false;
-            const currentBranch = branches.find(b => b.id === currentUser.branchAssignmentId);
-            const isAuthorizedBranch = currentUser.branchAssignmentId === 'B1' || !!currentBranch?.isDistributionBranch || currentUser.role === 'Admin';
-            if (item.id === 'transmittal' && !isAuthorizedBranch) return false;
-            return true;
-          }).slice(0, 5).map(item => {
-            const Icon = item.icon;
-            const isSelected = activeTab === item.id;
-            
-            return (
-              <button
-                key={item.id}
-                onClick={() => changeTab(item.id)}
-                className="flex flex-col items-center gap-1 focus:outline-none cursor-pointer relative py-0.5 px-2 min-w-[52px]"
-              >
-                {/* Active tactile capsule indicator */}
-                <div className={`px-4 py-1 rounded-xl transition-all duration-200 ${
-                  isSelected 
-                    ? 'bg-m3-primary/15 text-m3-primary' 
-                    : 'text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/5'
-                }`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <span className={`text-[9px] font-black tracking-tight text-center leading-none ${
-                  isSelected ? 'text-m3-primary' : 'text-m3-on-surface-variant'
-                }`}>
-                  {item.id === 'dashboard' ? 'Dash' : item.id === 'architecture' ? 'ERD' : item.id === 'pos' ? 'Checkout' : item.id === 'ledger' ? 'Ledger' : item.id === 'inventory' ? 'Stock' : item.id === 'procurement' ? 'Purchase' : item.id === 'transmittal' ? 'Send' : item.id === 'shift' ? 'Shift' : item.id === 'calculator' ? 'Calc' : item.name.split(' ')[0]}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+        {menuItems.filter(item => {
+          const isRoleOk = item.roles.includes(currentUser.role);
+          if (!isRoleOk) return false;
+          const currentBranch = branches.find(b => b.id === currentUser.branchAssignmentId);
+          const isAuthorizedBranch = currentUser.branchAssignmentId === 'B1' || !!currentBranch?.isDistributionBranch || currentUser.role === 'Admin';
+          if (item.id === 'transmittal' && !isAuthorizedBranch) return false;
+          // Exclude tutorials here as it is accessible in the header profile menu to avoid cluttering bottom space
+          if (item.id === 'tutorials') return false;
+          return true;
+        }).map(item => {
+          const Icon = item.icon;
+          const isSelected = activeTab === item.id;
+          
+          return (
+            <button
+              key={item.id}
+              onClick={() => changeTab(item.id)}
+              className="flex flex-col items-center gap-0.5 focus:outline-none cursor-pointer shrink-0 py-1.5 px-3 min-w-[64px] group transition-transform active:scale-95"
+            >
+              {/* Visual state capsule indicator */}
+              <div className={`px-4.5 py-1 rounded-2xl transition-[background-color,color,transform] duration-200 ${
+                isSelected 
+                  ? 'bg-m3-primary text-m3-on-primary shadow-sm shadow-m3-primary/10 scale-[1.03]' 
+                  : 'text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/5'
+              }`}>
+                <Icon className="h-4.5 w-4.5 shrink-0 transition-transform group-hover:scale-110" />
+              </div>
+              <span className={`text-[9px] font-black tracking-tight text-center leading-none mt-1 whitespace-nowrap ${
+                isSelected ? 'text-m3-primary font-black animate-fade-in' : 'text-zinc-400 dark:text-zinc-500 group-hover:text-m3-primary'
+              }`}>
+                {item.id === 'dashboard' ? 'Dash' : item.id === 'architecture' ? 'ERD' : item.id === 'pos' ? 'Checkout' : item.id === 'ledger' ? 'Ledger' : item.id === 'inventory-stocks' ? 'Stock' : item.id === 'procurement' ? 'Purchase' : item.id === 'transmittal' ? 'Send' : item.id === 'shift' ? 'Shift' : item.id === 'calculator' ? 'Calc' : item.name.split(' ')[0]}
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
       {/* Immersive Trigger Handles for POS Terminal Mode (Desktop Only) */}
       {activeTab === 'pos' && !showImmersiveControls && (
