@@ -781,7 +781,11 @@ function AppContent() {
       )}
 
       {/* HEADER SECTION with custom horizontal glowing accent bar & ambient overlay tint */}
-      <header className="py-4 px-6 border-b border-m3-outline-variant/15 flex justify-between items-center z-[60] android-glass-header shadow-sm bg-m3-surface/75 dark:bg-m3-surface-low/80 backdrop-blur-md transition-all duration-300 overflow-visible sticky top-0 translate-y-0 opacity-100 relative">
+      <header className={`py-4 px-6 border-b border-m3-outline-variant/15 flex justify-between items-center z-[60] android-glass-header shadow-sm bg-m3-surface/75 dark:bg-m3-surface-low/80 backdrop-blur-md transition-all duration-300 overflow-visible ${
+        activeTab === 'pos' 
+          ? `fixed top-0 left-0 right-0 md:transform ${showImmersiveControls ? 'md:translate-y-0 md:opacity-100 md:shadow-xl' : 'md:-translate-y-full md:opacity-0 md:pointer-events-none'} max-md:sticky max-md:top-0 max-md:translate-y-0 max-md:opacity-100 max-md:relative`
+          : 'sticky top-0 translate-y-0 opacity-100 relative'
+      }`}>
         {/* Subtle header brand overlay reflecting user custom color choice */}
         <div className="absolute inset-0 bg-gradient-to-b from-m3-primary/[0.03] to-transparent pointer-events-none z-[-1]" />
         {/* Horizontal glowing accent line reflecting selected color */}
@@ -969,7 +973,11 @@ function AppContent() {
         {/* SIDEBAR NAVIGATION: Desktop */}
         <aside className={`border-r border-m3-outline-variant/15 select-none android-glass-sidebar py-6 transition-all duration-300 ease-in-out ${
           activeTab === 'pos'
-            ? 'hidden'
+            ? `fixed left-0 top-0 bottom-0 z-49 transform bg-m3-surface-low border-r border-m3-primary/25 backdrop-blur-xl hidden md:block ${
+                isSidebarMinimized ? 'w-20 px-2' : 'w-72 px-4'
+              } ${
+                showImmersiveControls ? 'translate-x-[0px] opacity-100 shadow-2xl' : '-translate-x-full opacity-0 pointer-events-none'
+              }`
             : `sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto hidden md:block ${
                 isSidebarMinimized ? 'w-20 px-2' : 'w-72 px-4'
               }`
@@ -1140,7 +1148,11 @@ function AppContent() {
         {/* DYNAMIC COMPONENT PANEL AREA */}
         <main className={`flex-1 relative flex flex-col ${
           activeTab === 'pos' 
-            ? 'overflow-y-auto lg:overflow-hidden h-full lg:h-[calc(100vh-143px)] p-3 sm:p-4 pb-28 lg:pb-4' 
+            ? `overflow-y-auto md:overflow-hidden text-m3-on-surface transition-all duration-300 ${
+                showImmersiveControls 
+                  ? `p-4 pt-[73px] pb-24 md:h-screen md:p-4 md:pt-[73px] md:pb-4 ${isSidebarMinimized ? 'md:pl-[96px]' : 'md:pl-[304px]'}` 
+                  : 'p-4 pt-[73px] pb-24 md:h-screen md:p-0 md:pt-0 md:pl-0 md:pb-0'
+              } max-md:p-3 max-md:pb-28 max-md:pt-4 max-md:h-[calc(100vh-150px)]` 
             : 'p-4 md:p-6 pb-26 md:pb-6 overflow-y-auto'
         } ${isCompactColumns ? 'compact-fit' : ''}`}>
           {/* Elegant Collapsible Horizontal Sub-menu Navigation Pill Bar with Dynamic RBAC */}
@@ -1298,7 +1310,7 @@ function AppContent() {
 
       {/* BOTTOM NAVIGATION: Dynamic adaptation based on active mode */}
       {activeTab === 'pos' ? (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-m3-surface-low/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-m3-outline-variant/25 px-4 py-2 flex items-center justify-start gap-4 rounded-t-[24px] shadow-2xl transition-all duration-300 overflow-x-auto scrollbar-none select-none scroll-smooth">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-m3-surface-low/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-m3-outline-variant/25 px-4 py-2 flex items-center justify-start gap-4 rounded-t-[24px] shadow-2xl transition-all duration-300 overflow-x-auto scrollbar-none select-none scroll-smooth">
           {/* Brand/Mode indicator label to look highly professional */}
           <div className="flex items-center gap-2 shrink-0 pr-3 border-r border-m3-outline-variant/25 font-sans">
             <span className="h-2.5 w-2.5 rounded-full bg-m3-primary animate-pulse" />
@@ -1377,6 +1389,33 @@ function AppContent() {
               </button>
             );
           })}
+        </div>
+      )}
+
+      {/* Immersive Trigger Handles for POS Terminal Mode (Desktop Only) */}
+      {activeTab === 'pos' && !showImmersiveControls && (
+        <div className="hidden md:block">
+          {/* Subtle Pull handles for mouse cursor / touch slide */}
+          <div 
+            className="fixed left-0 top-1/2 -translate-y-1/2 w-2 h-24 bg-m3-primary/30 hover:bg-m3-primary/60 rounded-r-2xl z-[60] cursor-ew-resize flex items-center justify-center transition-all group scale-100 hover:w-3 border border-l-0 border-m3-primary/35 backdrop-blur-md shadow-lg animate-pulse"
+            title="Drag or slide from left to show system modules"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMoveDrag}
+            onMouseUp={handleMouseUp}
+            onClick={() => setShowImmersiveControls(true)}
+          >
+            <div className="w-1 h-8 bg-m3-primary/80 rounded-full group-hover:bg-m3-primary/100" />
+          </div>
+
+          <div 
+            className="fixed top-0 left-1/2 -translate-x-1/2 h-2 w-56 bg-m3-primary/25 hover:bg-m3-primary/55 rounded-b-2xl z-[60] cursor-ns-resize flex justify-center items-center transition-all group hover:h-4.5 border border-t-0 border-m3-primary/35 backdrop-blur-md shadow-md"
+            title="Hover or slide from top to show header controls"
+            onClick={() => setShowImmersiveControls(true)}
+          >
+            <div className="h-1 w-16 bg-m3-primary/60 rounded-full group-hover:bg-m3-primary/85" />
+          </div>
         </div>
       )}
 
