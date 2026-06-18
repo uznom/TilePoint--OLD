@@ -86,7 +86,7 @@ export const IdleScreen: React.FC = () => {
       if (dismissalInProgressRef.current) return;
       
       const secondsInactive = (Date.now() - lastActiveRef.current) / 1000;
-      if (secondsInactive >= 30) {
+      if (secondsInactive >= 15) {
         setIsIdle(true);
       }
     }, 500);
