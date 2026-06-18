@@ -34,6 +34,7 @@ import {
   Accessibility,
   Palette
 } from 'lucide-react';
+import { ExpressiveTooltip } from './ExpressiveTooltip';
 
 interface StaffPortalProps {
   darkMode: boolean;
@@ -321,23 +322,33 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
 
         {/* Right Side: Accessibility & Logout */}
         <div className="flex items-center gap-2" id="staff-header-right">
-          <button
-            id="accessibility-toggle-staff"
-            onClick={() => window.dispatchEvent(new Event('open-privacy-hub'))}
-            className="p-2.5 rounded-xl border border-m3-outline-variant text-m3-primary hover:bg-m3-primary/10 transition-colors cursor-pointer"
-            title="Privacy Policies & Accessibility Hub"
+          <ExpressiveTooltip
+            title="Accessibility Hub"
+            content="Adjust high contrast ratios, screen reader parameters, or design custom tonal color generation seeds instantly."
+            position="bottom"
           >
-            <Accessibility className="h-4 w-4" />
-          </button>
+            <button
+              id="accessibility-toggle-staff"
+              onClick={() => window.dispatchEvent(new Event('open-privacy-hub'))}
+              className="p-2.5 rounded-xl border border-m3-outline-variant text-m3-primary hover:bg-m3-primary/10 transition-colors cursor-pointer"
+            >
+              <Accessibility className="h-4 w-4" />
+            </button>
+          </ExpressiveTooltip>
 
-          <button
-            id="logout-staff"
-            onClick={() => logout()}
-            className="p-2.5 rounded-xl border border-rose-500/30 text-rose-500 bg-rose-500/5 hover:bg-rose-500/10 transition-colors cursor-pointer"
+          <ExpressiveTooltip
             title="Log out of Terminal"
+            content="Safely terminate your handheld scanning session and log back in from the master gate."
+            position="bottom"
           >
-            <Power className="h-4 w-4" />
-          </button>
+            <button
+              id="logout-staff"
+              onClick={() => logout()}
+              className="p-2.5 rounded-xl border border-rose-500/30 text-rose-500 bg-rose-500/5 hover:bg-rose-500/10 transition-colors cursor-pointer"
+            >
+              <Power className="h-4 w-4" />
+            </button>
+          </ExpressiveTooltip>
         </div>
       </header>
 
