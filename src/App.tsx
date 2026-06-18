@@ -781,24 +781,22 @@ function AppContent() {
       )}
 
       {/* HEADER SECTION with custom horizontal glowing accent bar & ambient overlay tint */}
-      <header className={`py-4 px-6 border-b border-m3-outline-variant/15 flex justify-between items-center z-[60] android-glass-header shadow-sm bg-m3-surface/75 dark:bg-m3-surface-low/80 backdrop-blur-md transition-all duration-300 overflow-visible ${
-        activeTab === 'pos' 
-          ? `fixed top-0 left-0 right-0 transform ${showImmersiveControls ? 'translate-y-0 opacity-100 shadow-xl' : '-translate-y-full opacity-0 pointer-events-none'}` 
-          : 'sticky top-0 translate-y-0 opacity-100 relative'
-      }`}>
+      <header className="py-4 px-6 border-b border-m3-outline-variant/15 flex justify-between items-center z-[60] android-glass-header shadow-sm bg-m3-surface/75 dark:bg-m3-surface-low/80 backdrop-blur-md transition-all duration-300 overflow-visible sticky top-0 translate-y-0 opacity-100 relative">
         {/* Subtle header brand overlay reflecting user custom color choice */}
         <div className="absolute inset-0 bg-gradient-to-b from-m3-primary/[0.03] to-transparent pointer-events-none z-[-1]" />
         {/* Horizontal glowing accent line reflecting selected color */}
         <div className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-m3-primary/35 via-m3-primary/10 to-transparent pointer-events-none" />
         <div className="flex items-center gap-3">
-          {/* Mobile menu toggle */}
-          <button
-            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-            className="md:hidden p-2 rounded-xl hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer"
-            title="Toggle navigation sidebar"
-          >
-            {mobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+          {/* Mobile menu toggle (removed in POS mode) */}
+          {activeTab !== 'pos' && (
+            <button
+              onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+              className="md:hidden p-2 rounded-xl hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer"
+              title="Toggle navigation sidebar"
+            >
+              {mobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          )}
 
           {/* Logo */}
           <div className="flex items-center gap-2.5">
@@ -971,11 +969,7 @@ function AppContent() {
         {/* SIDEBAR NAVIGATION: Desktop */}
         <aside className={`border-r border-m3-outline-variant/15 select-none android-glass-sidebar py-6 transition-all duration-300 ease-in-out ${
           activeTab === 'pos'
-            ? `fixed left-0 top-0 bottom-0 z-49 transform bg-m3-surface-low border-r border-m3-primary/25 backdrop-blur-xl hidden md:block ${
-                isSidebarMinimized ? 'w-20 px-2' : 'w-72 px-4'
-              } ${
-                showImmersiveControls ? 'translate-x-[0px] opacity-100 shadow-2xl' : '-translate-x-full opacity-0 pointer-events-none'
-              }`
+            ? 'hidden'
             : `sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto hidden md:block ${
                 isSidebarMinimized ? 'w-20 px-2' : 'w-72 px-4'
               }`
@@ -1065,7 +1059,7 @@ function AppContent() {
 
         {/* SIDEBAR NAVIGATION: Mobile Drawer overlay and sidebar content */}
         <AnimatePresence>
-          {mobileSidebarOpen && (
+          {mobileSidebarOpen && activeTab !== 'pos' && (
             <div className="fixed inset-0 z-45 flex md:hidden">
               <motion.div
                 initial={{ opacity: 0 }}
@@ -1146,11 +1140,7 @@ function AppContent() {
         {/* DYNAMIC COMPONENT PANEL AREA */}
         <main className={`flex-1 relative flex flex-col ${
           activeTab === 'pos' 
-            ? `overflow-y-auto md:overflow-hidden md:h-screen lg:max-h-screen text-m3-on-surface transition-all duration-300 ${
-                showImmersiveControls 
-                  ? `h-[calc(100vh-140px)] p-4 pt-[73px] pb-24 md:h-screen md:p-4 md:pt-[73px] md:pb-4 ${isSidebarMinimized ? 'md:pl-[96px]' : 'md:pl-[304px]'}` 
-                  : 'h-screen p-0 pt-0 md:p-0'
-              }` 
+            ? 'overflow-y-auto lg:overflow-hidden h-full lg:h-[calc(100vh-143px)] p-3 sm:p-4 pb-28 lg:pb-4' 
             : 'p-4 md:p-6 pb-26 md:pb-6 overflow-y-auto'
         } ${isCompactColumns ? 'compact-fit' : ''}`}>
           {/* Elegant Collapsible Horizontal Sub-menu Navigation Pill Bar with Dynamic RBAC */}
@@ -1166,7 +1156,7 @@ function AppContent() {
               return masterItem ? masterItem.roles.includes(currentUser.role) : false;
             });
 
-            if (authorizedSubItems.length <= 1 || (activeTab === 'pos' && !showImmersiveControls)) return null;
+            if (authorizedSubItems.length <= 1 || activeTab === 'pos') return null;
 
             return (
               <div className="mb-4 bg-m3-surface-low border border-m3-outline-variant/15 rounded-2xl p-2.5 flex flex-col shrink-0">
@@ -1306,72 +1296,88 @@ function AppContent() {
       </main>
       </div>
 
-      {/* MOBILE BOTTOM NAVIGATION BAR FOR COMFORTABLE TACTILE PWA FEEL */}
-      <div className={`md:hidden fixed bottom-0 left-0 right-0 z-40 android-glass border-t border-m3-outline-variant/20 px-2 py-2 flex justify-around items-center rounded-t-[24px] shadow-lg transition-all duration-300 ease-in-out ${
-        activeTab === 'pos'
-          ? `transform ${showImmersiveControls ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'}`
-          : 'translate-y-0 opacity-100'
-      }`}>
-        {menuItems.filter(item => {
-          const isRoleOk = item.roles.includes(currentUser.role);
-          if (!isRoleOk) return false;
-          const currentBranch = branches.find(b => b.id === currentUser.branchAssignmentId);
-          const isAuthorizedBranch = currentUser.branchAssignmentId === 'B1' || !!currentBranch?.isDistributionBranch || currentUser.role === 'Admin';
-          if (item.id === 'transmittal' && !isAuthorizedBranch) return false;
-          return true;
-        }).slice(0, 5).map(item => {
-          const Icon = item.icon;
-          const isSelected = activeTab === item.id;
-          
-          return (
-            <button
-              key={item.id}
-              onClick={() => changeTab(item.id)}
-              className="flex flex-col items-center gap-1 focus:outline-none cursor-pointer relative py-0.5 px-2 min-w-[52px]"
-            >
-              {/* Active tactile capsule indicator */}
-              <div className={`px-4 py-1 rounded-xl transition-all duration-200 ${
-                isSelected 
-                  ? 'bg-m3-primary/15 text-m3-primary' 
-                  : 'text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/5'
-              }`}>
-                <Icon className="h-5 w-5" />
-              </div>
-              <span className={`text-[9px] font-black tracking-tight text-center leading-none ${
-                isSelected ? 'text-m3-primary' : 'text-m3-on-surface-variant'
-              }`}>
-                {item.id === 'dashboard' ? 'Dash' : item.id === 'architecture' ? 'ERD' : item.id === 'pos' ? 'Checkout' : item.id === 'ledger' ? 'Ledger' : item.id === 'inventory' ? 'Stock' : item.id === 'procurement' ? 'Purchase' : item.id === 'transmittal' ? 'Send' : item.id === 'shift' ? 'Shift' : item.id === 'calculator' ? 'Calc' : item.name.split(' ')[0]}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Immersive Trigger Handles for POS Terminal Mode */}
-      {activeTab === 'pos' && !showImmersiveControls && (
-        <>
-          {/* Subtle Pull handles for mouse cursor / touch slide */}
-          <div 
-            className="fixed left-0 top-1/2 -translate-y-1/2 w-2 h-24 bg-m3-primary/30 hover:bg-m3-primary/60 rounded-r-2xl z-[60] cursor-ew-resize flex items-center justify-center transition-all group scale-100 hover:w-3 border border-l-0 border-m3-primary/35 backdrop-blur-md shadow-lg animate-pulse"
-            title="Drag or slide from left to show system modules"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMoveDrag}
-            onMouseUp={handleMouseUp}
-            onClick={() => setShowImmersiveControls(true)}
-          >
-            <div className="w-1 h-8 bg-m3-primary/80 rounded-full group-hover:bg-m3-primary/100" />
+      {/* BOTTOM NAVIGATION: Dynamic adaptation based on active mode */}
+      {activeTab === 'pos' ? (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-m3-surface-low/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-m3-outline-variant/25 px-4 py-2 flex items-center justify-start gap-4 rounded-t-[24px] shadow-2xl transition-all duration-300 overflow-x-auto scrollbar-none select-none scroll-smooth">
+          {/* Brand/Mode indicator label to look highly professional */}
+          <div className="flex items-center gap-2 shrink-0 pr-3 border-r border-m3-outline-variant/25 font-sans">
+            <span className="h-2.5 w-2.5 rounded-full bg-m3-primary animate-pulse" />
+            <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest font-mono">Modules</span>
           </div>
 
-          <div 
-            className="fixed top-0 left-1/2 -translate-x-1/2 h-2 w-56 bg-m3-primary/25 hover:bg-m3-primary/55 rounded-b-2xl z-[60] cursor-ns-resize flex justify-center items-center transition-all group hover:h-4.5 border border-t-0 border-m3-primary/35 backdrop-blur-md shadow-md"
-            title="Hover or slide from top to show header controls"
-            onClick={() => setShowImmersiveControls(true)}
-          >
-            <div className="h-1 w-16 bg-m3-primary/60 rounded-full group-hover:bg-m3-primary/85" />
-          </div>
-        </>
+          {menuItems.filter(item => {
+            const isRoleOk = item.roles.includes(currentUser.role);
+            if (!isRoleOk) return false;
+            const currentBranch = branches.find(b => b.id === currentUser.branchAssignmentId);
+            const isAuthorizedBranch = currentUser.branchAssignmentId === 'B1' || !!currentBranch?.isDistributionBranch || currentUser.role === 'Admin';
+            if (item.id === 'transmittal' && !isAuthorizedBranch) return false;
+            // Exclude tutorials here as it is accessible in the header profile menu to avoid cluttering bottom space
+            if (item.id === 'tutorials') return false;
+            return true;
+          }).map(item => {
+            const Icon = item.icon;
+            const isSelected = activeTab === item.id;
+            
+            return (
+              <button
+                key={item.id}
+                onClick={() => changeTab(item.id)}
+                className="flex flex-col items-center gap-1 focus:outline-none cursor-pointer shrink-0 py-1.5 px-3 min-w-[70px] group transition-transform active:scale-95"
+              >
+                {/* Visual state capsule indicator */}
+                <div className={`px-4.5 py-1 rounded-2xl transition-all duration-200 ${
+                  isSelected 
+                    ? 'bg-m3-primary text-m3-on-primary shadow-md shadow-m3-primary/25 scale-[1.03]' 
+                    : 'text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/5'
+                }`}>
+                  <Icon className="h-4.5 w-4.5 shrink-0 transition-transform group-hover:scale-110" />
+                </div>
+                <span className={`text-[10px] font-black tracking-tight text-center leading-none mt-0.5 whitespace-nowrap ${
+                  isSelected ? 'text-m3-primary font-black' : 'text-zinc-400 group-hover:text-m3-primary'
+                }`}>
+                  {item.id === 'dashboard' ? 'Dash' : item.id === 'architecture' ? 'ERD' : item.id === 'pos' ? 'Checkout' : item.id === 'ledger' ? 'Ledger' : item.id === 'inventory-stocks' ? 'Stock' : item.id === 'procurement' ? 'Purchase' : item.id === 'transmittal' ? 'Send' : item.id === 'shift' ? 'Shift' : item.id === 'calculator' ? 'Calc' : item.name.split(' ')[0]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        /* STANDARD MOBILE BOTTOM NAVIGATION BAR FOR COMFORTABLE TACTILE PWA FEEL */
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 android-glass border-t border-m3-outline-variant/20 px-2 py-2 flex justify-around items-center rounded-t-[24px] shadow-lg transition-all duration-300 ease-in-out">
+          {menuItems.filter(item => {
+            const isRoleOk = item.roles.includes(currentUser.role);
+            if (!isRoleOk) return false;
+            const currentBranch = branches.find(b => b.id === currentUser.branchAssignmentId);
+            const isAuthorizedBranch = currentUser.branchAssignmentId === 'B1' || !!currentBranch?.isDistributionBranch || currentUser.role === 'Admin';
+            if (item.id === 'transmittal' && !isAuthorizedBranch) return false;
+            return true;
+          }).slice(0, 5).map(item => {
+            const Icon = item.icon;
+            const isSelected = activeTab === item.id;
+            
+            return (
+              <button
+                key={item.id}
+                onClick={() => changeTab(item.id)}
+                className="flex flex-col items-center gap-1 focus:outline-none cursor-pointer relative py-0.5 px-2 min-w-[52px]"
+              >
+                {/* Active tactile capsule indicator */}
+                <div className={`px-4 py-1 rounded-xl transition-all duration-200 ${
+                  isSelected 
+                    ? 'bg-m3-primary/15 text-m3-primary' 
+                    : 'text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/5'
+                }`}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <span className={`text-[9px] font-black tracking-tight text-center leading-none ${
+                  isSelected ? 'text-m3-primary' : 'text-m3-on-surface-variant'
+                }`}>
+                  {item.id === 'dashboard' ? 'Dash' : item.id === 'architecture' ? 'ERD' : item.id === 'pos' ? 'Checkout' : item.id === 'ledger' ? 'Ledger' : item.id === 'inventory' ? 'Stock' : item.id === 'procurement' ? 'Purchase' : item.id === 'transmittal' ? 'Send' : item.id === 'shift' ? 'Shift' : item.id === 'calculator' ? 'Calc' : item.name.split(' ')[0]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       )}
 
       {/* CONFIRMATORY DIALOG: Logout verification check trigger */}
