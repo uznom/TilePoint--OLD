@@ -1,0 +1,25 @@
+{
+  "short_name": "TilePoint",
+  "name": "TilePoint - Branch Ledger & POS",
+  "description": "Enterprise Progressive Web App for TilePoint showroom staff, branch managers, and warehouse dispatch.",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#121214",
+  "theme_color": "#1c1b1f",
+  "display": "standalone",
+  "orientation": "any",
+  "categories": ["business", "productivity", "utilities"]
+}
