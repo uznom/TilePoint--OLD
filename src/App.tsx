@@ -791,17 +791,6 @@ function AppContent() {
         {/* Horizontal glowing accent line reflecting selected color */}
         <div className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-m3-primary/35 via-m3-primary/10 to-transparent pointer-events-none" />
         <div className="flex items-center gap-3">
-          {/* Mobile menu toggle (removed in POS mode) */}
-          {activeTab !== 'pos' && (
-            <button
-              onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-              className="md:hidden p-2 rounded-xl hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer"
-              title="Toggle navigation sidebar"
-            >
-              {mobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
-          )}
-
           {/* Logo */}
           <div className="flex items-center gap-2.5">
             <img src="/icon.svg" alt="TilePoint Favicon Logo" className="h-9 w-9 rounded-lg" referrerPolicy="no-referrer" />
@@ -1065,86 +1054,6 @@ function AppContent() {
           </div>
         </aside>
 
-        {/* SIDEBAR NAVIGATION: Mobile Drawer overlay and sidebar content */}
-        <AnimatePresence>
-          {mobileSidebarOpen && activeTab !== 'pos' && (
-            <div className="fixed inset-0 z-45 flex md:hidden">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.18 }}
-                className="absolute inset-0 bg-m3-on-surface/40 backdrop-blur-sm"
-                onClick={() => setMobileSidebarOpen(false)}
-              />
-              <motion.aside
-                initial={{ x: "-100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "-100%" }}
-                transition={{ type: "spring", damping: 24, stiffness: 220 }}
-                className="relative w-64 h-full flex flex-col p-5 space-y-5 shadow-2xl z-10 android-glass-modal text-m3-on-surface"
-              >
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-m3-on-surface-variant font-mono">Menu List</span>
-                  <button onClick={() => setMobileSidebarOpen(false)} className="text-m3-on-surface-variant hover:text-m3-primary p-1.5 rounded-xl hover:bg-m3-primary/10">
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-
-                {/* Mobile Logout option */}
-                <div className="bg-m3-surface-container p-3 rounded-2xl border border-m3-outline-variant/30 text-center">
-                  <button
-                    onClick={() => {
-                      setMobileSidebarOpen(false);
-                      setShowLogoutConfirmModal(true);
-                    }}
-                    className="w-full py-2.5 rounded-xl border border-rose-500/30 text-rose-500 bg-rose-500/5 hover:bg-rose-500/10 text-xs font-black uppercase tracking-wider cursor-pointer transition-all flex items-center justify-center gap-2"
-                  >
-                    <Power className="h-4 w-4" />
-                    <span>Logout Session</span>
-                  </button>
-                </div>
-
-                <nav className="space-y-1.5 overflow-y-auto max-h-[calc(100vh-180px)] pr-1 font-sans">
-
-                  {sidebarCategoryTree.map(category => {
-                    const CategoryIcon = category.icon;
-                    
-                    // Strong dynamic RBAC: Filter sub-items to only those this user has permission to see on mobile
-                    const authorizedSubItems = category.subItems.filter(sub => {
-                      const masterItem = menuItems.find(m => m.id === sub.id);
-                      return masterItem ? masterItem.roles.includes(currentUser.role) : false;
-                    });
-
-                    if (authorizedSubItems.length === 0) return null;
-
-                    const hasActiveSubItem = authorizedSubItems.some(sub => activeTab === sub.id) || activeTab === category.id;
-
-                    return (
-                      <button
-                        key={category.id}
-                        onClick={() => {
-                          const firstSub = authorizedSubItems[0]?.id || category.id;
-                          changeTab(firstSub);
-                          setMobileSidebarOpen(false);
-                        }}
-                        className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                          hasActiveSubItem 
-                            ? 'bg-m3-primary text-m3-on-primary shadow-md font-black scale-[1.01]' 
-                            : 'hover:bg-m3-primary/5 text-m3-on-surface-variant hover:text-m3-primary'
-                        }`}
-                      >
-                        <CategoryIcon className={`h-4.5 w-4.5 shrink-0 ${hasActiveSubItem ? 'text-m3-on-primary' : 'text-m3-on-surface-variant'}`} />
-                        <span>{category.name}</span>
-                      </button>
-                    );
-                  })}
-                </nav>
-              </motion.aside>
-            </div>
-          )}
-        </AnimatePresence>
-
         {/* DYNAMIC COMPONENT PANEL AREA */}
         <main className={`flex-1 relative flex flex-col text-m3-on-surface transition-all duration-300 ${
           activeTab === 'pos' 
@@ -1316,27 +1225,49 @@ function AppContent() {
           <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest font-mono">Modules</span>
         </div>
 
-        {menuItems.filter(item => {
-          const isRoleOk = item.roles.includes(currentUser.role);
-          if (!isRoleOk) return false;
-          const currentBranch = branches.find(b => b.id === currentUser.branchAssignmentId);
-          const isAuthorizedBranch = currentUser.branchAssignmentId === 'B1' || !!currentBranch?.isDistributionBranch || currentUser.role === 'Admin';
-          if (item.id === 'transmittal' && !isAuthorizedBranch) return false;
-          // Exclude tutorials here as it is accessible in the header profile menu to avoid cluttering bottom space
-          if (item.id === 'tutorials') return false;
-          return true;
-        }).map(item => {
-          const Icon = item.icon;
-          const isSelected = activeTab === item.id;
-          
+        {sidebarCategoryTree.map(category => {
+          // Dynamic RBAC filtering
+          const authorizedSubItems = category.subItems.filter(sub => {
+            const masterItem = menuItems.find(m => m.id === sub.id);
+            return masterItem ? masterItem.roles.includes(currentUser.role) : false;
+          });
+
+          // Branch authorization filter
+          const filteredSubItems = authorizedSubItems.filter(sub => {
+            const currentBranch = branches.find(b => b.id === currentUser.branchAssignmentId);
+            const isAuthorizedBranch = currentUser.branchAssignmentId === 'B1' || !!currentBranch?.isDistributionBranch || currentUser.role === 'Admin';
+            if (sub.id === 'transmittal' && !isAuthorizedBranch) return false;
+            return true;
+          });
+
+          if (filteredSubItems.length === 0) return null;
+
+          // Routing goes to first authorized sub-item of category
+          const firstSubTabId = filteredSubItems[0].id;
+          const Icon = category.icon;
+          const isSelected = filteredSubItems.some(sub => sub.id === activeTab) || activeTab === category.id;
+
+          // Short friendly labels for bottom bar
+          let shortLabel = category.name;
+          if (category.id === 'sale') shortLabel = 'Sale';
+          else if (category.id === 'inventory') shortLabel = 'Inventory';
+          else if (category.id === 'bir') shortLabel = 'Reports';
+          else if (category.id === 'deliveries') shortLabel = 'Cargo';
+          else if (category.id === 'members') shortLabel = 'Members';
+          else if (category.id === 'supplier') shortLabel = 'Suppliers';
+          else if (category.id === 'expenses') shortLabel = 'Expenses';
+          else if (category.id === 'adjustments') shortLabel = 'Voids';
+          else if (category.id === 'admin-bi') shortLabel = 'BI';
+          else if (category.id === 'admin-org') shortLabel = 'Staff';
+
           return (
             <button
-              key={item.id}
-              onClick={() => changeTab(item.id)}
-              className="flex flex-col items-center gap-0.5 focus:outline-none cursor-pointer shrink-0 py-1.5 px-3 min-w-[64px] group transition-transform active:scale-95"
+              key={category.id}
+              onClick={() => changeTab(firstSubTabId)}
+              className="flex flex-col items-center gap-0.5 focus:outline-none cursor-pointer shrink-0 py-1 px-2.5 min-w-[58px] group transition-transform active:scale-95"
             >
               {/* Visual state capsule indicator */}
-              <div className={`px-4.5 py-1 rounded-2xl transition-[background-color,color,transform] duration-200 ${
+              <div className={`px-4 py-1 rounded-2xl transition-[background-color,color,transform] duration-200 ${
                 isSelected 
                   ? 'bg-m3-primary text-m3-on-primary shadow-sm shadow-m3-primary/10 scale-[1.03]' 
                   : 'text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/5'
@@ -1344,9 +1275,9 @@ function AppContent() {
                 <Icon className="h-4.5 w-4.5 shrink-0 transition-transform group-hover:scale-110" />
               </div>
               <span className={`text-[9px] font-black tracking-tight text-center leading-none mt-1 whitespace-nowrap ${
-                isSelected ? 'text-m3-primary font-black animate-fade-in' : 'text-zinc-400 dark:text-zinc-500 group-hover:text-m3-primary'
+                isSelected ? 'text-m3-primary font-black' : 'text-zinc-400 dark:text-zinc-500 group-hover:text-m3-primary'
               }`}>
-                {item.id === 'dashboard' ? 'Dash' : item.id === 'architecture' ? 'ERD' : item.id === 'pos' ? 'Checkout' : item.id === 'ledger' ? 'Ledger' : item.id === 'inventory-stocks' ? 'Stock' : item.id === 'procurement' ? 'Purchase' : item.id === 'transmittal' ? 'Send' : item.id === 'shift' ? 'Shift' : item.id === 'calculator' ? 'Calc' : item.name.split(' ')[0]}
+                {shortLabel}
               </span>
             </button>
           );
