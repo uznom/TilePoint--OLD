@@ -1,6 +1,9 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "outputDirectory": "dist",
   "headers": [
     {
       "source": "/service-worker.js",
@@ -41,7 +44,7 @@
   ],
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!assets/|sw.js|service-worker.js|manifest.json|icon.svg|favicon.ico|.*\\.).*)",
       "destination": "/index.html"
     }
   ]
