@@ -925,7 +925,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                 </p>
               </div>
 
-              <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[600px] lg:max-h-none no-scrollbar">
+              <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[600px] lg:max-h-none scrollbar-none">
                 {parkedSales.length > 0 ? (
                   <div className="flex flex-col gap-3">
                     {parkedSales.map((park, idx) => (
@@ -1122,7 +1122,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                 </div>
 
                 {/* Cart item feeds */}
-                <div className="flex-1 overflow-y-auto max-h-[250px] sm:max-h-[400px] lg:max-h-none my-3 pr-1 space-y-1.5 divide-y divide-m3-outline-variant/10 no-scrollbar">
+                <div className="flex-1 overflow-y-auto max-h-[250px] sm:max-h-[400px] lg:max-h-none my-3 pr-1 space-y-1.5 divide-y divide-m3-outline-variant/10 scrollbar-none">
                   {cart.map((item, idx) => (
                     <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 py-3 border-b border-m3-outline-variant/10 last:border-0 pl-1">
                       <div className="space-y-0.5 max-w-2xl text-left w-full sm:w-auto">

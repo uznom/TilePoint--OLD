@@ -971,10 +971,10 @@ function AppContent() {
         {/* SIDEBAR NAVIGATION: Desktop */}
         <aside className={`border-r border-m3-outline-variant/15 select-none android-glass-sidebar py-6 transition-all duration-300 ease-in-out ${
           activeTab === 'pos'
-            ? `fixed left-0 top-0 bottom-0 z-49 transform bg-m3-surface-low border-r border-m3-primary/25 backdrop-blur-xl md:block ${
+            ? `fixed left-0 top-0 bottom-0 z-49 transform bg-m3-surface-low border-r border-m3-primary/25 backdrop-blur-xl hidden md:block ${
                 isSidebarMinimized ? 'w-20 px-2' : 'w-72 px-4'
               } ${
-                showImmersiveControls ? 'translate-x-0 opacity-100 shadow-2xl' : '-translate-x-full opacity-0 pointer-events-none'
+                showImmersiveControls ? 'translate-x-[0px] opacity-100 shadow-2xl' : '-translate-x-full opacity-0 pointer-events-none'
               }`
             : `sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto hidden md:block ${
                 isSidebarMinimized ? 'w-20 px-2' : 'w-72 px-4'
@@ -1148,8 +1148,8 @@ function AppContent() {
           activeTab === 'pos' 
             ? `overflow-y-auto md:overflow-hidden md:h-screen lg:max-h-screen text-m3-on-surface transition-all duration-300 ${
                 showImmersiveControls 
-                  ? `p-4 pt-[73px] pb-24 md:p-4 md:pt-[73px] md:pb-4 ${isSidebarMinimized ? 'md:pl-[96px]' : 'md:pl-[304px]'}` 
-                  : 'p-0 pt-0 md:p-0'
+                  ? `h-[calc(100vh-140px)] p-4 pt-[73px] pb-24 md:h-screen md:p-4 md:pt-[73px] md:pb-4 ${isSidebarMinimized ? 'md:pl-[96px]' : 'md:pl-[304px]'}` 
+                  : 'h-screen p-0 pt-0 md:p-0'
               }` 
             : 'p-4 md:p-6 pb-26 md:pb-6 overflow-y-auto'
         } ${isCompactColumns ? 'compact-fit' : ''}`}>
