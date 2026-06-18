@@ -97,8 +97,8 @@ export const IdleScreen: React.FC = () => {
     };
   }, [isLoggedIn, isIdle, isDesktop]);
 
-  // If not idle or not desktop/logged-in, render nothing
-  if (!isIdle) return null;
+  // If not logged-in or not desktop, render nothing to keep execution low
+  if (!isLoggedIn || !isDesktop) return null;
 
   // Format date and time
   const formatTime = (date: Date) => {
@@ -111,17 +111,18 @@ export const IdleScreen: React.FC = () => {
 
   return (
     <AnimatePresence>
-      <motion.div
-        id="desktop-m3-expressive-idle-screen"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: isDismissingWhole ? 0 : 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        className="fixed inset-0 z-[9999] overflow-hidden select-none"
-        style={{
-          backgroundColor: 'rgb(var(--m3-surface-container-lowest, 18, 20, 24))',
-        }}
-      >
+      {isIdle && (
+        <motion.div
+          id="desktop-m3-expressive-idle-screen"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: isDismissingWhole ? 0 : 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="fixed inset-0 z-[9999] overflow-hidden select-none"
+          style={{
+            backgroundColor: 'rgb(var(--m3-surface-container-lowest, 18, 20, 24))',
+          }}
+        >
         {/* ANDROID 17 FLUID GLOWING GRAPHIC BLURS */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
           {/* Dynamic Blob 1 */}
@@ -265,6 +266,8 @@ export const IdleScreen: React.FC = () => {
           </motion.div>
         </div>
       </motion.div>
+      )}
     </AnimatePresence>
   );
 };
+

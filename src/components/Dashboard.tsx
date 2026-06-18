@@ -65,7 +65,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
     suppliers,
     updateBranch,
     updateCurrentUser,
-    checkoutSale
+    checkoutSale,
+    simulationModeActive
   } = useDb();
 
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
@@ -1018,6 +1019,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              {simulationModeActive && (
               <button
                 type="button"
                 onClick={() => {
@@ -1067,6 +1069,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
               >
                 Simulate checkout
               </button>
+              )}
 
               <button
                 type="button"
@@ -2430,7 +2433,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
               {/* Day simulated overlay helper */}
               <div className="p-2 border border-m3-outline-variant/15 rounded-xl bg-m3-surface-low/50 text-[10.5px] text-m3-on-surface-variant leading-normal flex items-center gap-2 mb-3">
                 <span className="text-xs font-bold text-m3-primary">•</span>
-                <span>Select a day below to simulate a high-value bulk transaction in real-time.</span>
+                <span>
+                  {simulationModeActive 
+                    ? "Select a day below to simulate a high-value bulk transaction in real-time."
+                    : "Select a day below to examine that day's specific transactional volume."
+                  }
+                </span>
               </div>
 
               <div className="relative h-56 w-full flex items-end pt-4 pb-2">
@@ -2495,7 +2503,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
             </div>
 
             {/* Simulated transactions controls wrapper */}
-            {selectedWeeklyDay !== null && (
+            {selectedWeeklyDay !== null && simulationModeActive && (
               <div className="p-3.5 mt-2 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/25 rounded-2xl animate-fade-in flex flex-col gap-2 shrink-0 select-none">
                 <div className="flex justify-between items-center text-[11px] font-bold">
                   <span className="text-emerald-400 flex items-center gap-1 font-mono">

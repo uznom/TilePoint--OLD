@@ -2001,6 +2001,53 @@ startxref
                             </label>
                           </div>
                         </div>
+
+                        {/* Instant Forensic Master Database & Logs Generator */}
+                        <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 space-y-2.5">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 font-mono flex items-center gap-1.5">
+                            <Sparkles className="h-3 w-3 text-emerald-400" />
+                            Preseeded Master Forensic Database & System Audit Logs
+                          </span>
+                          <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+                            Instantly populate the entire TilePoint environment with rich, multi-module interactive transaction histories and deep compliance forensic audit logs (covering Sales, POS, stock transfers, suppliers, and security events). Downloads a valid backup template file or seeds it locally in one click.
+                          </p>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const payload = db.generateMasterForensicBackup();
+                                const element = document.createElement("a");
+                                const file = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
+                                element.href = URL.createObjectURL(file);
+                                element.download = `tilepoint_comprehensive_forensic_master_${Date.now()}.json`;
+                                document.body.appendChild(element);
+                                element.click();
+                                document.body.removeChild(element);
+                                setBackupActionStatus('Success: Downloaded comprehensive master logs template JSON file.');
+                                setTimeout(() => setBackupActionStatus(null), 3000);
+                              }}
+                              className="flex-1 bg-zinc-800 text-zinc-300 hover:bg-zinc-750 text-[9.2px] font-bold uppercase tracking-wider py-2 rounded-lg cursor-pointer transition-all text-center flex items-center justify-center gap-1.5 border border-zinc-700 font-sans shadow-sm"
+                            >
+                              <Download className="h-3.5 w-3.5 text-emerald-400" />
+                              Download Forensic JSON
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (window.confirm("Are you sure you want to seed and import the comprehensive Master Forensic Database? This will overwrite your current workspace, seed active metrics, products, and logs, and log you in securely as Simulated Admin.")) {
+                                  await db.importMasterForensicBackup();
+                                  setBackupActionStatus('SUCCESS: SEEDED COMPREHENSIVE RECORDS & MULTI-MODULE FORENSIC LOGS!');
+                                  setTimeout(() => setBackupActionStatus(null), 4000);
+                                }
+                              }}
+                              className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[9.2px] font-extrabold uppercase tracking-wider py-2 rounded-lg cursor-pointer transition-all text-center flex items-center justify-center gap-1.5 border border-emerald-500 shadow-md"
+                            >
+                              <Database className="h-3.5 w-3.5" />
+                              1-Click Import & Seed Logs
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

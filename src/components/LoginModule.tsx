@@ -32,7 +32,7 @@ interface SecurityStep {
 }
 
 export const LoginModule: React.FC = () => {
-  const { login, isRateLimited, rateLimitTimeLeft, users } = useDb();
+  const { login, isRateLimited, rateLimitTimeLeft, users, simulationModeActive } = useDb();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -46,7 +46,12 @@ export const LoginModule: React.FC = () => {
   const [showSecurityConsole, setShowSecurityConsole] = useState(false);
 
   // List of seeded accounts for quick simulation select
-  const simulatedAccounts: any[] = [];
+  const simulatedAccounts: any[] = simulationModeActive ? [
+    { name: 'Simulated Admin', username: 'admin', pass: 'admin123', role: 'ADMIN', avatar: 'AD', desc: 'Full authority, bypasses standard restrictions.' },
+    { name: 'Simulated Manager', username: 'manager', pass: 'tilepoint', role: 'MANAGER', avatar: 'MN', desc: 'Approves transmittals, manages stock & pricing.' },
+    { name: 'Simulated Cashier', username: 'cashier', pass: 'tilepoint', role: 'CASHIER', avatar: 'CS', desc: 'Performs checkout sales in POS module.' },
+    { name: 'Simulated Staff', username: 'staff', pass: 'tilepoint', role: 'STAFF', avatar: 'ST', desc: 'Checks prices & scans catalogs in staff portal.' }
+  ] : [];
 
   const handleSelectAccount = (acc: any) => {
     setUsername(acc.username);

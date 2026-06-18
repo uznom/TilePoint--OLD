@@ -31,6 +31,7 @@ import { TutorialOnboarding } from './components/TutorialOnboarding';
 import { PrivacyAccessibilityHub } from './components/PrivacyAccessibilityHub';
 import { SystemLoadingOverlay } from './components/SystemLoadingOverlay';
 import { IdleScreen } from './components/IdleScreen';
+import { PwaInstallPrompt } from './components/PwaInstallPrompt';
 import { DamageRegisterModule } from './components/DamageRegisterModule';
 import { generateThemeFromSeed, applyM3ThemeToDOM, resetM3ThemeOverride } from './lib/themeGenerator';
 
@@ -2067,6 +2068,9 @@ function AppContent() {
 
       {/* EXPRESSIVE MATERIAL 3 IDLE SCREEN OVERLAY */}
       <IdleScreen />
+
+      {/* DYNAMIC ALWAYS-ON PWA INSTALL CONVERSION PROMPT */}
+      <PwaInstallPrompt />
     </div>
   );
 }
