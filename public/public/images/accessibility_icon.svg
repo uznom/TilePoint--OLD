@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Bright Royal Blue Circle Background -->
+  <circle cx="50" cy="50" r="46" fill="#1d4ed8" />
+  
+  <!-- Active Accessibility Active-Wheelchair Symbol (White) -->
+  <!-- Head -->
+  <circle cx="58" cy="28" r="5" fill="#ffffff" />
+  
+  <!-- Body/Arm/Leg Paths -->
+  <path d="M 44 42 C 48 38, 54 42, 57 40 L 68 40" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M 44 42 L 53 52 L 67 52 L 63 68 L 56 68" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <!-- Wheel Arc -->
+  <path d="M 37 47 A 15 15 0 1 0 49 67" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" />
+</svg>
