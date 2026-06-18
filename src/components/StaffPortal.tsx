@@ -319,17 +319,8 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
           <div className="text-[9px] font-bold text-zinc-500 lowercase leading-tight mt-0.5">{currentUser.fullName}</div>
         </div>
 
-        {/* Right Side: Dark Theme trigger + Logout icon */}
+        {/* Right Side: Accessibility & Logout */}
         <div className="flex items-center gap-2" id="staff-header-right">
-          <button
-            id="theme-toggle-staff"
-            onClick={() => setDarkMode(!darkMode)}
-            className="p-2.5 rounded-xl border border-m3-outline-variant text-m3-primary hover:bg-m3-primary/10 transition-colors cursor-pointer"
-            title="Toggle color theme"
-          >
-            {darkMode ? <Sun className="h-4 w-4 text-amber-500 animate-pulse" /> : <Moon className="h-4 w-4" />}
-          </button>
-
           <button
             id="accessibility-toggle-staff"
             onClick={() => window.dispatchEvent(new Event('open-privacy-hub'))}
@@ -337,15 +328,6 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
             title="Privacy Policies & Accessibility Hub"
           >
             <Accessibility className="h-4 w-4" />
-          </button>
-
-          <button
-            id="theme-colors-staff"
-            onClick={() => window.dispatchEvent(new Event('open-privacy-hub'))}
-            className="p-2.5 rounded-xl border border-m3-outline-variant text-m3-primary hover:bg-m3-primary/10 transition-colors cursor-pointer"
-            title="Material Dynamic Theme Colors"
-          >
-            <Palette className="h-4 w-4" />
           </button>
 
           <button

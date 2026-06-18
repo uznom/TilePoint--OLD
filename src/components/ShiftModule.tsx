@@ -203,7 +203,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
 
               <button
                 type="submit"
-                className="w-full py-2.5 bg-m3-primary text-m3-surface font-extrabold text-xs uppercase tracking-widest rounded-full cursor-pointer transition shadow hover:bg-m3-primary/95 text-center"
+                className="w-full py-2.5 bg-m3-primary text-m3-on-primary font-extrabold text-xs uppercase tracking-widest rounded-full cursor-pointer transition shadow hover:bg-m3-primary/95 text-center"
               >
                 Close Out Safe and Close Shift
               </button>
@@ -366,7 +366,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
 
               <button
                 onClick={() => setShowXReport(false)}
-                className="flex-1 py-2 font-black uppercase bg-m3-primary text-m3-surface rounded-full cursor-pointer text-center text-[10px]"
+                className="flex-1 py-2 font-black uppercase bg-m3-primary text-m3-on-primary rounded-full cursor-pointer text-center text-[10px]"
               >
                 Dismiss X
               </button>
@@ -427,7 +427,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
                   closeShift(expectedEndCash); // auto closes shift at precision
                   setShowZReport(false);
                 }}
-                className="w-full py-2.5 bg-m3-tertiary text-m3-surface font-extrabold text-xs uppercase tracking-widest rounded-full cursor-pointer transition shadow text-center hover:bg-m3-tertiary/90"
+                className="w-full py-2.5 bg-m3-tertiary text-m3-on-tertiary font-extrabold text-xs uppercase tracking-widest rounded-full cursor-pointer transition shadow text-center hover:bg-m3-tertiary/90"
               >
                 Accept and Seal Z-Report Close
               </button>

@@ -1205,7 +1205,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
                     setActiveTrans(null);
                     showToast('Inter-branch document verified and authenticated successfully.');
                   }}
-                  className="w-full py-2 bg-m3-tertiary text-m3-surface rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1 hover:bg-m3-tertiary/90 transition-all border-0"
+                  className="w-full py-2 bg-m3-tertiary text-m3-on-tertiary rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1 hover:bg-m3-tertiary/90 transition-all border-0"
                 >
                   <CheckSquare className="h-4 w-4" /> Authenticate & Approve Document
                 </button>

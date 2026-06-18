@@ -634,7 +634,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
               </button>
               <button
                 onClick={proceedWithDelete}
-                className="px-4 py-2 text-xs font-bold bg-m3-primary text-m3-surface rounded-full hover:bg-m3-primary/90 transition-colors shadow-sm"
+                className="px-4 py-2 text-xs font-bold bg-m3-primary text-m3-on-primary rounded-full hover:bg-m3-primary/90 transition-colors shadow-sm"
               >
                 Confirm Delete
               </button>

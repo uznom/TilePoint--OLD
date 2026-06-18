@@ -1425,6 +1425,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   const createDbSnapshot = (name: string) => {
+    if (currentUser.role !== UserRole.ADMIN) {
+      console.error('Security alert: createDbSnapshot is restricted to system administrators.');
+      return;
+    }
     const payload = {
       isConfigured,
       users,
@@ -1465,6 +1469,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   const restoreDbSnapshot = (snapshotId: string): boolean => {
+    if (currentUser.role !== UserRole.ADMIN) {
+      console.error('Security alert: restoreDbSnapshot is restricted to system administrators.');
+      return false;
+    }
     const snap = dbSnapshots.find(s => s.id === snapshotId);
     if (!snap) return false;
     try {
@@ -1545,6 +1553,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   const deleteDbSnapshot = (snapshotId: string) => {
+    if (currentUser.role !== UserRole.ADMIN) {
+      console.error('Security alert: deleteDbSnapshot is restricted to system administrators.');
+      return;
+    }
     const updated = dbSnapshots.filter(s => s.id !== snapshotId);
     setDbSnapshots(updated);
     localStorage.setItem('tp_db_snapshots', JSON.stringify(updated));
@@ -2356,6 +2368,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   // --- DATABASE FACTORY TRUNCATE & RE-SEED ENGINE ---
   const truncateDatabase = (mode: 'all' | 'transactions' | 'seeds') => {
+    if (currentUser.role !== UserRole.ADMIN) {
+      console.error('Unauthorized security violation: Only system administrators are authorized to reset or truncate the database.');
+      return;
+    }
     if (mode === 'seeds') {
       // Restore all original database seeds
       setBranches(SEED_BRANCHES);

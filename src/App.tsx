@@ -30,6 +30,7 @@ import { DeliveriesModule } from './components/DeliveriesModule';
 import { TutorialOnboarding } from './components/TutorialOnboarding';
 import { PrivacyAccessibilityHub } from './components/PrivacyAccessibilityHub';
 import { SystemLoadingOverlay } from './components/SystemLoadingOverlay';
+import { IdleScreen } from './components/IdleScreen';
 import { DamageRegisterModule } from './components/DamageRegisterModule';
 import { generateThemeFromSeed, applyM3ThemeToDOM, resetM3ThemeOverride } from './lib/themeGenerator';
 
@@ -1146,7 +1147,7 @@ function AppContent() {
           activeTab === 'pos' 
             ? `md:overflow-hidden md:h-screen lg:max-h-screen text-m3-on-surface transition-all duration-300 ${
                 showImmersiveControls 
-                  ? `p-4 pt-[73px] md:p-4 md:pt-[73px] md:pb-4 ${isSidebarMinimized ? 'md:pl-[96px]' : 'md:pl-[304px]'}` 
+                  ? `p-4 pt-[73px] pb-24 md:p-4 md:pt-[73px] md:pb-4 ${isSidebarMinimized ? 'md:pl-[96px]' : 'md:pl-[304px]'}` 
                   : 'p-0 pt-0 md:p-0'
               }` 
             : 'p-4 md:p-6 pb-26 md:pb-6 overflow-y-auto'
@@ -1614,7 +1615,7 @@ function AppContent() {
                           setManualSnapshotName('');
                           showToast(`Successfully registered database snapshot: "${name}"`);
                         }}
-                        className="px-4 py-2.5 bg-m3-primary hover:bg-m3-primary/95 text-m3-surface text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm transition-all"
+                        className="px-4 py-2.5 bg-m3-primary hover:bg-m3-primary/95 text-m3-on-primary text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm transition-all"
                       >
                         Capture Snapshot
                       </button>
@@ -2063,6 +2064,9 @@ function AppContent() {
 
       {/* GLOBAL SYSTEM PROCESSING OVERLAY */}
       <SystemLoadingOverlay />
+
+      {/* EXPRESSIVE MATERIAL 3 IDLE SCREEN OVERLAY */}
+      <IdleScreen />
     </div>
   );
 }

@@ -1054,7 +1054,7 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
                       <div className="space-y-3">
                         <div className="flex justify-between items-center bg-m3-primary/10 px-3 py-1.5 rounded-xl">
                           <span className="text-xs font-bold font-mono">June {selectedCalendarDay}, 2026</span>
-                          <span className="text-[9px] font-black bg-m3-primary text-m3-surface px-2 py-0.5 rounded-full">{selectedDayEntries.length} Invoices</span>
+                          <span className="text-[9px] font-black bg-m3-primary text-m3-on-primary px-2 py-0.5 rounded-full">{selectedDayEntries.length} Invoices</span>
                         </div>
 
                         <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
@@ -1081,7 +1081,7 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
                                     handleSettleRealPO(payVal.poId, payVal.poNumber);
                                   }
                                 }}
-                                className="w-full text-center py-1 mt-1 bg-emerald-500 hover:bg-emerald-600 text-m3-surface text-[10px] font-bold rounded-lg transition"
+                                className="w-full text-center py-1 mt-1 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 text-[10px] font-bold rounded-lg transition"
                               >
                                 Settle Ledger Credit
                               </button>

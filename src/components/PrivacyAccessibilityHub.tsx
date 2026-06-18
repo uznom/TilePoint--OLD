@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useDb, DbSnapshot } from '../context/DbContext';
+import { UserRole } from '../types/db';
 import {
   Cookie,
   Shield,
@@ -309,6 +310,13 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
 
   const db = useDb();
 
+  // Enforce Admin role constraint for dbtuning tab (since staff, cashiers, and managers must not access it)
+  useEffect(() => {
+    if (activeTab === 'dbtuning' && db.currentUser?.role !== UserRole.ADMIN) {
+      setActiveTab('accessibility');
+    }
+  }, [activeTab, db.currentUser?.role]);
+
   // DB Tuning custom state variables
   const [dbSubTab, setDbSubTab] = useState<'performance' | 'rules' | 'backup'>('performance');
   const [snapshotName, setSnapshotName] = useState('');
@@ -550,17 +558,19 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                   <Info className="h-4 w-4" />
                   <span>About System</span>
                 </button>
-                <button
-                  onClick={() => setActiveTab('dbtuning')}
-                  className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
-                    activeTab === 'dbtuning'
-                      ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
-                      : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
-                  }`}
-                >
-                  <Database className="h-4 w-4" />
-                  <span>DB tuning & Sec</span>
-                </button>
+                {db.currentUser?.role === UserRole.ADMIN && (
+                  <button
+                    onClick={() => setActiveTab('dbtuning')}
+                    className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
+                      activeTab === 'dbtuning'
+                        ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
+                        : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
+                    }`}
+                  >
+                    <Database className="h-4 w-4" />
+                    <span>DB tuning & Sec</span>
+                  </button>
+                )}
               </div>
 
               {/* Dynamic scrollable core form content */}
@@ -719,10 +729,12 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                       </button>
                     </div>
 
-                    <div className="h-px bg-m3-outline-variant/15" />
+                    {db.currentUser?.role !== UserRole.STAFF && (
+                      <>
+                        <div className="h-px bg-m3-outline-variant/15" />
 
-                    {/* ANDROID-STYLE CUSTOM THEME PALETTE SECTION */}
-                    <div className="space-y-4 font-sans text-left">
+                        {/* ANDROID-STYLE CUSTOM THEME PALETTE SECTION */}
+                        <div className="space-y-4 font-sans text-left">
                       <div>
                         <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono flex items-center gap-2">
                           <Palette className="h-4.5 w-4.5 text-m3-primary" />
@@ -996,8 +1008,10 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </>
                 )}
+              </div>
+            )}
 
                 {/* TAB B: COOKIE PREFERENCES */}
                 {activeTab === 'cookies' && (

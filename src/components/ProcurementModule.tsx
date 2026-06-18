@@ -925,7 +925,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
                   <button
                     type="button"
                     onClick={addDraftItem}
-                    className="px-5 py-2 text-xs font-black bg-m3-primary text-m3-surface hover:bg-m3-primary/95 shadow-sm rounded-full cursor-pointer h-9 shrink-0 self-end transition-transform active:scale-95"
+                    className="px-5 py-2 text-xs font-black bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 shadow-sm rounded-full cursor-pointer h-9 shrink-0 self-end transition-transform active:scale-95"
                   >
                     Insert Item
                   </button>

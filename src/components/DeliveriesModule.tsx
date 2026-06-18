@@ -311,13 +311,13 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
               onClick={() => setSelectedStatusTab(tab.tag)}
               className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wide cursor-pointer transition-all flex items-center gap-1.5 ${
                 selectedStatusTab === tab.tag
-                  ? 'bg-m3-primary text-m3-surface shadow-sm font-black'
+                  ? 'bg-m3-primary text-m3-on-primary shadow-sm font-black'
                   : 'bg-m3-surface-lowest hover:bg-m3-outline-variant/15 text-m3-on-surface-variant'
               }`}
             >
               <span>{tab.label}</span>
               <span className={`text-[10px] font-mono font-black px-1.5 py-0.5 rounded-md ${
-                selectedStatusTab === tab.tag ? 'bg-m3-surface text-m3-primary' : 'bg-m3-outline-variant/20 text-m3-on-surface'
+                selectedStatusTab === tab.tag ? 'bg-m3-on-primary/20 text-m3-on-primary' : 'bg-m3-outline-variant/20 text-m3-on-surface'
               }`}>{tab.count}</span>
             </button>
           ))}
@@ -740,7 +740,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
                           </button>
                           <button
                             type="submit"
-                            className="bg-m3-primary text-m3-surface px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-wide cursor-pointer flex items-center gap-1.5"
+                            className="bg-m3-primary text-m3-on-primary px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-wide cursor-pointer flex items-center gap-1.5"
                           >
                             <UserCheck className="h-3.5 w-3.5" /> Let's Schedule
                           </button>

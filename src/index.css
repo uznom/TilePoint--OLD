@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wdth,wght@8..144,25..151,100..1000&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -74,7 +74,7 @@
 /* We also apply variables to .dark class when state has darkMode=true */
 .dark {
   --m3-primary: #3B82F6;          /* Glowing Professional Royal Blue */
-  --m3-on-primary: #041D3B;
+  --m3-on-primary: #FFFFFF;
   --m3-primary-container: #1E40AF;
   --m3-on-primary-container: #EBF5FF;
   
@@ -84,7 +84,7 @@
   --m3-on-secondary-container: #E2E8F0;
   
   --m3-tertiary: #14B8A6;         /* Warning Turquoise/Teal */
-  --m3-on-tertiary: #042F2E;
+  --m3-on-tertiary: #FFFFFF;
   --m3-tertiary-container: #115E59;
   --m3-on-tertiary-container: #CCFBF1;
   
@@ -902,6 +902,74 @@ select, option {
 select:focus {
   outline: none;
 }
+
+/* Expressive Variable Font Animation for Roboto Flex */
+@keyframes roboto-flex-morph {
+  0% {
+    font-variation-settings: 'wdth' 40, 'wght' 200, 'opsz' 14;
+    letter-spacing: -0.04em;
+    filter: drop-shadow(0 0 10px rgba(var(--m3-primary), 0.1));
+  }
+  50% {
+    font-variation-settings: 'wdth' 125, 'wght' 600, 'opsz' 72;
+    letter-spacing: -0.01em;
+    filter: drop-shadow(0 0 25px var(--m3-primary));
+  }
+  100% {
+    font-variation-settings: 'wdth' 40, 'wght' 200, 'opsz' 14;
+    letter-spacing: -0.04em;
+    filter: drop-shadow(0 0 10px rgba(var(--m3-primary), 0.1));
+  }
+}
+
+.animate-roboto-flex {
+  font-family: 'Roboto Flex', sans-serif !important;
+  animation: roboto-flex-morph 16s ease-in-out infinite;
+}
+
+/* Android 17 style smooth morphing background blobs */
+@keyframes blob-pivot-one {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.15) rotate(120deg);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9) rotate(240deg);
+  }
+}
+
+@keyframes blob-pivot-two {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+  }
+  50% {
+    transform: translate(-40px, 40px) scale(1.2) rotate(-180deg);
+  }
+}
+
+@keyframes blob-pivot-three {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+  }
+  40% {
+    transform: translate(50px, 20px) scale(0.85) rotate(90deg);
+  }
+}
+
+.animate-blob-1 {
+  animation: blob-pivot-one 24s ease-in-out infinite;
+}
+
+.animate-blob-2 {
+  animation: blob-pivot-two 28s ease-in-out infinite;
+}
+
+.animate-blob-3 {
+  animation: blob-pivot-three 20s ease-in-out infinite;
+}
+
 
 
 

@@ -264,7 +264,7 @@ export function generateThemeFromSeed(
       }
     }
     const primaryHex = rgbToHex(...Object.values(hslToRgb(h, Math.min(0.9, s * 1.1), primaryL)) as [number, number, number]);
-    const onPrimary = accentContrast === 'high' ? '#000000' : (getContrastRatio(primaryHex, '#09101F') >= 4.5 ? '#09101F' : '#FAFBFD');
+    const onPrimary = accentContrast === 'high' ? '#000000' : (getContrastRatio(primaryHex, '#FAFBFD') >= 3.0 ? '#FAFBFD' : '#09101F');
 
     // Primary Container: dark sapphire-style underlay
     const primaryContainerHex = rgbToHex(...Object.values(hslToRgb(h, Math.min(0.8, s * 0.9), accentContrast === 'high' ? 0.08 : (accentContrast === 'medium' ? 0.12 : 0.18))) as [number, number, number]);
@@ -275,7 +275,7 @@ export function generateThemeFromSeed(
     if (accentContrast === 'medium') secondaryL = 0.80;
     if (accentContrast === 'high') secondaryL = 0.90;
     const secondaryHex = rgbToHex(...Object.values(hslToRgb(h, 0.12, secondaryL)) as [number, number, number]);
-    const onSecondary = '#0F172A';
+    const onSecondary = getContrastRatio(secondaryHex, '#FAFBFD') >= 3.0 ? '#FAFBFD' : '#0F172A';
     const secondaryContainerHex = rgbToHex(...Object.values(hslToRgb(h, 0.10, accentContrast === 'high' ? 0.08 : 0.20)) as [number, number, number]);
     const onSecondaryContainerHex = rgbToHex(...Object.values(hslToRgb(h, 0.15, accentContrast === 'high' ? 0.95 : 0.86)) as [number, number, number]);
 
@@ -285,7 +285,7 @@ export function generateThemeFromSeed(
     if (accentContrast === 'medium') tertiaryL = 0.78;
     if (accentContrast === 'high') tertiaryL = 0.88;
     const tertiaryHex = rgbToHex(...Object.values(hslToRgb(tertiaryH, Math.min(0.7, s), tertiaryL)) as [number, number, number]);
-    const onTertiary = '#031E1E';
+    const onTertiary = getContrastRatio(tertiaryHex, '#FAFBFD') >= 3.0 ? '#FAFBFD' : '#031E1E';
     
     const tertiaryContainerHex = rgbToHex(...Object.values(hslToRgb(tertiaryH, 0.35, accentContrast === 'high' ? 0.08 : 0.22)) as [number, number, number]);
     const onTertiaryContainerHex = rgbToHex(...Object.values(hslToRgb(tertiaryH, 0.25, accentContrast === 'high' ? 0.95 : 0.88)) as [number, number, number]);

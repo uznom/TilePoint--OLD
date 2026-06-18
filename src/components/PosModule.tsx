@@ -151,6 +151,9 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
   const [showHotkeysHelp, setShowHotkeysHelp] = useState(false);
   const [shortcutsCollapsed, setShortcutsCollapsed] = useState(true);
 
+  // Mobile section toggle tab for responsive flow
+  const [mobilePosTab, setMobilePosTab] = useState<'queue' | 'basket'>('basket');
+
   // Custom modal input states (replacing prompt)
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [customerModalInput, setCustomerModalInput] = useState('');
@@ -355,6 +358,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
 
     // Remove from parked
     setParkedSales(prev => prev.filter(p => p.id !== parkedId));
+    setMobilePosTab('basket');
     showToast('Resumed parked basket.');
   };
 
@@ -871,10 +875,43 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
         <div className={`space-y-4 lg:space-y-0 lg:flex lg:flex-col lg:justify-between gap-4 w-full ${
           showImmersiveControls ? 'lg:h-[calc(100vh-140px)]' : 'lg:h-[calc(100vh-76px)]'
         }`}>
+          {/* MOBILE ONLY TAB SWITCHER TO REDUCE COGNITIVE OVERHEAD & SCROLLING ON SMARTPHONES */}
+          <div className="flex lg:hidden bg-m3-surface-low border border-m3-outline-variant/15 p-1 rounded-2xl w-full gap-1">
+            <button
+              onClick={() => setMobilePosTab('basket')}
+              className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 ${
+                mobilePosTab === 'basket'
+                  ? 'bg-m3-primary text-m3-on-primary shadow-sm font-black'
+                  : 'text-m3-on-surface-variant hover:bg-m3-primary/5'
+              }`}
+            >
+              <ShoppingCart className="h-4 w-4" />
+              <span>Basket ({cart.length})</span>
+            </button>
+            <button
+              onClick={() => setMobilePosTab('queue')}
+              className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 relative ${
+                mobilePosTab === 'queue'
+                  ? 'bg-m3-primary text-m3-on-primary shadow-sm font-black'
+                  : 'text-m3-on-surface-variant hover:bg-m3-primary/5'
+              }`}
+            >
+              <History className="h-4 w-4" />
+              <span>Hold Queue ({parkedSales.length})</span>
+              {parkedSales.length > 0 && (
+                <span className="absolute -top-1 right-2 bg-rose-500 text-white font-mono text-[9px] h-4.5 min-w-[18px] px-1 rounded-full flex items-center justify-center font-black animate-pulse border-2 border-m3-surface-low shadow">
+                  {parkedSales.length}
+                </span>
+              )}
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 animate-fade-in text-m3-on-surface items-stretch lg:flex-1 lg:overflow-hidden lg:min-h-0">
             
             {/* LEFT COLUMN: YARD STAFF TRANSACTIONS HOLD QUEUE */}
-            <div className="lg:col-span-4 bg-m3-surface-low p-4 rounded-[28px] border border-m3-outline-variant/20 shadow-sm space-y-4 text-left self-stretch flex flex-col lg:h-full lg:overflow-hidden lg:min-h-0">
+            <div className={`lg:col-span-4 bg-m3-surface-low p-4 rounded-[28px] border border-m3-outline-variant/20 shadow-sm space-y-4 text-left self-stretch flex flex-col lg:h-full lg:overflow-hidden lg:min-h-0 ${
+              mobilePosTab === 'queue' ? 'block' : 'hidden lg:flex'
+            }`}>
               <div className="border-b border-m3-outline-variant/15 pb-2 cursor-default">
                 <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest flex items-center gap-1.5">
                   <span className="relative flex h-2 w-2">
@@ -910,7 +947,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
 
                         <button
                           type="button"
-                          className="w-full py-1.5 text-[9.5px] font-black uppercase tracking-widest bg-m3-primary text-m3-surface hover:bg-m3-primary/95 transition-colors rounded-xl flex items-center justify-center gap-1 cursor-pointer shadow-sm mt-1"
+                          className="w-full py-1.5 text-[9.5px] font-black uppercase tracking-widest bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 transition-colors rounded-xl flex items-center justify-center gap-1 cursor-pointer shadow-sm mt-1"
                         >
                           Resume Staged Order &rarr;
                         </button>
@@ -927,7 +964,9 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
             </div>
 
             {/* RIGHT COLUMN: ACTIVE ORDER LIST OF MATERIALS */}
-            <div className="lg:col-span-8 text-left lg:h-full lg:flex lg:flex-col lg:overflow-hidden lg:min-h-0">
+            <div className={`lg:col-span-8 text-left lg:h-full lg:flex lg:flex-col lg:overflow-hidden lg:min-h-0 ${
+              mobilePosTab === 'basket' ? 'block' : 'hidden lg:flex'
+            }`}>
               <div className="p-5 rounded-[28px] border border-m3-outline-variant/35 bg-m3-surface-low shadow-sm flex flex-col justify-between lg:h-full lg:overflow-hidden lg:min-h-0">
                 
                 {/* Basket Header */}
@@ -1067,7 +1106,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                       </div>
                       <button
                         type="submit"
-                        className="w-full md:w-auto px-5 py-2 bg-m3-primary text-m3-surface hover:bg-m3-primary/95 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer self-end shrink-0 transition-all flex items-center gap-1.5 h-[34px] shadow-sm justify-center"
+                        className="w-full md:w-auto px-5 py-2 bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer self-end shrink-0 transition-all flex items-center gap-1.5 h-[34px] shadow-sm justify-center"
                       >
                         SKU Scan
                       </button>
