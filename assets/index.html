@@ -6,9 +6,9 @@
     <title>TilePoint - POS & Multi-Branch Ledger</title>
     
     <!-- PWA Metadata & Favicons -->
-    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-    <link rel="apple-touch-icon" href="/icon.svg" />
-    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+    <link rel="apple-touch-icon" href="./icon.svg" />
+    <link rel="manifest" href="./manifest.json" />
     
     <!-- Standalone install optimizations -->
     <meta name="theme-color" content="#1c1b1f" />
@@ -19,13 +19,13 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="./src/main.tsx"></script>
     
     <!-- Service Worker registration script -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
+          navigator.serviceWorker.register('./sw.js')
             .then((registration) => {
               console.log('⚡ TilePoint PWA Service Worker loaded successfully:', registration.scope);
             })

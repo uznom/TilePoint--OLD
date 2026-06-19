@@ -31,6 +31,7 @@ import { TutorialOnboarding } from './components/TutorialOnboarding';
 import { PrivacyAccessibilityHub } from './components/PrivacyAccessibilityHub';
 import { SystemLoadingOverlay } from './components/SystemLoadingOverlay';
 import { IdleScreen } from './components/IdleScreen';
+import { PwaInstallPrompt } from './components/PwaInstallPrompt';
 import { DamageRegisterModule } from './components/DamageRegisterModule';
 import { generateThemeFromSeed, applyM3ThemeToDOM, resetM3ThemeOverride } from './lib/themeGenerator';
 
@@ -782,23 +783,14 @@ function AppContent() {
       {/* HEADER SECTION with custom horizontal glowing accent bar & ambient overlay tint */}
       <header className={`py-4 px-6 border-b border-m3-outline-variant/15 flex justify-between items-center z-[60] android-glass-header shadow-sm bg-m3-surface/75 dark:bg-m3-surface-low/80 backdrop-blur-md transition-all duration-300 overflow-visible ${
         activeTab === 'pos' 
-          ? `fixed top-0 left-0 right-0 transform ${showImmersiveControls ? 'translate-y-0 opacity-100 shadow-xl' : '-translate-y-full opacity-0 pointer-events-none'}` 
-          : 'sticky top-0 translate-y-0 opacity-100 relative'
+          ? `sticky top-0 z-[60] md:fixed md:top-0 md:left-0 md:right-0 md:transform ${showImmersiveControls ? 'md:translate-y-0 md:opacity-100 md:shadow-xl' : 'md:-translate-y-full md:opacity-0 md:pointer-events-none'}`
+          : 'sticky top-0 z-[60]'
       }`}>
         {/* Subtle header brand overlay reflecting user custom color choice */}
         <div className="absolute inset-0 bg-gradient-to-b from-m3-primary/[0.03] to-transparent pointer-events-none z-[-1]" />
         {/* Horizontal glowing accent line reflecting selected color */}
         <div className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-m3-primary/35 via-m3-primary/10 to-transparent pointer-events-none" />
         <div className="flex items-center gap-3">
-          {/* Mobile menu toggle */}
-          <button
-            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-            className="md:hidden p-2 rounded-xl hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer"
-            title="Toggle navigation sidebar"
-          >
-            {mobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
-
           {/* Logo */}
           <div className="flex items-center gap-2.5">
             <img src="/icon.svg" alt="TilePoint Favicon Logo" className="h-9 w-9 rounded-lg" referrerPolicy="no-referrer" />
@@ -970,10 +962,10 @@ function AppContent() {
         {/* SIDEBAR NAVIGATION: Desktop */}
         <aside className={`border-r border-m3-outline-variant/15 select-none android-glass-sidebar py-6 transition-all duration-300 ease-in-out ${
           activeTab === 'pos'
-            ? `fixed left-0 top-0 bottom-0 z-49 transform bg-m3-surface-low border-r border-m3-primary/25 backdrop-blur-xl md:block ${
+            ? `fixed left-0 top-0 bottom-0 z-49 transform bg-m3-surface-low border-r border-m3-primary/25 backdrop-blur-xl hidden md:block ${
                 isSidebarMinimized ? 'w-20 px-2' : 'w-72 px-4'
               } ${
-                showImmersiveControls ? 'translate-x-0 opacity-100 shadow-2xl' : '-translate-x-full opacity-0 pointer-events-none'
+                showImmersiveControls ? 'translate-x-[0px] opacity-100 shadow-2xl' : '-translate-x-full opacity-0 pointer-events-none'
               }`
             : `sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto hidden md:block ${
                 isSidebarMinimized ? 'w-20 px-2' : 'w-72 px-4'
@@ -1062,93 +1054,13 @@ function AppContent() {
           </div>
         </aside>
 
-        {/* SIDEBAR NAVIGATION: Mobile Drawer overlay and sidebar content */}
-        <AnimatePresence>
-          {mobileSidebarOpen && (
-            <div className="fixed inset-0 z-45 flex md:hidden">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.18 }}
-                className="absolute inset-0 bg-m3-on-surface/40 backdrop-blur-sm"
-                onClick={() => setMobileSidebarOpen(false)}
-              />
-              <motion.aside
-                initial={{ x: "-100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "-100%" }}
-                transition={{ type: "spring", damping: 24, stiffness: 220 }}
-                className="relative w-64 h-full flex flex-col p-5 space-y-5 shadow-2xl z-10 android-glass-modal text-m3-on-surface"
-              >
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-m3-on-surface-variant font-mono">Menu List</span>
-                  <button onClick={() => setMobileSidebarOpen(false)} className="text-m3-on-surface-variant hover:text-m3-primary p-1.5 rounded-xl hover:bg-m3-primary/10">
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-
-                {/* Mobile Logout option */}
-                <div className="bg-m3-surface-container p-3 rounded-2xl border border-m3-outline-variant/30 text-center">
-                  <button
-                    onClick={() => {
-                      setMobileSidebarOpen(false);
-                      setShowLogoutConfirmModal(true);
-                    }}
-                    className="w-full py-2.5 rounded-xl border border-rose-500/30 text-rose-500 bg-rose-500/5 hover:bg-rose-500/10 text-xs font-black uppercase tracking-wider cursor-pointer transition-all flex items-center justify-center gap-2"
-                  >
-                    <Power className="h-4 w-4" />
-                    <span>Logout Session</span>
-                  </button>
-                </div>
-
-                <nav className="space-y-1.5 overflow-y-auto max-h-[calc(100vh-180px)] pr-1 font-sans">
-
-                  {sidebarCategoryTree.map(category => {
-                    const CategoryIcon = category.icon;
-                    
-                    // Strong dynamic RBAC: Filter sub-items to only those this user has permission to see on mobile
-                    const authorizedSubItems = category.subItems.filter(sub => {
-                      const masterItem = menuItems.find(m => m.id === sub.id);
-                      return masterItem ? masterItem.roles.includes(currentUser.role) : false;
-                    });
-
-                    if (authorizedSubItems.length === 0) return null;
-
-                    const hasActiveSubItem = authorizedSubItems.some(sub => activeTab === sub.id) || activeTab === category.id;
-
-                    return (
-                      <button
-                        key={category.id}
-                        onClick={() => {
-                          const firstSub = authorizedSubItems[0]?.id || category.id;
-                          changeTab(firstSub);
-                          setMobileSidebarOpen(false);
-                        }}
-                        className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                          hasActiveSubItem 
-                            ? 'bg-m3-primary text-m3-on-primary shadow-md font-black scale-[1.01]' 
-                            : 'hover:bg-m3-primary/5 text-m3-on-surface-variant hover:text-m3-primary'
-                        }`}
-                      >
-                        <CategoryIcon className={`h-4.5 w-4.5 shrink-0 ${hasActiveSubItem ? 'text-m3-on-primary' : 'text-m3-on-surface-variant'}`} />
-                        <span>{category.name}</span>
-                      </button>
-                    );
-                  })}
-                </nav>
-              </motion.aside>
-            </div>
-          )}
-        </AnimatePresence>
-
         {/* DYNAMIC COMPONENT PANEL AREA */}
-        <main className={`flex-1 relative flex flex-col ${
+        <main className={`flex-1 relative flex flex-col text-m3-on-surface transition-all duration-300 ${
           activeTab === 'pos' 
-            ? `md:overflow-hidden md:h-screen lg:max-h-screen text-m3-on-surface transition-all duration-300 ${
+            ? `overflow-y-auto md:overflow-hidden ${
                 showImmersiveControls 
-                  ? `p-4 pt-[73px] pb-24 md:p-4 md:pt-[73px] md:pb-4 ${isSidebarMinimized ? 'md:pl-[96px]' : 'md:pl-[304px]'}` 
-                  : 'p-0 pt-0 md:p-0'
+                  ? `p-4 pb-28 md:h-screen md:p-4 md:pt-[73px] md:pb-4 ${isSidebarMinimized ? 'md:pl-[96px]' : 'md:pl-[304px]'}` 
+                  : 'p-4 pb-28 md:h-screen md:p-0 md:pt-0 md:pl-0 md:pb-0'
               }` 
             : 'p-4 md:p-6 pb-26 md:pb-6 overflow-y-auto'
         } ${isCompactColumns ? 'compact-fit' : ''}`}>
@@ -1165,7 +1077,7 @@ function AppContent() {
               return masterItem ? masterItem.roles.includes(currentUser.role) : false;
             });
 
-            if (authorizedSubItems.length <= 1 || (activeTab === 'pos' && !showImmersiveControls)) return null;
+            if (authorizedSubItems.length <= 1 || activeTab === 'pos') return null;
 
             return (
               <div className="mb-4 bg-m3-surface-low border border-m3-outline-variant/15 rounded-2xl p-2.5 flex flex-col shrink-0">
@@ -1305,50 +1217,76 @@ function AppContent() {
       </main>
       </div>
 
-      {/* MOBILE BOTTOM NAVIGATION BAR FOR COMFORTABLE TACTILE PWA FEEL */}
-      <div className={`md:hidden fixed bottom-0 left-0 right-0 z-40 android-glass border-t border-m3-outline-variant/20 px-2 py-2 flex justify-around items-center rounded-t-[24px] shadow-lg transition-all duration-300 ease-in-out ${
-        activeTab === 'pos'
-          ? `transform ${showImmersiveControls ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'}`
-          : 'translate-y-0 opacity-100'
-      }`}>
-        {menuItems.filter(item => {
-          const isRoleOk = item.roles.includes(currentUser.role);
-          if (!isRoleOk) return false;
-          const currentBranch = branches.find(b => b.id === currentUser.branchAssignmentId);
-          const isAuthorizedBranch = currentUser.branchAssignmentId === 'B1' || !!currentBranch?.isDistributionBranch || currentUser.role === 'Admin';
-          if (item.id === 'transmittal' && !isAuthorizedBranch) return false;
-          return true;
-        }).slice(0, 5).map(item => {
-          const Icon = item.icon;
-          const isSelected = activeTab === item.id;
-          
+      {/* BOTTOM NAVIGATION: Unified premium horizontal scrollbar across the system (Mobile Only) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-m3-surface-low/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-m3-outline-variant/25 px-4 py-2 flex items-center justify-start gap-3 rounded-t-[20px] shadow-2xl transition-all duration-300 overflow-x-auto scrollbar-none select-none scroll-smooth">
+        {/* Brand Modules badge */}
+        <div className="flex items-center gap-2 shrink-0 pr-3 border-r border-m3-outline-variant/20 font-sans">
+          <span className="h-2 w-2 rounded-full bg-m3-primary animate-pulse" />
+          <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest font-mono">Modules</span>
+        </div>
+
+        {sidebarCategoryTree.map(category => {
+          // Dynamic RBAC filtering
+          const authorizedSubItems = category.subItems.filter(sub => {
+            const masterItem = menuItems.find(m => m.id === sub.id);
+            return masterItem ? masterItem.roles.includes(currentUser.role) : false;
+          });
+
+          // Branch authorization filter
+          const filteredSubItems = authorizedSubItems.filter(sub => {
+            const currentBranch = branches.find(b => b.id === currentUser.branchAssignmentId);
+            const isAuthorizedBranch = currentUser.branchAssignmentId === 'B1' || !!currentBranch?.isDistributionBranch || currentUser.role === 'Admin';
+            if (sub.id === 'transmittal' && !isAuthorizedBranch) return false;
+            return true;
+          });
+
+          if (filteredSubItems.length === 0) return null;
+
+          // Routing goes to first authorized sub-item of category
+          const firstSubTabId = filteredSubItems[0].id;
+          const Icon = category.icon;
+          const isSelected = filteredSubItems.some(sub => sub.id === activeTab) || activeTab === category.id;
+
+          // Short friendly labels for bottom bar
+          let shortLabel = category.name;
+          if (category.id === 'sale') shortLabel = 'Sale';
+          else if (category.id === 'inventory') shortLabel = 'Inventory';
+          else if (category.id === 'bir') shortLabel = 'Reports';
+          else if (category.id === 'deliveries') shortLabel = 'Cargo';
+          else if (category.id === 'members') shortLabel = 'Members';
+          else if (category.id === 'supplier') shortLabel = 'Suppliers';
+          else if (category.id === 'expenses') shortLabel = 'Expenses';
+          else if (category.id === 'adjustments') shortLabel = 'Voids';
+          else if (category.id === 'admin-bi') shortLabel = 'BI';
+          else if (category.id === 'admin-org') shortLabel = 'Staff';
+
           return (
             <button
-              key={item.id}
-              onClick={() => changeTab(item.id)}
-              className="flex flex-col items-center gap-1 focus:outline-none cursor-pointer relative py-0.5 px-2 min-w-[52px]"
+              key={category.id}
+              onClick={() => changeTab(firstSubTabId)}
+              className="flex flex-col items-center gap-0.5 focus:outline-none cursor-pointer shrink-0 py-1 px-2.5 min-w-[58px] group transition-transform active:scale-95"
             >
-              {/* Active tactile capsule indicator */}
-              <div className={`px-4 py-1 rounded-xl transition-all duration-200 ${
+              {/* Visual state capsule indicator */}
+              <div className={`px-4 py-1 rounded-2xl transition-[background-color,color,transform] duration-200 ${
                 isSelected 
-                  ? 'bg-m3-primary/15 text-m3-primary' 
+                  ? 'bg-m3-primary text-m3-on-primary shadow-sm shadow-m3-primary/10 scale-[1.03]' 
                   : 'text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/5'
               }`}>
-                <Icon className="h-5 w-5" />
+                <Icon className="h-4.5 w-4.5 shrink-0 transition-transform group-hover:scale-110" />
               </div>
-              <span className={`text-[9px] font-black tracking-tight text-center leading-none ${
-                isSelected ? 'text-m3-primary' : 'text-m3-on-surface-variant'
+              <span className={`text-[9px] font-black tracking-tight text-center leading-none mt-1 whitespace-nowrap ${
+                isSelected ? 'text-m3-primary font-black' : 'text-zinc-400 dark:text-zinc-500 group-hover:text-m3-primary'
               }`}>
-                {item.id === 'dashboard' ? 'Dash' : item.id === 'architecture' ? 'ERD' : item.id === 'pos' ? 'Checkout' : item.id === 'ledger' ? 'Ledger' : item.id === 'inventory' ? 'Stock' : item.id === 'procurement' ? 'Purchase' : item.id === 'transmittal' ? 'Send' : item.id === 'shift' ? 'Shift' : item.id === 'calculator' ? 'Calc' : item.name.split(' ')[0]}
+                {shortLabel}
               </span>
             </button>
           );
         })}
       </div>
 
-      {/* Immersive Trigger Handles for POS Terminal Mode */}
+      {/* Immersive Trigger Handles for POS Terminal Mode (Desktop Only) */}
       {activeTab === 'pos' && !showImmersiveControls && (
-        <>
+        <div className="hidden md:block">
           {/* Subtle Pull handles for mouse cursor / touch slide */}
           <div 
             className="fixed left-0 top-1/2 -translate-y-1/2 w-2 h-24 bg-m3-primary/30 hover:bg-m3-primary/60 rounded-r-2xl z-[60] cursor-ew-resize flex items-center justify-center transition-all group scale-100 hover:w-3 border border-l-0 border-m3-primary/35 backdrop-blur-md shadow-lg animate-pulse"
@@ -1370,7 +1308,7 @@ function AppContent() {
           >
             <div className="h-1 w-16 bg-m3-primary/60 rounded-full group-hover:bg-m3-primary/85" />
           </div>
-        </>
+        </div>
       )}
 
       {/* CONFIRMATORY DIALOG: Logout verification check trigger */}
@@ -2067,6 +2005,9 @@ function AppContent() {
 
       {/* EXPRESSIVE MATERIAL 3 IDLE SCREEN OVERLAY */}
       <IdleScreen />
+
+      {/* DYNAMIC ALWAYS-ON PWA INSTALL CONVERSION PROMPT */}
+      <PwaInstallPrompt />
     </div>
   );
 }

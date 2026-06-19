@@ -409,7 +409,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     'Doors & Windows'
   ];
 
-  const allowedToModify = currentUser.role === UserRole.MANAGER;
+  const allowedToModify = currentUser.role === UserRole.MANAGER || currentUser.role === UserRole.ADMIN;
 
   // Auto-coverage calculator effect based on tile dimensions & box contents
   useEffect(() => {
@@ -2581,7 +2581,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
       )}
 
       {/* VIEW 5: LEGACY POS DATA MIGRATION ENGINE */}
-      {activeSubTab === 'import' && false && (
+      {activeSubTab === 'import' && (
         <div className="space-y-6 animate-fade-in text-left">
           <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] p-6 shadow-sm space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-m3-outline-variant/15 pb-4">

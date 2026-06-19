@@ -906,32 +906,32 @@ select:focus {
 /* Expressive Variable Font Animation for Roboto Flex with a Natural Breathing Rhythm */
 @keyframes roboto-flex-morph {
   0% {
-    font-variation-settings: 'wdth' 30, 'wght' 150, 'opsz' 12;
-    letter-spacing: -0.05em;
-    filter: drop-shadow(0 0 10px rgba(13, 147, 132, 0.1)) drop-shadow(0 0 20px rgba(21, 94, 239, 0.05));
-    opacity: 0.85;
-    transform: scale(0.98);
+    font-variation-settings: 'wdth' 40, 'wght' 200, 'opsz' 14;
+    letter-spacing: -0.04em;
+    filter: drop-shadow(0 0 10px rgba(var(--m3-primary-rgb, 21, 94, 239), 0.15)) drop-shadow(0 0 20px var(--m3-primary-container, rgba(21, 94, 239, 0.1)));
+    opacity: 0.9;
+    transform: scale(0.99);
   }
   45% {
-    font-variation-settings: 'wdth' 151, 'wght' 950, 'opsz' 144;
-    letter-spacing: 0.04em;
-    filter: drop-shadow(0 0 25px var(--m3-primary)) drop-shadow(0 0 45px rgba(21, 94, 239, 0.3));
+    font-variation-settings: 'wdth' 125, 'wght' 600, 'opsz' 72;
+    letter-spacing: -0.01em;
+    filter: drop-shadow(0 0 25px var(--m3-primary)) drop-shadow(0 0 45px var(--m3-primary-container, rgba(21, 94, 239, 0.25)));
     opacity: 1.0;
-    transform: scale(1.02);
+    transform: scale(1.01);
   }
   55% {
-    font-variation-settings: 'wdth' 151, 'wght' 950, 'opsz' 144;
-    letter-spacing: 0.04em;
-    filter: drop-shadow(0 0 30px var(--m3-primary)) drop-shadow(0 0 50px rgba(21, 94, 239, 0.35));
+    font-variation-settings: 'wdth' 125, 'wght' 600, 'opsz' 72;
+    letter-spacing: -0.01em;
+    filter: drop-shadow(0 0 30px var(--m3-primary)) drop-shadow(0 0 50px var(--m3-primary-container, rgba(21, 94, 239, 0.3)));
     opacity: 1.0;
-    transform: scale(1.02);
+    transform: scale(1.01);
   }
   100% {
-    font-variation-settings: 'wdth' 30, 'wght' 150, 'opsz' 12;
-    letter-spacing: -0.05em;
-    filter: drop-shadow(0 0 10px rgba(13, 147, 132, 0.1)) drop-shadow(0 0 20px rgba(21, 94, 239, 0.05));
-    opacity: 0.85;
-    transform: scale(0.98);
+    font-variation-settings: 'wdth' 40, 'wght' 200, 'opsz' 14;
+    letter-spacing: -0.04em;
+    filter: drop-shadow(0 0 10px rgba(var(--m3-primary-rgb, 21, 94, 239), 0.15)) drop-shadow(0 0 20px var(--m3-primary-container, rgba(21, 94, 239, 0.1)));
+    opacity: 0.9;
+    transform: scale(0.99);
   }
 }
 

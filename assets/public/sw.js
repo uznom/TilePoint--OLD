@@ -1,9 +1,9 @@
 const CACHE_NAME = 'tilepoint-atpos-v2-cache-v1';
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/icon.svg',
-  '/manifest.json'
+  './',
+  './index.html',
+  './icon.svg',
+  './manifest.json'
 ];
 
 // Install Service Worker and prime app shell cash cache

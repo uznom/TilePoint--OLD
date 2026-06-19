@@ -909,7 +909,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 animate-fade-in text-m3-on-surface items-stretch lg:flex-1 lg:overflow-hidden lg:min-h-0">
             
             {/* LEFT COLUMN: YARD STAFF TRANSACTIONS HOLD QUEUE */}
-            <div className={`lg:col-span-4 bg-m3-surface-low p-4 rounded-[28px] border border-m3-outline-variant/20 shadow-sm space-y-4 text-left self-stretch flex flex-col lg:h-full lg:overflow-hidden lg:min-h-0 ${
+            <div className={`lg:col-span-4 bg-m3-surface-low p-3.5 sm:p-4 rounded-2xl sm:rounded-[28px] border border-m3-outline-variant/20 shadow-sm space-y-4 text-left self-stretch flex flex-col lg:h-full lg:overflow-hidden lg:min-h-0 ${
               mobilePosTab === 'queue' ? 'block' : 'hidden lg:flex'
             }`}>
               <div className="border-b border-m3-outline-variant/15 pb-2 cursor-default">
@@ -925,7 +925,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                 </p>
               </div>
 
-              <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[600px] lg:max-h-none no-scrollbar">
+              <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[600px] lg:max-h-none scrollbar-none">
                 {parkedSales.length > 0 ? (
                   <div className="flex flex-col gap-3">
                     {parkedSales.map((park, idx) => (
@@ -967,7 +967,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
             <div className={`lg:col-span-8 text-left lg:h-full lg:flex lg:flex-col lg:overflow-hidden lg:min-h-0 ${
               mobilePosTab === 'basket' ? 'block' : 'hidden lg:flex'
             }`}>
-              <div className="p-5 rounded-[28px] border border-m3-outline-variant/35 bg-m3-surface-low shadow-sm flex flex-col justify-between lg:h-full lg:overflow-hidden lg:min-h-0">
+              <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-[28px] border border-m3-outline-variant/35 bg-m3-surface-low shadow-sm flex flex-col justify-between lg:h-full lg:overflow-hidden lg:min-h-0">
                 
                 {/* Basket Header */}
                 <div className="border-b border-m3-outline-variant/15 pb-3">
@@ -1122,10 +1122,10 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                 </div>
 
                 {/* Cart item feeds */}
-                <div className="flex-1 overflow-y-auto max-h-[300px] lg:max-h-none my-3 pr-1 space-y-1.5 divide-y divide-m3-outline-variant/10 no-scrollbar">
+                <div className="flex-1 overflow-y-auto max-h-[250px] sm:max-h-[400px] lg:max-h-none my-3 pr-1 space-y-1.5 divide-y divide-m3-outline-variant/10 scrollbar-none">
                   {cart.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between py-2 border-b border-m3-outline-variant/10 last:border-0 pl-1">
-                      <div className="space-y-0.5 max-w-2xl text-left">
+                    <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 py-3 border-b border-m3-outline-variant/10 last:border-0 pl-1">
+                      <div className="space-y-0.5 max-w-2xl text-left w-full sm:w-auto">
                         <h5 className="text-xs font-black leading-tight text-m3-on-surface">{item.product.productName}</h5>
                         <div className="text-[10px] text-zinc-400 flex flex-wrap items-center gap-1.5 font-mono font-bold">
                           {item.overridePrice !== undefined ? (
@@ -1153,10 +1153,11 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-4 shrink-0">
+                      <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
                         {/* Qty adjustments */}
                         <div className="flex items-center border border-m3-outline-variant rounded-lg overflow-hidden shrink-0 bg-m3-surface">
                           <button
+                            type="button"
                             onClick={() => updateCartQty(item.product.id, item.quantity - 1, item.product.stockQuantity)}
                             className="px-2.5 py-1 hover:bg-m3-outline-variant/20 text-xs font-mono font-bold transition-colors cursor-pointer text-m3-on-surface"
                           >
@@ -1164,6 +1165,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                           </button>
                           <span className="px-3 text-xs font-mono font-black text-m3-on-surface">{item.quantity}</span>
                           <button
+                            type="button"
                             onClick={() => updateCartQty(item.product.id, item.quantity + 1, item.product.stockQuantity)}
                             className="px-2.5 py-1 hover:bg-m3-outline-variant/20 text-xs font-mono font-bold transition-colors cursor-pointer text-m3-on-surface"
                           >
@@ -1171,17 +1173,20 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                           </button>
                         </div>
 
-                        <span className="text-xs font-black font-mono min-w-[90px] text-right text-m3-on-surface">
-                          ₱{((item.overridePrice !== undefined ? item.overridePrice : getBranchPrice(item.product)) * item.quantity).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-black font-mono min-w-[80px] sm:min-w-[90px] text-right text-m3-on-surface">
+                            ₱{((item.overridePrice !== undefined ? item.overridePrice : getBranchPrice(item.product)) * item.quantity).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          </span>
 
-                        <button
-                          onClick={() => removeFromCart(item.product.id)}
-                          className="text-zinc-400 hover:text-red-500 p-1.5 rounded-full hover:bg-red-500/10 transition-colors cursor-pointer"
-                          title="Delete entry row"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => removeFromCart(item.product.id)}
+                            className="text-zinc-400 hover:text-red-500 p-1.5 rounded-full hover:bg-red-500/10 transition-colors cursor-pointer"
+                            title="Delete entry row"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
