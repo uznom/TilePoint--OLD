@@ -22,7 +22,6 @@ import { ShiftModule } from './components/ShiftModule';
 import { BranchModule } from './components/BranchModule';
 import { UsersModule } from './components/UsersModule';
 import { CalculatorModule } from './components/CalculatorModule';
-import { ArchitectureModule } from './components/ArchitectureModule';
 import { StaffPortal } from './components/StaffPortal';
 import AtposExtraModules from './components/AtposExtraModules';
 import { SalesTransmissionModule } from './components/SalesTransmissionModule';
@@ -253,6 +252,18 @@ function AppContent() {
 
   const [showLogoutConfirmModal, setShowLogoutConfirmModal] = useState(false);
   const [showAccountSettingsModal, setShowAccountSettingsModal] = useState(false);
+  const [showSetupWizard, setShowSetupWizard] = useState(false);
+
+  useEffect(() => {
+    const handleOpenWizard = () => {
+      setShowSetupWizard(true);
+    };
+    window.addEventListener('open-setup-wizard', handleOpenWizard);
+    return () => {
+      window.removeEventListener('open-setup-wizard', handleOpenWizard);
+    };
+  }, []);
+
   const isCompactColumns = true;
   const [showDatabaseCoreModal, setShowDatabaseCoreModal] = useState(false);
   const [dbCoreTab, setDbCoreTab] = useState<'scheduler' | 'ledger' | 'import-export'>('scheduler');
@@ -638,7 +649,6 @@ function AppContent() {
   const menuItems = [
     { id: 'tutorials', name: 'Operational Walkthrough', icon: BookOpen, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF] },
     { id: 'dashboard', name: 'Branch Dashboard', icon: LayoutDashboard, roles: [UserRole.ADMIN, UserRole.MANAGER] },
-    { id: 'architecture', name: 'Database ERD Studio', icon: Database, roles: [UserRole.ADMIN] },
     { id: 'pos', name: 'POS Checkout Mode', icon: ShoppingCart, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER] },
     { id: 'shift', name: 'Shift drawer', icon: LockKeyhole, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER] },
     { id: 'calculator', name: 'Tile Coverage Calc', icon: Calculator, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF] },
@@ -794,10 +804,10 @@ function AppContent() {
       )}
 
       {/* HEADER SECTION with custom horizontal glowing accent bar & ambient overlay tint */}
-      <header className={`py-4 px-6 border-b border-m3-outline-variant/15 flex justify-between items-center z-[60] android-glass-header shadow-sm bg-m3-surface/75 dark:bg-m3-surface-low/80 backdrop-blur-md transition-all duration-300 overflow-visible ${
+      <header className={`py-4 px-6 border-b border-m3-outline-variant/15 flex justify-between items-center z-[35] android-glass-header shadow-sm bg-m3-surface/75 dark:bg-m3-surface-low/80 backdrop-blur-md transition-all duration-300 overflow-visible ${
         activeTab === 'pos' 
-          ? `sticky top-0 z-[60] md:fixed md:top-0 md:left-0 md:right-0 md:transform ${showImmersiveControls ? 'md:translate-y-0 md:opacity-100 md:shadow-xl' : 'md:-translate-y-full md:opacity-0 md:pointer-events-none'}`
-          : 'sticky top-0 z-[60]'
+          ? `sticky top-0 z-[35] md:fixed md:top-0 md:left-0 md:right-0 md:transform ${showImmersiveControls ? 'md:translate-y-0 md:opacity-100 md:shadow-xl' : 'md:-translate-y-full md:opacity-0 md:pointer-events-none'}`
+          : 'sticky top-0 z-[35]'
       }`}>
         {/* Subtle header brand overlay reflecting user custom color choice */}
         <div className="absolute inset-0 bg-gradient-to-b from-m3-primary/[0.03] to-transparent pointer-events-none z-[-1]" />
@@ -808,7 +818,7 @@ function AppContent() {
           <div className="flex items-center gap-2.5">
             <img src="/icon.svg" alt="TilePoint Favicon Logo" className="h-9 w-9 rounded-lg" referrerPolicy="no-referrer" />
             <div>
-              <h1 className="text-base font-black tracking-tight leading-none uppercase font-sans text-m3-primary">TilePoint</h1>
+              <h1 className="text-base font-bold tracking-wide leading-none uppercase font-sans text-m3-primary">TilePoint</h1>
               <span className="text-[9px] text-m3-on-surface-variant font-bold block uppercase mt-0.5 tracking-widest leading-none">HQ POS System</span>
             </div>
           </div>
@@ -960,7 +970,7 @@ function AppContent() {
         {/* SIDEBAR NAVIGATION: Desktop */}
         <aside className={`border-r border-m3-outline-variant/15 select-none android-glass-sidebar py-6 transition-all duration-300 ease-in-out ${
           activeTab === 'pos'
-            ? `fixed left-0 top-0 bottom-0 z-49 transform bg-m3-surface-low border-r border-m3-primary/25 backdrop-blur-xl hidden md:block ${
+            ? `fixed left-0 top-0 bottom-0 z-[30] transform bg-m3-surface-low border-r border-m3-primary/25 backdrop-blur-xl hidden md:block ${
                 isSidebarMinimized ? 'w-20 px-2' : 'w-72 px-4'
               } ${
                 showImmersiveControls ? 'translate-x-[0px] opacity-100 shadow-2xl' : '-translate-x-full opacity-0 pointer-events-none'
@@ -1103,7 +1113,7 @@ function AppContent() {
                 </div>
 
                 {!isSubMenuCollapsed && (
-                  <div className="flex gap-2.5 overflow-x-auto pt-2 pb-1 whitespace-nowrap scrollbar-none select-none scroll-smooth shrink-0 w-full">
+                  <div className="flex flex-nowrap gap-2.5 overflow-x-auto pt-2 pb-1 whitespace-nowrap scrollbar-none scroll-smooth touch-pan-x shrink-0 w-full">
                     {authorizedSubItems.map(sub => {
                       const isSelected = activeTab === sub.id;
                       return (
@@ -1149,7 +1159,6 @@ function AppContent() {
               >
                 {activeTab === 'tutorials' && <TutorialOnboarding />}
                 {activeTab === 'dashboard' && <Dashboard darkMode={darkMode} onNavigate={changeTab} />}
-                {activeTab === 'architecture' && <ArchitectureModule />}
                 {activeTab === 'pos' && <PosModule darkMode={darkMode} onNavigate={changeTab} viewMode="checkout" showImmersiveControls={showImmersiveControls} />}
                 {activeTab === 'ledger' && <PosModule darkMode={darkMode} onNavigate={changeTab} viewMode="ledger" showImmersiveControls={showImmersiveControls} />}
                 {activeTab === 'inventory' && <InventoryModule darkMode={darkMode} isCompactGlobal={isCompactColumns} />}
@@ -1216,7 +1225,7 @@ function AppContent() {
       </div>
 
       {/* BOTTOM NAVIGATION: Unified premium horizontal scrollbar across the system (Mobile Only) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-m3-surface-low/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-m3-outline-variant/25 px-4 py-2 flex items-center justify-start gap-3 rounded-t-[20px] shadow-2xl transition-all duration-300 overflow-x-auto scrollbar-none select-none scroll-smooth">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-m3-surface-low/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-m3-outline-variant/25 px-4 py-2 flex flex-row flex-nowrap items-center justify-start gap-3 rounded-t-[20px] shadow-2xl transition-all duration-300 overflow-x-auto scrollbar-none scroll-smooth touch-pan-x whitespace-nowrap">
         {/* Brand Modules badge */}
         <div className="flex items-center gap-2 shrink-0 pr-3 border-r border-m3-outline-variant/20 font-sans">
           <span className="h-2 w-2 rounded-full bg-m3-primary animate-pulse" />
@@ -1287,7 +1296,7 @@ function AppContent() {
         <div className="hidden md:block">
           {/* Subtle Pull handles for mouse cursor / touch slide */}
           <div 
-            className="fixed left-0 top-1/2 -translate-y-1/2 w-2 h-24 bg-m3-primary/30 hover:bg-m3-primary/60 rounded-r-2xl z-[60] cursor-ew-resize flex items-center justify-center transition-all group scale-100 hover:w-3 border border-l-0 border-m3-primary/35 backdrop-blur-md shadow-lg animate-pulse"
+            className="fixed left-0 top-1/2 -translate-y-1/2 w-2 h-24 bg-m3-primary/30 hover:bg-m3-primary/60 rounded-r-2xl z-[38] cursor-ew-resize flex items-center justify-center transition-all group scale-100 hover:w-3 border border-l-0 border-m3-primary/35 backdrop-blur-md shadow-lg animate-pulse"
             title="Drag or slide from left to show system modules"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
@@ -1300,7 +1309,7 @@ function AppContent() {
           </div>
 
           <div 
-            className="fixed top-0 left-1/2 -translate-x-1/2 h-2 w-56 bg-m3-primary/25 hover:bg-m3-primary/55 rounded-b-2xl z-[60] cursor-ns-resize flex justify-center items-center transition-all group hover:h-4.5 border border-t-0 border-m3-primary/35 backdrop-blur-md shadow-md"
+            className="fixed top-0 left-1/2 -translate-x-1/2 h-2 w-56 bg-m3-primary/25 hover:bg-m3-primary/55 rounded-b-2xl z-[38] cursor-ns-resize flex justify-center items-center transition-all group hover:h-4.5 border border-t-0 border-m3-primary/35 backdrop-blur-md shadow-md"
             title="Hover or slide from top to show header controls"
             onClick={() => setShowImmersiveControls(true)}
           >
@@ -2006,6 +2015,11 @@ function AppContent() {
 
       {/* DYNAMIC ALWAYS-ON PWA INSTALL CONVERSION PROMPT */}
       <PwaInstallPrompt />
+
+      {/* SHOW SETUP WIZARD OVERLAY MODAL */}
+      {showSetupWizard && (
+        <OnboardingSetupWizard onClose={() => setShowSetupWizard(false)} />
+      )}
     </div>
   );
 }

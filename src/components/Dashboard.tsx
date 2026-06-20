@@ -333,6 +333,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
   const maxWeeklyAmount = Math.max(...weeklyChartData.map(d => d.amount));
   const maxMonthlyAmount = Math.max(...monthlyChartData.map(d => d.revenue));
 
+  const getMonthlyRatio = (val: number) => {
+    if (!maxMonthlyAmount || isNaN(maxMonthlyAmount) || maxMonthlyAmount <= 0) return 0;
+    const res = val / maxMonthlyAmount;
+    return isNaN(res) || !isFinite(res) ? 0 : res;
+  };
+
   const generateSvgPaths = (data: { month: string; revenue: number; isPredicted?: boolean }[]) => {
     const width = 560;
     const height = 150;
@@ -341,7 +347,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
     const points = data.map((d, idx) => {
       const cx = paddingLeft + (idx / (data.length - 1)) * (width - 40);
-      const cy = totalHeight - (maxMonthlyAmount ? (d.revenue / maxMonthlyAmount) * height : 0);
+      const cy = totalHeight - (getMonthlyRatio(d.revenue) * height);
       return { cx, cy, isPredicted: d.isPredicted, revenue: d.revenue, month: d.month };
     });
 
@@ -2889,7 +2895,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                     </span>
                     <span className="text-m3-on-surface font-medium block leading-snug">{log.description}</span>
                     <span className="text-[10px] text-zinc-400 block font-mono pl-1">
-                      Target Record: {log.tableAffected} ({log.recordId || 'Global'}) • Operator ID: @{log.username}
+                      <span className="hidden sm:inline">Target Record: {log.tableAffected} ({log.recordId || 'Global'}) • </span>Operator: @{log.username}
                     </span>
                   </div>
                   <div className="text-right text-[10.5px] text-zinc-400 font-mono shrink-0 ml-4">
@@ -3155,23 +3161,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
                 <path
                   d={`M 20 200 
-                      L 20 ${200 - (monthlyChartData[0].revenue / maxMonthlyAmount) * 160} 
-                      C 70 ${200 - (monthlyChartData[0].revenue / maxMonthlyAmount) * 160}, 90 ${200 - (monthlyChartData[1].revenue / maxMonthlyAmount) * 160}, 130 ${200 - (monthlyChartData[1].revenue / maxMonthlyAmount) * 160}
-                      C 180 ${200 - (monthlyChartData[1].revenue / maxMonthlyAmount) * 160}, 200 ${200 - (monthlyChartData[2].revenue / maxMonthlyAmount) * 160}, 240 ${200 - (monthlyChartData[2].revenue / maxMonthlyAmount) * 160}
-                      C 290 ${200 - (monthlyChartData[2].revenue / maxMonthlyAmount) * 160}, 310 ${200 - (monthlyChartData[3].revenue / maxMonthlyAmount) * 160}, 350 ${200 - (monthlyChartData[3].revenue / maxMonthlyAmount) * 160}
-                      C 400 ${200 - (monthlyChartData[3].revenue / maxMonthlyAmount) * 160}, 420 ${200 - (monthlyChartData[4].revenue / maxMonthlyAmount) * 160}, 460 ${200 - (monthlyChartData[4].revenue / maxMonthlyAmount) * 160}
-                      C 510 ${200 - (monthlyChartData[4].revenue / maxMonthlyAmount) * 160}, 530 ${200 - (monthlyChartData[5].revenue / maxMonthlyAmount) * 160}, 570 ${200 - (monthlyChartData[5].revenue / maxMonthlyAmount) * 160}
+                      L 20 ${200 - getMonthlyRatio(monthlyChartData[0].revenue) * 160} 
+                      C 70 ${200 - getMonthlyRatio(monthlyChartData[0].revenue) * 160}, 90 ${200 - getMonthlyRatio(monthlyChartData[1].revenue) * 160}, 130 ${200 - getMonthlyRatio(monthlyChartData[1].revenue) * 160}
+                      C 180 ${200 - getMonthlyRatio(monthlyChartData[1].revenue) * 160}, 200 ${200 - getMonthlyRatio(monthlyChartData[2].revenue) * 160}, 240 ${200 - getMonthlyRatio(monthlyChartData[2].revenue) * 160}
+                      C 290 ${200 - getMonthlyRatio(monthlyChartData[2].revenue) * 160}, 310 ${200 - getMonthlyRatio(monthlyChartData[3].revenue) * 160}, 350 ${200 - getMonthlyRatio(monthlyChartData[3].revenue) * 160}
+                      C 400 ${200 - getMonthlyRatio(monthlyChartData[3].revenue) * 160}, 420 ${200 - getMonthlyRatio(monthlyChartData[4].revenue) * 160}, 460 ${200 - getMonthlyRatio(monthlyChartData[4].revenue) * 160}
+                      C 510 ${200 - getMonthlyRatio(monthlyChartData[4].revenue) * 160}, 530 ${200 - getMonthlyRatio(monthlyChartData[5].revenue) * 160}, 570 ${200 - getMonthlyRatio(monthlyChartData[5].revenue) * 160}
                       L 570 200 Z`}
                   fill="url(#localWaveGrad)"
                 />
 
                 <path
-                  d={`M 20 ${200 - (monthlyChartData[0].revenue / maxMonthlyAmount) * 160} 
-                      C 70 ${200 - (monthlyChartData[0].revenue / maxMonthlyAmount) * 160}, 90 ${200 - (monthlyChartData[1].revenue / maxMonthlyAmount) * 160}, 130 ${200 - (monthlyChartData[1].revenue / maxMonthlyAmount) * 160}
-                      C 180 ${200 - (monthlyChartData[1].revenue / maxMonthlyAmount) * 160}, 200 ${200 - (monthlyChartData[2].revenue / maxMonthlyAmount) * 160}, 240 ${200 - (monthlyChartData[2].revenue / maxMonthlyAmount) * 160}
-                      C 290 ${200 - (monthlyChartData[2].revenue / maxMonthlyAmount) * 160}, 310 ${200 - (monthlyChartData[3].revenue / maxMonthlyAmount) * 160}, 350 ${200 - (monthlyChartData[3].revenue / maxMonthlyAmount) * 160}
-                      C 400 ${200 - (monthlyChartData[3].revenue / maxMonthlyAmount) * 160}, 420 ${200 - (monthlyChartData[4].revenue / maxMonthlyAmount) * 160}, 460 ${200 - (monthlyChartData[4].revenue / maxMonthlyAmount) * 160}
-                      C 510 ${200 - (monthlyChartData[4].revenue / maxMonthlyAmount) * 160}, 530 ${200 - (monthlyChartData[5].revenue / maxMonthlyAmount) * 160}, 570 ${200 - (monthlyChartData[5].revenue / maxMonthlyAmount) * 160}`}
+                  d={`M 20 ${200 - getMonthlyRatio(monthlyChartData[0].revenue) * 160} 
+                      C 70 ${200 - getMonthlyRatio(monthlyChartData[0].revenue) * 160}, 90 ${200 - getMonthlyRatio(monthlyChartData[1].revenue) * 160}, 130 ${200 - getMonthlyRatio(monthlyChartData[1].revenue) * 160}
+                      C 180 ${200 - getMonthlyRatio(monthlyChartData[1].revenue) * 160}, 200 ${200 - getMonthlyRatio(monthlyChartData[2].revenue) * 160}, 240 ${200 - getMonthlyRatio(monthlyChartData[2].revenue) * 160}
+                      C 290 ${200 - getMonthlyRatio(monthlyChartData[2].revenue) * 160}, 310 ${200 - getMonthlyRatio(monthlyChartData[3].revenue) * 160}, 350 ${200 - getMonthlyRatio(monthlyChartData[3].revenue) * 160}
+                      C 400 ${200 - getMonthlyRatio(monthlyChartData[3].revenue) * 160}, 420 ${200 - getMonthlyRatio(monthlyChartData[4].revenue) * 160}, 460 ${200 - getMonthlyRatio(monthlyChartData[4].revenue) * 160}
+                      C 510 ${200 - getMonthlyRatio(monthlyChartData[4].revenue) * 160}, 530 ${200 - getMonthlyRatio(monthlyChartData[5].revenue) * 160}, 570 ${200 - getMonthlyRatio(monthlyChartData[5].revenue) * 160}`}
                   fill="none"
                   stroke="var(--m3-primary)"
                   strokeWidth="3.5"
@@ -3180,7 +3186,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
                 {[[20, 0], [130, 1], [240, 2], [350, 3], [460, 4], [570, 5]].map(([cx, idx]) => {
                   const val = monthlyChartData[idx].revenue;
-                  const cy = 200 - (val / maxMonthlyAmount) * 160;
+                  const cy = 200 - getMonthlyRatio(val) * 160;
                   return (
                     <g key={idx} className="cursor-pointer">
                       <circle
@@ -3209,7 +3215,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                   className="absolute bg-m3-on-surface text-m3-surface text-[10.5px] py-1.5 px-3 rounded-xl border border-m3-outline-variant/30 font-bold font-mono shadow-lg z-40 pointer-events-none"
                   style={{
                     left: `${[20, 130, 240, 350, 460, 570][hoveredPoint] - 30}px`,
-                    top: `${130 - (monthlyChartData[hoveredPoint].revenue / maxMonthlyAmount) * 130}px`
+                    top: `${130 - getMonthlyRatio(monthlyChartData[hoveredPoint].revenue) * 130}px`
                   }}
                 >
                   ₱{monthlyChartData[hoveredPoint].revenue.toLocaleString()}
@@ -3457,7 +3463,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                     </span>
                     <span className="text-m3-on-surface font-medium block leading-snug">{log.description}</span>
                     <span className="text-[10px] text-zinc-400 block font-mono pl-1">
-                      Target Record: {log.tableAffected} ({log.recordId || 'Global'}) • Operator ID: @{log.username}
+                      <span className="hidden sm:inline">Target Record: {log.tableAffected} ({log.recordId || 'Global'}) • </span>Operator: @{log.username}
                     </span>
                   </div>
                   <div className="text-right text-[10.5px] text-zinc-400 font-mono shrink-0 ml-4">

@@ -1367,8 +1367,8 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
 
           </div>
 
-          {/* LOWER SECTION: PERSISTENT HIGH-CONTRAST POS SHORTCUT/HOTKEY LIST */}
-          <div className="bg-m3-surface-low p-4 rounded-[28px] border border-m3-outline-variant/20 shadow-sm text-left transition-all duration-300">
+          {/* LOWER SECTION: PERSISTENT HIGH-CONTRAST POS SHORTCUT/HOTKEY LIST (Hidden on Mobile) */}
+          <div className="hidden md:block bg-m3-surface-low p-4 rounded-[28px] border border-m3-outline-variant/20 shadow-sm text-left transition-all duration-300">
             <button
               type="button"
               onClick={() => setShortcutsCollapsed(!shortcutsCollapsed)}

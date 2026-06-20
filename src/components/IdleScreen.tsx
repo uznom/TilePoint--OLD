@@ -231,7 +231,7 @@ export const IdleScreen: React.FC = () => {
                 id="idle-screen-adaptive-clock"
                 className="animate-roboto-flex text-[11vw] font-black leading-none text-[var(--m3-on-surface)] select-none tracking-tighter whitespace-nowrap"
                 style={{
-                  fontFamily: "'Roboto Flex', 'Plus Jakarta Sans', sans-serif",
+                  fontFamily: "'Roboto Flex', var(--font-sans)",
                 }}
               >
                 {formatTime(time).split(' ')[0]}

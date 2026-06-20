@@ -3,7 +3,7 @@ import { useDb } from '../context/DbContext';
 import { Sparkles, Database, Upload, Play, CheckCircle, HelpCircle, ArrowRight, Save, Plus, X } from 'lucide-react';
 import { Product } from '../types/db';
 
-export const OnboardingSetupWizard: React.FC = () => {
+export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
   const db = useDb();
   
   // Local wizard navigation
@@ -340,6 +340,17 @@ export const OnboardingSetupWizard: React.FC = () => {
   return (
     <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex items-center justify-center z-[9999] p-4 font-sans select-none text-left">
       <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-[32px] p-6 sm:p-8 shadow-2xl text-slate-100 max-h-[90vh] overflow-y-auto">
+        
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-all cursor-pointer z-50 border border-transparent hover:border-slate-700"
+            title="Close Setup Wizard"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
         
         {/* Wizard Header decor */}
         <div className="absolute top-0 right-12 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />

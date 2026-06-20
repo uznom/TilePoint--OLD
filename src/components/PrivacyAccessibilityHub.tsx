@@ -42,7 +42,8 @@ import {
   Palette,
   Sparkles,
   RotateCcw,
-  CheckCircle
+  CheckCircle,
+  Play
 } from 'lucide-react';
 import { 
   generateThemeFromSeed, 
@@ -1099,6 +1100,30 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                         className="w-full py-3.5 px-4 font-black rounded-xl bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 text-xs uppercase tracking-wider shadow-sm transition-all cursor-pointer"
                       >
                         Save Preferences
+                      </button>
+                    </div>
+
+                    <div className="h-px bg-m3-outline-variant/15 my-6" />
+
+                    {/* INTERACTIVE ONBOARDING SETUP ASSISTANT */}
+                    <div className="p-4 rounded-xl border border-indigo-500/20 bg-indigo-500/5 space-y-2.5">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-indigo-400 font-mono flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+                        Interactive Setup Wizard
+                      </span>
+                      <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed font-sans">
+                        Need to re-configure starting catalogs, seed initial products, or bulk migrate raw spreadsheet rows? Relaunch the interactive Onboarding Setup Assistant instantly.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsOpen(false);
+                          window.dispatchEvent(new Event('open-setup-wizard'));
+                        }}
+                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-extrabold uppercase tracking-wider py-2.5 rounded-lg cursor-pointer transition-all text-center flex items-center justify-center gap-1.5 border border-indigo-500 shadow-md font-sans"
+                      >
+                        <Play className="h-3 w-3" />
+                        Relaunch Setup Wizard
                       </button>
                     </div>
 
