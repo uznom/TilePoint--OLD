@@ -409,7 +409,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     'Doors & Windows'
   ];
 
-  const allowedToModify = currentUser.role === UserRole.MANAGER;
+  const allowedToModify = currentUser.role === UserRole.MANAGER || currentUser.role === UserRole.ADMIN;
 
   // Auto-coverage calculator effect based on tile dimensions & box contents
   useEffect(() => {
@@ -1034,34 +1034,205 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   };
 
   const executeBulkImport = async () => {
-    if (!rawImportText.trim()) {
-      showToast('Error: Please input a valid JSON array text block.');
+    const trimmedInput = rawImportText.trim();
+    if (!trimmedInput) {
+      showToast('Error: Please input valid JSON or CSV older POS product data.');
       return;
     }
 
+    // Helper to parse CSV raw text into rows
+    const parseCSV = (text: string): Array<Record<string, any>> => {
+      const lines: string[] = [];
+      let currentLine = '';
+      let insideQuotes = false;
+      
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (char === '"' || char === "'") {
+          insideQuotes = !insideQuotes;
+        }
+        if ((char === '\r' || char === '\n') && !insideQuotes) {
+          if (currentLine.trim()) {
+            lines.push(currentLine);
+          }
+          currentLine = '';
+          if (char === '\r' && text[i + 1] === '\n') {
+            i++;
+          }
+        } else {
+          currentLine += char;
+        }
+      }
+      if (currentLine.trim()) {
+        lines.push(currentLine);
+      }
+
+      if (lines.length < 2) {
+        throw new Error('CSV must contain a header row and at least one data row.');
+      }
+
+      const headerLine = lines[0];
+      let delimiter = ',';
+      const commaCount = (headerLine.match(/,/g) || []).length;
+      const semiCount = (headerLine.match(/;/g) || []).length;
+      const tabCount = (headerLine.match(/\t/g) || []).length;
+      
+      if (semiCount > commaCount && semiCount > tabCount) {
+        delimiter = ';';
+      } else if (tabCount > commaCount && tabCount > semiCount) {
+        delimiter = '\t';
+      }
+
+      const splitLine = (line: string): string[] => {
+        const result: string[] = [];
+        let cell = '';
+        let inQuotes = false;
+        for (let j = 0; j < line.length; j++) {
+          const c = line[j];
+          if (c === '"' || c === "'") {
+            inQuotes = !inQuotes;
+          } else if (c === delimiter && !inQuotes) {
+            result.push(cell.trim());
+            cell = '';
+          } else {
+            cell += c;
+          }
+        }
+        result.push(cell.trim());
+        return result;
+      };
+
+      const headers = splitLine(headerLine).map(h => h.replace(/^["']|["']$/g, '').trim());
+      const rows: Array<Record<string, any>> = [];
+
+      for (let k = 1; k < lines.length; k++) {
+        const cells = splitLine(lines[k]);
+        if (cells.length > 0 && cells.some(c => c)) {
+          const rowObj: Record<string, any> = {};
+          headers.forEach((header, index) => {
+            const val = (cells[index] || '').replace(/^["']|["']$/g, '').trim();
+            rowObj[header] = val;
+          });
+          rows.push(rowObj);
+        }
+      }
+
+      return rows;
+    };
+
+    let parsed: any[] = [];
+    let formatType = 'JSON';
+
     try {
-      const parsed = JSON.parse(rawImportText);
-      if (Array.isArray(parsed)) {
+      if (trimmedInput.startsWith('[') || trimmedInput.startsWith('{')) {
+        const jsonParsed = JSON.parse(trimmedInput);
+        parsed = Array.isArray(jsonParsed) ? jsonParsed : [jsonParsed];
+      } else {
+        formatType = 'CSV';
+        const csvRows = parseCSV(trimmedInput);
+        
+        // Map older header formats from common schemas to clean database object fields
+        const headerMapping: Record<string, string> = {
+          'product name': 'productName',
+          'product_name': 'productName',
+          'name': 'productName',
+          'tile name': 'productName',
+          'tile': 'productName',
+          'item name': 'productName',
+          'product code': 'productCode',
+          'product_code': 'productCode',
+          'code': 'productCode',
+          'item code': 'productCode',
+          'sku': 'sku',
+          'sku code': 'sku',
+          'sku_code': 'sku',
+          'skucode': 'sku',
+          'barcode': 'barcode',
+          'bar code': 'barcode',
+          'bar_code': 'barcode',
+          'category': 'category',
+          'cat': 'category',
+          'group': 'category',
+          'brand': 'brand',
+          'brand_name': 'brand',
+          'manufacturer': 'brand',
+          'cost': 'costPrice',
+          'cost price': 'costPrice',
+          'cost_price': 'costPrice',
+          'selling price': 'sellingPrice',
+          'selling_price': 'sellingPrice',
+          'selling': 'sellingPrice',
+          'price': 'sellingPrice',
+          'rate': 'sellingPrice',
+          'retail': 'sellingPrice',
+          'size': 'size',
+          'dimensions': 'size',
+          'dimension': 'size',
+          'stock': 'stockQuantity',
+          'quantity': 'stockQuantity',
+          'qty': 'stockQuantity',
+          'stock quantity': 'stockQuantity',
+          'stock_quantity': 'stockQuantity',
+          'min stock': 'minimumStock',
+          'minimum stock': 'minimumStock',
+          'min_stock': 'minimumStock',
+          'minimum_stock': 'minimumStock',
+          'design': 'designName',
+          'design name': 'designName',
+          'design_name': 'designName',
+          'supplier': 'supplierId',
+          'supplier id': 'supplierId',
+          'supplier_id': 'supplierId',
+          'unit': 'unit',
+          'uom': 'unit',
+          'box qty': 'boxQuantity',
+          'box quantity': 'boxQuantity',
+          'box_quantity': 'boxQuantity'
+        };
+
+        parsed = csvRows.map(row => {
+          const mappedRow: Record<string, any> = {};
+          Object.keys(row).forEach(key => {
+            const cleanKey = key.toLowerCase().trim();
+            const mappedKey = headerMapping[cleanKey];
+            if (mappedKey) {
+              const numericFields = ['costPrice', 'sellingPrice', 'stockQuantity', 'minimumStock', 'boxQuantity', 'coveragePerBox'];
+              if (numericFields.includes(mappedKey)) {
+                const cleanVal = String(row[key]).replace(/[$,₱ ]/g, '').replace(/,/g, '');
+                const valNum = parseFloat(cleanVal);
+                mappedRow[mappedKey] = isNaN(valNum) ? 0 : valNum;
+              } else {
+                mappedRow[mappedKey] = row[key];
+              }
+            } else {
+              mappedRow[key] = row[key];
+            }
+          });
+          return mappedRow;
+        });
+      }
+
+      if (parsed.length > 0) {
         await triggerSystemProcessing(
-          'Executing Legacy POS Data Importer...',
+          `Executing Legacy POS Data Importer (${formatType})...`,
           1600,
           'db',
           undefined,
-          'Parsing JSON, validating product columns, and updating regional catalog tables...'
+          `Parsing ${formatType}, validating product columns, and updating regional catalog tables...`
         );
 
         const result = importProducts(parsed);
         if (result.success) {
           setShowImportModal(false);
-          showToast(`Successfully updated ${result.count} tile products.`);
+          showToast(`Successfully migrated ${result.count} tile products from old POS system (${formatType} parsed)!`);
         } else {
           showToast(`Import Failure: ${result.error}`);
         }
       } else {
-        showToast('Format Mismatch: Imported contents must represent a valid Tile Array.');
+        showToast('Format Mismatch: Imported contents must represent a valid dataset block.');
       }
-    } catch (e) {
-      showToast('Syntax Error: Failed Parsing JSON. Verify code format structure.');
+    } catch (e: any) {
+      showToast(`Migration Error: ${e.message || 'Failed parsing input data'}. Check layout / columns.`);
     }
   };
 
@@ -2581,7 +2752,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
       )}
 
       {/* VIEW 5: LEGACY POS DATA MIGRATION ENGINE */}
-      {activeSubTab === 'import' && false && (
+      {activeSubTab === 'import' && (
         <div className="space-y-6 animate-fade-in text-left">
           <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] p-6 shadow-sm space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-m3-outline-variant/15 pb-4">
@@ -2604,76 +2775,94 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
               <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
                 <span className="text-[10px] font-black text-indigo-500 uppercase tracking-wider block">STEP 1: Legacy Extraction</span>
                 <p className="text-xs text-m3-on-surface-variant font-medium">
-                  Export your old products list from your older checkout apps in <strong>JSON</strong> or copy your product inventory rows.
+                  Export product database or copy inventory rows from your older checkout apps in <strong>CSV</strong> or <strong>JSON</strong> format.
                 </p>
               </div>
               <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
-                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-wider block">STEP 2: Map Fields</span>
+                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-wider block">STEP 2: Smart Mapper</span>
                 <p className="text-xs text-m3-on-surface-variant font-medium">
-                  Paste the data array into the migration zone. The smart importer automatically maps keys like codes, costs, and brands.
+                  Paste the raw CSV rows or JSON array. The smart importer automatically maps keys like codes, quantities, and prices!
                 </p>
               </div>
               <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
-                <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider block">STEP 3: Commit Import</span>
+                <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider block">STEP 3: Verify & Commit</span>
                 <p className="text-xs text-m3-on-surface-variant font-medium">
-                  Verify the parsed dry-run entries on the interactive table layout, then commit the transfer to register them.
+                  The engine parses columns, generates robust secure keys/IDs, and upserts product records into the system catalog.
                 </p>
               </div>
             </div>
 
             {/* Paste Space */}
             <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <label className="text-xs font-black uppercase text-m3-primary tracking-wider">Paste raw older POS JSON data here</label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const sample = [
-                      {
-                        "productName": "Heritage White Glazed Porcelain",
-                        "productCode": "HW-GL-80",
-                        "skuCode": "SKU-HW-80",
-                        "barcode": "4801122334455",
-                        "category": "Porcelain Tiles",
-                        "brand": "Heritage Slabs",
-                        "costPrice": 420,
-                        "sellingPrice": 650,
-                        "size": "80x80 cm",
-                        "stockQuantity": 150
-                      },
-                      {
-                        "productName": "EcoSlate Anti-Slip Terracotta",
-                        "productCode": "ES-AS-30",
-                        "skuCode": "SKU-ES-30",
-                        "barcode": "4805566778899",
-                        "category": "Ceramic Tiles",
-                        "brand": "EcoStone",
-                        "costPrice": 180,
-                        "sellingPrice": 280,
-                        "size": "30x30 cm",
-                        "stockQuantity": 320
-                      }
-                    ];
-                    setRawImportText(JSON.stringify(sample, null, 2));
-                    showToast("Loaded high-fidelity Sample older POS Dataset into migration zone!");
-                  }}
-                  className="text-[11px] font-bold text-m3-primary hover:text-m3-primary/80 bg-m3-primary/10 px-3.5 py-1.5 rounded-full transition-all cursor-pointer"
-                >
-                  ⚡ Load High-Fidelity POS Sample
-                </button>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <label className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">Paste raw older POS CSV rows or JSON data here</label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sample = [
+                        {
+                          "productName": "Heritage White Glazed Porcelain",
+                          "productCode": "HW-GL-80",
+                          "skuCode": "SKU-HW-80",
+                          "barcode": "4801122334455",
+                          "category": "Porcelain Tiles",
+                          "brand": "Heritage Slabs",
+                          "costPrice": 420,
+                          "sellingPrice": 650,
+                          "size": "80x80 cm",
+                          "stockQuantity": 150
+                        },
+                        {
+                          "productName": "EcoSlate Anti-Slip Terracotta",
+                          "productCode": "ES-AS-30",
+                          "skuCode": "SKU-ES-30",
+                          "barcode": "4805566778899",
+                          "category": "Ceramic Tiles",
+                          "brand": "EcoStone",
+                          "costPrice": 180,
+                          "sellingPrice": 280,
+                          "size": "30x30 cm",
+                          "stockQuantity": 320
+                        }
+                      ];
+                      setRawImportText(JSON.stringify(sample, null, 2));
+                      showToast("Loaded high-fidelity Sample older POS JSON Dataset!");
+                    }}
+                    className="text-[10px] font-black uppercase text-m3-primary hover:text-m3-primary/80 bg-m3-primary/10 px-3.5 py-1.5 rounded-full transition-all cursor-pointer font-sans"
+                  >
+                    ⚡ Load JSON Sample
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sampleCsv = `Product Name,Product Code,SKU,Barcode,Category,Brand,Cost Price,Selling Price,Size,Quantity\n"Heritage White Glazed Porcelain",HW-GL-80,SKU-HW-80,4801122334455,Porcelain Tiles,Heritage Slabs,420,650,80x80 cm,150\n"EcoSlate Anti-Slip Terracotta",ES-AS-30,SKU-ES-30,4805566778899,Ceramic Tiles,EcoStone,180,280,30x30 cm,320`;
+                      setRawImportText(sampleCsv);
+                      showToast("Loaded high-fidelity Sample older POS CSV Dataset!");
+                    }}
+                    className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 hover:opacity-85 bg-emerald-500/10 px-3.5 py-1.5 rounded-full transition-all cursor-pointer font-sans"
+                  >
+                    📊 Load CSV Sample
+                  </button>
+                </div>
               </div>
 
               <textarea
                 value={rawImportText}
                 onChange={(e) => setRawImportText(e.target.value)}
-                rows={8}
-                placeholder={`[
+                rows={10}
+                placeholder={`--- CSV FORMAT EXAMPLE ---
+Product Name,Product Code,Cost Price,Selling Price,Quantity,Category
+"Old POS Tile X",OPT-001,120.00,190.00,80,Porcelain
+
+--- OR JSON FORMAT EXAMPLE ---
+[
   {
-    "productName": "Old POS Ceramic Tile x5",
-    "productCode": "OP-CER-01",
-    "costPrice": 120,
-    "sellingPrice": 190,
-    "stockQuantity": 80
+    "productName": "Old POS Tile Y",
+    "productCode": "OPT-002",
+    "costPrice": 150,
+    "sellingPrice": 240,
+    "stockQuantity": 110
   }
 ]`}
                 className="w-full bg-m3-surface-lowest border border-m3-outline-variant/40 focus:border-m3-primary p-4 text-xs font-mono text-m3-on-surface rounded-3xl focus:outline-none transition-colors"

@@ -29,6 +29,7 @@ import { SalesTransmissionModule } from './components/SalesTransmissionModule';
 import { DeliveriesModule } from './components/DeliveriesModule';
 import { TutorialOnboarding } from './components/TutorialOnboarding';
 import { PrivacyAccessibilityHub } from './components/PrivacyAccessibilityHub';
+import { OnboardingSetupWizard } from './components/OnboardingSetupWizard';
 import { SystemLoadingOverlay } from './components/SystemLoadingOverlay';
 import { IdleScreen } from './components/IdleScreen';
 import { PwaInstallPrompt } from './components/PwaInstallPrompt';
@@ -72,7 +73,8 @@ import {
   Upload,
   Sliders,
   AlertTriangle,
-  Palette
+  Palette,
+  Settings
 } from 'lucide-react';
 
 function AppContent() {
@@ -577,6 +579,17 @@ function AppContent() {
     );
   }
 
+  const isOnboarded = typeof window !== 'undefined' && localStorage.getItem('tilepoint_onboarded_setup') === 'true';
+
+  if (!isOnboarded) {
+    return (
+      <>
+        <OnboardingSetupWizard />
+        <PrivacyAccessibilityHub darkMode={darkMode} />
+      </>
+    );
+  }
+
   if (currentUser.role === UserRole.STAFF) {
     return (
       <>
@@ -907,22 +920,7 @@ function AppContent() {
                       <span>Operational Walkthrough</span>
                     </button>
 
-                    {/* Database Core & Backups Settings (Other Settings) */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsAccountDropdownOpen(false);
-                        setShowDatabaseCoreModal(true);
-                      }}
-                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
-                    >
-                      <Database className="h-4 w-4 text-emerald-500" />
-                      <span>Database Core & Backups</span>
-                    </button>
-
-                    <div className="h-px bg-m3-outline-variant/10 !my-1" />
-
-                    {/* Accessibility & Policy trigger */}
+                    {/* System Settings trigger */}
                     <button
                       type="button"
                       onClick={() => {
@@ -931,8 +929,8 @@ function AppContent() {
                       }}
                       className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
                     >
-                      <img src="/images/accessibility_icon.svg" alt="Accessibility & Policy" className="h-4.5 w-4.5 object-contain" referrerPolicy="no-referrer" />
-                      <span>Accessibility & Policy</span>
+                      <Settings className="h-4 w-4 text-m3-primary" />
+                      <span>Settings</span>
                     </button>
 
                     <div className="h-px bg-m3-outline-variant/10 !my-1" />

@@ -59,7 +59,7 @@ interface PrivacyAccessibilityHubProps {
 export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }: PrivacyAccessibilityHubProps) {
   // Hub open state
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'accessibility' | 'cookies' | 'privacy' | 'about' | 'dbtuning'>('accessibility');
+  const [activeTab, setActiveTab] = useState<'appearance' | 'features' | 'about' | 'accessibility' | 'backups'>('appearance');
 
   // Listen to open events from other modules/dropdowns
   useEffect(() => {
@@ -310,10 +310,10 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
 
   const db = useDb();
 
-  // Enforce Admin role constraint for dbtuning tab (since staff, cashiers, and managers must not access it)
+  // Enforce Admin role constraint for backups tab (since staff, cashiers, and managers must not access it)
   useEffect(() => {
-    if (activeTab === 'dbtuning' && db.currentUser?.role !== UserRole.ADMIN) {
-      setActiveTab('accessibility');
+    if (activeTab === 'backups' && db.currentUser?.role !== UserRole.ADMIN) {
+      setActiveTab('appearance');
     }
   }, [activeTab, db.currentUser?.role]);
 
@@ -441,7 +441,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                 type="button"
                 onClick={() => {
                   setIsOpen(true);
-                  setActiveTab('cookies');
+                  setActiveTab('features');
                 }}
                 className="flex-1 sm:flex-none px-4 py-2 text-xs font-extrabold rounded-xl border border-m3-outline-variant/50 hover:bg-m3-primary/10 text-m3-on-surface hover:text-m3-primary transition-all cursor-pointer whitespace-nowrap uppercase tracking-wider text-[10px]"
               >
@@ -491,14 +491,14 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
             <div className="p-5 border-b border-m3-outline-variant/20 flex justify-between items-center bg-m3-surface shrink-0">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-2xl bg-m3-primary/10 text-m3-primary flex items-center justify-center border border-m3-primary/20 shrink-0">
-                  <Accessibility className="h-5 w-5" />
+                  <Sliders className="h-5 w-5" />
                 </div>
                 <div>
                   <h3 className="text-sm font-black uppercase font-mono tracking-wider text-m3-primary">
-                    Comfort & Identity Control Center
+                    System Settings & Configuration
                   </h3>
                   <p className="text-[10px] text-m3-on-surface-variant font-medium mt-0.5 font-mono">
-                    PROACTIVE SYSTEM ACCESSIBILITY & DATA POLICY SHIELD
+                    MANAGE SYSTEM INTERACTIVE CONTROLS, APPEARANCE, & BACKUPS
                   </p>
                 </div>
               </div>
@@ -515,37 +515,26 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
               {/* Tab options side-rack */}
               <div className="w-full md:w-52 border-b md:border-b-0 md:border-r border-m3-outline-variant/15 p-3.5 flex md:flex-col gap-1.5 shrink-0 select-none overflow-x-auto md:overflow-x-visible">
                 <button
-                  onClick={() => setActiveTab('accessibility')}
+                  onClick={() => setActiveTab('appearance')}
                   className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
-                    activeTab === 'accessibility'
+                    activeTab === 'appearance'
                       ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
                       : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
                   }`}
                 >
-                  <Sliders className="h-4 w-4" />
-                  <span>Accessibility</span>
+                  <Palette className="h-4 w-4" />
+                  <span>Appearance</span>
                 </button>
                 <button
-                  onClick={() => setActiveTab('cookies')}
+                  onClick={() => setActiveTab('features')}
                   className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
-                    activeTab === 'cookies'
-                      ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
-                      : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
-                  }`}
-                >
-                  <Cookie className="h-4 w-4" />
-                  <span>Cookie Center</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('privacy')}
-                  className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
-                    activeTab === 'privacy'
+                    activeTab === 'features'
                       ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
                       : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
                   }`}
                 >
                   <Shield className="h-4 w-4" />
-                  <span>Privacy Shield</span>
+                  <span>Features & Priv</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('about')}
@@ -558,17 +547,28 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                   <Info className="h-4 w-4" />
                   <span>About System</span>
                 </button>
+                <button
+                  onClick={() => setActiveTab('accessibility')}
+                  className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
+                    activeTab === 'accessibility'
+                      ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
+                      : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
+                  }`}
+                >
+                  <Sliders className="h-4 w-4" />
+                  <span>Accessibility</span>
+                </button>
                 {db.currentUser?.role === UserRole.ADMIN && (
                   <button
-                    onClick={() => setActiveTab('dbtuning')}
+                    onClick={() => setActiveTab('backups')}
                     className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
-                      activeTab === 'dbtuning'
+                      activeTab === 'backups'
                         ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
                         : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
                     }`}
                   >
                     <Database className="h-4 w-4" />
-                    <span>DB tuning & Sec</span>
+                    <span>Backups & Core</span>
                   </button>
                 )}
               </div>
@@ -729,12 +729,12 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                       </button>
                     </div>
 
-                    {db.currentUser?.role !== UserRole.STAFF && (
-                      <>
-                        <div className="h-px bg-m3-outline-variant/15" />
+                  </div>
+                )}
 
-                        {/* ANDROID-STYLE CUSTOM THEME PALETTE SECTION */}
-                        <div className="space-y-4 font-sans text-left">
+                {/* TAB: APPEARANCE DYNAMIC COLOR THEMES */}
+                {activeTab === 'appearance' && (
+                  <div className="space-y-4 font-sans text-left animate-fade-in">
                       <div>
                         <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono flex items-center gap-2">
                           <Palette className="h-4.5 w-4.5 text-m3-primary" />
@@ -1008,13 +1008,10 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                         </div>
                       </div>
                     </div>
-                  </>
-                )}
-              </div>
-            )}
+                  )}
 
-                {/* TAB B: COOKIE PREFERENCES */}
-                {activeTab === 'cookies' && (
+                {/* TAB: FEATURES AND PRIVACY PREFERENCES */}
+                {activeTab === 'features' && (
                   <div className="space-y-4 animate-fade-in font-sans">
                     <div>
                       <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
@@ -1104,20 +1101,19 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                         Save Preferences
                       </button>
                     </div>
-                  </div>
-                )}
 
-                {/* TAB C: PRIVACY SHIELD POLICY */}
-                {activeTab === 'privacy' && (
-                  <div className="space-y-4 animate-fade-in text-xs leading-relaxed text-m3-on-surface hover:scrollbar">
-                    <div className="border-b border-m3-outline-variant/15 pb-4">
-                      <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
-                        TilePoint Privacy Shield Compliance Charter
-                      </h4>
-                      <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed font-sans">
-                        Last Refreshed: June 8, 2026. This Privacy Charter details the standard, transparent, zero-telemetry client architecture used inside our full-stack container environments.
-                      </p>
-                    </div>
+                    <div className="h-px bg-m3-outline-variant/15 my-6" />
+
+                    {/* INTEGRATED PRIVACY POLICY SECTION */}
+                    <div className="space-y-4 text-xs leading-relaxed text-m3-on-surface">
+                      <div className="border-b border-m3-outline-variant/15 pb-4">
+                        <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
+                          TilePoint Privacy Shield Compliance Charter
+                        </h4>
+                        <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed font-sans">
+                          Last Refreshed: June 8, 2026. This Privacy Charter details the standard, transparent, zero-telemetry client architecture used inside our full-stack container environments.
+                        </p>
+                      </div>
 
                     <div className="space-y-4 font-sans select-text max-h-[340px] overflow-y-auto pr-2">
                       <div className="space-y-1">
@@ -1144,7 +1140,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                       <div className="space-y-1">
                         <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">4. Access Control Under RBAC Policy</h5>
                         <p className="text-[11px] text-m3-on-surface-variant">
-                          Every write transaction is logged as an automated audit trail. You can fully review active data access policies or audit entries under the "System Admin Tools &rarr; Database ERD Studio" tab to monitor security and compliance status instantly.
+                          Every write transaction is logged as an automated audit trail. You can review active data access policies or audit entries under the secure Backups & Core sub-settings to monitor security and compliance status instantly.
                         </p>
                       </div>
 
@@ -1165,7 +1161,8 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                       </div>
                     </div>
                   </div>
-                )}
+                </div>
+              )}
 
                 {/* TAB D: ABOUT SYSTEM & DEVELOPER PROFILE */}
                 {activeTab === 'about' && (
@@ -1241,16 +1238,16 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                     </div>
 
                     {/* System specs info card */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
                       {/* Tech stack card */}
-                      <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/40 space-y-2 animate-fade-in">
+                      <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/40 space-y-2 animate-fade-in text-left">
                         <div className="flex items-center gap-2">
                           <Code className="h-4.5 w-4.5 text-m3-primary" />
                           <h5 className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono">
                             Enterprise Tech Stack
                           </h5>
                         </div>
-                        <ul className="space-y-1.5 text-[10px] leading-normal font-mono text-zinc-300">
+                        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] leading-normal font-mono text-zinc-300">
                           <li className="flex items-center gap-1.5">
                             <span className="h-1 w-1 rounded-full bg-m3-primary shrink-0" />
                             <span>React 18 & TypeScript (Safe Typings)</span>
@@ -1272,19 +1269,6 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                             <span>D3.js / Recharts (Data Visualizations)</span>
                           </li>
                         </ul>
-                      </div>
-
-                      {/* System architecture scope */}
-                      <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/40 space-y-2 animate-fade-in">
-                        <div className="flex items-center gap-2">
-                          <Cpu className="h-4.5 w-4.5 text-m3-primary" />
-                          <h5 className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono">
-                            Architecture Specs
-                          </h5>
-                        </div>
-                        <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
-                          Enterprise-grade point-of-sale (POS) and inventory logistics platform with premium offline-first caching layers, robust mathematical tile coverage analyzers, role-based security configurations, and secure transmittals compliant with international audit regulations.
-                        </p>
                       </div>
                     </div>
 
@@ -1501,7 +1485,7 @@ startxref
                 )}
 
                 {/* TAB E: DATABASE PERFORMANCE TUNING & SECURITY */}
-                {activeTab === 'dbtuning' && (
+                {activeTab === 'backups' && (
                   <div className="space-y-4 animate-fade-in font-sans">
                     <div>
                       <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono flex items-center gap-2">

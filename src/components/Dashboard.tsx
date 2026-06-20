@@ -980,12 +980,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                 >
                   Setup Wizard
                 </button>
-                <button 
-                  onClick={() => onNavigate('architecture')}
-                  className="p-3 text-xs bg-m3-surface-low rounded-2xl border border-m3-outline-variant/30 hover:bg-m3-primary hover:text-m3-on-primary font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
-                >
-                  <Database className="h-4 w-4" /> ERD Studio
-                </button>
                 <button
                   onClick={() => {
                     window.location.reload();

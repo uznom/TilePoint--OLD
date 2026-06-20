@@ -1219,42 +1219,62 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   });
 
   const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
+    const isSetup = typeof window !== 'undefined' && localStorage.getItem('tilepoint_onboarded_setup') === 'true';
+    if (!isSetup) return [];
     return safeParse<Supplier[]>('tp_suppliers', SEED_SUPPLIERS);
   });
 
   const [products, setProducts] = useState<Product[]>(() => {
+    const isSetup = typeof window !== 'undefined' && localStorage.getItem('tilepoint_onboarded_setup') === 'true';
+    if (!isSetup) return [];
     return safeParse<Product[]>('tp_products', SEED_PRODUCTS);
   });
 
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(() => {
+    const isSetup = typeof window !== 'undefined' && localStorage.getItem('tilepoint_onboarded_setup') === 'true';
+    if (!isSetup) return [];
     return safeParse<PurchaseOrder[]>('tp_purchase_orders', SEED_POS);
   });
 
   const [poItems, setPoItems] = useState<PurchaseOrderItem[]>(() => {
+    const isSetup = typeof window !== 'undefined' && localStorage.getItem('tilepoint_onboarded_setup') === 'true';
+    if (!isSetup) return [];
     return safeParse<PurchaseOrderItem[]>('tp_po_items', SEED_PO_ITEMS);
   });
 
   const [transmittals, setTransmittals] = useState<Transmittal[]>(() => {
+    const isSetup = typeof window !== 'undefined' && localStorage.getItem('tilepoint_onboarded_setup') === 'true';
+    if (!isSetup) return [];
     return safeParse<Transmittal[]>('tp_transmittals', SEED_TRANSMITTALS);
   });
 
   const [shifts, setShifts] = useState<Shift[]>(() => {
+    const isSetup = typeof window !== 'undefined' && localStorage.getItem('tilepoint_onboarded_setup') === 'true';
+    if (!isSetup) return [];
     return safeParse<Shift[]>('tp_shifts', SEED_SHIFTS);
   });
 
   const [sales, setSales] = useState<Sale[]>(() => {
+    const isSetup = typeof window !== 'undefined' && localStorage.getItem('tilepoint_onboarded_setup') === 'true';
+    if (!isSetup) return [];
     return safeParse<Sale[]>('tp_sales', SEED_SALES);
   });
 
   const [saleItems, setSaleItems] = useState<SaleItem[]>(() => {
+    const isSetup = typeof window !== 'undefined' && localStorage.getItem('tilepoint_onboarded_setup') === 'true';
+    if (!isSetup) return [];
     return safeParse<SaleItem[]>('tp_sale_items', SEED_SALE_ITEMS);
   });
 
   const [movements, setMovements] = useState<InventoryMovement[]>(() => {
+    const isSetup = typeof window !== 'undefined' && localStorage.getItem('tilepoint_onboarded_setup') === 'true';
+    if (!isSetup) return [];
     return safeParse<InventoryMovement[]>('tp_movements', SEED_MOVEMENTS);
   });
 
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
+    const isSetup = typeof window !== 'undefined' && localStorage.getItem('tilepoint_onboarded_setup') === 'true';
+    if (!isSetup) return [];
     return safeParse<AuditLog[]>('tp_audit_logs', SEED_AUDIT_LOGS);
   });
 
