@@ -1297,12 +1297,12 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                   {/* Visual Math Ledger summary stats */}
                   <div className="xl:col-span-5 xl:space-y-2 pt-0.5">
                     <div className="flex justify-between text-xs font-bold text-zinc-400">
-                      <span>Subtotal Staged</span>
+                      <span>{discountType === 'SENIOR' || discountType === 'PWD' ? 'VAT-Exempt Sales' : 'VATable Sales (Net)'}</span>
                       <span className="font-mono">₱{subtotal.toFixed(2)}</span>
                     </div>
 
                     <div className="flex justify-between text-xs font-bold text-zinc-400 mt-1">
-                      <span>{discountType === 'SENIOR' || discountType === 'PWD' ? 'VAT Zero-Rated (Exempt)' : 'VAT (12%) Included'}</span>
+                      <span>{discountType === 'SENIOR' || discountType === 'PWD' ? '12% Output VAT (Exempt)' : '12% Output VAT'}</span>
                       <span className="font-mono">₱{vat.toFixed(2)}</span>
                     </div>
 
@@ -2058,23 +2058,35 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                   )}
                 </div>
 
-                {/* Calculated Receipt Totals block */}
-                <div className="space-y-1 text-[10px] border-b border-dashed border-m3-outline-variant/30 pb-2 font-mono">
-                  <div className="flex justify-between text-m3-on-surface-variant">
-                    <span>VAT (12%):</span>
-                    <span>₱{activeReceipt.vat.toFixed(2)}</span>
-                  </div>
-                  {activeReceipt.discount > 0 && (
-                    <div className="flex justify-between text-m3-primary font-bold">
-                      <span>Discount:</span>
-                      <span>-₱{activeReceipt.discount.toFixed(2)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between font-black text-m3-on-surface text-xs pt-1">
-                    <span>GRAND TOTAL:</span>
-                    <span>₱{activeReceipt.grandTotal.toFixed(2)}</span>
-                  </div>
-                </div>
+                 {/* Calculated Receipt Totals block (BIR Compliant Details) */}
+                 <div className="space-y-1 text-[10px] border-b border-dashed border-m3-outline-variant/30 pb-2 font-mono">
+                   <div className="flex justify-between text-m3-on-surface-variant">
+                     <span>VATable Sales:</span>
+                     <span>₱{activeReceipt.vat > 0 ? activeReceipt.subtotal.toFixed(2) : '0.00'}</span>
+                   </div>
+                   <div className="flex justify-between text-m3-on-surface-variant">
+                     <span>VAT-Exempt Sales:</span>
+                     <span>₱{activeReceipt.vat === 0 ? activeReceipt.subtotal.toFixed(2) : '0.00'}</span>
+                   </div>
+                   <div className="flex justify-between text-m3-on-surface-variant">
+                     <span>Zero-Rated Sales:</span>
+                     <span>₱0.00</span>
+                   </div>
+                   <div className="flex justify-between text-m3-on-surface-variant">
+                     <span>12% Output VAT:</span>
+                     <span>₱{activeReceipt.vat.toFixed(2)}</span>
+                   </div>
+                   {activeReceipt.discount > 0 && (
+                     <div className="flex justify-between text-m3-primary font-bold">
+                       <span>BIR Discount Applied:</span>
+                       <span>-₱{activeReceipt.discount.toFixed(2)}</span>
+                     </div>
+                   )}
+                   <div className="flex justify-between font-black text-m3-on-surface text-xs pt-1 border-t border-dotted border-m3-outline-variant/20">
+                     <span>GRAND TOTAL DUE:</span>
+                     <span>₱{activeReceipt.grandTotal.toFixed(2)}</span>
+                   </div>
+                 </div>
 
                 {/* Tender calculations */}
                 <div className="space-y-1 text-[10px] font-mono text-m3-on-surface-variant font-medium">

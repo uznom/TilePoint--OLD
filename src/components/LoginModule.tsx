@@ -24,7 +24,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { UserRole } from '../types/db';
 
 export const LoginModule: React.FC = () => {
-  const { login, isRateLimited, rateLimitTimeLeft, users, simulationModeActive } = useDb();
+  const { login, isRateLimited, rateLimitTimeLeft, users, simulationModeActive, resetLockout } = useDb();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -180,6 +180,19 @@ export const LoginModule: React.FC = () => {
                 <span className="text-[10px] uppercase font-mono block px-2.5 py-1 bg-red-500/10 rounded-full text-red-500 border border-red-500/20">
                   Cooldown locks: {rateLimitTimeLeft}s remaining
                 </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (resetLockout) {
+                      resetLockout();
+                      setErrorMsg(null);
+                      setIsSQLiBlocked(false);
+                    }
+                  }}
+                  className="mt-1 px-3 py-1.5 bg-red-500 text-white rounded-lg font-bold text-[10.5px] uppercase tracking-widest hover:bg-red-600 transition-all cursor-pointer border-0 shadow-sm"
+                >
+                  Bypass & Reset Lockout
+                </button>
               </div>
             )}
 

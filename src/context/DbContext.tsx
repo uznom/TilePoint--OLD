@@ -291,6 +291,7 @@ interface DbContextType {
   setSimulationModeActive: (val: boolean) => void;
   generateMasterForensicBackup: () => any;
   importMasterForensicBackup: () => void;
+  resetLockout: () => void;
 }
 
 export interface DbSnapshot {
@@ -1100,10 +1101,16 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     }
   };
 
+  const resetLockout = () => {
+    setFailedAttempts(0);
+    setLockoutUntil(0);
+    setRateLimitTimeLeft(0);
+  };
+
   const login = async (username: string, password: string): Promise<{ success: boolean; error?: string; sqliBlocked?: boolean }> => {
     // Check if the credentials are 'admin' / 'admin123' to initiate simulation mode trigger
     if (username.trim().toLowerCase() === 'admin' && password === 'admin123') {
-      const proceed = window.confirm("You are entering simulation mode. Would you like to enable simulation mode, configured with the store 'tilepoint' and employee test credentials?");
+      const proceed = true; // Bypasses window.confirm in iframe environments for seamless login
       if (proceed) {
         setSimulationModeActive(true);
         localStorage.setItem('tp_simulation_mode_active', 'true');
@@ -4594,6 +4601,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         setSimulationModeActive,
         generateMasterForensicBackup,
         importMasterForensicBackup,
+        resetLockout,
       }}
     >
       {children}

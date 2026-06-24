@@ -10,6 +10,19 @@ import { Download, Monitor, Sparkles, Smartphone, CheckCircle, X, ShieldCheck } 
 export const PwaInstallPrompt: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [isDisabled, setIsDisabled] = useState(() => {
+    return localStorage.getItem('tilepoint-disable-install-prompt') === 'true';
+  });
+
+  // Listen to external theme sync events to instantly hide or show
+  useEffect(() => {
+    const handleSync = () => {
+      setIsDisabled(localStorage.getItem('tilepoint-disable-install-prompt') === 'true');
+    };
+    window.addEventListener('tilepoint-theme-updated', handleSync);
+    return () => window.removeEventListener('tilepoint-theme-updated', handleSync);
+  }, []);
+
   const [isInstalled, setIsInstalled] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       const isStandaloneInit = window.matchMedia('(display-mode: standalone)').matches ||
@@ -142,8 +155,8 @@ export const PwaInstallPrompt: React.FC = () => {
     setDeferredPrompt(null);
   };
 
-  if (isInstalled || isStandalone) {
-    return null; // Don't show anything once PWA is operating
+  if (isDisabled || isInstalled || isStandalone) {
+    return null; // Don't show anything once PWA is operating or disabled
   }
 
   return (

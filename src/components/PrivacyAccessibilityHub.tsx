@@ -103,14 +103,26 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
     return localStorage.getItem('tilepoint-enhanced-outlines') === 'true';
   });
 
+  const [disableAnimations, setDisableAnimations] = useState(() => {
+    return localStorage.getItem('tilepoint-disable-animations') === 'true';
+  });
+
+  const [disableBlurs, setDisableBlurs] = useState(() => {
+    return localStorage.getItem('tilepoint-disable-blurs') === 'true';
+  });
+
   // Listen to external theme sync events
   useEffect(() => {
     const handleSync = () => {
       const persistedContrast = (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'default';
       const persistedMaxText = localStorage.getItem('tilepoint-maximize-text-contrast') === 'true';
+      const persistedDisableAnimations = localStorage.getItem('tilepoint-disable-animations') === 'true';
+      const persistedDisableBlurs = localStorage.getItem('tilepoint-disable-blurs') === 'true';
       
       setColorContrast(persistedContrast);
       setMaximizeTextContrast(persistedMaxText);
+      setDisableAnimations(persistedDisableAnimations);
+      setDisableBlurs(persistedDisableBlurs);
     };
     window.addEventListener('tilepoint-theme-updated', handleSync);
     return () => {
@@ -380,10 +392,26 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
     }
     localStorage.setItem('tilepoint-enhanced-outlines', String(enhancedOutlines));
 
+    // 6. Disable Animations
+    if (disableAnimations) {
+      root.classList.add('accessibility-no-animation');
+    } else {
+      root.classList.remove('accessibility-no-animation');
+    }
+    localStorage.setItem('tilepoint-disable-animations', String(disableAnimations));
+
+    // 7. Disable Blurs
+    if (disableBlurs) {
+      root.classList.add('accessibility-no-blur');
+    } else {
+      root.classList.remove('accessibility-no-blur');
+    }
+    localStorage.setItem('tilepoint-disable-blurs', String(disableBlurs));
+
     // Dispatch global event for responsive real-time theme rebuilding
     window.dispatchEvent(new Event('tilepoint-theme-updated'));
 
-  }, [textSize, colorContrast, maximizeTextContrast, dyslexicFont, enhancedOutlines]);
+  }, [textSize, colorContrast, maximizeTextContrast, dyslexicFont, enhancedOutlines, disableAnimations, disableBlurs]);
 
   // Bulk Accept Cookies helper
   const handleAcceptAll = () => {
@@ -725,6 +753,54 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                           </div>
                           <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
                             Forces thick orange safety outlines around focused checkout inputs and catalog layout buttons when navigating via the TAB key.
+                          </p>
+                        </div>
+                      </button>
+
+                      {/* DISABLE BLURS toggle */}
+                      <button
+                        type="button"
+                        onClick={() => setDisableBlurs(!disableBlurs)}
+                        className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
+                          disableBlurs
+                            ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface'
+                            : 'bg-m3-surface border-m3-outline-variant/15 hover:bg-m3-primary/5'
+                        }`}
+                      >
+                        <div className={`p-2 rounded-lg shrink-0 ${disableBlurs ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
+                          <Eye className="h-4.5 w-4.5" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
+                            <span>Turn Off Backdrop & UI Blurs</span>
+                            {disableBlurs && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
+                          </div>
+                          <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+                            Removes frosted glass translucent backdrops and heavy gradient blur filters to improve visual clarity and rendering performance.
+                          </p>
+                        </div>
+                      </button>
+
+                      {/* DISABLE ANIMATIONS toggle */}
+                      <button
+                        type="button"
+                        onClick={() => setDisableAnimations(!disableAnimations)}
+                        className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
+                          disableAnimations
+                            ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface'
+                            : 'bg-m3-surface border-m3-outline-variant/15 hover:bg-m3-primary/5'
+                        }`}
+                      >
+                        <div className={`p-2 rounded-lg shrink-0 ${disableAnimations ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
+                          <Sparkles className="h-4.5 w-4.5" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
+                            <span>Remove Animations & Effects</span>
+                            {disableAnimations && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
+                          </div>
+                          <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+                            Bypasses interface slide-in motion, tab page fade effects, and interactive scaling physics for instant navigation.
                           </p>
                         </div>
                       </button>

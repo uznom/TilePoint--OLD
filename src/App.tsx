@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { DbProvider, useDb, DbSnapshot } from './context/DbContext';
 import { UserRole, User } from './types/db';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, MotionConfig } from 'motion/react';
 import { SkeletalLoader } from './components/SkeletalLoader';
 import { LoginModule } from './components/LoginModule';
 import { SetupModule } from './components/SetupModule';
@@ -21,6 +21,7 @@ import { TransmittalModule } from './components/TransmittalModule';
 import { ShiftModule } from './components/ShiftModule';
 import { BranchModule } from './components/BranchModule';
 import { UsersModule } from './components/UsersModule';
+import { SystemSettingsModule } from './components/SystemSettingsModule';
 import { CalculatorModule } from './components/CalculatorModule';
 import { StaffPortal } from './components/StaffPortal';
 import AtposExtraModules from './components/AtposExtraModules';
@@ -210,14 +211,26 @@ function AppContent() {
     return localStorage.getItem('tilepoint-maximize-text-contrast') === 'true';
   });
 
+  const [disableAnimations, setDisableAnimations] = useState(() => {
+    return localStorage.getItem('tilepoint-disable-animations') === 'true';
+  });
+
+  const [disableBlurs, setDisableBlurs] = useState(() => {
+    return localStorage.getItem('tilepoint-disable-blurs') === 'true';
+  });
+
   useEffect(() => {
     const handleSync = () => {
       const contrast = (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'default';
       const maxText = localStorage.getItem('tilepoint-maximize-text-contrast') === 'true';
       const savedSeed = localStorage.getItem('tilepoint_custom_theme_primary');
+      const noAnim = localStorage.getItem('tilepoint-disable-animations') === 'true';
+      const noBlur = localStorage.getItem('tilepoint-disable-blurs') === 'true';
 
       setColorContrast(contrast);
       setMaximizeTextContrast(maxText);
+      setDisableAnimations(noAnim);
+      setDisableBlurs(noBlur);
 
       // Apply the theme with latest contrast settings
       if (savedSeed) {
@@ -242,6 +255,18 @@ function AppContent() {
         document.documentElement.classList.add('accessibility-maximize-text-contrast');
       } else {
         document.documentElement.classList.remove('accessibility-maximize-text-contrast');
+      }
+
+      if (noAnim) {
+        document.documentElement.classList.add('accessibility-no-animation');
+      } else {
+        document.documentElement.classList.remove('accessibility-no-animation');
+      }
+
+      if (noBlur) {
+        document.documentElement.classList.add('accessibility-no-blur');
+      } else {
+        document.documentElement.classList.remove('accessibility-no-blur');
       }
     };
     window.addEventListener('tilepoint-theme-updated', handleSync);
@@ -544,6 +569,7 @@ function AppContent() {
     { id: 'calculator', name: 'Tile Coverage Calc', icon: Calculator, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF] },
     { id: 'branches', name: 'Branches Profile', icon: Building2, roles: [UserRole.ADMIN] },
     { id: 'users', name: 'Employee Directory', icon: UsersIcon, roles: [UserRole.ADMIN] },
+    { id: 'system-settings', name: 'System Settings', icon: Sliders, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF] },
     
     // ATPOS v2 Submodules
     { id: 'inventory-stocks', name: 'Catalog Stock Ledger', icon: Layers, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF] },
@@ -666,7 +692,8 @@ function AppContent() {
       icon: UsersIcon,
       subItems: [
         { id: 'branches', name: 'Branches Profile' },
-        { id: 'users', name: 'Employee Directory' }
+        { id: 'users', name: 'Employee Directory' },
+        { id: 'system-settings', name: 'System Settings' }
       ]
     }
   ];
@@ -678,7 +705,8 @@ function AppContent() {
   };
 
   return (
-    <div className={`h-screen overflow-hidden flex flex-col font-sans transition-all duration-300 relative ${
+    <MotionConfig reducedMotion={disableAnimations ? "always" : "never"}>
+      <div className={`h-screen overflow-hidden flex flex-col font-sans transition-all duration-300 relative ${
       darkMode ? 'dark bg-m3-surface text-m3-on-surface' : 'bg-m3-surface text-m3-on-surface'
     }`}>
       {/* Dynamic Ambient Background Color Accent Glow using core M3 primary color token */}
@@ -1114,7 +1142,7 @@ function AppContent() {
         {/* DYNAMIC COMPONENT PANEL AREA */}
         <main className={`flex-1 relative flex flex-col text-m3-on-surface transition-all duration-300 overflow-x-hidden ${
           activeTab === 'pos' || activeTab === 'ledger'
-            ? 'p-4 md:p-5 overflow-hidden h-screen'
+            ? 'p-4 md:p-5 overflow-hidden h-full'
             : 'p-4 md:p-6 pb-26 md:pb-6 overflow-y-auto'
         } ${isCompactColumns ? 'compact-fit' : ''}`}>
           {/* Elegant Collapsible Horizontal Sub-menu Navigation Pill Bar with Dynamic RBAC */}
@@ -1212,6 +1240,7 @@ function AppContent() {
                 {activeTab === 'shift' && <ShiftModule darkMode={darkMode} />}
                 {activeTab === 'calculator' && <CalculatorModule darkMode={darkMode} />}
                 {activeTab === 'branches' && <BranchModule darkMode={darkMode} />}
+                {activeTab === 'system-settings' && <SystemSettingsModule darkMode={darkMode} />}
                 {activeTab === 'users' && <UsersModule darkMode={darkMode} />}
                 {activeTab === 'reports-transmission' && <SalesTransmissionModule darkMode={darkMode} />}
                 {activeTab === 'deliveries-panel' && <DeliveriesModule darkMode={darkMode} />}
@@ -2041,6 +2070,7 @@ function AppContent() {
         <OnboardingSetupWizard onClose={() => setShowSetupWizard(false)} />
       )}
     </div>
+    </MotionConfig>
   );
 }
 

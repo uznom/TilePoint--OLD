@@ -11,6 +11,20 @@ import { UserRole } from '../types/db';
 export const IdleScreen: React.FC = () => {
   const { isLoggedIn, currentUser } = useDb();
   
+  // State to track if idle screen is globally disabled by settings
+  const [isDisabled, setIsDisabled] = useState(() => {
+    return localStorage.getItem('tilepoint-disable-idle-clock') === 'true';
+  });
+
+  // Listen to external theme sync events to instantly hide or show
+  useEffect(() => {
+    const handleSync = () => {
+      setIsDisabled(localStorage.getItem('tilepoint-disable-idle-clock') === 'true');
+    };
+    window.addEventListener('tilepoint-theme-updated', handleSync);
+    return () => window.removeEventListener('tilepoint-theme-updated', handleSync);
+  }, []);
+  
   // State to track idle status
   const [isIdle, setIsIdle] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
@@ -44,8 +58,8 @@ export const IdleScreen: React.FC = () => {
 
   // Monitor activity & trigger idle screen
   useEffect(() => {
-    // Only monitor if logged in and on desktop
-    if (!isLoggedIn || !isDesktop) {
+    // Only monitor if logged in, on desktop, and NOT disabled
+    if (isDisabled || !isLoggedIn || !isDesktop) {
       setIsIdle(false);
       return;
     }
@@ -95,10 +109,10 @@ export const IdleScreen: React.FC = () => {
       events.forEach(event => window.removeEventListener(event, resetTimer));
       clearInterval(interval);
     };
-  }, [isLoggedIn, isIdle, isDesktop]);
+  }, [isLoggedIn, isIdle, isDesktop, isDisabled]);
 
-  // If not logged-in or not desktop, render nothing to keep execution low
-  if (!isLoggedIn || !isDesktop) return null;
+  // If disabled, not logged-in, or not desktop, render nothing to keep execution low
+  if (isDisabled || !isLoggedIn || !isDesktop) return null;
 
   // Format date and time
   const formatTime = (date: Date) => {

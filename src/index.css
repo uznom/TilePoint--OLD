@@ -896,6 +896,54 @@ html.accessibility-maximize-text-contrast div[role="button"] span {
   font-weight: inherit !important;
 }
 
+/* 4c. Turn Off Blurs & Remove Animations Fallbacks */
+html.accessibility-no-blur *,
+html.accessibility-no-blur {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Turn off card/button hover transforms, scaling, translation, and transition effects */
+html.accessibility-no-blur *:hover {
+  transform: none !important;
+  scale: none !important;
+  transition: none !important;
+  --tw-scale-x: 1 !important;
+  --tw-scale-y: 1 !important;
+  --tw-translate-x: 0 !important;
+  --tw-translate-y: 0 !important;
+  --tw-skew-x: 0 !important;
+  --tw-skew-y: 0 !important;
+}
+
+/* Specifically target classes or elements containing blur or filter with blur */
+html.accessibility-no-blur .blur,
+html.accessibility-no-blur .blur-sm,
+html.accessibility-no-blur .blur-md,
+html.accessibility-no-blur .blur-lg,
+html.accessibility-no-blur .blur-xl,
+html.accessibility-no-blur .blur-2xl,
+html.accessibility-no-blur .blur-3xl,
+html.accessibility-no-blur [class*="blur-"],
+html.accessibility-no-blur [class*="backdrop-blur"] {
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Globally remove transitions and animations */
+html.accessibility-no-animation *,
+html.accessibility-no-animation,
+html.accessibility-no-animation *::before,
+html.accessibility-no-animation *::after {
+  animation: none !important;
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  transition: none !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+}
+
 /* 5. Clean, Professional @media print System for BIR ledger compliance sheets & slips */
 @media print {
   /* Hide standard non-printed blocks specifically */

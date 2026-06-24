@@ -334,26 +334,21 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
     alert(`Return settled! ${retStatus === 'Restocked' ? 'Stock count adjusted in active product ledger.' : 'Returned stock archived as damaged.'}`);
   };
 
-  // BIR tax computation helpers using db.sales
-  const totalSalesFromDay = db.sales.reduce((acc, s) => {
-    if (s.isDeleted) return acc;
+  // BIR tax computation helpers using db.sales compliant with Philippine BIR regulations
+  const activeSales = db.sales.filter(s => {
+    if (s.isDeleted) return false;
     // enforce dynamic branch scoping if not admin
     if (db.currentUser?.role !== 'Admin' && s.branchId !== db.currentUser?.branchAssignmentId) {
-      return acc;
+      return false;
     }
-    return acc + (s.grandTotal || 0);
-  }, 0);
+    return true;
+  });
 
-  const discountTotal = db.sales.reduce((acc, s) => {
-    if (s.isDeleted) return acc;
-    if (db.currentUser?.role !== 'Admin' && s.branchId !== db.currentUser?.branchAssignmentId) {
-      return acc;
-    }
-    return acc + (s.discount || 0);
-  }, 0);
-
-  const vatOutput = totalSalesFromDay * 0.12;
-  const netOfVat = totalSalesFromDay - vatOutput;
+  const totalSalesFromDay = activeSales.reduce((acc, s) => acc + (s.grandTotal || 0), 0);
+  const discountTotal = activeSales.reduce((acc, s) => acc + (s.discount || 0), 0);
+  const vatOutput = activeSales.reduce((acc, s) => acc + (s.vat || 0), 0);
+  const vatableSales = activeSales.reduce((acc, s) => acc + (s.vat > 0 ? (s.subtotal || 0) : 0), 0);
+  const vatExemptSales = activeSales.reduce((acc, s) => acc + (s.vat === 0 ? (s.subtotal || 0) : 0), 0);
 
   return (
     <div className="space-y-6">
@@ -1138,22 +1133,26 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
           activeSubTab === 'bir-regular') && (
           <motion.div key="bir-tax" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
             
-            {/* Tax compliance status badge cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Tax compliance status badge cards according to BIR specifications */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-xs font-sans space-y-1">
-                <span className="text-zinc-400 block font-bold uppercase tracking-wider text-[9px]">Vatable Sales Summary</span>
-                <span className="text-sm font-black font-mono">₱{netOfVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                <span className="text-zinc-400 block font-bold uppercase tracking-wider text-[9px]">Vatable Sales (Net of VAT)</span>
+                <span className="text-sm font-black font-mono">₱{vatableSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-xs font-sans space-y-1">
+                <span className="text-zinc-400 block font-bold uppercase tracking-wider text-[9px]">VAT-Exempt Sales Base</span>
+                <span className="text-sm font-black font-mono">₱{vatExemptSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-xs font-sans space-y-1">
                 <span className="text-zinc-400 block font-bold uppercase tracking-wider text-[9px]">12% Output VAT Amount</span>
                 <span className="text-sm font-black text-amber-500 font-mono">₱{vatOutput.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-xs font-sans space-y-1">
-                <span className="text-zinc-400 block font-bold uppercase tracking-wider text-[9px]">Senior & Discount Deductions</span>
+                <span className="text-zinc-400 block font-bold uppercase tracking-wider text-[9px]">BIR Discounts & Deductions</span>
                 <span className="text-sm font-black text-emerald-500 font-mono">₱{discountTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
               </div>
-              <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-xs font-sans space-y-1">
-                <span className="text-zinc-400 block font-bold uppercase tracking-wider text-[9px]">Accredited Grand Net Sales</span>
+              <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-xs font-sans space-y-1 col-span-2 sm:col-span-1">
+                <span className="text-zinc-400 block font-bold uppercase tracking-wider text-[9px]">Accredited Net Sales Due</span>
                 <span className="text-sm font-black text-emerald-500 font-mono">₱{totalSalesFromDay.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
@@ -1278,19 +1277,9 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
                   </div>
                 </div>
 
-                <table className="w-full text-left font-sans text-xs divide-y divide-m3-outline-variant/15">
-                  <thead className="bg-m3-surface-high/50 font-black border-b border-m3-outline-variant/15">
-                    <tr>
-                      <th className="p-3">Reference Date</th>
-                      <th className="p-3">Receipt Code</th>
-                      <th className="p-3">Purchaser Classification</th>
-                      <th className="p-3 text-right">Taxable Sales</th>
-                      <th className="p-3 text-right">BIR Deduction Applied</th>
-                      <th className="p-3 text-right">Net VAT-Exempt Sales</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-m3-outline-variant/10">
-                    {db.sales.filter(s => !s.isDeleted).map((s, idx) => {
+                <div className="overflow-x-auto rounded-xl border border-m3-outline-variant/15">
+                  {(() => {
+                    const filteredRows = db.sales.filter(s => !s.isDeleted).map((s, idx) => {
                       // distribute some discount profiles across demo transactions
                       const isPwd = activeSubTab === 'bir-pwd' && idx % 2 === 0;
                       const isSenior20 = activeSubTab === 'bir-senior20' && idx % 3 === 0;
@@ -1304,24 +1293,85 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
                       if (!matchesFilter) return null;
 
                       const taxLabel = isPwd ? 'PWD Dsc. 20%' : isSenior20 ? 'Senior 20% Dsc.' : isSenior5 ? 'Senior 5% Special' : isSolo ? 'Solo Parent Dsc.' : isAthletes ? 'Athletes Dsc.' : 'Regular Promo';
-                      const deductVal = (s.discount || 0) || ((s.grandTotal || 0) * 0.12);
+                      const isVatExempt = isPwd || isSenior20 || isSenior5 || isSolo || isAthletes;
 
-                      return (
-                        <tr key={s.id} className="hover:bg-m3-primary/5 transition-all text-m3-on-surface">
-                          <td className="p-3 font-mono text-[10.5px] text-zinc-400">{new Date(s.createdAt || Date.now()).toLocaleString()}</td>
-                          <td className="p-3 font-mono font-black text-m3-primary">{s.id}</td>
-                          <td className="p-3 font-bold uppercase text-[10px]">
-                            {s.customerName || 'Walk-In Customer'}
-                            <span className="block font-mono text-[9px] text-zinc-400 font-normal lowercase tracking-wide mt-0.5">({taxLabel})</span>
-                          </td>
-                          <td className="p-3 text-right font-mono">₱{((s.grandTotal || 0) * 0.88).toFixed(2)}</td>
-                          <td className="p-3 text-right font-mono text-amber-500 font-bold">-₱{deductVal.toFixed(2)}</td>
-                          <td className="p-3 text-right font-mono text-emerald-500 font-extrabold">₱{((s.grandTotal || 0) - deductVal).toFixed(2)}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                      const rowVatable = isVatExempt ? 0 : (s.subtotal || 0);
+                      const rowVatExempt = isVatExempt ? (s.subtotal || 0) : 0;
+                      const rowVat = isVatExempt ? 0 : (s.vat || 0);
+                      const rowDiscount = s.discount || (isVatExempt ? parseFloat((rowVatExempt * 0.20).toFixed(2)) : 0);
+                      const rowNet = parseFloat((rowVatable + rowVat + rowVatExempt - rowDiscount).toFixed(2));
+
+                      return {
+                        s,
+                        taxLabel,
+                        rowVatable,
+                        rowVatExempt,
+                        rowVat,
+                        rowDiscount,
+                        rowNet
+                      };
+                    }).filter(item => item !== null) as Array<{
+                      s: any;
+                      taxLabel: string;
+                      rowVatable: number;
+                      rowVatExempt: number;
+                      rowVat: number;
+                      rowDiscount: number;
+                      rowNet: number;
+                    }>;
+
+                    // Compute column aggregates for tfoot compliant with BIR
+                    const sumVatable = filteredRows.reduce((sum, r) => sum + r.rowVatable, 0);
+                    const sumVatExempt = filteredRows.reduce((sum, r) => sum + r.rowVatExempt, 0);
+                    const sumVat = filteredRows.reduce((sum, r) => sum + r.rowVat, 0);
+                    const sumDiscount = filteredRows.reduce((sum, r) => sum + r.rowDiscount, 0);
+                    const sumNet = filteredRows.reduce((sum, r) => sum + r.rowNet, 0);
+
+                    return (
+                      <table className="w-full text-left font-sans text-xs divide-y divide-m3-outline-variant/15 min-w-[900px]">
+                        <thead className="bg-m3-surface-high/50 font-black border-b border-m3-outline-variant/15">
+                          <tr>
+                            <th className="p-3">Reference Date</th>
+                            <th className="p-3">SI Number</th>
+                            <th className="p-3">Customer & Classification</th>
+                            <th className="p-3 text-right">VATable Sales</th>
+                            <th className="p-3 text-right">VAT-Exempt Sales</th>
+                            <th className="p-3 text-right">12% Output VAT</th>
+                            <th className="p-3 text-right">Sales Discount</th>
+                            <th className="p-3 text-right">Net Sales Due</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-m3-outline-variant/10 bg-m3-surface-low">
+                          {filteredRows.map(({ s, taxLabel, rowVatable, rowVatExempt, rowVat, rowDiscount, rowNet }) => (
+                            <tr key={s.id} className="hover:bg-m3-primary/5 transition-all text-m3-on-surface">
+                              <td className="p-3 font-mono text-[10.5px] text-zinc-400">{new Date(s.createdAt || Date.now()).toLocaleString()}</td>
+                              <td className="p-3 font-mono font-black text-m3-primary">{s.saleNumber || s.id}</td>
+                              <td className="p-3 font-bold uppercase text-[10px]">
+                                {s.customerName || 'Walk-In Customer'}
+                                <span className="block font-mono text-[9px] text-zinc-400 font-normal lowercase tracking-wide mt-0.5">({taxLabel})</span>
+                              </td>
+                              <td className="p-3 text-right font-mono">₱{rowVatable.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                              <td className="p-3 text-right font-mono">₱{rowVatExempt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                              <td className="p-3 text-right font-mono text-amber-500">₱{rowVat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                              <td className="p-3 text-right font-mono text-rose-500 font-bold">-₱{rowDiscount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                              <td className="p-3 text-right font-mono text-emerald-500 font-extrabold">₱{rowNet.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot className="bg-m3-surface-high/30 border-t border-m3-outline-variant/30 font-black text-[11px] text-m3-on-surface">
+                          <tr>
+                            <td colSpan={3} className="p-3 text-left uppercase tracking-wider text-zinc-400">Cumulative Ledger Totals:</td>
+                            <td className="p-3 text-right font-mono">₱{sumVatable.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td className="p-3 text-right font-mono">₱{sumVatExempt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td className="p-3 text-right font-mono text-amber-500">₱{sumVat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td className="p-3 text-right font-mono text-rose-500">-₱{sumDiscount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td className="p-3 text-right font-mono text-emerald-500">₱{sumNet.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    );
+                  })()}
+                </div>
               </div>
             )}
           </motion.div>
