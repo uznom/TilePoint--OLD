@@ -2140,7 +2140,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
             </div>
 
             <div className="border-t border-m3-outline-variant/10 pt-3 mt-4 text-[10px] font-mono text-zinc-400">
-              Matches warehouse stock matrices dynamically
+              Updates warehouse inventory levels in real-time
             </div>
           </div>
           
@@ -2352,31 +2352,166 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                       </button>
                     </div>
 
-                    {(activeDrilldown === 'products' ? activeProducts : activeDrilldown === 'low' ? lowStockProducts : activeDrilldown === 'critical' ? criticalStockProducts : outOfStockProducts).map((p, idx) => (
-                      <div key={idx} className="p-3 bg-m3-surface-lowest rounded-xl border border-m3-outline-variant/15 text-xs flex flex-col justify-between gap-2.5">
-                        <div className="space-y-1">
-                          <div className="font-extrabold text-m3-on-surface leading-snug">{p.productName}</div>
-                          <div className="text-[10.5px] text-zinc-400 flex items-center justify-between font-mono">
-                            <span>SKU: {p.sku}</span>
-                            <span className="text-m3-primary font-bold">Price: ₱{p.sellingPrice.toLocaleString()}</span>
+                    {(activeDrilldown === 'products' ? activeProducts : activeDrilldown === 'low' ? lowStockProducts : activeDrilldown === 'critical' ? criticalStockProducts : outOfStockProducts).map((p, idx) => {
+                      // Calculate branch stock breakdown ("display it per item")
+                      const itemBranchStocks = branchStock.filter(bs => bs.productId === p.id);
+                      
+                      // Identify if any branch has excess stock (>25 boxes)
+                      const excessBranches = itemBranchStocks.filter(bs => bs.quantity > 25);
+                      const currentBranchId = currentUser.branchAssignmentId || 'B1';
+                      
+                      return (
+                        <div key={idx} className="p-3 bg-m3-surface-lowest rounded-xl border border-m3-outline-variant/15 text-xs flex flex-col justify-between gap-2.5">
+                          <div className="space-y-1">
+                            <div className="font-extrabold text-m3-on-surface leading-snug flex items-center justify-between">
+                              <span>{p.productName}</span>
+                              {p.brand && (
+                                <span className="text-[9.5px] font-mono uppercase bg-amber-500/10 text-amber-500 font-bold px-2 py-0.5 rounded-full">
+                                  {p.brand}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10.5px] text-zinc-400 flex items-center justify-between font-mono">
+                              <span>SKU: {p.sku}</span>
+                              <span className="text-m3-primary font-bold">Price: ₱{p.sellingPrice.toLocaleString()}</span>
+                            </div>
+                          </div>
+
+                          {/* Branch Stock Breakdown Display */}
+                          <div className="bg-m3-surface-low/50 p-2 rounded-lg space-y-1 my-1">
+                            <span className="text-[9.5px] font-extrabold text-zinc-400 uppercase tracking-wide block">Branch stock records:</span>
+                            <div className="grid grid-cols-2 gap-1.5 text-[10.5px] font-mono">
+                              {branches.filter(b => !b.isDeleted).map(br => {
+                                const matchedStock = itemBranchStocks.find(bs => bs.branchId === br.id)?.quantity || 0;
+                                const isLow = matchedStock < (p.minimumStock / 2);
+                                return (
+                                  <div key={br.id} className="flex justify-between items-center pr-2 bg-m3-surface-lowest p-1 rounded">
+                                    <span className="text-zinc-500 truncate max-w-[90px]" title={br.name}>{br.name}:</span>
+                                    <span className={isLow ? "text-red-400 font-bold" : matchedStock > 25 ? "text-emerald-400 font-bold" : "text-m3-on-surface"}>
+                                      {matchedStock} bx {matchedStock > 25 && "📈"}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between border-t border-zinc-500/10 pt-2 text-[10.5px]">
+                            <span>Current Global Stock: <span className="font-black text-m3-primary font-mono">{p.stockQuantity} boxes</span></span>
+                            <span className="text-zinc-500 font-mono">Min req: {p.minimumStock}</span>
+                          </div>
+
+                          {/* Custom Button triggers according to user rules */}
+                          <div className="space-y-1.5 pt-1">
+                            {currentUser.role === 'Admin' ? (
+                              <div className="space-y-1">
+                                <button 
+                                  onClick={() => {
+                                    let cart = [];
+                                    try {
+                                      const cached = localStorage.getItem('tp_po_cart');
+                                      cart = cached ? JSON.parse(cached) : [];
+                                    } catch (e) {}
+                                    if (!cart.some(item => item.productId === p.id)) {
+                                      cart.push({ productId: p.id, quantity: 50 });
+                                      localStorage.setItem('tp_po_cart', JSON.stringify(cart));
+                                    }
+                                    showToastMsg(`Queued "${p.productName}" for Purchase Order! Navigating to Sourcing Desk...`, 'success');
+                                    setTimeout(() => {
+                                      onNavigate('procurement');
+                                      // Force sub-tab to brands so they can compile!
+                                      localStorage.setItem('tp_active_subtab', 'brands');
+                                      window.location.reload();
+                                    }, 900);
+                                  }}
+                                  className="w-full py-1.5 bg-teal-600 hover:bg-teal-500 transition-all text-white font-black rounded-lg text-[10.5px] uppercase cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+                                >
+                                  Direct to PO Sourcing Deck
+                                </button>
+                                
+                                {excessBranches.length > 0 && (
+                                  <div className="pt-1">
+                                    <p className="text-[10px] text-emerald-400 italic font-mono mb-1 text-center">Surplus Stock Available:</p>
+                                    <div className="space-y-1">
+                                      {excessBranches.map(eb => {
+                                        const donor = branches.find(b => b.id === eb.branchId);
+                                        const recipient = branches.find(b => b.id === currentBranchId) || branches[0];
+                                        return (
+                                          <button
+                                            key={eb.branchId}
+                                            onClick={() => {
+                                              try {
+                                                const items = [{ productId: p.id, quantity: 15 }];
+                                                const reason = `Inter-branch surplus transfer initialized from ${donor?.name} to balanced shortage.`;
+                                                createStockTransfer(eb.branchId, recipient.id, 'Redistribution', items, reason);
+                                                showToastMsg(`Dispatched excess stock rebalance transfer of 15boxes from ${donor?.name}!`, 'success');
+                                              } catch (err) {
+                                                showToastMsg('Failed to dispatch balancing transfer.', 'error');
+                                              }
+                                            }}
+                                            className="w-full py-1 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold rounded-lg text-[9.5px] uppercase transition-all"
+                                          >
+                                            Transfer 15 boxes from surplus {donor?.name}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : currentUser.role === 'Manager' ? (
+                              <div className="space-y-1">
+                                <button 
+                                  onClick={() => {
+                                    showToastMsg(`Manager request submitted: Restock requisition log for ${p.productName} initiated.`, 'info');
+                                    let cart = [];
+                                    try {
+                                      const cached = localStorage.getItem('tp_po_cart');
+                                      cart = cached ? JSON.parse(cached) : [];
+                                    } catch (e) {}
+                                    if (!cart.some(item => item.productId === p.id)) {
+                                      cart.push({ productId: p.id, quantity: 30 });
+                                      localStorage.setItem('tp_po_cart', JSON.stringify(cart));
+                                    }
+                                  }}
+                                  className="w-full py-1.5 bg-m3-primary hover:bg-m3-primary/80 transition-all text-m3-on-primary font-bold rounded-lg text-[10.5px] uppercase cursor-pointer"
+                                >
+                                  Request Restock Order Requisition
+                                </button>
+                                
+                                {excessBranches.length > 0 && (
+                                  <div className="pt-1">
+                                    <p className="text-[10px] text-zinc-400 italic mb-1 text-center">Manage excess transfer option available:</p>
+                                    {excessBranches.map(eb => {
+                                      const donor = branches.find(b => b.id === eb.branchId);
+                                      const recipient = branches.find(b => b.id === currentBranchId) || branches[0];
+                                      return (
+                                        <button
+                                          key={eb.branchId}
+                                          onClick={() => {
+                                            const items = [{ productId: p.id, quantity: 15 }];
+                                            const reason = `Manager request: balancing transfer of ${p.productName} from overstock.`;
+                                            createStockTransfer(eb.branchId, recipient.id, 'Redistribution', items, reason);
+                                            showToastMsg(`BALANCING: Sent request to transfer 15 units from ${donor?.name}.`, 'success');
+                                          }}
+                                          className="w-full py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/25 rounded-md text-[9.5px] uppercase transition-all"
+                                        >
+                                          Pull balancing stock transfer from {donor?.name}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-center text-[10.5px] text-zinc-500 py-1 font-sans italic border border-m3-outline-variant/10 rounded bg-m3-surface-low">
+                                Restricted: Restocking requires Manager or Admin clearance.
+                              </div>
+                            )}
                           </div>
                         </div>
-
-                        <div className="flex items-center justify-between border-t border-zinc-500/10 pt-2 text-[10.5px]">
-                          <span>Current Global Stock: <span className="font-black text-m3-primary font-mono">{p.stockQuantity} boxes</span></span>
-                          <span className="text-zinc-500 font-mono">Min req: {p.minimumStock}</span>
-                        </div>
-
-                        <button 
-                          onClick={() => {
-                            showToastMsg(`Created automatic logistics restock PO request for ${p.productName}! Supplier notified.`, 'success');
-                          }}
-                          className="w-full py-1.5 bg-m3-primary hover:bg-m3-primary/80 transition-all text-m3-on-primary font-bold rounded-lg text-[10.5px] uppercase cursor-pointer"
-                        >
-                          Request Restock Order
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

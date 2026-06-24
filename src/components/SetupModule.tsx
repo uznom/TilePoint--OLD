@@ -74,6 +74,7 @@ export const SetupModule: React.FC = () => {
   const [deployStep, setDeployStep] = useState(0);
   const [terminalLogs, setTerminalLogs] = useState<LogLine[]>([]);
   const [installSuccess, setInstallSuccess] = useState(false);
+  const [installProgress, setInstallProgress] = useState(0);
 
   // Validation
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -123,6 +124,7 @@ export const SetupModule: React.FC = () => {
     setIsDeploying(true);
     setTerminalLogs([]);
     setDeployStep(1);
+    setInstallProgress(5);
 
     const logHistory: LogLine[] = [];
     const addLog = (text: string, type: 'info' | 'success' | 'warn' = 'info') => {
@@ -132,36 +134,44 @@ export const SetupModule: React.FC = () => {
     };
 
     addLog('Initializing local database node for TilePoint POS...', 'info');
+    setInstallProgress(15);
     await new Promise(r => setTimeout(r, 150));
 
-    addLog('✔ Client structures successfully bound to environment parameters.', 'success');
-    addLog('Allocating clean database schema registers...', 'info');
+    addLog('✔ Client storage database bound successfully.', 'success');
+    addLog('Allocating application tables...', 'info');
+    setInstallProgress(30);
     await new Promise(r => setTimeout(r, 150));
 
-    addLog('Designing table mappings for Sales, Product stocks, and Suppliers...', 'info');
+    addLog('Designing database schemas for Products, Sales, Suppliers and Orders...', 'info');
+    setInstallProgress(45);
     await new Promise(r => setTimeout(r, 150));
 
-    addLog('✔ Database structures allocated in client persistent context store.', 'success');
-    addLog(`Generating security keys for admin user [${username}]...`, 'info');
+    addLog('✔ Application data schema instantiated in local storage.', 'success');
+    addLog(`Creating administrator profile [${username}]...`, 'info');
+    setInstallProgress(60);
+    await new Promise(r => setTimeout(r, 150));
+
+    addLog('Generating secure password verification hash...', 'info');
+    setInstallProgress(72);
     await new Promise(r => setTimeout(r, 150));
 
     const salt = username.trim() + '_salt_tok';
-    addLog(`Salting administrator security key using salt index: [${salt}]`, 'info');
-    addLog('Running cryptographic PBKDF2 stretching rounds (2,500 SHA-256 iterations)...', 'info');
-    await new Promise(r => setTimeout(r, 150));
-
     const hashed = await createSaltedHash(password, salt, 2500);
     const token = formatHashToken(salt, hashed, 2500);
-    addLog(`✔ Secure hashed password generated successfully.`, 'success');
+    addLog(`✔ Administrator login token generated successfully.`, 'success');
+    setInstallProgress(85);
     await new Promise(r => setTimeout(r, 150));
 
-    addLog(`Instantiating primary headquarters node: [${branchName}]`, 'info');
+    addLog(`Instantiating main headquarters: [${branchName}]`, 'info');
+    setInstallProgress(92);
     await new Promise(r => setTimeout(r, 150));
 
-    addLog('Logging initial system bootstrap audit event...', 'info');
+    addLog('Registering initial system configurations and branch indices...', 'info');
+    setInstallProgress(97);
     await new Promise(r => setTimeout(r, 150));
 
-    addLog('SUCCESS: System build authenticated. Local database certified.', 'success');
+    addLog('SUCCESS: Installation complete. Local workspace successfully established.', 'success');
+    setInstallProgress(100);
     setInstallSuccess(true);
   };
 
@@ -175,7 +185,7 @@ export const SetupModule: React.FC = () => {
         1600,
         'db',
         undefined,
-        'Deploying secure relational schema matrices...'
+        'Initializing local database and workspace...'
       );
       setupSystem(
         {
@@ -463,10 +473,10 @@ export const SetupModule: React.FC = () => {
                         )}
                         <div className="flex justify-between items-center text-[11px]">
                           <span className="text-zinc-500 font-sans">System Access Key:</span>
-                          <span className="text-zinc-400">•••••••• (min 2,500 PBKDF2 stretching rounds)</span>
+                          <span className="text-zinc-400">•••••••• (Secured encryption)</span>
                         </div>
                         <div className="flex justify-between items-center text-[11px]">
-                          <span className="text-zinc-500 font-sans">Manager pin:</span>
+                          <span className="text-zinc-500 font-sans">Manager PIN:</span>
                           <span className="text-zinc-300 font-mono tracking-widest">{managerPin}</span>
                         </div>
                       </div>
@@ -475,9 +485,9 @@ export const SetupModule: React.FC = () => {
                     <div className="p-3.5 bg-amber-500/5 rounded-xl border border-amber-500/10 flex items-start gap-2.5">
                       <ShieldCheck className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-[10px] font-black text-amber-500 uppercase tracking-wider mb-0.5">Secure Salt Handshake Protocol Active</p>
+                        <p className="text-[10px] font-black text-amber-500 uppercase tracking-wider mb-0.5">Secure Password Encryption Enabled</p>
                         <p className="text-[9.5px] text-zinc-400 leading-relaxed font-sans">
-                          Once confirmed, a salted cryptographic token matching WebCrypto specifications will be generated. The system stores no plaintext user passwords.
+                          The system never stores plaintext credentials. All passwords are converted to secure hashed tokens before saving to local storage.
                         </p>
                       </div>
                     </div>
@@ -535,13 +545,27 @@ export const SetupModule: React.FC = () => {
                 animate={{ opacity: 1 }}
                 className="space-y-5 font-mono"
               >
-                <div className="space-y-1 font-sans">
-                  <h2 className="text-sm font-extrabold text-white flex items-center gap-2">
-                    <Terminal className="h-4 w-4 text-amber-500" />
-                    Deploying Sandbox Environment
-                  </h2>
-                  <p className="text-[11px] text-zinc-400">
-                    Instantiating the localized database mapping matrices and key hashes safely inside localStorage.
+                <div className="space-y-3 font-sans">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-extrabold uppercase tracking-widest text-amber-500 flex items-center gap-2">
+                      <RefreshCw className={`h-3.5 w-3.5 ${!installSuccess ? 'animate-spin' : ''}`} />
+                      {installSuccess ? 'Installation Completed' : 'Setting up your Workspace'}
+                    </span>
+                    <span className="font-mono font-bold text-zinc-300">{installProgress}%</span>
+                  </div>
+                  {/* High Fidelity Progress Bar Container */}
+                  <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
+                    <motion.div
+                      className="h-full bg-gradient-to-r from-amber-500 to-amber-400"
+                      initial={{ width: '0%' }}
+                      animate={{ width: `${installProgress}%` }}
+                      transition={{ duration: 0.15 }}
+                    />
+                  </div>
+                  <p className="text-[10.5px] text-zinc-400 leading-normal">
+                    {installSuccess 
+                      ? 'Local branch and database environment have been successfully created and secured.' 
+                      : 'Configuring storage adapters, database indices, and creating administrative security profiles...'}
                   </p>
                 </div>
 
@@ -558,7 +582,7 @@ export const SetupModule: React.FC = () => {
                   {!installSuccess && (
                      <div className="flex items-center gap-2 text-zinc-500 animate-pulse pt-1">
                        <RefreshCw className="h-3.5 w-3.5 animate-spin text-amber-500" />
-                       <span>PROCESSING CLIENT HANDSHAKE INTEGRATION SEQUENCE...</span>
+                       <span>CONFIGURING SYSTEM REPOSITORIES...</span>
                      </div>
                   )}
                 </div>
@@ -573,7 +597,7 @@ export const SetupModule: React.FC = () => {
                     <div>
                       <p className="text-xs font-black text-emerald-400 uppercase tracking-widest">Active Installation Completed</p>
                       <p className="text-[10px] text-zinc-300 leading-normal">
-                        All branch database registers have been established and configured with dynamic SHA-256 tokens.
+                        Branch database was created successfully with a secure superadministrator profile.
                       </p>
                     </div>
                   </motion.div>

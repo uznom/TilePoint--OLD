@@ -108,20 +108,37 @@ body {
   transition: background-color 300ms cubic-bezier(0.2, 0, 0, 1), color 300ms cubic-bezier(0.2, 0, 0, 1);
 }
 
-/* Custom Scrollbars in Material 3 Style */
+/* Custom Scrollbars in Material 3 Style - Luxury, Low-profile & Fully Styled */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--m3-outline-variant) transparent;
+}
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
+  border-radius: 99px;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--m3-outline-variant);
+  background: color-mix(in srgb, var(--m3-outline-variant) 65%, transparent);
   border-radius: 99px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 250ms cubic-bezier(0.2, 0, 0, 1);
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--m3-outline);
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 /* Material 3 Card Bases - Solid and comfortable in Light Mode, Glassmorphic in Dark Mode */
@@ -416,33 +433,73 @@ body {
   border-color: var(--m3-outline);
 }
 
-/* Material 3 Input Field Style */
-.m3-input {
+/* Material 3 Input Field Style & Unified System Inputs */
+.m3-input,
+input[type="text"]:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent):not(.border-0):not(.un-m3-input):not(.sr-only),
+input[type="number"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+input[type="email"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+input[type="password"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+input[type="tel"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+input[type="search"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+input[type="date"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+select:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+textarea:not(.bg-transparent):not(.border-0):not(.un-m3-input) {
   width: 100%;
-  padding: 0.75rem 1rem;
-  border-radius: 12px;
-  background-color: var(--m3-surface-container-lowest);
-  color: var(--m3-on-surface);
-  border: 1.5px solid var(--m3-outline);
-  box-shadow: inset 0 1.5px 3px rgba(16, 24, 40, 0.04);
-  font-size: 0.875rem;
-  transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
+  padding: 0.625rem 0.875rem;
+  border-radius: 12px !important;
+  background-color: var(--m3-surface-container-lowest) !important;
+  color: var(--m3-on-surface) !important;
+  border: 1.5px solid var(--m3-outline-variant) !important;
+  box-shadow: inset 0 1.5px 3px rgba(16, 24, 40, 0.04) !important;
+  font-size: 0.825rem !important;
+  transition: all 200ms cubic-bezier(0.2, 0, 0, 1) !important;
 }
-.m3-input:focus {
-  outline: none;
-  border-color: var(--m3-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--m3-primary) 15%, transparent);
-  background-color: var(--m3-surface-container-lowest);
+
+.m3-input:focus,
+input[type="text"]:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent):not(.border-0):not(.un-m3-input):not(.sr-only):focus,
+input[type="number"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+input[type="email"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+input[type="password"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+input[type="tel"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+input[type="search"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+input[type="date"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+select:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+textarea:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus {
+  outline: none !important;
+  border-color: var(--m3-primary) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--m3-primary) 15%, transparent), inset 0 1.5px 3px rgba(16, 24, 40, 0.04) !important;
+  background-color: var(--m3-surface-container-lowest) !important;
 }
-.dark .m3-input {
-  background-color: var(--m3-surface-container-lowest);
-  border-color: var(--m3-outline-variant);
-  box-shadow: inset 0 1.5px 3px rgba(0, 0, 0, 0.4);
+
+.dark .m3-input,
+.dark input[type="text"]:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent):not(.border-0):not(.un-m3-input):not(.sr-only),
+.dark input[type="number"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+.dark input[type="email"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+.dark input[type="password"]:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent):not(.border-0):not(.un-m3-input),
+.dark input[type="tel"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+.dark input[type="search"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+.dark input[type="date"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+.dark select:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+.dark textarea:not(.bg-transparent):not(.border-0):not(.un-m3-input) {
+  background-color: var(--m3-surface-container-lowest) !important;
+  border-color: var(--m3-outline-variant) !important;
+  box-shadow: inset 0 1.5px 3px rgba(0, 0, 0, 0.4) !important;
+  color: #f8fafc !important;
 }
-.dark .m3-input:focus {
-  background-color: var(--m3-surface-container-low);
-  border-color: var(--m3-primary);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--m3-primary) 30%, transparent);
+
+.dark .m3-input:focus,
+.dark input[type="text"]:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent):not(.border-0):not(.un-m3-input):not(.sr-only):focus,
+.dark input[type="number"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+.dark input[type="email"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+.dark input[type="password"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+.dark input[type="tel"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+.dark input[type="search"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+.dark input[type="date"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+.dark select:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+.dark textarea:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus {
+  background-color: var(--m3-surface-container-low) !important;
+  border-color: var(--m3-primary) !important;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--m3-primary) 30%, transparent), inset 0 1.5px 3px rgba(0, 0, 0, 0.4) !important;
 }
 
 /* FAB (Floating Action Button) styling */
@@ -678,6 +735,32 @@ table thead tr th:last-child {
 .scrollbar-none {
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
+}
+
+/* Custom scrollbar-thin utility to override custom scrollbar styles or explicitly request modern slim scrollbars */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px !important;
+  height: 4px !important;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.25) !important;
+  border-radius: 99px !important;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.45) !important;
+}
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+.scrollbar-thin {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(156, 163, 175, 0.25) transparent !important;
 }
 
 /* ========================================================

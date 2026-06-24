@@ -10,6 +10,7 @@ import {
   UserRole,
   Branch,
   Supplier,
+  Brand,
   Product,
   PurchaseOrder,
   PurchaseOrderItem,
@@ -33,6 +34,79 @@ import {
   DeliveryStatus,
   DamageLog
 } from '../types/db';
+
+// Self-healing LocalStorage Interceptor to prevent QuotaExceededError crashes
+if (typeof window !== 'undefined' && window.localStorage) {
+  const originalSetItem = window.localStorage.setItem;
+  window.localStorage.setItem = function (key, value) {
+    try {
+      originalSetItem.call(window.localStorage, key, value);
+    } catch (error: any) {
+      if (
+        error.name === 'QuotaExceededError' ||
+        error.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+        error.code === 22
+      ) {
+        console.warn(`[System Guard] LocalStorage quota exceeded for key "${key}". Attempting automated self-heal/pruning...`);
+        let purgedSomething = false;
+        
+        // 1. Core self-heal: Prune simulation db backup snapshots first (since they consume ~80% of storage)
+        try {
+          const cachedSnapshotsStr = window.localStorage.getItem('tp_db_snapshots');
+          if (cachedSnapshotsStr) {
+            const snapshots = JSON.parse(cachedSnapshotsStr);
+            if (Array.isArray(snapshots) && snapshots.length > 0) {
+              console.log('[System Guard] Self-healing: Reducing snapshot catalog size to prevent render failure...');
+              if (snapshots.length > 1) {
+                // Keep only the most recent snapshot to clear space
+                originalSetItem.call(window.localStorage, 'tp_db_snapshots', JSON.stringify(snapshots.slice(0, 1)));
+              } else {
+                // Remove all snapshots completely if space is still needed
+                window.localStorage.removeItem('tp_db_snapshots');
+              }
+              purgedSomething = true;
+            }
+          }
+        } catch (e) {
+          console.error('[System Guard] Failed to prune tp_db_snapshots:', e);
+        }
+
+        // 2. Secondary self-heal: Prune older large histories (audit logs, movements, etc.)
+        if (!purgedSomething || key !== 'tp_db_snapshots') {
+          const largeKeysToPrune = ['tp_audit_logs', 'tp_movements', 'tp_sales', 'tp_damage_logs'];
+          for (const pruneKey of largeKeysToPrune) {
+            try {
+              const cachedStr = window.localStorage.getItem(pruneKey);
+              if (cachedStr) {
+                const parsed = JSON.parse(cachedStr);
+                if (Array.isArray(parsed) && parsed.length > 25) {
+                  console.log(`[System Guard] Self-healing: Trimming oldest entries from key "${pruneKey}" to free up space.`);
+                  originalSetItem.call(window.localStorage, pruneKey, JSON.stringify(parsed.slice(0, 25)));
+                  purgedSomething = true;
+                }
+              }
+            } catch (e) {
+              // Ignore
+            }
+          }
+        }
+
+        // 3. Retry the original write operation after cleaning up
+        try {
+          originalSetItem.call(window.localStorage, key, value);
+          console.log(`[System Guard] Self-healing SUCCESS: Saved key "${key}" after pruning storage layout.`);
+          return;
+        } catch (retryError) {
+          console.error(`[System Guard] Critical Storage Fail: Unable to save "${key}" even after pruning. Suppressing crash.`, retryError);
+          // Return without throwing to protect application runtime state of active view
+          return;
+        }
+      }
+      // Re-throw other unexpected localStorage exceptions
+      throw error;
+    }
+  };
+}
 
 interface SummaryStats {
   totalProducts: number;
@@ -76,6 +150,7 @@ interface DbContextType {
   users: User[];
   branches: Branch[];
   suppliers: Supplier[];
+  brands: Brand[];
   products: Product[];
   purchaseOrders: PurchaseOrder[];
   poItems: PurchaseOrderItem[];
@@ -105,6 +180,11 @@ interface DbContextType {
   updateSupplier: (id: string, updates: Partial<Supplier>) => void;
   deleteSupplier: (id: string) => void;
 
+  // Actions - Brands
+  createBrand: (brand: Omit<Brand, 'id' | 'createdAt' | 'isDeleted'>) => Brand;
+  updateBrand: (id: string, updates: Partial<Brand>) => void;
+  deleteBrand: (id: string) => void;
+
   // Actions - Products
   createProduct: (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'qrCode' | 'createdBy' | 'updatedBy'>) => Product;
   updateProduct: (id: string, updates: Partial<Product>, customLogReason?: string) => void;
@@ -132,7 +212,7 @@ interface DbContextType {
   getShiftReportStats: (shift: Shift) => { salesCount: number; salesTotal: number; vatTotal: number; discountTotal: number; netTotal: number };
 
   // Actions - Purchase Orders
-  createPO: (supplierId: string, branchId: string, items: { productId: string; costPrice: number; quantityRequested: number }[], notes?: string) => void;
+  createPO: (supplierId: string, branchId: string, items: { productId: string; costPrice: number; quantityRequested: number }[], notes?: string, status?: POStatus) => void;
   updatePOStatus: (id: string, status: POStatus) => void;
   receivePOItems: (id: string, receivedMap: Record<string, number>) => void; // productId -> qty
 
@@ -416,6 +496,17 @@ const SEED_SUPPLIERS: Supplier[] = [
     createdAt: new Date('2026-01-20T08:00:00Z').toISOString(),
     isDeleted: false
   }
+];
+
+const SEED_BRANDS: Brand[] = [
+  { id: 'BND-1', name: 'Mariwasa', supplierId: 'S1', description: 'Premium decorative ceramic & porcelain floor tiles', isDeleted: false, createdAt: new Date('2026-01-01T08:00:00Z').toISOString() },
+  { id: 'BND-2', name: 'Lepanto', supplierId: 'S1', description: 'Vibrant and heavy-duty tiles', isDeleted: false, createdAt: new Date('2026-01-01T08:00:00Z').toISOString() },
+  { id: 'BND-3', name: 'Pioneer', supplierId: 'S1', description: 'Standard high-grade ceramics', isDeleted: false, createdAt: new Date('2026-01-01T08:00:00Z').toISOString() },
+  { id: 'BND-4', name: 'Kito', supplierId: 'S2', description: 'Architectural tiles and slab design collections', isDeleted: false, createdAt: new Date('2026-01-05T08:00:00Z').toISOString() },
+  { id: 'BND-5', name: 'Premium Ceramics', supplierId: 'S2', description: 'Glossy white polished and modern matte finishes', isDeleted: false, createdAt: new Date('2026-01-05T08:00:00Z').toISOString() },
+  { id: 'BND-6', name: 'TilePoint Premium', supplierId: 'S3', description: 'In-house luxury marble-effect porcelain slabs', isDeleted: false, createdAt: new Date('2026-01-10T08:00:00Z').toISOString() },
+  { id: 'BND-7', name: 'TilePoint Standard', supplierId: 'S3', description: 'Affordable commercial porcelain tiles', isDeleted: false, createdAt: new Date('2026-01-10T08:00:00Z').toISOString() },
+  { id: 'BND-8', name: 'ClayWorks', supplierId: 'S4', description: 'Handcrafted terracotta and clay tiles', isDeleted: false, createdAt: new Date('2026-01-15T08:00:00Z').toISOString() }
 ];
 
 const SEED_PRODUCTS: Product[] = [
@@ -1224,6 +1315,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     return safeParse<Supplier[]>('tp_suppliers', SEED_SUPPLIERS);
   });
 
+  const [brands, setBrands] = useState<Brand[]>(() => {
+    const isSetup = typeof window !== 'undefined' && localStorage.getItem('tilepoint_onboarded_setup') === 'true';
+    if (!isSetup) return [];
+    return safeParse<Brand[]>('tp_brands', SEED_BRANDS);
+  });
+
   const [products, setProducts] = useState<Product[]>(() => {
     const isSetup = typeof window !== 'undefined' && localStorage.getItem('tilepoint_onboarded_setup') === 'true';
     if (!isSetup) return [];
@@ -1478,8 +1575,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
         // Update snapshots state cleanly
         setDbSnapshots(prev => {
-          const updated = [newSnapshot, ...prev];
-          localStorage.setItem('tp_db_snapshots', JSON.stringify(updated));
+          const updated = [newSnapshot, ...prev].slice(0, 2);
+          try {
+            localStorage.setItem('tp_db_snapshots', JSON.stringify(updated));
+          } catch (e) {
+            console.error('[System Guard] Failed to save tp_db_snapshots to localStorage:', e);
+          }
           return updated;
         });
 
@@ -1556,6 +1657,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     localStorage.setItem('tp_users', JSON.stringify(users));
     localStorage.setItem('tp_branches', JSON.stringify(branches));
     localStorage.setItem('tp_suppliers', JSON.stringify(suppliers));
+    localStorage.setItem('tp_brands', JSON.stringify(brands));
     localStorage.setItem('tp_products', JSON.stringify(products));
     localStorage.setItem('tp_purchase_orders', JSON.stringify(purchaseOrders));
     localStorage.setItem('tp_po_items', JSON.stringify(poItems));
@@ -1624,9 +1726,13 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       data: dataStr
     };
     
-    const updatedSnapshots = [newSnapshot, ...dbSnapshots];
+    const updatedSnapshots = [newSnapshot, ...dbSnapshots].slice(0, 2);
     setDbSnapshots(updatedSnapshots);
-    localStorage.setItem('tp_db_snapshots', JSON.stringify(updatedSnapshots));
+    try {
+      localStorage.setItem('tp_db_snapshots', JSON.stringify(updatedSnapshots));
+    } catch (e) {
+      console.error('[System Guard] Failed to save manual tp_db_snapshots:', e);
+    }
 
     addAuditLog('DB_BACKUP_CREATE', `Created manual backup snapshot: ${newSnapshot.name}`, 'SYSTEM', id);
   };
@@ -1722,7 +1828,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     }
     const updated = dbSnapshots.filter(s => s.id !== snapshotId);
     setDbSnapshots(updated);
-    localStorage.setItem('tp_db_snapshots', JSON.stringify(updated));
+    try {
+      localStorage.setItem('tp_db_snapshots', JSON.stringify(updated));
+    } catch (e) {
+      console.error('[System Guard] Failed to update snapshots on delete:', e);
+    }
     addAuditLog('DB_BACKUP_DELETE', `Deleted backup snapshot key: ${snapshotId}`, 'SYSTEM', snapshotId);
   };
 
@@ -1742,6 +1852,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   useEffect(() => {
     saveToStorageWithDebounce('tp_suppliers', suppliers);
   }, [suppliers]);
+
+  useEffect(() => {
+    saveToStorageWithDebounce('tp_brands', brands);
+  }, [brands]);
 
   useEffect(() => {
     saveToStorageWithDebounce('tp_products', products);
@@ -3454,6 +3568,31 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     addAuditLog('SUPPLIER_DELETE', `Soft-deleted supplier ID ${id}`, 'Suppliers', id);
   };
 
+  // BRANDS
+  const createBrand = (brandFields: Omit<Brand, 'id' | 'createdAt' | 'isDeleted'>): Brand => {
+    const newBrand: Brand = {
+      ...brandFields,
+      name: sanitizeInputText(brandFields.name),
+      description: brandFields.description ? sanitizeInputText(brandFields.description) : '',
+      id: `BND-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      isDeleted: false,
+    };
+    setBrands(prev => [...prev, newBrand]);
+    addAuditLog('BRAND_CREATE', `Created brand ${newBrand.name}`, 'Brands', newBrand.id);
+    return newBrand;
+  };
+
+  const updateBrand = (id: string, updates: Partial<Brand>) => {
+    setBrands(prev => prev.map(b => (b.id === id ? { ...b, ...updates } : b)));
+    addAuditLog('BRAND_UPDATE', `Updated brand properties for ID: ${id}`, 'Brands', id);
+  };
+
+  const deleteBrand = (id: string) => {
+    setBrands(prev => prev.map(b => (b.id === id ? { ...b, isDeleted: true } : b)));
+    addAuditLog('BRAND_DELETE', `Soft-deleted brand ID: ${id}`, 'Brands', id);
+  };
+
   // PRODUCTS
   const createProduct = (prodFields: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'qrCode' | 'createdBy' | 'updatedBy'>) => {
     const newId = `P-${Date.now()}`;
@@ -3566,29 +3705,48 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const importProducts = (imported: Product[]) => {
     try {
       const sanitized = imported.map((p, i) => {
-        const productCode = sanitizeInputText(p.productCode) || `TL-IMP-${Date.now()}-${i}`;
+        const barcode = sanitizeInputText(p.barcode) || `BAR-${Date.now()}-${i}`;
+        const productCode = sanitizeInputText(p.productCode) || barcode || `TL-IMP-${Date.now()}-${i}`;
+        const pName = sanitizeInputText(p.productName) || 'Unnamed Imported Product';
+
+        // Extrapolate size if not set e.g. from productName "20X30 # SENEPA BEIGE"
+        let size = sanitizeInputText(p.size);
+        if (!size && pName) {
+          const sizeMatch = pName.match(/(\d+(?:\.\d+)?)\s*[xX]\s*(\d+(?:\.\d+)?)/);
+          if (sizeMatch) {
+            size = `${sizeMatch[1]}x${sizeMatch[2]} cm`;
+          }
+        }
+        if (!size) {
+          const catLower = (p.category || '').toLowerCase();
+          const isTile = catLower.includes('tile') || catLower.includes('slab') || catLower.includes('stone');
+          size = isTile ? '60x60 cm' : 'N/A';
+        }
+
+        const sku = sanitizeInputText(p.sku) || (barcode ? `SKU-${barcode}` : `SKU-IMP-${Date.now()}-${i}`);
+
         return {
           ...p,
           id: p.id || `P-IMPORT-${Date.now()}-${i}`,
           productCode,
-          productName: sanitizeInputText(p.productName) || 'Unnamed Imported Product',
-          sku: sanitizeInputText(p.sku) || `SKU-IMP-${Date.now()}-${i}`,
-          barcode: sanitizeInputText(p.barcode) || `BAR-${Date.now()}-${i}`,
+          productName: pName,
+          sku,
+          barcode,
           qrCode: p.qrCode || `TP-${productCode}`,
           category: sanitizeInputText(p.category) || 'Porcelain Tiles',
           brand: sanitizeInputText(p.brand) || 'Generic',
-          size: sanitizeInputText(p.size) || '60x60 cm',
-          designName: sanitizeInputText(p.designName) || 'Standard Design',
+          size,
+          designName: sanitizeInputText(p.designName) || pName,
           supplierId: sanitizeInputText(p.supplierId) || 'central',
           unit: sanitizeInputText(p.unit) || 'Boxes',
           origin: p.origin ? sanitizeInputText(p.origin) : undefined,
 
-          boxQuantity: sanitizeAndValidateNumber(p.boxQuantity, 1),
+          boxQuantity: sanitizeAndValidateNumber(p.boxQuantity || (size !== 'N/A' ? 4 : 1), 1),
           coveragePerBox: p.coveragePerBox !== undefined ? sanitizeAndValidateNumber(p.coveragePerBox, 1) : undefined,
           costPrice: sanitizeAndValidateNumber(p.costPrice),
           sellingPrice: sanitizeAndValidateNumber(p.sellingPrice),
           stockQuantity: Math.round(sanitizeAndValidateNumber(p.stockQuantity)),
-          minimumStock: Math.round(sanitizeAndValidateNumber(p.minimumStock, 10)),
+          minimumStock: Math.round(sanitizeAndValidateNumber(p.minimumStock, 0)),
 
           createdAt: p.createdAt || new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -3936,7 +4094,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   // PURCHASE ORDERS
-  const createPO = (supplierId: string, branchId: string, itemInputs: { productId: string; costPrice: number; quantityRequested: number }[], notes?: string) => {
+  const createPO = (supplierId: string, branchId: string, itemInputs: { productId: string; costPrice: number; quantityRequested: number }[], notes?: string, status?: POStatus) => {
     const poId = `PO-${Date.now()}`;
     
     // Find maximum numeric sequence suffix or total count of existing purchase orders to increment
@@ -3957,7 +4115,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       poNumber: poNum,
       supplierId,
       branchId,
-      status: 'Pending' as POStatus,
+      status: (status || 'Pending') as POStatus,
       requestedBy: currentUser.fullName,
       date: new Date().toISOString().slice(0, 10),
       notes,
@@ -4343,6 +4501,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         users,
         branches,
         suppliers,
+        brands,
         products,
         purchaseOrders,
         poItems,
@@ -4365,6 +4524,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         createSupplier,
         updateSupplier,
         deleteSupplier,
+        createBrand,
+        updateBrand,
+        deleteBrand,
         createProduct,
         updateProduct,
         deleteProduct,

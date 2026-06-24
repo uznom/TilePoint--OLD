@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useDb } from '../context/DbContext';
 import { Sparkles, Database, Upload, Play, CheckCircle, HelpCircle, ArrowRight, Save, Plus, X } from 'lucide-react';
 import { Product } from '../types/db';
@@ -7,10 +7,100 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
   const db = useDb();
   
   // Local wizard navigation
-  // 'welcome' -> 'question' -> 'yes_migrate' | 'no_enter' | 'blank_confirm'
-  const [step, setStep] = useState<'welcome' | 'question' | 'yes_migrate' | 'no_enter' | 'blank_confirm'>('welcome');
+  // 'welcome' -> 'question' -> 'yes_migrate' | 'no_enter' | 'blank_confirm' | 'configure_branches'
+  const [step, setStep] = useState<'welcome' | 'question' | 'yes_migrate' | 'no_enter' | 'blank_confirm' | 'configure_branches'>('welcome');
   const [rawImportText, setRawImportText] = useState('');
   const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
+  const [isDragging, setIsDragging] = useState(false);
+  const [pendingProducts, setPendingProducts] = useState<Product[]>([]);
+  
+  interface PendingBranch {
+    name: string;
+    manager: string;
+    address: string;
+    phone: string;
+    isDistributionBranch: boolean;
+    staffCount: number;
+  }
+  const [pendingBranches, setPendingBranches] = useState<PendingBranch[]>([]);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processSelectedFile(file);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processSelectedFile(file);
+    }
+  };
+
+  const processSelectedFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (text) {
+        setRawImportText(text);
+        setImportStatus({
+          type: 'success',
+          message: `Successfully loaded "${file.name}" (${(file.size / 1024).toFixed(1)} KB) - Review items and Migrate!`
+        });
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleCompleteWithBranches = () => {
+    const invalid = pendingBranches.some(b => !b.manager.trim() || !b.address.trim() || !b.phone.trim());
+    if (invalid) {
+      setImportStatus({
+        type: 'error',
+        message: 'Please complete all details (Manager, Address, Phone) for each newly detected branch location.'
+      });
+      return;
+    }
+
+    pendingBranches.forEach(b => {
+      db.createBranch({
+        name: b.name,
+        manager: b.manager,
+        address: b.address,
+        phone: b.phone,
+        monthlySales: 0,
+        staffCount: b.staffCount,
+        activeCashiers: 1,
+        isDistributionBranch: b.isDistributionBranch
+      });
+    });
+
+    localStorage.setItem('tp_products', JSON.stringify(pendingProducts));
+    localStorage.setItem('tilepoint_onboarded_setup', 'true');
+
+    setImportStatus({
+      type: 'success',
+      message: `Successfully registered ${pendingBranches.length} branches and migrated ${pendingProducts.length} listings!`
+    });
+
+    setTimeout(() => {
+      window.location.reload();
+    }, 1500);
+  };
   
   // Single product registration form states
   const [newProdName, setNewProdName] = useState('');
@@ -159,6 +249,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
           'tile name': 'productName',
           'tile': 'productName',
           'item name': 'productName',
+          'product': 'productName',
           'product code': 'productCode',
           'product_code': 'productCode',
           'code': 'productCode',
@@ -179,12 +270,17 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
           'cost': 'costPrice',
           'cost price': 'costPrice',
           'cost_price': 'costPrice',
+          'p price': 'costPrice',
+          'p_price': 'costPrice',
+          'purchase price': 'costPrice',
           'selling price': 'sellingPrice',
           'selling_price': 'sellingPrice',
           'selling': 'sellingPrice',
           'price': 'sellingPrice',
           'rate': 'sellingPrice',
           'retail': 'sellingPrice',
+          's price': 'sellingPrice',
+          's_price': 'sellingPrice',
           'size': 'size',
           'dimensions': 'size',
           'dimension': 'size',
@@ -197,6 +293,8 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
           'minimum stock': 'minimumStock',
           'min_stock': 'minimumStock',
           'minimum_stock': 'minimumStock',
+          'alert level': 'minimumStock',
+          'alert_level': 'minimumStock',
           'design': 'designName',
           'design name': 'designName',
           'design_name': 'designName',
@@ -207,7 +305,9 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
           'uom': 'unit',
           'box qty': 'boxQuantity',
           'box quantity': 'boxQuantity',
-          'box_quantity': 'boxQuantity'
+          'box_quantity': 'boxQuantity',
+          'location': 'origin',
+          'origin': 'origin'
         };
 
         parsed = csvRows.map(row => {
@@ -234,43 +334,88 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
 
       if (parsed.length > 0) {
         // Build clean Product array with necessary UUID handles & fallback defaults
-        const cleanProducts: Product[] = parsed.map((item, idx) => ({
-          id: item.id || `P-IMPORT-${Math.random().toString(36).substring(2, 9)}`,
-          productCode: item.productCode || `PC-MIG-${idx + 1}`,
-          sku: item.sku || `SKU-MIG-${idx + 1}`,
-          barcode: item.barcode || `480MIG000${idx + 1}`,
-          qrCode: item.qrCode || `URL:MIG-${idx + 1}`,
-          designName: item.designName || item.productName || 'Imported Design',
-          productName: item.productName || 'Imported Legacy Tile',
-          category: item.category || 'Ceramic Tiles',
-          brand: item.brand || 'Generic',
-          supplierId: item.supplierId || 'S1',
-          unit: item.unit || 'Boxes',
-          size: item.size || '60x60 cm',
-          boxQuantity: item.boxQuantity || 4,
-          coveragePerBox: item.coveragePerBox || 1.44,
-          costPrice: Number(item.costPrice) || 120,
-          sellingPrice: Number(item.sellingPrice) || 200,
-          stockQuantity: Number(item.stockQuantity) || 100,
-          minimumStock: Number(item.minimumStock) || 15,
-          isDeleted: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          createdBy: 'system-initial',
-          updatedBy: 'system-initial'
-        }));
+        const cleanProducts: Product[] = parsed.map((item, idx) => {
+          const barcode = item.barcode || `480MIG000${idx + 1}`;
+          const brand = item.brand || 'Generic';
+          const pName = item.productName || 'Imported Legacy Tile';
+          
+          // Extrapolate size if not set e.g. from productName "20X30 # SENEPA BEIGE"
+          let size = item.size;
+          if (!size && pName) {
+            const sizeMatch = pName.match(/(\d+(?:\.\d+)?)\s*[xX]\s*(\d+(?:\.\d+)?)/);
+            if (sizeMatch) {
+              size = `${sizeMatch[1]}x${sizeMatch[2]} cm`;
+            }
+          }
+          if (!size) {
+            const catLower = (item.category || '').toLowerCase();
+            const isTile = catLower.includes('tile') || catLower.includes('slab') || catLower.includes('stone');
+            size = isTile ? '60x60 cm' : 'N/A';
+          }
 
-        localStorage.setItem('tp_products', JSON.stringify(cleanProducts));
-        localStorage.setItem('tilepoint_onboarded_setup', 'true');
-        
-        setImportStatus({
-          type: 'success',
-          message: `Succesfully parsed and loaded ${cleanProducts.length} Tile Products. Priming system...`
+          const productCode = item.productCode || barcode || `PC-MIG-${idx + 1}`;
+          const sku = item.sku || (barcode ? `SKU-${barcode}` : `SKU-MIG-${idx + 1}`);
+
+          return {
+            id: item.id || `P-IMPORT-${Math.random().toString(36).substring(2, 9)}`,
+            productCode,
+            sku,
+            barcode,
+            qrCode: item.qrCode || `URL:MIG-${idx + 1}`,
+            designName: item.designName || pName,
+            productName: pName,
+            category: item.category || 'Porcelain Tiles',
+            brand,
+            supplierId: item.supplierId || 'S1',
+            unit: item.unit || 'PCS',
+            size,
+            boxQuantity: item.boxQuantity || (size !== 'N/A' ? 4 : 1),
+            coveragePerBox: item.coveragePerBox || (size !== 'N/A' ? 1.44 : undefined),
+            costPrice: Number(item.costPrice) || 0,
+            sellingPrice: Number(item.sellingPrice) || 0,
+            stockQuantity: Number(item.stockQuantity) || 0,
+            minimumStock: Number(item.minimumStock) || 0,
+            origin: item.origin || undefined,
+            isDeleted: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            createdBy: 'system-initial',
+            updatedBy: 'system-initial'
+          };
         });
 
-        setTimeout(() => {
-          window.location.reload();
-        }, 1200);
+        // Auto-detect new locations/branches from imported product origin data
+        const uniqueLocations = Array.from(new Set(
+          cleanProducts.map(p => p.origin?.trim()).filter(Boolean)
+        )) as string[];
+
+        const existingBranchNames = (db.branches || []).filter(b => !b.isDeleted).map(b => b.name.toLowerCase().trim());
+        const newLocations = uniqueLocations.filter(loc => !existingBranchNames.includes(loc.toLowerCase().trim()));
+
+        if (newLocations.length > 0) {
+          setPendingProducts(cleanProducts);
+          setPendingBranches(newLocations.map(name => ({
+            name,
+            manager: 'Operational Branch Manager',
+            address: 'Region Branch Site, Dipolog City',
+            phone: '+63 920 123 4567',
+            isDistributionBranch: false,
+            staffCount: 3
+          })));
+          setStep('configure_branches');
+        } else {
+          localStorage.setItem('tp_products', JSON.stringify(cleanProducts));
+          localStorage.setItem('tilepoint_onboarded_setup', 'true');
+          
+          setImportStatus({
+            type: 'success',
+            message: `Successfully parsed and loaded ${cleanProducts.length} Tile Products. Priming system...`
+          });
+
+          setTimeout(() => {
+            window.location.reload();
+          }, 1200);
+        }
 
       } else {
         setImportStatus({ type: 'error', message: 'No valid records parsed from data payload.' });
@@ -469,14 +614,44 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
               </button>
             </div>
 
-            <div className="space-y-1">
-              <textarea
-                value={rawImportText}
-                onChange={(e) => setRawImportText(e.target.value)}
-                rows={7}
-                placeholder={`Product Name,Product Code,Cost Price,Selling Price,Quantity,Category\n"Legacy Premium Marble",L-PM-01,150,220,100,"Marble"\n"Eco Slate Tile",E-SL-02,80,130,150,"Porcelain"`}
-                className="w-full bg-slate-950 border border-slate-800 p-3 text-xs font-mono text-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all placeholder:text-slate-600 leading-normal"
-              />
+            <div className="space-y-3">
+              <div 
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`p-6 border-2 border-dashed rounded-2xl text-center space-y-2 transition-all cursor-pointer ${
+                  isDragging 
+                    ? 'border-indigo-400 bg-indigo-500/10' 
+                    : 'border-slate-800 hover:border-slate-700 bg-slate-900/50'
+                }`}
+              >
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileSelect} 
+                  className="hidden" 
+                  accept=".csv,.json,.txt"
+                />
+                <Upload className="h-6 w-6 text-indigo-400 mx-auto animate-bounce" />
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wide text-slate-200">Drag &amp; Drop Old POS File Here</p>
+                  <p className="text-[10px] text-slate-400 mt-1 select-none">
+                    Drop your spreadsheet .csv or database backup .json file, or click inside to browse computer
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 pl-1 block">Or Paste Raw Clipboard text below:</span>
+                <textarea
+                  value={rawImportText}
+                  onChange={(e) => setRawImportText(e.target.value)}
+                  rows={6}
+                  placeholder={`Product Name,Product Code,Cost Price,Selling Price,Quantity,Category\n"Legacy Premium Marble",L-PM-01,150,220,100,"Marble"\n"Eco Slate Tile",E-SL-02,80,130,150,"Porcelain"`}
+                  className="w-full bg-slate-950 border border-slate-800 p-3 text-xs font-mono text-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all placeholder:text-slate-600 leading-normal"
+                />
+              </div>
             </div>
 
             {importStatus.type && (
@@ -636,6 +811,146 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
                 className="py-2.5 px-5 bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white font-black text-[11px] tracking-wider uppercase rounded-xl shadow-lg shadow-indigo-500/15 transition-all cursor-pointer"
               >
                 Launch Empty POS
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 'configure_branches' && (
+          <div className="space-y-5 animate-fade-in text-slate-100 text-left max-h-[70vh] overflow-y-auto pr-2">
+            <div className="space-y-1 text-center sm:text-left">
+              <h3 className="text-lg font-black uppercase tracking-wider text-amber-400 flex items-center justify-center sm:justify-start gap-2">
+                📍 New Branch Outlets Detected!
+              </h3>
+              <p className="text-xs text-slate-400">
+                We found locations in your imported database that are not yet created in TilePoint. Please fill in their operational details to complete the migration:
+              </p>
+            </div>
+
+            <div className="space-y-4 pt-2">
+              {pendingBranches.map((pb, idx) => (
+                <div key={idx} className="p-4 rounded-2xl bg-slate-900/85 border border-slate-800 space-y-3">
+                  <div className="pb-2 border-b border-slate-800 flex justify-between items-center">
+                    <span className="text-xs font-black uppercase tracking-wider text-amber-400">
+                      🏢 Detected Branch {idx + 1}: {pb.name}
+                    </span>
+                    <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono font-bold">Import Location</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-slate-400 block pl-1">Manager In Charge *</label>
+                      <input
+                        type="text"
+                        value={pb.manager}
+                        onChange={(e) => {
+                          const updated = [...pendingBranches];
+                          updated[idx].manager = e.target.value;
+                          setPendingBranches(updated);
+                        }}
+                        required
+                        className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 focus:outline-none text-slate-200 transition-colors"
+                        placeholder="e.g. Maria Clara"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-slate-400 block pl-1">Branch Contact Number *</label>
+                      <input
+                        type="text"
+                        value={pb.phone}
+                        onChange={(e) => {
+                          const updated = [...pendingBranches];
+                          updated[idx].phone = e.target.value;
+                          setPendingBranches(updated);
+                        }}
+                        required
+                        className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 focus:outline-none text-slate-200 transition-colors"
+                        placeholder="e.g. +63 920 123 4567"
+                      />
+                    </div>
+
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="text-[10px] font-bold uppercase text-slate-400 block pl-1">Full Dispatch Address *</label>
+                      <input
+                        type="text"
+                        value={pb.address}
+                        onChange={(e) => {
+                          const updated = [...pendingBranches];
+                          updated[idx].address = e.target.value;
+                          setPendingBranches(updated);
+                        }}
+                        required
+                        className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 focus:outline-none text-slate-200 transition-colors"
+                        placeholder="e.g. Rizal Ave, Central District, Dipolog Main Branch"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <input
+                        type="checkbox"
+                        id={`wizard-dist-hub-${idx}`}
+                        checked={pb.isDistributionBranch}
+                        onChange={(e) => {
+                          const updated = [...pendingBranches];
+                          updated[idx].isDistributionBranch = e.target.checked;
+                          setPendingBranches(updated);
+                        }}
+                        className="rounded border-slate-800 focus:ring-opacity-50 text-indigo-500"
+                      />
+                      <label htmlFor={`wizard-dist-hub-${idx}`} className="text-[10px] text-slate-300 font-bold uppercase cursor-pointer select-none">
+                        Is Distribution Hub?
+                      </label>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <label className="text-[10px] text-slate-300 font-bold uppercase block select-none">
+                        Allocated Staff:
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={pb.staffCount}
+                        onChange={(e) => {
+                          const updated = [...pendingBranches];
+                          updated[idx].staffCount = parseInt(e.target.value) || 3;
+                          setPendingBranches(updated);
+                        }}
+                        className="w-16 bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-xl px-2 py-1 focus:outline-none text-slate-200 transition-colors text-center text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {importStatus.type && (
+              <div className={`p-3 rounded-xl border text-xs font-medium ${
+                importStatus.type === 'success' 
+                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                  : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+              }`}>
+                {importStatus.message}
+              </div>
+            )}
+
+            <div className="flex justify-between items-center pt-4 border-t border-slate-800">
+              <button
+                onClick={() => {
+                  setStep('yes_migrate');
+                  setImportStatus({ type: null, message: '' });
+                }}
+                className="text-[10px] font-bold text-slate-400 hover:text-white uppercase tracking-wider transition-colors cursor-pointer"
+              >
+                Back To Upload
+              </button>
+              <button
+                onClick={handleCompleteWithBranches}
+                className="py-2.5 px-5 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[11px] tracking-wider uppercase rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <CheckCircle className="h-4 w-4" />
+                <span>Initialize Branches & Catalog</span>
               </button>
             </div>
           </div>

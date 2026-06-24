@@ -54,6 +54,15 @@ export interface Supplier {
   isDeleted: boolean;
 }
 
+export interface Brand {
+  id: string;
+  name: string;
+  supplierId: string; // Supplier supplying this brand
+  description?: string;
+  isDeleted: boolean;
+  createdAt: string;
+}
+
 export interface Product {
   id: string;
   productCode: string;

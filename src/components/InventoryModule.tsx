@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useDb } from '../context/DbContext';
 import { Product, UserRole, TransferType, TransferStatus } from '../types/db';
 import {
@@ -134,6 +134,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     updateProduct,
     deleteProduct,
     importProducts,
+    createBranch,
     currentUser,
     addAuditLog,
     movements,
@@ -151,6 +152,41 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
   // Primary navigation sub-tabs: "catalog" | "movements" | "transfers" | "ledger" | "import" | "branch-prices"
   const [activeSubTab, setActiveSubTab] = useState<'catalog' | 'movements' | 'transfers' | 'ledger' | 'import' | 'branch-prices'>(initialSubTab || 'catalog');
+
+  // Synchronized Sourcing / Procurement Requisitions Queue Cart State
+  const [poCart, setPoCart] = useState<{ productId: string; quantity: number; notes?: string; requestedByBranchId?: string }[]>(() => {
+    try {
+      const cached = localStorage.getItem('tp_po_cart');
+      return cached ? JSON.parse(cached) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const syncPoCart = (newCart: any[]) => {
+    setPoCart(newCart);
+    localStorage.setItem('tp_po_cart', JSON.stringify(newCart));
+    // Dispatch system-wide event so the Procurement module balances its cart state in real-time
+    window.dispatchEvent(new Event('tp_po_cart_updated'));
+  };
+
+  const handleQueueRestock = (productId: string) => {
+    const exists = poCart.some(item => item.productId === productId);
+    if (exists) {
+      const updated = poCart.map(item => {
+        if (item.productId === productId) {
+          return { ...item, quantity: item.quantity + 50 };
+        }
+        return item;
+      });
+      syncPoCart(updated);
+      showToast('Restock desk updated: Increased queue quantity for this tile code!');
+    } else {
+      const updated = [...poCart, { productId, quantity: 50 }];
+      syncPoCart(updated);
+      showToast('Sourcing Deck linked: Added item to your Procurement Restock Queue!');
+    }
+  };
 
   // Table layout optimization states
   const isCompactColumns = isCompactGlobal !== undefined ? isCompactGlobal : true;
@@ -181,6 +217,22 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
       setActiveSubTab(initialSubTab);
     }
   }, [initialSubTab]);
+
+  // Real-time synchronization event listener from other modules
+  useEffect(() => {
+    const handleCartSync = () => {
+      try {
+        const cached = localStorage.getItem('tp_po_cart');
+        setPoCart(cached ? JSON.parse(cached) : []);
+      } catch (e) {
+        // Safe fallback
+      }
+    };
+    window.addEventListener('tp_po_cart_updated', handleCartSync);
+    return () => {
+      window.removeEventListener('tp_po_cart_updated', handleCartSync);
+    };
+  }, []);
 
   // Search & Filters
   const [term, setTerm] = useState('');
@@ -283,6 +335,11 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   const [confirmDeleteName, setConfirmDeleteName] = useState<string>('');
   const [showImportModal, setShowImportModal] = useState(false);
   const [rawImportText, setRawImportText] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
+  const [pendingProducts, setPendingProducts] = useState<Product[]>([]);
+  const [pendingBranches, setPendingBranches] = useState<any[]>([]);
+  const [showBranchConfigs, setShowBranchConfigs] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Movement Ledger tracking states
   const [movementSearch, setMovementSearch] = useState('');
@@ -1033,6 +1090,43 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     setShowImportModal(true);
   };
 
+  const handleImportDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleImportDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleImportDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processSelectedFile(file);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processSelectedFile(file);
+    }
+  };
+
+  const processSelectedFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (text) {
+        setRawImportText(text);
+        showToast(`Successfully loaded file: ${file.name}`);
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const executeBulkImport = async () => {
     const trimmedInput = rawImportText.trim();
     if (!trimmedInput) {
@@ -1139,6 +1233,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
           'tile name': 'productName',
           'tile': 'productName',
           'item name': 'productName',
+          'product': 'productName',
           'product code': 'productCode',
           'product_code': 'productCode',
           'code': 'productCode',
@@ -1159,12 +1254,17 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
           'cost': 'costPrice',
           'cost price': 'costPrice',
           'cost_price': 'costPrice',
+          'p price': 'costPrice',
+          'p_price': 'costPrice',
+          'purchase price': 'costPrice',
           'selling price': 'sellingPrice',
           'selling_price': 'sellingPrice',
           'selling': 'sellingPrice',
           'price': 'sellingPrice',
           'rate': 'sellingPrice',
           'retail': 'sellingPrice',
+          's price': 'sellingPrice',
+          's_price': 'sellingPrice',
           'size': 'size',
           'dimensions': 'size',
           'dimension': 'size',
@@ -1177,6 +1277,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
           'minimum stock': 'minimumStock',
           'min_stock': 'minimumStock',
           'minimum_stock': 'minimumStock',
+          'alert level': 'minimumStock',
+          'alert_level': 'minimumStock',
           'design': 'designName',
           'design name': 'designName',
           'design_name': 'designName',
@@ -1187,7 +1289,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
           'uom': 'unit',
           'box qty': 'boxQuantity',
           'box quantity': 'boxQuantity',
-          'box_quantity': 'boxQuantity'
+          'box_quantity': 'boxQuantity',
+          'location': 'origin',
+          'origin': 'origin'
         };
 
         parsed = csvRows.map(row => {
@@ -1213,26 +1317,96 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
       }
 
       if (parsed.length > 0) {
-        await triggerSystemProcessing(
-          `Executing Legacy POS Data Importer (${formatType})...`,
-          1600,
-          'db',
-          undefined,
-          `Parsing ${formatType}, validating product columns, and updating regional catalog tables...`
-        );
+        // Auto-detect branch locations mapped in imported rows
+        const uniqueLocations = Array.from(new Set(
+          parsed.map(item => item.origin || item.location).map(v => String(v || '').trim()).filter(Boolean)
+        )) as string[];
 
-        const result = importProducts(parsed);
-        if (result.success) {
+        const existingBranchNames = branches.filter(b => !b.isDeleted).map(b => b.name.toLowerCase().trim());
+        const newLocations = uniqueLocations.filter(loc => !existingBranchNames.includes(loc.toLowerCase().trim()));
+
+        if (newLocations.length > 0) {
+          setPendingProducts(parsed);
+          setPendingBranches(newLocations.map(name => ({
+            name,
+            manager: 'Operational Branch Manager',
+            address: 'Region Branch Site, Dipolog City',
+            phone: '+63 920 123 4567',
+            isDistributionBranch: false,
+            staffCount: 3
+          })));
+          setShowBranchConfigs(true);
           setShowImportModal(false);
-          showToast(`Successfully migrated ${result.count} tile products from old POS system (${formatType} parsed)!`);
+          setShowPortabilityHubModal(false);
+          showToast(`Detected ${newLocations.length} new branch location(s)! Please fill in their details to finalize migration.`);
         } else {
-          showToast(`Import Failure: ${result.error}`);
+          await triggerSystemProcessing(
+            `Executing Legacy POS Data Importer (${formatType})...`,
+            1600,
+            'db',
+            undefined,
+            `Parsing ${formatType}, validating product columns, and updating regional catalog tables...`
+          );
+
+          const result = importProducts(parsed);
+          if (result.success) {
+            setShowImportModal(false);
+            setShowPortabilityHubModal(false);
+            showToast(`Successfully migrated ${result.count} tile products from old POS system!`);
+          } else {
+            showToast(`Import Failure: ${result.error}`);
+          }
         }
       } else {
         showToast('Format Mismatch: Imported contents must represent a valid dataset block.');
       }
     } catch (e: any) {
       showToast(`Migration Error: ${e.message || 'Failed parsing input data'}. Check layout / columns.`);
+    }
+  };
+
+  const handleFinalizeImportWithBranches = async () => {
+    const invalid = pendingBranches.some(b => !b.manager.trim() || !b.address.trim() || !b.phone.trim());
+    if (invalid) {
+      showToast('Error: Please complete Manager, Address, and Phone for all new branches.');
+      return;
+    }
+
+    try {
+      await triggerSystemProcessing(
+        `Registering ${pendingBranches.length} Branches & Migrating Catalog...`,
+        1800,
+        'db',
+        undefined,
+        `Instantiating regional stores, mapping inventories, and synching product lines...`
+      );
+
+      // Create new branches
+      pendingBranches.forEach(b => {
+        createBranch({
+          name: b.name,
+          manager: b.manager,
+          address: b.address,
+          phone: b.phone,
+          monthlySales: 0,
+          staffCount: b.staffCount,
+          activeCashiers: 1,
+          isDistributionBranch: b.isDistributionBranch
+        });
+      });
+
+      // Import products
+      const result = importProducts(pendingProducts);
+      if (result.success) {
+        showToast(`Successfully set up ${pendingBranches.length} new branches and migrated ${result.count} tile products!`);
+        setPendingBranches([]);
+        setPendingProducts([]);
+        setShowBranchConfigs(false);
+      } else {
+        showToast(`Product Import Error: ${result.error}`);
+      }
+    } catch (e: any) {
+      showToast(`Error: ${e.message || 'Verification failed.'}`);
     }
   };
 
@@ -1690,6 +1864,14 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                               title="View / Print Barcodes & QR Codes"
                             >
                               <QrCode className="h-4 w-4" />
+                            </button>
+
+                            <button
+                              onClick={() => handleQueueRestock(p.id)}
+                              className="p-1.5 text-zinc-500 hover:text-amber-500 hover:bg-amber-500/10 transition-all rounded-full cursor-pointer shrink-0"
+                              title="Queue Restock in Sourcing Desk (+50 Units)"
+                            >
+                              <Truck className="h-4 w-4" />
                             </button>
                             
                             {allowedToModify && (
@@ -2847,13 +3029,43 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                 </div>
               </div>
 
-              <textarea
-                value={rawImportText}
-                onChange={(e) => setRawImportText(e.target.value)}
-                rows={10}
-                placeholder={`--- CSV FORMAT EXAMPLE ---
-Product Name,Product Code,Cost Price,Selling Price,Quantity,Category
-"Old POS Tile X",OPT-001,120.00,190.00,80,Porcelain
+            <div className="space-y-4">
+              <div 
+                onDragOver={handleImportDragOver}
+                onDragLeave={handleImportDragLeave}
+                onDrop={handleImportDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`p-10 border-2 border-dashed rounded-[24px] text-center space-y-3 transition-all cursor-pointer ${
+                  isDragging 
+                    ? 'border-m3-primary bg-m3-primary/10 shadow-lg' 
+                    : 'border-m3-outline-variant/45 hover:border-m3-primary/60 bg-m3-surface-low'
+                }`}
+              >
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileSelect} 
+                  className="hidden" 
+                  accept=".csv,.json,.txt"
+                />
+                <Upload className="h-8 w-8 text-m3-primary mx-auto animate-bounce" />
+                <div>
+                  <h4 className="text-sm font-black uppercase text-m3-on-surface">Drag &amp; Drop Older POS File Here</h4>
+                  <p className="text-[11px] text-m3-on-surface-variant mt-1.5 max-w-md mx-auto select-none font-medium">
+                    Supports spreadsheet .csv exports, backup raw .json database copies, text tables. Or click inside to request manual file browser dialog.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1 block font-mono">Or paste clipboard rows / raw database snippet text below:</label>
+                <textarea
+                  value={rawImportText}
+                  onChange={(e) => setRawImportText(e.target.value)}
+                  rows={8}
+                  placeholder={`--- CSV FORMAT EXAMPLE ---
+Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
+"Old POS Tile X",OPT-001,120.00,190.00,80,Porcelain,"ETC_DIPOLOG MAIN"
 
 --- OR JSON FORMAT EXAMPLE ---
 [
@@ -2862,11 +3074,14 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category
     "productCode": "OPT-002",
     "costPrice": 150,
     "sellingPrice": 240,
-    "stockQuantity": 110
+    "stockQuantity": 110,
+    "origin": "ETC_DIPOLOG MAIN"
   }
 ]`}
-                className="w-full bg-m3-surface-lowest border border-m3-outline-variant/40 focus:border-m3-primary p-4 text-xs font-mono text-m3-on-surface rounded-3xl focus:outline-none transition-colors"
-              />
+                  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/40 focus:border-m3-primary p-4 text-xs font-mono text-m3-on-surface rounded-3xl focus:outline-none transition-colors"
+                />
+              </div>
+            </div>
             </div>
 
             <div className="flex flex-wrap gap-2 pt-2">
@@ -3996,6 +4211,146 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category
                   <span>Verify & Commit Import</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NEW MODAL: Newly Discovered Outlets / Branches Configure & Register Form Panel */}
+      {showBranchConfigs && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-m3-scrim/60 backdrop-blur-sm animate-fade-in text-m3-on-surface">
+          <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[28px] p-6 shadow-2xl space-y-6 w-full max-w-2xl animate-scale-up text-left max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-4">
+              <div>
+                <h3 className="text-base font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                  <span className="p-1.5 rounded-xl bg-amber-500/10">📍</span>
+                  <span>Brand New Outlet Locations Detected!</span>
+                </h3>
+                <p className="text-xs text-m3-on-surface-variant font-medium mt-1 font-sans">
+                  The imported dataset references location(s) not currently registered in TilePoint. Please complete their professional workplace profiles to finish:
+                </p>
+              </div>
+              <button
+                onClick={() => setShowBranchConfigs(false)}
+                className="text-zinc-500 hover:text-rose-500 p-2 hover:bg-rose-500/10 rounded-full transition-all text-xl cursor-pointer font-black"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              {pendingBranches.map((pb, idx) => (
+                <div key={idx} className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-3 font-sans">
+                  <div className="pb-2 border-b border-m3-outline-variant/10 flex justify-between items-center">
+                    <span className="text-xs font-black uppercase tracking-wider text-amber-500">
+                      🏢 Detected Branch Outpost: {pb.name}
+                    </span>
+                    <span className="text-[9px] bg-m3-secondary-container text-m3-on-secondary-container px-2.5 py-0.5 rounded font-mono font-bold uppercase">Pending Profile</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1">Manager name *</label>
+                      <input
+                        type="text"
+                        value={pb.manager}
+                        onChange={(e) => {
+                          const updated = [...pendingBranches];
+                          updated[idx].manager = e.target.value;
+                          setPendingBranches(updated);
+                        }}
+                        className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/55 focus:border-m3-primary p-2 focus:outline-none text-m3-on-surface transition-colors rounded-t font-sans"
+                        placeholder="e.g. Maria Clara"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1 font-mono">Contact Phone *</label>
+                      <input
+                        type="text"
+                        value={pb.phone}
+                        onChange={(e) => {
+                          const updated = [...pendingBranches];
+                          updated[idx].phone = e.target.value;
+                          setPendingBranches(updated);
+                        }}
+                        className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/55 focus:border-m3-primary p-2 focus:outline-none text-m3-on-surface transition-colors rounded-t font-sans"
+                        placeholder="e.g. +63 920 123 4567"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1">Full Workplace Dispatch Address *</label>
+                      <input
+                        type="text"
+                        value={pb.address}
+                        onChange={(e) => {
+                          const updated = [...pendingBranches];
+                          updated[idx].address = e.target.value;
+                          setPendingBranches(updated);
+                        }}
+                        className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/55 focus:border-m3-primary p-2 focus:outline-none text-m3-on-surface transition-colors rounded-t font-sans"
+                        placeholder="e.g. Rizal Highway, Dipolog City, Zamboanga del Norte"
+                        required
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1 font-sans">
+                      <input
+                        type="checkbox"
+                        id={`modal-dist-hub-${idx}`}
+                        checked={pb.isDistributionBranch}
+                        onChange={(e) => {
+                          const updated = [...pendingBranches];
+                          updated[idx].isDistributionBranch = e.target.checked;
+                          setPendingBranches(updated);
+                        }}
+                        className="rounded border-m3-outline-variant text-m3-primary focus:ring-m3-primary/50"
+                      />
+                      <label htmlFor={`modal-dist-hub-${idx}`} className="text-[10px] font-black uppercase text-m3-on-surface-variant cursor-pointer select-none">
+                        Is Distribution Hub
+                      </label>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1 font-sans">
+                      <label className="text-[10px] font-black uppercase text-m3-on-surface-variant block select-none">
+                        Assigned Force:
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={pb.staffCount}
+                        onChange={(e) => {
+                          const updated = [...pendingBranches];
+                          updated[idx].staffCount = parseInt(e.target.value) || 3;
+                          setPendingBranches(updated);
+                        }}
+                        className="w-16 bg-m3-surface-lowest border-b-2 border-m3-outline-variant/55 focus:border-m3-primary p-1 focus:outline-none text-m3-on-surface text-center font-mono text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-m3-outline-variant/15 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowBranchConfigs(false)}
+                className="px-4 py-2.5 text-xs font-black uppercase tracking-wider rounded-full hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
+              >
+                Discard Import
+              </button>
+              <button
+                onClick={handleFinalizeImportWithBranches}
+                className="px-6 py-2.5 bg-m3-primary hover:bg-m3-primary/95 text-white font-black text-xs uppercase tracking-wider rounded-full shadow transition-all active:scale-95 cursor-pointer flex items-center gap-2"
+              >
+                <Check className="h-4 w-4" />
+                <span>Instantiate Outlets & Commit Products</span>
+              </button>
             </div>
           </div>
         </div>

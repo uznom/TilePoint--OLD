@@ -169,6 +169,7 @@ function AppContent() {
     return saved !== null ? saved === 'true' : true;
   });
   const [isSubMenuCollapsed, setIsSubMenuCollapsed] = useState(false);
+  const [isSidebarProfileDropdownOpen, setIsSidebarProfileDropdownOpen] = useState(false);
 
   // Auto-minimize the sidebar when tab is POS Mode
   useEffect(() => {
@@ -302,122 +303,11 @@ function AppContent() {
   };
 
   // Immersive POS terminal distraction-free mode state
-  const [showImmersiveControls, setShowImmersiveControls] = useState(false);
-  const [dragStartX, setDragStartX] = useState<number | null>(null);
+  const [showImmersiveControls, setShowImmersiveControls] = useState(true);
 
   useEffect(() => {
-    if (activeTab !== 'pos') {
-      setShowImmersiveControls(true);
-      return;
-    }
-    
-    // Default distraction free mode on load/pos selection, unless account dropdown is active
-    if (isAccountDropdownOpen) {
-      setShowImmersiveControls(true);
-    } else {
-      setShowImmersiveControls(false);
-    }
-
-    // 1. Automatic fullscreen trigger on browser when in POS checkout mode.
-    // (This runs when tab changes, triggered by a click/keypress gesture in the application)
-    const requestFullscreenSafely = async () => {
-      if (!document.fullscreenElement) {
-        try {
-          await document.documentElement.requestFullscreen();
-        } catch (err) {
-          console.warn('[Fullscreen POS Mode] Programmatic fullscreen request was ignored or blocked by the browser. Interaction captures will handle it.', err);
-        }
-      }
-    };
-
-    requestFullscreenSafely();
-
-    // 2. Gesture fallback so if initial request is blocked, any click/key interaction in POS immediately triggers fullscreen
-    const handleGestureFullscreen = async () => {
-      if (activeTab === 'pos' && !document.fullscreenElement) {
-        try {
-          await document.documentElement.requestFullscreen();
-        } catch (err) {
-          console.error('[Fullscreen POS Mode] Failed to set fullscreen on user interaction:', err);
-        }
-      }
-    };
-
-    window.addEventListener('click', handleGestureFullscreen, { capture: true, once: true });
-    window.addEventListener('keydown', handleGestureFullscreen, { capture: true, once: true });
-
-    // 3. Keep mousemove listener for immersive distraction-free navigation menu
-    const handleMouseMove = (e: MouseEvent) => {
-      // Show modules if mouse approaches the left edge (<= 45px) or top edge (<= 45px)
-      if (e.clientX <= 45 || e.clientY <= 45) {
-        setShowImmersiveControls(true);
-      } else {
-        // Only collapse if the cursor is sufficiently far away from both the sidebar (width ~288px) and top header (height ~75px)
-        // And NOT if the account dropdown is active
-        if (e.clientX > 325 && e.clientY > 100 && !isAccountDropdownOpen) {
-          setShowImmersiveControls(false);
-        }
-      }
-    };
-
-    // 4. Alt + Escape Key down listener to exit both browser full screen AND the distraction-free system
-    const handleAltEscExit = (e: KeyboardEvent) => {
-      if (e.altKey && (e.key === 'Escape' || e.key === 'Esc')) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        // Exit browser full screen if active
-        if (document.fullscreenElement) {
-          document.exitFullscreen().catch(err => console.warn('Exit fullscreen rejected:', err));
-        }
-
-        // Exit system POS terminal distraction-free mode back to previous tab
-        setActiveTab(previousTab !== 'pos' ? previousTab : 'dashboard');
-        showToast('Exited POS terminal and Fullscreen mode.');
-      }
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('keydown', handleAltEscExit, { capture: true });
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('keydown', handleAltEscExit, { capture: true });
-      window.removeEventListener('click', handleGestureFullscreen, { capture: true });
-      window.removeEventListener('keydown', handleGestureFullscreen, { capture: true });
-    };
-  }, [activeTab, previousTab, isAccountDropdownOpen]);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setDragStartX(e.touches[0].clientX);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (dragStartX === null) return;
-    const currentX = e.touches[0].clientX;
-    const diffX = currentX - dragStartX;
-    if (diffX > 40) { // Dragged to the right by more than 40px
-      setShowImmersiveControls(true);
-      setDragStartX(null);
-    }
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setDragStartX(e.clientX);
-  };
-
-  const handleMouseMoveDrag = (e: React.MouseEvent) => {
-    if (dragStartX === null) return;
-    const diffX = e.clientX - dragStartX;
-    if (diffX > 40) { // Dragged to the right by more than 40px
-      setShowImmersiveControls(true);
-      setDragStartX(null);
-    }
-  };
-
-  const handleMouseUp = () => {
-    setDragStartX(null);
-  };
+    setShowImmersiveControls(true);
+  }, [activeTab]);
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -804,7 +694,7 @@ function AppContent() {
       )}
 
       {/* HEADER SECTION with custom horizontal glowing accent bar & ambient overlay tint */}
-      <header className={`py-4 px-6 border-b border-m3-outline-variant/15 flex justify-between items-center z-[35] android-glass-header shadow-sm bg-m3-surface/75 dark:bg-m3-surface-low/80 backdrop-blur-md transition-all duration-300 overflow-visible ${
+      <header className={`py-4 px-6 border-b border-m3-outline-variant/15 flex justify-between items-center z-[35] android-glass-header shadow-sm bg-m3-surface/75 dark:bg-m3-surface-low/80 backdrop-blur-md transition-all duration-300 overflow-visible md:hidden ${
         activeTab === 'pos' 
           ? `sticky top-0 z-[35] md:fixed md:top-0 md:left-0 md:right-0 md:transform ${showImmersiveControls ? 'md:translate-y-0 md:opacity-100 md:shadow-xl' : 'md:-translate-y-full md:opacity-0 md:pointer-events-none'}`
           : 'sticky top-0 z-[35]'
@@ -967,21 +857,40 @@ function AppContent() {
 
       {/* BODY CONTENT: Sidebar + Dynamic tab target */}
       <div className="flex-1 flex overflow-hidden">
-        {/* SIDEBAR NAVIGATION: Desktop */}
-        <aside className={`border-r border-m3-outline-variant/15 select-none android-glass-sidebar py-6 transition-all duration-300 ease-in-out ${
-          activeTab === 'pos'
-            ? `fixed left-0 top-0 bottom-0 z-[30] transform bg-m3-surface-low border-r border-m3-primary/25 backdrop-blur-xl hidden md:block ${
-                isSidebarMinimized ? 'w-20 px-2' : 'w-72 px-4'
-              } ${
-                showImmersiveControls ? 'translate-x-[0px] opacity-100 shadow-2xl' : '-translate-x-full opacity-0 pointer-events-none'
-              }`
-            : `sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto hidden md:block ${
-                isSidebarMinimized ? 'w-20 px-2' : 'w-72 px-4'
-              }`
+        {/* SIDEBAR NAVIGATION: Desktop (Unified with Brand Header & Profile) */}
+        <aside className={`border-r border-m3-outline-variant/15 select-none android-glass-sidebar py-5 px-3.5 transition-all duration-300 ease-in-out hidden md:flex md:flex-col md:justify-between h-screen sticky top-0 z-40 ${
+          isSidebarMinimized ? 'w-20 !px-2' : 'w-72'
         }`}>
-          <div className="space-y-5">
-            {/* Modular indicator trigger */}
-            <div className={`flex items-center ${isSidebarMinimized ? 'justify-center mb-4' : 'justify-between pl-3 mb-2'}`}>
+          {/* TOP SECTION: Brand Logo, Name and Branch assignment */}
+          <div className="flex flex-col gap-4">
+            {/* Brand Logo & Name */}
+            <div className={`flex items-center gap-3 ${isSidebarMinimized ? 'justify-center' : 'pl-2'}`}>
+              <img src="/icon.svg" alt="TilePoint Favicon Logo" className="h-9 w-9 rounded-xl shrink-0 shadow-sm" referrerPolicy="no-referrer" />
+              {!isSidebarMinimized && (
+                <div className="animate-fade-in truncate">
+                  <h1 className="text-sm font-black tracking-wide leading-none uppercase font-sans text-m3-primary">TilePoint</h1>
+                  <span className="text-[8px] text-m3-on-surface-variant font-bold block uppercase mt-1 tracking-widest leading-none">HQ POS System</span>
+                </div>
+              )}
+            </div>
+
+            {/* Branch Assignment tag badge */}
+            {!isSidebarMinimized ? (
+              <div className="px-1.5 animate-fade-in">
+                <div className="w-full text-center px-3 py-1.5 rounded-xl text-[9px] font-extrabold uppercase bg-m3-secondary-container text-m3-on-secondary-container border border-m3-outline-variant/35 tracking-wider truncate">
+                  {getBranchName(currentUser.branchAssignmentId)}
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-center" title={getBranchName(currentUser.branchAssignmentId)}>
+                <span className="h-2.5 w-2.5 rounded-full bg-m3-primary animate-pulse" />
+              </div>
+            )}
+
+            <div className="h-px bg-m3-outline-variant/10" />
+
+            {/* Modules Label and Minimize/Maximize toggle handle */}
+            <div className={`flex items-center ${isSidebarMinimized ? 'justify-center mb-1' : 'justify-between pl-2 mb-1'}`}>
               {!isSidebarMinimized && (
                 <span className="text-[10px] font-black tracking-widest text-m3-on-surface-variant uppercase font-mono animate-fade-in truncate">
                   Modules
@@ -994,14 +903,12 @@ function AppContent() {
                 }`}
                 title={isSidebarMinimized ? "Maximize Sidebar" : "Minimize Sidebar"}
               >
-                <ChevronLeft className={`h-4.5 w-4.5 transition-transform duration-350 ${isSidebarMinimized ? 'rotate-180' : ''}`} />
+                <ChevronLeft className={`h-4 w-4 transition-transform duration-300 ${isSidebarMinimized ? 'rotate-180' : ''}`} />
               </button>
             </div>
 
-            {/* Profile card removed for cleaner non-duplicated design */}
-
-            <nav className="space-y-1">
-
+            {/* Navigation item lists */}
+            <nav className="space-y-1 overflow-y-auto max-h-[calc(100vh-250px)] pr-1 scrollbar-thin">
               {sidebarCategoryTree.map(category => {
                 const CategoryIcon = category.icon;
                 
@@ -1024,14 +931,14 @@ function AppContent() {
                         const firstSub = authorizedSubItems[0]?.id || category.id;
                         changeTab(firstSub);
                       }}
-                      className={`flex items-center justify-center w-12 h-12 rounded-xl mx-auto relative group transition-all duration-200 cursor-pointer ${
+                      className={`flex items-center justify-center w-11 h-11 rounded-xl mx-auto relative group transition-all duration-200 cursor-pointer ${
                         hasActiveSubItem 
                           ? 'bg-m3-primary/15 text-m3-primary border border-m3-primary/30 shadow-sm' 
                           : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
                       }`}
                     >
                       <CategoryIcon className="h-4.5 w-4.5 shrink-0" />
-                      <div className="absolute left-16 scale-0 group-hover:scale-100 transition-all duration-200 origin-left bg-m3-on-surface text-m3-surface text-[10px] font-extrabold px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none border border-m3-outline-variant/30">
+                      <div className="absolute left-14 scale-0 group-hover:scale-100 transition-all duration-200 origin-left bg-m3-on-surface text-m3-surface text-[10px] font-extrabold px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none border border-m3-outline-variant/30">
                         {category.name}
                       </div>
                     </button>
@@ -1045,7 +952,7 @@ function AppContent() {
                       const firstSub = authorizedSubItems[0]?.id || category.id;
                       changeTab(firstSub);
                     }}
-                    className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                       hasActiveSubItem 
                         ? 'bg-m3-primary text-m3-on-primary shadow-md shadow-m3-primary/10 font-black scale-[1.01]' 
                         : 'hover:bg-m3-primary/5 text-m3-on-surface-variant hover:text-m3-primary'
@@ -1060,16 +967,154 @@ function AppContent() {
               })}
             </nav>
           </div>
+
+          {/* BOTTOM SECTION: Profile card & Upward-opening popup Menu */}
+          <div className="pt-3 border-t border-m3-outline-variant/15 relative z-50">
+            <button
+              onClick={() => setIsSidebarProfileDropdownOpen(!isSidebarProfileDropdownOpen)}
+              className={`w-full flex items-center gap-2.5 p-2 rounded-xl border border-m3-outline-variant/40 hover:bg-m3-primary/5 transition-all cursor-pointer text-left focus:outline-none bg-m3-surface-low select-none active:scale-[0.98] ${
+                isSidebarMinimized ? 'justify-center' : ''
+              }`}
+            >
+              <div className="h-8.5 w-8.5 rounded-xl bg-m3-primary font-black text-xs items-center justify-center flex text-m3-on-primary shadow-sm m3-shape-asymmetric relative overflow-hidden shrink-0">
+                {(() => {
+                  const isErica = currentUser.fullName.toLowerCase().includes('erica') || currentUser.username?.toLowerCase().includes('erica');
+                  if (isErica) {
+                    return "E";
+                  }
+                  
+                  const avatarSrc = currentUser.profilePicture || '';
+
+                  return (
+                    <>
+                      {avatarSrc ? (
+                        <img src={avatarSrc} alt={currentUser.fullName} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        currentUser.avatarInitials
+                      )}
+                      <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 border border-m3-surface animate-pulse" />
+                    </>
+                  );
+                })()}
+              </div>
+              
+              {!isSidebarMinimized && (
+                <div className="flex-1 min-w-0 animate-fade-in">
+                  <div className="text-[11px] font-extrabold leading-none text-m3-on-surface truncate">
+                    {currentUser.fullName}
+                  </div>
+                  <span className="text-[8.5px] text-m3-on-surface-variant font-mono capitalize leading-none font-bold block mt-1 truncate">
+                    {currentUser.role} Account
+                  </span>
+                </div>
+              )}
+              
+              {!isSidebarMinimized && (
+                <ChevronDown className={`h-3.5 w-3.5 text-m3-on-surface-variant transition-transform duration-200 shrink-0 ${isSidebarProfileDropdownOpen ? 'rotate-180' : ''}`} />
+              )}
+            </button>
+
+            {/* Upward Dropdown Menu */}
+            <AnimatePresence>
+              {isSidebarProfileDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsSidebarProfileDropdownOpen(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                    className={`absolute bottom-full mb-2 w-56 rounded-2xl bg-m3-surface-low border border-m3-outline-variant/40 text-m3-on-surface shadow-2xl z-50 p-2 space-y-1.5 font-sans ${
+                      isSidebarMinimized ? 'left-0' : 'left-0 right-0'
+                    }`}
+                  >
+                    <div className="px-3 py-2 border-b border-m3-outline-variant/15 bg-m3-surface-high/10 rounded-xl">
+                      <div className="text-xs font-black text-m3-on-surface truncate">{currentUser.fullName}</div>
+                      <div className="text-[9.5px] text-zinc-400 font-mono font-bold mt-0.5 uppercase tracking-wider">{currentUser.role} Mode</div>
+                    </div>
+
+                    {/* Theme Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDarkMode(!darkMode);
+                        setIsSidebarProfileDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center justify-between text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        {darkMode ? <Sun className="h-4 w-4 text-amber-500" /> : <Moon className="h-4 w-4 text-m3-primary" />}
+                        <span>{darkMode ? 'Light Theme' : 'Dark Theme'}</span>
+                      </div>
+                      <span className="text-[9px] font-black uppercase text-zinc-400 px-1.5 py-0.5 bg-m3-outline-variant/20 rounded font-mono">
+                        {darkMode ? 'LIGHT' : 'DARK'}
+                      </span>
+                    </button>
+
+                    {/* Account Settings */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSidebarProfileDropdownOpen(false);
+                        setShowAccountSettingsModal(true);
+                      }}
+                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                    >
+                      <LockKeyhole className="h-4 w-4 text-amber-500" />
+                      <span>Account Settings</span>
+                    </button>
+
+                    {/* Operational Walkthrough */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSidebarProfileDropdownOpen(false);
+                        changeTab('tutorials');
+                      }}
+                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                    >
+                      <BookOpen className="h-4 w-4 text-m3-primary" />
+                      <span>Walkthrough</span>
+                    </button>
+
+                    {/* System Settings */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSidebarProfileDropdownOpen(false);
+                        window.dispatchEvent(new Event('open-privacy-hub'));
+                      }}
+                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                    >
+                      <Settings className="h-4 w-4 text-m3-primary" />
+                      <span>Settings</span>
+                    </button>
+
+                    <div className="h-px bg-m3-outline-variant/10 !my-1" />
+
+                    {/* Logout */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSidebarProfileDropdownOpen(false);
+                        setShowLogoutConfirmModal(true);
+                      }}
+                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-rose-500/10 text-rose-500 cursor-pointer transition-colors"
+                    >
+                      <Power className="h-4 w-4 text-rose-500" />
+                      <span>Logout Account</span>
+                    </button>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
         </aside>
 
         {/* DYNAMIC COMPONENT PANEL AREA */}
-        <main className={`flex-1 relative flex flex-col text-m3-on-surface transition-all duration-300 ${
-          activeTab === 'pos' 
-            ? `overflow-y-auto md:overflow-hidden ${
-                showImmersiveControls 
-                  ? `p-4 pb-28 md:h-screen md:p-4 md:pt-[73px] md:pb-4 ${isSidebarMinimized ? 'md:pl-[96px]' : 'md:pl-[304px]'}` 
-                  : 'p-4 pb-28 md:h-screen md:p-0 md:pt-0 md:pl-0 md:pb-0'
-              }` 
+        <main className={`flex-1 relative flex flex-col text-m3-on-surface transition-all duration-300 overflow-x-hidden ${
+          activeTab === 'pos' || activeTab === 'ledger'
+            ? 'p-4 md:p-5 overflow-hidden h-screen'
             : 'p-4 md:p-6 pb-26 md:pb-6 overflow-y-auto'
         } ${isCompactColumns ? 'compact-fit' : ''}`}>
           {/* Elegant Collapsible Horizontal Sub-menu Navigation Pill Bar with Dynamic RBAC */}
@@ -1291,32 +1336,7 @@ function AppContent() {
         })}
       </div>
 
-      {/* Immersive Trigger Handles for POS Terminal Mode (Desktop Only) */}
-      {activeTab === 'pos' && !showImmersiveControls && (
-        <div className="hidden md:block">
-          {/* Subtle Pull handles for mouse cursor / touch slide */}
-          <div 
-            className="fixed left-0 top-1/2 -translate-y-1/2 w-2 h-24 bg-m3-primary/30 hover:bg-m3-primary/60 rounded-r-2xl z-[38] cursor-ew-resize flex items-center justify-center transition-all group scale-100 hover:w-3 border border-l-0 border-m3-primary/35 backdrop-blur-md shadow-lg animate-pulse"
-            title="Drag or slide from left to show system modules"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMoveDrag}
-            onMouseUp={handleMouseUp}
-            onClick={() => setShowImmersiveControls(true)}
-          >
-            <div className="w-1 h-8 bg-m3-primary/80 rounded-full group-hover:bg-m3-primary/100" />
-          </div>
 
-          <div 
-            className="fixed top-0 left-1/2 -translate-x-1/2 h-2 w-56 bg-m3-primary/25 hover:bg-m3-primary/55 rounded-b-2xl z-[38] cursor-ns-resize flex justify-center items-center transition-all group hover:h-4.5 border border-t-0 border-m3-primary/35 backdrop-blur-md shadow-md"
-            title="Hover or slide from top to show header controls"
-            onClick={() => setShowImmersiveControls(true)}
-          >
-            <div className="h-1 w-16 bg-m3-primary/60 rounded-full group-hover:bg-m3-primary/85" />
-          </div>
-        </div>
-      )}
 
       {/* CONFIRMATORY DIALOG: Logout verification check trigger */}
       {showLogoutConfirmModal && (
@@ -1749,7 +1769,7 @@ function AppContent() {
 
                               const cachedListStr = localStorage.getItem('tp_db_snapshots');
                               const cachedList = cachedListStr ? JSON.parse(cachedListStr) : [];
-                              const updatedList = [newSnap, ...cachedList];
+                              const updatedList = [newSnap, ...cachedList].slice(0, 2);
                               localStorage.setItem('tp_db_snapshots', JSON.stringify(updatedList));
 
                               // Apply changes directly using atomic restore
@@ -1966,7 +1986,7 @@ function AppContent() {
                 </p>
               ) : (
                 <p className="text-[9px] text-zinc-400 px-1 leading-normal font-medium flex items-center gap-1">
-                  <span>Salted PBKDF2 cryptography hashes are automatically updated across all local registers.</span>
+                  <span>Your account security credentials will be encrypted and updated securely.</span>
                 </p>
               )}
             </div>

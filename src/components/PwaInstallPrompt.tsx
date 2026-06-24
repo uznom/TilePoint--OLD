@@ -10,9 +10,26 @@ import { Download, Monitor, Sparkles, Smartphone, CheckCircle, X, ShieldCheck } 
 export const PwaInstallPrompt: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPrompt, setShowPrompt] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [isInstalled, setIsInstalled] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const isStandaloneInit = window.matchMedia('(display-mode: standalone)').matches ||
+        (window.navigator as any).standalone === true;
+      if (isStandaloneInit) {
+        localStorage.setItem('tp_pwa_installed', 'true');
+        return true;
+      }
+      return localStorage.getItem('tp_pwa_installed') === 'true';
+    }
+    return false;
+  });
   const [isIOS, setIsIOS] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
+  const [isStandalone, setIsStandalone] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(display-mode: standalone)').matches ||
+        (window.navigator as any).standalone === true;
+    }
+    return false;
+  });
 
   useEffect(() => {
     // 1. Detect if already running in standalone mode (installed PWA)
@@ -22,6 +39,13 @@ export const PwaInstallPrompt: React.FC = () => {
     
     setIsStandalone(checkStandalone);
     if (checkStandalone) {
+      setIsInstalled(true);
+      localStorage.setItem('tp_pwa_installed', 'true');
+      return;
+    }
+
+    // Check if previously marked as installed in persistent storage
+    if (localStorage.getItem('tp_pwa_installed') === 'true') {
       setIsInstalled(true);
       return;
     }
@@ -45,14 +69,30 @@ export const PwaInstallPrompt: React.FC = () => {
       setDeferredPrompt(e);
       // Automatically prompt or show the banner when open
       setTimeout(() => {
-        setShowPrompt(true);
+        if (localStorage.getItem('tp_pwa_installed') !== 'true') {
+          setShowPrompt(true);
+        }
       }, 1500); // 1.5 seconds delay after loading for perfect entrance timing
     };
 
+    // 4. Listen to appinstalled event (fires when user successfully installs app)
+    const handleAppInstalled = () => {
+      console.log('[PWA] TilePoint App successfully installed!');
+      localStorage.setItem('tp_pwa_installed', 'true');
+      setIsInstalled(true);
+      setShowPrompt(false);
+      try {
+        window.location.reload();
+      } catch (e) {
+        // Safe fallback
+      }
+    };
+
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
 
     // If iOS Safari, we can display instructions after a delayed trigger because the event won't fire
-    if (iosDetected) {
+    if (iosDetected && localStorage.getItem('tp_pwa_installed') !== 'true') {
       setTimeout(() => {
         setShowPrompt(true);
       }, 2500);
@@ -60,7 +100,7 @@ export const PwaInstallPrompt: React.FC = () => {
 
     // Alternative trigger check if never prompt event fires but not installed
     const fallbackTimer = setTimeout(() => {
-      if (!deferredPrompt && !iosDetected && !checkStandalone) {
+      if (!deferredPrompt && !iosDetected && !checkStandalone && localStorage.getItem('tp_pwa_installed') !== 'true') {
         // Show install button as simulated setup anyway to give guide
         setShowPrompt(true);
       }
@@ -68,6 +108,7 @@ export const PwaInstallPrompt: React.FC = () => {
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
       clearTimeout(fallbackTimer);
     };
   }, [deferredPrompt]);
@@ -87,8 +128,14 @@ export const PwaInstallPrompt: React.FC = () => {
     console.log(`[PWA Install] User conversion preference outcome: ${outcome}`);
 
     if (outcome === 'accepted') {
+      localStorage.setItem('tp_pwa_installed', 'true');
       setIsInstalled(true);
       setShowPrompt(false);
+      try {
+        window.location.reload();
+      } catch (e) {
+        // Safe fallback
+      }
     }
     
     // Clear deferred prompt reference

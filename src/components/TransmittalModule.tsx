@@ -117,7 +117,14 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
 
       // 5. Operating Petty Cash Expenses registered under this branch from standard LocalStorage
       const cachedExpenses = localStorage.getItem('atpos_v2_expenses');
-      const allExpenses = cachedExpenses ? JSON.parse(cachedExpenses) : [];
+      let allExpenses: any[] = [];
+      if (cachedExpenses) {
+        try {
+          allExpenses = JSON.parse(cachedExpenses);
+        } catch (e) {
+          console.error('Failed to parse expenses', e);
+        }
+      }
       const branchExpenses = allExpenses.filter((ex: any) => ex.branchId === currentBranchId);
 
       // 6. Local Inventory Movements logged for this branch

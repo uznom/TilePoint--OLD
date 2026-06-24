@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, Receipt, PlusCircle, Search, Calendar, FileText, 
   Printer, ArrowRight, DollarSign, Archive, RefreshCw, Layers, CheckCircle2,
@@ -93,31 +93,46 @@ export default function AtposExtraModules({ activeSubTab, darkMode, onNavigate }
 
   // Initial Load
   useEffect(() => {
+    let membersList: Member[] = [];
     const cachedMembers = localStorage.getItem(LOCAL_STORAGE_MEMBERS);
     if (cachedMembers) {
-      setMembers(JSON.parse(cachedMembers));
-    } else {
-      const seed: Member[] = [];
-      setMembers(seed);
-      localStorage.setItem(LOCAL_STORAGE_MEMBERS, JSON.stringify(seed));
+      try {
+        membersList = JSON.parse(cachedMembers);
+      } catch (e) {
+        console.error('Error parsing members storage', e);
+      }
+    }
+    setMembers(membersList);
+    if (!cachedMembers) {
+      localStorage.setItem(LOCAL_STORAGE_MEMBERS, JSON.stringify(membersList));
     }
 
+    let expensesList: Expense[] = [];
     const cachedExpenses = localStorage.getItem(LOCAL_STORAGE_EXPENSES);
     if (cachedExpenses) {
-      setExpenses(JSON.parse(cachedExpenses));
-    } else {
-      const seed: Expense[] = [];
-      setExpenses(seed);
-      localStorage.setItem(LOCAL_STORAGE_EXPENSES, JSON.stringify(seed));
+      try {
+        expensesList = JSON.parse(cachedExpenses);
+      } catch (e) {
+        console.error('Error parsing expenses storage', e);
+      }
+    }
+    setExpenses(expensesList);
+    if (!cachedExpenses) {
+      localStorage.setItem(LOCAL_STORAGE_EXPENSES, JSON.stringify(expensesList));
     }
 
+    let returnsList: ProductReturn[] = [];
     const cachedReturns = localStorage.getItem(LOCAL_STORAGE_RETURNS);
     if (cachedReturns) {
-      setProductReturns(JSON.parse(cachedReturns));
-    } else {
-      const seed: ProductReturn[] = [];
-      setProductReturns(seed);
-      localStorage.setItem(LOCAL_STORAGE_RETURNS, JSON.stringify(seed));
+      try {
+        returnsList = JSON.parse(cachedReturns);
+      } catch (e) {
+        console.error('Error parsing returns storage', e);
+      }
+    }
+    setProductReturns(returnsList);
+    if (!cachedReturns) {
+      localStorage.setItem(LOCAL_STORAGE_RETURNS, JSON.stringify(returnsList));
     }
   }, []);
 

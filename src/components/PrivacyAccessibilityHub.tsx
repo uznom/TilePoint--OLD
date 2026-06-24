@@ -1035,7 +1035,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                             <span className="text-[8.5px] font-mono bg-emerald-500/10 text-emerald-500 rounded px-1.5 font-bold uppercase tracking-wider">Permanent</span>
                           </div>
                           <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
-                            Stores session authentication payloads, PBKDF2 salting references, dynamic shift tracking ID arrays, and structural organization assignments. Cannot be disabled as they directly secure database access maps.
+                            Stores session authentication tokens, active shift tracking, and local workspace configurations. Cannot be disabled as they are required to maintain secure user sessions.
                           </p>
                         </div>
                       </div>
@@ -1992,7 +1992,7 @@ startxref
                                       
                                       const cachedListStr = localStorage.getItem('tp_db_snapshots');
                                       const cachedList = cachedListStr ? JSON.parse(cachedListStr) : [];
-                                      const updatedList = [newSnap, ...cachedList];
+                                      const updatedList = [newSnap, ...cachedList].slice(0, 2);
                                       localStorage.setItem('tp_db_snapshots', JSON.stringify(updatedList));
                                       
                                       // Trigger snapshot restore to apply
