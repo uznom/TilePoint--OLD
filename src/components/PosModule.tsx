@@ -9,22 +9,15 @@ import { useDb } from '../context/DbContext';
 import { Product, Sale, SaleItem, UserRole } from '../types/db';
 import { verifyPasswordWithToken } from '../lib/crypto';
 import {
-  Search,
   ShoppingCart,
   Trash2,
   Sparkles,
-  CreditCard,
-  Pause,
-  AlertCircle,
-  Play,
   CheckCircle,
   Printer,
-  Calculator,
   Lock,
   Keyboard,
   X,
   ShieldCheck,
-  Barcode,
   History,
   LockKeyhole,
   ShoppingBag,
@@ -46,6 +39,9 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     products,
     activeShift,
     openShift,
+    closeShift,
+    getShiftReportStats,
+    shifts,
     activeBranch,
     checkoutSale,
     voidSale,
@@ -71,8 +67,38 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
   };
 
   // Active cashier shift states
-  const [startCashInput, setStartCashInput] = useState('3000');
+  const [startCashInput, setStartCashInput] = useState('5000');
   const [showShiftModal, setShowShiftModal] = useState(false);
+
+  // Closing shift states
+  const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
+  const [closeShiftCashInput, setCloseShiftCashInput] = useState('');
+
+  // Find the last closed shift at this branch to pre-fill starting cash
+  const previouslyClosedShift = React.useMemo(() => {
+    if (!shifts || shifts.length === 0) return null;
+    return [...shifts]
+      .filter(s => s.status === 'CLOSED' && s.branchId === currentUser.branchAssignmentId)
+      .sort((a, b) => new Date(b.closedAt || 0).getTime() - new Date(a.closedAt || 0).getTime())[0] || null;
+  }, [shifts, currentUser.branchAssignmentId]);
+
+  // Pre-fill starting cash when modal opens
+  React.useEffect(() => {
+    if (showShiftModal) {
+      if (previouslyClosedShift) {
+        setStartCashInput(previouslyClosedShift.cashCount.toString());
+      } else {
+        setStartCashInput('5000');
+      }
+    }
+  }, [showShiftModal, previouslyClosedShift]);
+
+  // Auto-prompt the user to initialize a shift on mount if not active
+  React.useEffect(() => {
+    if (!activeShift) {
+      setShowShiftModal(true);
+    }
+  }, [activeShift]);
 
   // Pagination State for Ledger Sales
   const [salesPage, setSalesPage] = useState(1);
@@ -613,6 +639,16 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     showToast(`Cashier terminal shift opened: ₱${startingVal.toFixed(2)} starting drawer.`);
   };
 
+  // Close shift function
+  const handleCloseShiftSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const endingVal = parseFloat(closeShiftCashInput) || 0;
+    closeShift(endingVal);
+    setCloseShiftCashInput('');
+    setShowCloseShiftModal(false);
+    showToast(`Shift closed successfully. Current register drawer has been locked.`);
+  };
+
   const handleSaveCustomerName = (e: React.FormEvent) => {
     e.preventDefault();
     setCustomerName(customerModalInput.trim() || 'Walk-in Customer');
@@ -823,29 +859,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
   }, [filteredSales, salesPage]);
 
   return (
-    <div className="space-y-4 w-full">
-      {/* 1. CLOSED DRAWER SHIFT ALERT BANNER (OPTIMIZATION FOR CASHIER WRITING EXPERIENCE) */}
-      {!activeShift && (
-        <div className="bg-amber-500/10 border-2 border-dashed border-amber-500/40 p-4 rounded-[24px] flex flex-col sm:flex-row items-center justify-between gap-4 text-left shadow-lg">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-amber-500/20 text-amber-550 rounded-2xl animate-pulse">
-              <LockKeyhole className="h-6 w-6" />
-            </div>
-            <div>
-              <h3 className="text-sm font-black text-amber-500 uppercase tracking-wider">Cashier Shift Drawer Closed</h3>
-              <p className="text-xs text-zinc-400 font-semibold mt-0.5 max-w-xl">
-                The active cash drawer is locked. You must establish a starting cash float in the terminal register to execute product lookups and checkout sales.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setShowShiftModal(true)}
-            className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer transition-all active:scale-95 shrink-0 shadow-md"
-          >
-            Initialize Shift Drawer
-          </button>
-        </div>
-      )}
+    <div className="flex flex-col h-full w-full overflow-hidden pb-1 gap-4">
       <div className="flex border-b border-m3-outline-variant/20 pb-3.5 items-center justify-between mb-2 text-left sticky top-0 bg-m3-surface/90 backdrop-blur-md z-20 pt-2 shadow-sm rounded-b-xl px-2">
         <div>
           <h2 className="text-sm font-black uppercase tracking-widest text-m3-primary pl-1 flex items-center gap-2">
@@ -868,14 +882,40 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
           </p>
         </div>
 
-        <div className="hidden lg:flex items-center gap-2 text-[10px] uppercase font-black tracking-widest text-emerald-400 bg-emerald-500/10 py-1.5 px-3 rounded-full border border-emerald-500/20 select-none">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span>Active Cashier Station</span>
+        <div className="flex items-center gap-3">
+          {activeShift ? (
+            <div className="flex items-center gap-3 bg-zinc-900/80 border border-zinc-800 p-1.5 pl-3.5 rounded-full shadow-inner">
+              <div className="flex flex-col text-right">
+                <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Shift Active</span>
+                <span className="text-[10px] font-bold text-zinc-200 font-sans">{activeShift.cashierName}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setCloseShiftCashInput('');
+                  setShowCloseShiftModal(true);
+                }}
+                className="py-1.5 px-3.5 bg-rose-500/10 hover:bg-rose-600 hover:text-white border border-rose-500/30 text-rose-400 text-[10px] font-black uppercase tracking-wider rounded-full transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+              >
+                <LockKeyhole className="h-3 w-3" />
+                <span>Close Shift</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowShiftModal(true)}
+              className="py-1.5 px-3.5 bg-amber-500/15 hover:bg-amber-500 hover:text-black border border-amber-500/30 text-amber-400 hover:border-amber-400 text-[10px] font-black uppercase tracking-wider rounded-full transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+            >
+              <LockKeyhole className="h-3 w-3 animate-pulse" />
+              <span>Open Shift</span>
+            </button>
+          )}
         </div>
       </div>
 
       {activeSubModule === 'checkout' ? (
-        <div className="space-y-4 lg:space-y-0 lg:flex lg:flex-col lg:justify-between gap-4 w-full lg:h-[calc(100vh-180px)]">
+        <div className="flex-1 min-h-0 flex flex-col justify-between gap-4 w-full overflow-hidden">
           {/* MOBILE ONLY TAB SWITCHER TO REDUCE COGNITIVE OVERHEAD & SCROLLING ON SMARTPHONES */}
           <div className="flex lg:hidden bg-m3-surface-low border border-m3-outline-variant/15 p-1 rounded-2xl w-full gap-1">
             <button
@@ -907,7 +947,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
             </button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 animate-fade-in text-m3-on-surface items-stretch lg:flex-1 lg:overflow-hidden lg:min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 animate-fade-in text-m3-on-surface items-stretch flex-1 min-h-0 overflow-hidden">
             
             {/* LEFT COLUMN: YARD STAFF TRANSACTIONS HOLD QUEUE */}
             <div className={`lg:col-span-4 bg-m3-surface-low p-3.5 sm:p-4 rounded-2xl sm:rounded-[28px] border border-m3-outline-variant/20 shadow-sm space-y-4 text-left self-stretch flex flex-col lg:h-full lg:overflow-hidden lg:min-h-0 ${
@@ -968,7 +1008,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
             <div className={`lg:col-span-8 text-left lg:h-full lg:flex lg:flex-col lg:overflow-hidden lg:min-h-0 ${
               mobilePosTab === 'basket' ? 'block' : 'hidden lg:flex'
             }`}>
-              <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-[28px] border border-m3-outline-variant/35 bg-m3-surface-low shadow-sm flex flex-col justify-between lg:h-full lg:overflow-y-auto lg:min-h-0 scrollbar-thin">
+              <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-[28px] border border-m3-outline-variant/35 bg-m3-surface-low shadow-sm flex flex-col justify-between h-full overflow-hidden">
                 
                 {/* Basket Header */}
                 <div className="border-b border-m3-outline-variant/15 pb-3">
@@ -985,15 +1025,6 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                         title="Toggle customer profile details"
                       >
                         {isCustomerMetadataCollapsed ? 'Show Profile' : 'Hide Profile'}
-                      </button>
-                      <span className="text-zinc-500">•</span>
-                      <button
-                        type="button"
-                        onClick={() => setIsCategoryFilterCollapsed(!isCategoryFilterCollapsed)}
-                        className="text-m3-primary hover:text-m3-primary/85 flex items-center gap-1 cursor-pointer transition-colors"
-                        title="Toggle catalog category filters"
-                      >
-                        {isCategoryFilterCollapsed ? 'Show Filters' : 'Hide Filters'}
                       </button>
                       <span className="text-zinc-500">•</span>
                       <button
@@ -1061,56 +1092,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                     </AnimatePresence>
                   </div>
 
-                  {/* Premium Material 3 Category Chip Scroller */}
-                  <div className="mt-4">
-                    <button
-                      type="button"
-                      onClick={() => setIsCategoryFilterCollapsed(!isCategoryFilterCollapsed)}
-                      className="w-full flex items-center justify-between text-left focus:outline-none group pb-1.5 border-b border-m3-outline-variant/10 cursor-pointer"
-                    >
-                      <span className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 block select-none">
-                        Filter Catalog by Material Category {selectedCategory && selectedCategory !== 'All' ? `(${selectedCategory})` : ''}
-                      </span>
-                      <div className="flex items-center gap-1 text-[9px] text-zinc-400 group-hover:text-m3-primary transition-colors font-bold uppercase tracking-wider">
-                        <span>{isCategoryFilterCollapsed ? 'Show' : 'Hide'}</span>
-                        {isCategoryFilterCollapsed ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
-                      </div>
-                    </button>
-                    
-                    <AnimatePresence initial={false}>
-                      {!isCategoryFilterCollapsed && (
-                        <motion.div 
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.15 }}
-                          className="mt-2.5 text-left overflow-hidden"
-                        >
-                          <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin scroll-smooth whitespace-nowrap">
-                            {categories.map((cat) => {
-                              const isSelected = selectedCategory === cat;
-                              return (
-                                <motion.button
-                                  key={cat}
-                                  type="button"
-                                  whileHover={{ scale: 1.03, y: -0.5 }}
-                                  whileTap={{ scale: 0.97 }}
-                                  onClick={() => setSelectedCategory(cat)}
-                                  className={`px-3 py-1.5 rounded-full text-[10.5px] font-extrabold tracking-wide transition-all duration-200 cursor-pointer ${
-                                    isSelected
-                                      ? 'bg-m3-primary text-m3-on-primary shadow-sm ring-2 ring-m3-primary/20'
-                                      : 'bg-m3-surface border border-m3-outline-variant/30 text-m3-on-surface hover:border-m3-primary/40'
-                                  }`}
-                                >
-                                  {cat}
-                                </motion.button>
-                              );
-                            })}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
+
 
                   {/* Barcode scan input search bar */}
                   <form onSubmit={handleBarcodeSubmit} className="mt-2.5 bg-m3-surface-low border border-m3-primary/15 hover:border-m3-primary/35 p-3 rounded-2xl transition-all relative">
@@ -1220,59 +1202,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                   </form>
                 </div>
 
-                {/* Elegant product browser for selected category */}
-                {barcodeSearchTerm.trim().length === 0 && selectedCategory !== 'All' && (
-                  <div className="my-3 p-3 bg-m3-surface-low border border-m3-primary/10 rounded-2xl text-left">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1">
-                        Browse: {selectedCategory}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedCategory('All')}
-                        className="text-[9px] font-bold text-rose-500 hover:text-rose-600 uppercase cursor-pointer"
-                      >
-                        Reset Filter
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[160px] overflow-y-auto pr-1 scrollbar-thin">
-                      {products
-                        .filter(p => !p.isDeleted && p.category === selectedCategory)
-                        .map(p => {
-                          const isInBasket = cart.some(item => item.product.id === p.id);
-                          return (
-                            <motion.div
-                              key={p.id}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                              onClick={() => {
-                                if (p.stockQuantity <= 0) {
-                                  showToast(`Out of stock: Cannot add ${p.productName}`);
-                                  return;
-                                }
-                                addToCart(p);
-                                setBarcodeAddFeedback(`Added: ${p.productName}`);
-                                setTimeout(() => setBarcodeAddFeedback(null), 3000);
-                              }}
-                              className={`p-2 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden select-none flex flex-col justify-between h-[64px] ${
-                                isInBasket
-                                  ? 'border-m3-primary bg-m3-primary/5 ring-1 ring-m3-primary/10'
-                                  : 'border-m3-outline-variant/20 bg-m3-surface hover:border-m3-primary/30'
-                              }`}
-                            >
-                              <div className="text-[10px] font-extrabold truncate text-m3-on-surface" title={p.productName}>
-                                {p.productName}
-                              </div>
-                              <div className="flex justify-between items-end mt-1">
-                                <span className="text-[8px] font-mono text-zinc-400 font-bold">Qty: {p.stockQuantity}</span>
-                                <span className="text-[10px] font-black text-emerald-400">₱{getBranchPrice(p).toFixed(0)}</span>
-                              </div>
-                            </motion.div>
-                          );
-                        })}
-                    </div>
-                  </div>
-                )}
+
 
                 {/* Cart item feeds */}
                 <div className="flex-1 overflow-y-auto max-h-[250px] sm:max-h-[400px] lg:max-h-none my-3 pr-1 space-y-1.5 scrollbar-thin">
@@ -1549,7 +1479,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
             </button>
             
             {!shortcutsCollapsed && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-9 gap-3 mt-4 animate-fade-in">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-9 gap-2.5 mt-4 animate-fade-in">
                 {[
                   { keys: ['F1', 'ESC'], desc: 'Clear/Cancel Cart' },
                   { keys: ['F3'], desc: 'Park/Hold Transaction' },
@@ -1576,7 +1506,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
         </div>
       ) : (
         /* COMPONENT 4: DEDICATED CORPORATE DAILY SALES LEDGER & VOID TERMINAL (SUB-MODULE TAB) */
-        <div className="col-span-full border border-m3-outline-variant/30 rounded-[28px] bg-m3-surface-low p-6 text-left space-y-4 animate-fade-in shadow-lg">
+        <div className="flex-1 min-h-0 border border-m3-outline-variant/30 rounded-[28px] bg-m3-surface-low p-5 sm:p-6 text-left flex flex-col gap-4 animate-fade-in shadow-lg overflow-hidden">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-m3-outline-variant/20 pb-4 gap-4">
             <div>
               <h3 className="text-sm font-black text-rose-500 flex items-center gap-2 uppercase tracking-widest pl-1 font-mono">
@@ -1605,7 +1535,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-m3-outline-variant/20 shadow-inner bg-m3-surface">
+          <div className="flex-1 min-h-0 overflow-auto rounded-xl border border-m3-outline-variant/20 shadow-inner bg-m3-surface scrollbar-thin">
             <table className="w-full text-left border-collapse table-auto text-xs min-w-[1000px] font-sans">
               <thead>
                 <tr className="border-b border-m3-outline-variant/30 bg-m3-surface/30 text-[9px] uppercase font-black text-zinc-400 tracking-wider">
@@ -1754,12 +1684,35 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
               </div>
 
               <form onSubmit={handleOpenShiftSubmit} className="space-y-4 text-left">
+                {previouslyClosedShift && (
+                  <div className="p-3 bg-zinc-900 border border-zinc-850 rounded-2xl space-y-1.5 text-[11px] leading-normal">
+                    <div className="flex justify-between items-center text-amber-500 font-bold">
+                      <span>Previous Close Balance:</span>
+                      <span className="font-mono font-black text-xs text-white">₱{previouslyClosedShift.cashCount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <p className="text-[9.5px] text-zinc-400">
+                      Closed by <strong className="text-zinc-300">{previouslyClosedShift.cashierName}</strong> on {new Date(previouslyClosedShift.closedAt || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStartCashInput(previouslyClosedShift.cashCount.toString());
+                        showToast(`Loaded previous shift balance of ₱${previouslyClosedShift.cashCount.toFixed(2)}`);
+                      }}
+                      className="w-full py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-xl font-bold transition-all text-center text-[10px]"
+                    >
+                      Use Previous Shift Balance
+                    </button>
+                  </div>
+                )}
+
                 <div className="space-y-1 relative pr-0 pl-0">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-m3-primary block pl-1">
                     Starting Cash fund (PHP)
                   </label>
                   <input
                     type="number"
+                    step="any"
                     required
                     value={startCashInput}
                     onChange={e => setStartCashInput(e.target.value)}
@@ -1783,6 +1736,117 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL: Close Drawer Shift */}
+      <AnimatePresence>
+        {showCloseShiftModal && activeShift && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm"
+              onClick={() => setShowCloseShiftModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4"
+            >
+              <div className="flex items-start gap-3 mb-1">
+                <div className="p-2 rounded-2xl bg-rose-500/10 text-rose-400 shrink-0">
+                  <LockKeyhole className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <h3 className="text-base font-bold text-rose-400">Close Cashier Drawer Shift</h3>
+                  <p className="text-xs text-m3-on-surface-variant mt-0.5 font-medium leading-relaxed">
+                    Verify and count the physical cash in the register drawer to close shift.
+                  </p>
+                </div>
+              </div>
+
+              {activeShift && (() => {
+                const stats = getShiftReportStats(activeShift);
+                const expectedCash = activeShift.startCash + stats.netTotal;
+                const enteredCash = parseFloat(closeShiftCashInput) || 0;
+                const variance = closeShiftCashInput === '' ? 0 : enteredCash - expectedCash;
+
+                return (
+                  <form onSubmit={handleCloseShiftSubmit} className="space-y-4 text-left">
+                    <div className="bg-zinc-900 border border-zinc-850 p-3.5 rounded-2xl space-y-2.5 text-xs">
+                      <div className="flex justify-between border-b border-zinc-800 pb-2">
+                        <span className="text-zinc-400">Active Cashier:</span>
+                        <span className="font-bold text-zinc-200">{activeShift.cashierName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Starting Cash:</span>
+                        <span className="font-mono font-bold text-zinc-300">₱{activeShift.startCash.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Net Sales Added:</span>
+                        <span className="font-mono font-bold text-zinc-300">₱{stats.netTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex justify-between border-t border-dashed border-zinc-800 pt-2 text-sm font-bold">
+                        <span className="text-m3-primary">Expected Drawer Cash:</span>
+                        <span className="font-mono text-m3-primary">₱{expectedCash.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 relative pr-0 pl-0">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-m3-primary block pl-1">
+                        Physical Cash Counted (PHP)
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        required
+                        value={closeShiftCashInput}
+                        onChange={e => setCloseShiftCashInput(e.target.value)}
+                        placeholder="Enter counted physical cash..."
+                        className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-sm text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors text-center font-mono font-black rounded-t-lg"
+                      />
+                    </div>
+
+                    {closeShiftCashInput !== '' && (
+                      <div className="p-3 bg-zinc-900/50 border border-zinc-850 rounded-2xl flex justify-between items-center">
+                        <span className="text-xs text-zinc-400 font-bold uppercase">Variance:</span>
+                        <span className={`font-mono font-black text-sm ${
+                          variance === 0 
+                            ? 'text-zinc-400' 
+                            : variance > 0 
+                              ? 'text-emerald-400' 
+                              : 'text-rose-400'
+                        }`}>
+                          {variance > 0 ? '+' : ''}₱{variance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2 border-t border-m3-outline-variant/15 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowCloseShiftModal(false)}
+                        className="flex-1 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors text-center"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="flex-1 bg-rose-500 hover:bg-rose-600 text-white py-2 text-xs font-black uppercase rounded-full shadow-sm cursor-pointer text-center"
+                      >
+                        Close Out & Close Shift
+                      </button>
+                    </div>
+                  </form>
+                );
+              })()}
             </motion.div>
           </div>
         )}

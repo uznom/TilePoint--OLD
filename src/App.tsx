@@ -908,7 +908,7 @@ function AppContent() {
             </div>
 
             {/* Navigation item lists */}
-            <nav className="space-y-1 overflow-y-auto max-h-[calc(100vh-250px)] pr-1 scrollbar-thin">
+            <nav id="sidebar-nav" className="space-y-1 overflow-y-auto overflow-x-hidden max-h-[calc(100vh-250px)] pr-1 scrollbar-thin">
               {sidebarCategoryTree.map(category => {
                 const CategoryIcon = category.icon;
                 
