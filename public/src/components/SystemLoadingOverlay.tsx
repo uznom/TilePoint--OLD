@@ -34,24 +34,24 @@ export const SystemLoadingOverlay: React.FC = () => {
     switch (systemProcessingType) {
       case 'db':
         return [
-          'Checking local browser IndexedDB storage integrity...',
-          'Compiling system-wide JSON relations...',
-          'Acquiring exclusive write locks...',
-          'Writing database transactional logs to LocalStorage...'
+          'Verifying local application storage...',
+          'Compiling system database records...',
+          'Applying data configurations...',
+          'Saving changes to local storage...'
         ];
       case 'verification':
         return [
-          'Performing secure PBKDF2 salting on credentials...',
-          'Checking for SQL injection risk models...',
-          'Generating secure Tilepoint-v2 authentication tokens...',
-          'Establishing high-fidelity session privileges...'
+          'Encrypting credentials securely...',
+          'Running security validation checks...',
+          'Generating secure session credentials...',
+          'Establishing account privileges...'
         ];
       default:
         return [
-          'Contacting local branch terminal gateway...',
-          'Preparing secure transmission packets...',
+          'Connecting to system gateway...',
+          'Preparing transaction request...',
           'Validating operational stock values...',
-          'Synchronizing database indexes...'
+          'Synchronizing system index...'
         ];
     }
   };

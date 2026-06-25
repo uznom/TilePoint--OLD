@@ -23,16 +23,8 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { UserRole } from '../types/db';
 
-interface SecurityStep {
-  id: string;
-  label: string;
-  status: 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED';
-  details?: string;
-  cipher?: string;
-}
-
 export const LoginModule: React.FC = () => {
-  const { login, isRateLimited, rateLimitTimeLeft, users } = useDb();
+  const { login, isRateLimited, rateLimitTimeLeft, users, simulationModeActive, resetLockout } = useDb();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -40,13 +32,14 @@ export const LoginModule: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSQLiBlocked, setIsSQLiBlocked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Terminal execution steps for E2EE + Hash visualization
-  const [securitySteps, setSecuritySteps] = useState<SecurityStep[]>([]);
-  const [showSecurityConsole, setShowSecurityConsole] = useState(false);
 
   // List of seeded accounts for quick simulation select
-  const simulatedAccounts: any[] = [];
+  const simulatedAccounts: any[] = simulationModeActive ? [
+    { name: 'Simulated Admin', username: 'admin', pass: 'admin123', role: 'ADMIN', avatar: 'AD', desc: 'Full authority, bypasses standard restrictions.' },
+    { name: 'Simulated Manager', username: 'manager', pass: 'tilepoint', role: 'MANAGER', avatar: 'MN', desc: 'Approves transmittals, manages stock & pricing.' },
+    { name: 'Simulated Cashier', username: 'cashier', pass: 'tilepoint', role: 'CASHIER', avatar: 'CS', desc: 'Performs checkout sales in POS module.' },
+    { name: 'Simulated Staff', username: 'staff', pass: 'tilepoint', role: 'STAFF', avatar: 'ST', desc: 'Checks prices & scans catalogs in staff portal.' }
+  ] : [];
 
   const handleSelectAccount = (acc: any) => {
     setUsername(acc.username);
@@ -58,27 +51,14 @@ export const LoginModule: React.FC = () => {
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !password) {
-      setErrorMsg(' Please enter both employee handle and password.');
+      setErrorMsg('Please enter both employee handle and password.');
       return;
     }
 
     setErrorMsg(null);
     setIsSQLiBlocked(false);
     setIsSubmitting(true);
-    setShowSecurityConsole(true);
 
-    // Bootstrap terminal steps
-    const steps: SecurityStep[] = [
-      { id: '1', label: 'SQL Injection Blocker Scan', status: 'RUNNING', details: 'Parsing username and security code for injection vectors...' },
-      { id: '2', label: 'E2EE Public Key Exchange', status: 'PENDING', details: 'Generating 256-bit symmetric session socket cipher envelope...' },
-      { id: '3', label: 'Secure Wi-Fi Network Transport', status: 'PENDING', details: 'Transmitting secure packets across local branch PWA LAN...' },
-      { id: '4', label: 'Decryption & PBKDF2 stretched hash matching', status: 'PENDING', details: 'Resolving database user salt. Staggering SHA-256 iterations...' }
-    ];
-    setSecuritySteps(steps);
-
-    // Step 1: SQL Injection Check
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
     // Check SQL keywords
     const lowerUser = username.toLowerCase();
     const lowerPass = password.toLowerCase();
@@ -87,65 +67,19 @@ export const LoginModule: React.FC = () => {
     const hasSQLiPass = sqlRegex.test(lowerPass);
 
     if (hasSQLiUser || hasSQLiPass) {
-      // Failed Injection blocked!
-      setSecuritySteps(prev => prev.map((s, idx) => {
-        if (idx === 0) return { ...s, status: 'FAILED', details: 'SECURITY ATTACK DETECTED! SQL statement parsing detected bypass characters: OR \/ UNION \/ --' };
-        return s;
-      }));
       setIsSubmitting(false);
       setIsSQLiBlocked(true);
-      
       const res = await login(username, password); // Log inside DbProvider audit
-      setErrorMsg(res.error || 'Access Denied.');
+      setErrorMsg(res.error || 'Access Denied. Query blocking protocol active.');
       return;
     }
 
-    setSecuritySteps(prev => prev.map((s, idx) => {
-      if (idx === 0) return { ...s, status: 'SUCCESS', details: 'SAFE: Inputs verified. No SQL injection patterns found.' };
-      if (idx === 1) return { ...s, status: 'RUNNING', details: 'Encrypting plaintext using AES-GCM-256...' };
-      return s;
-    }));
+    // Small delay to feel professional but fast
+    await new Promise(resolve => setTimeout(resolve, 400));
 
-    // Step 2: E2EE Encrypt
-    await new Promise(resolve => setTimeout(resolve, 900));
-    const simulatedCipher = btoa(encodeURIComponent(JSON.stringify({ username, password }))).slice(0, 48) + '...==';
-    const simulatedKey = 'aes-key-' + Math.random().toString(36).slice(2, 10).toUpperCase();
-    
-    setSecuritySteps(prev => prev.map((s, idx) => {
-      if (idx === 1) return { 
-        ...s, 
-        status: 'SUCCESS', 
-        details: `ENCRYPTED: Ciphertext packed successfully:`, 
-        cipher: `Ciphertext: ${simulatedCipher} | Ephemeral Key: ${simulatedKey}` 
-      };
-      if (idx === 2) return { ...s, status: 'RUNNING', details: 'Sending 204 B parcel through local Wi-Fi router to HQ local context...' };
-      return s;
-    }));
-
-    // Step 3: Wi-Fi transport emulated ping
-    await new Promise(resolve => setTimeout(resolve, 700));
-    setSecuritySteps(prev => prev.map((s, idx) => {
-      if (idx === 2) return { ...s, status: 'SUCCESS', details: 'DELIVERED: Transport tunnel closed cleanly with no packet loss.' };
-      if (idx === 3) return { ...s, status: 'RUNNING', details: 'Decoding E2EE. Triggering PBKDF2 stretching with SHA-256 (2,500 cycles)...' };
-      return s;
-    }));
-
-    // Step 4: Verification Hash PBKDF2
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
     const loginResult = await login(username, password);
     
-    if (loginResult.success) {
-      setSecuritySteps(prev => prev.map((s, idx) => {
-        if (idx === 3) return { ...s, status: 'SUCCESS', details: 'VALIDATED: Salt match. PBKDF2 matched hash database record. Terminal session authorized.' };
-        return s;
-      }));
-      await new Promise(resolve => setTimeout(resolve, 400));
-    } else {
-      setSecuritySteps(prev => prev.map((s, idx) => {
-        if (idx === 3) return { ...s, status: 'FAILED', details: `REJECTED: ${loginResult.error}` };
-        return s;
-      }));
+    if (!loginResult.success) {
       setErrorMsg(loginResult.error || 'Authentication failure.');
     }
     setIsSubmitting(false);
@@ -165,13 +99,13 @@ export const LoginModule: React.FC = () => {
         <div className="lg:col-span-7 flex flex-col gap-6 text-left">
           <div>
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-black bg-m3-primary/10 text-m3-primary border border-m3-primary/25 mb-4">
-              <ShieldCheck className="h-4 w-4" /> SECURE CASSETTE TERMINAL LOCK
+              <ShieldCheck className="h-4 w-4" /> SECURE TERMINAL GATEWAY
             </div>
             <h2 className="text-3xl md:text-5xl font-black tracking-tight text-m3-on-surface leading-none uppercase">
               TilePoint <span className="text-m3-primary">HQ POS</span>
             </h2>
             <p className="text-sm md:text-base text-m3-on-surface-variant max-w-lg mt-2.5 font-medium">
-              Enterprise Grade Point-of-Sale Terminal. Salted Cryptographic SHA-256 stretching, End-to-End Handshake Encryption, and SQL injection blockers active.
+              Enterprise-grade Point-of-Sale and Stock Management Terminal. Protected with real-time access control policies and secure localized database integrity.
             </p>
           </div>
 
@@ -179,10 +113,10 @@ export const LoginModule: React.FC = () => {
           {simulatedAccounts.length > 0 && (
             <div className="m3-card !rounded-2xl border-m3-outline-variant/30 mt-1">
               <h3 className="text-xs font-black uppercase tracking-widest text-m3-primary flex items-center gap-2 mb-3">
-                <Cpu className="h-4 w-4" /> Branch Simulation Quick-Pickers
+                <Cpu className="h-4 w-4" /> Simulation & Role Pre-selectors
               </h3>
               <p className="text-xs text-m3-on-surface-variant font-medium mb-4">
-                Switch roles to simulate specific permission restrictions in the POS, inventory, POs, or transmittals. Select an assignment to pre-load secure tokens:
+                Instantly switch accounts to preview the specific role layouts, clearance tiers, and permissions across the POS, Inventory, and Admin panels:
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -209,8 +143,8 @@ export const LoginModule: React.FC = () => {
           )}
 
           <div className="flex items-center gap-3 text-xs font-medium text-m3-on-surface-variant pl-2">
-            <Wifi className="h-4 w-4 text-emerald-500 animate-pulse" />
-            <span>Branch Local Wi-Fi Network Connected • Offline DB Active</span>
+            <Wifi className="h-4 w-4 text-emerald-500" />
+            <span>Active Local Database Connection Verified • Online Sync Ready</span>
           </div>
         </div>
 
@@ -246,6 +180,19 @@ export const LoginModule: React.FC = () => {
                 <span className="text-[10px] uppercase font-mono block px-2.5 py-1 bg-red-500/10 rounded-full text-red-500 border border-red-500/20">
                   Cooldown locks: {rateLimitTimeLeft}s remaining
                 </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (resetLockout) {
+                      resetLockout();
+                      setErrorMsg(null);
+                      setIsSQLiBlocked(false);
+                    }
+                  }}
+                  className="mt-1 px-3 py-1.5 bg-red-500 text-white rounded-lg font-bold text-[10.5px] uppercase tracking-widest hover:bg-red-600 transition-all cursor-pointer border-0 shadow-sm"
+                >
+                  Bypass & Reset Lockout
+                </button>
               </div>
             )}
 
@@ -296,58 +243,11 @@ export const LoginModule: React.FC = () => {
                 disabled={isRateLimited || isSubmitting || !username || !password}
                 className="w-full py-3.5 mt-2 rounded-xl bg-m3-primary text-m3-on-primary font-extrabold text-xs tracking-wider uppercase cursor-pointer hover:bg-m3-primary/95 shadow-md flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm disabled:opacity-50 disabled:translate-y-0 transition-all font-sans"
               >
-                {isSubmitting ? 'SECURE SOCKET VERIFICATION...' : 'AUTHORIZE ACCESS'}
+                {isSubmitting ? 'Verifying Credentials...' : 'Sign In'}
                 <ArrowRight className="h-4 w-4" />
               </button>
             </form>
-
-            <div className="flex justify-between text-[10px] font-bold text-m3-on-surface-variant mt-5 px-1 border-t border-m3-outline-variant/20 pt-4.5">
-              <span>DB NODES: CONNECTED</span>
-              <span>HOST IP: LOCAL LAN</span>
-            </div>
           </div>
-
-          {/* SECURITY INTERCEPT LOGS (DYNAMIC) */}
-          <AnimatePresence>
-            {showSecurityConsole && (
-              <motion.div
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 15 }}
-                className="m3-card !rounded-2xl border-m3-outline-variant/35 bg-zinc-950 text-zinc-300 font-mono text-[11px] leading-relaxed p-4 h-56 flex flex-col shadow-inner"
-              >
-                <div className="flex items-center justify-between border-b border-zinc-800 pb-2 mb-2 font-sans shrink-0">
-                  <div className="flex items-center gap-1.5 text-zinc-400 font-black tracking-widest text-[10px] uppercase">
-                    <Terminal className="h-3.5 w-3.5 text-m3-primary" /> SECURE HANDSHAKE AUDIT LOG
-                  </div>
-                  <span className="text-[9px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded uppercase font-bold">LIVE TELEMETRY</span>
-                </div>
-
-                <div className="flex-1 overflow-y-auto pr-1 text-left select-text flex flex-col gap-2">
-                  {securitySteps.map((s) => (
-                    <div key={s.id} className="border-l-2 border-zinc-700 pl-2 ml-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-extrabold text-[#73A5FF]">{s.label}</span>
-                        <span className={`text-[9px] px-1 rounded uppercase font-bold shrink-0 ${
-                          s.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-400' :
-                          s.status === 'RUNNING' ? 'bg-amber-500/15 text-amber-400 animate-pulse' :
-                          s.status === 'FAILED' ? 'bg-rose-500/15 text-rose-400' : 'text-zinc-600'
-                        }`}>
-                          {s.status}
-                        </span>
-                      </div>
-                      <div className="text-zinc-400 font-mono mt-0.5">{s.details}</div>
-                      {s.cipher && (
-                        <div className="text-zinc-500 bg-zinc-900 border border-zinc-800 p-1 rounded mt-1 overflow-x-auto text-[9px] leading-tight select-all">
-                          {s.cipher}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
 
       </div>

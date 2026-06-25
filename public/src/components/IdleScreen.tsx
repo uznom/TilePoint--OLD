@@ -11,6 +11,20 @@ import { UserRole } from '../types/db';
 export const IdleScreen: React.FC = () => {
   const { isLoggedIn, currentUser } = useDb();
   
+  // State to track if idle screen is globally disabled by settings
+  const [isDisabled, setIsDisabled] = useState(() => {
+    return localStorage.getItem('tilepoint-disable-idle-clock') === 'true';
+  });
+
+  // Listen to external theme sync events to instantly hide or show
+  useEffect(() => {
+    const handleSync = () => {
+      setIsDisabled(localStorage.getItem('tilepoint-disable-idle-clock') === 'true');
+    };
+    window.addEventListener('tilepoint-theme-updated', handleSync);
+    return () => window.removeEventListener('tilepoint-theme-updated', handleSync);
+  }, []);
+  
   // State to track idle status
   const [isIdle, setIsIdle] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
@@ -44,8 +58,8 @@ export const IdleScreen: React.FC = () => {
 
   // Monitor activity & trigger idle screen
   useEffect(() => {
-    // Only monitor if logged in and on desktop
-    if (!isLoggedIn || !isDesktop) {
+    // Only monitor if logged in, on desktop, and NOT disabled
+    if (isDisabled || !isLoggedIn || !isDesktop) {
       setIsIdle(false);
       return;
     }
@@ -95,10 +109,10 @@ export const IdleScreen: React.FC = () => {
       events.forEach(event => window.removeEventListener(event, resetTimer));
       clearInterval(interval);
     };
-  }, [isLoggedIn, isIdle, isDesktop]);
+  }, [isLoggedIn, isIdle, isDesktop, isDisabled]);
 
-  // If not idle or not desktop/logged-in, render nothing
-  if (!isIdle) return null;
+  // If disabled, not logged-in, or not desktop, render nothing to keep execution low
+  if (isDisabled || !isLoggedIn || !isDesktop) return null;
 
   // Format date and time
   const formatTime = (date: Date) => {
@@ -111,17 +125,18 @@ export const IdleScreen: React.FC = () => {
 
   return (
     <AnimatePresence>
-      <motion.div
-        id="desktop-m3-expressive-idle-screen"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: isDismissingWhole ? 0 : 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        className="fixed inset-0 z-[9999] overflow-hidden select-none"
-        style={{
-          backgroundColor: 'rgb(var(--m3-surface-container-lowest, 18, 20, 24))',
-        }}
-      >
+      {isIdle && (
+        <motion.div
+          id="desktop-m3-expressive-idle-screen"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: isDismissingWhole ? 0 : 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="fixed inset-0 z-[9999] overflow-hidden select-none"
+          style={{
+            backgroundColor: 'rgb(var(--m3-surface-container-lowest, 18, 20, 24))',
+          }}
+        >
         {/* ANDROID 17 FLUID GLOWING GRAPHIC BLURS */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
           {/* Dynamic Blob 1 */}
@@ -230,7 +245,7 @@ export const IdleScreen: React.FC = () => {
                 id="idle-screen-adaptive-clock"
                 className="animate-roboto-flex text-[11vw] font-black leading-none text-[var(--m3-on-surface)] select-none tracking-tighter whitespace-nowrap"
                 style={{
-                  fontFamily: "'Roboto Flex', 'Plus Jakarta Sans', sans-serif",
+                  fontFamily: "'Roboto Flex', var(--font-sans)",
                 }}
               >
                 {formatTime(time).split(' ')[0]}
@@ -265,6 +280,8 @@ export const IdleScreen: React.FC = () => {
           </motion.div>
         </div>
       </motion.div>
+      )}
     </AnimatePresence>
   );
 };
+

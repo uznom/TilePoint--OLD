@@ -4,8 +4,9 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { useDb, encryptString } from '../context/DbContext';
+import { useDb, encryptString, decryptString } from '../context/DbContext';
 import { UserRole, BranchSalesReport, Sale, SaleItem } from '../types/db';
+import { ActionButton } from './ActionButton';
 import {
   Send,
   Download,
@@ -26,7 +27,8 @@ import {
   FolderOpen,
   Share2,
   Copy,
-  Printer
+  Printer,
+  Mail
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -64,6 +66,100 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState(false);
 
+  // Real-time JSON validation script engine
+  const liveValidation = useMemo(() => {
+    if (!pastedJson.trim()) {
+      return null;
+    }
+
+    const checks = {
+      isParsed: false,
+      hasRequiredFields: false,
+      isSignatureValid: false,
+      isTotalsCorrect: false,
+      isDuplicate: false,
+      branchId: '',
+      branchName: '',
+      reportingDate: '',
+      totalSalesCount: 0,
+      totalSalesAmount: 0,
+      recalculatedCount: 0,
+      recalculatedAmount: 0,
+      signatureMeta: null as any,
+      errors: [] as string[]
+    };
+
+    let parsed: any = null;
+    // 1. JSON parse
+    try {
+      parsed = JSON.parse(pastedJson);
+      checks.isParsed = true;
+    } catch (e: any) {
+      checks.errors.push(`JSON Syntax Error: ${e.message}`);
+      return checks;
+    }
+
+    // 2. Schema check
+    const required = ['branchId', 'branchName', 'reportingDate', 'sales'];
+    const missing = required.filter(f => parsed[f] === undefined);
+    if (missing.length === 0) {
+      checks.hasRequiredFields = true;
+      checks.branchId = parsed.branchId;
+      checks.branchName = parsed.branchName;
+      checks.reportingDate = parsed.reportingDate;
+      checks.totalSalesCount = parsed.totalSalesCount || 0;
+      checks.totalSalesAmount = parsed.totalSalesAmount || 0;
+    } else {
+      checks.errors.push(`Missing mandatory fields: ${missing.join(', ')}`);
+    }
+
+    // 3. Security signature verification
+    if (parsed.securitySignature) {
+      try {
+        const decrypted = decryptString(parsed.securitySignature, "EmmanTileCenterSecretKey");
+        const sig = JSON.parse(decrypted);
+        if (sig && sig.branchId === parsed.branchId) {
+          checks.isSignatureValid = true;
+          checks.signatureMeta = sig;
+        } else {
+          checks.errors.push("Security Signature verification mismatch: Branch ID in signature does not match header.");
+        }
+      } catch (err) {
+        checks.errors.push("Security Signature corrupted or forged: Could not decrypt package signature.");
+      }
+    } else {
+      checks.errors.push("Unsigned ledger packet: No securitySignature found.");
+    }
+
+    // 4. Totals recalculation check
+    if (Array.isArray(parsed.sales)) {
+      checks.recalculatedCount = parsed.sales.length;
+      checks.recalculatedAmount = parsed.sales.reduce((acc: number, s: any) => acc + (s.grandTotal || 0), 0);
+      
+      const countMatch = checks.totalSalesCount === 0 || checks.totalSalesCount === checks.recalculatedCount;
+      const amountMatch = checks.totalSalesAmount === 0 || Math.abs(checks.totalSalesAmount - checks.recalculatedAmount) < 0.1;
+
+      if (countMatch && amountMatch) {
+        checks.isTotalsCorrect = true;
+      } else {
+        checks.errors.push(`Header claim and actual data mismatch: Declared ${checks.totalSalesCount} txs (₱${checks.totalSalesAmount}) but contains ${checks.recalculatedCount} txs (₱${checks.recalculatedAmount.toFixed(2)})`);
+      }
+    } else if (checks.hasRequiredFields) {
+      checks.errors.push("'sales' property must be a valid array of transactions.");
+    }
+
+    // 5. Duplication Check
+    if (checks.hasRequiredFields) {
+      const dup = branchSalesReports.find(r => r.branchId === parsed.branchId && r.reportingDate === parsed.reportingDate);
+      if (dup) {
+        checks.isDuplicate = true;
+        checks.errors.push(`Report already exists: A sales report for ${parsed.branchName} on ${parsed.reportingDate} is already logged in HQ database.`);
+      }
+    }
+
+    return checks;
+  }, [pastedJson, branchSalesReports]);
+
   // Search filter for Admin report list
   const [adminSearchQuery, setAdminSearchQuery] = useState('');
   const [adminBranchFilter, setAdminBranchFilter] = useState('ALL');
@@ -83,9 +179,71 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
   const [shareFileName, setShareFileName] = useState('');
   const [isDragging, setIsDragging] = useState(false);
 
+  // Button interactive states
+  const [isTransmittingOnline, setIsTransmittingOnline] = useState(false);
+  const [isDownloadingManual, setIsDownloadingManual] = useState(false);
+  const [isImportingManual, setIsImportingManual] = useState(false);
+
   const triggerToast = (msg: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ message: msg, type });
     setTimeout(() => setToast(null), 4000);
+  };
+
+  // Robust clipboard copy helper that works in sandboxed iframes / HTTP environments
+  const handleCopyText = (text: string, successMessage: string) => {
+    let success = false;
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        navigator.clipboard.writeText(text);
+        success = true;
+      }
+    } catch (err) {
+      console.warn('Modern clipboard API failed, using fallback:', err);
+    }
+
+    if (!success) {
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.top = '0';
+        textArea.style.left = '0';
+        textArea.style.opacity = '0';
+        textArea.style.pointerEvents = 'none';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        success = document.execCommand('copy');
+        document.body.removeChild(textArea);
+      } catch (err) {
+        console.error('Fallback clipboard copy failed:', err);
+      }
+    }
+
+    if (success) {
+      triggerToast(successMessage, 'success');
+    } else {
+      triggerToast('Unable to copy automatically. Please copy the signature text at the bottom.', 'error');
+    }
+  };
+
+  // Manual fallback download helper
+  const handleManualDownload = () => {
+    try {
+      const blob = new Blob([sharePayloadText], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const element = document.createElement('a');
+      element.setAttribute('href', url);
+      element.setAttribute('download', shareFileName);
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+      URL.revokeObjectURL(url);
+      triggerToast('Downloaded offline JSON sales packet successfully!', 'success');
+    } catch (err) {
+      console.error('Manual download failed:', err);
+      triggerToast('Failed to download file. Try copying the raw JSON below instead.', 'error');
+    }
   };
 
   // Printing & Exporting states
@@ -252,21 +410,26 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
       return;
     }
 
-    transmitSalesReport({
-      branchId: currentBranchMeta.id,
-      branchName: currentBranchMeta.name,
-      reportingDate,
-      totalSalesCount: compiledLocalSalesData.count,
-      totalSalesAmount: compiledLocalSalesData.grandTotal,
-      totalVatAmount: compiledLocalSalesData.vat,
-      totalDiscountAmount: compiledLocalSalesData.discount,
-      transmissionType: 'Online',
-      sales: compiledLocalSalesData.sales,
-      saleItems: compiledLocalSalesData.saleItems,
-      notes: `Online real-time sync completed by employee ${currentUser.fullName}.`
-    });
+    setIsTransmittingOnline(true);
 
-    triggerToast(`Sales report for ${currentBranchMeta.name} uploaded and transmitted.`, 'success');
+    setTimeout(() => {
+      transmitSalesReport({
+        branchId: currentBranchMeta.id,
+        branchName: currentBranchMeta.name,
+        reportingDate,
+        totalSalesCount: compiledLocalSalesData.count,
+        totalSalesAmount: compiledLocalSalesData.grandTotal,
+        totalVatAmount: compiledLocalSalesData.vat,
+        totalDiscountAmount: compiledLocalSalesData.discount,
+        transmissionType: 'Online',
+        sales: compiledLocalSalesData.sales,
+        saleItems: compiledLocalSalesData.saleItems,
+        notes: `Online real-time sync completed by employee ${currentUser.fullName}.`
+      });
+
+      triggerToast(`Sales report for ${currentBranchMeta.name} uploaded and transmitted.`, 'success');
+      setIsTransmittingOnline(false);
+    }, 1200);
   };
 
   const handleDownloadOfflineJSON = () => {
@@ -275,59 +438,68 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
       return;
     }
 
-    const establishmentName = localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center';
-    const importVerificationId = `IMPID-EXP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    const sigPayload = {
-      importVerificationId,
-      branchId: currentBranchMeta.id,
-      exportedByRole: currentUser.role,
-      exportedBy: currentUser.fullName,
-      establishmentName,
-      timestamp: new Date().toISOString()
-    };
-    const signature = encryptString(JSON.stringify(sigPayload), "EmmanTileCenterSecretKey");
+    setIsDownloadingManual(true);
 
-    const payload = {
-      id: `REP-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      importVerificationId,
-      branchId: currentBranchMeta.id,
-      branchName: currentBranchMeta.name,
-      reportingDate,
-      totalSalesCount: compiledLocalSalesData.count,
-      totalSalesAmount: compiledLocalSalesData.grandTotal,
-      totalVatAmount: compiledLocalSalesData.vat,
-      totalDiscountAmount: compiledLocalSalesData.discount,
-      transmissionType: 'Manual',
-      exportedByRole: currentUser.role,
-      securitySignature: signature,
-      sales: compiledLocalSalesData.sales,
-      saleItems: compiledLocalSalesData.saleItems,
-      notes: `Offline encrypted sales package generated securely with validation signatures.`
-    };
+    setTimeout(() => {
+      const establishmentName = localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center';
+      const importVerificationId = `IMPID-EXP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const sigPayload = {
+        importVerificationId,
+        branchId: currentBranchMeta.id,
+        exportedByRole: currentUser.role,
+        exportedBy: currentUser.fullName,
+        establishmentName,
+        timestamp: new Date().toISOString()
+      };
+      const signature = encryptString(JSON.stringify(sigPayload), "EmmanTileCenterSecretKey");
 
-    const payloadString = JSON.stringify(payload, null, 2);
-    const str = 'data:text/json;charset=utf-8,' + encodeURIComponent(payloadString);
-    const fileName = `TilePoint_Sales_Report_${currentBranchMeta.id}_${reportingDate}.json`;
-    
-    // Download file
-    const element = document.createElement('a');
-    element.setAttribute('href', str);
-    element.setAttribute('download', fileName);
-    element.click();
+      const payload = {
+        id: `REP-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        importVerificationId,
+        branchId: currentBranchMeta.id,
+        branchName: currentBranchMeta.name,
+        reportingDate,
+        totalSalesCount: compiledLocalSalesData.count,
+        totalSalesAmount: compiledLocalSalesData.grandTotal,
+        totalVatAmount: compiledLocalSalesData.vat,
+        totalDiscountAmount: compiledLocalSalesData.discount,
+        transmissionType: 'Manual',
+        exportedByRole: currentUser.role,
+        securitySignature: signature,
+        sales: compiledLocalSalesData.sales,
+        saleItems: compiledLocalSalesData.saleItems,
+        notes: `Offline encrypted sales package generated securely with validation signatures.`
+      };
 
-    addAuditLog(
-      'SALES_OFFLINE_EXPORT',
-      `Downloaded offline JSON sales packet for ${currentBranchMeta.name} on ${reportingDate}. Transactions: ${compiledLocalSalesData.count}`,
-      'BranchSalesReport',
-      payload.id
-    );
+      const payloadString = JSON.stringify(payload, null, 2);
+      const blob = new Blob([payloadString], { type: 'application/json;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const fileName = `TilePoint_Sales_Report_${currentBranchMeta.id}_${reportingDate}.json`;
+      
+      // Download file
+      const element = document.createElement('a');
+      element.setAttribute('href', url);
+      element.setAttribute('download', fileName);
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+      URL.revokeObjectURL(url);
 
-    // Save to state to show custom Share dialog
-    setSharePayloadText(payloadString);
-    setShareFileName(fileName);
-    setShowShareModal(true);
+      addAuditLog(
+        'SALES_OFFLINE_EXPORT',
+        `Downloaded offline JSON sales packet for ${currentBranchMeta.name} on ${reportingDate}. Transactions: ${compiledLocalSalesData.count}`,
+        'BranchSalesReport',
+        payload.id
+      );
 
-    triggerToast('Secure JSON sales report package downloaded.', 'success');
+      // Save to state to show custom Share dialog
+      setSharePayloadText(payloadString);
+      setShareFileName(fileName);
+      setShowShareModal(true);
+
+      triggerToast('Secure JSON sales report package downloaded.', 'success');
+      setIsDownloadingManual(false);
+    }, 1000);
   };
 
   // Upload or handle file inclusion
@@ -354,18 +526,32 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
       return;
     }
 
-    const result = importManualSalesReport(pastedJson);
-    if (result.success) {
-      setImportSuccess(true);
-      setPastedJson('');
-      triggerToast('Manual JSON sales report imported. Assigned for audit processing.', 'success');
-      setTimeout(() => {
-        setShowJsonImport(false);
-        setImportSuccess(false);
-      }, 1500);
-    } else {
-      setImportError(result.error || 'Import validation failure.');
+    if (liveValidation && liveValidation.errors.length > 0) {
+      // Do not block completely if it's just duplicate, but block for structure or signature errors
+      const criticalErrors = liveValidation.errors.filter(e => !e.includes('already exists') && !e.includes('already been registered'));
+      if (criticalErrors.length > 0) {
+        setImportError(`Critical live validation failed: ${criticalErrors[0]}`);
+        return;
+      }
     }
+
+    setIsImportingManual(true);
+
+    setTimeout(() => {
+      const result = importManualSalesReport(pastedJson);
+      if (result.success) {
+        setImportSuccess(true);
+        setPastedJson('');
+        triggerToast('Manual JSON sales report imported. Assigned for audit processing.', 'success');
+        setTimeout(() => {
+          setShowJsonImport(false);
+          setImportSuccess(false);
+        }, 1500);
+      } else {
+        setImportError(result.error || 'Import validation failure.');
+      }
+      setIsImportingManual(false);
+    }, 1200);
   };
 
   const handleSetAuditStatus = (status: 'Verified' | 'Pending Audit') => {
@@ -576,23 +762,31 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
 
             {/* Execution Actions */}
             <div className="space-y-2.5 pt-2 border-t border-m3-outline-variant/15 md:space-y-2">
-              <button
+              <ActionButton
+                variant="primary"
+                fullWidth
                 disabled={compiledLocalSalesData.count === 0 || !!existingReport}
                 onClick={handleTransmitOnline}
-                className="w-full py-3 bg-m3-primary disabled:bg-m3-outline-variant/20 disabled:text-zinc-500 disabled:border-transparent text-m3-on-primary border border-m3-primary hover:bg-m3-primary/95 text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-m3-primary/10 active:scale-98"
+                isLoading={isTransmittingOnline}
+                loadingText="Transmitting to Central Database..."
+                icon={<Send className="h-4 w-4" />}
+                className="py-3"
               >
-                <Send className="h-4 w-4" />
-                <span>Transmit Secure Online Link</span>
-              </button>
+                Transmit Secure Online Link
+              </ActionButton>
 
-              <button
+              <ActionButton
+                variant="outline"
+                fullWidth
                 disabled={compiledLocalSalesData.count === 0}
                 onClick={handleDownloadOfflineJSON}
-                className="w-full py-3 bg-m3-surface-low border border-m3-outline-variant/45 hover:bg-m3-primary/5 text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                isLoading={isDownloadingManual}
+                loadingText="Assembling Encrypted JSON Packet..."
+                icon={<Download className="h-4 w-4 text-amber-500" />}
+                className="py-3 hover:text-white"
               >
-                <Download className="h-4 w-4 text-amber-500" />
-                <span>Download manual JSON Packet</span>
-              </button>
+                Download manual JSON Packet
+              </ActionButton>
 
               {/* Multi-Format Corporate Exports */}
               <div className="mt-4 pt-4 border-t border-m3-outline-variant/15 space-y-2">
@@ -1242,13 +1436,114 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                   />
                 </div>
 
+                {/* LIVE VERIFICATION ENGINE OUTPUT */}
+                {liveValidation && (
+                  <div className="p-4 bg-[#111217] border border-m3-outline-variant/35 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between border-b border-m3-outline-variant/15 pb-2">
+                      <h4 className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono flex items-center gap-1.5">
+                        <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        Live Ledger Audit Script (Verifying...)
+                      </h4>
+                      <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-zinc-400 bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-700">
+                        v2.4 SECURE SIGNATURE
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {/* Check 1: Parser */}
+                      <div className="flex items-center gap-2 text-[10.5px]">
+                        <span className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                          liveValidation.isParsed ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/15 text-rose-400 border border-rose-500/20'
+                        }`}>
+                          {liveValidation.isParsed ? '✓' : '✗'}
+                        </span>
+                        <div className="text-zinc-300">
+                          <span className="font-semibold block leading-none">JSON Syntax Check</span>
+                          <span className="text-[8.5px] text-zinc-500 font-mono">
+                            {liveValidation.isParsed ? 'JSON parsed successfully' : 'Malformed grammar'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Check 2: Fields */}
+                      <div className="flex items-center gap-2 text-[10.5px]">
+                        <span className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                          liveValidation.hasRequiredFields ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/15 text-rose-400 border border-rose-500/20'
+                        }`}>
+                          {liveValidation.hasRequiredFields ? '✓' : '✗'}
+                        </span>
+                        <div className="text-zinc-300">
+                          <span className="font-semibold block leading-none">Schema Structure Matches</span>
+                          <span className="text-[8.5px] text-zinc-500 font-mono">
+                            {liveValidation.hasRequiredFields ? `${liveValidation.branchId} | ${liveValidation.reportingDate}` : 'Missing metadata key fields'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Check 3: Signature */}
+                      <div className="flex items-center gap-2 text-[10.5px]">
+                        <span className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                          liveValidation.isSignatureValid ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
+                        }`}>
+                          {liveValidation.isSignatureValid ? '✓' : '⚡'}
+                        </span>
+                        <div className="text-zinc-300">
+                          <span className="font-semibold block leading-none">HQ Authenticity Seal</span>
+                          <span className="text-[8.5px] text-zinc-500 font-mono">
+                            {liveValidation.isSignatureValid ? `Verified: Generated by ${liveValidation.signatureMeta?.exportedByRole || 'Staff'}` : 'Unsigned / custom customizer'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Check 4: Totals Match */}
+                      <div className="flex items-center gap-2 text-[10.5px]">
+                        <span className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                          liveValidation.isTotalsCorrect ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/15 text-rose-400 border border-rose-500/20'
+                        }`}>
+                          {liveValidation.isTotalsCorrect ? '✓' : '✗'}
+                        </span>
+                        <div className="text-zinc-300">
+                          <span className="font-semibold block leading-none">Ledger Sum Reconciliation</span>
+                          <span className="text-[8.5px] text-zinc-500 font-mono">
+                            {liveValidation.isTotalsCorrect 
+                              ? `Verified ₱${liveValidation.recalculatedAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} total` 
+                              : `Header: ₱${liveValidation.totalSalesAmount} vs Recalc: ₱${liveValidation.recalculatedAmount}`}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Check 5: Duplicate */}
+                    <div className="pt-2 border-t border-m3-outline-variant/10 text-[9.5px] flex items-center gap-1.5">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${liveValidation.isDuplicate ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                      <span className="text-zinc-450 font-medium">
+                        {liveValidation.isDuplicate 
+                          ? 'Duplicate Entry: This daily batch has already been imported and processed.' 
+                          : 'Duplicate Check Clear: Brand new report packet.'}
+                      </span>
+                    </div>
+
+                    {/* Detailed Errors */}
+                    {liveValidation.errors.length > 0 && (
+                      <div className="p-2.5 bg-rose-500/10 border border-rose-500/25 rounded-xl space-y-1">
+                        <span className="text-[9px] font-black uppercase text-rose-400 tracking-wider font-mono">Verification Failures:</span>
+                        <ul className="list-disc pl-3 text-[9px] text-zinc-300 space-y-0.5 leading-normal">
+                          {liveValidation.errors.map((err, idx) => (
+                            <li key={idx} className="font-mono text-rose-400">{err}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* ERROR PANEL */}
                 {importError && (
                   <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-[10px] font-bold leading-normal flex items-start gap-2">
                     <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                     <div>
                       <span>Schema Verification Error:</span>
-                      <p className="font-medium text-zinc-300 mt-1">{importError}</p>
+                      <p className="font-medium text-zinc-300 mt-1 whitespace-pre-line">{importError}</p>
                     </div>
                   </div>
                 )}
@@ -1256,26 +1551,30 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                 {/* SUCCESS PANEL */}
                 {importSuccess && (
                   <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl text-[10.5px] font-bold flex items-center gap-2.5">
-                    <CheckCircle2 className="h-4.5 w-4.5" />
+                    <CheckCircle2 className="h-4.5 w-4.5 animate-bounce text-emerald-400" />
                     <span>Report verified, parsed, and logged inside the audit lists successfully.</span>
                   </div>
                 )}
               </div>
 
               <div className="px-6 py-4 bg-m3-surface border-t border-m3-outline-variant/15 flex justify-end gap-3.5">
-                <button
+                <ActionButton
+                  variant="outline"
                   onClick={() => setShowJsonImport(false)}
-                  className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-white rounded-xl transition-all cursor-pointer"
+                  className="hover:bg-m3-primary/10"
                 >
                   Cancel
-                </button>
+                </ActionButton>
 
-                <button
+                <ActionButton
+                  variant="primary"
                   onClick={handleManualImportSubmit}
-                  className="px-5 py-2.5 bg-m3-primary text-m3-on-primary font-black text-xs uppercase tracking-wider rounded-xl hover:bg-m3-primary/95 transition-all shadow-md cursor-pointer active:scale-97"
+                  disabled={!pastedJson.trim() || (liveValidation !== null && liveValidation.errors.filter(e => !e.includes('already exists') && !e.includes('already been registered')).length > 0)}
+                  isLoading={isImportingManual}
+                  loadingText="Executing Ledger Insertion Rules..."
                 >
                   Confirm & Finalize Import
-                </button>
+                </ActionButton>
               </div>
             </motion.div>
           </div>
@@ -1326,14 +1625,47 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                   </span>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Copy JSON content (highly robust) */}
+                    <button
+                      onClick={() => handleCopyText(sharePayloadText, 'Encrypted sales report copied to clipboard!')}
+                      className="p-4 bg-[#1e293b]/50 hover:bg-[#1e293b]/80 border border-slate-700/50 hover:border-slate-500 text-slate-200 rounded-2xl text-left transition-all group flex flex-col justify-between h-24 cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-[10px] font-black uppercase tracking-wider font-mono text-slate-400">Clipboard</span>
+                        <Copy className="h-4 w-4 text-slate-400 group-hover:scale-110 transition-transform" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-white mb-0.5">Copy JSON String</div>
+                        <p className="text-[10px] text-zinc-400">Copies code to paste anywhere</p>
+                      </div>
+                    </button>
+
+                    {/* Manual re-download */}
+                    <button
+                      onClick={handleManualDownload}
+                      className="p-4 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 rounded-2xl text-left transition-all group flex flex-col justify-between h-24 cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-[10px] font-black uppercase tracking-wider font-mono">Local File</span>
+                        <Download className="h-4 w-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-white mb-0.5">Download JSON File</div>
+                        <p className="text-[10px] text-zinc-400">Re-saves JSON packet file directly</p>
+                      </div>
+                    </button>
+
                     {/* Share on facebook messenger */}
                     <button
                       onClick={() => {
-                        navigator.clipboard.writeText(sharePayloadText);
-                        triggerToast('JSON payload copied! Redirecting to Messenger...', 'success');
+                        handleCopyText(sharePayloadText, 'JSON report copied! Opening Messenger...');
                         setTimeout(() => {
-                          window.open('https://www.messenger.com', '_blank', 'noopener,noreferrer');
-                        }, 800);
+                          try {
+                            window.open('https://www.messenger.com', '_blank', 'noopener,noreferrer');
+                          } catch (err) {
+                            console.warn('Blocked popup:', err);
+                          }
+                        }, 500);
                       }}
                       className="p-4 bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/20 hover:border-blue-500/40 text-blue-400 rounded-2xl text-left transition-all group flex flex-col justify-between h-24 cursor-pointer"
                     >
@@ -1342,46 +1674,33 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-white mb-0.5">Share to Messenger</div>
-                        <p className="text-[10px] text-zinc-400">Copies code & opens messenger chat</p>
+                        <div className="text-xs font-bold text-white mb-0.5">Share via Messenger</div>
+                        <p className="text-[10px] text-zinc-400">Copies code & loads messenger chat</p>
                       </div>
                     </button>
 
-                    {/* Native system share screen */}
+                    {/* Email sales report package */}
                     <button
-                      onClick={async () => {
-                        if (navigator.share) {
+                      onClick={() => {
+                        handleCopyText(sharePayloadText, 'JSON report copied! Launching email...');
+                        setTimeout(() => {
                           try {
-                            const file = new File([sharePayloadText], shareFileName, { type: 'application/json' });
-                            await navigator.share({
-                              files: [file],
-                              title: `Sales Report - ${reportingDate}`,
-                              text: `Encrypted Sales Report for ${currentBranchMeta.name} (${reportingDate})`
-                            });
-                            triggerToast('Shared successfully!', 'success');
+                            const mailtoUrl = `mailto:?subject=${encodeURIComponent(`TilePoint Sales Report - ${currentBranchMeta.name} (${reportingDate})`)}&body=${encodeURIComponent(`Dear Admin,\n\nAttached is the encrypted JSON sales report for ${currentBranchMeta.name} compiled on ${reportingDate}.\n\nPlease find the encrypted data string below. Copy and paste this directly into the HQ import portal to reconcile:\n\n${sharePayloadText}\n\nKind regards,\nTilePoint Offline POS System`)};`;
+                            window.location.href = mailtoUrl;
                           } catch (err) {
-                            console.log('Native share error or cancel:', err);
+                            console.warn('Mailto redirect failed:', err);
                           }
-                        } else {
-                          navigator.clipboard.writeText(sharePayloadText);
-                          triggerToast('Copied encrypted JSON content to clipboard!', 'success');
-                        }
+                        }, 500);
                       }}
-                      className="p-4 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 rounded-2xl text-left transition-all group flex flex-col justify-between h-24 cursor-pointer"
+                      className="p-4 bg-amber-600/10 hover:bg-amber-600/20 border border-amber-500/20 hover:border-amber-500/40 text-amber-400 rounded-2xl text-left transition-all group flex flex-col justify-between h-24 cursor-pointer"
                     >
                       <div className="flex items-center justify-between w-full">
-                        <span className="text-[10px] font-black uppercase tracking-wider font-mono">
-                          {navigator.share ? 'System Share' : 'Clipboard'}
-                        </span>
-                        <Share2 className="h-4 w-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+                        <span className="text-[10px] font-black uppercase tracking-wider font-mono">Email client</span>
+                        <Mail className="h-4 w-4 text-amber-400 group-hover:scale-110 transition-transform" />
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-white mb-0.5">
-                          {navigator.share ? 'Trigger Share Screen' : 'Copy JSON String'}
-                        </div>
-                        <p className="text-[10px] text-zinc-400">
-                          {navigator.share ? 'Opens native Android/iOS share sheet' : 'Copy string to paste manually'}
-                        </p>
+                        <div className="text-xs font-bold text-white mb-0.5">Email Sales Packet</div>
+                        <p className="text-[10px] text-zinc-400">Launches default system mail app</p>
                       </div>
                     </button>
                   </div>
@@ -1393,10 +1712,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                       Secure Decryption Signature Content:
                     </span>
                     <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(sharePayloadText);
-                        triggerToast('Full report JSON copied to clipboard!', 'success');
-                      }}
+                      onClick={() => handleCopyText(sharePayloadText, 'Full report JSON copied to clipboard!')}
                       className="text-[9px] font-bold text-m3-primary hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <Copy className="h-3 w-3" />

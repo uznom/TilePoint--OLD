@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDb } from '../context/DbContext';
 import { PurchaseOrder, UserRole } from '../types/db';
 import {
@@ -21,8 +21,11 @@ import {
   Edit2,
   Trash2,
   Package,
+  Tag,
   Printer,
-  Download
+  Download,
+  Settings2,
+  ChevronRight
 } from 'lucide-react';
 
 interface ProcurementModuleProps {
@@ -36,6 +39,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
     poItems,
     products,
     suppliers,
+    brands,
     branches,
     createPO,
     updatePOStatus,
@@ -43,18 +47,37 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
     createSupplier,
     updateSupplier,
     deleteSupplier,
+    createBrand,
+    updateBrand,
+    deleteBrand,
     createProduct,
     currentUser
   } = useDb();
 
   // Active submodule tab selection
-  const [activeSubTab, setActiveSubTab] = useState<'po' | 'suppliers'>(defaultTab);
+  const [activeSubTab, setActiveSubTab] = useState<'po' | 'suppliers' | 'brands' | 'consolidation'>(defaultTab as any);
+  const [poFilterTab, setPoFilterTab] = useState<'all' | 'pending' | 'outsourcing'>('all');
+
+  const [isConfirmingConsolidation, setIsConfirmingConsolidation] = useState(false);
 
   React.useEffect(() => {
     if (currentUser.role !== UserRole.ADMIN && activeSubTab === 'suppliers') {
       setActiveSubTab('po');
     }
   }, [currentUser.role, activeSubTab]);
+
+  React.useEffect(() => {
+    try {
+      const cached = localStorage.getItem('tp_po_cart');
+      if (cached) {
+        setPoCart(JSON.parse(cached));
+      } else {
+        setPoCart([]);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [activeSubTab]);
 
   // Template state
   const [poTemplates, setPoTemplates] = useState<{
@@ -65,8 +88,12 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
     items: { productId: string; costPrice: number; quantityRequested: number }[];
     notes?: string;
   }[]>(() => {
-    const cached = localStorage.getItem('tp_po_templates');
-    return cached ? JSON.parse(cached) : [];
+    try {
+      const cached = localStorage.getItem('tp_po_templates');
+      return cached ? JSON.parse(cached) : [];
+    } catch (e) {
+      return [];
+    }
   });
   const [templateNameInput, setTemplateNameInput] = useState('');
 
@@ -74,6 +101,118 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
   const [showPOModal, setShowPOModal] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [showSupplierModal, setShowSupplierModal] = useState(false);
+  const [showBrandModal, setShowBrandModal] = useState(false);
+
+  // Brand form states
+  const [editingBrandId, setEditingBrandId] = useState<string | null>(null);
+  const [brandName, setBrandName] = useState('');
+  const [brandSupplierId, setBrandSupplierId] = useState('S1');
+  const [brandDescription, setBrandDescription] = useState('');
+
+  // Requisitions Cart State
+  const [poCart, setPoCart] = useState<{ productId: string; quantity: number; notes?: string; requestedByBranchId?: string }[]>(() => {
+    try {
+      const cached = localStorage.getItem('tp_po_cart');
+      return cached ? JSON.parse(cached) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const syncPoCart = (newCart: any[]) => {
+    setPoCart(newCart);
+    localStorage.setItem('tp_po_cart', JSON.stringify(newCart));
+    window.dispatchEvent(new Event('tp_po_cart_updated'));
+  };
+
+  useEffect(() => {
+    const handleCartSync = () => {
+      try {
+        const cached = localStorage.getItem('tp_po_cart');
+        setPoCart(cached ? JSON.parse(cached) : []);
+      } catch (e) {
+        // Safe fallback
+      }
+    };
+    window.addEventListener('tp_po_cart_updated', handleCartSync);
+    return () => {
+      window.removeEventListener('tp_po_cart_updated', handleCartSync);
+    };
+  }, []);
+
+  const [selectedConsolidationBranchId, setSelectedConsolidationBranchId] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const activeBranchId = localStorage.getItem('tp_active_branch_id');
+      if (activeBranchId && activeBranchId !== 'all') return activeBranchId;
+    }
+    return currentUser.branchAssignmentId || (branches[0]?.id || 'B1');
+  });
+
+  const handleConsolidateOrders = (forcedStatus?: 'Pending' | 'Approved' | 'Draft') => {
+    if (poCart.length === 0) {
+      showToast('Compilation Error: The restock queue is currently empty.');
+      return;
+    }
+
+    const supplierGroups: Record<string, typeof poCart> = {};
+    
+    poCart.forEach(item => {
+      const prod = products.find(p => p.id === item.productId);
+      if (!prod) return;
+
+      const brandMatch = brands.find(
+        b => b.name.toLowerCase().trim() === prod.brand?.toLowerCase().trim() && !b.isDeleted
+      );
+
+      const supplierId = brandMatch ? brandMatch.supplierId : 'S1';
+
+      if (!supplierGroups[supplierId]) {
+        supplierGroups[supplierId] = [];
+      }
+      supplierGroups[supplierId].push(item);
+    });
+
+    let poCreatedCount = 0;
+    const targetStatus = forcedStatus || 'Pending';
+    Object.entries(supplierGroups).forEach(([supId, itemsInGroup]) => {
+      const draftItemsInput = itemsInGroup.map(item => {
+        const prod = products.find(p => p.id === item.productId);
+        const costPrice = prod ? prod.costPrice : 300;
+        return {
+          productId: item.productId,
+          costPrice,
+          quantityRequested: item.quantity,
+        };
+      });
+
+      const brandsInGroup = Array.from(new Set(
+        itemsInGroup.map(item => {
+          const prod = products.find(p => p.id === item.productId);
+          return prod ? prod.brand : '';
+        }).filter(Boolean)
+      )).join(', ');
+
+      const notes = `Auto-Consolidated Purchase Order. Grouped brands: ${brandsInGroup || 'N/A'}. Compiled via Automated Sourcing Deck.`;
+
+      createPO(supId, selectedConsolidationBranchId, draftItemsInput, notes, targetStatus as any);
+      poCreatedCount++;
+    });
+
+    if (poCreatedCount > 0) {
+      syncPoCart([]);
+      setIsConfirmingConsolidation(false);
+      setActiveSubTab('po');
+      if (targetStatus === 'Approved') {
+        setPoFilterTab('outsourcing');
+        showToast(`Success: Synthesized ${poCreatedCount} auto-consolidated Purchase Orders dispatched direct to supplier Outsourcing Deck!`);
+      } else {
+        setPoFilterTab('pending');
+        showToast(`Success: Synthesized ${poCreatedCount} auto-consolidated Purchase Order Drafts queued in Pending deck!`);
+      }
+    } else {
+      showToast('Sourcing Error: Could not compile any valid purchase order drafts.');
+    }
+  };
 
   // Supplier forms editing/creation state
   const [editingSupplierId, setEditingSupplierId] = useState<string | null>(null);
@@ -181,6 +320,52 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
     if (confirm(`Are you absolutely sure you want to remove supplier "${name}"? Existing purchase orders and catalog records will be kept.`)) {
       deleteSupplier(id);
       showToast(`Supplier "${name}" was soft-deleted.`);
+    }
+  };
+
+  // Brand handlers
+  const handleOpenAddBrand = () => {
+    setEditingBrandId(null);
+    setBrandName('');
+    const firstSupplier = suppliers.filter(s => !s.isDeleted)[0]?.id || 'S1';
+    setBrandSupplierId(firstSupplier);
+    setBrandDescription('');
+    setShowBrandModal(true);
+  };
+
+  const handleOpenEditBrand = (b: any) => {
+    setEditingBrandId(b.id);
+    setBrandName(b.name);
+    setBrandSupplierId(b.supplierId);
+    setBrandDescription(b.description || '');
+    setShowBrandModal(true);
+  };
+
+  const handleSaveBrand = () => {
+    if (!brandName.trim()) {
+      showToast('Validation Error: Brand Name is required.');
+      return;
+    }
+    const brandData = {
+      name: brandName.trim(),
+      supplierId: brandSupplierId,
+      description: brandDescription.trim(),
+    };
+
+    if (editingBrandId) {
+      updateBrand(editingBrandId, brandData);
+      showToast(`Brand "${brandName.trim()}" updated successfully.`);
+    } else {
+      createBrand(brandData);
+      showToast(`Brand "${brandName.trim()}" registered under associated supplier.`);
+    }
+    setShowBrandModal(false);
+  };
+
+  const handleDeleteBrand = (id: string, name: string) => {
+    if (confirm(`Are you sure you want to remove brand partnership "${name}"?`)) {
+      deleteBrand(id);
+      showToast(`Brand "${name}" was soft-deleted.`);
     }
   };
 
@@ -369,16 +554,28 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
       <div className="flex justify-between items-center bg-m3-surface-low/95 backdrop-blur-md p-4 rounded-[20px] border border-m3-outline-variant/20 sticky top-0 z-20 shadow-md">
         <div>
           <h3 className="text-xs font-black tracking-widest text-m3-primary uppercase font-mono">
-            {activeSubTab === 'po' ? 'Supply Logistics Ledger' : 'Supplier Registry Management'}
+            {activeSubTab === 'po'
+              ? 'Supply Logistics Ledger'
+              : activeSubTab === 'suppliers'
+              ? 'Supplier Registry Management'
+              : activeSubTab === 'brands'
+              ? 'Manufacturer Brands Directory'
+              : 'Automated PO Consolidation Desk'}
           </h3>
           <p className="text-xs text-m3-on-surface-variant/80 mt-0.5">
-            {activeSubTab === 'po' ? 'Procurement pipelines & delivery tracking' : 'Corporate manufacturer broker profiles database'}
+            {activeSubTab === 'po'
+              ? 'Procurement pipelines & delivery tracking'
+              : activeSubTab === 'suppliers'
+              ? 'Corporate manufacturer broker profiles database'
+              : activeSubTab === 'brands'
+              ? 'Configure manufacturer-to-supplier mappings'
+              : 'Pre-restock compilation worksheets & bulk compiler'}
           </p>
         </div>
 
         {allowedToModify && (
           <div>
-            {activeSubTab === 'po' ? (
+            {activeSubTab === 'po' || activeSubTab === 'consolidation' ? (
               <button
                 onClick={() => {
                   setSelectedSupplierId(suppliers.filter(s => !s.isDeleted)[0]?.id || 'S1');
@@ -390,12 +587,19 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
               >
                 <Plus className="h-4 w-4" /> Requisition PO
               </button>
-            ) : (
+            ) : activeSubTab === 'suppliers' ? (
               <button
                 onClick={handleOpenAddSupplier}
                 className="m3-btn-primary flex items-center gap-1.5 cursor-pointer shadow-sm text-xs shrink-0"
               >
                 <Plus className="h-4 w-4" /> Register Supplier
+              </button>
+            ) : (
+              <button
+                onClick={handleOpenAddBrand}
+                className="m3-btn-primary flex items-center gap-1.5 cursor-pointer shadow-sm text-xs shrink-0"
+              >
+                <Plus className="h-4 w-4" /> Register Sourced Brand
               </button>
             )}
           </div>
@@ -405,7 +609,10 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
       {/* Submodule Level Navigation Tabs */}
       <div className="flex flex-wrap gap-1 md:gap-2 border-b border-m3-outline-variant/20 pb-px items-center sticky top-0 bg-m3-surface/90 backdrop-blur-md z-30 pt-2 pb-2 rounded-b-xl px-2 shadow-sm mb-4">
         <button
-          onClick={() => setActiveSubTab('po')}
+          onClick={() => {
+            setActiveSubTab('po');
+            setIsConfirmingConsolidation(false);
+          }}
           className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
             activeSubTab === 'po'
               ? 'border-m3-primary text-m3-primary font-black scale-102 font-bold'
@@ -417,7 +624,10 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
         </button>
         {currentUser.role === UserRole.ADMIN && (
           <button
-            onClick={() => setActiveSubTab('suppliers')}
+            onClick={() => {
+              setActiveSubTab('suppliers');
+              setIsConfirmingConsolidation(false);
+            }}
             className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
               activeSubTab === 'suppliers'
                 ? 'border-m3-primary text-m3-primary font-black scale-102 font-bold'
@@ -428,133 +638,261 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
             <span>Enterprise Suppliers ({suppliers.filter(s => !s.isDeleted).length})</span>
           </button>
         )}
+        <button
+          onClick={() => {
+            setActiveSubTab('brands');
+            setIsConfirmingConsolidation(false);
+          }}
+          className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
+            activeSubTab === 'brands'
+              ? 'border-m3-primary text-m3-primary font-black scale-102 font-bold'
+              : 'border-transparent text-m3-on-surface-variant'
+          }`}
+        >
+          <Tag className="h-4 w-4" />
+          <span>Manufacturer Brands ({brands.filter(b => !b.isDeleted).length})</span>
+        </button>
+        <button
+          onClick={() => {
+            setActiveSubTab('consolidation');
+            setIsConfirmingConsolidation(false);
+          }}
+          className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
+            activeSubTab === 'consolidation'
+              ? 'border-m3-primary text-m3-primary font-black scale-102 font-bold'
+              : 'border-transparent text-m3-on-surface-variant'
+          }`}
+        >
+          <Settings2 className={`h-4 w-4 ${poCart.length > 0 ? 'text-emerald-500 animate-pulse' : 'text-m3-on-surface-variant'}`} />
+          <span>Consolidation Desk & Queue {poCart.length > 0 ? `(${poCart.length})` : ''}</span>
+        </button>
       </div>
 
       {activeSubTab === 'po' ? (
         /* PO List Ledgers view */
         <div className="grid grid-cols-1 gap-6 items-start">
-          <div className="m3-card shadow-sm overflow-x-auto p-0">
-            <table className="w-full text-xs text-left border-collapse table-auto min-w-[900px]">
-              <thead>
-                <tr className="border-b border-m3-outline-variant/20 bg-m3-surface/30 text-[10px] uppercase font-bold text-m3-on-surface-variant tracking-wider">
-                  <th className="py-3 px-4">PO Document Ref</th>
-                  <th className="py-3 px-4">Origin Supplier</th>
-                  <th className="py-3 px-4">Destination Branch</th>
-                  <th className="py-3 px-4 text-center">Date Requested</th>
-                  <th className="py-3 px-4 text-center">Status</th>
-                  <th className="py-3 px-4 text-right">Drafted By</th>
-                  <th className="py-3 px-4 text-center">Export</th>
-                  {allowedToModify && <th className="py-3 px-4 text-center">Command Operational Action</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
-                {purchaseOrders.map((po) => {
-                  const relatedPoItems = poItems.filter(item => item.poId === po.id);
-                  // Status color triggers
-                  let statusBadge = 'bg-m3-outline-variant/20 text-m3-on-surface';
-                  if (po.status === 'Pending') statusBadge = 'bg-m3-primary-container text-m3-on-primary-container border-m3-primary/25';
-                  if (po.status === 'Approved' || po.status === 'Ordered') statusBadge = 'bg-m3-tertiary-container text-m3-on-tertiary-container border border-m3-tertiary/25';
-                  if (po.status === 'Completed') statusBadge = 'bg-m3-tertiary-container text-m3-on-tertiary-container border-transparent';
-                  if (po.status === 'Partially Received') statusBadge = 'bg-m3-secondary-container text-m3-on-secondary-container';
+          {(() => {
+            const pendingCount = purchaseOrders.filter(po => po.status === 'Pending' || po.status === 'Draft').length;
+            const outsourcingCount = purchaseOrders.filter(po => po.status === 'Approved' || po.status === 'Ordered' || po.status === 'Partially Received').length;
+            const totalCount = purchaseOrders.length;
 
-                  return (
-                    <tr
-                      key={po.id}
-                      onClick={() => setSelectedPoDetails(po)}
-                      className="hover:bg-m3-surface-low/90 cursor-pointer transition-colors"
-                      title="Click to view full purchase order (PO) requisition details"
-                    >
-                      <td className="py-3.5 px-4">
-                        <div className="font-extrabold text-m3-primary font-mono text-xs hover:underline flex items-center gap-1">
-                          <span>{po.poNumber}</span>
-                        </div>
-                        <div className="text-[10px] text-m3-on-surface-variant font-medium">{relatedPoItems.length} material segments req.</div>
-                      </td>
+            const filteredPurchaseOrders = purchaseOrders.filter((po) => {
+              if (poFilterTab === 'pending') {
+                return po.status === 'Pending' || po.status === 'Draft';
+              }
+              if (poFilterTab === 'outsourcing') {
+                return po.status === 'Approved' || po.status === 'Ordered' || po.status === 'Partially Received';
+              }
+              return true; // 'all'
+            });
 
-                      <td className="py-3.5 px-4 font-bold text-m3-on-surface">{getSuplierName(po.supplierId)}</td>
+            return (
+              <>
+                {/* PO Sub-Ledger Filters */}
+                <div className="flex flex-wrap gap-2 items-center bg-m3-surface-low/50 p-2 rounded-xl border border-m3-outline-variant/15">
+                  <button
+                    onClick={() => setPoFilterTab('all')}
+                    className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-2 ${
+                      poFilterTab === 'all'
+                        ? 'bg-m3-primary text-m3-on-primary shadow-sm'
+                        : 'hover:bg-m3-surface text-m3-on-surface-variant'
+                    }`}
+                  >
+                    <span>All Requisitions Ledger</span>
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      poFilterTab === 'all' ? 'bg-m3-on-primary/20 text-m3-on-primary font-black' : 'bg-m3-outline-variant/30 text-m3-on-surface'
+                    }`}>
+                      {totalCount}
+                    </span>
+                  </button>
+                  <button
+                    id="po-filter-pending-btn"
+                    onClick={() => setPoFilterTab('pending')}
+                    className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-2 ${
+                      poFilterTab === 'pending'
+                        ? 'bg-amber-600 text-white shadow-sm'
+                        : 'hover:bg-m3-surface text-m3-on-surface-variant'
+                    }`}
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    <span>Pending & Drafts</span>
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      poFilterTab === 'pending' ? 'bg-white/20 text-white font-black' : 'bg-m3-outline-variant/30 text-m3-on-surface'
+                    }`}>
+                      {pendingCount}
+                    </span>
+                  </button>
+                  <button
+                    id="po-filter-outsourcing-btn"
+                    onClick={() => setPoFilterTab('outsourcing')}
+                    className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-2 ${
+                      poFilterTab === 'outsourcing'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'hover:bg-m3-surface text-m3-on-surface-variant'
+                    }`}
+                  >
+                    <Truck className="h-3.5 w-3.5" />
+                    <span>Direct Outsourcing Deck</span>
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      poFilterTab === 'outsourcing' ? 'bg-white/20 text-white font-black' : 'bg-m3-outline-variant/30 text-m3-on-surface'
+                    }`}>
+                      {outsourcingCount}
+                    </span>
+                  </button>
+                </div>
 
-                      {/* Destination Branch */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-1.5 font-bold">
-                          <MapPin className="h-3.5 w-3.5 text-m3-primary" />
-                          <span>{getBranchName(po.branchId)}</span>
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-4 text-center font-mono font-bold text-m3-on-surface">{po.date}</td>
-
-                      <td className="py-3.5 px-4 text-center">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-widest border uppercase ${statusBadge}`}>
-                          {po.status}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-4 text-right text-m3-on-surface-variant font-mono">
-                        {po.requestedBy}
-                      </td>
-
-                      <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedPoForExport(po);
-                            setShowExportModal(true);
-                          }}
-                          className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider bg-amber-500 hover:bg-amber-400 text-zinc-950 border border-amber-650/15 rounded-full cursor-pointer flex items-center gap-1 transition-all hover:scale-103 mx-auto shadow-sm"
-                        >
-                          <FileText className="h-3 w-3" />
-                          <span>Export</span>
-                        </button>
-                      </td>
-
-                      {allowedToModify && (
-                        <td className="py-3.5 px-4 text-center">
-                          <div className="flex gap-2 justify-center" onClick={(e) => e.stopPropagation()}>
-                            {po.status === 'Pending' && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  updatePOStatus(po.id, 'Approved');
-                                  showToast(`Requisition slip ${po.poNumber} approved.`);
-                                }}
-                                className="px-3 py-1 text-[10.5px] font-bold bg-m3-primary/5 hover:bg-m3-primary/10 text-m3-primary border border-m3-primary/30 rounded-full cursor-pointer transition-colors"
-                              >
-                                Approve Draft
-                              </button>
-                            )}
-
-                            {(po.status === 'Approved' || po.status === 'Ordered' || po.status === 'Partially Received') && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleOpenReceive(po);
-                                }}
-                                className="px-3 py-1 text-[10.5px] font-black bg-m3-tertiary/5 hover:bg-m3-tertiary/10 text-m3-tertiary border border-m3-tertiary/30 rounded-full cursor-pointer flex items-center justify-center gap-1.5 transition-colors"
-                              >
-                                <Truck className="h-3.5 w-3.5" /> Receive Cargo Delivery
-                              </button>
-                            )}
-
-                            {po.status === 'Completed' && (
-                              <span className="text-[10px] text-m3-on-surface-variant/70 font-semibold italic">Settled & Completed</span>
-                            )}
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
-
-                {purchaseOrders.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="py-8 text-center text-m3-on-surface-variant font-medium">No purchase order records registered.</td>
-                  </tr>
+                {/* Context Explanatory Banner */}
+                {poFilterTab === 'pending' && (
+                  <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl flex items-start gap-3 text-xs animate-fade-in">
+                    <FileText className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-bold text-amber-600 dark:text-amber-500 font-mono text-xs uppercase tracking-wider">Pending & Draft Requisitions pipeline</h4>
+                      <p className="text-m3-on-surface-variant/95 mt-0.5">
+                        Review procurement layouts and draft purchase order specifications assembled by store operators. Approving a pending draft dispatches the order to the active outsourcing deck, permitting receipt of carrier shipments.
+                      </p>
+                    </div>
+                  </div>
                 )}
-              </tbody>
-            </table>
-          </div>
+
+                {poFilterTab === 'outsourcing' && (
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl flex items-start gap-3 text-xs animate-fade-in">
+                    <Truck className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-bold text-emerald-600 dark:text-emerald-500 font-mono text-xs uppercase tracking-wider">Enterprise Supplier Outsourcing Deck</h4>
+                      <p className="text-m3-on-surface-variant/95 mt-0.5">
+                        This cockpit displays purchase orders actively sourced and outsourced to third-party manufacturers. Track logistics carrier transit statuses, print invoice records, or log arriving carrier cargo to automatically reconcile inventory volume.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="m3-card shadow-sm overflow-x-auto p-0">
+                  <table className="w-full text-xs text-left border-collapse table-auto min-w-[900px]">
+                    <thead>
+                      <tr className="border-b border-m3-outline-variant/20 bg-m3-surface/30 text-[10px] uppercase font-bold text-m3-on-surface-variant tracking-wider">
+                        <th className="py-3 px-4">PO Document Ref</th>
+                        <th className="py-3 px-4">Origin Supplier</th>
+                        <th className="py-3 px-4">Destination Branch</th>
+                        <th className="py-3 px-4 text-center">Date Requested</th>
+                        <th className="py-3 px-4 text-center">Status</th>
+                        <th className="py-3 px-4 text-right">Drafted By</th>
+                        <th className="py-3 px-4 text-center">Export</th>
+                        {allowedToModify && <th className="py-3 px-4 text-center">Command Operational Action</th>}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
+                      {filteredPurchaseOrders.map((po) => {
+                        const relatedPoItems = poItems.filter(item => item.poId === po.id);
+                        // Status color triggers
+                        let statusBadge = 'bg-m3-outline-variant/20 text-m3-on-surface';
+                        if (po.status === 'Pending') statusBadge = 'bg-m3-primary-container text-m3-on-primary-container border-m3-primary/25';
+                        if (po.status === 'Approved' || po.status === 'Ordered') statusBadge = 'bg-m3-tertiary-container text-m3-on-tertiary-container border border-m3-tertiary/25';
+                        if (po.status === 'Completed') statusBadge = 'bg-m3-tertiary-container text-m3-on-tertiary-container border-transparent';
+                        if (po.status === 'Partially Received') statusBadge = 'bg-m3-secondary-container text-m3-on-secondary-container';
+
+                        return (
+                          <tr
+                            key={po.id}
+                            onClick={() => setSelectedPoDetails(po)}
+                            className="hover:bg-m3-surface-low/90 cursor-pointer transition-colors"
+                            title="Click to view full purchase order (PO) requisition details"
+                          >
+                            <td className="py-3.5 px-4">
+                              <div className="font-extrabold text-m3-primary font-mono text-xs hover:underline flex items-center gap-1">
+                                <span>{po.poNumber}</span>
+                              </div>
+                              <div className="text-[10px] text-m3-on-surface-variant font-medium">{relatedPoItems.length} material segments req.</div>
+                            </td>
+
+                            <td className="py-3.5 px-4 font-bold text-m3-on-surface">{getSuplierName(po.supplierId)}</td>
+
+                            {/* Destination Branch */}
+                            <td className="py-3.5 px-4">
+                              <div className="flex items-center gap-1.5 font-bold">
+                                <MapPin className="h-3.5 w-3.5 text-m3-primary" />
+                                <span>{getBranchName(po.branchId)}</span>
+                              </div>
+                            </td>
+
+                            <td className="py-3.5 px-4 text-center font-mono font-bold text-m3-on-surface">{po.date}</td>
+
+                            <td className="py-3.5 px-4 text-center">
+                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-widest border uppercase ${statusBadge}`}>
+                                {po.status}
+                              </span>
+                            </td>
+
+                            <td className="py-3.5 px-4 text-right text-m3-on-surface-variant font-mono">
+                              {po.requestedBy}
+                            </td>
+
+                            <td className="py-3.5 px-4 text-center">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedPoForExport(po);
+                                  setShowExportModal(true);
+                                }}
+                                className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider bg-amber-500 hover:bg-amber-400 text-zinc-950 border border-amber-650/15 rounded-full cursor-pointer flex items-center gap-1 transition-all hover:scale-103 mx-auto shadow-sm"
+                              >
+                                <FileText className="h-3 w-3" />
+                                <span>Export</span>
+                              </button>
+                            </td>
+
+                            {allowedToModify && (
+                              <td className="py-3.5 px-4 text-center">
+                                <div className="flex gap-2 justify-center" onClick={(e) => e.stopPropagation()}>
+                                  {po.status === 'Pending' && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        updatePOStatus(po.id, 'Approved');
+                                        showToast(`Requisition slip ${po.poNumber} approved.`);
+                                      }}
+                                      className="px-3 py-1 text-[10.5px] font-bold bg-m3-primary/5 hover:bg-m3-primary/10 text-m3-primary border border-m3-primary/30 rounded-full cursor-pointer transition-colors"
+                                    >
+                                      Approve Draft
+                                    </button>
+                                  )}
+
+                                  {(po.status === 'Approved' || po.status === 'Ordered' || po.status === 'Partially Received') && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenReceive(po);
+                                      }}
+                                      className="px-3 py-1 text-[10.5px] font-black bg-m3-tertiary/5 hover:bg-m3-tertiary/10 text-m3-tertiary border border-m3-tertiary/30 rounded-full cursor-pointer flex items-center justify-center gap-1.5 transition-colors"
+                                    >
+                                      <Truck className="h-3.5 w-3.5" /> Receive Cargo Delivery
+                                    </button>
+                                  )}
+
+                                  {po.status === 'Completed' && (
+                                    <span className="text-[10px] text-m3-on-surface-variant/70 font-semibold italic">Settled & Completed</span>
+                                  )}
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
+
+                      {filteredPurchaseOrders.length === 0 && (
+                        <tr>
+                          <td colSpan={8} className="py-12 text-center text-m3-on-surface-variant font-medium text-xs italic">
+                            No purchase order requisitions in this select category filters list.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            );
+          })()}
         </div>
-      ) : (
+      ) : activeSubTab === 'suppliers' ? (
         /* Manage Suppliers Directory view */
         <div className="space-y-6">
           {/* Supplier Directory Stats cards */}
@@ -670,6 +1008,432 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      ) : activeSubTab === 'brands' ? (
+        /* Manage Brands Directory view */
+        <div className="space-y-6 animate-fade-in">
+          {/* Brand Stats cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-2xl flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-m3-primary/10 text-m3-primary">
+                <Tag className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block font-sans">Active Brands</span>
+                <span className="text-lg font-black font-mono leading-none">{brands.filter(b => !b.isDeleted).length} Cataloged</span>
+              </div>
+            </div>
+
+            <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-2xl flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-m3-tertiary/10 text-m3-tertiary">
+                <Building2 className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block font-sans">Sourced Vendors</span>
+                <span className="text-lg font-black font-mono leading-none">
+                  {new Set(brands.filter(b => !b.isDeleted).map(b => b.supplierId)).size} Active Suppliers
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-2xl flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-amber-500/10 text-amber-500">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block font-sans">Restock Queue Load</span>
+                <span className="text-lg font-black font-mono leading-none">{poCart.length} Items pending</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div>
+              <h2 className="text-base font-black text-m3-on-surface tracking-tight font-sans">Brand Sourcing & Directory Deck</h2>
+              <p className="text-xs text-m3-on-surface-variant">Configure manufacturer-to-supplier mappings to power automated PO consolidation.</p>
+            </div>
+            {allowedToModify && (
+              <button
+                onClick={handleOpenAddBrand}
+                className="px-4 py-2 bg-m3-primary hover:bg-m3-primary/95 text-m3-on-primary text-xs font-bold rounded-full shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Plus className="h-4 w-4" /> Register Sourced Brand
+              </button>
+            )}
+          </div>
+
+          {/* Brands Directory table */}
+          <div className="m3-card shadow-sm overflow-x-auto p-0">
+            <table className="w-full text-xs text-left border-collapse table-auto min-w-[800px]">
+              <thead>
+                <tr className="border-b border-m3-outline-variant/20 bg-m3-surface/30 text-[10px] uppercase font-bold text-m3-on-surface-variant tracking-wider">
+                  <th className="py-3 px-4">Brand Identifier</th>
+                  <th className="py-3 px-4">Brand Logo / Name</th>
+                  <th className="py-3 px-4">Authorized Distributor / Supplier</th>
+                  <th className="py-3 px-4">Unique Catalog SKUs</th>
+                  <th className="py-3 px-4">Description Info</th>
+                  <th className="py-3 px-4 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
+                {brands.filter(b => !b.isDeleted).map(b => {
+                  const linkedSupplierName = getSuplierName(b.supplierId);
+                  const brandNameTrim = b.name.toLowerCase().trim();
+                  const skuCount = products.filter(p => !p.isDeleted && p.brand?.toLowerCase().trim() === brandNameTrim).length;
+
+                  return (
+                    <tr key={b.id} className="hover:bg-m3-surface-lowest/40 transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-m3-on-surface-variant">{b.id}</td>
+                      <td className="py-3 px-4 font-black text-m3-on-surface text-sm">{b.name}</td>
+                      <td className="py-3 px-4">
+                        <span className="font-bold text-m3-primary bg-m3-primary/5 px-2.5 py-1 rounded-full text-[11px] border border-m3-primary/20">
+                          {linkedSupplierName}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-mono font-bold text-teal-600">{skuCount} Items linked</td>
+                      <td className="py-3 px-4 text-m3-on-surface-variant/80 italic">{b.description || 'No custom description.'}</td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center justify-center gap-2">
+                          {allowedToModify && (
+                            <>
+                              <button
+                                onClick={() => handleOpenEditBrand(b)}
+                                className="p-1 px-1.5 bg-m3-surface-low hover:bg-m3-surface border border-m3-outline-variant/20 text-m3-on-surface-variant rounded transition-all active:scale-95"
+                                title="Edit Brand Mapping"
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteBrand(b.id, b.name)}
+                                className="p-1 px-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded transition-all active:scale-95"
+                                title="De-register Brand"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {brands.filter(b => !b.isDeleted).length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-m3-on-surface-variant font-medium">No manufacturer brands registered. Click 'Register Sourced Brand' above to catalog.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        /* Automated PO Consolidation Desk & Restock Queue */
+        <div className="space-y-6">
+          <div className="m3-card border border-m3-outline/20 bg-m3-surface-low/80 rounded-2xl p-6 space-y-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-m3-outline-variant/25 pb-4">
+              <div>
+                <h3 className="text-base font-black text-m3-on-surface flex items-center gap-1.5">
+                  <Settings2 className="h-5 w-5 text-m3-primary" />
+                  <span>Automated PO Consolidation Desk & Restock Queue</span>
+                </h3>
+                <p className="text-xs text-m3-on-surface-variant">Products requiring restocking are consolidated here. Items under different brands but supplied by the same company will be merged in a single PO!</p>
+              </div>
+
+              {/* Destination Branch selector */}
+              <div className="flex items-center gap-2">
+                <label className="text-[11px] font-bold text-m3-on-surface-variant uppercase">Receiving Branch:</label>
+                <select
+                  value={selectedConsolidationBranchId}
+                  onChange={e => setSelectedConsolidationBranchId(e.target.value)}
+                  className="bg-m3-surface border border-m3-outline-variant/50 rounded-lg px-3 py-1.5 text-xs font-bold text-m3-on-surface"
+                >
+                  {branches.filter(b => !b.isDeleted).map(branch => (
+                    <option key={branch.id} value={branch.id}>{branch.name} ({branch.address})</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Quick manual item adder to Restock Queue */}
+            <div className="bg-m3-surface/30 p-3.5 rounded-xl border border-m3-outline-variant/10 flex flex-wrap gap-3 items-end">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-m3-primary uppercase pl-0.5">Quick-Add catalog item to consolidation:</label>
+                <select
+                  id="quick-add-product-select"
+                  className="bg-m3-surface border border-m3-outline-variant rounded-lg px-3 py-1 text-xs font-bold text-m3-on-surface max-w-xs"
+                  onChange={e => {
+                    const select = e.target as HTMLSelectElement;
+                    const val = select.value;
+                    if (val) {
+                      const exists = poCart.some(item => item.productId === val);
+                      if (exists) {
+                        showToast('Item already queued.');
+                      } else {
+                        const updated = [...poCart, { productId: val, quantity: 50 }];
+                        syncPoCart(updated);
+                        showToast('Added product to restock queue.');
+                      }
+                      select.value = '';
+                    }
+                  }}
+                >
+                  <option value="">-- Choose Product to Queue --</option>
+                  {(() => {
+                    let firstSupplierId: string | null = null;
+                    if (poCart.length > 0) {
+                      const firstItem = poCart[0];
+                      const firstProd = products.find(p => p.id === firstItem.productId);
+                      if (firstProd) {
+                        const brandMatch = brands.find(
+                          b => b.name.toLowerCase().trim() === firstProd.brand?.toLowerCase().trim() && !b.isDeleted
+                        );
+                        firstSupplierId = brandMatch ? brandMatch.supplierId : 'S1';
+                      }
+                    }
+
+                    return products
+                      .filter(p => !p.isDeleted)
+                      .filter(p => {
+                        if (!firstSupplierId) return true;
+                        const brandMatch = brands.find(
+                          b => b.name.toLowerCase().trim() === p.brand?.toLowerCase().trim() && !b.isDeleted
+                        );
+                        const prodSupplierId = brandMatch ? brandMatch.supplierId : 'S1';
+                        return prodSupplierId === firstSupplierId;
+                      })
+                      .map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.productName} [{p.brand || 'No Brand'}] (Stock: {p.stockQuantity})
+                        </option>
+                      ));
+                  })()}
+                </select>
+              </div>
+              <p className="text-[10.5px] text-m3-on-surface-variant italic pb-1">Choose a product from the list to instantly append it to the current restocking worksheet.</p>
+            </div>
+
+            {poCart.length > 0 ? (
+              <div className="space-y-5 animate-fade-in">
+                {/* Cart compiling list */}
+                <div className="overflow-x-auto border border-m3-outline-variant/15 rounded-xl">
+                  <table className="w-full text-xs text-left border-collapse">
+                    <thead>
+                      <tr className="bg-m3-surface-lowest text-[10px] text-zinc-400 font-bold uppercase border-b border-m3-outline-variant/20">
+                        <th className="py-2.5 px-3">Product Name</th>
+                        <th className="py-2.5 px-3">Brand</th>
+                        <th className="py-2.5 px-3">Brand Supplier Partner</th>
+                        <th className="py-2.5 px-3 text-center">Remaining Stock</th>
+                        <th className="py-2.5 px-3 text-center" style={{ width: '130px' }}>Desired Units</th>
+                        <th className="py-2.5 px-3 text-center">Remove</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-m3-outline-variant/10">
+                      {poCart.map((cartItem, cIdx) => {
+                        const prod = products.find(p => p.id === cartItem.productId);
+                        if (!prod) return null;
+                        
+                        const brandMatch = brands.find(
+                          b => b.name.toLowerCase().trim() === prod.brand?.toLowerCase().trim() && !b.isDeleted
+                        );
+                        const supplierName = brandMatch ? getSuplierName(brandMatch.supplierId) : 'No Mapped Brand (S1 fallback)';
+
+                        return (
+                          <tr key={cartItem.productId || cIdx} className="hover:bg-m3-surface/20">
+                            <td className="py-2 px-3 font-bold text-m3-on-surface">{prod.productName}</td>
+                            <td className="py-2 px-3 font-mono text-[11px] font-bold text-amber-600">{prod.brand || 'Generic'}</td>
+                            <td className="py-2 px-3 font-bold text-teal-600">{supplierName}</td>
+                            <td className="py-2 px-3 font-mono font-bold text-center">{prod.stockQuantity} boxes</td>
+                            <td className="py-2 px-3 text-center">
+                              <input
+                                type="number"
+                                min={1}
+                                value={cartItem.quantity}
+                                onChange={e => {
+                                  const val = Math.max(1, Number(e.target.value) || 1);
+                                  const updated = poCart.map((item, idx) => 
+                                    idx === cIdx ? { ...item, quantity: val } : item
+                                  );
+                                  syncPoCart(updated);
+                                }}
+                                className="w-20 bg-m3-surface border border-m3-outline-variant/60 rounded px-2 py-1 text-center font-bold text-xs"
+                              />
+                            </td>
+                            <td className="py-2 px-3 text-center">
+                              <button
+                                onClick={() => {
+                                  const updated = poCart.filter((_, idx) => idx !== cIdx);
+                                  syncPoCart(updated);
+                                  showToast('Removed item from restock list.');
+                                }}
+                                className="p-1 text-red-500 hover:bg-red-500/15 rounded-full"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pre-consolidation visual groupings layout */}
+                <div className="bg-m3-surface-lowest/50 p-4 rounded-xl border border-m3-outline-variant/10 space-y-3">
+                  <span className="text-[10px] uppercase font-black text-m3-primary tracking-widest block">PO Consolidation Sourcing Preview:</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    {(() => {
+                      const groups: Record<string, any[]> = {};
+                      poCart.forEach(item => {
+                        const prod = products.find(p => p.id === item.productId);
+                        if (!prod) return;
+                        const brandMatch = brands.find(
+                          b => b.name.toLowerCase().trim() === prod.brand?.toLowerCase().trim() && !b.isDeleted
+                        );
+                        const supplierId = brandMatch ? brandMatch.supplierId : 'S1';
+                        if (!groups[supplierId]) groups[supplierId] = [];
+                        groups[supplierId].push({ item, prod });
+                      });
+
+                      return Object.entries(groups).map(([supId, entries]) => {
+                        const supNameVal = getSuplierName(supId);
+                        return (
+                          <div key={supId} className="bg-m3-surface border border-m3-outline-variant/15 p-3 rounded-xl flex flex-col justify-between gap-2 text-xs">
+                            <div>
+                              <div className="flex items-center justify-between border-b border-m3-outline-variant/10 pb-1.5 mb-2">
+                                <span className="font-extrabold text-m3-primary">{supNameVal}</span>
+                                <span className="text-[10px] px-2 py-0.5 bg-teal-500/10 text-teal-500 font-bold rounded-lg uppercase">
+                                  {entries.length} items grouped
+                                </span>
+                              </div>
+                              <ul className="space-y-1 text-[11px] text-m3-on-surface-variant/90 pl-1 list-disc list-inside">
+                                {entries.map((entry, idx) => (
+                                  <li key={idx}>
+                                    <span className="font-semibold text-m3-on-surface">{entry.prod.productName}</span> ({entry.item.quantity} boxes) - <span className="italic text-zinc-400">[{entry.prod.brand}]</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                            <span className="text-[10px] text-zinc-400 block pt-1.5 mt-2 border-t border-m3-outline-variant/5 text-[10.5px]">
+                              Auto-consolidating all products into one bulk Supplier PO.
+                            </span>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    onClick={() => {
+                      if (confirm('Are you absolutely sure you want to discard the current draft compilation worksheet?')) {
+                        syncPoCart([]);
+                        showToast('Worksheet discarded.');
+                      }
+                    }}
+                    className="px-4 py-2 bg-m3-surface border border-m3-outline-variant hover:bg-m3-surface-low text-m3-on-surface text-xs font-bold rounded-full cursor-pointer uppercase tracking-wide"
+                  >
+                    Clear Restock Cart
+                  </button>
+                  <button
+                    onClick={() => setIsConfirmingConsolidation(true)}
+                    className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-black rounded-full cursor-pointer uppercase shadow-sm tracking-wide flex items-center gap-1.5"
+                  >
+                    <Plus className="h-4 w-4" /> Group & Compile Consolidated POs
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="py-8 text-center space-y-2">
+                <p className="text-sm font-semibold text-m3-on-surface-variant">The restock worksheet is currently empty.</p>
+                <p className="text-[11px] text-m3-on-surface-variant/75 max-w-lg mx-auto">
+                  Queued items scheduled by Branch Managers or Admins inside the Dashboard - Active Inventory Health list will automatically populate this compiler workspace. You can also manually add items using the "Quick-Add" dropdown selector above!
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Sourcing Strategy Selection & Confirmation */}
+      {isConfirmingConsolidation && (
+        <div id="consolidation-sourcing-strategy-modal" className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setIsConfirmingConsolidation(false)} />
+          <div className="relative w-full max-w-2xl bg-m3-surface-low rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl space-y-6 text-left">
+            <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-3">
+              <h3 className="text-sm font-black font-mono uppercase tracking-wider text-m3-primary flex items-center gap-2">
+                <Settings2 className="h-4 w-4" />
+                <span>Select Requisitions Routing Strategy</span>
+              </h3>
+              <button onClick={() => setIsConfirmingConsolidation(false)} className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-xs text-m3-on-surface-variant leading-relaxed">
+                You have queued <span className="font-extrabold text-m3-primary">{poCart.length} restock segments</span> for consolidation. Based on supply parameters, please choose the optimal automated routing sequence for the compiled purchase orders:
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Strategy A (Recommended for standard) */}
+                <div 
+                  onClick={() => handleConsolidateOrders('Pending')}
+                  className="bg-m3-surface hover:bg-m3-surface-lowest border-2 border-amber-500/20 hover:border-amber-500/50 p-4 rounded-2xl cursor-pointer transition-all hover:scale-101 space-y-3 relative group"
+                >
+                  <div className="absolute top-3 right-3 bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider font-mono">
+                    Highly Recommended
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500 w-10 h-10 flex items-center justify-center">
+                    <FileText className="h-5 w-5 animate-pulse" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs text-m3-on-surface">Route to Requisitions Drafts (Pending)</h4>
+                    <p className="text-[11px] text-m3-on-surface-variant/90 mt-1 leading-normal">
+                      Saves the compiled POs in <strong>Pending</strong> status, permitting pricing edits, segment verification, and direct manual approval inside the ledger before active communication with the manufacturer.
+                    </p>
+                  </div>
+                  <div className="text-[10px] text-amber-600 font-extrabold flex items-center gap-1 group-hover:underline pt-1">
+                    <span>Draft & Save Requisitions</span>
+                    <ChevronRight className="h-3 w-3" />
+                  </div>
+                </div>
+
+                {/* Strategy B (Direct to Sourcing Deck) */}
+                <div 
+                  onClick={() => handleConsolidateOrders('Approved')}
+                  className="bg-m3-surface hover:bg-m3-surface-lowest border-2 border-emerald-500/20 hover:border-emerald-500/50 p-4 rounded-2xl cursor-pointer transition-all hover:scale-101 space-y-3 relative group"
+                >
+                  <div className="absolute top-3 right-3 bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider font-mono">
+                    Direct Sourcing
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 w-10 h-10 flex items-center justify-center">
+                    <Truck className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs text-m3-on-surface">Route Direct to Outsourcing (Approved)</h4>
+                    <p className="text-[11px] text-m3-on-surface-variant/90 mt-1 leading-normal">
+                      Optimal for fast-tracked pipelines. Dispatches compiled POs instantly with <strong>Approved</strong> status, skipping draft phases. Orders are immediately ready for carrier transit logs and arrival reconciliation inside the Sourcing Deck.
+                    </p>
+                  </div>
+                  <div className="text-[10px] text-emerald-600 font-extrabold flex items-center gap-1 group-hover:underline pt-1">
+                    <span>Dispatch Direct to Suppliers</span>
+                    <ChevronRight className="h-3 w-3" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-m3-outline-variant/10 pt-4">
+              <button
+                onClick={() => setIsConfirmingConsolidation(false)}
+                className="px-4 py-2 bg-m3-surface hover:bg-m3-surface-low border border-m3-outline-variant text-[11px] font-bold text-m3-on-surface rounded-full uppercase tracking-wider cursor-pointer"
+              >
+                Go Back
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1200,6 +1964,80 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
                 className="m3-btn-primary px-5 py-2 text-xs shadow-sm cursor-pointer"
               >
                 Commit Supplier Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: Brand Profile Manager (Create / Edit Brand) */}
+      {showBrandModal && (
+        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setShowBrandModal(false)} />
+          <div className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4">
+            <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
+              <h3 className="text-base font-bold text-m3-primary flex items-center gap-2">
+                <Tag className="h-5 w-5" />
+                <span>{editingBrandId ? 'Modify Brand Partnership' : 'Register New Manufacturer Brand'}</span>
+              </h3>
+              <button onClick={() => setShowBrandModal(false)} className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="text-[11px] text-m3-on-surface-variant/85 leading-relaxed mt-1">
+              Associate a brand name with a specific vendor supplier. This automates PO consolidation when order requests are compiled for low-stock items.
+            </p>
+
+            <div className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">Brand Name</label>
+                <input
+                  type="text"
+                  value={brandName}
+                  onChange={e => setBrandName(e.target.value)}
+                  placeholder="e.g. Mariwasa, ROYU, Matimco"
+                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-bold"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">Authorized Supplier Partner</label>
+                <select
+                  value={brandSupplierId}
+                  onChange={e => setBrandSupplierId(e.target.value)}
+                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-bold"
+                >
+                  {suppliers.filter(s => !s.isDeleted).map(sup => (
+                    <option key={sup.id} value={sup.id}>{sup.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">Description / Notes</label>
+                <textarea
+                  value={brandDescription}
+                  onChange={e => setBrandDescription(e.target.value)}
+                  placeholder="e.g. Premium decorative tiles..."
+                  rows={2}
+                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t border-m3-outline-variant/15">
+              <button
+                onClick={() => setShowBrandModal(false)}
+                className="flex-1 py-2 bg-m3-surface hover:bg-m3-surface-low text-m3-on-surface-variant hover:text-m3-on-surface border border-m3-outline-variant/45 font-bold rounded-full text-xs uppercase cursor-pointer text-center"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveBrand}
+                className="flex-1 py-2 bg-m3-primary hover:bg-m3-primary/95 text-m3-on-primary font-bold rounded-full text-xs uppercase cursor-pointer shadow-sm text-center"
+              >
+                Save Mapping
               </button>
             </div>
           </div>

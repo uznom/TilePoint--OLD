@@ -1,8 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wdth,wght@8..144,25..151,100..1000&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Roboto+Flex:opsz,wdth,wght@8..144,25..151,100..1000&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
   /* Register M3 color tokens */
@@ -102,26 +102,43 @@
 }
 
 body {
-  font-family: 'Plus Jakarta Sans', var(--font-sans);
+  font-family: var(--font-sans);
   background-color: var(--m3-surface);
   color: var(--m3-on-surface);
   transition: background-color 300ms cubic-bezier(0.2, 0, 0, 1), color 300ms cubic-bezier(0.2, 0, 0, 1);
 }
 
-/* Custom Scrollbars in Material 3 Style */
+/* Custom Scrollbars in Material 3 Style - Luxury, Low-profile & Fully Styled */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--m3-outline-variant) transparent;
+}
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
+  border-radius: 99px;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--m3-outline-variant);
+  background: color-mix(in srgb, var(--m3-outline-variant) 65%, transparent);
   border-radius: 99px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 250ms cubic-bezier(0.2, 0, 0, 1);
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--m3-outline);
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 /* Material 3 Card Bases - Solid and comfortable in Light Mode, Glassmorphic in Dark Mode */
@@ -416,33 +433,73 @@ body {
   border-color: var(--m3-outline);
 }
 
-/* Material 3 Input Field Style */
-.m3-input {
+/* Material 3 Input Field Style & Unified System Inputs */
+.m3-input,
+input[type="text"]:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent):not(.border-0):not(.un-m3-input):not(.sr-only),
+input[type="number"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+input[type="email"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+input[type="password"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+input[type="tel"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+input[type="search"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+input[type="date"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+select:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+textarea:not(.bg-transparent):not(.border-0):not(.un-m3-input) {
   width: 100%;
-  padding: 0.75rem 1rem;
-  border-radius: 12px;
-  background-color: var(--m3-surface-container-lowest);
-  color: var(--m3-on-surface);
-  border: 1.5px solid var(--m3-outline);
-  box-shadow: inset 0 1.5px 3px rgba(16, 24, 40, 0.04);
-  font-size: 0.875rem;
-  transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
+  padding: 0.625rem 0.875rem;
+  border-radius: 12px !important;
+  background-color: var(--m3-surface-container-lowest) !important;
+  color: var(--m3-on-surface) !important;
+  border: 1.5px solid var(--m3-outline-variant) !important;
+  box-shadow: inset 0 1.5px 3px rgba(16, 24, 40, 0.04) !important;
+  font-size: 0.825rem !important;
+  transition: all 200ms cubic-bezier(0.2, 0, 0, 1) !important;
 }
-.m3-input:focus {
-  outline: none;
-  border-color: var(--m3-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--m3-primary) 15%, transparent);
-  background-color: var(--m3-surface-container-lowest);
+
+.m3-input:focus,
+input[type="text"]:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent):not(.border-0):not(.un-m3-input):not(.sr-only):focus,
+input[type="number"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+input[type="email"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+input[type="password"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+input[type="tel"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+input[type="search"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+input[type="date"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+select:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+textarea:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus {
+  outline: none !important;
+  border-color: var(--m3-primary) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--m3-primary) 15%, transparent), inset 0 1.5px 3px rgba(16, 24, 40, 0.04) !important;
+  background-color: var(--m3-surface-container-lowest) !important;
 }
-.dark .m3-input {
-  background-color: var(--m3-surface-container-lowest);
-  border-color: var(--m3-outline-variant);
-  box-shadow: inset 0 1.5px 3px rgba(0, 0, 0, 0.4);
+
+.dark .m3-input,
+.dark input[type="text"]:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent):not(.border-0):not(.un-m3-input):not(.sr-only),
+.dark input[type="number"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+.dark input[type="email"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+.dark input[type="password"]:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent):not(.border-0):not(.un-m3-input),
+.dark input[type="tel"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+.dark input[type="search"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+.dark input[type="date"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+.dark select:not(.bg-transparent):not(.border-0):not(.un-m3-input),
+.dark textarea:not(.bg-transparent):not(.border-0):not(.un-m3-input) {
+  background-color: var(--m3-surface-container-lowest) !important;
+  border-color: var(--m3-outline-variant) !important;
+  box-shadow: inset 0 1.5px 3px rgba(0, 0, 0, 0.4) !important;
+  color: #f8fafc !important;
 }
-.dark .m3-input:focus {
-  background-color: var(--m3-surface-container-low);
-  border-color: var(--m3-primary);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--m3-primary) 30%, transparent);
+
+.dark .m3-input:focus,
+.dark input[type="text"]:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent):not(.border-0):not(.un-m3-input):not(.sr-only):focus,
+.dark input[type="number"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+.dark input[type="email"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+.dark input[type="password"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+.dark input[type="tel"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+.dark input[type="search"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+.dark input[type="date"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+.dark select:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
+.dark textarea:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus {
+  background-color: var(--m3-surface-container-low) !important;
+  border-color: var(--m3-primary) !important;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--m3-primary) 30%, transparent), inset 0 1.5px 3px rgba(0, 0, 0, 0.4) !important;
 }
 
 /* FAB (Floating Action Button) styling */
@@ -601,6 +658,14 @@ html:not(.dark) .text-neutral-300 {
   color: var(--m3-on-surface-variant) !important;
 }
 
+html:not(.dark) .text-zinc-50,
+html:not(.dark) .text-slate-50,
+html:not(.dark) .text-gray-50,
+html:not(.dark) .text-neutral-50,
+html:not(.dark) .text-zinc-100,
+html:not(.dark) .text-slate-100,
+html:not(.dark) .text-gray-100,
+html:not(.dark) .text-neutral-100,
 html:not(.dark) .text-zinc-200,
 html:not(.dark) .text-slate-200,
 html:not(.dark) .text-gray-200,
@@ -611,8 +676,30 @@ html:not(.dark) .text-neutral-200 {
 html:not(.dark) .text-zinc-400,
 html:not(.dark) .text-slate-400,
 html:not(.dark) .text-gray-400,
-html:not(.dark) .text-neutral-400 {
+html:not(.dark) .text-neutral-400,
+html:not(.dark) .text-zinc-450,
+html:not(.dark) .text-slate-450,
+html:not(.dark) .text-gray-450,
+html:not(.dark) .text-neutral-450 {
   color: var(--m3-on-surface-variant) !important;
+}
+
+html:not(.dark) .text-zinc-500,
+html:not(.dark) .text-slate-500,
+html:not(.dark) .text-gray-500,
+html:not(.dark) .text-neutral-500 {
+  color: var(--m3-on-surface-variant) !important;
+}
+
+/* Force text-white to be visible in tables and plain text in Light Mode unless on a specific color background */
+html:not(.dark) table .text-white,
+html:not(.dark) td.text-white,
+html:not(.dark) th.text-white,
+html:not(.dark) .m3-card .text-white:not([class*="bg-"]):not([class*="btn"]):not([class*="primary"]),
+html:not(.dark) div.text-white:not([class*="bg-"]):not([class*="btn"]):not([class*="badge"]),
+html:not(.dark) span.text-white:not([class*="bg-"]):not([class*="btn"]):not([class*="badge"]),
+html:not(.dark) p.text-white:not([class*="bg-"]):not([class*="btn"]):not([class*="badge"]) {
+  color: var(--m3-on-surface) !important;
 }
 
 html:not(.dark) .text-rose-300 {
@@ -678,6 +765,32 @@ table thead tr th:last-child {
 .scrollbar-none {
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
+}
+
+/* Custom scrollbar-thin utility to override custom scrollbar styles or explicitly request modern slim scrollbars */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px !important;
+  height: 4px !important;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.25) !important;
+  border-radius: 99px !important;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.45) !important;
+}
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+.scrollbar-thin {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(156, 163, 175, 0.25) transparent !important;
 }
 
 /* ========================================================
@@ -806,11 +919,245 @@ html.dark.accessibility-maximize-text-contrast a {
 /* Ensure raw layouts, navigation, and functional icons are not forced to wrap */
 html.accessibility-maximize-text-contrast .lucide,
 html.accessibility-maximize-text-contrast button span,
-html.accessibility-maximize-text-contrast div[role="button"] span {
+html.accessibility-maximize-text-contrast div[role="button"] span,
+html.accessibility-maximize-text-contrast span.absolute,
+html.accessibility-maximize-text-contrast span[class*="absolute"],
+html.accessibility-maximize-text-contrast span:has(.lucide),
+html.accessibility-maximize-text-contrast span:has(svg) {
   background-color: transparent !important;
   box-shadow: none !important;
   padding: 0 !important;
   font-weight: inherit !important;
+  text-shadow: none !important;
+}
+
+/* 4c. Turn Off Blurs & Remove Animations Fallbacks */
+html.accessibility-no-blur *,
+html.accessibility-no-blur {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Ensure input icon paddings are respected and do not merge with text */
+input[class*="pl-2"] { padding-left: 0.5rem !important; }
+input[class*="pl-3"] { padding-left: 0.75rem !important; }
+input[class*="pl-4"] { padding-left: 1rem !important; }
+input[class*="pl-5"] { padding-left: 1.25rem !important; }
+input[class*="pl-6"] { padding-left: 1.5rem !important; }
+input[class*="pl-7"] { padding-left: 1.75rem !important; }
+input[class*="pl-8"] { padding-left: 2rem !important; }
+input[class*="pl-9"] { padding-left: 2.25rem !important; }
+input[class*="pl-10"] { padding-left: 2.5rem !important; }
+input[class*="pl-11"] { padding-left: 2.75rem !important; }
+input[class*="pl-12"] { padding-left: 3rem !important; }
+input[class*="pl-14"] { padding-left: 3.5rem !important; }
+input[class*="pl-16"] { padding-left: 4rem !important; }
+
+input[class*="pr-2"] { padding-right: 0.5rem !important; }
+input[class*="pr-3"] { padding-right: 0.75rem !important; }
+input[class*="pr-4"] { padding-right: 1rem !important; }
+input[class*="pr-5"] { padding-right: 1.25rem !important; }
+input[class*="pr-6"] { padding-right: 1.5rem !important; }
+input[class*="pr-7"] { padding-right: 1.75rem !important; }
+input[class*="pr-8"] { padding-right: 2rem !important; }
+input[class*="pr-9"] { padding-right: 2.25rem !important; }
+input[class*="pr-10"] { padding-right: 2.5rem !important; }
+input[class*="pr-11"] { padding-right: 2.75rem !important; }
+input[class*="pr-12"] { padding-right: 3rem !important; }
+input[class*="pr-14"] { padding-right: 3.5rem !important; }
+input[class*="pr-16"] { padding-right: 4rem !important; }
+
+/* Turn off card/button hover transition effects safely */
+html.accessibility-no-blur *:hover {
+  transition: none !important;
+}
+
+/* Specifically target classes or elements containing blur or filter with blur */
+html.accessibility-no-blur .blur,
+html.accessibility-no-blur .blur-sm,
+html.accessibility-no-blur .blur-md,
+html.accessibility-no-blur .blur-lg,
+html.accessibility-no-blur .blur-xl,
+html.accessibility-no-blur .blur-2xl,
+html.accessibility-no-blur .blur-3xl,
+html.accessibility-no-blur [class*="blur-"],
+html.accessibility-no-blur [class*="backdrop-blur"] {
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Force solid backgrounds on cards and overlays when blur is disabled (no glass/transparency slop) */
+html.accessibility-no-blur .m3-card,
+html.accessibility-no-blur .glowing-card,
+html.accessibility-no-blur .android-glass-card {
+  background-color: var(--m3-surface-container-lowest) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-color: var(--m3-outline-variant) !important;
+  box-shadow: 0 4px 16px -2px rgba(16, 24, 40, 0.08) !important;
+}
+
+.dark html.accessibility-no-blur .m3-card,
+.dark html.accessibility-no-blur .glowing-card,
+.dark html.accessibility-no-blur .android-glass-card {
+  background-color: var(--m3-surface-container-low, #131a22) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-color: var(--m3-outline-variant) !important;
+  box-shadow: 0 10px 40px -6px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Completely strip all interactive transform and hover scale effects when blurs/backdrop blurs are off */
+html.accessibility-no-blur .m3-card:hover,
+html.accessibility-no-blur .glowing-card:hover,
+html.accessibility-no-blur .android-glass-card:hover {
+  transform: none !important;
+  scale: none !important;
+  background-color: var(--m3-surface-container-lowest) !important;
+  border-color: var(--m3-outline-variant) !important;
+  box-shadow: 0 4px 16px -2px rgba(16, 24, 40, 0.08) !important;
+}
+
+.dark html.accessibility-no-blur .m3-card:hover,
+.dark html.accessibility-no-blur .glowing-card:hover,
+.dark html.accessibility-no-blur .android-glass-card:hover {
+  transform: none !important;
+  scale: none !important;
+  background-color: var(--m3-surface-container-low, #131a22) !important;
+  border-color: var(--m3-outline-variant) !important;
+  box-shadow: 0 10px 40px -6px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Make the background of the whole system a single solid color */
+html.accessibility-no-blur,
+html.accessibility-no-blur body {
+  background-color: var(--m3-surface) !important;
+}
+
+/* Solid background for idle clock screen */
+html.accessibility-no-blur #desktop-m3-expressive-idle-screen {
+  background-color: var(--m3-surface) !important;
+}
+
+/* Hide all dynamic background glowing blobs and shapes on the idle screen to maintain single solid color background */
+html.accessibility-no-blur #desktop-m3-expressive-idle-screen > div:not(.z-10) {
+  display: none !important;
+}
+
+/* Ensure solid backgrounds on dialogs, cards, dropdowns, and components when backdrop blur is disabled */
+html.accessibility-no-blur [class*="backdrop-blur"]:not(.fixed):not(.absolute),
+html.accessibility-no-blur .backdrop-blur,
+html.accessibility-no-blur .backdrop-blur-sm,
+html.accessibility-no-blur .backdrop-blur-md,
+html.accessibility-no-blur .backdrop-blur-lg,
+html.accessibility-no-blur .backdrop-blur-xl {
+  background-color: var(--m3-surface-container-lowest) !important;
+  color: var(--m3-on-surface, #1c1b1f) !important;
+}
+
+.dark html.accessibility-no-blur [class*="backdrop-blur"]:not(.fixed):not(.absolute),
+.dark html.accessibility-no-blur .backdrop-blur,
+.dark html.accessibility-no-blur .backdrop-blur-sm,
+.dark html.accessibility-no-blur .backdrop-blur-md,
+.dark html.accessibility-no-blur .backdrop-blur-lg,
+.dark html.accessibility-no-blur .backdrop-blur-xl {
+  background-color: var(--m3-surface-container-low, #131a22) !important;
+  color: #f8fafc !important;
+}
+
+/* Specific transparent class overrides to solid backgrounds */
+html.accessibility-no-blur .bg-zinc-900\/80,
+html.accessibility-no-blur .bg-zinc-950\/80,
+html.accessibility-no-blur .bg-zinc-900\/90,
+html.accessibility-no-blur .bg-black\/80,
+html.accessibility-no-blur .bg-m3-surface-low\/80,
+html.accessibility-no-blur .bg-m3-surface-low\/90,
+html.accessibility-no-blur .bg-m3-surface\/80,
+html.accessibility-no-blur .bg-m3-surface\/90 {
+  background-color: var(--m3-surface-container-lowest) !important;
+}
+
+.dark html.accessibility-no-blur .bg-zinc-900\/80,
+.dark html.accessibility-no-blur .bg-zinc-950\/80,
+.dark html.accessibility-no-blur .bg-zinc-900\/90,
+.dark html.accessibility-no-blur .bg-black\/80,
+.dark html.accessibility-no-blur .bg-m3-surface-low\/80,
+.dark html.accessibility-no-blur .bg-m3-surface-low\/90,
+.dark html.accessibility-no-blur .bg-m3-surface\/80,
+.dark html.accessibility-no-blur .bg-m3-surface\/90 {
+  background-color: var(--m3-surface-container-low, #131a22) !important;
+}
+
+html.accessibility-no-blur .bg-white\/80,
+html.accessibility-no-blur .bg-white\/90 {
+  background-color: #ffffff !important;
+}
+
+/* Globally remove transitions and animations */
+html.accessibility-no-animation *,
+html.accessibility-no-animation,
+html.accessibility-no-animation *::before,
+html.accessibility-no-animation *::after {
+  animation: none !important;
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  transition: none !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+}
+
+/* Completely disable all hover states, scale effects, and pointer changes when animations & effects are turned off */
+html.accessibility-no-animation *:hover {
+  transform: none !important;
+  scale: none !important;
+  transition: none !important;
+  animation: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* For cards and buttons under no-animation setting, lock their background colors and styles to their defaults */
+html.accessibility-no-animation .m3-card:hover,
+html.accessibility-no-animation .android-glass-card:hover,
+html.accessibility-no-animation .glowing-card:hover {
+  background-color: var(--m3-surface-container-lowest) !important;
+  border-color: var(--m3-outline-variant) !important;
+  box-shadow: 0 4px 16px -2px rgba(16, 24, 40, 0.08) !important;
+}
+
+.dark html.accessibility-no-animation .m3-card:hover,
+.dark html.accessibility-no-animation .android-glass-card:hover,
+.dark html.accessibility-no-animation .glowing-card:hover {
+  background-color: var(--m3-surface-container-low, #131a22) !important;
+  border-color: var(--m3-outline-variant) !important;
+  box-shadow: 0 10px 40px -6px rgba(0, 0, 0, 0.6) !important;
+}
+
+html.accessibility-no-animation .m3-btn-primary:hover,
+html.accessibility-no-animation .m3-btn-filled:hover {
+  background-color: var(--m3-primary) !important;
+  color: var(--m3-on-primary) !important;
+}
+
+.dark html.accessibility-no-animation .m3-btn-primary:hover,
+.dark html.accessibility-no-animation .m3-btn-filled:hover {
+  background-color: var(--m3-primary) !important;
+  color: var(--m3-on-primary) !important;
+}
+
+html.accessibility-no-animation .m3-btn-outlined:hover {
+  background-color: transparent !important;
+  color: var(--m3-primary) !important;
+}
+
+html.accessibility-no-animation .m3-btn-tonal:hover {
+  background-color: var(--m3-secondary-container) !important;
+  color: var(--m3-on-secondary-container) !important;
+}
+
+html.accessibility-no-animation table tbody tr:hover td {
+  background-color: transparent !important;
 }
 
 /* 5. Clean, Professional @media print System for BIR ledger compliance sheets & slips */

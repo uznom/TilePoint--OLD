@@ -4,26 +4,20 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useDb } from '../context/DbContext';
 import { Product, Sale, SaleItem, UserRole } from '../types/db';
 import { verifyPasswordWithToken } from '../lib/crypto';
 import {
-  Search,
   ShoppingCart,
   Trash2,
   Sparkles,
-  CreditCard,
-  Pause,
-  AlertCircle,
-  Play,
   CheckCircle,
   Printer,
-  Calculator,
   Lock,
   Keyboard,
   X,
   ShieldCheck,
-  Barcode,
   History,
   LockKeyhole,
   ShoppingBag,
@@ -45,6 +39,9 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     products,
     activeShift,
     openShift,
+    closeShift,
+    getShiftReportStats,
+    shifts,
     activeBranch,
     checkoutSale,
     voidSale,
@@ -70,8 +67,38 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
   };
 
   // Active cashier shift states
-  const [startCashInput, setStartCashInput] = useState('3000');
+  const [startCashInput, setStartCashInput] = useState('5000');
   const [showShiftModal, setShowShiftModal] = useState(false);
+
+  // Closing shift states
+  const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
+  const [closeShiftCashInput, setCloseShiftCashInput] = useState('');
+
+  // Find the last closed shift at this branch to pre-fill starting cash
+  const previouslyClosedShift = React.useMemo(() => {
+    if (!shifts || shifts.length === 0) return null;
+    return [...shifts]
+      .filter(s => s.status === 'CLOSED' && s.branchId === currentUser.branchAssignmentId)
+      .sort((a, b) => new Date(b.closedAt || 0).getTime() - new Date(a.closedAt || 0).getTime())[0] || null;
+  }, [shifts, currentUser.branchAssignmentId]);
+
+  // Pre-fill starting cash when modal opens
+  React.useEffect(() => {
+    if (showShiftModal) {
+      if (previouslyClosedShift) {
+        setStartCashInput(previouslyClosedShift.cashCount.toString());
+      } else {
+        setStartCashInput('5000');
+      }
+    }
+  }, [showShiftModal, previouslyClosedShift]);
+
+  // Auto-prompt the user to initialize a shift on mount if not active
+  React.useEffect(() => {
+    if (!activeShift) {
+      setShowShiftModal(true);
+    }
+  }, [activeShift]);
 
   // Pagination State for Ledger Sales
   const [salesPage, setSalesPage] = useState(1);
@@ -84,6 +111,8 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [customerName, setCustomerName] = useState('Walk-in Customer');
   const [customerNotes, setCustomerNotes] = useState('');
+  const [isCategoryFilterCollapsed, setIsCategoryFilterCollapsed] = useState(false);
+  const [isCustomerMetadataCollapsed, setIsCustomerMetadataCollapsed] = useState(false);
 
   // Reset salesPage when filters change
   useEffect(() => {
@@ -610,6 +639,16 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     showToast(`Cashier terminal shift opened: ₱${startingVal.toFixed(2)} starting drawer.`);
   };
 
+  // Close shift function
+  const handleCloseShiftSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const endingVal = parseFloat(closeShiftCashInput) || 0;
+    closeShift(endingVal);
+    setCloseShiftCashInput('');
+    setShowCloseShiftModal(false);
+    showToast(`Shift closed successfully. Current register drawer has been locked.`);
+  };
+
   const handleSaveCustomerName = (e: React.FormEvent) => {
     e.preventDefault();
     setCustomerName(customerModalInput.trim() || 'Walk-in Customer');
@@ -820,29 +859,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
   }, [filteredSales, salesPage]);
 
   return (
-    <div className="space-y-4 w-full">
-      {/* 1. CLOSED DRAWER SHIFT ALERT BANNER (OPTIMIZATION FOR CASHIER WRITING EXPERIENCE) */}
-      {!activeShift && (
-        <div className="bg-amber-500/10 border-2 border-dashed border-amber-500/40 p-4 rounded-[24px] flex flex-col sm:flex-row items-center justify-between gap-4 text-left shadow-lg">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-amber-500/20 text-amber-550 rounded-2xl animate-pulse">
-              <LockKeyhole className="h-6 w-6" />
-            </div>
-            <div>
-              <h3 className="text-sm font-black text-amber-500 uppercase tracking-wider">Cashier Shift Drawer Closed</h3>
-              <p className="text-xs text-zinc-400 font-semibold mt-0.5 max-w-xl">
-                The active cash drawer is locked. You must establish a starting cash float in the terminal register to execute product lookups and checkout sales.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setShowShiftModal(true)}
-            className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer transition-all active:scale-95 shrink-0 shadow-md"
-          >
-            Initialize Shift Drawer
-          </button>
-        </div>
-      )}
+    <div className="flex flex-col h-full w-full overflow-hidden pb-1 gap-4">
       <div className="flex border-b border-m3-outline-variant/20 pb-3.5 items-center justify-between mb-2 text-left sticky top-0 bg-m3-surface/90 backdrop-blur-md z-20 pt-2 shadow-sm rounded-b-xl px-2">
         <div>
           <h2 className="text-sm font-black uppercase tracking-widest text-m3-primary pl-1 flex items-center gap-2">
@@ -865,16 +882,40 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
           </p>
         </div>
 
-        <div className="hidden lg:flex items-center gap-2 text-[10px] uppercase font-black tracking-widest text-emerald-400 bg-emerald-500/10 py-1.5 px-3 rounded-full border border-emerald-500/20 select-none">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span>Active Cashier Station</span>
+        <div className="flex items-center gap-3">
+          {activeShift ? (
+            <div className="flex items-center gap-3 bg-zinc-900/80 border border-zinc-800 p-1.5 pl-3.5 rounded-full shadow-inner">
+              <div className="flex flex-col text-right">
+                <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Shift Active</span>
+                <span className="text-[10px] font-bold text-zinc-200 font-sans">{activeShift.cashierName}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setCloseShiftCashInput('');
+                  setShowCloseShiftModal(true);
+                }}
+                className="py-1.5 px-3.5 bg-rose-500/10 hover:bg-rose-600 hover:text-white border border-rose-500/30 text-rose-400 text-[10px] font-black uppercase tracking-wider rounded-full transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+              >
+                <LockKeyhole className="h-3 w-3" />
+                <span>Close Shift</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowShiftModal(true)}
+              className="py-1.5 px-3.5 bg-amber-500/15 hover:bg-amber-500 hover:text-black border border-amber-500/30 text-amber-400 hover:border-amber-400 text-[10px] font-black uppercase tracking-wider rounded-full transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+            >
+              <LockKeyhole className="h-3 w-3 animate-pulse" />
+              <span>Open Shift</span>
+            </button>
+          )}
         </div>
       </div>
 
       {activeSubModule === 'checkout' ? (
-        <div className={`space-y-4 lg:space-y-0 lg:flex lg:flex-col lg:justify-between gap-4 w-full ${
-          showImmersiveControls ? 'lg:h-[calc(100vh-140px)]' : 'lg:h-[calc(100vh-76px)]'
-        }`}>
+        <div className="flex-1 min-h-0 flex flex-col justify-between gap-4 w-full overflow-hidden">
           {/* MOBILE ONLY TAB SWITCHER TO REDUCE COGNITIVE OVERHEAD & SCROLLING ON SMARTPHONES */}
           <div className="flex lg:hidden bg-m3-surface-low border border-m3-outline-variant/15 p-1 rounded-2xl w-full gap-1">
             <button
@@ -906,10 +947,10 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
             </button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 animate-fade-in text-m3-on-surface items-stretch lg:flex-1 lg:overflow-hidden lg:min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 animate-fade-in text-m3-on-surface items-stretch flex-1 min-h-0 overflow-hidden">
             
             {/* LEFT COLUMN: YARD STAFF TRANSACTIONS HOLD QUEUE */}
-            <div className={`lg:col-span-4 bg-m3-surface-low p-4 rounded-[28px] border border-m3-outline-variant/20 shadow-sm space-y-4 text-left self-stretch flex flex-col lg:h-full lg:overflow-hidden lg:min-h-0 ${
+            <div className={`lg:col-span-4 bg-m3-surface-low p-3.5 sm:p-4 rounded-2xl sm:rounded-[28px] border border-m3-outline-variant/20 shadow-sm space-y-4 text-left self-stretch flex flex-col lg:h-full lg:overflow-hidden lg:min-h-0 ${
               mobilePosTab === 'queue' ? 'block' : 'hidden lg:flex'
             }`}>
               <div className="border-b border-m3-outline-variant/15 pb-2 cursor-default">
@@ -925,7 +966,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                 </p>
               </div>
 
-              <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[600px] lg:max-h-none no-scrollbar">
+              <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[600px] lg:max-h-none scrollbar-thin">
                 {parkedSales.length > 0 ? (
                   <div className="flex flex-col gap-3">
                     {parkedSales.map((park, idx) => (
@@ -955,7 +996,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                     ))}
                   </div>
                 ) : (
-                  <div className="py-12 text-center text-xs text-zinc-400 font-bold border border-dashed border-m3-outline-variant/20 rounded-2xl bg-m3-surface-lowest flex flex-col items-center justify-center gap-2 p-4 h-full my-auto">
+                  <div className="py-10 px-4 text-center text-xs text-zinc-400 font-bold border border-dashed border-m3-outline-variant/20 rounded-2xl bg-m3-surface-lowest flex flex-col items-center justify-center gap-2 min-h-[180px]">
                     <History className="h-5 w-5 text-zinc-500" />
                     <span className="animate-pulse text-zinc-500 leading-relaxed">Staged Lobby Clear: Waiting for floor staff to upload material hold queues from customer devices.</span>
                   </div>
@@ -967,54 +1008,94 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
             <div className={`lg:col-span-8 text-left lg:h-full lg:flex lg:flex-col lg:overflow-hidden lg:min-h-0 ${
               mobilePosTab === 'basket' ? 'block' : 'hidden lg:flex'
             }`}>
-              <div className="p-5 rounded-[28px] border border-m3-outline-variant/35 bg-m3-surface-low shadow-sm flex flex-col justify-between lg:h-full lg:overflow-hidden lg:min-h-0">
+              <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-[28px] border border-m3-outline-variant/35 bg-m3-surface-low shadow-sm flex flex-col justify-between h-full overflow-hidden">
                 
                 {/* Basket Header */}
                 <div className="border-b border-m3-outline-variant/15 pb-3">
-                  <div className="flex items-center justify-between pl-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pl-1 mb-2">
                     <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest flex items-center gap-2">
                       <ShoppingCart className="h-4 w-4" /> 
                       <span>Active Order list of materials</span>
                     </h3>
-                    <button
-                      onClick={handleCancelSale}
-                      className="text-[10px] text-rose-500 hover:text-rose-650 flex items-center gap-1 cursor-pointer font-black uppercase tracking-wide transition-colors"
-                      title="Discard active order list"
-                    >
-                      Clear Active Order
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[10px] font-black uppercase tracking-wide">
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomerMetadataCollapsed(!isCustomerMetadataCollapsed)}
+                        className="text-m3-primary hover:text-m3-primary/85 flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Toggle customer profile details"
+                      >
+                        {isCustomerMetadataCollapsed ? 'Show Profile' : 'Hide Profile'}
+                      </button>
+                      <span className="text-zinc-500">•</span>
+                      <button
+                        type="button"
+                        onClick={handleCancelSale}
+                        className="text-rose-500 hover:text-rose-650 flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Discard active order list"
+                      >
+                        Clear Active Order
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Customer input metadata */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-                    <div className="relative pl-0">
-                      <label className="text-[9px] font-bold text-m3-primary uppercase tracking-widest pl-1 block mb-1">
-                        Customer Profile
-                      </label>
-                      <input
-                        type="text"
-                        value={customerName}
-                        onChange={e => setCustomerName(e.target.value)}
-                        placeholder="Manuel Santos / Walk-in"
-                        className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-bold"
-                      />
-                    </div>
-                    <div className="relative pl-0">
-                      <label className="text-[9px] font-bold text-m3-primary uppercase tracking-widest pl-1 block mb-1">
-                        Ticket Note / Project Assign (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        value={customerNotes}
-                        onChange={e => setCustomerNotes(e.target.value)}
-                        placeholder="e.g. Master Bedroom Toilet tiles, Travertine Matt"
-                        className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-bold"
-                      />
-                    </div>
+                  {/* Customer input metadata Section */}
+                  <div className="mt-3.5">
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomerMetadataCollapsed(!isCustomerMetadataCollapsed)}
+                      className="w-full flex items-center justify-between text-left focus:outline-none group pb-1.5 border-b border-m3-outline-variant/10 cursor-pointer"
+                    >
+                      <span className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 block select-none">
+                        Customer Info & Project Assignment {customerName && customerName !== 'Walk-in Customer' ? `(${customerName})` : ''}
+                      </span>
+                      <div className="flex items-center gap-1 text-[9px] text-zinc-400 group-hover:text-m3-primary transition-colors font-bold uppercase tracking-wider">
+                        <span>{isCustomerMetadataCollapsed ? 'Show' : 'Hide'}</span>
+                        {isCustomerMetadataCollapsed ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
+                      </div>
+                    </button>
+                    
+                    <AnimatePresence initial={false}>
+                      {!isCustomerMetadataCollapsed && (
+                        <motion.div 
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.15 }}
+                          className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2.5 overflow-hidden"
+                        >
+                          <div className="relative pl-0">
+                            <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest pl-1 block mb-1">
+                              Customer Profile
+                            </label>
+                            <input
+                              type="text"
+                              value={customerName}
+                              onChange={e => setCustomerName(e.target.value)}
+                              placeholder="Manuel Santos / Walk-in"
+                              className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-bold"
+                            />
+                          </div>
+                          <div className="relative pl-0">
+                            <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest pl-1 block mb-1">
+                              Ticket Note / Project Assign (Optional)
+                            </label>
+                            <input
+                              type="text"
+                              value={customerNotes}
+                              onChange={e => setCustomerNotes(e.target.value)}
+                              placeholder="e.g. Master Bedroom Toilet tiles, Travertine Matt"
+                              className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-bold"
+                            />
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
+
+
 
                   {/* Barcode scan input search bar */}
-                  <form onSubmit={handleBarcodeSubmit} className="mt-3 bg-m3-surface-low border border-m3-primary/15 hover:border-m3-primary/35 p-3 rounded-2xl transition-all relative">
+                  <form onSubmit={handleBarcodeSubmit} className="mt-2.5 bg-m3-surface-low border border-m3-primary/15 hover:border-m3-primary/35 p-3 rounded-2xl transition-all relative">
                     <div className="flex flex-col md:flex-row gap-2 items-center">
                       <div className="flex-1 w-full text-left">
                         <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block mb-1.5">
@@ -1046,7 +1127,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                           {barcodeSearchTerm.trim().length > 0 && (
                             <div className="absolute left-0 right-0 mt-2 bg-white dark:bg-zinc-950 border border-m3-outline-variant/60 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-m3-outline-variant/20 text-xs">
                               {products
-                                .filter(p => !p.isDeleted && (
+                                .filter(p => !p.isDeleted && (selectedCategory === 'All' || p.category === selectedCategory) && (
                                   p.productName.toLowerCase().includes(barcodeSearchTerm.toLowerCase()) ||
                                   p.sku.toLowerCase().includes(barcodeSearchTerm.toLowerCase()) ||
                                   p.barcode.toLowerCase().includes(barcodeSearchTerm.toLowerCase()) ||
@@ -1078,7 +1159,27 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                                           <span>•</span>
                                           <span>Brand: {p.brand}</span>
                                           <span>•</span>
-                                          <span className="text-zinc-500 bg-m3-surface/30 px-1 rounded">Qty: {p.stockQuantity}</span>
+                                          <span className="text-zinc-500 bg-m3-surface/30 px-1 rounded font-black">Total Stock: {p.stockQuantity}</span>
+                                          <span>•</span>
+                                          <div className="flex flex-wrap gap-1 items-center">
+                                            {branches.filter(b => !b.isDeleted).map(b => {
+                                              const bQty = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id)?.quantity || 0;
+                                              const isCurrent = b.id === currentUser.branchAssignmentId;
+                                              return (
+                                                <span 
+                                                  key={b.id} 
+                                                  className={`px-1 py-0.2 rounded text-[9px] ${
+                                                    isCurrent 
+                                                      ? 'bg-m3-primary/15 text-m3-primary font-black border border-m3-primary/20' 
+                                                      : 'bg-zinc-500/10 text-zinc-400 font-medium'
+                                                  }`}
+                                                  title={`${b.name}`}
+                                                >
+                                                  {b.id}: {bQty}
+                                                </span>
+                                              );
+                                            })}
+                                          </div>
                                         </div>
                                       </div>
                                       <div className="text-right">
@@ -1089,7 +1190,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                                   );
                                 })
                               }
-                              {products.filter(p => !p.isDeleted && (
+                              {products.filter(p => !p.isDeleted && (selectedCategory === 'All' || p.category === selectedCategory) && (
                                 p.productName.toLowerCase().includes(barcodeSearchTerm.toLowerCase()) ||
                                 p.sku.toLowerCase().includes(barcodeSearchTerm.toLowerCase()) ||
                                 p.barcode.toLowerCase().includes(barcodeSearchTerm.toLowerCase()) ||
@@ -1097,7 +1198,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                                 p.designName.toLowerCase().includes(barcodeSearchTerm.toLowerCase())
                               )).length === 0 && (
                                 <div className="p-4 text-center text-zinc-400 text-[11px] italic font-bold">
-                                  No product match found for "{barcodeSearchTerm}"
+                                  No product match found for "{barcodeSearchTerm}" {selectedCategory !== 'All' ? `in category "${selectedCategory}"` : ''}
                                 </div>
                               )}
                             </div>
@@ -1121,70 +1222,86 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                   </form>
                 </div>
 
+
+
                 {/* Cart item feeds */}
-                <div className="flex-1 overflow-y-auto max-h-[300px] lg:max-h-none my-3 pr-1 space-y-1.5 divide-y divide-m3-outline-variant/10 no-scrollbar">
-                  {cart.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between py-2 border-b border-m3-outline-variant/10 last:border-0 pl-1">
-                      <div className="space-y-0.5 max-w-2xl text-left">
-                        <h5 className="text-xs font-black leading-tight text-m3-on-surface">{item.product.productName}</h5>
-                        <div className="text-[10px] text-zinc-400 flex flex-wrap items-center gap-1.5 font-mono font-bold">
-                          {item.overridePrice !== undefined ? (
-                            <>
-                              <span className="text-zinc-500 line-through">₱{getBranchPrice(item.product).toFixed(2)}</span>
-                              <span className="text-emerald-500 font-extrabold bg-emerald-500/10 px-1 rounded">₱{item.overridePrice.toFixed(2)}</span>
-                            </>
-                          ) : (
-                            <span className="text-zinc-300">₱{getBranchPrice(item.product).toFixed(2)}</span>
-                          )}
-                          <span>/{item.product.unit}</span>
-                          <span>•</span>
-                          <span className="text-m3-primary">SKU: {item.product.sku}</span>
-                          <span>•</span>
-                          <span>Brand: {item.product.brand}</span>
-                          <span>•</span>
-                          <button
-                            type="button"
-                            onClick={() => handleTriggerPriceOverride(idx)}
-                            className="text-[9px] font-black text-m3-primary hover:text-m3-primary/80 transition-colors uppercase bg-m3-primary/5 px-1.5 py-0.2 rounded"
-                            title="Execute supervisor level override"
-                          >
-                            [Override Price]
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-4 shrink-0">
-                        {/* Qty adjustments */}
-                        <div className="flex items-center border border-m3-outline-variant rounded-lg overflow-hidden shrink-0 bg-m3-surface">
-                          <button
-                            onClick={() => updateCartQty(item.product.id, item.quantity - 1, item.product.stockQuantity)}
-                            className="px-2.5 py-1 hover:bg-m3-outline-variant/20 text-xs font-mono font-bold transition-colors cursor-pointer text-m3-on-surface"
-                          >
-                            -
-                          </button>
-                          <span className="px-3 text-xs font-mono font-black text-m3-on-surface">{item.quantity}</span>
-                          <button
-                            onClick={() => updateCartQty(item.product.id, item.quantity + 1, item.product.stockQuantity)}
-                            className="px-2.5 py-1 hover:bg-m3-outline-variant/20 text-xs font-mono font-bold transition-colors cursor-pointer text-m3-on-surface"
-                          >
-                            +
-                          </button>
+                <div className="flex-1 overflow-y-auto max-h-[250px] sm:max-h-[400px] lg:max-h-none my-3 pr-1 space-y-1.5 scrollbar-thin">
+                  <AnimatePresence initial={false}>
+                    {cart.map((item, idx) => (
+                      <motion.div
+                        key={item.product.id}
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, x: -30, height: 0, padding: 0 }}
+                        transition={{ type: 'spring', stiffness: 450, damping: 30 }}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 py-3 border-b border-m3-outline-variant/10 last:border-0 pl-1 overflow-hidden"
+                      >
+                        <div className="space-y-0.5 max-w-2xl text-left w-full sm:w-auto">
+                          <h5 className="text-xs font-black leading-tight text-m3-on-surface">{item.product.productName}</h5>
+                          <div className="text-[10px] text-zinc-400 flex flex-wrap items-center gap-1.5 font-mono font-bold">
+                            {item.overridePrice !== undefined ? (
+                              <>
+                                <span className="text-zinc-500 line-through">₱{getBranchPrice(item.product).toFixed(2)}</span>
+                                <span className="text-emerald-500 font-extrabold bg-emerald-500/10 px-1 rounded">₱{item.overridePrice.toFixed(2)}</span>
+                              </>
+                            ) : (
+                              <span className="text-zinc-300">₱{getBranchPrice(item.product).toFixed(2)}</span>
+                            )}
+                            <span>/{item.product.unit}</span>
+                            <span>•</span>
+                            <span className="text-m3-primary">SKU: {item.product.sku}</span>
+                            <span>•</span>
+                            <span>Brand: {item.product.brand}</span>
+                            <span>•</span>
+                            <button
+                              type="button"
+                              onClick={() => handleTriggerPriceOverride(idx)}
+                              className="text-[9px] font-black text-m3-primary hover:text-m3-primary/80 transition-colors uppercase bg-m3-primary/5 px-1.5 py-0.2 rounded"
+                              title="Execute supervisor level override"
+                            >
+                              [Override Price]
+                            </button>
+                          </div>
                         </div>
 
-                        <span className="text-xs font-black font-mono min-w-[90px] text-right text-m3-on-surface">
-                          ₱{((item.overridePrice !== undefined ? item.overridePrice : getBranchPrice(item.product)) * item.quantity).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </span>
+                        <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
+                          {/* Qty adjustments */}
+                          <div className="flex items-center border border-m3-outline-variant rounded-lg overflow-hidden shrink-0 bg-m3-surface">
+                            <button
+                              type="button"
+                              onClick={() => updateCartQty(item.product.id, item.quantity - 1, item.product.stockQuantity)}
+                              className="px-2.5 py-1 hover:bg-m3-outline-variant/20 text-xs font-mono font-bold transition-colors cursor-pointer text-m3-on-surface"
+                            >
+                              -
+                            </button>
+                            <span className="px-3 text-xs font-mono font-black text-m3-on-surface">{item.quantity}</span>
+                            <button
+                              type="button"
+                              onClick={() => updateCartQty(item.product.id, item.quantity + 1, item.product.stockQuantity)}
+                              className="px-2.5 py-1 hover:bg-m3-outline-variant/20 text-xs font-mono font-bold transition-colors cursor-pointer text-m3-on-surface"
+                            >
+                              +
+                            </button>
+                          </div>
 
-                        <button
-                          onClick={() => removeFromCart(item.product.id)}
-                          className="text-zinc-400 hover:text-red-500 p-1.5 rounded-full hover:bg-red-500/10 transition-colors cursor-pointer"
-                          title="Delete entry row"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-black font-mono min-w-[80px] sm:min-w-[90px] text-right text-m3-on-surface">
+                              ₱{((item.overridePrice !== undefined ? item.overridePrice : getBranchPrice(item.product)) * item.quantity).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={() => removeFromCart(item.product.id)}
+                              className="text-zinc-400 hover:text-red-500 p-1.5 rounded-full hover:bg-red-500/10 transition-colors cursor-pointer"
+                              title="Delete entry row"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
 
                   {cart.length === 0 && (
                     <div className="text-center py-12 text-zinc-400 text-xs flex flex-col items-center justify-center gap-2 font-bold min-h-[160px]">
@@ -1195,17 +1312,17 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                 </div>
 
                 {/* Totals Ledger Breakdown & Settlement Options */}
-                <div className="border-t border-m3-outline-variant/20 pt-4 grid grid-cols-1 xl:grid-cols-12 gap-6">
+                <div className="border-t border-m3-outline-variant/20 pt-4 grid grid-cols-1 xl:grid-cols-12 gap-5">
                   
                   {/* Visual Math Ledger summary stats */}
-                  <div className="xl:col-span-12 xxl:col-span-5 xl:space-y-2 pt-0.5">
+                  <div className="xl:col-span-5 xl:space-y-2 pt-0.5">
                     <div className="flex justify-between text-xs font-bold text-zinc-400">
-                      <span>Subtotal Staged</span>
+                      <span>{discountType === 'SENIOR' || discountType === 'PWD' ? 'VAT-Exempt Sales' : 'VATable Sales (Net)'}</span>
                       <span className="font-mono">₱{subtotal.toFixed(2)}</span>
                     </div>
 
                     <div className="flex justify-between text-xs font-bold text-zinc-400 mt-1">
-                      <span>{discountType === 'SENIOR' || discountType === 'PWD' ? 'VAT Zero-Rated (Exempt)' : 'VAT (12%) Included'}</span>
+                      <span>{discountType === 'SENIOR' || discountType === 'PWD' ? '12% Output VAT (Exempt)' : '12% Output VAT'}</span>
                       <span className="font-mono">₱{vat.toFixed(2)}</span>
                     </div>
 
@@ -1241,7 +1358,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                   </div>
 
                   {/* Settlement Payment System inputs */}
-                  <div id="checkout-action-panel" className="xl:col-span-12 bg-m3-surface p-4 rounded-2xl border border-m3-outline-variant/35 space-y-3 shadow-inner text-left">
+                  <div id="checkout-action-panel" className="xl:col-span-7 bg-m3-surface p-4 rounded-2xl border border-m3-outline-variant/35 space-y-3 shadow-inner text-left">
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
                       
                       <div className="sm:col-span-6 space-y-1">
@@ -1362,8 +1479,8 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
 
           </div>
 
-          {/* LOWER SECTION: PERSISTENT HIGH-CONTRAST POS SHORTCUT/HOTKEY LIST */}
-          <div className="bg-m3-surface-low p-4 rounded-[28px] border border-m3-outline-variant/20 shadow-sm text-left transition-all duration-300">
+          {/* LOWER SECTION: PERSISTENT HIGH-CONTRAST POS SHORTCUT/HOTKEY LIST (Hidden on Mobile) */}
+          <div className="hidden md:block bg-m3-surface-low p-4 rounded-[28px] border border-m3-outline-variant/20 shadow-sm text-left transition-all duration-300">
             <button
               type="button"
               onClick={() => setShortcutsCollapsed(!shortcutsCollapsed)}
@@ -1382,7 +1499,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
             </button>
             
             {!shortcutsCollapsed && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-9 gap-3 mt-4 animate-fade-in">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-9 gap-2.5 mt-4 animate-fade-in">
                 {[
                   { keys: ['F1', 'ESC'], desc: 'Clear/Cancel Cart' },
                   { keys: ['F3'], desc: 'Park/Hold Transaction' },
@@ -1409,7 +1526,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
         </div>
       ) : (
         /* COMPONENT 4: DEDICATED CORPORATE DAILY SALES LEDGER & VOID TERMINAL (SUB-MODULE TAB) */
-        <div className="col-span-full border border-m3-outline-variant/30 rounded-[28px] bg-m3-surface-low p-6 text-left space-y-4 animate-fade-in shadow-lg">
+        <div className="flex-1 min-h-0 border border-m3-outline-variant/30 rounded-[28px] bg-m3-surface-low p-5 sm:p-6 text-left flex flex-col gap-4 animate-fade-in shadow-lg overflow-hidden">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-m3-outline-variant/20 pb-4 gap-4">
             <div>
               <h3 className="text-sm font-black text-rose-500 flex items-center gap-2 uppercase tracking-widest pl-1 font-mono">
@@ -1438,8 +1555,9 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-m3-outline-variant/20 shadow-inner bg-m3-surface">
-            <table className="w-full text-left border-collapse table-auto text-xs min-w-[1000px] font-sans">
+          <div className="flex-1 min-h-0 flex flex-col rounded-xl border border-m3-outline-variant/20 shadow-inner bg-m3-surface overflow-hidden">
+            <div className="flex-1 overflow-auto scrollbar-thin">
+              <table className="w-full text-left border-collapse table-auto text-xs min-w-[1000px] font-sans">
               <thead>
                 <tr className="border-b border-m3-outline-variant/30 bg-m3-surface/30 text-[9px] uppercase font-black text-zinc-400 tracking-wider">
                   <th className="py-3 px-4 w-28">Ref Invoice</th>
@@ -1458,7 +1576,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                   <tr
                     key={idx}
                     onClick={() => setSelectedSaleDetail(s)}
-                    className={`hover:bg-m3-surface-low/90 hover:text-white cursor-pointer transition-colors font-bold ${s.isDeleted ? 'bg-red-500/5 text-zinc-650 line-through decoration-rose-650' : ''}`}
+                    className={`hover:bg-m3-surface-low/90 hover:text-white cursor-pointer transition-colors font-bold ${s.isDeleted ? 'bg-red-500/5 text-zinc-500 line-through decoration-rose-500' : ''}`}
                     title="Click to view full transaction invoice ledger details"
                   >
                     <td className="py-3 px-4 text-m3-primary font-black uppercase hover:underline">{s.saleNumber}</td>
@@ -1507,870 +1625,1131 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                 )}
               </tbody>
             </table>
+          </div>
 
-            {/* Pagination Controls bar */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-m3-surface-low border-t border-m3-outline-variant/20 text-xs font-sans">
-              <span className="font-semibold text-zinc-400 font-mono">
-                Showing {Math.min(filteredSales.length, (salesPage - 1) * SALES_PER_PAGE + 1)}-{Math.min(filteredSales.length, salesPage * SALES_PER_PAGE)} of {filteredSales.length} invoices
-              </span>
-              <div className="flex items-center gap-1.5 select-none font-sans">
-                <button
-                  type="button"
-                  disabled={salesPage === 1}
-                  onClick={() => setSalesPage(prev => Math.max(1, prev - 1))}
-                  className="px-3 py-1.5 rounded-lg border border-m3-outline-variant/60 hover:border-m3-primary hover:bg-m3-primary/10 text-m3-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px]"
-                >
-                  Prev
-                </button>
-                {Array.from({ length: totalSalesPages }).map((_, i) => {
-                  const pNum = i + 1;
-                  if (totalSalesPages > 5 && Math.abs(pNum - salesPage) > 2 && pNum !== 1 && pNum !== totalSalesPages) {
-                    if (pNum === 2 || pNum === totalSalesPages - 1) {
-                      return <span key={pNum} className="px-1 text-zinc-500">...</span>;
-                    }
-                    return null;
+          {/* Pagination Controls bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-m3-surface-low border-t border-m3-outline-variant/20 text-xs font-sans">
+            <span className="font-semibold text-zinc-400 font-mono">
+              Showing {Math.min(filteredSales.length, (salesPage - 1) * SALES_PER_PAGE + 1)}-{Math.min(filteredSales.length, salesPage * SALES_PER_PAGE)} of {filteredSales.length} invoices
+            </span>
+            <div className="flex items-center gap-1.5 select-none font-sans">
+              <button
+                type="button"
+                disabled={salesPage === 1}
+                onClick={() => setSalesPage(prev => Math.max(1, prev - 1))}
+                className="px-3 py-1.5 rounded-lg border border-m3-outline-variant/60 hover:border-m3-primary hover:bg-m3-primary/10 text-m3-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px]"
+              >
+                Prev
+              </button>
+              {Array.from({ length: totalSalesPages }).map((_, i) => {
+                const pNum = i + 1;
+                if (totalSalesPages > 5 && Math.abs(pNum - salesPage) > 2 && pNum !== 1 && pNum !== totalSalesPages) {
+                  if (pNum === 2 || pNum === totalSalesPages - 1) {
+                    return <span key={pNum} className="px-1 text-zinc-500">...</span>;
                   }
-                  return (
-                    <button
-                      key={pNum}
-                      type="button"
-                      onClick={() => setSalesPage(pNum)}
-                      className={`h-7 w-7 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
-                        salesPage === pNum
-                          ? 'bg-m3-primary text-m3-on-primary shadow-md'
-                          : 'border border-m3-outline-variant/20 hover:bg-m3-primary/10 text-zinc-300'
-                      }`}
-                    >
-                      {pNum}
-                    </button>
-                  );
-                })}
-                <button
-                  type="button"
-                  disabled={salesPage === totalSalesPages}
-                  onClick={() => setSalesPage(prev => Math.min(totalSalesPages, prev + 1))}
-                  className="px-3 py-1.5 rounded-lg border border-m3-outline-variant/60 hover:border-m3-primary hover:bg-m3-primary/10 text-m3-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px]"
-                >
-                  Next
-                </button>
-              </div>
+                  return null;
+                }
+                return (
+                  <button
+                    key={pNum}
+                    type="button"
+                    onClick={() => setSalesPage(pNum)}
+                    className={`h-7 w-7 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                      salesPage === pNum
+                        ? 'bg-m3-primary text-m3-on-primary shadow-md'
+                        : 'border border-m3-outline-variant/20 hover:bg-m3-primary/10 text-zinc-300'
+                    }`}
+                  >
+                    {pNum}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                disabled={salesPage === totalSalesPages}
+                onClick={() => setSalesPage(prev => Math.min(totalSalesPages, prev + 1))}
+                className="px-3 py-1.5 rounded-lg border border-m3-outline-variant/60 hover:border-m3-primary hover:bg-m3-primary/10 text-m3-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px]"
+              >
+                Next
+              </button>
             </div>
           </div>
         </div>
+      </div>
       )}      {/* MODAL 1: Cashier Shift Opener */}
-      {showShiftModal && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setShowShiftModal(false)} />
-          <div className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4">
-            <div className="flex items-start gap-3 mb-1">
-              <div className="p-2 rounded-2xl bg-m3-primary/10 text-m3-primary shrink-0">
-                <Lock className="h-5 w-5" />
+      <AnimatePresence>
+        {showShiftModal && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm"
+              onClick={() => setShowShiftModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4"
+            >
+              <div className="flex items-start gap-3 mb-1">
+                <div className="p-2 rounded-2xl bg-m3-primary/10 text-m3-primary shrink-0">
+                  <Lock className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <h3 className="text-base font-bold text-m3-primary">Cashier Terminal Shift Required</h3>
+                  <p className="text-xs text-m3-on-surface-variant mt-0.5 font-medium leading-relaxed">Please register an active cashier starting drawer fund to accept POS payments.</p>
+                </div>
               </div>
-              <div className="text-left">
-                <h3 className="text-base font-bold text-m3-primary">Cashier Terminal Shift Required</h3>
-                <p className="text-xs text-m3-on-surface-variant mt-0.5 font-medium leading-relaxed">Please register an active cashier starting drawer fund to accept POS payments.</p>
-              </div>
-            </div>
 
-            <form onSubmit={handleOpenShiftSubmit} className="space-y-4 text-left">
+              <form onSubmit={handleOpenShiftSubmit} className="space-y-4 text-left">
+                {previouslyClosedShift && (
+                  <div className="p-3 bg-zinc-900 border border-zinc-850 rounded-2xl space-y-1.5 text-[11px] leading-normal">
+                    <div className="flex justify-between items-center text-amber-500 font-bold">
+                      <span>Previous Close Balance:</span>
+                      <span className="font-mono font-black text-xs text-white">₱{previouslyClosedShift.cashCount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <p className="text-[9.5px] text-zinc-400">
+                      Closed by <strong className="text-zinc-300">{previouslyClosedShift.cashierName}</strong> on {new Date(previouslyClosedShift.closedAt || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStartCashInput(previouslyClosedShift.cashCount.toString());
+                        showToast(`Loaded previous shift balance of ₱${previouslyClosedShift.cashCount.toFixed(2)}`);
+                      }}
+                      className="w-full py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-xl font-bold transition-all text-center text-[10px]"
+                    >
+                      Use Previous Shift Balance
+                    </button>
+                  </div>
+                )}
+
+                <div className="space-y-1 relative pr-0 pl-0">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-m3-primary block pl-1">
+                    Starting Cash fund (PHP)
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    value={startCashInput}
+                    onChange={e => setStartCashInput(e.target.value)}
+                    className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-sm text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors text-center font-mono font-black rounded-t-lg"
+                  />
+                </div>
+
+                <div className="flex gap-2 border-t border-m3-outline-variant/15 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowShiftModal(false)}
+                    className="flex-1 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors text-center"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 m3-btn-primary py-2 text-xs shadow-sm cursor-pointer text-center"
+                  >
+                    Open Terminal Shift
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL: Close Drawer Shift */}
+      <AnimatePresence>
+        {showCloseShiftModal && activeShift && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm"
+              onClick={() => setShowCloseShiftModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4"
+            >
+              <div className="flex items-start gap-3 mb-1">
+                <div className="p-2 rounded-2xl bg-rose-500/10 text-rose-400 shrink-0">
+                  <LockKeyhole className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <h3 className="text-base font-bold text-rose-400">Close Cashier Drawer Shift</h3>
+                  <p className="text-xs text-m3-on-surface-variant mt-0.5 font-medium leading-relaxed">
+                    Verify and count the physical cash in the register drawer to close shift.
+                  </p>
+                </div>
+              </div>
+
+              {activeShift && (() => {
+                const stats = getShiftReportStats(activeShift);
+                const expectedCash = activeShift.startCash + stats.netTotal;
+                const enteredCash = parseFloat(closeShiftCashInput) || 0;
+                const variance = closeShiftCashInput === '' ? 0 : enteredCash - expectedCash;
+
+                return (
+                  <form onSubmit={handleCloseShiftSubmit} className="space-y-4 text-left">
+                    <div className="bg-zinc-900 border border-zinc-850 p-3.5 rounded-2xl space-y-2.5 text-xs">
+                      <div className="flex justify-between border-b border-zinc-800 pb-2">
+                        <span className="text-zinc-400">Active Cashier:</span>
+                        <span className="font-bold text-zinc-200">{activeShift.cashierName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Starting Cash:</span>
+                        <span className="font-mono font-bold text-zinc-300">₱{activeShift.startCash.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Net Sales Added:</span>
+                        <span className="font-mono font-bold text-zinc-300">₱{stats.netTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex justify-between border-t border-dashed border-zinc-800 pt-2 text-sm font-bold">
+                        <span className="text-m3-primary">Expected Drawer Cash:</span>
+                        <span className="font-mono text-m3-primary">₱{expectedCash.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 relative pr-0 pl-0">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-m3-primary block pl-1">
+                        Physical Cash Counted (PHP)
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        required
+                        value={closeShiftCashInput}
+                        onChange={e => setCloseShiftCashInput(e.target.value)}
+                        placeholder="Enter counted physical cash..."
+                        className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-sm text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors text-center font-mono font-black rounded-t-lg"
+                      />
+                    </div>
+
+                    {closeShiftCashInput !== '' && (
+                      <div className="p-3 bg-zinc-900/50 border border-zinc-850 rounded-2xl flex justify-between items-center">
+                        <span className="text-xs text-zinc-400 font-bold uppercase">Variance:</span>
+                        <span className={`font-mono font-black text-sm ${
+                          variance === 0 
+                            ? 'text-zinc-400' 
+                            : variance > 0 
+                              ? 'text-emerald-400' 
+                              : 'text-rose-400'
+                        }`}>
+                          {variance > 0 ? '+' : ''}₱{variance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2 border-t border-m3-outline-variant/15 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowCloseShiftModal(false)}
+                        className="flex-1 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors text-center"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="flex-1 bg-rose-500 hover:bg-rose-600 text-white py-2 text-xs font-black uppercase rounded-full shadow-sm cursor-pointer text-center"
+                      >
+                        Close Out & Close Shift
+                      </button>
+                    </div>
+                  </form>
+                );
+              })()}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showDiscountModal && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm"
+              onClick={() => setShowDiscountModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left"
+            >
+              <h3 className="text-sm font-bold text-m3-primary flex items-center gap-2">
+                <Sparkles className="h-4.5 w-4.5 text-m3-primary" /> Select Trade & Exemption Discounts
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Presets Grid */}
+                <button
+                  type="button"
+                  onClick={() => applyCustomDiscount('NONE')}
+                  className={`p-3 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
+                    discountType === 'NONE'
+                      ? 'border-m3-primary bg-m3-primary/10'
+                      : 'border-m3-outline-variant/20 bg-m3-surface hover:bg-m3-outline-variant/10'
+                  }`}
+                >
+                  <div className="font-bold text-xs">No Discount</div>
+                  <div className="text-[10px] text-m3-on-surface-variant mt-1 font-medium">Standard cashier list pricing applies.</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyCustomDiscount('SENIOR')}
+                  className={`p-3 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
+                    discountType === 'SENIOR'
+                      ? 'border-m3-primary bg-m3-primary/10'
+                      : 'border-m3-outline-variant/20 bg-m3-surface hover:bg-m3-outline-variant/10'
+                  }`}
+                >
+                  <div className="font-bold text-xs text-m3-primary flex items-center gap-1">Senior Citizen</div>
+                  <div className="text-[10px] text-m3-on-surface-variant mt-1 font-medium">20% Off base + 12% VAT exemption (Philippine RA 9994).</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyCustomDiscount('PWD')}
+                  className={`p-3 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
+                    discountType === 'PWD'
+                      ? 'border-m3-primary bg-m3-primary/10'
+                      : 'border-m3-outline-variant/20 bg-m3-surface hover:bg-m3-outline-variant/10'
+                  }`}
+                >
+                  <div className="font-bold text-xs text-m3-primary flex items-center gap-1">PWD Resident</div>
+                  <div className="text-[10px] text-m3-on-surface-variant mt-1 font-medium">20% Off base + 12% VAT exemption (Philippine RA 10754).</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyCustomDiscount('CONTRACT')}
+                  className={`p-3 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
+                    discountType === 'CONTRACT'
+                      ? 'border-m3-primary bg-m3-primary/10'
+                      : 'border-m3-outline-variant/20 bg-m3-surface hover:bg-m3-outline-variant/10'
+                  }`}
+                >
+                  <div className="font-bold text-xs text-m3-primary">Contractor Alliance</div>
+                  <div className="text-[10px] text-m3-on-surface-variant mt-1 font-medium">Flat 10% Trade Allied partner discount.</div>
+                </button>
+              </div>
+
+              <div className="border-t border-m3-outline-variant/20 pt-4 space-y-4">
+                <h4 className="text-[10px] font-bold text-m3-primary uppercase tracking-wider pl-1 font-sans">Or Apply Custom Values (Flat / Rate)</h4>
+                
+                <div className="flex gap-3">
+                  <div className="flex-1 relative pl-0">
+                    <label className="text-[9.5px] font-bold tracking-wider text-m3-on-surface-variant mb-1 block pl-1">Discount Amount/Value</label>
+                    <input
+                      type="number"
+                      value={discountInput}
+                      onChange={e => setDiscountInput(e.target.value)}
+                      placeholder={discountType === 'PERCENT' ? 'e.g. 15 for 15%' : 'e.g. 100 for ₱100'}
+                      className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs font-mono font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary rounded-t-lg transition-colors"
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col justify-end gap-1.5 shrink-0">
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => applyCustomDiscount('FLAT', discountInput)}
+                        className="px-4 py-2 bg-m3-primary/10 text-m3-primary border border-m3-primary/20 hover:bg-m3-primary/20 text-[10.5px] font-bold rounded-lg cursor-pointer transition-colors"
+                      >
+                        Apply Flat (₱)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => applyCustomDiscount('PERCENT', discountInput)}
+                        className="px-4 py-2 bg-m3-primary/10 text-m3-primary border border-m3-primary/20 hover:bg-m3-primary/20 text-[10.5px] font-bold rounded-lg cursor-pointer transition-colors"
+                      >
+                        Apply Percent (%)
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-4 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowDiscountModal(false)}
+                  className="px-5 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors text-center"
+                >
+                  Close Panel
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showReceiptModal && activeReceipt && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
+              onClick={() => setShowReceiptModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 30 }}
+              transition={{ type: "spring", stiffness: 350, damping: 25 }}
+              className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-5 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface flex flex-col justify-between shrink-0"
+            >
+              {/* Header Success symbol */}
+              <div className="flex flex-col items-center justify-center mb-4 text-center">
+                <div className="p-2 rounded-full bg-m3-tertiary-container border border-m3-tertiary/20 text-m3-on-tertiary-container mb-2 text-center">
+                  <CheckCircle className="h-6 w-6 animate-bounce text-m3-tertiary" />
+                </div>
+                <h3 className="text-base font-bold text-m3-on-surface">Checkout Succeeded</h3>
+                <p className="text-[11px] text-m3-on-surface-variant font-medium">Inventory files adjusted automatically.</p>
+              </div>
+
+              {/* Virtual Paper Receipt container with roll-down animation */}
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
+                className="p-4 bg-m3-surface-lowest border border-dashed border-m3-outline-variant/40 rounded-2xl text-[11px] leading-relaxed space-y-3 select-none text-m3-on-surface text-left overflow-hidden shadow-inner"
+              >
+                <div className="text-center font-bold tracking-tight border-b border-dashed border-m3-outline-variant/30 pb-2">
+                  <h4 className="text-xs font-black text-m3-primary tracking-widest font-mono uppercase">TILEPOINT RETailing co.</h4>
+                  <div className="text-[10px] text-m3-on-surface-variant font-bold mt-0.5">{activeBranch?.name || 'Central Outlet Branch'}</div>
+                  <div className="text-[9px] text-m3-on-surface-variant mt-0.5 font-normal">PH-0917-002340 • TIN 000-111-222</div>
+                </div>
+
+                {/* Specs */}
+                <div className="text-[10px] space-y-1.5 border-b border-dashed border-m3-outline-variant/30 pb-2 font-medium">
+                  <div className="flex justify-between">
+                    <span>Invoice Ref:</span>
+                    <span className="font-mono font-bold text-m3-primary">{activeReceipt.saleNumber}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Terminal Date:</span>
+                    <span>{new Date(activeReceipt.createdAt).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Cashier Name:</span>
+                    <span>{activeReceipt.cashierName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Buyer:</span>
+                    <span className="font-bold">{activeReceipt.customerName}</span>
+                  </div>
+                </div>
+
+                {/* Goods details rows */}
+                <div className="space-y-1.5 font-mono text-[9px] border-b border-dashed border-m3-outline-variant/30 pb-2">
+                  <div className="flex justify-between font-extrabold text-m3-on-surface-variant">
+                    <span>Description / Qty</span>
+                    <span>Amount</span>
+                  </div>
+
+                  {cart.length > 0 ? (
+                    cart.map((it, idx) => (
+                      <div key={idx} className="flex justify-between text-m3-on-surface">
+                        <span className="truncate max-w-[200px]">{it.product.productName} (x{it.quantity})</span>
+                        <span className="font-bold">₱{((it.overridePrice !== undefined ? it.overridePrice : getBranchPrice(it.product)) * it.quantity).toFixed(2)}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-[9px] text-m3-on-surface-variant italic">Hardware ledger invoice saved correctly.</p>
+                  )}
+                </div>
+
+                 {/* Calculated Receipt Totals block (BIR Compliant Details) */}
+                 <div className="space-y-1 text-[10px] border-b border-dashed border-m3-outline-variant/30 pb-2 font-mono">
+                   <div className="flex justify-between text-m3-on-surface-variant">
+                     <span>VATable Sales:</span>
+                     <span>₱{activeReceipt.vat > 0 ? activeReceipt.subtotal.toFixed(2) : '0.00'}</span>
+                   </div>
+                   <div className="flex justify-between text-m3-on-surface-variant">
+                     <span>VAT-Exempt Sales:</span>
+                     <span>₱{activeReceipt.vat === 0 ? activeReceipt.subtotal.toFixed(2) : '0.00'}</span>
+                   </div>
+                   <div className="flex justify-between text-m3-on-surface-variant">
+                     <span>Zero-Rated Sales:</span>
+                     <span>₱0.00</span>
+                   </div>
+                   <div className="flex justify-between text-m3-on-surface-variant">
+                     <span>12% Output VAT:</span>
+                     <span>₱{activeReceipt.vat.toFixed(2)}</span>
+                   </div>
+                   {activeReceipt.discount > 0 && (
+                     <div className="flex justify-between text-m3-primary font-bold">
+                       <span>BIR Discount Applied:</span>
+                       <span>-₱{activeReceipt.discount.toFixed(2)}</span>
+                     </div>
+                   )}
+                   <div className="flex justify-between font-black text-m3-on-surface text-xs pt-1 border-t border-dotted border-m3-outline-variant/20">
+                     <span>GRAND TOTAL DUE:</span>
+                     <span>₱{activeReceipt.grandTotal.toFixed(2)}</span>
+                   </div>
+                 </div>
+
+                {/* Tender calculations */}
+                <div className="space-y-1 text-[10px] font-mono text-m3-on-surface-variant font-medium">
+                  <div className="flex justify-between">
+                    <span>Method:</span>
+                    <span className="text-m3-on-surface font-extrabold uppercase">{activeReceipt.paymentMethod}</span>
+                  </div>
+                  {activeReceipt.paymentMethod === 'Cash' && (
+                    <>
+                      <div className="flex justify-between">
+                        <span>Tendered:</span>
+                        <span className="text-m3-on-surface">₱{activeReceipt.amountTendered.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between font-bold">
+                        <span>Change:</span>
+                        <span className="text-m3-tertiary">₱{activeReceipt.changeAmount.toFixed(2)}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </motion.div>
+
+              {/* Print trigger and fine buttons */}
+              <div className="flex gap-2 mt-4.5 flex-shrink-0">
+                <button
+                  onClick={() => {
+                    window.print();
+                    addAuditLog('POS_RECEIPT_PRINT', `Printed physical invoice ticket ${activeReceipt.saleNumber}`, 'Sales', activeReceipt.id);
+                    showToast('Sent printing signal to hardware terminal.');
+                  }}
+                  className="flex-1 py-2 text-xs font-bold rounded-full border border-m3-outline-variant hover:bg-m3-outline-variant/20 transition-colors flex items-center justify-center gap-1.5 cursor-pointer text-center"
+                >
+                  <Printer className="h-3.5 w-3.5" /> Print Receipt
+                </button>
+                <button
+                  onClick={() => setShowReceiptModal(false)}
+                  className="flex-1 m3-btn-primary py-2 text-xs shadow-sm cursor-pointer text-center"
+                >
+                  Done
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Customer Full Name Custom Form Modal (replaces native F5 prompt popup) */}
+      <AnimatePresence>
+        {showCustomerModal && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4 text-left">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm"
+              onClick={() => setShowCustomerModal(false)}
+            />
+            <motion.form
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              onSubmit={handleSaveCustomerName}
+              className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4"
+            >
+              <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
+                <h3 className="text-base font-bold text-m3-primary flex items-center gap-2">
+                  <span>Assign Customer Profile</span>
+                </h3>
+                <button type="button" onClick={() => setShowCustomerModal(false)} className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
               <div className="space-y-1 relative pr-0 pl-0">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-m3-primary block pl-1">
-                  Starting Cash fund (PHP)
-                </label>
+                <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1 block">Full Name</label>
                 <input
-                  type="number"
-                  required
-                  value={startCashInput}
-                  onChange={e => setStartCashInput(e.target.value)}
-                  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-sm text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors text-center font-mono font-black rounded-t-lg"
+                  type="text"
+                  value={customerModalInput}
+                  onChange={e => setCustomerModalInput(e.target.value)}
+                  placeholder="e.g. Architect Manuel Santos"
+                  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold"
                 />
               </div>
 
-              <div className="flex gap-2 border-t border-m3-outline-variant/15 pt-4">
+              <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-4">
                 <button
                   type="button"
-                  onClick={() => setShowShiftModal(false)}
-                  className="flex-1 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors text-center"
+                  onClick={() => setShowCustomerModal(false)}
+                  className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 m3-btn-primary py-2 text-xs shadow-sm cursor-pointer text-center"
+                  className="m3-btn-primary px-5 py-2 text-xs shadow-sm cursor-pointer"
                 >
-                  Open Terminal Shift
+                  Assign Customer
                 </button>
               </div>
-            </form>
+            </motion.form>
           </div>
-        </div>
-      )}
-
-      {/* MODAL 2: Apply Discount Dialog */}
-      {showDiscountModal && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setShowDiscountModal(false)} />
-          <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left">
-            <h3 className="text-sm font-bold text-m3-primary flex items-center gap-2">
-              <Sparkles className="h-4.5 w-4.5 text-m3-primary" /> Select Trade & Exemption Discounts
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Presets Grid */}
-              <button
-                type="button"
-                onClick={() => applyCustomDiscount('NONE')}
-                className={`p-3 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
-                  discountType === 'NONE'
-                    ? 'border-m3-primary bg-m3-primary/10'
-                    : 'border-m3-outline-variant/20 bg-m3-surface hover:bg-m3-outline-variant/10'
-                }`}
-              >
-                <div className="font-bold text-xs">No Discount</div>
-                <div className="text-[10px] text-m3-on-surface-variant mt-1 font-medium">Standard cashier list pricing applies.</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => applyCustomDiscount('SENIOR')}
-                className={`p-3 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
-                  discountType === 'SENIOR'
-                    ? 'border-m3-primary bg-m3-primary/10'
-                    : 'border-m3-outline-variant/20 bg-m3-surface hover:bg-m3-outline-variant/10'
-                }`}
-              >
-                <div className="font-bold text-xs text-m3-primary flex items-center gap-1">Senior Citizen</div>
-                <div className="text-[10px] text-m3-on-surface-variant mt-1 font-medium">20% Off base + 12% VAT exemption (Philippine RA 9994).</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => applyCustomDiscount('PWD')}
-                className={`p-3 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
-                  discountType === 'PWD'
-                    ? 'border-m3-primary bg-m3-primary/10'
-                    : 'border-m3-outline-variant/20 bg-m3-surface hover:bg-m3-outline-variant/10'
-                }`}
-              >
-                <div className="font-bold text-xs text-m3-primary flex items-center gap-1">PWD Resident</div>
-                <div className="text-[10px] text-m3-on-surface-variant mt-1 font-medium">20% Off base + 12% VAT exemption (Philippine RA 10754).</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => applyCustomDiscount('CONTRACT')}
-                className={`p-3 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
-                  discountType === 'CONTRACT'
-                    ? 'border-m3-primary bg-m3-primary/10'
-                    : 'border-m3-outline-variant/20 bg-m3-surface hover:bg-m3-outline-variant/10'
-                }`}
-              >
-                <div className="font-bold text-xs text-m3-primary">Contractor Alliance</div>
-                <div className="text-[10px] text-m3-on-surface-variant mt-1 font-medium">Flat 10% Trade Allied partner discount.</div>
-              </button>
-            </div>
-
-            <div className="border-t border-m3-outline-variant/20 pt-4 space-y-4">
-              <h4 className="text-[10px] font-bold text-m3-primary uppercase tracking-wider pl-1 font-sans">Or Apply Custom Values (Flat / Rate)</h4>
-              
-              <div className="flex gap-3">
-                <div className="flex-1 relative pl-0">
-                  <label className="text-[9.5px] font-bold tracking-wider text-m3-on-surface-variant mb-1 block pl-1">Discount Amount/Value</label>
-                  <input
-                    type="number"
-                    value={discountInput}
-                    onChange={e => setDiscountInput(e.target.value)}
-                    placeholder={discountType === 'PERCENT' ? 'e.g. 15 for 15%' : 'e.g. 100 for ₱100'}
-                    className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs font-mono font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary rounded-t-lg transition-colors"
-                  />
-                </div>
-                
-                <div className="flex flex-col justify-end gap-1.5 shrink-0">
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => applyCustomDiscount('FLAT', discountInput)}
-                      className="px-4 py-2 bg-m3-primary/10 text-m3-primary border border-m3-primary/20 hover:bg-m3-primary/20 text-[10.5px] font-bold rounded-lg cursor-pointer transition-colors"
-                    >
-                      Apply Flat (₱)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => applyCustomDiscount('PERCENT', discountInput)}
-                      className="px-4 py-2 bg-m3-primary/10 text-m3-primary border border-m3-primary/20 hover:bg-m3-primary/20 text-[10.5px] font-bold rounded-lg cursor-pointer transition-colors"
-                    >
-                      Apply Percent (%)
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-4 flex-shrink-0">
-              <button
-                type="button"
-                onClick={() => setShowDiscountModal(false)}
-                className="px-5 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors text-center"
-              >
-                Close Panel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 3: Visual Print Receipt Drawer */}
-      {showReceiptModal && activeReceipt && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm animate-fade-in" onClick={() => setShowReceiptModal(false)} />
-          <div className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-5 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface flex flex-col justify-between shrink-0">
-            {/* Header Success symbol */}
-            <div className="flex flex-col items-center justify-center mb-4 text-center">
-              <div className="p-2 rounded-full bg-m3-tertiary-container border border-m3-tertiary/20 text-m3-on-tertiary-container mb-2 text-center">
-                <CheckCircle className="h-6 w-6 animate-bounce text-m3-tertiary" />
-              </div>
-              <h3 className="text-base font-bold text-m3-on-surface">Checkout Succeeded</h3>
-              <p className="text-[11px] text-m3-on-surface-variant font-medium">Inventory files adjusted automatically.</p>
-            </div>
-
-            {/* Virtual Paper Receipt container */}
-            <div className="p-4 bg-m3-surface-lowest border border-dashed border-m3-outline-variant/40 rounded-2xl text-[11px] leading-relaxed space-y-3 select-none text-m3-on-surface text-left">
-              <div className="text-center font-bold tracking-tight border-b border-dashed border-m3-outline-variant/30 pb-2">
-                <h4 className="text-xs font-black text-m3-primary tracking-widest font-mono uppercase">TILEPOINT RETailing co.</h4>
-                <div className="text-[10px] text-m3-on-surface-variant font-bold mt-0.5">{activeBranch?.name || 'Central Outlet Branch'}</div>
-                <div className="text-[9px] text-m3-on-surface-variant mt-0.5 font-normal">PH-0917-002340 • TIN 000-111-222</div>
-              </div>
-
-              {/* Specs */}
-              <div className="text-[10px] space-y-1.5 border-b border-dashed border-m3-outline-variant/30 pb-2 font-medium">
-                <div className="flex justify-between">
-                  <span>Invoice Ref:</span>
-                  <span className="font-mono font-bold text-m3-primary">{activeReceipt.saleNumber}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Terminal Date:</span>
-                  <span>{new Date(activeReceipt.createdAt).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Cashier Name:</span>
-                  <span>{activeReceipt.cashierName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Buyer:</span>
-                  <span className="font-bold">{activeReceipt.customerName}</span>
-                </div>
-              </div>
-
-              {/* Goods details rows */}
-              <div className="space-y-1.5 font-mono text-[9px] border-b border-dashed border-m3-outline-variant/30 pb-2">
-                <div className="flex justify-between font-extrabold text-m3-on-surface-variant">
-                  <span>Description / Qty</span>
-                  <span>Amount</span>
-                </div>
-
-                {cart.length > 0 ? (
-                  cart.map((it, idx) => (
-                    <div key={idx} className="flex justify-between text-m3-on-surface">
-                      <span className="truncate max-w-[200px]">{it.product.productName} (x{it.quantity})</span>
-                      <span className="font-bold">₱{((it.overridePrice !== undefined ? it.overridePrice : getBranchPrice(it.product)) * it.quantity).toFixed(2)}</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-[9px] text-m3-on-surface-variant italic">Hardware ledger invoice saved correctly.</p>
-                )}
-              </div>
-
-              {/* Calculated Receipt Totals block */}
-              <div className="space-y-1 text-[10px] border-b border-dashed border-m3-outline-variant/30 pb-2 font-mono">
-                <div className="flex justify-between text-m3-on-surface-variant">
-                  <span>VAT (12%):</span>
-                  <span>₱{activeReceipt.vat.toFixed(2)}</span>
-                </div>
-                {activeReceipt.discount > 0 && (
-                  <div className="flex justify-between text-m3-primary font-bold">
-                    <span>Discount:</span>
-                    <span>-₱{activeReceipt.discount.toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between font-black text-m3-on-surface text-xs pt-1">
-                  <span>GRAND TOTAL:</span>
-                  <span>₱{activeReceipt.grandTotal.toFixed(2)}</span>
-                </div>
-              </div>
-
-              {/* Tender calculations */}
-              <div className="space-y-1 text-[10px] font-mono text-m3-on-surface-variant font-medium">
-                <div className="flex justify-between">
-                  <span>Method:</span>
-                  <span className="text-m3-on-surface font-extrabold uppercase">{activeReceipt.paymentMethod}</span>
-                </div>
-                {activeReceipt.paymentMethod === 'Cash' && (
-                  <>
-                    <div className="flex justify-between">
-                      <span>Tendered:</span>
-                      <span className="text-m3-on-surface">₱{activeReceipt.amountTendered.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between font-bold">
-                      <span>Change:</span>
-                      <span className="text-m3-tertiary">₱{activeReceipt.changeAmount.toFixed(2)}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Print trigger and fine buttons */}
-            <div className="flex gap-2 mt-4.5 flex-shrink-0">
-              <button
-                onClick={() => {
-                  window.print();
-                  addAuditLog('POS_RECEIPT_PRINT', `Printed physical invoice ticket ${activeReceipt.saleNumber}`, 'Sales', activeReceipt.id);
-                  showToast('Sent printing signal to hardware terminal.');
-                }}
-                className="flex-1 py-2 text-xs font-bold rounded-full border border-m3-outline-variant hover:bg-m3-outline-variant/20 transition-colors flex items-center justify-center gap-1.5 cursor-pointer text-center"
-              >
-                <Printer className="h-3.5 w-3.5" /> Print Receipt
-              </button>
-              <button
-                onClick={() => setShowReceiptModal(false)}
-                className="flex-1 m3-btn-primary py-2 text-xs shadow-sm cursor-pointer text-center"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Customer Full Name Custom Form Modal (replaces native F5 prompt popup) */}
-      {showCustomerModal && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setShowCustomerModal(false)} />
-          <form
-            onSubmit={handleSaveCustomerName}
-            className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left"
-          >
-            <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
-              <h3 className="text-base font-bold text-m3-primary flex items-center gap-2">
-                <span>Assign Customer Profile</span>
-              </h3>
-              <button type="button" onClick={() => setShowCustomerModal(false)} className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-1 relative pr-0 pl-0">
-              <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1 block">Full Name</label>
-              <input
-                type="text"
-                value={customerModalInput}
-                onChange={e => setCustomerModalInput(e.target.value)}
-                placeholder="e.g. Architect Manuel Santos"
-                className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-4">
-              <button
-                type="button"
-                onClick={() => setShowCustomerModal(false)}
-                className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="m3-btn-primary px-5 py-2 text-xs shadow-sm cursor-pointer"
-              >
-                Assign Customer
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
 
 
       {/* MODAL 4: Dynamic Security Override Verification (Manager / Admin Clearance) */}
-      {pendingApproval && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm" onClick={() => setPendingApproval(null)} />
-          <form
-            onSubmit={handleVerifyApprovalSubmit}
-            className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-rose-500/35 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left border-t-4"
-          >
-            <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
-              <h3 className="text-sm font-black text-rose-500 flex items-center gap-1.5 uppercase tracking-wider">
-                <LockKeyhole className="h-5 w-5" />
-                <span>Security override prompt</span>
-              </h3>
-              <button type="button" onClick={() => setPendingApproval(null)} className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-0.5 rounded-full">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="bg-rose-500/5 border border-rose-500/25 p-3 rounded-2xl text-[11px] leading-relaxed text-rose-300 font-bold space-y-1">
-              <div><strong>REASON:</strong> POS Terminal requires authorization to proceed.</div>
-              {pendingApproval.type === 'DISCOUNT' ? (
-                <div>
-                  Applying a <span className="text-amber-400 font-black">{pendingApproval.discountType} discount ({pendingApproval.discountValue}%)</span> which requires <span className="underline">{pendingApproval.requiredRole}+</span> clearance.
-                </div>
-              ) : (
-                <div>
-                  Applying price override of <span className="text-amber-400 font-black">₱{pendingApproval.overridePrice?.toFixed(2)}</span> instead of ₱{pendingApproval.originalPrice?.toFixed(2)} on SKU catalog. Requires <span className="underline">{pendingApproval.requiredRole}+</span> level override.
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Authorize Username</label>
-                <input
-                  type="text"
-                  required
-                  value={approverUsername}
-                  onChange={e => setApproverUsername(e.target.value)}
-                  placeholder="e.g. tomas_mgr, juan_mgr, or erica_admin"
-                  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Security Clearance PIN Code / Password</label>
-                <input
-                  type="password"
-                  required
-                  value={approverPassword}
-                  onChange={e => setApproverPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold"
-                />
-              </div>
-            </div>
-
-            {approvalError && (
-              <div className="text-[10px] font-extrabold text-red-500 px-2 animate-pulse">
-                {approvalError}
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-4">
-              <button
-                type="button"
-                onClick={() => setPendingApproval(null)}
-                className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
-              >
-                Decline
-              </button>
-              <button
-                type="submit"
-                className="bg-gradient-to-r from-red-650 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-extrabold px-5 py-2 text-xs shadow-sm cursor-pointer rounded-full"
-              >
-                Authorize Override
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* MODAL 5: Single Item Price Override dialog */}
-      {overrideModalOpen && overrideItemIndex !== null && cart[overrideItemIndex] && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm" onClick={() => setOverrideModalOpen(false)} />
-          <form
-            onSubmit={handleSavePriceOverride}
-            className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left"
-          >
-            <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
-              <h3 className="text-sm font-black text-m3-primary flex items-center gap-1.5 uppercase tracking-wider">
-                <span>Unit Price Override</span>
-              </h3>
-              <button type="button" onClick={() => setOverrideModalOpen(false)} className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-0.5 rounded-full">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-1 leading-normal pl-1 text-[11px] font-medium text-m3-on-surface-variant">
-              <div><strong>Product:</strong> {cart[overrideItemIndex].product.productName}</div>
-              <div><strong>Default Unit Price:</strong> ₱{getBranchPrice(cart[overrideItemIndex].product).toFixed(2)}</div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">New Unit Selling Price</label>
-              <input
-                type="number"
-                required
-                min={0}
-                step="0.01"
-                value={overridePriceInput}
-                onChange={e => setOverridePriceInput(e.target.value)}
-                className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold font-mono"
-              />
-              <span className="text-[9px] text-m3-on-surface-variant pl-1 block mt-1 font-medium">
-                {currentUser.role === UserRole.CASHIER ? 'Changing the standard price requires Manager override verification.' : 'Your role has privileges to direct-apply this override.'}
-              </span>
-            </div>
-
-            <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-4 font-sans">
-              <button
-                type="button"
-                onClick={() => setOverrideModalOpen(false)}
-                className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="m3-btn-primary px-5 py-2 text-xs shadow-sm cursor-pointer"
-              >
-                Apply Price
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* MODAL 6: Checkout Fulfillment Assignment & Delivery Scheduling Form */}
-      {showFulfillmentModal && pendingSaleForFulfillment && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm" />
-          <div className="relative w-full max-w-lg rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4 max-h-[90vh] overflow-y-auto">
-            
-            <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-3">
-              <div>
-                <h3 className="text-sm font-black text-m3-primary uppercase tracking-widest font-mono">
-                  Order Dispatch Fulfillment
+      <AnimatePresence>
+        {pendingApproval && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm"
+              onClick={() => setPendingApproval(null)}
+            />
+            <motion.form
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              onSubmit={handleVerifyApprovalSubmit}
+              className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-rose-500/35 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left border-t-4"
+            >
+              <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
+                <h3 className="text-sm font-black text-rose-500 flex items-center gap-1.5 uppercase tracking-wider">
+                  <LockKeyhole className="h-5 w-5" />
+                  <span>Security override prompt</span>
                 </h3>
-                <p className="text-[10px] text-m3-on-surface-variant font-bold mt-0.5 uppercase tracking-wide">
-                  Receipt Ref: {pendingSaleForFulfillment.saleNumber} • Customer: {pendingSaleForFulfillment.customerName}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-1.5 pl-1">
-              <span className="text-[9.5px] font-black text-m3-primary uppercase tracking-widest block mb-1.5">
-                How will the customer receive the items?
-              </span>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setFulfillmentType('TakeHome')}
-                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer text-left flex flex-col justify-between h-[110px] ${
-                    fulfillmentType === 'TakeHome'
-                      ? 'border-m3-primary bg-m3-primary/5 text-m3-primary font-bold'
-                      : 'border-m3-outline-variant/30 hover:border-m3-outline-variant/60 bg-m3-surface-lowest text-m3-on-surface'
-                  }`}
-                >
-                  <ShoppingBag className="h-6 w-6 text-m3-primary" />
-                  <div>
-                    <h4 className="text-[10.5px] font-black uppercase tracking-wide">Take Home / Pickup</h4>
-                    <p className="text-[8.5px] opacity-80 mt-0.5 leading-normal font-medium">Material leaves physical store desk. Fulfillment releases immediately.</p>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFulfillmentType('Delivery')}
-                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer text-left flex flex-col justify-between h-[110px] ${
-                    fulfillmentType === 'Delivery'
-                      ? 'border-m3-primary bg-m3-primary/5 text-m3-primary font-bold'
-                      : 'border-m3-outline-variant/30 hover:border-m3-outline-variant/60 bg-m3-surface-lowest text-m3-on-surface'
-                  }`}
-                >
-                  <Truck className="h-6 w-6 text-m3-primary" />
-                  <div>
-                    <h4 className="text-[10.5px] font-black uppercase tracking-wide">Store Delivery</h4>
-                    <p className="text-[8.5px] opacity-80 mt-0.5 leading-normal font-medium">Customer requests heavy unloading trucks. Hold stock at distribution warehouse.</p>
-                  </div>
+                <button type="button" onClick={() => setPendingApproval(null)} className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-0.5 rounded-full">
+                  <X className="h-5 w-5" />
                 </button>
               </div>
-            </div>
 
-            {fulfillmentType === 'TakeHome' && (
-              <div className="space-y-4 border-t border-m3-outline-variant/15 pt-4">
-                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-xs text-emerald-400 font-medium leading-relaxed">
-                  <strong>TAKE HOME IMMEDIATE RELEASE:</strong> All products in the cart are logged as released immediately. Stock has been deducted. No further truck scheduling is tracking.
-                </div>
-                <div className="flex justify-end pt-1">
-                  <button
-                    type="button"
-                    onClick={handleFulfillmentTakeHome}
-                    className="m3-btn-primary px-8 py-2.5 text-xs font-black uppercase tracking-widest shadow-md cursor-pointer"
-                  >
-                    Release Material & View Receipt
-                  </button>
-                </div>
+              <div className="bg-rose-500/5 border border-rose-500/25 p-3 rounded-2xl text-[11px] leading-relaxed text-rose-300 font-bold space-y-1">
+                <div><strong>REASON:</strong> POS Terminal requires authorization to proceed.</div>
+                {pendingApproval.type === 'DISCOUNT' ? (
+                  <div>
+                    Applying a <span className="text-amber-400 font-black">{pendingApproval.discountType} discount ({pendingApproval.discountValue}%)</span> which requires <span className="underline">{pendingApproval.requiredRole}+</span> clearance.
+                  </div>
+                ) : (
+                  <div>
+                    Applying price override of <span className="text-amber-400 font-black">₱{pendingApproval.overridePrice?.toFixed(2)}</span> instead of ₱{pendingApproval.originalPrice?.toFixed(2)} on SKU catalog. Requires <span className="underline">{pendingApproval.requiredRole}+</span> level override.
+                  </div>
+                )}
               </div>
-            )}
 
-            {fulfillmentType === 'Delivery' && (
-              <form onSubmit={handleFulfillmentDeliverySubmit} className="space-y-4 border-t border-m3-outline-variant/15 pt-4">
-                <div className="bg-m3-primary/10 border border-m3-primary/15 rounded-xl p-3 text-[10.5px] text-m3-primary font-medium leading-relaxed">
-                  <strong>STORE DELIVERY ALLOCATION:</strong> This creates a <strong>Pending Scheduling</strong> transport ledger. Stock quantities are reserved of this location immediately.
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pl-1">
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Contact Number *</label>
-                    <input
-                      type="text"
-                      required
-                      value={deliveryContact}
-                      onChange={e => setDeliveryContact(e.target.value)}
-                      placeholder="e.g. 0917-555-1234"
-                      className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold"
-                    />
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">House No. / Building / Suite</label>
-                    <input
-                      type="text"
-                      value={deliveryHouseNo}
-                      onChange={e => setDeliveryHouseNo(e.target.value)}
-                      placeholder="e.g. Blk 12 Lot 14, 2nd Floor"
-                      className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Street / Subdivision</label>
-                    <input
-                      type="text"
-                      value={deliveryStreet}
-                      onChange={e => setDeliveryStreet(e.target.value)}
-                      placeholder="e.g. Sampaguita Street, Camella"
-                      className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Barangay *</label>
-                    <input
-                      type="text"
-                      required
-                      value={deliveryBarangay}
-                      onChange={e => setDeliveryBarangay(e.target.value)}
-                      placeholder="e.g. Mandalagan"
-                      className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">City / Municipality *</label>
-                    <input
-                      type="text"
-                      required
-                      value={deliveryCity}
-                      onChange={e => setDeliveryCity(e.target.value)}
-                      placeholder="e.g. Bacolod City"
-                      className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Landmark / Directions</label>
-                    <input
-                      type="text"
-                      value={deliveryLandmark}
-                      onChange={e => setDeliveryLandmark(e.target.value)}
-                      placeholder="e.g. Near Shell gas station, red gate"
-                      className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Unloading Date *</label>
-                    <input
-                      type="date"
-                      required
-                      value={deliveryDate}
-                      onChange={e => setDeliveryDate(e.target.value)}
-                      className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Arrival Time Window</label>
-                    <input
-                      type="text"
-                      value={deliveryTime}
-                      onChange={e => setDeliveryTime(e.target.value)}
-                      placeholder="e.g. 10:00 AM - 2:00 PM"
-                      className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1 pl-1">
-                  <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest block mb-0.5">Special Unloading Notes (e.g. Fragile, Heavy Lift)</label>
-                  <textarea
-                    rows={2}
-                    value={deliveryNotes}
-                    onChange={e => setDeliveryNotes(e.target.value)}
-                    placeholder="e.g. Heavy tiles, require helpers to haul on 2nd Floor."
-                    className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Authorize Username</label>
+                  <input
+                    type="text"
+                    required
+                    value={approverUsername}
+                    onChange={e => setApproverUsername(e.target.value)}
+                    placeholder="e.g. tomas_mgr, juan_mgr, or erica_admin"
+                    className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold"
                   />
                 </div>
 
-                <div className="flex justify-end pt-2 border-t border-m3-outline-variant/10">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Security Clearance PIN Code / Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={approverPassword}
+                    onChange={e => setApproverPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold"
+                  />
+                </div>
+              </div>
+
+              {approvalError && (
+                <div className="text-[10px] font-extrabold text-red-500 px-2 animate-pulse">
+                  {approvalError}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setPendingApproval(null)}
+                  className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
+                >
+                  Decline
+                </button>
+                <button
+                  type="submit"
+                  className="bg-gradient-to-r from-red-650 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-extrabold px-5 py-2 text-xs shadow-sm cursor-pointer rounded-full"
+                >
+                  Authorize Override
+                </button>
+              </div>
+            </motion.form>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL 5: Single Item Price Override dialog */}
+      <AnimatePresence>
+        {overrideModalOpen && overrideItemIndex !== null && cart[overrideItemIndex] && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm"
+              onClick={() => setOverrideModalOpen(false)}
+            />
+            <motion.form
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              onSubmit={handleSavePriceOverride}
+              className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left"
+            >
+              <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
+                <h3 className="text-sm font-black text-m3-primary flex items-center gap-1.5 uppercase tracking-wider">
+                  <span>Unit Price Override</span>
+                </h3>
+                <button type="button" onClick={() => setOverrideModalOpen(false)} className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-0.5 rounded-full">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="space-y-1 leading-normal pl-1 text-[11px] font-medium text-m3-on-surface-variant">
+                <div><strong>Product:</strong> {cart[overrideItemIndex].product.productName}</div>
+                <div><strong>Default Unit Price:</strong> ₱{getBranchPrice(cart[overrideItemIndex].product).toFixed(2)}</div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">New Unit Selling Price</label>
+                <input
+                  type="number"
+                  required
+                  min={0}
+                  step="0.01"
+                  value={overridePriceInput}
+                  onChange={e => setOverridePriceInput(e.target.value)}
+                  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold font-mono"
+                />
+                <span className="text-[9px] text-m3-on-surface-variant pl-1 block mt-1 font-medium">
+                  {currentUser.role === UserRole.CASHIER ? 'Changing the standard price requires Manager override verification.' : 'Your role has privileges to direct-apply this override.'}
+                </span>
+              </div>
+
+              <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-4 font-sans">
+                <button
+                  type="button"
+                  onClick={() => setOverrideModalOpen(false)}
+                  className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="m3-btn-primary px-5 py-2 text-xs shadow-sm cursor-pointer"
+                >
+                  Apply Price
+                </button>
+              </div>
+            </motion.form>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL 6: Checkout Fulfillment Assignment & Delivery Scheduling Form */}
+      <AnimatePresence>
+        {showFulfillmentModal && pendingSaleForFulfillment && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
+              onClick={() => setShowFulfillmentModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              className="relative w-full max-w-lg rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-3">
+                <div>
+                  <h3 className="text-sm font-black text-m3-primary uppercase tracking-widest font-mono">
+                    Order Dispatch Fulfillment
+                  </h3>
+                  <p className="text-[10px] text-m3-on-surface-variant font-bold mt-0.5 uppercase tracking-wide">
+                    Receipt Ref: {pendingSaleForFulfillment.saleNumber} • Customer: {pendingSaleForFulfillment.customerName}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 pl-1">
+                <span className="text-[9.5px] font-black text-m3-primary uppercase tracking-widest block mb-1.5">
+                  How will the customer receive the items?
+                </span>
+                <div className="grid grid-cols-2 gap-3">
                   <button
-                    type="submit"
-                    className="m3-btn-primary px-8 py-2.5 text-xs font-black uppercase tracking-widest shadow-md cursor-pointer flex items-center gap-1.5"
+                    type="button"
+                    onClick={() => setFulfillmentType('TakeHome')}
+                    className={`p-4 rounded-2xl border-2 transition-all cursor-pointer text-left flex flex-col justify-between h-[110px] ${
+                      fulfillmentType === 'TakeHome'
+                        ? 'border-m3-primary bg-m3-primary/5 text-m3-primary font-bold'
+                        : 'border-m3-outline-variant/30 hover:border-m3-outline-variant/60 bg-m3-surface-lowest text-m3-on-surface'
+                    }`}
                   >
-                    Schedule Store Delivery
+                    <ShoppingBag className="h-6 w-6 text-m3-primary" />
+                    <div>
+                      <h4 className="text-[10.5px] font-black uppercase tracking-wide">Take Home / Pickup</h4>
+                      <p className="text-[8.5px] opacity-80 mt-0.5 leading-normal font-medium">Material leaves physical store desk. Fulfillment releases immediately.</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFulfillmentType('Delivery')}
+                    className={`p-4 rounded-2xl border-2 transition-all cursor-pointer text-left flex flex-col justify-between h-[110px] ${
+                      fulfillmentType === 'Delivery'
+                        ? 'border-m3-primary bg-m3-primary/5 text-m3-primary font-bold'
+                        : 'border-m3-outline-variant/30 hover:border-m3-outline-variant/60 bg-m3-surface-lowest text-m3-on-surface'
+                    }`}
+                  >
+                    <Truck className="h-6 w-6 text-m3-primary" />
+                    <div>
+                      <h4 className="text-[10.5px] font-black uppercase tracking-wide">Store Delivery</h4>
+                      <p className="text-[8.5px] opacity-80 mt-0.5 leading-normal font-medium">Customer requests heavy unloading trucks. Hold stock at distribution warehouse.</p>
+                    </div>
                   </button>
                 </div>
-              </form>
-            )}
+              </div>
 
+              {fulfillmentType === 'TakeHome' && (
+                <div className="space-y-4 border-t border-m3-outline-variant/15 pt-4">
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-xs text-emerald-400 font-medium leading-relaxed">
+                    <strong>TAKE HOME IMMEDIATE RELEASE:</strong> All products in the cart are logged as released immediately. Stock has been deducted. No further truck scheduling is tracking.
+                  </div>
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={handleFulfillmentTakeHome}
+                      className="m3-btn-primary px-8 py-2.5 text-xs font-black uppercase tracking-widest shadow-md cursor-pointer"
+                    >
+                      Release Material & View Receipt
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {fulfillmentType === 'Delivery' && (
+                <form onSubmit={handleFulfillmentDeliverySubmit} className="space-y-4 border-t border-m3-outline-variant/15 pt-4">
+                  <div className="bg-m3-primary/10 border border-m3-primary/15 rounded-xl p-3 text-[10.5px] text-m3-primary font-medium leading-relaxed">
+                    <strong>STORE DELIVERY ALLOCATION:</strong> This creates a <strong>Pending Scheduling</strong> transport ledger. Stock quantities are reserved of this location immediately.
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pl-1">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Contact Number *</label>
+                      <input
+                        type="text"
+                        required
+                        value={deliveryContact}
+                        onChange={e => setDeliveryContact(e.target.value)}
+                        placeholder="e.g. 0917-555-1234"
+                        className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold"
+                      />
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">House No. / Building / Suite</label>
+                      <input
+                        type="text"
+                        value={deliveryHouseNo}
+                        onChange={e => setDeliveryHouseNo(e.target.value)}
+                        placeholder="e.g. Blk 12 Lot 14, 2nd Floor"
+                        className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Street / Subdivision</label>
+                      <input
+                        type="text"
+                        value={deliveryStreet}
+                        onChange={e => setDeliveryStreet(e.target.value)}
+                        placeholder="e.g. Sampaguita Street, Camella"
+                        className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Barangay *</label>
+                      <input
+                        type="text"
+                        required
+                        value={deliveryBarangay}
+                        onChange={e => setDeliveryBarangay(e.target.value)}
+                        placeholder="e.g. Mandalagan"
+                        className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">City / Municipality *</label>
+                      <input
+                        type="text"
+                        required
+                        value={deliveryCity}
+                        onChange={e => setDeliveryCity(e.target.value)}
+                        placeholder="e.g. Bacolod City"
+                        className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Landmark / Directions</label>
+                      <input
+                        type="text"
+                        value={deliveryLandmark}
+                        onChange={e => setDeliveryLandmark(e.target.value)}
+                        placeholder="e.g. Near Shell gas station, red gate"
+                        className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Unloading Date *</label>
+                      <input
+                        type="date"
+                        required
+                        value={deliveryDate}
+                        onChange={e => setDeliveryDate(e.target.value)}
+                        className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold cursor-pointer"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Arrival Time Window</label>
+                      <input
+                        type="text"
+                        value={deliveryTime}
+                        onChange={e => setDeliveryTime(e.target.value)}
+                        placeholder="e.g. 10:00 AM - 2:00 PM"
+                        className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 pl-1">
+                    <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest block mb-0.5">Special Unloading Notes (e.g. Fragile, Heavy Lift)</label>
+                    <textarea
+                      rows={2}
+                      value={deliveryNotes}
+                      onChange={e => setDeliveryNotes(e.target.value)}
+                      placeholder="e.g. Heavy tiles, require helpers to haul on 2nd Floor."
+                      className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
+                    />
+                  </div>
+
+                  <div className="flex justify-end pt-2 border-t border-m3-outline-variant/10">
+                    <button
+                      type="submit"
+                      className="m3-btn-primary px-8 py-2.5 text-xs font-black uppercase tracking-widest shadow-md cursor-pointer flex items-center gap-1.5"
+                    >
+                      Schedule Store Delivery
+                    </button>
+                  </div>
+                </form>
+              )}
+
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* MODAL 6: Security PIN verification passcode modal (Guarded by Manager/Supervisor PIN) */}
-      {pinModalOpen && pinAction && pinTargetSale && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm" onClick={() => {
-            setPinModalOpen(false);
-            setPinAction(null);
-            setPinTargetSale(null);
-          }} />
-          <form
-            onSubmit={handleVerifySecurityPin}
-            className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-amber-500/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left font-sans"
-          >
-            <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
-              <h3 className="text-sm font-black text-amber-500 flex items-center gap-1.5 uppercase tracking-widest">
-                <LockKeyhole className="h-4 w-4 animate-pulse text-amber-500" />
-                <span>{pinAction} Verification</span>
-              </h3>
-              <button
-                type="button"
-                onClick={() => {
-                  setPinModalOpen(false);
-                  setPinAction(null);
-                  setPinTargetSale(null);
-                }}
-                className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-0.5 rounded-full"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="bg-amber-500/5 border border-amber-500/20 p-3 rounded-2xl text-[11px] leading-relaxed text-zinc-300 font-bold space-y-1">
-              <div><strong>SECURE OVERRIDE REASON:</strong></div>
-              <p className="text-amber-400 font-extrabold uppercase tracking-wide">
-                Guarded Operation: {pinAction === 'REPRINT' ? 'Ticket Copy Reprinting' : 'Sales Journal Invoice Voiding'}
-              </p>
-              <div className="text-zinc-400 mt-1">
-                Transaction Ref: <span className="text-m3-on-surface select-all font-mono font-black">{pinTargetSale.saleNumber}</span>
+      <AnimatePresence>
+        {pinModalOpen && pinAction && pinTargetSale && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4 font-sans">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm"
+              onClick={() => {
+                setPinModalOpen(false);
+                setPinAction(null);
+                setPinTargetSale(null);
+              }}
+            />
+            <motion.form
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              onSubmit={handleVerifySecurityPin}
+              className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-amber-500/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left"
+            >
+              <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
+                <h3 className="text-sm font-black text-amber-500 flex items-center gap-1.5 uppercase tracking-widest">
+                  <LockKeyhole className="h-4 w-4 animate-pulse text-amber-500" />
+                  <span>{pinAction} Verification</span>
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPinModalOpen(false);
+                    setPinAction(null);
+                    setPinTargetSale(null);
+                  }}
+                  className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-0.5 rounded-full"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-              <div className="text-zinc-400">
-                Settled Amount: <span className="text-m3-on-surface font-mono font-bold">₱{pinTargetSale.grandTotal.toFixed(2)}</span>
-              </div>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-amber-500 uppercase tracking-widest pl-1 block">
-                Enter Manager / Administrator PIN
-              </label>
-              
-              <div className="relative">
-                <input
-                  type="password"
-                  required
-                  maxLength={6}
-                  value={securityPinInput}
-                  onChange={e => {
-                    setSecurityPinInput(e.target.value.replace(/\D/g, ''));
+              <div className="bg-amber-500/5 border border-amber-500/20 p-3 rounded-2xl text-[11px] leading-relaxed text-zinc-300 font-bold space-y-1">
+                <div><strong>SECURE OVERRIDE REASON:</strong></div>
+                <p className="text-amber-400 font-extrabold uppercase tracking-wide">
+                  Guarded Operation: {pinAction === 'REPRINT' ? 'Ticket Copy Reprinting' : 'Sales Journal Invoice Voiding'}
+                </p>
+                <div className="text-zinc-400 mt-1">
+                  Transaction Ref: <span className="text-m3-on-surface select-all font-mono font-black">{pinTargetSale.saleNumber}</span>
+                </div>
+                <div className="text-zinc-400">
+                  Settled Amount: <span className="text-m3-on-surface font-mono font-bold">₱{pinTargetSale.grandTotal.toFixed(2)}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-amber-500 uppercase tracking-widest pl-1 block">
+                  Enter Manager / Administrator PIN
+                </label>
+                
+                <div className="relative">
+                  <input
+                    type="password"
+                    required
+                    maxLength={6}
+                    value={securityPinInput}
+                    onChange={e => {
+                      setSecurityPinInput(e.target.value.replace(/\D/g, ''));
+                      setSecurityPinError('');
+                    }}
+                    placeholder="••••"
+                    className="w-full bg-m3-surface border-b-2 border-m3-outline-variant text-center tracking-[0.5em] text-lg font-black py-2 text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-mono"
+                    autoFocus
+                  />
+                </div>
+
+                {securityPinError ? (
+                  <p className="text-[9.5px] font-extrabold text-red-500 px-1 animate-pulse text-center">
+                    {securityPinError}
+                  </p>
+                ) : (
+                  <p className="text-[9px] text-zinc-400 px-1 text-center font-medium">
+                    Ask a Store Supervisor or General Admin to verify their 4-6 digit operational security PIN.
+                  </p>
+                )}
+              </div>
+
+              {/* Tactile Keypad */}
+              <div className="grid grid-cols-3 gap-2 pt-2">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => {
+                      if (securityPinInput.length < 6) {
+                        setSecurityPinInput(prev => prev + num);
+                        setSecurityPinError('');
+                      }
+                    }}
+                    className="py-2.5 rounded-xl bg-m3-surface hover:bg-m3-outline-variant/15 font-black text-sm text-m3-on-surface transition-all active:scale-95 shadow-sm border border-m3-outline-variant/10 cursor-pointer"
+                  >
+                    {num}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSecurityPinInput('');
                     setSecurityPinError('');
                   }}
-                  placeholder="••••"
-                  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant text-center tracking-[0.5em] text-lg font-black py-2 text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-mono"
-                  autoFocus
-                />
-              </div>
-
-              {securityPinError ? (
-                <p className="text-[9.5px] font-extrabold text-red-500 px-1 animate-pulse text-center">
-                  {securityPinError}
-                </p>
-              ) : (
-                <p className="text-[9px] text-zinc-400 px-1 text-center font-medium">
-                  Ask a Store Supervisor or General Admin to verify their 4-6 digit operational security PIN.
-                </p>
-              )}
-            </div>
-
-            {/* Tactile Keypad */}
-            <div className="grid grid-cols-3 gap-2 pt-2">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                  className="py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-extrabold text-[10px] transition-all active:scale-95 cursor-pointer border border-rose-500/15 uppercase tracking-wider"
+                >
+                  Clear
+                </button>
                 <button
-                  key={num}
                   type="button"
                   onClick={() => {
                     if (securityPinInput.length < 6) {
-                      setSecurityPinInput(prev => prev + num);
+                      setSecurityPinInput(prev => prev + '0');
                       setSecurityPinError('');
                     }
                   }}
                   className="py-2.5 rounded-xl bg-m3-surface hover:bg-m3-outline-variant/15 font-black text-sm text-m3-on-surface transition-all active:scale-95 shadow-sm border border-m3-outline-variant/10 cursor-pointer"
-                >
-                  {num}
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => {
-                  setSecurityPinInput('');
-                  setSecurityPinError('');
-                }}
-                className="py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-extrabold text-[10px] transition-all active:scale-95 cursor-pointer border border-rose-500/15 uppercase tracking-wider"
-              >
-                Clear
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (securityPinInput.length < 6) {
-                    setSecurityPinInput(prev => prev + '0');
-                    setSecurityPinError('');
-                  }
-                }}
-                className="py-2.5 rounded-xl bg-m3-surface hover:bg-m3-outline-variant/15 font-black text-sm text-m3-on-surface transition-all active:scale-95 shadow-sm border border-m3-outline-variant/10 cursor-pointer"
-              >
-                0
-              </button>
-              <button
-                type="submit"
-                className="py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[10px] transition-all active:scale-95 cursor-pointer shadow-md uppercase tracking-wider"
-              >
-                Enter
-              </button>
-            </div>
+                  >
+                    0
+                  </button>
+                  <button
+                    type="submit"
+                    className="py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[10px] transition-all active:scale-95 cursor-pointer shadow-md uppercase tracking-wider"
+                  >
+                    Enter
+                  </button>
+                </div>
 
-            {/* Quick-reference info helper to support sandbox testing */}
-            <div className="pt-2 text-[8.5px] font-semibold text-zinc-500 text-center border-t border-m3-outline-variant/10">
-              Demopack PIN: <span className="text-amber-500 font-bold">9988</span> (Manager Juan) or <span className="text-amber-500 font-bold">4321</span> (Admin Erica)
-            </div>
+                {/* Quick-reference info helper to support sandbox testing */}
+                <div className="pt-2 text-[8.5px] font-semibold text-zinc-500 text-center border-t border-m3-outline-variant/10">
+                  Demopack PIN: <span className="text-amber-500 font-bold">9988</span> (Manager Juan) or <span className="text-amber-500 font-bold">4321</span> (Admin Erica)
+                </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setPinModalOpen(false);
-                  setPinAction(null);
-                  setPinTargetSale(null);
-                }}
-                className="w-full py-2 bg-m3-outline-variant/10 hover:bg-m3-outline-variant/20 rounded-full text-zinc-300 font-black text-[10px] uppercase tracking-wider transition-all cursor-pointer text-center"
-              >
-                Decline & Close
-              </button>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPinModalOpen(false);
+                      setPinAction(null);
+                      setPinTargetSale(null);
+                    }}
+                    className="w-full py-2 bg-m3-outline-variant/10 hover:bg-m3-outline-variant/20 rounded-full text-zinc-300 font-black text-[10px] uppercase tracking-wider transition-all cursor-pointer text-center"
+                  >
+                    Decline & Close
+                  </button>
+                </div>
+              </motion.form>
             </div>
-          </form>
-        </div>
-      )}
+          )}
+        </AnimatePresence>
 
       {/* MODAL 10: Selected Sale Transaction Details (LEDGER & VOID TERMINAL CLICK) */}
       {selectedSaleDetail && (

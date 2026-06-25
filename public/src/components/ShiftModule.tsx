@@ -32,8 +32,25 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
     addAuditLog
   } = useDb();
 
-  const [startCashInput, setStartCashInput] = useState('3000');
+  // Find the last closed shift at this branch to pre-fill starting cash
+  const previouslyClosedShift = React.useMemo(() => {
+    if (!shifts || shifts.length === 0) return null;
+    return [...shifts]
+      .filter(s => s.status === 'CLOSED' && s.branchId === currentUser.branchAssignmentId)
+      .sort((a, b) => new Date(b.closedAt || 0).getTime() - new Date(a.closedAt || 0).getTime())[0] || null;
+  }, [shifts, currentUser.branchAssignmentId]);
+
+  const [startCashInput, setStartCashInput] = useState('5000');
   const [closingCashInput, setClosingCashInput] = useState('');
+
+  // Prefill starting cash if a previously closed shift exists
+  React.useEffect(() => {
+    if (previouslyClosedShift) {
+      setStartCashInput(previouslyClosedShift.cashCount.toString());
+    } else {
+      setStartCashInput('5000');
+    }
+  }, [previouslyClosedShift]);
 
   // Report overlays
   const [showXReport, setShowXReport] = useState(false);
@@ -225,12 +242,35 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
           </div>
 
           <form onSubmit={handleOpenLocalShift} className="space-y-4 text-xs text-left">
+            {previouslyClosedShift && (
+              <div className="p-3 bg-zinc-900 border border-zinc-850 rounded-2xl space-y-1.5 text-[11px] leading-normal">
+                <div className="flex justify-between items-center text-amber-500 font-bold">
+                  <span>Previous Close Balance:</span>
+                  <span className="font-mono font-black text-xs text-white">₱{previouslyClosedShift.cashCount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <p className="text-[9.5px] text-zinc-400">
+                  Closed by <strong className="text-zinc-300">{previouslyClosedShift.cashierName}</strong> on {new Date(previouslyClosedShift.closedAt || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStartCashInput(previouslyClosedShift.cashCount.toString());
+                    showToast(`Loaded previous shift balance of ₱${previouslyClosedShift.cashCount.toFixed(2)}`);
+                  }}
+                  className="w-full py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-xl font-bold transition-all text-center text-[10px]"
+                >
+                  Use Previous Shift Balance
+                </button>
+              </div>
+            )}
+
             <div>
               <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest block mb-1.5 pl-1">
                 Declared Starting cash (PHP)
               </label>
               <input
                 type="number"
+                step="any"
                 required
                 value={startCashInput}
                 onChange={e => setStartCashInput(e.target.value)}

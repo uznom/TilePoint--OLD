@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { DbProvider, useDb, DbSnapshot } from './context/DbContext';
 import { UserRole, User } from './types/db';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, MotionConfig } from 'motion/react';
 import { SkeletalLoader } from './components/SkeletalLoader';
 import { LoginModule } from './components/LoginModule';
 import { SetupModule } from './components/SetupModule';
@@ -21,16 +21,18 @@ import { TransmittalModule } from './components/TransmittalModule';
 import { ShiftModule } from './components/ShiftModule';
 import { BranchModule } from './components/BranchModule';
 import { UsersModule } from './components/UsersModule';
+import { SystemSettingsModule } from './components/SystemSettingsModule';
 import { CalculatorModule } from './components/CalculatorModule';
-import { ArchitectureModule } from './components/ArchitectureModule';
 import { StaffPortal } from './components/StaffPortal';
 import AtposExtraModules from './components/AtposExtraModules';
 import { SalesTransmissionModule } from './components/SalesTransmissionModule';
 import { DeliveriesModule } from './components/DeliveriesModule';
 import { TutorialOnboarding } from './components/TutorialOnboarding';
 import { PrivacyAccessibilityHub } from './components/PrivacyAccessibilityHub';
+import { OnboardingSetupWizard } from './components/OnboardingSetupWizard';
 import { SystemLoadingOverlay } from './components/SystemLoadingOverlay';
 import { IdleScreen } from './components/IdleScreen';
+import { PwaInstallPrompt } from './components/PwaInstallPrompt';
 import { DamageRegisterModule } from './components/DamageRegisterModule';
 import { generateThemeFromSeed, applyM3ThemeToDOM, resetM3ThemeOverride } from './lib/themeGenerator';
 
@@ -71,7 +73,8 @@ import {
   Upload,
   Sliders,
   AlertTriangle,
-  Palette
+  Palette,
+  Settings
 } from 'lucide-react';
 
 function AppContent() {
@@ -116,7 +119,8 @@ function AppContent() {
     branchStock,
     ledgerEntries,
     branchSalesReports,
-    deliveries
+    deliveries,
+    serverConnected
   } = useDb();
   const [activeTab, setActiveTab] = useState(() => {
     const isFirstTime = typeof window !== 'undefined' && localStorage.getItem('tp_first_login_done') !== 'true';
@@ -167,6 +171,7 @@ function AppContent() {
     return saved !== null ? saved === 'true' : true;
   });
   const [isSubMenuCollapsed, setIsSubMenuCollapsed] = useState(false);
+  const [isSidebarProfileDropdownOpen, setIsSidebarProfileDropdownOpen] = useState(false);
 
   // Auto-minimize the sidebar when tab is POS Mode
   useEffect(() => {
@@ -207,14 +212,26 @@ function AppContent() {
     return localStorage.getItem('tilepoint-maximize-text-contrast') === 'true';
   });
 
+  const [disableAnimations, setDisableAnimations] = useState(() => {
+    return localStorage.getItem('tilepoint-disable-animations') === 'true';
+  });
+
+  const [disableBlurs, setDisableBlurs] = useState(() => {
+    return localStorage.getItem('tilepoint-disable-blurs') === 'true';
+  });
+
   useEffect(() => {
     const handleSync = () => {
       const contrast = (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'default';
       const maxText = localStorage.getItem('tilepoint-maximize-text-contrast') === 'true';
       const savedSeed = localStorage.getItem('tilepoint_custom_theme_primary');
+      const noAnim = localStorage.getItem('tilepoint-disable-animations') === 'true';
+      const noBlur = localStorage.getItem('tilepoint-disable-blurs') === 'true';
 
       setColorContrast(contrast);
       setMaximizeTextContrast(maxText);
+      setDisableAnimations(noAnim);
+      setDisableBlurs(noBlur);
 
       // Apply the theme with latest contrast settings
       if (savedSeed) {
@@ -240,6 +257,18 @@ function AppContent() {
       } else {
         document.documentElement.classList.remove('accessibility-maximize-text-contrast');
       }
+
+      if (noAnim) {
+        document.documentElement.classList.add('accessibility-no-animation');
+      } else {
+        document.documentElement.classList.remove('accessibility-no-animation');
+      }
+
+      if (noBlur) {
+        document.documentElement.classList.add('accessibility-no-blur');
+      } else {
+        document.documentElement.classList.remove('accessibility-no-blur');
+      }
     };
     window.addEventListener('tilepoint-theme-updated', handleSync);
     handleSync();
@@ -250,6 +279,18 @@ function AppContent() {
 
   const [showLogoutConfirmModal, setShowLogoutConfirmModal] = useState(false);
   const [showAccountSettingsModal, setShowAccountSettingsModal] = useState(false);
+  const [showSetupWizard, setShowSetupWizard] = useState(false);
+
+  useEffect(() => {
+    const handleOpenWizard = () => {
+      setShowSetupWizard(true);
+    };
+    window.addEventListener('open-setup-wizard', handleOpenWizard);
+    return () => {
+      window.removeEventListener('open-setup-wizard', handleOpenWizard);
+    };
+  }, []);
+
   const isCompactColumns = true;
   const [showDatabaseCoreModal, setShowDatabaseCoreModal] = useState(false);
   const [dbCoreTab, setDbCoreTab] = useState<'scheduler' | 'ledger' | 'import-export'>('scheduler');
@@ -288,122 +329,11 @@ function AppContent() {
   };
 
   // Immersive POS terminal distraction-free mode state
-  const [showImmersiveControls, setShowImmersiveControls] = useState(false);
-  const [dragStartX, setDragStartX] = useState<number | null>(null);
+  const [showImmersiveControls, setShowImmersiveControls] = useState(true);
 
   useEffect(() => {
-    if (activeTab !== 'pos') {
-      setShowImmersiveControls(true);
-      return;
-    }
-    
-    // Default distraction free mode on load/pos selection, unless account dropdown is active
-    if (isAccountDropdownOpen) {
-      setShowImmersiveControls(true);
-    } else {
-      setShowImmersiveControls(false);
-    }
-
-    // 1. Automatic fullscreen trigger on browser when in POS checkout mode.
-    // (This runs when tab changes, triggered by a click/keypress gesture in the application)
-    const requestFullscreenSafely = async () => {
-      if (!document.fullscreenElement) {
-        try {
-          await document.documentElement.requestFullscreen();
-        } catch (err) {
-          console.warn('[Fullscreen POS Mode] Programmatic fullscreen request was ignored or blocked by the browser. Interaction captures will handle it.', err);
-        }
-      }
-    };
-
-    requestFullscreenSafely();
-
-    // 2. Gesture fallback so if initial request is blocked, any click/key interaction in POS immediately triggers fullscreen
-    const handleGestureFullscreen = async () => {
-      if (activeTab === 'pos' && !document.fullscreenElement) {
-        try {
-          await document.documentElement.requestFullscreen();
-        } catch (err) {
-          console.error('[Fullscreen POS Mode] Failed to set fullscreen on user interaction:', err);
-        }
-      }
-    };
-
-    window.addEventListener('click', handleGestureFullscreen, { capture: true, once: true });
-    window.addEventListener('keydown', handleGestureFullscreen, { capture: true, once: true });
-
-    // 3. Keep mousemove listener for immersive distraction-free navigation menu
-    const handleMouseMove = (e: MouseEvent) => {
-      // Show modules if mouse approaches the left edge (<= 45px) or top edge (<= 45px)
-      if (e.clientX <= 45 || e.clientY <= 45) {
-        setShowImmersiveControls(true);
-      } else {
-        // Only collapse if the cursor is sufficiently far away from both the sidebar (width ~288px) and top header (height ~75px)
-        // And NOT if the account dropdown is active
-        if (e.clientX > 325 && e.clientY > 100 && !isAccountDropdownOpen) {
-          setShowImmersiveControls(false);
-        }
-      }
-    };
-
-    // 4. Alt + Escape Key down listener to exit both browser full screen AND the distraction-free system
-    const handleAltEscExit = (e: KeyboardEvent) => {
-      if (e.altKey && (e.key === 'Escape' || e.key === 'Esc')) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        // Exit browser full screen if active
-        if (document.fullscreenElement) {
-          document.exitFullscreen().catch(err => console.warn('Exit fullscreen rejected:', err));
-        }
-
-        // Exit system POS terminal distraction-free mode back to previous tab
-        setActiveTab(previousTab !== 'pos' ? previousTab : 'dashboard');
-        showToast('Exited POS terminal and Fullscreen mode.');
-      }
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('keydown', handleAltEscExit, { capture: true });
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('keydown', handleAltEscExit, { capture: true });
-      window.removeEventListener('click', handleGestureFullscreen, { capture: true });
-      window.removeEventListener('keydown', handleGestureFullscreen, { capture: true });
-    };
-  }, [activeTab, previousTab, isAccountDropdownOpen]);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setDragStartX(e.touches[0].clientX);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (dragStartX === null) return;
-    const currentX = e.touches[0].clientX;
-    const diffX = currentX - dragStartX;
-    if (diffX > 40) { // Dragged to the right by more than 40px
-      setShowImmersiveControls(true);
-      setDragStartX(null);
-    }
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setDragStartX(e.clientX);
-  };
-
-  const handleMouseMoveDrag = (e: React.MouseEvent) => {
-    if (dragStartX === null) return;
-    const diffX = e.clientX - dragStartX;
-    if (diffX > 40) { // Dragged to the right by more than 40px
-      setShowImmersiveControls(true);
-      setDragStartX(null);
-    }
-  };
-
-  const handleMouseUp = () => {
-    setDragStartX(null);
-  };
+    setShowImmersiveControls(true);
+  }, [activeTab]);
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -562,7 +492,6 @@ function AppContent() {
     return (
       <>
         <SetupModule />
-        <PrivacyAccessibilityHub darkMode={false} />
       </>
     );
   }
@@ -571,7 +500,17 @@ function AppContent() {
     return (
       <>
         <LoginModule />
-        <PrivacyAccessibilityHub darkMode={true} />
+      </>
+    );
+  }
+
+  const isOnboarded = typeof window !== 'undefined' && localStorage.getItem('tilepoint_onboarded_setup') === 'true';
+
+  if (!isOnboarded) {
+    return (
+      <>
+        <OnboardingSetupWizard />
+        <PrivacyAccessibilityHub darkMode={darkMode} />
       </>
     );
   }
@@ -624,12 +563,12 @@ function AppContent() {
   const menuItems = [
     { id: 'tutorials', name: 'Operational Walkthrough', icon: BookOpen, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF] },
     { id: 'dashboard', name: 'Branch Dashboard', icon: LayoutDashboard, roles: [UserRole.ADMIN, UserRole.MANAGER] },
-    { id: 'architecture', name: 'Database ERD Studio', icon: Database, roles: [UserRole.ADMIN] },
     { id: 'pos', name: 'POS Checkout Mode', icon: ShoppingCart, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER] },
     { id: 'shift', name: 'Shift drawer', icon: LockKeyhole, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER] },
     { id: 'calculator', name: 'Tile Coverage Calc', icon: Calculator, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF] },
-    { id: 'branches', name: 'Branches Profile', icon: Building2, roles: [UserRole.ADMIN] },
-    { id: 'users', name: 'Employee Directory', icon: UsersIcon, roles: [UserRole.ADMIN] },
+    { id: 'branches', name: 'Branches Profile', icon: Building2, roles: [UserRole.ADMIN, UserRole.MANAGER] },
+    { id: 'users', name: 'Employee Directory', icon: UsersIcon, roles: [UserRole.ADMIN, UserRole.MANAGER] },
+    { id: 'system-settings', name: 'System Settings', icon: Sliders, roles: [UserRole.ADMIN, UserRole.MANAGER] },
     
     // ATPOS v2 Submodules
     { id: 'inventory-stocks', name: 'Catalog Stock Ledger', icon: Layers, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF] },
@@ -752,7 +691,8 @@ function AppContent() {
       icon: UsersIcon,
       subItems: [
         { id: 'branches', name: 'Branches Profile' },
-        { id: 'users', name: 'Employee Directory' }
+        { id: 'users', name: 'Employee Directory' },
+        { id: 'system-settings', name: 'System Settings' }
       ]
     }
   ];
@@ -764,7 +704,8 @@ function AppContent() {
   };
 
   return (
-    <div className={`h-screen overflow-hidden flex flex-col font-sans transition-all duration-300 relative ${
+    <MotionConfig reducedMotion={disableAnimations ? "always" : "never"}>
+      <div className={`h-screen overflow-hidden flex flex-col font-sans transition-all duration-300 relative ${
       darkMode ? 'dark bg-m3-surface text-m3-on-surface' : 'bg-m3-surface text-m3-on-surface'
     }`}>
       {/* Dynamic Ambient Background Color Accent Glow using core M3 primary color token */}
@@ -780,30 +721,21 @@ function AppContent() {
       )}
 
       {/* HEADER SECTION with custom horizontal glowing accent bar & ambient overlay tint */}
-      <header className={`py-4 px-6 border-b border-m3-outline-variant/15 flex justify-between items-center z-[60] android-glass-header shadow-sm bg-m3-surface/75 dark:bg-m3-surface-low/80 backdrop-blur-md transition-all duration-300 overflow-visible ${
+      <header className={`py-4 px-6 border-b border-m3-outline-variant/15 flex justify-between items-center z-[35] android-glass-header shadow-sm bg-m3-surface/75 dark:bg-m3-surface-low/80 backdrop-blur-md transition-all duration-300 overflow-visible md:hidden ${
         activeTab === 'pos' 
-          ? `fixed top-0 left-0 right-0 transform ${showImmersiveControls ? 'translate-y-0 opacity-100 shadow-xl' : '-translate-y-full opacity-0 pointer-events-none'}` 
-          : 'sticky top-0 translate-y-0 opacity-100 relative'
+          ? `sticky top-0 z-[35] md:fixed md:top-0 md:left-0 md:right-0 md:transform ${showImmersiveControls ? 'md:translate-y-0 md:opacity-100 md:shadow-xl' : 'md:-translate-y-full md:opacity-0 md:pointer-events-none'}`
+          : 'sticky top-0 z-[35]'
       }`}>
         {/* Subtle header brand overlay reflecting user custom color choice */}
         <div className="absolute inset-0 bg-gradient-to-b from-m3-primary/[0.03] to-transparent pointer-events-none z-[-1]" />
         {/* Horizontal glowing accent line reflecting selected color */}
         <div className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-m3-primary/35 via-m3-primary/10 to-transparent pointer-events-none" />
         <div className="flex items-center gap-3">
-          {/* Mobile menu toggle */}
-          <button
-            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-            className="md:hidden p-2 rounded-xl hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer"
-            title="Toggle navigation sidebar"
-          >
-            {mobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
-
           {/* Logo */}
           <div className="flex items-center gap-2.5">
             <img src="/icon.svg" alt="TilePoint Favicon Logo" className="h-9 w-9 rounded-lg" referrerPolicy="no-referrer" />
             <div>
-              <h1 className="text-base font-black tracking-tight leading-none uppercase font-sans text-m3-primary">TilePoint</h1>
+              <h1 className="text-base font-bold tracking-wide leading-none uppercase font-sans text-m3-primary">TilePoint</h1>
               <span className="text-[9px] text-m3-on-surface-variant font-bold block uppercase mt-0.5 tracking-widest leading-none">HQ POS System</span>
             </div>
           </div>
@@ -811,6 +743,16 @@ function AppContent() {
           {/* Branch tag indicator */}
           <span className="hidden sm:inline-block px-3 py-1 rounded-xl text-[10px] font-extrabold uppercase bg-m3-secondary-container text-m3-on-secondary-container border border-m3-outline-variant/40">
             {getBranchName(currentUser.branchAssignmentId)}
+          </span>
+
+          {/* Shared DB status indicator */}
+          <span className={`px-2.5 py-1 rounded-xl text-[9px] font-bold uppercase border flex items-center gap-1.5 ${
+            serverConnected 
+              ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
+              : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+          }`} title={serverConnected ? 'Connected to central offline network database on host PC' : 'Offline. Storing data in browser storage only.'}>
+            <span className={`h-1.5 w-1.5 rounded-full ${serverConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+            <span>{serverConnected ? 'Shared Server Live' : 'Local Fallback'}</span>
           </span>
         </div>
 
@@ -915,22 +857,7 @@ function AppContent() {
                       <span>Operational Walkthrough</span>
                     </button>
 
-                    {/* Database Core & Backups Settings (Other Settings) */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsAccountDropdownOpen(false);
-                        setShowDatabaseCoreModal(true);
-                      }}
-                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
-                    >
-                      <Database className="h-4 w-4 text-emerald-500" />
-                      <span>Database Core & Backups</span>
-                    </button>
-
-                    <div className="h-px bg-m3-outline-variant/10 !my-1" />
-
-                    {/* Accessibility & Policy trigger */}
+                    {/* System Settings trigger */}
                     <button
                       type="button"
                       onClick={() => {
@@ -939,8 +866,8 @@ function AppContent() {
                       }}
                       className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
                     >
-                      <img src="/images/accessibility_icon.svg" alt="Accessibility & Policy" className="h-4.5 w-4.5 object-contain" referrerPolicy="no-referrer" />
-                      <span>Accessibility & Policy</span>
+                      <Settings className="h-4 w-4 text-m3-primary" />
+                      <span>Settings</span>
                     </button>
 
                     <div className="h-px bg-m3-outline-variant/10 !my-1" />
@@ -967,21 +894,45 @@ function AppContent() {
 
       {/* BODY CONTENT: Sidebar + Dynamic tab target */}
       <div className="flex-1 flex overflow-hidden">
-        {/* SIDEBAR NAVIGATION: Desktop */}
-        <aside className={`border-r border-m3-outline-variant/15 select-none android-glass-sidebar py-6 transition-all duration-300 ease-in-out ${
-          activeTab === 'pos'
-            ? `fixed left-0 top-0 bottom-0 z-49 transform bg-m3-surface-low border-r border-m3-primary/25 backdrop-blur-xl md:block ${
-                isSidebarMinimized ? 'w-20 px-2' : 'w-72 px-4'
-              } ${
-                showImmersiveControls ? 'translate-x-0 opacity-100 shadow-2xl' : '-translate-x-full opacity-0 pointer-events-none'
-              }`
-            : `sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto hidden md:block ${
-                isSidebarMinimized ? 'w-20 px-2' : 'w-72 px-4'
-              }`
+        {/* SIDEBAR NAVIGATION: Desktop (Unified with Brand Header & Profile) */}
+        <aside className={`border-r border-m3-outline-variant/15 select-none android-glass-sidebar py-5 px-3.5 transition-all duration-300 ease-in-out hidden md:flex md:flex-col md:justify-between h-screen sticky top-0 z-40 ${
+          isSidebarMinimized ? 'w-20 !px-2' : 'w-72'
         }`}>
-          <div className="space-y-5">
-            {/* Modular indicator trigger */}
-            <div className={`flex items-center ${isSidebarMinimized ? 'justify-center mb-4' : 'justify-between pl-3 mb-2'}`}>
+          {/* TOP SECTION: Brand Logo, Name and Branch assignment */}
+          <div className="flex flex-col gap-4">
+            {/* Brand Logo & Name */}
+            <div className={`flex items-center gap-3 ${isSidebarMinimized ? 'justify-center' : 'pl-2'}`}>
+              <img src="/icon.svg" alt="TilePoint Favicon Logo" className="h-9 w-9 rounded-xl shrink-0 shadow-sm" referrerPolicy="no-referrer" />
+              {!isSidebarMinimized && (
+                <div className="animate-fade-in truncate">
+                  <h1 className="text-sm font-black tracking-wide leading-none uppercase font-sans text-m3-primary">TilePoint</h1>
+                  <span className="text-[8px] text-m3-on-surface-variant font-bold block uppercase mt-1 tracking-widest leading-none">HQ POS System</span>
+                  <span className={`text-[7.5px] font-extrabold uppercase tracking-wider block mt-1.5 ${
+                    serverConnected ? 'text-emerald-500' : 'text-amber-500'
+                  }`}>
+                    ● {serverConnected ? 'Shared Server Live' : 'Local Fallback'}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Branch Assignment tag badge */}
+            {!isSidebarMinimized ? (
+              <div className="px-1.5 animate-fade-in">
+                <div className="w-full text-center px-3 py-1.5 rounded-xl text-[9px] font-extrabold uppercase bg-m3-secondary-container text-m3-on-secondary-container border border-m3-outline-variant/35 tracking-wider truncate">
+                  {getBranchName(currentUser.branchAssignmentId)}
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-center" title={getBranchName(currentUser.branchAssignmentId)}>
+                <span className="h-2.5 w-2.5 rounded-full bg-m3-primary animate-pulse" />
+              </div>
+            )}
+
+            <div className="h-px bg-m3-outline-variant/10" />
+
+            {/* Modules Label and Minimize/Maximize toggle handle */}
+            <div className={`flex items-center ${isSidebarMinimized ? 'justify-center mb-1' : 'justify-between pl-2 mb-1'}`}>
               {!isSidebarMinimized && (
                 <span className="text-[10px] font-black tracking-widest text-m3-on-surface-variant uppercase font-mono animate-fade-in truncate">
                   Modules
@@ -994,14 +945,12 @@ function AppContent() {
                 }`}
                 title={isSidebarMinimized ? "Maximize Sidebar" : "Minimize Sidebar"}
               >
-                <ChevronLeft className={`h-4.5 w-4.5 transition-transform duration-350 ${isSidebarMinimized ? 'rotate-180' : ''}`} />
+                <ChevronLeft className={`h-4 w-4 transition-transform duration-300 ${isSidebarMinimized ? 'rotate-180' : ''}`} />
               </button>
             </div>
 
-            {/* Profile card removed for cleaner non-duplicated design */}
-
-            <nav className="space-y-1">
-
+            {/* Navigation item lists */}
+            <nav id="sidebar-nav" className="space-y-1 overflow-y-auto overflow-x-hidden max-h-[calc(100vh-250px)] pr-1 scrollbar-thin">
               {sidebarCategoryTree.map(category => {
                 const CategoryIcon = category.icon;
                 
@@ -1024,14 +973,14 @@ function AppContent() {
                         const firstSub = authorizedSubItems[0]?.id || category.id;
                         changeTab(firstSub);
                       }}
-                      className={`flex items-center justify-center w-12 h-12 rounded-xl mx-auto relative group transition-all duration-200 cursor-pointer ${
+                      className={`flex items-center justify-center w-11 h-11 rounded-xl mx-auto relative group transition-all duration-200 cursor-pointer ${
                         hasActiveSubItem 
                           ? 'bg-m3-primary/15 text-m3-primary border border-m3-primary/30 shadow-sm' 
                           : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
                       }`}
                     >
                       <CategoryIcon className="h-4.5 w-4.5 shrink-0" />
-                      <div className="absolute left-16 scale-0 group-hover:scale-100 transition-all duration-200 origin-left bg-m3-on-surface text-m3-surface text-[10px] font-extrabold px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none border border-m3-outline-variant/30">
+                      <div className="absolute left-14 scale-0 group-hover:scale-100 transition-all duration-200 origin-left bg-m3-on-surface text-m3-surface text-[10px] font-extrabold px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none border border-m3-outline-variant/30">
                         {category.name}
                       </div>
                     </button>
@@ -1045,7 +994,7 @@ function AppContent() {
                       const firstSub = authorizedSubItems[0]?.id || category.id;
                       changeTab(firstSub);
                     }}
-                    className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                       hasActiveSubItem 
                         ? 'bg-m3-primary text-m3-on-primary shadow-md shadow-m3-primary/10 font-black scale-[1.01]' 
                         : 'hover:bg-m3-primary/5 text-m3-on-surface-variant hover:text-m3-primary'
@@ -1060,96 +1009,154 @@ function AppContent() {
               })}
             </nav>
           </div>
+
+          {/* BOTTOM SECTION: Profile card & Upward-opening popup Menu */}
+          <div className="pt-3 border-t border-m3-outline-variant/15 relative z-50">
+            <button
+              onClick={() => setIsSidebarProfileDropdownOpen(!isSidebarProfileDropdownOpen)}
+              className={`w-full flex items-center gap-2.5 p-2 rounded-xl border border-m3-outline-variant/40 hover:bg-m3-primary/5 transition-all cursor-pointer text-left focus:outline-none bg-m3-surface-low select-none active:scale-[0.98] ${
+                isSidebarMinimized ? 'justify-center' : ''
+              }`}
+            >
+              <div className="h-8.5 w-8.5 rounded-xl bg-m3-primary font-black text-xs items-center justify-center flex text-m3-on-primary shadow-sm m3-shape-asymmetric relative overflow-hidden shrink-0">
+                {(() => {
+                  const isErica = currentUser.fullName.toLowerCase().includes('erica') || currentUser.username?.toLowerCase().includes('erica');
+                  if (isErica) {
+                    return "E";
+                  }
+                  
+                  const avatarSrc = currentUser.profilePicture || '';
+
+                  return (
+                    <>
+                      {avatarSrc ? (
+                        <img src={avatarSrc} alt={currentUser.fullName} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        currentUser.avatarInitials
+                      )}
+                      <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 border border-m3-surface animate-pulse" />
+                    </>
+                  );
+                })()}
+              </div>
+              
+              {!isSidebarMinimized && (
+                <div className="flex-1 min-w-0 animate-fade-in">
+                  <div className="text-[11px] font-extrabold leading-none text-m3-on-surface truncate">
+                    {currentUser.fullName}
+                  </div>
+                  <span className="text-[8.5px] text-m3-on-surface-variant font-mono capitalize leading-none font-bold block mt-1 truncate">
+                    {currentUser.role} Account
+                  </span>
+                </div>
+              )}
+              
+              {!isSidebarMinimized && (
+                <ChevronDown className={`h-3.5 w-3.5 text-m3-on-surface-variant transition-transform duration-200 shrink-0 ${isSidebarProfileDropdownOpen ? 'rotate-180' : ''}`} />
+              )}
+            </button>
+
+            {/* Upward Dropdown Menu */}
+            <AnimatePresence>
+              {isSidebarProfileDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsSidebarProfileDropdownOpen(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                    className={`absolute bottom-full mb-2 w-56 rounded-2xl bg-m3-surface-low border border-m3-outline-variant/40 text-m3-on-surface shadow-2xl z-50 p-2 space-y-1.5 font-sans ${
+                      isSidebarMinimized ? 'left-0' : 'left-0 right-0'
+                    }`}
+                  >
+                    <div className="px-3 py-2 border-b border-m3-outline-variant/15 bg-m3-surface-high/10 rounded-xl">
+                      <div className="text-xs font-black text-m3-on-surface truncate">{currentUser.fullName}</div>
+                      <div className="text-[9.5px] text-zinc-400 font-mono font-bold mt-0.5 uppercase tracking-wider">{currentUser.role} Mode</div>
+                    </div>
+
+                    {/* Theme Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDarkMode(!darkMode);
+                        setIsSidebarProfileDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center justify-between text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        {darkMode ? <Sun className="h-4 w-4 text-amber-500" /> : <Moon className="h-4 w-4 text-m3-primary" />}
+                        <span>{darkMode ? 'Light Theme' : 'Dark Theme'}</span>
+                      </div>
+                      <span className="text-[9px] font-black uppercase text-zinc-400 px-1.5 py-0.5 bg-m3-outline-variant/20 rounded font-mono">
+                        {darkMode ? 'LIGHT' : 'DARK'}
+                      </span>
+                    </button>
+
+                    {/* Account Settings */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSidebarProfileDropdownOpen(false);
+                        setShowAccountSettingsModal(true);
+                      }}
+                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                    >
+                      <LockKeyhole className="h-4 w-4 text-amber-500" />
+                      <span>Account Settings</span>
+                    </button>
+
+                    {/* Operational Walkthrough */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSidebarProfileDropdownOpen(false);
+                        changeTab('tutorials');
+                      }}
+                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                    >
+                      <BookOpen className="h-4 w-4 text-m3-primary" />
+                      <span>Walkthrough</span>
+                    </button>
+
+                    {/* System Settings */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSidebarProfileDropdownOpen(false);
+                        window.dispatchEvent(new Event('open-privacy-hub'));
+                      }}
+                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                    >
+                      <Settings className="h-4 w-4 text-m3-primary" />
+                      <span>Settings</span>
+                    </button>
+
+                    <div className="h-px bg-m3-outline-variant/10 !my-1" />
+
+                    {/* Logout */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSidebarProfileDropdownOpen(false);
+                        setShowLogoutConfirmModal(true);
+                      }}
+                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-rose-500/10 text-rose-500 cursor-pointer transition-colors"
+                    >
+                      <Power className="h-4 w-4 text-rose-500" />
+                      <span>Logout Account</span>
+                    </button>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
         </aside>
 
-        {/* SIDEBAR NAVIGATION: Mobile Drawer overlay and sidebar content */}
-        <AnimatePresence>
-          {mobileSidebarOpen && (
-            <div className="fixed inset-0 z-45 flex md:hidden">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.18 }}
-                className="absolute inset-0 bg-m3-on-surface/40 backdrop-blur-sm"
-                onClick={() => setMobileSidebarOpen(false)}
-              />
-              <motion.aside
-                initial={{ x: "-100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "-100%" }}
-                transition={{ type: "spring", damping: 24, stiffness: 220 }}
-                className="relative w-64 h-full flex flex-col p-5 space-y-5 shadow-2xl z-10 android-glass-modal text-m3-on-surface"
-              >
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-m3-on-surface-variant font-mono">Menu List</span>
-                  <button onClick={() => setMobileSidebarOpen(false)} className="text-m3-on-surface-variant hover:text-m3-primary p-1.5 rounded-xl hover:bg-m3-primary/10">
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-
-                {/* Mobile Logout option */}
-                <div className="bg-m3-surface-container p-3 rounded-2xl border border-m3-outline-variant/30 text-center">
-                  <button
-                    onClick={() => {
-                      setMobileSidebarOpen(false);
-                      setShowLogoutConfirmModal(true);
-                    }}
-                    className="w-full py-2.5 rounded-xl border border-rose-500/30 text-rose-500 bg-rose-500/5 hover:bg-rose-500/10 text-xs font-black uppercase tracking-wider cursor-pointer transition-all flex items-center justify-center gap-2"
-                  >
-                    <Power className="h-4 w-4" />
-                    <span>Logout Session</span>
-                  </button>
-                </div>
-
-                <nav className="space-y-1.5 overflow-y-auto max-h-[calc(100vh-180px)] pr-1 font-sans">
-
-                  {sidebarCategoryTree.map(category => {
-                    const CategoryIcon = category.icon;
-                    
-                    // Strong dynamic RBAC: Filter sub-items to only those this user has permission to see on mobile
-                    const authorizedSubItems = category.subItems.filter(sub => {
-                      const masterItem = menuItems.find(m => m.id === sub.id);
-                      return masterItem ? masterItem.roles.includes(currentUser.role) : false;
-                    });
-
-                    if (authorizedSubItems.length === 0) return null;
-
-                    const hasActiveSubItem = authorizedSubItems.some(sub => activeTab === sub.id) || activeTab === category.id;
-
-                    return (
-                      <button
-                        key={category.id}
-                        onClick={() => {
-                          const firstSub = authorizedSubItems[0]?.id || category.id;
-                          changeTab(firstSub);
-                          setMobileSidebarOpen(false);
-                        }}
-                        className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                          hasActiveSubItem 
-                            ? 'bg-m3-primary text-m3-on-primary shadow-md font-black scale-[1.01]' 
-                            : 'hover:bg-m3-primary/5 text-m3-on-surface-variant hover:text-m3-primary'
-                        }`}
-                      >
-                        <CategoryIcon className={`h-4.5 w-4.5 shrink-0 ${hasActiveSubItem ? 'text-m3-on-primary' : 'text-m3-on-surface-variant'}`} />
-                        <span>{category.name}</span>
-                      </button>
-                    );
-                  })}
-                </nav>
-              </motion.aside>
-            </div>
-          )}
-        </AnimatePresence>
-
         {/* DYNAMIC COMPONENT PANEL AREA */}
-        <main className={`flex-1 relative flex flex-col ${
-          activeTab === 'pos' 
-            ? `md:overflow-hidden md:h-screen lg:max-h-screen text-m3-on-surface transition-all duration-300 ${
-                showImmersiveControls 
-                  ? `p-4 pt-[73px] pb-24 md:p-4 md:pt-[73px] md:pb-4 ${isSidebarMinimized ? 'md:pl-[96px]' : 'md:pl-[304px]'}` 
-                  : 'p-0 pt-0 md:p-0'
-              }` 
+        <main className={`flex-1 relative flex flex-col text-m3-on-surface transition-all duration-300 overflow-x-hidden ${
+          activeTab === 'pos' || activeTab === 'ledger'
+            ? 'p-4 md:p-5 overflow-hidden h-full'
             : 'p-4 md:p-6 pb-26 md:pb-6 overflow-y-auto'
         } ${isCompactColumns ? 'compact-fit' : ''}`}>
           {/* Elegant Collapsible Horizontal Sub-menu Navigation Pill Bar with Dynamic RBAC */}
@@ -1165,7 +1172,7 @@ function AppContent() {
               return masterItem ? masterItem.roles.includes(currentUser.role) : false;
             });
 
-            if (authorizedSubItems.length <= 1 || (activeTab === 'pos' && !showImmersiveControls)) return null;
+            if (authorizedSubItems.length <= 1 || activeTab === 'pos') return null;
 
             return (
               <div className="mb-4 bg-m3-surface-low border border-m3-outline-variant/15 rounded-2xl p-2.5 flex flex-col shrink-0">
@@ -1193,7 +1200,7 @@ function AppContent() {
                 </div>
 
                 {!isSubMenuCollapsed && (
-                  <div className="flex gap-2.5 overflow-x-auto pt-2 pb-1 whitespace-nowrap scrollbar-none select-none scroll-smooth shrink-0 w-full">
+                  <div className="flex flex-nowrap gap-2.5 overflow-x-auto pt-2 pb-1 whitespace-nowrap scrollbar-none scroll-smooth touch-pan-x shrink-0 w-full">
                     {authorizedSubItems.map(sub => {
                       const isSelected = activeTab === sub.id;
                       return (
@@ -1239,7 +1246,6 @@ function AppContent() {
               >
                 {activeTab === 'tutorials' && <TutorialOnboarding />}
                 {activeTab === 'dashboard' && <Dashboard darkMode={darkMode} onNavigate={changeTab} />}
-                {activeTab === 'architecture' && <ArchitectureModule />}
                 {activeTab === 'pos' && <PosModule darkMode={darkMode} onNavigate={changeTab} viewMode="checkout" showImmersiveControls={showImmersiveControls} />}
                 {activeTab === 'ledger' && <PosModule darkMode={darkMode} onNavigate={changeTab} viewMode="ledger" showImmersiveControls={showImmersiveControls} />}
                 {activeTab === 'inventory' && <InventoryModule darkMode={darkMode} isCompactGlobal={isCompactColumns} />}
@@ -1248,6 +1254,7 @@ function AppContent() {
                 {activeTab === 'shift' && <ShiftModule darkMode={darkMode} />}
                 {activeTab === 'calculator' && <CalculatorModule darkMode={darkMode} />}
                 {activeTab === 'branches' && <BranchModule darkMode={darkMode} />}
+                {activeTab === 'system-settings' && <SystemSettingsModule darkMode={darkMode} />}
                 {activeTab === 'users' && <UsersModule darkMode={darkMode} />}
                 {activeTab === 'reports-transmission' && <SalesTransmissionModule darkMode={darkMode} />}
                 {activeTab === 'deliveries-panel' && <DeliveriesModule darkMode={darkMode} />}
@@ -1305,73 +1312,74 @@ function AppContent() {
       </main>
       </div>
 
-      {/* MOBILE BOTTOM NAVIGATION BAR FOR COMFORTABLE TACTILE PWA FEEL */}
-      <div className={`md:hidden fixed bottom-0 left-0 right-0 z-40 android-glass border-t border-m3-outline-variant/20 px-2 py-2 flex justify-around items-center rounded-t-[24px] shadow-lg transition-all duration-300 ease-in-out ${
-        activeTab === 'pos'
-          ? `transform ${showImmersiveControls ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'}`
-          : 'translate-y-0 opacity-100'
-      }`}>
-        {menuItems.filter(item => {
-          const isRoleOk = item.roles.includes(currentUser.role);
-          if (!isRoleOk) return false;
-          const currentBranch = branches.find(b => b.id === currentUser.branchAssignmentId);
-          const isAuthorizedBranch = currentUser.branchAssignmentId === 'B1' || !!currentBranch?.isDistributionBranch || currentUser.role === 'Admin';
-          if (item.id === 'transmittal' && !isAuthorizedBranch) return false;
-          return true;
-        }).slice(0, 5).map(item => {
-          const Icon = item.icon;
-          const isSelected = activeTab === item.id;
-          
+      {/* BOTTOM NAVIGATION: Unified premium horizontal scrollbar across the system (Mobile Only) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-m3-surface-low/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-m3-outline-variant/25 px-4 py-2 flex flex-row flex-nowrap items-center justify-start gap-3 rounded-t-[20px] shadow-2xl transition-all duration-300 overflow-x-auto scrollbar-none scroll-smooth touch-pan-x whitespace-nowrap">
+        {/* Brand Modules badge */}
+        <div className="flex items-center gap-2 shrink-0 pr-3 border-r border-m3-outline-variant/20 font-sans">
+          <span className="h-2 w-2 rounded-full bg-m3-primary animate-pulse" />
+          <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest font-mono">Modules</span>
+        </div>
+
+        {sidebarCategoryTree.map(category => {
+          // Dynamic RBAC filtering
+          const authorizedSubItems = category.subItems.filter(sub => {
+            const masterItem = menuItems.find(m => m.id === sub.id);
+            return masterItem ? masterItem.roles.includes(currentUser.role) : false;
+          });
+
+          // Branch authorization filter
+          const filteredSubItems = authorizedSubItems.filter(sub => {
+            const currentBranch = branches.find(b => b.id === currentUser.branchAssignmentId);
+            const isAuthorizedBranch = currentUser.branchAssignmentId === 'B1' || !!currentBranch?.isDistributionBranch || currentUser.role === 'Admin';
+            if (sub.id === 'transmittal' && !isAuthorizedBranch) return false;
+            return true;
+          });
+
+          if (filteredSubItems.length === 0) return null;
+
+          // Routing goes to first authorized sub-item of category
+          const firstSubTabId = filteredSubItems[0].id;
+          const Icon = category.icon;
+          const isSelected = filteredSubItems.some(sub => sub.id === activeTab) || activeTab === category.id;
+
+          // Short friendly labels for bottom bar
+          let shortLabel = category.name;
+          if (category.id === 'sale') shortLabel = 'Sale';
+          else if (category.id === 'inventory') shortLabel = 'Inventory';
+          else if (category.id === 'bir') shortLabel = 'Reports';
+          else if (category.id === 'deliveries') shortLabel = 'Cargo';
+          else if (category.id === 'members') shortLabel = 'Members';
+          else if (category.id === 'supplier') shortLabel = 'Suppliers';
+          else if (category.id === 'expenses') shortLabel = 'Expenses';
+          else if (category.id === 'adjustments') shortLabel = 'Voids';
+          else if (category.id === 'admin-bi') shortLabel = 'BI';
+          else if (category.id === 'admin-org') shortLabel = 'Staff';
+
           return (
             <button
-              key={item.id}
-              onClick={() => changeTab(item.id)}
-              className="flex flex-col items-center gap-1 focus:outline-none cursor-pointer relative py-0.5 px-2 min-w-[52px]"
+              key={category.id}
+              onClick={() => changeTab(firstSubTabId)}
+              className="flex flex-col items-center gap-0.5 focus:outline-none cursor-pointer shrink-0 py-1 px-2.5 min-w-[58px] group transition-transform active:scale-95"
             >
-              {/* Active tactile capsule indicator */}
-              <div className={`px-4 py-1 rounded-xl transition-all duration-200 ${
+              {/* Visual state capsule indicator */}
+              <div className={`px-4 py-1 rounded-2xl transition-[background-color,color,transform] duration-200 ${
                 isSelected 
-                  ? 'bg-m3-primary/15 text-m3-primary' 
+                  ? 'bg-m3-primary text-m3-on-primary shadow-sm shadow-m3-primary/10 scale-[1.03]' 
                   : 'text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/5'
               }`}>
-                <Icon className="h-5 w-5" />
+                <Icon className="h-4.5 w-4.5 shrink-0 transition-transform group-hover:scale-110" />
               </div>
-              <span className={`text-[9px] font-black tracking-tight text-center leading-none ${
-                isSelected ? 'text-m3-primary' : 'text-m3-on-surface-variant'
+              <span className={`text-[9px] font-black tracking-tight text-center leading-none mt-1 whitespace-nowrap ${
+                isSelected ? 'text-m3-primary font-black' : 'text-zinc-400 dark:text-zinc-500 group-hover:text-m3-primary'
               }`}>
-                {item.id === 'dashboard' ? 'Dash' : item.id === 'architecture' ? 'ERD' : item.id === 'pos' ? 'Checkout' : item.id === 'ledger' ? 'Ledger' : item.id === 'inventory' ? 'Stock' : item.id === 'procurement' ? 'Purchase' : item.id === 'transmittal' ? 'Send' : item.id === 'shift' ? 'Shift' : item.id === 'calculator' ? 'Calc' : item.name.split(' ')[0]}
+                {shortLabel}
               </span>
             </button>
           );
         })}
       </div>
 
-      {/* Immersive Trigger Handles for POS Terminal Mode */}
-      {activeTab === 'pos' && !showImmersiveControls && (
-        <>
-          {/* Subtle Pull handles for mouse cursor / touch slide */}
-          <div 
-            className="fixed left-0 top-1/2 -translate-y-1/2 w-2 h-24 bg-m3-primary/30 hover:bg-m3-primary/60 rounded-r-2xl z-[60] cursor-ew-resize flex items-center justify-center transition-all group scale-100 hover:w-3 border border-l-0 border-m3-primary/35 backdrop-blur-md shadow-lg animate-pulse"
-            title="Drag or slide from left to show system modules"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMoveDrag}
-            onMouseUp={handleMouseUp}
-            onClick={() => setShowImmersiveControls(true)}
-          >
-            <div className="w-1 h-8 bg-m3-primary/80 rounded-full group-hover:bg-m3-primary/100" />
-          </div>
 
-          <div 
-            className="fixed top-0 left-1/2 -translate-x-1/2 h-2 w-56 bg-m3-primary/25 hover:bg-m3-primary/55 rounded-b-2xl z-[60] cursor-ns-resize flex justify-center items-center transition-all group hover:h-4.5 border border-t-0 border-m3-primary/35 backdrop-blur-md shadow-md"
-            title="Hover or slide from top to show header controls"
-            onClick={() => setShowImmersiveControls(true)}
-          >
-            <div className="h-1 w-16 bg-m3-primary/60 rounded-full group-hover:bg-m3-primary/85" />
-          </div>
-        </>
-      )}
 
       {/* CONFIRMATORY DIALOG: Logout verification check trigger */}
       {showLogoutConfirmModal && (
@@ -1804,7 +1812,7 @@ function AppContent() {
 
                               const cachedListStr = localStorage.getItem('tp_db_snapshots');
                               const cachedList = cachedListStr ? JSON.parse(cachedListStr) : [];
-                              const updatedList = [newSnap, ...cachedList];
+                              const updatedList = [newSnap, ...cachedList].slice(0, 2);
                               localStorage.setItem('tp_db_snapshots', JSON.stringify(updatedList));
 
                               // Apply changes directly using atomic restore
@@ -2021,7 +2029,7 @@ function AppContent() {
                 </p>
               ) : (
                 <p className="text-[9px] text-zinc-400 px-1 leading-normal font-medium flex items-center gap-1">
-                  <span>Salted PBKDF2 cryptography hashes are automatically updated across all local registers.</span>
+                  <span>Your account security credentials will be encrypted and updated securely.</span>
                 </p>
               )}
             </div>
@@ -2067,7 +2075,16 @@ function AppContent() {
 
       {/* EXPRESSIVE MATERIAL 3 IDLE SCREEN OVERLAY */}
       <IdleScreen />
+
+      {/* DYNAMIC ALWAYS-ON PWA INSTALL CONVERSION PROMPT */}
+      <PwaInstallPrompt />
+
+      {/* SHOW SETUP WIZARD OVERLAY MODAL */}
+      {showSetupWizard && (
+        <OnboardingSetupWizard onClose={() => setShowSetupWizard(false)} />
+      )}
     </div>
+    </MotionConfig>
   );
 }
 

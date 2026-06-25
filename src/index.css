@@ -108,6 +108,19 @@ body {
   transition: background-color 300ms cubic-bezier(0.2, 0, 0, 1), color 300ms cubic-bezier(0.2, 0, 0, 1);
 }
 
+/* Enable ultra-smooth, premium transitions for all elements when toggling dark/light mode */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition: background-color 600ms cubic-bezier(0.16, 1, 0.3, 1) !important, 
+              color 600ms cubic-bezier(0.16, 1, 0.3, 1) !important, 
+              border-color 600ms cubic-bezier(0.16, 1, 0.3, 1) !important, 
+              box-shadow 600ms cubic-bezier(0.16, 1, 0.3, 1) !important,
+              backdrop-filter 600ms cubic-bezier(0.16, 1, 0.3, 1) !important,
+              -webkit-backdrop-filter 600ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
 /* Custom Scrollbars in Material 3 Style - Luxury, Low-profile & Fully Styled */
 * {
   scrollbar-width: thin;
@@ -215,6 +228,18 @@ body {
     color-mix(in srgb, var(--m3-primary) 22%, transparent),
     transparent 80%
   );
+}
+
+/* Disable card hover spotlight cursor light effect when backdrop & UI blurs are disabled */
+html.accessibility-no-blur .m3-card::before,
+html.accessibility-no-blur .android-glass-card::before,
+html.accessibility-no-blur .glowing-card::before,
+html.accessibility-no-animation .m3-card::before,
+html.accessibility-no-animation .android-glass-card::before,
+html.accessibility-no-animation .glowing-card::before {
+  display: none !important;
+  opacity: 0 !important;
+  content: none !important;
 }
 
 /* Ensure all child text elements, action components, lists, and icons float over the glow indicator */

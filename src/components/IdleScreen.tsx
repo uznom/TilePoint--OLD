@@ -212,8 +212,9 @@ export const IdleScreen: React.FC = () => {
         <div className="relative h-full w-full flex flex-col justify-between p-12 md:p-20 z-10 font-sans">
           {/* Top Info Bar */}
           <motion.div
+            initial={{ opacity: 0, y: -25 }}
             animate={{ opacity: isDismissing ? 0 : 1, y: isDismissing ? -20 : 0 }}
-            transition={{ duration: 0.45 }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
             className="flex items-center justify-between w-full"
           >
             <div className="flex items-center gap-3">
@@ -232,12 +233,13 @@ export const IdleScreen: React.FC = () => {
           <div className="flex-1 flex flex-col justify-center items-center text-center">
             {/* Expressive Growing & Shrinking Time */}
             <motion.div
+              initial={{ opacity: 0, scale: 0.88, y: 35 }}
               animate={{
                 opacity: isDismissing ? 0 : 1,
                 scale: isDismissing ? 0.94 : 1,
                 y: isDismissing ? -30 : 0
               }}
-              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.05 }}
               className="space-y-4"
             >
               {/* Giant Clock Face */}
@@ -265,8 +267,9 @@ export const IdleScreen: React.FC = () => {
 
           {/* Bottom Diagnostics / Corporate Signboard */}
           <motion.div
+            initial={{ opacity: 0, y: 25 }}
             animate={{ opacity: isDismissing ? 0 : 0.6, y: isDismissing ? 20 : 0 }}
-            transition={{ duration: 0.4 }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.35 }}
             className="flex flex-col md:flex-row justify-between items-center text-center md:text-left gap-4 text-[9.5px] font-mono text-[var(--m3-on-surface-variant)]"
           >
             <div>

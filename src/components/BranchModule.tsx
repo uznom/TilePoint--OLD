@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useDb } from '../context/DbContext';
 import { Branch, UserRole } from '../types/db';
 import {
@@ -264,49 +265,57 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
                   )}
                 </button>
 
-                {isExpanded && (
-                  <div className="space-y-2 pt-2 border-t border-m3-outline-variant/10 animate-fade-in max-h-[180px] overflow-y-auto pr-1">
-                    {branchEmployees.length === 0 ? (
-                      <div className="text-[10px] text-zinc-400 italic py-1 text-center font-medium">
-                        No active logins assigned to this branch.
-                      </div>
-                    ) : (
-                      branchEmployees.map((u) => (
-                        <div
-                          key={u.id}
-                          className="flex items-center justify-between p-2 rounded-xl bg-m3-surface-low/95 border border-m3-outline-variant/5 hover:border-m3-outline-variant/20 hover:bg-m3-surface transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="h-7 w-7 rounded-full bg-m3-primary/10 text-m3-primary font-mono text-[9px] font-black flex items-center justify-center shrink-0 border border-m3-primary/15 shadow-inner">
-                              {u.avatarInitials || (u.fullName ? u.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : '??')}
-                            </div>
-                            <div className="min-w-0">
-                              <span className="block text-xs font-bold text-m3-on-surface truncate leading-tight">
-                                {u.fullName}
-                              </span>
-                              <span className="block text-[9.5px] text-zinc-450 font-mono truncate leading-none mt-0.5">
-                                {u.email || `@${u.username}`}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-end shrink-0 gap-1 pl-1">
-                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border leading-none ${
-                              u.role === UserRole.ADMIN 
-                                ? 'bg-purple-500/10 text-purple-600 border-purple-500/15'
-                                : u.role === UserRole.MANAGER
-                                ? 'bg-blue-500/10 text-blue-600 border-blue-500/15'
-                                : u.role === UserRole.CASHIER
-                                ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/15'
-                                : 'bg-zinc-500/10 text-zinc-650 border-zinc-500/15'
-                            }`}>
-                              {u.role}
-                            </span>
-                          </div>
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                      className="overflow-hidden space-y-2 pt-2 border-t border-m3-outline-variant/10 max-h-[180px] overflow-y-auto pr-1"
+                    >
+                      {branchEmployees.length === 0 ? (
+                        <div className="text-[10px] text-zinc-400 italic py-1 text-center font-medium">
+                          No active logins assigned to this branch.
                         </div>
-                      ))
-                    )}
-                  </div>
-                )}
+                      ) : (
+                        branchEmployees.map((u) => (
+                          <div
+                            key={u.id}
+                            className="flex items-center justify-between p-2 rounded-xl bg-m3-surface-low/95 border border-m3-outline-variant/5 hover:border-m3-outline-variant/20 hover:bg-m3-surface transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="h-7 w-7 rounded-full bg-m3-primary/10 text-m3-primary font-mono text-[9px] font-black flex items-center justify-center shrink-0 border border-m3-primary/15 shadow-inner">
+                                {u.avatarInitials || (u.fullName ? u.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : '??')}
+                              </div>
+                              <div className="min-w-0">
+                                <span className="block text-xs font-bold text-m3-on-surface truncate leading-tight">
+                                  {u.fullName}
+                                </span>
+                                <span className="block text-[9.5px] text-zinc-450 font-mono truncate leading-none mt-0.5">
+                                  {u.email || `@${u.username}`}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-end shrink-0 gap-1 pl-1">
+                              <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border leading-none ${
+                                u.role === UserRole.ADMIN 
+                                  ? 'bg-purple-500/10 text-purple-600 border-purple-500/15'
+                                  : u.role === UserRole.MANAGER
+                                  ? 'bg-blue-500/10 text-blue-600 border-blue-500/15'
+                                  : u.role === UserRole.CASHIER
+                                  ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/15'
+                                  : 'bg-zinc-500/10 text-zinc-650 border-zinc-500/15'
+                              }`}>
+                                {u.role}
+                              </span>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Calculations KPI footer metrics layout */}

@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useDb, DbSnapshot } from '../context/DbContext';
 import { UserRole } from '../types/db';
+import { ActionButton } from './ActionButton';
 import {
   Cookie,
   Shield,
@@ -337,6 +338,9 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
   const [ruleEnforcementProfile, setRuleEnforcementProfile] = useState<'strict' | 'audit' | 'open'>('strict');
   const [importText, setImportText] = useState('');
   const [backupActionStatus, setBackupActionStatus] = useState<string | null>(null);
+  const [isExportingFullDb, setIsExportingFullDb] = useState(false);
+  const [isSeedingMasterLogs, setIsSeedingMasterLogs] = useState(false);
+  const [isExportingForensic, setIsExportingForensic] = useState(false);
   const [rulesAlert, setRulesAlert] = useState<string | null>(null);
   const [isShowingHandbook, setIsShowingHandbook] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
@@ -1994,45 +1998,51 @@ startxref
                             Backup files represent your database physically as raw JSON blocks. You can export these to flash storage or import/replace tables below in case of storage wipe.
                           </p>
                           <div className="flex gap-2">
-                            <button
-                              type="button"
+                            <ActionButton
+                              variant="slate"
+                              className="flex-1 py-2 text-[9.5px]"
+                              isLoading={isExportingFullDb}
+                              loadingText="Serializing tables..."
                               onClick={() => {
-                                const payload = {
-                                  isConfigured: db.isConfigured,
-                                  users: db.users,
-                                  branches: db.branches,
-                                  suppliers: db.suppliers,
-                                  products: db.products,
-                                  purchaseOrders: db.purchaseOrders,
-                                  poItems: db.poItems,
-                                  transmittals: db.transmittals,
-                                  shifts: db.shifts,
-                                  sales: db.sales,
-                                  saleItems: db.saleItems,
-                                  movements: db.movements,
-                                  auditLogs: db.auditLogs,
-                                  parkedSales: db.parkedSales,
-                                  stockTransfers: db.stockTransfers,
-                                  branchStock: db.branchStock,
-                                  ledgerEntries: db.ledgerEntries,
-                                  branchSalesReports: db.branchSalesReports,
-                                  deliveries: db.deliveries
-                                };
-                                const element = document.createElement("a");
-                                const file = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
-                                element.href = URL.createObjectURL(file);
-                                element.download = `tilepoint_full_backup_${Date.now()}.json`;
-                                document.body.appendChild(element);
-                                element.click();
-                                document.body.removeChild(element);
-                                setBackupActionStatus('Success: Downloaded portable backup database JSON file.');
-                                setTimeout(() => setBackupActionStatus(null), 2500);
+                                setIsExportingFullDb(true);
+                                setTimeout(() => {
+                                  const payload = {
+                                    isConfigured: db.isConfigured,
+                                    users: db.users,
+                                    branches: db.branches,
+                                    suppliers: db.suppliers,
+                                    products: db.products,
+                                    purchaseOrders: db.purchaseOrders,
+                                    poItems: db.poItems,
+                                    transmittals: db.transmittals,
+                                    shifts: db.shifts,
+                                    sales: db.sales,
+                                    saleItems: db.saleItems,
+                                    movements: db.movements,
+                                    auditLogs: db.auditLogs,
+                                    parkedSales: db.parkedSales,
+                                    stockTransfers: db.stockTransfers,
+                                    branchStock: db.branchStock,
+                                    ledgerEntries: db.ledgerEntries,
+                                    branchSalesReports: db.branchSalesReports,
+                                    deliveries: db.deliveries
+                                  };
+                                  const element = document.createElement("a");
+                                  const file = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
+                                  element.href = URL.createObjectURL(file);
+                                  element.download = `tilepoint_full_backup_${Date.now()}.json`;
+                                  document.body.appendChild(element);
+                                  element.click();
+                                  document.body.removeChild(element);
+                                  setBackupActionStatus('Success: Downloaded portable backup database JSON file.');
+                                  setTimeout(() => setBackupActionStatus(null), 2500);
+                                  setIsExportingFullDb(false);
+                                }, 1000);
                               }}
-                              className="flex-1 bg-zinc-800 text-zinc-300 hover:bg-zinc-750 text-[9.5px] font-bold uppercase tracking-wider py-2 rounded-lg cursor-pointer transition-all text-center flex items-center justify-center gap-2 border border-zinc-700 font-sans shadow-sm"
+                              icon={<Download className="h-3.5 w-3.5 text-m3-primary" />}
                             >
-                              <Download className="h-3.5 w-3.5 text-m3-primary" />
                               Export Full DB as JSON
-                            </button>
+                            </ActionButton>
                             
                             <label className="flex-1 bg-zinc-800 text-zinc-300 hover:bg-zinc-750 text-[9.5px] font-bold uppercase tracking-wider py-2 rounded-lg cursor-pointer transition-all text-center flex items-center justify-center gap-2 border border-zinc-700 font-sans shadow-sm select-none">
                               <Upload className="h-3.5 w-3.5 text-m3-primary" />
@@ -2097,40 +2107,52 @@ startxref
                             Instantly populate the entire TilePoint environment with rich, multi-module interactive transaction histories and deep compliance forensic audit logs (covering Sales, POS, stock transfers, suppliers, and security events). Downloads a valid backup template file or seeds it locally in one click.
                           </p>
                           <div className="flex gap-2">
-                            <button
-                              type="button"
+                            <ActionButton
+                              variant="slate"
+                              className="flex-1 py-2 text-[9px]"
+                              isLoading={isExportingForensic}
+                              loadingText="Compiling Master..."
                               onClick={() => {
-                                const payload = db.generateMasterForensicBackup();
-                                const element = document.createElement("a");
-                                const file = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
-                                element.href = URL.createObjectURL(file);
-                                element.download = `tilepoint_comprehensive_forensic_master_${Date.now()}.json`;
-                                document.body.appendChild(element);
-                                element.click();
-                                document.body.removeChild(element);
-                                setBackupActionStatus('Success: Downloaded comprehensive master logs template JSON file.');
-                                setTimeout(() => setBackupActionStatus(null), 3000);
+                                setIsExportingForensic(true);
+                                setTimeout(() => {
+                                  const payload = db.generateMasterForensicBackup();
+                                  const element = document.createElement("a");
+                                  const file = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
+                                  element.href = URL.createObjectURL(file);
+                                  element.download = `tilepoint_comprehensive_forensic_master_${Date.now()}.json`;
+                                  document.body.appendChild(element);
+                                  element.click();
+                                  document.body.removeChild(element);
+                                  setBackupActionStatus('Success: Downloaded comprehensive master logs template JSON file.');
+                                  setTimeout(() => setBackupActionStatus(null), 3000);
+                                  setIsExportingForensic(false);
+                                }, 1000);
                               }}
-                              className="flex-1 bg-zinc-800 text-zinc-300 hover:bg-zinc-750 text-[9.2px] font-bold uppercase tracking-wider py-2 rounded-lg cursor-pointer transition-all text-center flex items-center justify-center gap-1.5 border border-zinc-700 font-sans shadow-sm"
+                              icon={<Download className="h-3.5 w-3.5 text-emerald-400" />}
                             >
-                              <Download className="h-3.5 w-3.5 text-emerald-400" />
                               Download Forensic JSON
-                            </button>
+                            </ActionButton>
 
-                            <button
-                              type="button"
-                              onClick={async () => {
+                            <ActionButton
+                              variant="success"
+                              className="flex-1 py-2 text-[9px]"
+                              isLoading={isSeedingMasterLogs}
+                              loadingText="Seeding workspace tables..."
+                              onClick={() => {
                                 if (window.confirm("Are you sure you want to seed and import the comprehensive Master Forensic Database? This will overwrite your current workspace, seed active metrics, products, and logs, and log you in securely as Simulated Admin.")) {
-                                  await db.importMasterForensicBackup();
-                                  setBackupActionStatus('SUCCESS: SEEDED COMPREHENSIVE RECORDS & MULTI-MODULE FORENSIC LOGS!');
-                                  setTimeout(() => setBackupActionStatus(null), 4000);
+                                  setIsSeedingMasterLogs(true);
+                                  setTimeout(async () => {
+                                    await db.importMasterForensicBackup();
+                                    setBackupActionStatus('SUCCESS: SEEDED COMPREHENSIVE RECORDS & MULTI-MODULE FORENSIC LOGS!');
+                                    setTimeout(() => setBackupActionStatus(null), 4000);
+                                    setIsSeedingMasterLogs(false);
+                                  }, 1200);
                                 }
                               }}
-                              className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[9.2px] font-extrabold uppercase tracking-wider py-2 rounded-lg cursor-pointer transition-all text-center flex items-center justify-center gap-1.5 border border-emerald-500 shadow-md"
+                              icon={<Database className="h-3.5 w-3.5" />}
                             >
-                              <Database className="h-3.5 w-3.5" />
-                              1-Click Import & Seed Logs
-                            </button>
+                              1-Click Import & Seed
+                            </ActionButton>
                           </div>
                         </div>
                       </div>

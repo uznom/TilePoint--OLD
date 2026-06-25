@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useDb } from '../context/DbContext';
 import { Product, UserRole, TransferType, TransferStatus } from '../types/db';
 import {
@@ -134,6 +134,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     updateProduct,
     deleteProduct,
     importProducts,
+    createBranch,
     currentUser,
     addAuditLog,
     movements,
@@ -151,6 +152,41 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
   // Primary navigation sub-tabs: "catalog" | "movements" | "transfers" | "ledger" | "import" | "branch-prices"
   const [activeSubTab, setActiveSubTab] = useState<'catalog' | 'movements' | 'transfers' | 'ledger' | 'import' | 'branch-prices'>(initialSubTab || 'catalog');
+
+  // Synchronized Sourcing / Procurement Requisitions Queue Cart State
+  const [poCart, setPoCart] = useState<{ productId: string; quantity: number; notes?: string; requestedByBranchId?: string }[]>(() => {
+    try {
+      const cached = localStorage.getItem('tp_po_cart');
+      return cached ? JSON.parse(cached) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const syncPoCart = (newCart: any[]) => {
+    setPoCart(newCart);
+    localStorage.setItem('tp_po_cart', JSON.stringify(newCart));
+    // Dispatch system-wide event so the Procurement module balances its cart state in real-time
+    window.dispatchEvent(new Event('tp_po_cart_updated'));
+  };
+
+  const handleQueueRestock = (productId: string) => {
+    const exists = poCart.some(item => item.productId === productId);
+    if (exists) {
+      const updated = poCart.map(item => {
+        if (item.productId === productId) {
+          return { ...item, quantity: item.quantity + 50 };
+        }
+        return item;
+      });
+      syncPoCart(updated);
+      showToast('Restock desk updated: Increased queue quantity for this tile code!');
+    } else {
+      const updated = [...poCart, { productId, quantity: 50 }];
+      syncPoCart(updated);
+      showToast('Sourcing Deck linked: Added item to your Procurement Restock Queue!');
+    }
+  };
 
   // Table layout optimization states
   const isCompactColumns = isCompactGlobal !== undefined ? isCompactGlobal : true;
@@ -181,6 +217,22 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
       setActiveSubTab(initialSubTab);
     }
   }, [initialSubTab]);
+
+  // Real-time synchronization event listener from other modules
+  useEffect(() => {
+    const handleCartSync = () => {
+      try {
+        const cached = localStorage.getItem('tp_po_cart');
+        setPoCart(cached ? JSON.parse(cached) : []);
+      } catch (e) {
+        // Safe fallback
+      }
+    };
+    window.addEventListener('tp_po_cart_updated', handleCartSync);
+    return () => {
+      window.removeEventListener('tp_po_cart_updated', handleCartSync);
+    };
+  }, []);
 
   // Search & Filters
   const [term, setTerm] = useState('');
@@ -283,6 +335,11 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   const [confirmDeleteName, setConfirmDeleteName] = useState<string>('');
   const [showImportModal, setShowImportModal] = useState(false);
   const [rawImportText, setRawImportText] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
+  const [pendingProducts, setPendingProducts] = useState<Product[]>([]);
+  const [pendingBranches, setPendingBranches] = useState<any[]>([]);
+  const [showBranchConfigs, setShowBranchConfigs] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Movement Ledger tracking states
   const [movementSearch, setMovementSearch] = useState('');
@@ -409,7 +466,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     'Doors & Windows'
   ];
 
-  const allowedToModify = currentUser.role === UserRole.MANAGER;
+  const allowedToModify = currentUser.role === UserRole.MANAGER || currentUser.role === UserRole.ADMIN;
 
   // Auto-coverage calculator effect based on tile dimensions & box contents
   useEffect(() => {
@@ -1019,11 +1076,16 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
   // Bulk Import / Export simulations
   const handleExportJSON = () => {
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(products.filter(p => !p.isDeleted), null, 2));
+    const jsonString = JSON.stringify(products.filter(p => !p.isDeleted), null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const dlAnchorElem = document.createElement('a');
-    dlAnchorElem.setAttribute('href', dataStr);
+    dlAnchorElem.setAttribute('href', url);
     dlAnchorElem.setAttribute('download', `TilePoint_Inventory_${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(dlAnchorElem);
     dlAnchorElem.click();
+    document.body.removeChild(dlAnchorElem);
+    URL.revokeObjectURL(url);
     addAuditLog('INVENTORY_EXPORT', 'Exported product database as JSON file', 'Products', 'EXPORT');
     showToast('Exported full non-deleted inventory roster as JSON file.');
   };
@@ -1033,35 +1095,323 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     setShowImportModal(true);
   };
 
+  const handleImportDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleImportDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleImportDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processSelectedFile(file);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processSelectedFile(file);
+    }
+  };
+
+  const processSelectedFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (text) {
+        setRawImportText(text);
+        showToast(`Successfully loaded file: ${file.name}`);
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const executeBulkImport = async () => {
-    if (!rawImportText.trim()) {
-      showToast('Error: Please input a valid JSON array text block.');
+    const trimmedInput = rawImportText.trim();
+    if (!trimmedInput) {
+      showToast('Error: Please input valid JSON or CSV older POS product data.');
+      return;
+    }
+
+    // Helper to parse CSV raw text into rows
+    const parseCSV = (text: string): Array<Record<string, any>> => {
+      const lines: string[] = [];
+      let currentLine = '';
+      let insideQuotes = false;
+      
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (char === '"' || char === "'") {
+          insideQuotes = !insideQuotes;
+        }
+        if ((char === '\r' || char === '\n') && !insideQuotes) {
+          if (currentLine.trim()) {
+            lines.push(currentLine);
+          }
+          currentLine = '';
+          if (char === '\r' && text[i + 1] === '\n') {
+            i++;
+          }
+        } else {
+          currentLine += char;
+        }
+      }
+      if (currentLine.trim()) {
+        lines.push(currentLine);
+      }
+
+      if (lines.length < 2) {
+        throw new Error('CSV must contain a header row and at least one data row.');
+      }
+
+      const headerLine = lines[0];
+      let delimiter = ',';
+      const commaCount = (headerLine.match(/,/g) || []).length;
+      const semiCount = (headerLine.match(/;/g) || []).length;
+      const tabCount = (headerLine.match(/\t/g) || []).length;
+      
+      if (semiCount > commaCount && semiCount > tabCount) {
+        delimiter = ';';
+      } else if (tabCount > commaCount && tabCount > semiCount) {
+        delimiter = '\t';
+      }
+
+      const splitLine = (line: string): string[] => {
+        const result: string[] = [];
+        let cell = '';
+        let inQuotes = false;
+        for (let j = 0; j < line.length; j++) {
+          const c = line[j];
+          if (c === '"' || c === "'") {
+            inQuotes = !inQuotes;
+          } else if (c === delimiter && !inQuotes) {
+            result.push(cell.trim());
+            cell = '';
+          } else {
+            cell += c;
+          }
+        }
+        result.push(cell.trim());
+        return result;
+      };
+
+      const headers = splitLine(headerLine).map(h => h.replace(/^["']|["']$/g, '').trim());
+      const rows: Array<Record<string, any>> = [];
+
+      for (let k = 1; k < lines.length; k++) {
+        const cells = splitLine(lines[k]);
+        if (cells.length > 0 && cells.some(c => c)) {
+          const rowObj: Record<string, any> = {};
+          headers.forEach((header, index) => {
+            const val = (cells[index] || '').replace(/^["']|["']$/g, '').trim();
+            rowObj[header] = val;
+          });
+          rows.push(rowObj);
+        }
+      }
+
+      return rows;
+    };
+
+    let parsed: any[] = [];
+    let formatType = 'JSON';
+
+    try {
+      if (trimmedInput.startsWith('[') || trimmedInput.startsWith('{')) {
+        const jsonParsed = JSON.parse(trimmedInput);
+        parsed = Array.isArray(jsonParsed) ? jsonParsed : [jsonParsed];
+      } else {
+        formatType = 'CSV';
+        const csvRows = parseCSV(trimmedInput);
+        
+        // Map older header formats from common schemas to clean database object fields
+        const headerMapping: Record<string, string> = {
+          'product name': 'productName',
+          'product_name': 'productName',
+          'name': 'productName',
+          'tile name': 'productName',
+          'tile': 'productName',
+          'item name': 'productName',
+          'product': 'productName',
+          'product code': 'productCode',
+          'product_code': 'productCode',
+          'code': 'productCode',
+          'item code': 'productCode',
+          'sku': 'sku',
+          'sku code': 'sku',
+          'sku_code': 'sku',
+          'skucode': 'sku',
+          'barcode': 'barcode',
+          'bar code': 'barcode',
+          'bar_code': 'barcode',
+          'category': 'category',
+          'cat': 'category',
+          'group': 'category',
+          'brand': 'brand',
+          'brand_name': 'brand',
+          'manufacturer': 'brand',
+          'cost': 'costPrice',
+          'cost price': 'costPrice',
+          'cost_price': 'costPrice',
+          'p price': 'costPrice',
+          'p_price': 'costPrice',
+          'purchase price': 'costPrice',
+          'selling price': 'sellingPrice',
+          'selling_price': 'sellingPrice',
+          'selling': 'sellingPrice',
+          'price': 'sellingPrice',
+          'rate': 'sellingPrice',
+          'retail': 'sellingPrice',
+          's price': 'sellingPrice',
+          's_price': 'sellingPrice',
+          'size': 'size',
+          'dimensions': 'size',
+          'dimension': 'size',
+          'stock': 'stockQuantity',
+          'quantity': 'stockQuantity',
+          'qty': 'stockQuantity',
+          'stock quantity': 'stockQuantity',
+          'stock_quantity': 'stockQuantity',
+          'min stock': 'minimumStock',
+          'minimum stock': 'minimumStock',
+          'min_stock': 'minimumStock',
+          'minimum_stock': 'minimumStock',
+          'alert level': 'minimumStock',
+          'alert_level': 'minimumStock',
+          'design': 'designName',
+          'design name': 'designName',
+          'design_name': 'designName',
+          'supplier': 'supplierId',
+          'supplier id': 'supplierId',
+          'supplier_id': 'supplierId',
+          'unit': 'unit',
+          'uom': 'unit',
+          'box qty': 'boxQuantity',
+          'box quantity': 'boxQuantity',
+          'box_quantity': 'boxQuantity',
+          'location': 'origin',
+          'origin': 'origin'
+        };
+
+        parsed = csvRows.map(row => {
+          const mappedRow: Record<string, any> = {};
+          Object.keys(row).forEach(key => {
+            const cleanKey = key.toLowerCase().trim();
+            const mappedKey = headerMapping[cleanKey];
+            if (mappedKey) {
+              const numericFields = ['costPrice', 'sellingPrice', 'stockQuantity', 'minimumStock', 'boxQuantity', 'coveragePerBox'];
+              if (numericFields.includes(mappedKey)) {
+                const cleanVal = String(row[key]).replace(/[$,₱ ]/g, '').replace(/,/g, '');
+                const valNum = parseFloat(cleanVal);
+                mappedRow[mappedKey] = isNaN(valNum) ? 0 : valNum;
+              } else {
+                mappedRow[mappedKey] = row[key];
+              }
+            } else {
+              mappedRow[key] = row[key];
+            }
+          });
+          return mappedRow;
+        });
+      }
+
+      if (parsed.length > 0) {
+        // Auto-detect branch locations mapped in imported rows
+        const uniqueLocations = Array.from(new Set(
+          parsed.map(item => item.origin || item.location).map(v => String(v || '').trim()).filter(Boolean)
+        )) as string[];
+
+        const existingBranchNames = branches.filter(b => !b.isDeleted).map(b => b.name.toLowerCase().trim());
+        const newLocations = uniqueLocations.filter(loc => !existingBranchNames.includes(loc.toLowerCase().trim()));
+
+        if (newLocations.length > 0) {
+          setPendingProducts(parsed);
+          setPendingBranches(newLocations.map(name => ({
+            name,
+            manager: 'Operational Branch Manager',
+            address: 'Region Branch Site, Dipolog City',
+            phone: '+63 920 123 4567',
+            isDistributionBranch: false,
+            staffCount: 3
+          })));
+          setShowBranchConfigs(true);
+          setShowImportModal(false);
+          setShowPortabilityHubModal(false);
+          showToast(`Detected ${newLocations.length} new branch location(s)! Please fill in their details to finalize migration.`);
+        } else {
+          await triggerSystemProcessing(
+            `Executing Legacy POS Data Importer (${formatType})...`,
+            1600,
+            'db',
+            undefined,
+            `Parsing ${formatType}, validating product columns, and updating regional catalog tables...`
+          );
+
+          const result = importProducts(parsed);
+          if (result.success) {
+            setShowImportModal(false);
+            setShowPortabilityHubModal(false);
+            showToast(`Successfully migrated ${result.count} tile products from old POS system!`);
+          } else {
+            showToast(`Import Failure: ${result.error}`);
+          }
+        }
+      } else {
+        showToast('Format Mismatch: Imported contents must represent a valid dataset block.');
+      }
+    } catch (e: any) {
+      showToast(`Migration Error: ${e.message || 'Failed parsing input data'}. Check layout / columns.`);
+    }
+  };
+
+  const handleFinalizeImportWithBranches = async () => {
+    const invalid = pendingBranches.some(b => !b.manager.trim() || !b.address.trim() || !b.phone.trim());
+    if (invalid) {
+      showToast('Error: Please complete Manager, Address, and Phone for all new branches.');
       return;
     }
 
     try {
-      const parsed = JSON.parse(rawImportText);
-      if (Array.isArray(parsed)) {
-        await triggerSystemProcessing(
-          'Executing Legacy POS Data Importer...',
-          1600,
-          'db',
-          undefined,
-          'Parsing JSON, validating product columns, and updating regional catalog tables...'
-        );
+      await triggerSystemProcessing(
+        `Registering ${pendingBranches.length} Branches & Migrating Catalog...`,
+        1800,
+        'db',
+        undefined,
+        `Instantiating regional stores, mapping inventories, and synching product lines...`
+      );
 
-        const result = importProducts(parsed);
-        if (result.success) {
-          setShowImportModal(false);
-          showToast(`Successfully updated ${result.count} tile products.`);
-        } else {
-          showToast(`Import Failure: ${result.error}`);
-        }
+      // Create new branches
+      pendingBranches.forEach(b => {
+        createBranch({
+          name: b.name,
+          manager: b.manager,
+          address: b.address,
+          phone: b.phone,
+          monthlySales: 0,
+          staffCount: b.staffCount,
+          activeCashiers: 1,
+          isDistributionBranch: b.isDistributionBranch
+        });
+      });
+
+      // Import products
+      const result = importProducts(pendingProducts);
+      if (result.success) {
+        showToast(`Successfully set up ${pendingBranches.length} new branches and migrated ${result.count} tile products!`);
+        setPendingBranches([]);
+        setPendingProducts([]);
+        setShowBranchConfigs(false);
       } else {
-        showToast('Format Mismatch: Imported contents must represent a valid Tile Array.');
+        showToast(`Product Import Error: ${result.error}`);
       }
-    } catch (e) {
-      showToast('Syntax Error: Failed Parsing JSON. Verify code format structure.');
+    } catch (e: any) {
+      showToast(`Error: ${e.message || 'Verification failed.'}`);
     }
   };
 
@@ -1235,9 +1585,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
         <>
           {/* Main Filter Controller Panel Card */}
           <div className="bg-m3-surface-low p-4 rounded-[28px] border border-m3-outline-variant/20 shadow-sm space-y-4">
-            <div className="flex flex-col xl:flex-row gap-4 items-center justify-between">
+            <div className="flex flex-col xl:flex-row gap-4 items-stretch xl:items-center justify-between">
               {/* Search query box */}
-              <div className="relative w-full xl:max-w-xs shrink-0">
+              <div className="relative w-full xl:max-w-md shrink-0">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-m3-primary">
                   <Search className="h-4 w-4" />
                 </span>
@@ -1246,12 +1596,12 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   placeholder="Filter by Name, SKU, design name, code..."
                   value={term}
                   onChange={e => setTerm(e.target.value)}
-                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2.5 pl-10 pr-8 text-xs text-m3-on-surface focus:outline-none transition-all rounded-t-md font-medium"
+                  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/25 focus:border-m3-primary px-3.5 py-2.5 pl-10 pr-8 text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary/10 transition-all rounded-xl font-medium"
                 />
                 {term && (
                   <button
                     onClick={() => setTerm('')}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-zinc-400 hover:text-rose-500 cursor-pointer text-sm font-black transition-colors"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-zinc-400 hover:text-rose-500 cursor-pointer text-xs font-black transition-colors"
                     title="Clear search"
                   >
                     ✗
@@ -1260,45 +1610,53 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
               </div>
 
               {/* Advanced catalog filters and commands */}
-              <div className="flex flex-wrap gap-2 w-full justify-start xl:justify-end items-center">
+              <div className="flex flex-wrap gap-2.5 w-full justify-start xl:justify-end items-center">
                 
                 {/* Branch view select / consolidated */}
-                <span className="text-[10px] uppercase font-black tracking-widest text-m3-on-surface-variant/70 pl-2">View scope:</span>
-                <select
-                  value={selectedViewBranchId}
-                  onChange={e => setSelectedViewBranchId(e.target.value)}
-                  className="p-2 border-b-2 border-emerald-500 bg-m3-surface-lowest text-xs text-m3-on-surface focus:outline-none rounded-t-md cursor-pointer transition-colors font-extrabold text-emerald-500"
-                >
-                  <option value="consolidated">HQ Consolidated (HQ Master)</option>
-                  {branches.filter(b => !b.isDeleted).map((b) => (
-                    <option key={b.id} value={b.id}>{b.name.replace('Emman Tile Center ', 'Branch: ')}</option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-1.5 bg-m3-surface-lowest border border-emerald-500/30 px-3 py-1.5 rounded-xl shadow-sm">
+                  <span className="text-[9px] uppercase font-black tracking-widest text-emerald-600 font-mono">View scope:</span>
+                  <select
+                    value={selectedViewBranchId}
+                    onChange={e => setSelectedViewBranchId(e.target.value)}
+                    className="bg-transparent text-xs text-emerald-500 focus:outline-none cursor-pointer transition-colors font-extrabold outline-none"
+                  >
+                    <option value="consolidated">HQ Consolidated (HQ Master)</option>
+                    {branches.filter(b => !b.isDeleted).map((b) => (
+                      <option key={b.id} value={b.id}>{b.name.replace('Emman Tile Center ', 'Branch: ')}</option>
+                    ))}
+                  </select>
+                </div>
 
                 {/* Category select */}
-                <select
-                  value={categoryFilter}
-                  onChange={e => setCategoryFilter(e.target.value)}
-                  className="p-2 border-b-2 border-m3-outline-variant/60 focus:border-m3-primary bg-m3-surface-lowest text-xs text-m3-on-surface focus:outline-none rounded-t-md cursor-pointer transition-colors font-medium"
-                >
-                  <option value="All">All Categories</option>
-                  {categories.slice(0, 16).map((cat, i) => (
-                    <option key={i} value={cat}>{cat}</option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-1.5 bg-m3-surface-lowest border border-m3-outline-variant/25 px-3 py-1.5 rounded-xl shadow-sm">
+                  <span className="text-[9px] uppercase font-black tracking-widest text-m3-on-surface-variant font-mono">Category:</span>
+                  <select
+                    value={categoryFilter}
+                    onChange={e => setCategoryFilter(e.target.value)}
+                    className="bg-transparent text-xs text-m3-on-surface focus:outline-none cursor-pointer transition-colors font-semibold outline-none"
+                  >
+                    <option value="All">All Categories</option>
+                    {categories.slice(0, 16).map((cat, i) => (
+                      <option key={i} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
 
                 {/* Status select */}
-                <select
-                  value={statusFilter}
-                  onChange={e => setStatusFilter(e.target.value)}
-                  className="p-2 border-b-2 border-m3-outline-variant/60 focus:border-m3-primary bg-m3-surface-lowest text-xs text-m3-on-surface focus:outline-none rounded-t-md cursor-pointer transition-colors font-medium"
-                >
-                  <option value="All">All Statuses</option>
-                  <option value="In Stock">In Stock</option>
-                  <option value="Low Stock">● Low Stock</option>
-                  <option value="Critical">● Critical Stock</option>
-                  <option value="Out of Stock">● Out of Stock</option>
-                </select>
+                <div className="flex items-center gap-1.5 bg-m3-surface-lowest border border-m3-outline-variant/25 px-3 py-1.5 rounded-xl shadow-sm">
+                  <span className="text-[9px] uppercase font-black tracking-widest text-m3-on-surface-variant font-mono">Status:</span>
+                  <select
+                    value={statusFilter}
+                    onChange={e => setStatusFilter(e.target.value)}
+                    className="bg-transparent text-xs text-m3-on-surface focus:outline-none cursor-pointer transition-colors font-semibold outline-none"
+                  >
+                    <option value="All">All Statuses</option>
+                    <option value="In Stock">In Stock</option>
+                    <option value="Low Stock">● Low Stock</option>
+                    <option value="Critical">● Critical Stock</option>
+                    <option value="Out of Stock">● Out of Stock</option>
+                  </select>
+                </div>
 
                 {allowedToModify && (
                   <>
@@ -1323,8 +1681,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
           </div>
 
           {/* Database Catalog Table List */}
-          <div className="m3-card shadow-sm overflow-x-auto p-0 scrollbar-thin scrollbar-thumb-m3-outline-variant">
-            <table className={`w-full text-left border-collapse table-auto text-xs transition-all ${isCompactColumns ? 'min-w-[700px]' : 'min-w-[1280px]'}`}>
+          <div className="m3-card shadow-sm p-0 overflow-hidden">
+            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-m3-outline-variant">
+              <table className={`w-full text-left border-collapse table-auto text-xs transition-all ${isCompactColumns ? 'min-w-[700px]' : 'min-w-[1280px]'}`}>
               <thead>
                 <tr className="border-b border-m3-outline-variant/20 bg-m3-surface/30 text-[10px] uppercase font-bold text-m3-on-surface-variant tracking-wider">
                   <th className="py-3 px-2 w-10 text-center bg-m3-surface-low/40 select-none"></th>
@@ -1494,6 +1853,23 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                           }>
                             {qty}
                           </div>
+                          {selectedViewBranchId === 'consolidated' && (
+                            <div className="flex flex-wrap justify-center gap-1 mt-1.5 max-w-[180px] mx-auto">
+                              {branches.filter(b => !b.isDeleted).map(b => {
+                                const bStock = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id)?.quantity || 0;
+                                if (bStock === 0) return null;
+                                return (
+                                  <span
+                                    key={b.id}
+                                    className="text-[9px] px-1.5 py-0.5 rounded bg-m3-primary/10 text-m3-primary border border-m3-primary/15 font-sans font-bold whitespace-nowrap"
+                                    title={`${b.name}: ${bStock} Boxes`}
+                                  >
+                                    {b.id}: {bStock}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
                         </td>
 
                         {/* Threshold warnings trigger limit */}
@@ -1519,6 +1895,14 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                               title="View / Print Barcodes & QR Codes"
                             >
                               <QrCode className="h-4 w-4" />
+                            </button>
+
+                            <button
+                              onClick={() => handleQueueRestock(p.id)}
+                              className="p-1.5 text-zinc-500 hover:text-amber-500 hover:bg-amber-500/10 transition-all rounded-full cursor-pointer shrink-0"
+                              title="Queue Restock in Sourcing Desk (+50 Units)"
+                            >
+                              <Truck className="h-4 w-4" />
                             </button>
                             
                             {allowedToModify && (
@@ -1698,73 +2082,74 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                 )}
               </tbody>
             </table>
+          </div>
 
-            {/* Pagination Controls bar */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-m3-surface-low/80 border-t border-m3-outline-variant/30 text-xs">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="font-medium text-m3-on-surface-variant font-mono">
-                  Showing {filteredProducts.length === 0 ? 0 : Math.min(filteredProducts.length, (prodPage - 1) * prodsPerPage + 1)}-{Math.min(filteredProducts.length, prodPage * prodsPerPage)} of {filteredProducts.length} entries
-                </span>
-                <span className="text-zinc-400">|</span>
-                <div className="flex items-center gap-1.5 font-sans">
-                  <span className="text-zinc-500 text-[11px]">Show</span>
-                  <select
-                    value={prodsPerPage}
-                    onChange={(e) => setProdsPerPage(Number(e.target.value))}
-                    className="bg-m3-surface-lowest text-m3-on-surface border border-m3-outline-variant/35 rounded-md px-1.5 py-1 text-xs focus:outline-none focus:border-m3-primary font-mono cursor-pointer"
-                  >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                  </select>
-                  <span className="text-zinc-500 text-[11px]">entries per page</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5 select-none">
-                <button
-                  type="button"
-                  disabled={prodPage === 1}
-                  onClick={() => setProdPage(prev => Math.max(1, prev - 1))}
-                  className="px-3.5 py-1.5 rounded-lg border border-m3-outline-variant/30 text-m3-on-surface hover:bg-m3-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[10px]"
+          {/* Pagination Controls bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-m3-surface-low/80 border-t border-m3-outline-variant/30 text-xs">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="font-medium text-m3-on-surface-variant font-mono">
+                Showing {filteredProducts.length === 0 ? 0 : Math.min(filteredProducts.length, (prodPage - 1) * prodsPerPage + 1)}-{Math.min(filteredProducts.length, prodPage * prodsPerPage)} of {filteredProducts.length} entries
+              </span>
+              <span className="text-zinc-400">|</span>
+              <div className="flex items-center gap-1.5 font-sans">
+                <span className="text-zinc-500 text-[11px]">Show</span>
+                <select
+                  value={prodsPerPage}
+                  onChange={(e) => setProdsPerPage(Number(e.target.value))}
+                  className="bg-m3-surface-lowest text-m3-on-surface border border-m3-outline-variant/35 rounded-md px-1.5 py-1 text-xs focus:outline-none focus:border-m3-primary font-mono cursor-pointer"
                 >
-                  Prev
-                </button>
-                {Array.from({ length: totalProdPages }).map((_, i) => {
-                  const pNum = i + 1;
-                  if (totalProdPages > 5 && Math.abs(pNum - prodPage) > 2 && pNum !== 1 && pNum !== totalProdPages) {
-                    if (pNum === 2 || pNum === totalProdPages - 1) {
-                      return <span key={pNum} className="px-1.5 text-zinc-400">...</span>;
-                    }
-                    return null;
-                  }
-                  return (
-                    <button
-                      key={pNum}
-                      type="button"
-                      onClick={() => setProdPage(pNum)}
-                      className={`h-7.5 w-7.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
-                        prodPage === pNum
-                          ? 'bg-m3-primary text-m3-on-primary shadow-sm'
-                          : 'border border-m3-outline-variant/20 hover:bg-m3-primary/10 text-m3-on-surface-variant'
-                      }`}
-                    >
-                      {pNum}
-                    </button>
-                  );
-                })}
-                <button
-                  type="button"
-                  disabled={prodPage === totalProdPages}
-                  onClick={() => setProdPage(prev => Math.min(totalProdPages, prev + 1))}
-                  className="px-3.5 py-1.5 rounded-lg border border-m3-outline-variant/30 text-m3-on-surface hover:bg-m3-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[10px]"
-                >
-                  Next
-                </button>
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+                <span className="text-zinc-500 text-[11px]">entries per page</span>
               </div>
             </div>
+            <div className="flex items-center gap-1.5 select-none">
+              <button
+                type="button"
+                disabled={prodPage === 1}
+                onClick={() => setProdPage(prev => Math.max(1, prev - 1))}
+                className="px-3.5 py-1.5 rounded-lg border border-m3-outline-variant/30 text-m3-on-surface hover:bg-m3-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[10px]"
+              >
+                Prev
+              </button>
+              {Array.from({ length: totalProdPages }).map((_, i) => {
+                const pNum = i + 1;
+                if (totalProdPages > 5 && Math.abs(pNum - prodPage) > 2 && pNum !== 1 && pNum !== totalProdPages) {
+                  if (pNum === 2 || pNum === totalProdPages - 1) {
+                    return <span key={pNum} className="px-1.5 text-zinc-400">...</span>;
+                  }
+                  return null;
+                }
+                return (
+                  <button
+                    key={pNum}
+                    type="button"
+                    onClick={() => setProdPage(pNum)}
+                    className={`h-7.5 w-7.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                      prodPage === pNum
+                        ? 'bg-m3-primary text-m3-on-primary shadow-sm'
+                        : 'border border-m3-outline-variant/20 hover:bg-m3-primary/10 text-m3-on-surface-variant'
+                    }`}
+                  >
+                    {pNum}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                disabled={prodPage === totalProdPages}
+                onClick={() => setProdPage(prev => Math.min(totalProdPages, prev + 1))}
+                className="px-3.5 py-1.5 rounded-lg border border-m3-outline-variant/30 text-m3-on-surface hover:bg-m3-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[10px]"
+              >
+                Next
+              </button>
+            </div>
           </div>
+        </div>
         </>
       )}
 
@@ -1773,9 +2158,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
         <>
           {/* Movement search filters */}
           <div className="bg-m3-surface-low p-4 rounded-[28px] border border-m3-outline-variant/20 shadow-sm">
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
               
-              <div className="relative w-full md:max-w-xs shrink-0">
+              <div className="relative w-full md:max-w-md shrink-0">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-m3-primary">
                   <Search className="h-4 w-4" />
                 </span>
@@ -1784,12 +2169,12 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   placeholder="Filter by ref ID, code, notes, user..."
                   value={movementSearch}
                   onChange={e => setMovementSearch(e.target.value)}
-                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2.5 pl-10 pr-8 text-xs text-m3-on-surface focus:outline-none transition-all rounded-t-md font-medium"
+                  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/25 focus:border-m3-primary px-3.5 py-2.5 pl-10 pr-8 text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary/10 transition-all rounded-xl font-medium"
                 />
                 {movementSearch && (
                   <button
                     onClick={() => setMovementSearch('')}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-zinc-400 hover:text-rose-500 cursor-pointer text-sm font-black transition-colors"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-zinc-400 hover:text-rose-500 cursor-pointer text-xs font-black transition-colors"
                     title="Clear search"
                   >
                     ✗
@@ -1798,21 +2183,23 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
               </div>
 
               <div className="flex items-center gap-2 w-full justify-start md:justify-end">
-                <span className="text-[10px] font-black uppercase tracking-widest text-m3-on-surface-variant">Type:</span>
-                <select
-                  value={movementTypeFilter}
-                  onChange={e => setMovementTypeFilter(e.target.value)}
-                  className="p-2 border-b-2 border-m3-outline-variant/60 focus:border-m3-primary bg-m3-surface-lowest text-xs text-m3-on-surface focus:outline-none rounded-t-md cursor-pointer transition-colors font-bold"
-                >
-                  <option value="All">All Movements</option>
-                  <option value="IN">Intake (IN)</option>
-                  <option value="OUT">Outtake (OUT)</option>
-                  <option value="ADJUST">Correction (ADJUST)</option>
-                  <option value="TRANSFER">Inter-Branch (TRANSFER)</option>
-                </select>
+                <div className="flex items-center gap-1.5 bg-m3-surface-lowest border border-m3-outline-variant/25 px-3 py-1.5 rounded-xl shadow-sm">
+                  <span className="text-[9px] uppercase font-black tracking-widest text-m3-on-surface-variant font-mono">Type:</span>
+                  <select
+                    value={movementTypeFilter}
+                    onChange={e => setMovementTypeFilter(e.target.value)}
+                    className="bg-transparent text-xs text-m3-on-surface focus:outline-none cursor-pointer transition-colors font-bold outline-none"
+                  >
+                    <option value="All">All Movements</option>
+                    <option value="IN">Intake (IN)</option>
+                    <option value="OUT">Outtake (OUT)</option>
+                    <option value="ADJUST">Correction (ADJUST)</option>
+                    <option value="TRANSFER">Inter-Branch (TRANSFER)</option>
+                  </select>
+                </div>
               </div>
-
             </div>
+
           </div>
 
           {/* Activity Logs Table */}
@@ -2242,20 +2629,16 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   <thead>
                     <tr className="bg-m3-surface text-[10px] font-black uppercase tracking-wider text-zinc-500 border-b border-m3-outline-variant/15">
                       <th className="py-3 px-4">Associated Product</th>
-                      <th className="py-3 px-4 text-center">B1: Cebu Main HQ</th>
-                      <th className="py-3 px-4 text-center">B2: Bacolod Branch</th>
-                      <th className="py-3 px-4 text-center">B3: Iloilo Hub</th>
-                      <th className="py-3 px-4 text-center">B4: Dumaguete Center</th>
+                      {branches.filter(b => !b.isDeleted).map((b) => (
+                        <th key={b.id} className="py-3 px-4 text-center">{b.id}: {b.name.replace('Emman Tile Center ', '').replace('TilePoint ', '')}</th>
+                      ))}
                       <th className="py-3 px-4 text-right">Unified Global Pools</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-m3-outline-variant/10 text-xs font-semibold">
                     {products.filter(p => !p.isDeleted).map((p) => {
-                      const b1Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B1')?.quantity || 0;
-                      const b2Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B2')?.quantity || 0;
-                      const b3Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B3')?.quantity || 0;
-                      const b4Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B4')?.quantity || 0;
-                      const totalGlobal = b1Stock + b2Stock + b3Stock + b4Stock;
+                      const activeBranches = branches.filter(b => !b.isDeleted);
+                      let totalGlobal = 0;
 
                       return (
                         <tr key={p.id} className="hover:bg-m3-surface-high/30 transition-colors">
@@ -2265,32 +2648,36 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                           </td>
                           
                           {/* Branch cells with interactive alerts */}
-                          <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
-                            <span className={b1Stock < 30 ? 'bg-amber-500/15 text-amber-600 border border-amber-500/20 px-2 py-0.5 rounded-lg text-xs' : 'text-m3-on-surface'}>
-                              {b1Stock} boxes
-                            </span>
-                          </td>
+                          {activeBranches.map((b) => {
+                            const bStockRec = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id);
+                            const bStock = bStockRec?.quantity || 0;
+                            totalGlobal += bStock;
 
-                          <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
-                            <span className={b2Stock < 15 ? 'bg-rose-500/15 text-rose-600 border border-rose-500/20 px-2 py-0.5 rounded-lg text-xs' : 'text-m3-on-surface'}>
-                              {b2Stock} boxes
-                            </span>
-                          </td>
+                            const threshold = bStockRec?.lowStockThresholdOverride !== undefined
+                              ? bStockRec.lowStockThresholdOverride
+                              : p.minimumStock;
 
-                          <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
-                            <span className={b3Stock < 15 ? 'bg-rose-500/15 text-rose-600 border border-rose-500/20 px-2 py-0.5 rounded-lg text-xs' : 'text-m3-on-surface'}>
-                              {b3Stock} boxes
-                            </span>
-                          </td>
+                            const isLow = bStock <= threshold;
+                            const isZero = bStock === 0;
 
-                          <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
-                            <span className={b4Stock < 15 ? 'bg-rose-500/15 text-rose-600 border border-rose-500/20 px-2 py-0.5 rounded-lg text-xs' : 'text-m3-on-surface'}>
-                              {b4Stock} boxes
-                            </span>
-                          </td>
+                            let alertClass = 'text-m3-on-surface';
+                            if (isZero) {
+                              alertClass = 'bg-rose-500/15 text-rose-600 border border-rose-500/20 px-2 py-0.5 rounded-lg text-xs';
+                            } else if (isLow) {
+                              alertClass = 'bg-amber-500/15 text-amber-600 border border-amber-500/20 px-2 py-0.5 rounded-lg text-xs';
+                            }
+
+                            return (
+                              <td key={b.id} className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
+                                <span className={alertClass}>
+                                  {bStock} {p.unit || 'boxes'}
+                                </span>
+                              </td>
+                            );
+                          })}
 
                           <td className="py-3.5 px-4 text-right font-mono font-black text-sm text-m3-primary">
-                            {totalGlobal} units
+                            {totalGlobal} {p.unit || 'boxes'}
                           </td>
                         </tr>
                       );
@@ -2521,11 +2908,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   </thead>
                   <tbody className="divide-y divide-m3-outline-variant/10 text-xs font-semibold">
                     {products.filter(p => !p.isDeleted).map((p) => {
-                      const b1Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B1')?.quantity || 0;
-                      const b2Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B2')?.quantity || 0;
-                      const b3Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B3')?.quantity || 0;
-                      const b4Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B4')?.quantity || 0;
-                      const totalGlobal = b1Stock + b2Stock + b3Stock + b4Stock;
+                      const totalGlobal = branchStock
+                        .filter(bs => bs.productId === p.id && branches.some(b => b.id === bs.branchId && !b.isDeleted))
+                        .reduce((acc, curr) => acc + curr.quantity, 0);
 
                       const ages: Record<string, number> = { 'P1': 14, 'P2': 210, 'P3': 45, 'P4': 185 };
                       const ageDays = ages[p.id] || 35;
@@ -2581,7 +2966,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
       )}
 
       {/* VIEW 5: LEGACY POS DATA MIGRATION ENGINE */}
-      {activeSubTab === 'import' && false && (
+      {activeSubTab === 'import' && (
         <div className="space-y-6 animate-fade-in text-left">
           <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] p-6 shadow-sm space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-m3-outline-variant/15 pb-4">
@@ -2604,80 +2989,131 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
               <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
                 <span className="text-[10px] font-black text-indigo-500 uppercase tracking-wider block">STEP 1: Legacy Extraction</span>
                 <p className="text-xs text-m3-on-surface-variant font-medium">
-                  Export your old products list from your older checkout apps in <strong>JSON</strong> or copy your product inventory rows.
+                  Export product database or copy inventory rows from your older checkout apps in <strong>CSV</strong> or <strong>JSON</strong> format.
                 </p>
               </div>
               <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
-                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-wider block">STEP 2: Map Fields</span>
+                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-wider block">STEP 2: Smart Mapper</span>
                 <p className="text-xs text-m3-on-surface-variant font-medium">
-                  Paste the data array into the migration zone. The smart importer automatically maps keys like codes, costs, and brands.
+                  Paste the raw CSV rows or JSON array. The smart importer automatically maps keys like codes, quantities, and prices!
                 </p>
               </div>
               <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
-                <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider block">STEP 3: Commit Import</span>
+                <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider block">STEP 3: Verify & Commit</span>
                 <p className="text-xs text-m3-on-surface-variant font-medium">
-                  Verify the parsed dry-run entries on the interactive table layout, then commit the transfer to register them.
+                  The engine parses columns, generates robust secure keys/IDs, and upserts product records into the system catalog.
                 </p>
               </div>
             </div>
 
             {/* Paste Space */}
             <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <label className="text-xs font-black uppercase text-m3-primary tracking-wider">Paste raw older POS JSON data here</label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const sample = [
-                      {
-                        "productName": "Heritage White Glazed Porcelain",
-                        "productCode": "HW-GL-80",
-                        "skuCode": "SKU-HW-80",
-                        "barcode": "4801122334455",
-                        "category": "Porcelain Tiles",
-                        "brand": "Heritage Slabs",
-                        "costPrice": 420,
-                        "sellingPrice": 650,
-                        "size": "80x80 cm",
-                        "stockQuantity": 150
-                      },
-                      {
-                        "productName": "EcoSlate Anti-Slip Terracotta",
-                        "productCode": "ES-AS-30",
-                        "skuCode": "SKU-ES-30",
-                        "barcode": "4805566778899",
-                        "category": "Ceramic Tiles",
-                        "brand": "EcoStone",
-                        "costPrice": 180,
-                        "sellingPrice": 280,
-                        "size": "30x30 cm",
-                        "stockQuantity": 320
-                      }
-                    ];
-                    setRawImportText(JSON.stringify(sample, null, 2));
-                    showToast("Loaded high-fidelity Sample older POS Dataset into migration zone!");
-                  }}
-                  className="text-[11px] font-bold text-m3-primary hover:text-m3-primary/80 bg-m3-primary/10 px-3.5 py-1.5 rounded-full transition-all cursor-pointer"
-                >
-                  ⚡ Load High-Fidelity POS Sample
-                </button>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <label className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">Paste raw older POS CSV rows or JSON data here</label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sample = [
+                        {
+                          "productName": "Heritage White Glazed Porcelain",
+                          "productCode": "HW-GL-80",
+                          "skuCode": "SKU-HW-80",
+                          "barcode": "4801122334455",
+                          "category": "Porcelain Tiles",
+                          "brand": "Heritage Slabs",
+                          "costPrice": 420,
+                          "sellingPrice": 650,
+                          "size": "80x80 cm",
+                          "stockQuantity": 150
+                        },
+                        {
+                          "productName": "EcoSlate Anti-Slip Terracotta",
+                          "productCode": "ES-AS-30",
+                          "skuCode": "SKU-ES-30",
+                          "barcode": "4805566778899",
+                          "category": "Ceramic Tiles",
+                          "brand": "EcoStone",
+                          "costPrice": 180,
+                          "sellingPrice": 280,
+                          "size": "30x30 cm",
+                          "stockQuantity": 320
+                        }
+                      ];
+                      setRawImportText(JSON.stringify(sample, null, 2));
+                      showToast("Loaded high-fidelity Sample older POS JSON Dataset!");
+                    }}
+                    className="text-[10px] font-black uppercase text-m3-primary hover:text-m3-primary/80 bg-m3-primary/10 px-3.5 py-1.5 rounded-full transition-all cursor-pointer font-sans"
+                  >
+                    ⚡ Load JSON Sample
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sampleCsv = `Product Name,Product Code,SKU,Barcode,Category,Brand,Cost Price,Selling Price,Size,Quantity\n"Heritage White Glazed Porcelain",HW-GL-80,SKU-HW-80,4801122334455,Porcelain Tiles,Heritage Slabs,420,650,80x80 cm,150\n"EcoSlate Anti-Slip Terracotta",ES-AS-30,SKU-ES-30,4805566778899,Ceramic Tiles,EcoStone,180,280,30x30 cm,320`;
+                      setRawImportText(sampleCsv);
+                      showToast("Loaded high-fidelity Sample older POS CSV Dataset!");
+                    }}
+                    className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 hover:opacity-85 bg-emerald-500/10 px-3.5 py-1.5 rounded-full transition-all cursor-pointer font-sans"
+                  >
+                    📊 Load CSV Sample
+                  </button>
+                </div>
               </div>
 
-              <textarea
-                value={rawImportText}
-                onChange={(e) => setRawImportText(e.target.value)}
-                rows={8}
-                placeholder={`[
+            <div className="space-y-4">
+              <div 
+                onDragOver={handleImportDragOver}
+                onDragLeave={handleImportDragLeave}
+                onDrop={handleImportDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`p-10 border-2 border-dashed rounded-[24px] text-center space-y-3 transition-all cursor-pointer ${
+                  isDragging 
+                    ? 'border-m3-primary bg-m3-primary/10 shadow-lg' 
+                    : 'border-m3-outline-variant/45 hover:border-m3-primary/60 bg-m3-surface-low'
+                }`}
+              >
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileSelect} 
+                  className="hidden" 
+                  accept=".csv,.json,.txt"
+                />
+                <Upload className="h-8 w-8 text-m3-primary mx-auto animate-bounce" />
+                <div>
+                  <h4 className="text-sm font-black uppercase text-m3-on-surface">Drag &amp; Drop Older POS File Here</h4>
+                  <p className="text-[11px] text-m3-on-surface-variant mt-1.5 max-w-md mx-auto select-none font-medium">
+                    Supports spreadsheet .csv exports, backup raw .json database copies, text tables. Or click inside to request manual file browser dialog.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1 block font-mono">Or paste clipboard rows / raw database snippet text below:</label>
+                <textarea
+                  value={rawImportText}
+                  onChange={(e) => setRawImportText(e.target.value)}
+                  rows={8}
+                  placeholder={`--- CSV FORMAT EXAMPLE ---
+Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
+"Old POS Tile X",OPT-001,120.00,190.00,80,Porcelain,"ETC_DIPOLOG MAIN"
+
+--- OR JSON FORMAT EXAMPLE ---
+[
   {
-    "productName": "Old POS Ceramic Tile x5",
-    "productCode": "OP-CER-01",
-    "costPrice": 120,
-    "sellingPrice": 190,
-    "stockQuantity": 80
+    "productName": "Old POS Tile Y",
+    "productCode": "OPT-002",
+    "costPrice": 150,
+    "sellingPrice": 240,
+    "stockQuantity": 110,
+    "origin": "ETC_DIPOLOG MAIN"
   }
 ]`}
-                className="w-full bg-m3-surface-lowest border border-m3-outline-variant/40 focus:border-m3-primary p-4 text-xs font-mono text-m3-on-surface rounded-3xl focus:outline-none transition-colors"
-              />
+                  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/40 focus:border-m3-primary p-4 text-xs font-mono text-m3-on-surface rounded-3xl focus:outline-none transition-colors"
+                />
+              </div>
+            </div>
             </div>
 
             <div className="flex flex-wrap gap-2 pt-2">
@@ -3807,6 +4243,146 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   <span>Verify & Commit Import</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NEW MODAL: Newly Discovered Outlets / Branches Configure & Register Form Panel */}
+      {showBranchConfigs && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-m3-scrim/60 backdrop-blur-sm animate-fade-in text-m3-on-surface">
+          <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[28px] p-6 shadow-2xl space-y-6 w-full max-w-2xl animate-scale-up text-left max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-4">
+              <div>
+                <h3 className="text-base font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                  <span className="p-1.5 rounded-xl bg-amber-500/10">📍</span>
+                  <span>Brand New Outlet Locations Detected!</span>
+                </h3>
+                <p className="text-xs text-m3-on-surface-variant font-medium mt-1 font-sans">
+                  The imported dataset references location(s) not currently registered in TilePoint. Please complete their professional workplace profiles to finish:
+                </p>
+              </div>
+              <button
+                onClick={() => setShowBranchConfigs(false)}
+                className="text-zinc-500 hover:text-rose-500 p-2 hover:bg-rose-500/10 rounded-full transition-all text-xl cursor-pointer font-black"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              {pendingBranches.map((pb, idx) => (
+                <div key={idx} className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-3 font-sans">
+                  <div className="pb-2 border-b border-m3-outline-variant/10 flex justify-between items-center">
+                    <span className="text-xs font-black uppercase tracking-wider text-amber-500">
+                      🏢 Detected Branch Outpost: {pb.name}
+                    </span>
+                    <span className="text-[9px] bg-m3-secondary-container text-m3-on-secondary-container px-2.5 py-0.5 rounded font-mono font-bold uppercase">Pending Profile</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1">Manager name *</label>
+                      <input
+                        type="text"
+                        value={pb.manager}
+                        onChange={(e) => {
+                          const updated = [...pendingBranches];
+                          updated[idx].manager = e.target.value;
+                          setPendingBranches(updated);
+                        }}
+                        className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/55 focus:border-m3-primary p-2 focus:outline-none text-m3-on-surface transition-colors rounded-t font-sans"
+                        placeholder="e.g. Maria Clara"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1 font-mono">Contact Phone *</label>
+                      <input
+                        type="text"
+                        value={pb.phone}
+                        onChange={(e) => {
+                          const updated = [...pendingBranches];
+                          updated[idx].phone = e.target.value;
+                          setPendingBranches(updated);
+                        }}
+                        className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/55 focus:border-m3-primary p-2 focus:outline-none text-m3-on-surface transition-colors rounded-t font-sans"
+                        placeholder="e.g. +63 920 123 4567"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1">Full Workplace Dispatch Address *</label>
+                      <input
+                        type="text"
+                        value={pb.address}
+                        onChange={(e) => {
+                          const updated = [...pendingBranches];
+                          updated[idx].address = e.target.value;
+                          setPendingBranches(updated);
+                        }}
+                        className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/55 focus:border-m3-primary p-2 focus:outline-none text-m3-on-surface transition-colors rounded-t font-sans"
+                        placeholder="e.g. Rizal Highway, Dipolog City, Zamboanga del Norte"
+                        required
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1 font-sans">
+                      <input
+                        type="checkbox"
+                        id={`modal-dist-hub-${idx}`}
+                        checked={pb.isDistributionBranch}
+                        onChange={(e) => {
+                          const updated = [...pendingBranches];
+                          updated[idx].isDistributionBranch = e.target.checked;
+                          setPendingBranches(updated);
+                        }}
+                        className="rounded border-m3-outline-variant text-m3-primary focus:ring-m3-primary/50"
+                      />
+                      <label htmlFor={`modal-dist-hub-${idx}`} className="text-[10px] font-black uppercase text-m3-on-surface-variant cursor-pointer select-none">
+                        Is Distribution Hub
+                      </label>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1 font-sans">
+                      <label className="text-[10px] font-black uppercase text-m3-on-surface-variant block select-none">
+                        Assigned Force:
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={pb.staffCount}
+                        onChange={(e) => {
+                          const updated = [...pendingBranches];
+                          updated[idx].staffCount = parseInt(e.target.value) || 3;
+                          setPendingBranches(updated);
+                        }}
+                        className="w-16 bg-m3-surface-lowest border-b-2 border-m3-outline-variant/55 focus:border-m3-primary p-1 focus:outline-none text-m3-on-surface text-center font-mono text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-m3-outline-variant/15 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowBranchConfigs(false)}
+                className="px-4 py-2.5 text-xs font-black uppercase tracking-wider rounded-full hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
+              >
+                Discard Import
+              </button>
+              <button
+                onClick={handleFinalizeImportWithBranches}
+                className="px-6 py-2.5 bg-m3-primary hover:bg-m3-primary/95 text-white font-black text-xs uppercase tracking-wider rounded-full shadow transition-all active:scale-95 cursor-pointer flex items-center gap-2"
+              >
+                <Check className="h-4 w-4" />
+                <span>Instantiate Outlets & Commit Products</span>
+              </button>
             </div>
           </div>
         </div>

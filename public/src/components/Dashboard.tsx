@@ -65,7 +65,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
     suppliers,
     updateBranch,
     updateCurrentUser,
-    checkoutSale
+    checkoutSale,
+    simulationModeActive
   } = useDb();
 
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
@@ -107,34 +108,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
   const [editingBranchQuota, setEditingBranchQuota] = useState<number>(2000000);
   const [editingBranchStaff, setEditingBranchStaff] = useState<number>(10);
 
-  // Enterprise Systems Onboarding Walkthrough Setup Wizard
-  const [showSetupWizard, setShowSetupWizard] = useState<boolean>(() => {
-    if (currentUser.role !== UserRole.ADMIN) return false;
-    return localStorage.getItem('tilepoint_setup_completed') !== 'true';
-  });
-  const [setupStep, setSetupStep] = useState<number>(1);
-  const [customCompanyName, setCustomCompanyName] = useState<string>(() => {
-    return localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center';
-  });
-  const [customStoreLogo, setCustomStoreLogo] = useState<string>(() => {
-    return localStorage.getItem('tilepoint_store_logo_v1') || '';
-  });
-  const [customTaxRate, setCustomTaxRate] = useState<number>(12);
-  const [customCurrency, setCustomCurrency] = useState<string>('₱');
-  const [customTargets, setCustomTargets] = useState<Record<string, number>>({
-    'B1': 2200000,
-    'B2': 1800000,
-    'B3': 1500000,
-    'B4': 1200000
-  });
-  const [customStaff, setCustomStaff] = useState<Record<string, number>>({
-    'B1': 15,
-    'B2': 10,
-    'B3': 8,
-    'B4': 6
-  });
-  const [setupAdminEmail, setSetupAdminEmail] = useState<string>(currentUser.email || 'erica.manaban.04@gmail.com');
-  const [setupManagerPin, setSetupManagerPin] = useState<string>(currentUser.managerPin || '4321');
+  const [showSetupWizard, setShowSetupWizard] = useState<boolean>(false);
 
   // Real-time Admin Daily Sales Monitor states
   const [dailySalesSearch, setDailySalesSearch] = useState<string>('');
@@ -149,20 +123,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
     }, 4500);
   };
 
-  const handleWizardLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 1.5 * 1024 * 1024) {
-        showToastMsg('Store Logo size must be less than 1.5MB.', 'error');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setCustomStoreLogo(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+
 
   // Resolve current active branch filter based on user role and Admin select choice
   const activeBranchId = currentUser.role === UserRole.ADMIN
@@ -332,6 +293,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
   const maxWeeklyAmount = Math.max(...weeklyChartData.map(d => d.amount));
   const maxMonthlyAmount = Math.max(...monthlyChartData.map(d => d.revenue));
 
+  const getMonthlyRatio = (val: number) => {
+    if (!maxMonthlyAmount || isNaN(maxMonthlyAmount) || maxMonthlyAmount <= 0) return 0;
+    const res = val / maxMonthlyAmount;
+    return isNaN(res) || !isFinite(res) ? 0 : res;
+  };
+
   const generateSvgPaths = (data: { month: string; revenue: number; isPredicted?: boolean }[]) => {
     const width = 560;
     const height = 150;
@@ -340,7 +307,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
     const points = data.map((d, idx) => {
       const cx = paddingLeft + (idx / (data.length - 1)) * (width - 40);
-      const cy = totalHeight - (maxMonthlyAmount ? (d.revenue / maxMonthlyAmount) * height : 0);
+      const cy = totalHeight - (getMonthlyRatio(d.revenue) * height);
       return { cx, cy, isPredicted: d.isPredicted, revenue: d.revenue, month: d.month };
     });
 
@@ -557,42 +524,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
     }
   };
 
-  const handleCompleteSetup = () => {
-    try {
-      localStorage.setItem('tilepoint_setup_completed', 'true');
-      localStorage.setItem('tilepoint_company_name_v1', customCompanyName);
-      localStorage.setItem('tilepoint_store_logo_v1', customStoreLogo);
-      localStorage.setItem('tilepoint_tax_rate_v1', String(customTaxRate));
-      localStorage.setItem('tilepoint_currency_v1', customCurrency);
-
-      branches.forEach(b => {
-        let suffix = "";
-        if (b.id === 'B1') suffix = "Main Branch";
-        else if (b.id === 'B2') suffix = "Bacolod Showroom";
-        else if (b.id === 'B3') suffix = "Talisay Depot";
-        else if (b.id === 'B4') suffix = "Silay Warehouse";
-        
-        updateBranch(b.id, {
-          name: `${customCompanyName} ${suffix}`,
-          monthlySales: customTargets[b.id] || b.monthlySales,
-          staffCount: customStaff[b.id] || b.staffCount
-        });
-      });
-
-      updateCurrentUser({
-        email: setupAdminEmail,
-        managerPin: setupManagerPin
-      });
-
-      setShowSetupWizard(false);
-      showToastMsg(`SYSTEM SETUP WALKTHROUGH COMPLETE: ${customCompanyName} system parameters successfully locked!`, 'success');
-    } catch (err) {
-      console.error(err);
-      showToastMsg('Setup execution error failed.', 'error');
-    }
-  };
+  const handleCompleteSetup = () => {};
 
   const renderSetupWizardModal = () => {
+    return null;
+    const showSetupWizard = false;
+    const setupStep = 1 as number;
+    const customCompanyName = '';
+    const customStoreLogo = '';
+    const customTaxRate = 12;
+    const customCurrency = '₱';
+    const customTargets: Record<string, number> = {};
+    const customStaff: Record<string, number> = {};
+    const setupAdminEmail = '';
+    const setupManagerPin = '';
+    const setSetupStep = (v: any) => {};
+    const setCustomCompanyName = (v: any) => {};
+    const setCustomStoreLogo = (v: any) => {};
+    const setCustomCurrency = (v: any) => {};
+    const setCustomTaxRate = (v: any) => {};
+    const setCustomTargets = (v: any) => {};
+    const setCustomStaff = (v: any) => {};
+    const setSetupAdminEmail = (v: any) => {};
+    const setSetupManagerPin = (v: any) => {};
+    const handleWizardLogoChange = (e: any) => {};
+
     if (!showSetupWizard) return null;
 
     return (
@@ -972,24 +928,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
               </div>
 
               <div className="flex gap-2 w-full sm:w-auto justify-end">
-                <button 
-                  onClick={() => setShowSetupWizard(true)}
-                  className="p-3 text-xs bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 text-emerald-400 rounded-2xl border border-emerald-500/30 hover:from-emerald-500 hover:to-emerald-600 hover:text-white font-extrabold transition-all flex items-center gap-1.5 cursor-pointer shadow-md active:scale-95"
-                  title="Configure core company thresholds & branding profiles"
-                >
-                  Setup Wizard
-                </button>
-                <button 
-                  onClick={() => onNavigate('architecture')}
-                  className="p-3 text-xs bg-m3-surface-low rounded-2xl border border-m3-outline-variant/30 hover:bg-m3-primary hover:text-m3-on-primary font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
-                >
-                  <Database className="h-4 w-4" /> ERD Studio
-                </button>
                 <button
                   onClick={() => {
                     window.location.reload();
                   }}
-                  className="p-3 text-xs bg-m3-surface-low rounded-2xl border border-m3-outline-variant/30 hover:bg-m3-primary/10 transition-all flex items-center gap-1 cursor-pointer shadow-sm active:scale-95"
+                  className="p-3 text-xs bg-m3-surface-low rounded-2xl border border-m3-outline-variant/30 hover:bg-m3-primary/10 transition-all flex items-center gap-1 cursor-pointer shadow-sm active:scale-95 font-sans font-bold text-m3-on-surface"
                   title="Force refresh database records"
                 >
                   <RefreshCw className="h-4 w-4 text-m3-primary" /> Reload Feed
@@ -1018,6 +961,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              {simulationModeActive && (
               <button
                 type="button"
                 onClick={() => {
@@ -1067,6 +1011,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
               >
                 Simulate checkout
               </button>
+              )}
 
               <button
                 type="button"
@@ -2137,7 +2082,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
             </div>
 
             <div className="border-t border-m3-outline-variant/10 pt-3 mt-4 text-[10px] font-mono text-zinc-400">
-              Matches warehouse stock matrices dynamically
+              Updates warehouse inventory levels in real-time
             </div>
           </div>
           
@@ -2349,31 +2294,166 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                       </button>
                     </div>
 
-                    {(activeDrilldown === 'products' ? activeProducts : activeDrilldown === 'low' ? lowStockProducts : activeDrilldown === 'critical' ? criticalStockProducts : outOfStockProducts).map((p, idx) => (
-                      <div key={idx} className="p-3 bg-m3-surface-lowest rounded-xl border border-m3-outline-variant/15 text-xs flex flex-col justify-between gap-2.5">
-                        <div className="space-y-1">
-                          <div className="font-extrabold text-m3-on-surface leading-snug">{p.productName}</div>
-                          <div className="text-[10.5px] text-zinc-400 flex items-center justify-between font-mono">
-                            <span>SKU: {p.sku}</span>
-                            <span className="text-m3-primary font-bold">Price: ₱{p.sellingPrice.toLocaleString()}</span>
+                    {(activeDrilldown === 'products' ? activeProducts : activeDrilldown === 'low' ? lowStockProducts : activeDrilldown === 'critical' ? criticalStockProducts : outOfStockProducts).map((p, idx) => {
+                      // Calculate branch stock breakdown ("display it per item")
+                      const itemBranchStocks = branchStock.filter(bs => bs.productId === p.id);
+                      
+                      // Identify if any branch has excess stock (>25 boxes)
+                      const excessBranches = itemBranchStocks.filter(bs => bs.quantity > 25);
+                      const currentBranchId = currentUser.branchAssignmentId || 'B1';
+                      
+                      return (
+                        <div key={idx} className="p-3 bg-m3-surface-lowest rounded-xl border border-m3-outline-variant/15 text-xs flex flex-col justify-between gap-2.5">
+                          <div className="space-y-1">
+                            <div className="font-extrabold text-m3-on-surface leading-snug flex items-center justify-between">
+                              <span>{p.productName}</span>
+                              {p.brand && (
+                                <span className="text-[9.5px] font-mono uppercase bg-amber-500/10 text-amber-500 font-bold px-2 py-0.5 rounded-full">
+                                  {p.brand}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10.5px] text-zinc-400 flex items-center justify-between font-mono">
+                              <span>SKU: {p.sku}</span>
+                              <span className="text-m3-primary font-bold">Price: ₱{p.sellingPrice.toLocaleString()}</span>
+                            </div>
+                          </div>
+
+                          {/* Branch Stock Breakdown Display */}
+                          <div className="bg-m3-surface-low/50 p-2 rounded-lg space-y-1 my-1">
+                            <span className="text-[9.5px] font-extrabold text-zinc-400 uppercase tracking-wide block">Branch stock records:</span>
+                            <div className="grid grid-cols-2 gap-1.5 text-[10.5px] font-mono">
+                              {branches.filter(b => !b.isDeleted).map(br => {
+                                const matchedStock = itemBranchStocks.find(bs => bs.branchId === br.id)?.quantity || 0;
+                                const isLow = matchedStock < (p.minimumStock / 2);
+                                return (
+                                  <div key={br.id} className="flex justify-between items-center pr-2 bg-m3-surface-lowest p-1 rounded">
+                                    <span className="text-zinc-500 truncate max-w-[90px]" title={br.name}>{br.name}:</span>
+                                    <span className={isLow ? "text-red-400 font-bold" : matchedStock > 25 ? "text-emerald-400 font-bold" : "text-m3-on-surface"}>
+                                      {matchedStock} bx {matchedStock > 25 && "📈"}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between border-t border-zinc-500/10 pt-2 text-[10.5px]">
+                            <span>Current Global Stock: <span className="font-black text-m3-primary font-mono">{p.stockQuantity} boxes</span></span>
+                            <span className="text-zinc-500 font-mono">Min req: {p.minimumStock}</span>
+                          </div>
+
+                          {/* Custom Button triggers according to user rules */}
+                          <div className="space-y-1.5 pt-1">
+                            {currentUser.role === 'Admin' ? (
+                              <div className="space-y-1">
+                                <button 
+                                  onClick={() => {
+                                    let cart = [];
+                                    try {
+                                      const cached = localStorage.getItem('tp_po_cart');
+                                      cart = cached ? JSON.parse(cached) : [];
+                                    } catch (e) {}
+                                    if (!cart.some(item => item.productId === p.id)) {
+                                      cart.push({ productId: p.id, quantity: 50 });
+                                      localStorage.setItem('tp_po_cart', JSON.stringify(cart));
+                                    }
+                                    showToastMsg(`Queued "${p.productName}" for Purchase Order! Navigating to Sourcing Desk...`, 'success');
+                                    setTimeout(() => {
+                                      onNavigate('procurement');
+                                      // Force sub-tab to brands so they can compile!
+                                      localStorage.setItem('tp_active_subtab', 'brands');
+                                      window.location.reload();
+                                    }, 900);
+                                  }}
+                                  className="w-full py-1.5 bg-teal-600 hover:bg-teal-500 transition-all text-white font-black rounded-lg text-[10.5px] uppercase cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+                                >
+                                  Direct to PO Sourcing Deck
+                                </button>
+                                
+                                {excessBranches.length > 0 && (
+                                  <div className="pt-1">
+                                    <p className="text-[10px] text-emerald-400 italic font-mono mb-1 text-center">Surplus Stock Available:</p>
+                                    <div className="space-y-1">
+                                      {excessBranches.map(eb => {
+                                        const donor = branches.find(b => b.id === eb.branchId);
+                                        const recipient = branches.find(b => b.id === currentBranchId) || branches[0];
+                                        return (
+                                          <button
+                                            key={eb.branchId}
+                                            onClick={() => {
+                                              try {
+                                                const items = [{ productId: p.id, quantity: 15 }];
+                                                const reason = `Inter-branch surplus transfer initialized from ${donor?.name} to balanced shortage.`;
+                                                createStockTransfer(eb.branchId, recipient.id, 'Redistribution', items, reason);
+                                                showToastMsg(`Dispatched excess stock rebalance transfer of 15boxes from ${donor?.name}!`, 'success');
+                                              } catch (err) {
+                                                showToastMsg('Failed to dispatch balancing transfer.', 'error');
+                                              }
+                                            }}
+                                            className="w-full py-1 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold rounded-lg text-[9.5px] uppercase transition-all"
+                                          >
+                                            Transfer 15 boxes from surplus {donor?.name}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : currentUser.role === 'Manager' ? (
+                              <div className="space-y-1">
+                                <button 
+                                  onClick={() => {
+                                    showToastMsg(`Manager request submitted: Restock requisition log for ${p.productName} initiated.`, 'info');
+                                    let cart = [];
+                                    try {
+                                      const cached = localStorage.getItem('tp_po_cart');
+                                      cart = cached ? JSON.parse(cached) : [];
+                                    } catch (e) {}
+                                    if (!cart.some(item => item.productId === p.id)) {
+                                      cart.push({ productId: p.id, quantity: 30 });
+                                      localStorage.setItem('tp_po_cart', JSON.stringify(cart));
+                                    }
+                                  }}
+                                  className="w-full py-1.5 bg-m3-primary hover:bg-m3-primary/80 transition-all text-m3-on-primary font-bold rounded-lg text-[10.5px] uppercase cursor-pointer"
+                                >
+                                  Request Restock Order Requisition
+                                </button>
+                                
+                                {excessBranches.length > 0 && (
+                                  <div className="pt-1">
+                                    <p className="text-[10px] text-zinc-400 italic mb-1 text-center">Manage excess transfer option available:</p>
+                                    {excessBranches.map(eb => {
+                                      const donor = branches.find(b => b.id === eb.branchId);
+                                      const recipient = branches.find(b => b.id === currentBranchId) || branches[0];
+                                      return (
+                                        <button
+                                          key={eb.branchId}
+                                          onClick={() => {
+                                            const items = [{ productId: p.id, quantity: 15 }];
+                                            const reason = `Manager request: balancing transfer of ${p.productName} from overstock.`;
+                                            createStockTransfer(eb.branchId, recipient.id, 'Redistribution', items, reason);
+                                            showToastMsg(`BALANCING: Sent request to transfer 15 units from ${donor?.name}.`, 'success');
+                                          }}
+                                          className="w-full py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/25 rounded-md text-[9.5px] uppercase transition-all"
+                                        >
+                                          Pull balancing stock transfer from {donor?.name}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-center text-[10.5px] text-zinc-500 py-1 font-sans italic border border-m3-outline-variant/10 rounded bg-m3-surface-low">
+                                Restricted: Restocking requires Manager or Admin clearance.
+                              </div>
+                            )}
                           </div>
                         </div>
-
-                        <div className="flex items-center justify-between border-t border-zinc-500/10 pt-2 text-[10.5px]">
-                          <span>Current Global Stock: <span className="font-black text-m3-primary font-mono">{p.stockQuantity} boxes</span></span>
-                          <span className="text-zinc-500 font-mono">Min req: {p.minimumStock}</span>
-                        </div>
-
-                        <button 
-                          onClick={() => {
-                            showToastMsg(`Created automatic logistics restock PO request for ${p.productName}! Supplier notified.`, 'success');
-                          }}
-                          className="w-full py-1.5 bg-m3-primary hover:bg-m3-primary/80 transition-all text-m3-on-primary font-bold rounded-lg text-[10.5px] uppercase cursor-pointer"
-                        >
-                          Request Restock Order
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -2430,7 +2510,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
               {/* Day simulated overlay helper */}
               <div className="p-2 border border-m3-outline-variant/15 rounded-xl bg-m3-surface-low/50 text-[10.5px] text-m3-on-surface-variant leading-normal flex items-center gap-2 mb-3">
                 <span className="text-xs font-bold text-m3-primary">•</span>
-                <span>Select a day below to simulate a high-value bulk transaction in real-time.</span>
+                <span>
+                  {simulationModeActive 
+                    ? "Select a day below to simulate a high-value bulk transaction in real-time."
+                    : "Select a day below to examine that day's specific transactional volume."
+                  }
+                </span>
               </div>
 
               <div className="relative h-56 w-full flex items-end pt-4 pb-2">
@@ -2448,7 +2533,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                   {weeklyChartData.map((data, index) => {
                     const heightPercent = maxWeeklyAmount ? (data.amount / maxWeeklyAmount) * 80 : 10;
                     const isSelected = selectedWeeklyDay === index;
-                    const hasSimulatedValue = (daysSimulatedSales[data.day] || 0) > 0;
 
                     return (
                       <div 
@@ -2463,8 +2547,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                           className={`w-full max-w-[32px] rounded-t-lg transition-all duration-300 ${
                             isSelected 
                               ? 'bg-emerald-500 shadow-lg ring-2 ring-emerald-500/40 ring-offset-2 ring-offset-zinc-900' 
-                              : hasSimulatedValue 
-                              ? 'bg-sky-500 hover:bg-sky-400'
                               : hoveredBar === index
                               ? 'bg-m3-tertiary shadow-md'
                               : 'bg-m3-primary/85 hover:bg-m3-primary'
@@ -2479,11 +2561,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                           <span className="text-emerald-400 font-black">
                             {weeklyMetric === 'revenue' ? `₱${data.amount.toLocaleString()}` : weeklyMetric === 'orders' ? `${data.amount} Orders` : `${data.amount} Boxes Sold`}
                           </span>
-                          {hasSimulatedValue && (
-                            <span className="text-[8.5px] text-sky-300 font-extrabold uppercase mt-0.5 tracking-wider">
-                              (+₱{(daysSimulatedSales[data.day] || 0).toLocaleString()} Simulated)
-                            </span>
-                          )}
                         </div>
 
                         <span className={`text-[9.5px] font-mono mt-2 transition-colors ${isSelected ? 'text-emerald-400 font-black' : 'text-m3-on-surface-variant/80'}`}>{data.day}</span>
@@ -2494,55 +2571,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
               </div>
             </div>
 
-            {/* Simulated transactions controls wrapper */}
-            {selectedWeeklyDay !== null && (
-              <div className="p-3.5 mt-2 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/25 rounded-2xl animate-fade-in flex flex-col gap-2 shrink-0 select-none">
-                <div className="flex justify-between items-center text-[11px] font-bold">
-                  <span className="text-emerald-400 flex items-center gap-1 font-mono">
-                    Simulate Bulk deal for {weeklyChartData[selectedWeeklyDay].day}
-                  </span>
-                  <button onClick={() => setSelectedWeeklyDay(null)} className="text-zinc-500 hover:text-white px-1">✕</button>
-                </div>
-                
-                <div className="grid grid-cols-4 gap-2">
-                  {[25000, 75000, 150000, 300000].map((val) => (
-                    <button 
-                      key={val}
-                      onClick={() => {
-                        const dayName = weeklyChartData[selectedWeeklyDay].day;
-                        setDaysSimulatedSales({
-                          ...daysSimulatedSales,
-                          [dayName]: (daysSimulatedSales[dayName] || 0) + val
-                        });
-                        showToastMsg(`Simulated custom transaction bulk deal worth ₱${val.toLocaleString()} on ${dayName}!`, 'success');
-                      }}
-                      className="bg-zinc-900 border border-m3-outline-variant/20 p-2 rounded-xl text-[10px] font-bold text-white hover:border-emerald-500 hover:bg-emerald-500/20 active:scale-95 transition-all text-center"
-                    >
-                      +₱{val / 1000}k
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex justify-between items-center mt-1.5 border-t border-emerald-500/10 pt-2 text-[10px] font-mono">
-                  <span className="text-zinc-400">Total Simulation Impact for {weeklyChartData[selectedWeeklyDay].day}:</span>
-                  <div className="flex gap-2 items-center">
-                    <span className="text-emerald-400 font-black">₱{(daysSimulatedSales[weeklyChartData[selectedWeeklyDay].day] || 0).toLocaleString()}</span>
-                    {(daysSimulatedSales[weeklyChartData[selectedWeeklyDay].day] || 0) > 0 && (
-                      <button 
-                        onClick={() => {
-                          const dayName = weeklyChartData[selectedWeeklyDay].day;
-                          setDaysSimulatedSales({ ...daysSimulatedSales, [dayName]: 0 });
-                          showToastMsg(`Reset Simulated Deals on ${dayName}`, 'info');
-                        }}
-                        className="text-[9.5px] text-rose-400 hover:underline font-extrabold"
-                      >
-                        Reset Day
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Monthly Revenue Wave Chart */}
@@ -2887,7 +2915,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                     </span>
                     <span className="text-m3-on-surface font-medium block leading-snug">{log.description}</span>
                     <span className="text-[10px] text-zinc-400 block font-mono pl-1">
-                      Target Record: {log.tableAffected} ({log.recordId || 'Global'}) • Operator ID: @{log.username}
+                      <span className="hidden sm:inline">Target Record: {log.tableAffected} ({log.recordId || 'Global'}) • </span>Operator: @{log.username}
                     </span>
                   </div>
                   <div className="text-right text-[10.5px] text-zinc-400 font-mono shrink-0 ml-4">
@@ -3153,23 +3181,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
                 <path
                   d={`M 20 200 
-                      L 20 ${200 - (monthlyChartData[0].revenue / maxMonthlyAmount) * 160} 
-                      C 70 ${200 - (monthlyChartData[0].revenue / maxMonthlyAmount) * 160}, 90 ${200 - (monthlyChartData[1].revenue / maxMonthlyAmount) * 160}, 130 ${200 - (monthlyChartData[1].revenue / maxMonthlyAmount) * 160}
-                      C 180 ${200 - (monthlyChartData[1].revenue / maxMonthlyAmount) * 160}, 200 ${200 - (monthlyChartData[2].revenue / maxMonthlyAmount) * 160}, 240 ${200 - (monthlyChartData[2].revenue / maxMonthlyAmount) * 160}
-                      C 290 ${200 - (monthlyChartData[2].revenue / maxMonthlyAmount) * 160}, 310 ${200 - (monthlyChartData[3].revenue / maxMonthlyAmount) * 160}, 350 ${200 - (monthlyChartData[3].revenue / maxMonthlyAmount) * 160}
-                      C 400 ${200 - (monthlyChartData[3].revenue / maxMonthlyAmount) * 160}, 420 ${200 - (monthlyChartData[4].revenue / maxMonthlyAmount) * 160}, 460 ${200 - (monthlyChartData[4].revenue / maxMonthlyAmount) * 160}
-                      C 510 ${200 - (monthlyChartData[4].revenue / maxMonthlyAmount) * 160}, 530 ${200 - (monthlyChartData[5].revenue / maxMonthlyAmount) * 160}, 570 ${200 - (monthlyChartData[5].revenue / maxMonthlyAmount) * 160}
+                      L 20 ${200 - getMonthlyRatio(monthlyChartData[0].revenue) * 160} 
+                      C 70 ${200 - getMonthlyRatio(monthlyChartData[0].revenue) * 160}, 90 ${200 - getMonthlyRatio(monthlyChartData[1].revenue) * 160}, 130 ${200 - getMonthlyRatio(monthlyChartData[1].revenue) * 160}
+                      C 180 ${200 - getMonthlyRatio(monthlyChartData[1].revenue) * 160}, 200 ${200 - getMonthlyRatio(monthlyChartData[2].revenue) * 160}, 240 ${200 - getMonthlyRatio(monthlyChartData[2].revenue) * 160}
+                      C 290 ${200 - getMonthlyRatio(monthlyChartData[2].revenue) * 160}, 310 ${200 - getMonthlyRatio(monthlyChartData[3].revenue) * 160}, 350 ${200 - getMonthlyRatio(monthlyChartData[3].revenue) * 160}
+                      C 400 ${200 - getMonthlyRatio(monthlyChartData[3].revenue) * 160}, 420 ${200 - getMonthlyRatio(monthlyChartData[4].revenue) * 160}, 460 ${200 - getMonthlyRatio(monthlyChartData[4].revenue) * 160}
+                      C 510 ${200 - getMonthlyRatio(monthlyChartData[4].revenue) * 160}, 530 ${200 - getMonthlyRatio(monthlyChartData[5].revenue) * 160}, 570 ${200 - getMonthlyRatio(monthlyChartData[5].revenue) * 160}
                       L 570 200 Z`}
                   fill="url(#localWaveGrad)"
                 />
 
                 <path
-                  d={`M 20 ${200 - (monthlyChartData[0].revenue / maxMonthlyAmount) * 160} 
-                      C 70 ${200 - (monthlyChartData[0].revenue / maxMonthlyAmount) * 160}, 90 ${200 - (monthlyChartData[1].revenue / maxMonthlyAmount) * 160}, 130 ${200 - (monthlyChartData[1].revenue / maxMonthlyAmount) * 160}
-                      C 180 ${200 - (monthlyChartData[1].revenue / maxMonthlyAmount) * 160}, 200 ${200 - (monthlyChartData[2].revenue / maxMonthlyAmount) * 160}, 240 ${200 - (monthlyChartData[2].revenue / maxMonthlyAmount) * 160}
-                      C 290 ${200 - (monthlyChartData[2].revenue / maxMonthlyAmount) * 160}, 310 ${200 - (monthlyChartData[3].revenue / maxMonthlyAmount) * 160}, 350 ${200 - (monthlyChartData[3].revenue / maxMonthlyAmount) * 160}
-                      C 400 ${200 - (monthlyChartData[3].revenue / maxMonthlyAmount) * 160}, 420 ${200 - (monthlyChartData[4].revenue / maxMonthlyAmount) * 160}, 460 ${200 - (monthlyChartData[4].revenue / maxMonthlyAmount) * 160}
-                      C 510 ${200 - (monthlyChartData[4].revenue / maxMonthlyAmount) * 160}, 530 ${200 - (monthlyChartData[5].revenue / maxMonthlyAmount) * 160}, 570 ${200 - (monthlyChartData[5].revenue / maxMonthlyAmount) * 160}`}
+                  d={`M 20 ${200 - getMonthlyRatio(monthlyChartData[0].revenue) * 160} 
+                      C 70 ${200 - getMonthlyRatio(monthlyChartData[0].revenue) * 160}, 90 ${200 - getMonthlyRatio(monthlyChartData[1].revenue) * 160}, 130 ${200 - getMonthlyRatio(monthlyChartData[1].revenue) * 160}
+                      C 180 ${200 - getMonthlyRatio(monthlyChartData[1].revenue) * 160}, 200 ${200 - getMonthlyRatio(monthlyChartData[2].revenue) * 160}, 240 ${200 - getMonthlyRatio(monthlyChartData[2].revenue) * 160}
+                      C 290 ${200 - getMonthlyRatio(monthlyChartData[2].revenue) * 160}, 310 ${200 - getMonthlyRatio(monthlyChartData[3].revenue) * 160}, 350 ${200 - getMonthlyRatio(monthlyChartData[3].revenue) * 160}
+                      C 400 ${200 - getMonthlyRatio(monthlyChartData[3].revenue) * 160}, 420 ${200 - getMonthlyRatio(monthlyChartData[4].revenue) * 160}, 460 ${200 - getMonthlyRatio(monthlyChartData[4].revenue) * 160}
+                      C 510 ${200 - getMonthlyRatio(monthlyChartData[4].revenue) * 160}, 530 ${200 - getMonthlyRatio(monthlyChartData[5].revenue) * 160}, 570 ${200 - getMonthlyRatio(monthlyChartData[5].revenue) * 160}`}
                   fill="none"
                   stroke="var(--m3-primary)"
                   strokeWidth="3.5"
@@ -3178,7 +3206,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
                 {[[20, 0], [130, 1], [240, 2], [350, 3], [460, 4], [570, 5]].map(([cx, idx]) => {
                   const val = monthlyChartData[idx].revenue;
-                  const cy = 200 - (val / maxMonthlyAmount) * 160;
+                  const cy = 200 - getMonthlyRatio(val) * 160;
                   return (
                     <g key={idx} className="cursor-pointer">
                       <circle
@@ -3207,7 +3235,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                   className="absolute bg-m3-on-surface text-m3-surface text-[10.5px] py-1.5 px-3 rounded-xl border border-m3-outline-variant/30 font-bold font-mono shadow-lg z-40 pointer-events-none"
                   style={{
                     left: `${[20, 130, 240, 350, 460, 570][hoveredPoint] - 30}px`,
-                    top: `${130 - (monthlyChartData[hoveredPoint].revenue / maxMonthlyAmount) * 130}px`
+                    top: `${130 - getMonthlyRatio(monthlyChartData[hoveredPoint].revenue) * 130}px`
                   }}
                 >
                   ₱{monthlyChartData[hoveredPoint].revenue.toLocaleString()}
@@ -3455,7 +3483,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                     </span>
                     <span className="text-m3-on-surface font-medium block leading-snug">{log.description}</span>
                     <span className="text-[10px] text-zinc-400 block font-mono pl-1">
-                      Target Record: {log.tableAffected} ({log.recordId || 'Global'}) • Operator ID: @{log.username}
+                      <span className="hidden sm:inline">Target Record: {log.tableAffected} ({log.recordId || 'Global'}) • </span>Operator: @{log.username}
                     </span>
                   </div>
                   <div className="text-right text-[10.5px] text-zinc-400 font-mono shrink-0 ml-4">

@@ -1,8 +1,6 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
-import http from 'http';
-import https from 'https';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -10,25 +8,6 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 3000;
-
-// SSL Certificate configurations for local secure deployments (such as PM2 HTTPS)
-const SSL_KEY_PATH = process.env.SSL_KEY_PATH || path.join(__dirname, 'key.pem');
-const SSL_CERT_PATH = process.env.SSL_CERT_PATH || path.join(__dirname, 'cert.pem');
-
-let useSsl = false;
-let sslOptions = {};
-
-try {
-  if (fs.existsSync(SSL_KEY_PATH) && fs.existsSync(SSL_CERT_PATH)) {
-    sslOptions = {
-      key: fs.readFileSync(SSL_KEY_PATH),
-      cert: fs.readFileSync(SSL_CERT_PATH),
-    };
-    useSsl = true;
-  }
-} catch (error) {
-  console.warn('[Shared DB Server] SSL config detected but could not load files:', error.message);
-}
 
 // Increase body payload size limit to accommodate larger database files (images, logs, catalogs)
 app.use(express.json({ limit: '100mb' }));
@@ -172,25 +151,12 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-let server;
-if (useSsl) {
-  server = https.createServer(sslOptions, app);
-} else {
-  server = http.createServer(app);
-}
-
-server.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`========================================`);
   console.log(`   TILEPOINT SHARED DATABASE SERVER     `);
   console.log(`========================================`);
   console.log(`Server Port         : ${PORT}`);
-  console.log(`Security Mode       : ${useSsl ? 'HTTPS (SSL Secured)' : 'HTTP (Standard)'}`);
-  if (useSsl) {
-    console.log(`Admin PC Access     : https://localhost:${PORT}`);
-    console.log(`Staff Mobile Access : https://192.168.1.38:${PORT}`);
-  } else {
-    console.log(`Admin PC Access     : http://localhost:${PORT}`);
-    console.log(`Staff Mobile Access : http://192.168.1.38:${PORT}`);
-  }
+  console.log(`Admin PC Access     : http://localhost:${PORT}`);
+  console.log(`Staff Mobile Access : http://192.168.1.38:${PORT}`);
   console.log(`========================================`);
 });

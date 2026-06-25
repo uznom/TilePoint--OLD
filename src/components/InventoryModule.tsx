@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useDb } from '../context/DbContext';
 import { Product, UserRole, TransferType, TransferStatus } from '../types/db';
 import {
@@ -1935,140 +1936,150 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                       </tr>
 
                       {/* Expanded Sub-Row with Detailed Layout Card to Prevent Screen Overflow */}
-                      {isExpanded && (
-                        <tr key={`${p.id}-expanded-details`}>
-                          <td colSpan={isCompactColumns ? 7 : 13} className="p-4 bg-m3-surface-low border-b border-m3-outline-variant/20 animate-scale-up">
-                            <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/15 grid grid-cols-1 md:grid-cols-3 gap-6 shadow-inner text-left">
-                              
-                              {/* Left specs: Branding & Thumbnail */}
-                              <div className="space-y-4 border-b md:border-b-0 md:border-r border-m3-outline-variant/10 pb-4 md:pb-0 md:pr-6">
-                                <div className="flex gap-4 items-start">
-                                  <div className="w-16 h-16 rounded-xl overflow-hidden border border-zinc-200/40 dark:border-zinc-700/40 bg-zinc-300/30 flex items-center justify-center shrink-0">
-                                    {p.image ? (
-                                      <img
-                                        src={p.image}
-                                        alt={p.productName}
-                                        className="w-full h-full object-cover"
-                                        referrerPolicy="no-referrer"
-                                      />
-                                    ) : (
-                                      <div className="text-[9px] uppercase tracking-tighter text-zinc-400 font-extrabold text-center leading-none p-2 truncate">No Image</div>
-                                    )}
-                                  </div>
-                                  <div className="space-y-1">
-                                    <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest block">Primary SKU Details</span>
-                                    <strong className="text-sm text-m3-on-surface block leading-tight">{p.productName}</strong>
-                                    <span className="text-[10px] text-zinc-400 font-mono block">ID Key: {p.id}</span>
-                                  </div>
-                                </div>
-                                
-                                <div className="pt-2">
-                                  <StyledBarcode code={p.barcode} />
-                                  <span className="text-[9px] font-mono font-bold text-zinc-400 block mt-1.5 text-center">SCAN BARCODE: {p.barcode}</span>
-                                </div>
-                              </div>
-
-                              {/* Center specs: Dimensions, quantities and price indices */}
-                              <div className="space-y-3 md:border-r border-m3-outline-variant/10 md:pr-6">
-                                <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest block">Dimensional Specifications</span>
-                                <div className="grid grid-cols-2 gap-3 text-xs font-semibold">
-                                  <div>
-                                    <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Brand Name</span>
-                                    <span className="text-m3-on-surface">{p.brand || 'No registered brand'}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Catalog Category</span>
-                                    <span className="text-m3-on-surface">{p.category}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Dimensions / Size</span>
-                                    <span className="text-m3-on-surface">{p.size || 'Unspecified'}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Box Coverage</span>
-                                    <span className="text-m3-primary">{p.coveragePerBox ? `${p.coveragePerBox} m²` : '0.00 m²'}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Pcs / Package</span>
-                                    <span className="text-m3-on-surface">{p.boxQuantity} pieces</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Safety Threshold</span>
-                                    <span className="text-amber-500 font-mono">{p.minimumStock} {p.unit}</span>
-                                  </div>
-                                  <div className="border-t border-m3-outline-variant/10 pt-2 col-span-2 grid grid-cols-2 gap-2">
-                                    {canSeeFinancialCostsAndSources && (
-                                      <div>
-                                        <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Unit Cost</span>
-                                        <span className="text-zinc-500 font-mono text-xs">₱{p.costPrice.toFixed(2)}</span>
+                      <AnimatePresence initial={false}>
+                        {isExpanded && (
+                          <tr key={`${p.id}-expanded-details`}>
+                            <td colSpan={isCompactColumns ? 7 : 13} className="p-4 bg-m3-surface-low border-b border-m3-outline-variant/20">
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                                className="overflow-hidden"
+                              >
+                                <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/15 grid grid-cols-1 md:grid-cols-3 gap-6 shadow-inner text-left">
+                                  
+                                  {/* Left specs: Branding & Thumbnail */}
+                                  <div className="space-y-4 border-b md:border-b-0 md:border-r border-m3-outline-variant/10 pb-4 md:pb-0 md:pr-6">
+                                    <div className="flex gap-4 items-start">
+                                      <div className="w-16 h-16 rounded-xl overflow-hidden border border-zinc-200/40 dark:border-zinc-700/40 bg-zinc-300/30 flex items-center justify-center shrink-0">
+                                        {p.image ? (
+                                          <img
+                                            src={p.image}
+                                            alt={p.productName}
+                                            className="w-full h-full object-cover"
+                                            referrerPolicy="no-referrer"
+                                          />
+                                        ) : (
+                                          <div className="text-[9px] uppercase tracking-tighter text-zinc-400 font-extrabold text-center leading-none p-2 truncate">No Image</div>
+                                        )}
                                       </div>
-                                    )}
-                                    <div>
-                                      <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Selling Retail</span>
-                                      <span className="text-m3-primary font-mono text-xs font-extrabold">₱{p.sellingPrice.toFixed(2)}</span>
+                                      <div className="space-y-1">
+                                        <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest block">Primary SKU Details</span>
+                                        <strong className="text-sm text-m3-on-surface block leading-tight">{p.productName}</strong>
+                                        <span className="text-[10px] text-zinc-400 font-mono block">ID Key: {p.id}</span>
+                                      </div>
                                     </div>
-                                    {p.origin && canSeeFinancialCostsAndSources && (
-                                      <div className="col-span-2 pt-2 border-t border-m3-outline-variant/10">
-                                        <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Acquired From / Origin</span>
-                                        <span className="text-amber-500 dark:text-amber-400 font-bold text-[11px] block">{p.origin}</span>
-                                      </div>
-                                    )}
+                                    
+                                    <div className="pt-2">
+                                      <StyledBarcode code={p.barcode} />
+                                      <span className="text-[9px] font-mono font-bold text-zinc-400 block mt-1.5 text-center">SCAN BARCODE: {p.barcode}</span>
+                                    </div>
                                   </div>
-                                </div>
-                              </div>
 
-                              {/* Right specs: Regional Branch distributions */}
-                              <div className="space-y-3">
-                                <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest block">Live Multi-Branch Stock balance</span>
-                                <div className="space-y-2">
-                                  {branches.filter(b => !b.isDeleted).map((b) => {
-                                    const branchRecord = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id);
-                                    const qty = branchRecord?.quantity || 0;
-                                    const overrideLimit = branchRecord?.lowStockThresholdOverride !== undefined
-                                      ? branchRecord.lowStockThresholdOverride
-                                      : p.minimumStock;
-
-                                    let statusBg = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/10';
-                                    if (qty === 0) statusBg = 'bg-rose-500/10 text-rose-500 border-rose-500/10';
-                                    else if (qty <= overrideLimit) statusBg = 'bg-amber-500/10 text-amber-500 border-amber-500/10';
-
-                                    return (
-                                      <div key={b.id} className="flex flex-col md:flex-row justify-between md:items-center gap-2 text-xs p-3 rounded-xl bg-m3-surface border border-m3-outline-variant/10 shadow-3xs">
-                                        <div className="flex flex-col">
-                                          <span className="font-extrabold text-[10px] text-m3-on-surface uppercase tracking-tight">{b.name.replace('Emman Tile Center ', '')}</span>
-                                          <span className="text-[8px] text-zinc-400 font-mono uppercase">Current Balance: <strong className="text-m3-on-surface">{qty} {p.unit || 'Boxes'}</strong></span>
-                                        </div>
-
-                                        <div className="flex items-center gap-2">
-                                          {/* Alert limit settings for each branch */}
-                                          <div className="flex items-center gap-1 bg-m3-surface-low px-2 py-1 rounded-lg border border-m3-outline-variant/20">
-                                            <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider">Alert Threshold:</span>
-                                            <input
-                                              type="number"
-                                              className="w-12 bg-m3-surface-lowest text-xs font-mono font-bold text-center border-b border-m3-outline-variant text-m3-on-surface py-0.5"
-                                              value={overrideLimit}
-                                              onChange={(e) => {
-                                                const val = parseInt(e.target.value);
-                                                updateBranchLowStockThreshold(p.id, b.id, isNaN(val) ? p.minimumStock : val);
-                                              }}
-                                              min={0}
-                                            />
-                                          </div>
-
-                                          <span className={`font-mono font-black text-xs px-2.5 py-1 rounded-lg border ${statusBg}`}>
-                                            {qty} {p.unit || 'Boxes'}
-                                          </span>
-                                        </div>
+                                  {/* Center specs: Dimensions, quantities and price indices */}
+                                  <div className="space-y-3 md:border-r border-m3-outline-variant/10 md:pr-6">
+                                    <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest block">Dimensional Specifications</span>
+                                    <div className="grid grid-cols-2 gap-3 text-xs font-semibold">
+                                      <div>
+                                        <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Brand Name</span>
+                                        <span className="text-m3-on-surface">{p.brand || 'No registered brand'}</span>
                                       </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
+                                      <div>
+                                        <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Catalog Category</span>
+                                        <span className="text-m3-on-surface">{p.category}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Dimensions / Size</span>
+                                        <span className="text-m3-on-surface">{p.size || 'Unspecified'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Box Coverage</span>
+                                        <span className="text-m3-primary">{p.coveragePerBox ? `${p.coveragePerBox} m²` : '0.00 m²'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Pcs / Package</span>
+                                        <span className="text-m3-on-surface">{p.boxQuantity} pieces</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Safety Threshold</span>
+                                        <span className="text-amber-500 font-mono">{p.minimumStock} {p.unit}</span>
+                                      </div>
+                                      <div className="border-t border-m3-outline-variant/10 pt-2 col-span-2 grid grid-cols-2 gap-2">
+                                        {canSeeFinancialCostsAndSources && (
+                                          <div>
+                                            <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Unit Cost</span>
+                                            <span className="text-zinc-500 font-mono text-xs">₱{p.costPrice.toFixed(2)}</span>
+                                          </div>
+                                        )}
+                                        <div>
+                                          <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Selling Retail</span>
+                                          <span className="text-m3-primary font-mono text-xs font-extrabold">₱{p.sellingPrice.toFixed(2)}</span>
+                                        </div>
+                                        {p.origin && canSeeFinancialCostsAndSources && (
+                                          <div className="col-span-2 pt-2 border-t border-m3-outline-variant/10">
+                                            <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Acquired From / Origin</span>
+                                            <span className="text-amber-500 dark:text-amber-400 font-bold text-[11px] block">{p.origin}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
 
-                            </div>
-                          </td>
-                        </tr>
-                      )}
+                                  {/* Right specs: Regional Branch distributions */}
+                                  <div className="space-y-3">
+                                    <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest block">Live Multi-Branch Stock balance</span>
+                                    <div className="space-y-2">
+                                      {branches.filter(b => !b.isDeleted).map((b) => {
+                                        const branchRecord = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id);
+                                        const qty = branchRecord?.quantity || 0;
+                                        const overrideLimit = branchRecord?.lowStockThresholdOverride !== undefined
+                                          ? branchRecord.lowStockThresholdOverride
+                                          : p.minimumStock;
+
+                                        let statusBg = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/10';
+                                        if (qty === 0) statusBg = 'bg-rose-500/10 text-rose-500 border-rose-500/10';
+                                        else if (qty <= overrideLimit) statusBg = 'bg-amber-500/10 text-amber-500 border-amber-500/10';
+
+                                        return (
+                                          <div key={b.id} className="flex flex-col md:flex-row justify-between md:items-center gap-2 text-xs p-3 rounded-xl bg-m3-surface border border-m3-outline-variant/10 shadow-3xs">
+                                            <div className="flex flex-col">
+                                              <span className="font-extrabold text-[10px] text-m3-on-surface uppercase tracking-tight">{b.name.replace('Emman Tile Center ', '')}</span>
+                                              <span className="text-[8px] text-zinc-400 font-mono uppercase">Current Balance: <strong className="text-m3-on-surface">{qty} {p.unit || 'Boxes'}</strong></span>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                              {/* Alert limit settings for each branch */}
+                                              <div className="flex items-center gap-1 bg-m3-surface-low px-2 py-1 rounded-lg border border-m3-outline-variant/20">
+                                                <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider">Alert Threshold:</span>
+                                                <input
+                                                  type="number"
+                                                  className="w-12 bg-m3-surface-lowest text-xs font-mono font-bold text-center border-b border-m3-outline-variant text-m3-on-surface py-0.5"
+                                                  value={overrideLimit}
+                                                  onChange={(e) => {
+                                                    const val = parseInt(e.target.value);
+                                                    updateBranchLowStockThreshold(p.id, b.id, isNaN(val) ? p.minimumStock : val);
+                                                  }}
+                                                  min={0}
+                                                />
+                                              </div>
+
+                                              <span className={`font-mono font-black text-xs px-2.5 py-1 rounded-lg border ${statusBg}`}>
+                                                {qty} {p.unit || 'Boxes'}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+
+                                </div>
+                              </motion.div>
+                            </td>
+                          </tr>
+                        )}
+                      </AnimatePresence>
                     </React.Fragment>
                   );
                 })}

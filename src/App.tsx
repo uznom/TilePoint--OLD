@@ -170,6 +170,23 @@ function AppContent() {
     const saved = localStorage.getItem('tilepoint_dark_theme');
     return saved !== null ? saved === 'true' : true;
   });
+
+  // Smoothly transition all elements when changing dark/light theme
+  const isFirstThemeRender = useRef(true);
+  useEffect(() => {
+    if (isFirstThemeRender.current) {
+      isFirstThemeRender.current = false;
+      return;
+    }
+    if (document.documentElement.classList.contains('accessibility-no-animation')) {
+      return;
+    }
+    document.documentElement.classList.add('theme-transition');
+    const timer = setTimeout(() => {
+      document.documentElement.classList.remove('theme-transition');
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [darkMode]);
   const [isSubMenuCollapsed, setIsSubMenuCollapsed] = useState(false);
   const [isSidebarProfileDropdownOpen, setIsSidebarProfileDropdownOpen] = useState(false);
 
@@ -451,6 +468,14 @@ function AppContent() {
   // Global High-Performance Cursor Tracker for Glowing Card hover effects
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      // Bypassed instantly when backdrop and UI blurs or animations are disabled
+      if (
+        document.documentElement.classList.contains('accessibility-no-blur') ||
+        document.documentElement.classList.contains('accessibility-no-animation')
+      ) {
+        return;
+      }
+
       const target = e.target as HTMLElement;
       // Resolve up the DOM tree to locate any active hover target card
       const card = target.closest('.m3-card, .android-glass-card, .glowing-card') as HTMLElement | null;
@@ -468,6 +493,17 @@ function AppContent() {
     };
 
     const handleMouseOver = (e: MouseEvent) => {
+      if (
+        document.documentElement.classList.contains('accessibility-no-blur') ||
+        document.documentElement.classList.contains('accessibility-no-animation')
+      ) {
+        const cards = document.querySelectorAll('.m3-card, .android-glass-card, .glowing-card');
+        cards.forEach(el => {
+          (el as HTMLElement).style.setProperty('--glow-opacity', '0');
+        });
+        return;
+      }
+
       const target = e.target as HTMLElement;
       const card = target.closest('.m3-card, .android-glass-card, .glowing-card') as HTMLElement | null;
       if (!card) {
@@ -1190,35 +1226,40 @@ function AppContent() {
                       title={isSubMenuCollapsed ? "Expand Sub-menu" : "Collapse Sub-menu"}
                     >
                       <span>{isSubMenuCollapsed ? "Show Options" : "Hide Options"}</span>
-                      {isSubMenuCollapsed ? (
-                        <ChevronDown className="h-3.5 w-3.5" />
-                      ) : (
-                        <ChevronDown className="h-3.5 w-3.5 rotate-180 transition-transform duration-200" />
-                      )}
+                      <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-300 ${isSubMenuCollapsed ? '' : 'rotate-180'}`} />
                     </button>
                   </div>
                 </div>
 
-                {!isSubMenuCollapsed && (
-                  <div className="flex flex-nowrap gap-2.5 overflow-x-auto pt-2 pb-1 whitespace-nowrap scrollbar-none scroll-smooth touch-pan-x shrink-0 w-full">
-                    {authorizedSubItems.map(sub => {
-                      const isSelected = activeTab === sub.id;
-                      return (
-                        <button
-                          key={sub.id}
-                          onClick={() => changeTab(sub.id)}
-                          className={`px-4.5 py-2 text-xs font-bold tracking-wide rounded-2xl transition-all cursor-pointer shrink-0 ${
-                            isSelected
-                              ? 'bg-m3-primary text-m3-on-primary shadow-md shadow-m3-primary/10 font-black scale-[1.01]'
-                              : 'bg-m3-surface border border-m3-outline-variant/15 text-m3-on-surface-variant hover:bg-m3-primary/10 hover:text-m3-primary'
-                          }`}
-                        >
-                          {sub.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                <AnimatePresence initial={false}>
+                  {!isSubMenuCollapsed && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0, scaleY: 0.95 }}
+                      animate={{ height: "auto", opacity: 1, scaleY: 1 }}
+                      exit={{ height: 0, opacity: 0, scaleY: 0.95 }}
+                      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                      style={{ originY: 0 }}
+                      className="overflow-hidden w-full flex flex-nowrap gap-2.5 overflow-x-auto pt-2 pb-1 whitespace-nowrap scrollbar-none scroll-smooth touch-pan-x shrink-0"
+                    >
+                      {authorizedSubItems.map(sub => {
+                        const isSelected = activeTab === sub.id;
+                        return (
+                          <button
+                            key={sub.id}
+                            onClick={() => changeTab(sub.id)}
+                            className={`px-4.5 py-2 text-xs font-bold tracking-wide rounded-2xl transition-all cursor-pointer shrink-0 ${
+                              isSelected
+                                ? 'bg-m3-primary text-m3-on-primary shadow-md shadow-m3-primary/10 font-black scale-[1.01]'
+                                : 'bg-m3-surface border border-m3-outline-variant/15 text-m3-on-surface-variant hover:bg-m3-primary/10 hover:text-m3-primary'
+                            }`}
+                          >
+                            {sub.name}
+                          </button>
+                        );
+                      })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             );
           })()}

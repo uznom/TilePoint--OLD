@@ -363,6 +363,10 @@ export function applyM3ThemeToDOM(scheme: M3ThemeScheme) {
   root.style.setProperty('--m3-primary-container', scheme.primaryContainer);
   root.style.setProperty('--m3-on-primary-container', scheme.onPrimaryContainer);
   
+  // Set RGB helper for dropshadow opacity calculations
+  const rgbPrimary = hexToRgb(scheme.primary);
+  root.style.setProperty('--m3-primary-rgb', `${rgbPrimary.r}, ${rgbPrimary.g}, ${rgbPrimary.b}`);
+  
   root.style.setProperty('--m3-secondary', scheme.secondary);
   root.style.setProperty('--m3-on-secondary', scheme.onSecondary);
   root.style.setProperty('--m3-secondary-container', scheme.secondaryContainer);
@@ -390,7 +394,7 @@ export function applyM3ThemeToDOM(scheme: M3ThemeScheme) {
 export function resetM3ThemeOverride() {
   const root = document.documentElement;
   const vars = [
-    'primary', 'on-primary', 'primary-container', 'on-primary-container',
+    'primary', 'on-primary', 'primary-container', 'on-primary-container', 'primary-rgb',
     'secondary', 'on-secondary', 'secondary-container', 'on-secondary-container',
     'tertiary', 'on-tertiary', 'tertiary-container', 'on-tertiary-container',
     'surface', 'on-surface', 'on-surface-variant',

@@ -1,9 +1,9 @@
 const CACHE_NAME = 'tilepoint-atpos-v2-cache-v1';
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/icon.svg',
-  '/manifest.json'
+  './',
+  './index.html',
+  './icon.svg',
+  './manifest.json'
 ];
 
 // Install Service Worker and prime app shell cash cache
@@ -56,15 +56,20 @@ self.addEventListener('fetch', (event) => {
       }
 
       return fetch(event.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+        if (!networkResponse || (networkResponse.status !== 200 && networkResponse.status !== 0)) {
           return networkResponse;
         }
 
-        // Cache newly fetched assets dynamically
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
+        const isGoogleFont = requestUrl.host.includes('fonts.googleapis.com') || requestUrl.host.includes('fonts.gstatic.com');
+        const isOpaqueOrBasic = networkResponse.type === 'basic' || networkResponse.type === 'cors' || networkResponse.type === 'opaque';
+
+        if (isOpaqueOrBasic) {
+          // Cache newly fetched assets dynamically (including fonts and stylesheets)
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+        }
 
         return networkResponse;
       }).catch(() => {
