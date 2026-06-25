@@ -119,7 +119,8 @@ function AppContent() {
     branchStock,
     ledgerEntries,
     branchSalesReports,
-    deliveries
+    deliveries,
+    serverConnected
   } = useDb();
   const [activeTab, setActiveTab] = useState(() => {
     const isFirstTime = typeof window !== 'undefined' && localStorage.getItem('tp_first_login_done') !== 'true';
@@ -743,6 +744,16 @@ function AppContent() {
           <span className="hidden sm:inline-block px-3 py-1 rounded-xl text-[10px] font-extrabold uppercase bg-m3-secondary-container text-m3-on-secondary-container border border-m3-outline-variant/40">
             {getBranchName(currentUser.branchAssignmentId)}
           </span>
+
+          {/* Shared DB status indicator */}
+          <span className={`px-2.5 py-1 rounded-xl text-[9px] font-bold uppercase border flex items-center gap-1.5 ${
+            serverConnected 
+              ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
+              : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+          }`} title={serverConnected ? 'Connected to central offline network database on host PC' : 'Offline. Storing data in browser storage only.'}>
+            <span className={`h-1.5 w-1.5 rounded-full ${serverConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+            <span>{serverConnected ? 'Shared Server Live' : 'Local Fallback'}</span>
+          </span>
         </div>
 
         {/* Right side controls with Dropdown Menu following strict user intent */}
@@ -896,6 +907,11 @@ function AppContent() {
                 <div className="animate-fade-in truncate">
                   <h1 className="text-sm font-black tracking-wide leading-none uppercase font-sans text-m3-primary">TilePoint</h1>
                   <span className="text-[8px] text-m3-on-surface-variant font-bold block uppercase mt-1 tracking-widest leading-none">HQ POS System</span>
+                  <span className={`text-[7.5px] font-extrabold uppercase tracking-wider block mt-1.5 ${
+                    serverConnected ? 'text-emerald-500' : 'text-amber-500'
+                  }`}>
+                    ● {serverConnected ? 'Shared Server Live' : 'Local Fallback'}
+                  </span>
                 </div>
               )}
             </div>

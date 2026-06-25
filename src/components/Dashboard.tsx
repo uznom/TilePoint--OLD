@@ -2533,7 +2533,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                   {weeklyChartData.map((data, index) => {
                     const heightPercent = maxWeeklyAmount ? (data.amount / maxWeeklyAmount) * 80 : 10;
                     const isSelected = selectedWeeklyDay === index;
-                    const hasSimulatedValue = (daysSimulatedSales[data.day] || 0) > 0;
 
                     return (
                       <div 
@@ -2548,8 +2547,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                           className={`w-full max-w-[32px] rounded-t-lg transition-all duration-300 ${
                             isSelected 
                               ? 'bg-emerald-500 shadow-lg ring-2 ring-emerald-500/40 ring-offset-2 ring-offset-zinc-900' 
-                              : hasSimulatedValue 
-                              ? 'bg-sky-500 hover:bg-sky-400'
                               : hoveredBar === index
                               ? 'bg-m3-tertiary shadow-md'
                               : 'bg-m3-primary/85 hover:bg-m3-primary'
@@ -2564,11 +2561,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                           <span className="text-emerald-400 font-black">
                             {weeklyMetric === 'revenue' ? `₱${data.amount.toLocaleString()}` : weeklyMetric === 'orders' ? `${data.amount} Orders` : `${data.amount} Boxes Sold`}
                           </span>
-                          {hasSimulatedValue && (
-                            <span className="text-[8.5px] text-sky-300 font-extrabold uppercase mt-0.5 tracking-wider">
-                              (+₱{(daysSimulatedSales[data.day] || 0).toLocaleString()} Simulated)
-                            </span>
-                          )}
                         </div>
 
                         <span className={`text-[9.5px] font-mono mt-2 transition-colors ${isSelected ? 'text-emerald-400 font-black' : 'text-m3-on-surface-variant/80'}`}>{data.day}</span>
@@ -2579,55 +2571,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
               </div>
             </div>
 
-            {/* Simulated transactions controls wrapper */}
-            {selectedWeeklyDay !== null && simulationModeActive && (
-              <div className="p-3.5 mt-2 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/25 rounded-2xl animate-fade-in flex flex-col gap-2 shrink-0 select-none">
-                <div className="flex justify-between items-center text-[11px] font-bold">
-                  <span className="text-emerald-400 flex items-center gap-1 font-mono">
-                    Simulate Bulk deal for {weeklyChartData[selectedWeeklyDay].day}
-                  </span>
-                  <button onClick={() => setSelectedWeeklyDay(null)} className="text-zinc-500 hover:text-white px-1">✕</button>
-                </div>
-                
-                <div className="grid grid-cols-4 gap-2">
-                  {[25000, 75000, 150000, 300000].map((val) => (
-                    <button 
-                      key={val}
-                      onClick={() => {
-                        const dayName = weeklyChartData[selectedWeeklyDay].day;
-                        setDaysSimulatedSales({
-                          ...daysSimulatedSales,
-                          [dayName]: (daysSimulatedSales[dayName] || 0) + val
-                        });
-                        showToastMsg(`Simulated custom transaction bulk deal worth ₱${val.toLocaleString()} on ${dayName}!`, 'success');
-                      }}
-                      className="bg-zinc-900 border border-m3-outline-variant/20 p-2 rounded-xl text-[10px] font-bold text-white hover:border-emerald-500 hover:bg-emerald-500/20 active:scale-95 transition-all text-center"
-                    >
-                      +₱{val / 1000}k
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex justify-between items-center mt-1.5 border-t border-emerald-500/10 pt-2 text-[10px] font-mono">
-                  <span className="text-zinc-400">Total Simulation Impact for {weeklyChartData[selectedWeeklyDay].day}:</span>
-                  <div className="flex gap-2 items-center">
-                    <span className="text-emerald-400 font-black">₱{(daysSimulatedSales[weeklyChartData[selectedWeeklyDay].day] || 0).toLocaleString()}</span>
-                    {(daysSimulatedSales[weeklyChartData[selectedWeeklyDay].day] || 0) > 0 && (
-                      <button 
-                        onClick={() => {
-                          const dayName = weeklyChartData[selectedWeeklyDay].day;
-                          setDaysSimulatedSales({ ...daysSimulatedSales, [dayName]: 0 });
-                          showToastMsg(`Reset Simulated Deals on ${dayName}`, 'info');
-                        }}
-                        className="text-[9.5px] text-rose-400 hover:underline font-extrabold"
-                      >
-                        Reset Day
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Monthly Revenue Wave Chart */}

@@ -526,11 +526,16 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({ darkMode }
       businessIntelligenceDashboard: biDashboardMetrics
     };
 
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(slip, null, 2));
+    const jsonString = JSON.stringify(slip, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const dlAnchorElem = document.createElement('a');
-    dlAnchorElem.setAttribute('href', dataStr);
+    dlAnchorElem.setAttribute('href', url);
     dlAnchorElem.setAttribute('download', `TilePoint_BI_Transmittal_Package_${t.id}.json`);
+    document.body.appendChild(dlAnchorElem);
     dlAnchorElem.click();
+    document.body.removeChild(dlAnchorElem);
+    URL.revokeObjectURL(url);
     addAuditLog('TRANSMITTAL_EXPORT', `Downloaded comprehensive BI transmittal slip JSON for ${t.id}`, 'Transmittals', t.id);
     showToast(`BI Data Packet downloaded successfully to TilePoint_BI_Transmittal_Package_${t.id}.json!`);
   };

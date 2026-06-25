@@ -1076,11 +1076,16 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
   // Bulk Import / Export simulations
   const handleExportJSON = () => {
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(products.filter(p => !p.isDeleted), null, 2));
+    const jsonString = JSON.stringify(products.filter(p => !p.isDeleted), null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const dlAnchorElem = document.createElement('a');
-    dlAnchorElem.setAttribute('href', dataStr);
+    dlAnchorElem.setAttribute('href', url);
     dlAnchorElem.setAttribute('download', `TilePoint_Inventory_${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(dlAnchorElem);
     dlAnchorElem.click();
+    document.body.removeChild(dlAnchorElem);
+    URL.revokeObjectURL(url);
     addAuditLog('INVENTORY_EXPORT', 'Exported product database as JSON file', 'Products', 'EXPORT');
     showToast('Exported full non-deleted inventory roster as JSON file.');
   };
@@ -1848,6 +1853,23 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                           }>
                             {qty}
                           </div>
+                          {selectedViewBranchId === 'consolidated' && (
+                            <div className="flex flex-wrap justify-center gap-1 mt-1.5 max-w-[180px] mx-auto">
+                              {branches.filter(b => !b.isDeleted).map(b => {
+                                const bStock = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id)?.quantity || 0;
+                                if (bStock === 0) return null;
+                                return (
+                                  <span
+                                    key={b.id}
+                                    className="text-[9px] px-1.5 py-0.5 rounded bg-m3-primary/10 text-m3-primary border border-m3-primary/15 font-sans font-bold whitespace-nowrap"
+                                    title={`${b.name}: ${bStock} Boxes`}
+                                  >
+                                    {b.id}: {bStock}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
                         </td>
 
                         {/* Threshold warnings trigger limit */}
@@ -2607,20 +2629,16 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   <thead>
                     <tr className="bg-m3-surface text-[10px] font-black uppercase tracking-wider text-zinc-500 border-b border-m3-outline-variant/15">
                       <th className="py-3 px-4">Associated Product</th>
-                      <th className="py-3 px-4 text-center">B1: Cebu Main HQ</th>
-                      <th className="py-3 px-4 text-center">B2: Bacolod Branch</th>
-                      <th className="py-3 px-4 text-center">B3: Iloilo Hub</th>
-                      <th className="py-3 px-4 text-center">B4: Dumaguete Center</th>
+                      {branches.filter(b => !b.isDeleted).map((b) => (
+                        <th key={b.id} className="py-3 px-4 text-center">{b.id}: {b.name.replace('Emman Tile Center ', '').replace('TilePoint ', '')}</th>
+                      ))}
                       <th className="py-3 px-4 text-right">Unified Global Pools</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-m3-outline-variant/10 text-xs font-semibold">
                     {products.filter(p => !p.isDeleted).map((p) => {
-                      const b1Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B1')?.quantity || 0;
-                      const b2Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B2')?.quantity || 0;
-                      const b3Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B3')?.quantity || 0;
-                      const b4Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B4')?.quantity || 0;
-                      const totalGlobal = b1Stock + b2Stock + b3Stock + b4Stock;
+                      const activeBranches = branches.filter(b => !b.isDeleted);
+                      let totalGlobal = 0;
 
                       return (
                         <tr key={p.id} className="hover:bg-m3-surface-high/30 transition-colors">
@@ -2630,32 +2648,36 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                           </td>
                           
                           {/* Branch cells with interactive alerts */}
-                          <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
-                            <span className={b1Stock < 30 ? 'bg-amber-500/15 text-amber-600 border border-amber-500/20 px-2 py-0.5 rounded-lg text-xs' : 'text-m3-on-surface'}>
-                              {b1Stock} boxes
-                            </span>
-                          </td>
+                          {activeBranches.map((b) => {
+                            const bStockRec = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id);
+                            const bStock = bStockRec?.quantity || 0;
+                            totalGlobal += bStock;
 
-                          <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
-                            <span className={b2Stock < 15 ? 'bg-rose-500/15 text-rose-600 border border-rose-500/20 px-2 py-0.5 rounded-lg text-xs' : 'text-m3-on-surface'}>
-                              {b2Stock} boxes
-                            </span>
-                          </td>
+                            const threshold = bStockRec?.lowStockThresholdOverride !== undefined
+                              ? bStockRec.lowStockThresholdOverride
+                              : p.minimumStock;
 
-                          <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
-                            <span className={b3Stock < 15 ? 'bg-rose-500/15 text-rose-600 border border-rose-500/20 px-2 py-0.5 rounded-lg text-xs' : 'text-m3-on-surface'}>
-                              {b3Stock} boxes
-                            </span>
-                          </td>
+                            const isLow = bStock <= threshold;
+                            const isZero = bStock === 0;
 
-                          <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
-                            <span className={b4Stock < 15 ? 'bg-rose-500/15 text-rose-600 border border-rose-500/20 px-2 py-0.5 rounded-lg text-xs' : 'text-m3-on-surface'}>
-                              {b4Stock} boxes
-                            </span>
-                          </td>
+                            let alertClass = 'text-m3-on-surface';
+                            if (isZero) {
+                              alertClass = 'bg-rose-500/15 text-rose-600 border border-rose-500/20 px-2 py-0.5 rounded-lg text-xs';
+                            } else if (isLow) {
+                              alertClass = 'bg-amber-500/15 text-amber-600 border border-amber-500/20 px-2 py-0.5 rounded-lg text-xs';
+                            }
+
+                            return (
+                              <td key={b.id} className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
+                                <span className={alertClass}>
+                                  {bStock} {p.unit || 'boxes'}
+                                </span>
+                              </td>
+                            );
+                          })}
 
                           <td className="py-3.5 px-4 text-right font-mono font-black text-sm text-m3-primary">
-                            {totalGlobal} units
+                            {totalGlobal} {p.unit || 'boxes'}
                           </td>
                         </tr>
                       );
@@ -2886,11 +2908,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   </thead>
                   <tbody className="divide-y divide-m3-outline-variant/10 text-xs font-semibold">
                     {products.filter(p => !p.isDeleted).map((p) => {
-                      const b1Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B1')?.quantity || 0;
-                      const b2Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B2')?.quantity || 0;
-                      const b3Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B3')?.quantity || 0;
-                      const b4Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B4')?.quantity || 0;
-                      const totalGlobal = b1Stock + b2Stock + b3Stock + b4Stock;
+                      const totalGlobal = branchStock
+                        .filter(bs => bs.productId === p.id && branches.some(b => b.id === bs.branchId && !b.isDeleted))
+                        .reduce((acc, curr) => acc + curr.quantity, 0);
 
                       const ages: Record<string, number> = { 'P1': 14, 'P2': 210, 'P3': 45, 'P4': 185 };
                       const ageDays = ages[p.id] || 35;

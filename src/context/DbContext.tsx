@@ -292,6 +292,8 @@ interface DbContextType {
   generateMasterForensicBackup: () => any;
   importMasterForensicBackup: () => void;
   resetLockout: () => void;
+  serverConnected: boolean;
+  syncFromSharedServer: () => Promise<void>;
 }
 
 export interface DbSnapshot {
@@ -1028,6 +1030,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const [failedAttempts, setFailedAttempts] = useState<number>(0);
   const [lockoutUntil, setLockoutUntil] = useState<number>(0);
   const [rateLimitTimeLeft, setRateLimitTimeLeft] = useState<number>(0);
+  const [serverConnected, setServerConnected] = useState<boolean>(false);
 
   const updateCurrentUser = (updates: Partial<User>) => {
     setCurrentUser(prev => {
@@ -1442,6 +1445,49 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     setActiveShift(openShift || null);
   }, [shifts, currentUser]);
 
+  // Self-heal and sync missing/zero branch stock entries for products with positive total stock (migrated/imported POS data)
+  useEffect(() => {
+    if (products.length > 0 && branches.length > 0) {
+      setBranchStock(prevStock => {
+        let updated = [...prevStock];
+        let hasChanges = false;
+
+        products.forEach(p => {
+          if (p.isDeleted) return;
+
+          // Find existing branchStock records for this product across all non-deleted branches
+          const activeBranchIds = branches.filter(b => !b.isDeleted).map(b => b.id);
+          const productBranchStocks = updated.filter(bs => bs.productId === p.id && activeBranchIds.includes(bs.branchId));
+          const totalBranchQty = productBranchStocks.reduce((sum, bs) => sum + bs.quantity, 0);
+
+          // If catalog says we have positive stock, but total branch stock is 0 (classic migrated/imported signature)
+          if (p.stockQuantity > 0 && totalBranchQty === 0) {
+            // Assign full quantity to the current user's branch or the first non-deleted branch
+            const targetBranchId = currentUser.branchAssignmentId || branches.find(b => !b.isDeleted)?.id || 'B1';
+            
+            const existingIdx = updated.findIndex(bs => bs.productId === p.id && bs.branchId === targetBranchId);
+            if (existingIdx !== -1) {
+              updated[existingIdx] = {
+                ...updated[existingIdx],
+                quantity: p.stockQuantity
+              };
+            } else {
+              updated.push({
+                id: `${targetBranchId}_${p.id}`,
+                branchId: targetBranchId,
+                productId: p.id,
+                quantity: p.stockQuantity
+              });
+            }
+            hasChanges = true;
+          }
+        });
+
+        return hasChanges ? updated : prevStock;
+      });
+    }
+  }, [products, branches, currentUser.branchAssignmentId]);
+
   // DB Tuning debouncer settings & stats
   const [debounceDelay, setDebounceDelay] = useState<number>(() => {
     const cached = localStorage.getItem('tp_debounce_delay');
@@ -1518,6 +1564,112 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       }, durationMs);
     });
   };
+
+  const forceSyncAllToServer = async () => {
+    try {
+      const payload = {
+        'tp_users': users,
+        'tp_branches': branches,
+        'tp_suppliers': suppliers,
+        'tp_brands': brands,
+        'tp_products': products,
+        'tp_purchase_orders': purchaseOrders,
+        'tp_po_items': poItems,
+        'tp_transmittals': transmittals,
+        'tp_shifts': shifts,
+        'tp_sales': sales,
+        'tp_sale_items': saleItems,
+        'tp_movements': movements,
+        'tp_audit_logs': auditLogs,
+        'tp_parked_sales': parkedSales,
+        'tp_stock_transfers': stockTransfers,
+        'tp_branch_stock': branchStock,
+        'tp_ledger_entries': ledgerEntries,
+        'tp_branch_sales_reports': branchSalesReports,
+        'tp_deliveries': deliveries,
+        'tp_damage_logs': damageLogs,
+        'tp_is_configured': String(isConfigured),
+        'tilepoint_onboarded_setup': localStorage.getItem('tilepoint_onboarded_setup') || 'false',
+        'tilepoint_company_name_v1': localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center'
+      };
+      
+      const res = await fetch('/api/db/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: payload })
+      });
+      if (res.ok) {
+        console.log('[Shared DB Client] Successfully synced all local data to server.');
+      }
+    } catch (err) {
+      console.error('[Shared DB Client] Failed bulk sync to server:', err);
+    }
+  };
+
+  const syncFromSharedServer = async () => {
+    try {
+      const res = await fetch('/api/db');
+      if (!res.ok) throw new Error('Shared server returned status ' + res.status);
+      const responseData = await res.json();
+      if (responseData && responseData.success && responseData.data) {
+        const db = responseData.data;
+        if (Object.keys(db).length > 0) {
+          // Pre-populate localStorage so the auto-save hooks are immediately bypassed!
+          Object.keys(db).forEach(k => {
+            const valStr = typeof db[k] === 'string' ? db[k] : JSON.stringify(db[k]);
+            localStorage.setItem(k, valStr);
+          });
+
+          // Now safely update all React states!
+          if (db['tp_users']) setUsers(db['tp_users']);
+          if (db['tp_branches']) setBranches(db['tp_branches']);
+          if (db['tp_suppliers']) setSuppliers(db['tp_suppliers']);
+          if (db['tp_brands']) setBrands(db['tp_brands']);
+          if (db['tp_products']) setProducts(db['tp_products']);
+          if (db['tp_purchase_orders']) setPurchaseOrders(db['tp_purchase_orders']);
+          if (db['tp_po_items']) setPoItems(db['tp_po_items']);
+          if (db['tp_transmittals']) setTransmittals(db['tp_transmittals']);
+          if (db['tp_shifts']) setShifts(db['tp_shifts']);
+          if (db['tp_sales']) setSales(db['tp_sales']);
+          if (db['tp_sale_items']) setSaleItems(db['tp_sale_items']);
+          if (db['tp_movements']) setMovements(db['tp_movements']);
+          if (db['tp_audit_logs']) setAuditLogs(db['tp_audit_logs']);
+          if (db['tp_parked_sales']) setParkedSales(db['tp_parked_sales']);
+          if (db['tp_stock_transfers']) setStockTransfers(db['tp_stock_transfers']);
+          if (db['tp_branch_stock']) setBranchStock(db['tp_branch_stock']);
+          if (db['tp_ledger_entries']) setLedgerEntries(db['tp_ledger_entries']);
+          if (db['tp_branch_sales_reports']) setBranchSalesReports(db['tp_branch_sales_reports']);
+          if (db['tp_deliveries']) setDeliveries(db['tp_deliveries']);
+          if (db['tp_damage_logs']) setDamageLogs(db['tp_damage_logs']);
+          
+          if (db['tp_is_configured'] !== undefined) {
+            setIsConfigured(db['tp_is_configured'] === 'true' || db['tp_is_configured'] === true);
+          }
+        } else {
+          // Shared server db is empty (first-time launch of the server!)
+          // Bootstrap server with local client-side state so we don't lose anything
+          console.log('[Shared DB Client] Server DB is empty. Bootstrapping server with local state...');
+          await forceSyncAllToServer();
+        }
+        setServerConnected(true);
+      }
+    } catch (error) {
+      console.warn('[Shared DB Client] Server offline/unreachable. Operating in local fallback mode.', error);
+      setServerConnected(false);
+    }
+  };
+
+  // Synchronize on mount and poll periodically
+  useEffect(() => {
+    syncFromSharedServer();
+    
+    // Check every 5 seconds to sync data in real-time between PC and mobile devices!
+    const interval = setInterval(() => {
+      syncFromSharedServer();
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // Persist auto backup settings
   useEffect(() => {
@@ -1626,8 +1778,21 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       return;
     }
 
+    const writeToServer = async () => {
+      try {
+        await fetch('/api/db', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key, value })
+        });
+      } catch (e) {
+        console.warn('[Shared DB Client] Failed to write to offline server database:', e);
+      }
+    };
+
     if (bypassDebounce || debounceDelay === 0) {
       localStorage.setItem(key, dataStr);
+      writeToServer();
       setDbSyncStatus('syncing');
       setTimeout(() => setDbSyncStatus('idle'), 150);
       return;
@@ -1648,6 +1813,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
     timeoutRefs.current[key] = setTimeout(() => {
       localStorage.setItem(key, dataStr);
+      writeToServer();
       delete timeoutRefs.current[key];
       
       const pendingKeys = Object.keys(timeoutRefs.current);
@@ -2651,11 +2817,23 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   // --- DATABASE FACTORY TRUNCATE & RE-SEED ENGINE ---
-  const truncateDatabase = (mode: 'all' | 'transactions' | 'seeds') => {
+  const truncateDatabase = async (mode: 'all' | 'transactions' | 'seeds') => {
     if (currentUser.role !== UserRole.ADMIN) {
       console.error('Unauthorized security violation: Only system administrators are authorized to reset or truncate the database.');
       return;
     }
+
+    // Reset/truncate server database first
+    try {
+      await fetch('/api/db/truncate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode })
+      });
+    } catch (e) {
+      console.warn('[Shared DB Client] Failed to reset server-side database. Resetting locally...', e);
+    }
+
     if (mode === 'seeds') {
       // Restore all original database seeds
       setBranches(SEED_BRANCHES);
@@ -3637,6 +3815,17 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     };
     setProducts(prev => [...prev, newProd]);
 
+    // Initial branchStock record
+    setBranchStock(prev => [
+      ...prev,
+      {
+        id: `${currentUser.branchAssignmentId || 'B1'}_${newId}`,
+        branchId: currentUser.branchAssignmentId || 'B1',
+        productId: newId,
+        quantity: sanitizedFields.stockQuantity,
+      }
+    ]);
+
     // Initial stock movement
     const initMove: InventoryMovement = {
       id: `M-${Date.now()}`,
@@ -3660,6 +3849,36 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   const updateProduct = (id: string, updates: Partial<Product>, customLogReason?: string) => {
     const original = products.find(p => p.id === id);
+    if (!original) return;
+
+    // Check if stock level changed
+    if (updates.stockQuantity !== undefined) {
+      const nextStock = Math.round(sanitizeAndValidateNumber(updates.stockQuantity));
+      if (nextStock !== original.stockQuantity) {
+        const diff = nextStock - original.stockQuantity;
+        logManualAdjustment(id, diff, customLogReason || 'Stock level manual correction from product edit panel');
+        
+        setBranchStock(stockList => {
+          const targetBranchId = currentUser.branchAssignmentId || 'B1';
+          const idx = stockList.findIndex(bs => bs.productId === id && bs.branchId === targetBranchId);
+          if (idx !== -1) {
+            const updated = [...stockList];
+            const nextQty = Math.max(0, updated[idx].quantity + diff);
+            updated[idx] = { ...updated[idx], quantity: nextQty };
+            return updated;
+          } else {
+            const nextQty = Math.max(0, diff);
+            return [...stockList, {
+              id: `${targetBranchId}_${id}`,
+              branchId: targetBranchId,
+              productId: id,
+              quantity: nextQty
+            }];
+          }
+        });
+      }
+    }
+
     setProducts(prev => prev.map(p => {
       if (p.id === id) {
         const sanitizedUpdates: Partial<Product> = {};
@@ -3682,12 +3901,6 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         if (updates.sellingPrice !== undefined) sanitizedUpdates.sellingPrice = sanitizeAndValidateNumber(updates.sellingPrice);
         if (updates.stockQuantity !== undefined) sanitizedUpdates.stockQuantity = Math.round(sanitizeAndValidateNumber(updates.stockQuantity));
         if (updates.minimumStock !== undefined) sanitizedUpdates.minimumStock = Math.round(sanitizeAndValidateNumber(updates.minimumStock));
-
-        // If stock level changed, record movement
-        if (sanitizedUpdates.stockQuantity !== undefined && sanitizedUpdates.stockQuantity !== p.stockQuantity) {
-          const diff = sanitizedUpdates.stockQuantity - p.stockQuantity;
-          logManualAdjustment(id, diff, customLogReason || 'Stock level manual correction from product edit panel');
-        }
 
         return {
           ...p,
@@ -3773,6 +3986,28 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         });
 
         return Object.values(currentCodes);
+      });
+
+      // Synchronize newly imported products with branch stock
+      setBranchStock(prevStock => {
+        const updated = [...prevStock];
+        sanitized.forEach(item => {
+          if (item.stockQuantity > 0) {
+            const targetBranchId = currentUser.branchAssignmentId || 'B1';
+            const existingIdx = updated.findIndex(bs => bs.productId === item.id && bs.branchId === targetBranchId);
+            if (existingIdx !== -1) {
+              updated[existingIdx] = { ...updated[existingIdx], quantity: item.stockQuantity };
+            } else {
+              updated.push({
+                id: `${targetBranchId}_${item.id}`,
+                branchId: targetBranchId,
+                productId: item.id,
+                quantity: item.stockQuantity
+              });
+            }
+          }
+        });
+        return updated;
       });
 
       addAuditLog('PRODUCT_BULK_IMPORT', `Bulk-imported ${sanitized.length} products successfully`, 'Products', 'BULK');
@@ -4602,6 +4837,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         generateMasterForensicBackup,
         importMasterForensicBackup,
         resetLockout,
+        serverConnected,
+        syncFromSharedServer,
       }}
     >
       {children}

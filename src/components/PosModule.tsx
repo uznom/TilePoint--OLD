@@ -1159,7 +1159,27 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                                           <span>•</span>
                                           <span>Brand: {p.brand}</span>
                                           <span>•</span>
-                                          <span className="text-zinc-500 bg-m3-surface/30 px-1 rounded">Qty: {p.stockQuantity}</span>
+                                          <span className="text-zinc-500 bg-m3-surface/30 px-1 rounded font-black">Total Stock: {p.stockQuantity}</span>
+                                          <span>•</span>
+                                          <div className="flex flex-wrap gap-1 items-center">
+                                            {branches.filter(b => !b.isDeleted).map(b => {
+                                              const bQty = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id)?.quantity || 0;
+                                              const isCurrent = b.id === currentUser.branchAssignmentId;
+                                              return (
+                                                <span 
+                                                  key={b.id} 
+                                                  className={`px-1 py-0.2 rounded text-[9px] ${
+                                                    isCurrent 
+                                                      ? 'bg-m3-primary/15 text-m3-primary font-black border border-m3-primary/20' 
+                                                      : 'bg-zinc-500/10 text-zinc-400 font-medium'
+                                                  }`}
+                                                  title={`${b.name}`}
+                                                >
+                                                  {b.id}: {bQty}
+                                                </span>
+                                              );
+                                            })}
+                                          </div>
                                         </div>
                                       </div>
                                       <div className="text-right">

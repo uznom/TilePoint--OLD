@@ -306,14 +306,18 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
     };
 
     const payloadString = JSON.stringify(payload, null, 2);
-    const str = 'data:text/json;charset=utf-8,' + encodeURIComponent(payloadString);
+    const blob = new Blob([payloadString], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const fileName = `TilePoint_Sales_Report_${currentBranchMeta.id}_${reportingDate}.json`;
     
     // Download file
     const element = document.createElement('a');
-    element.setAttribute('href', str);
+    element.setAttribute('href', url);
     element.setAttribute('download', fileName);
+    document.body.appendChild(element);
     element.click();
+    document.body.removeChild(element);
+    URL.revokeObjectURL(url);
 
     addAuditLog(
       'SALES_OFFLINE_EXPORT',
