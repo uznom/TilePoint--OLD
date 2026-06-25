@@ -108,34 +108,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
   const [editingBranchQuota, setEditingBranchQuota] = useState<number>(2000000);
   const [editingBranchStaff, setEditingBranchStaff] = useState<number>(10);
 
-  // Enterprise Systems Onboarding Walkthrough Setup Wizard
-  const [showSetupWizard, setShowSetupWizard] = useState<boolean>(() => {
-    if (currentUser.role !== UserRole.ADMIN) return false;
-    return localStorage.getItem('tilepoint_setup_completed') !== 'true';
-  });
-  const [setupStep, setSetupStep] = useState<number>(1);
-  const [customCompanyName, setCustomCompanyName] = useState<string>(() => {
-    return localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center';
-  });
-  const [customStoreLogo, setCustomStoreLogo] = useState<string>(() => {
-    return localStorage.getItem('tilepoint_store_logo_v1') || '';
-  });
-  const [customTaxRate, setCustomTaxRate] = useState<number>(12);
-  const [customCurrency, setCustomCurrency] = useState<string>('₱');
-  const [customTargets, setCustomTargets] = useState<Record<string, number>>({
-    'B1': 2200000,
-    'B2': 1800000,
-    'B3': 1500000,
-    'B4': 1200000
-  });
-  const [customStaff, setCustomStaff] = useState<Record<string, number>>({
-    'B1': 15,
-    'B2': 10,
-    'B3': 8,
-    'B4': 6
-  });
-  const [setupAdminEmail, setSetupAdminEmail] = useState<string>(currentUser.email || 'erica.manaban.04@gmail.com');
-  const [setupManagerPin, setSetupManagerPin] = useState<string>(currentUser.managerPin || '4321');
+  const [showSetupWizard, setShowSetupWizard] = useState<boolean>(false);
 
   // Real-time Admin Daily Sales Monitor states
   const [dailySalesSearch, setDailySalesSearch] = useState<string>('');
@@ -150,20 +123,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
     }, 4500);
   };
 
-  const handleWizardLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 1.5 * 1024 * 1024) {
-        showToastMsg('Store Logo size must be less than 1.5MB.', 'error');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setCustomStoreLogo(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+
 
   // Resolve current active branch filter based on user role and Admin select choice
   const activeBranchId = currentUser.role === UserRole.ADMIN
@@ -564,42 +524,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
     }
   };
 
-  const handleCompleteSetup = () => {
-    try {
-      localStorage.setItem('tilepoint_setup_completed', 'true');
-      localStorage.setItem('tilepoint_company_name_v1', customCompanyName);
-      localStorage.setItem('tilepoint_store_logo_v1', customStoreLogo);
-      localStorage.setItem('tilepoint_tax_rate_v1', String(customTaxRate));
-      localStorage.setItem('tilepoint_currency_v1', customCurrency);
-
-      branches.forEach(b => {
-        let suffix = "";
-        if (b.id === 'B1') suffix = "Main Branch";
-        else if (b.id === 'B2') suffix = "Bacolod Showroom";
-        else if (b.id === 'B3') suffix = "Talisay Depot";
-        else if (b.id === 'B4') suffix = "Silay Warehouse";
-        
-        updateBranch(b.id, {
-          name: `${customCompanyName} ${suffix}`,
-          monthlySales: customTargets[b.id] || b.monthlySales,
-          staffCount: customStaff[b.id] || b.staffCount
-        });
-      });
-
-      updateCurrentUser({
-        email: setupAdminEmail,
-        managerPin: setupManagerPin
-      });
-
-      setShowSetupWizard(false);
-      showToastMsg(`SYSTEM SETUP WALKTHROUGH COMPLETE: ${customCompanyName} system parameters successfully locked!`, 'success');
-    } catch (err) {
-      console.error(err);
-      showToastMsg('Setup execution error failed.', 'error');
-    }
-  };
+  const handleCompleteSetup = () => {};
 
   const renderSetupWizardModal = () => {
+    return null;
+    const showSetupWizard = false;
+    const setupStep = 1 as number;
+    const customCompanyName = '';
+    const customStoreLogo = '';
+    const customTaxRate = 12;
+    const customCurrency = '₱';
+    const customTargets: Record<string, number> = {};
+    const customStaff: Record<string, number> = {};
+    const setupAdminEmail = '';
+    const setupManagerPin = '';
+    const setSetupStep = (v: any) => {};
+    const setCustomCompanyName = (v: any) => {};
+    const setCustomStoreLogo = (v: any) => {};
+    const setCustomCurrency = (v: any) => {};
+    const setCustomTaxRate = (v: any) => {};
+    const setCustomTargets = (v: any) => {};
+    const setCustomStaff = (v: any) => {};
+    const setSetupAdminEmail = (v: any) => {};
+    const setSetupManagerPin = (v: any) => {};
+    const handleWizardLogoChange = (e: any) => {};
+
     if (!showSetupWizard) return null;
 
     return (
@@ -979,18 +928,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
               </div>
 
               <div className="flex gap-2 w-full sm:w-auto justify-end">
-                <button 
-                  onClick={() => setShowSetupWizard(true)}
-                  className="p-3 text-xs bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 text-emerald-400 rounded-2xl border border-emerald-500/30 hover:from-emerald-500 hover:to-emerald-600 hover:text-white font-extrabold transition-all flex items-center gap-1.5 cursor-pointer shadow-md active:scale-95"
-                  title="Configure core company thresholds & branding profiles"
-                >
-                  Setup Wizard
-                </button>
                 <button
                   onClick={() => {
                     window.location.reload();
                   }}
-                  className="p-3 text-xs bg-m3-surface-low rounded-2xl border border-m3-outline-variant/30 hover:bg-m3-primary/10 transition-all flex items-center gap-1 cursor-pointer shadow-sm active:scale-95"
+                  className="p-3 text-xs bg-m3-surface-low rounded-2xl border border-m3-outline-variant/30 hover:bg-m3-primary/10 transition-all flex items-center gap-1 cursor-pointer shadow-sm active:scale-95 font-sans font-bold text-m3-on-surface"
                   title="Force refresh database records"
                 >
                   <RefreshCw className="h-4 w-4 text-m3-primary" /> Reload Feed

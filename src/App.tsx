@@ -491,7 +491,6 @@ function AppContent() {
     return (
       <>
         <SetupModule />
-        <PrivacyAccessibilityHub darkMode={false} />
       </>
     );
   }
@@ -500,7 +499,6 @@ function AppContent() {
     return (
       <>
         <LoginModule />
-        <PrivacyAccessibilityHub darkMode={true} />
       </>
     );
   }
@@ -567,9 +565,9 @@ function AppContent() {
     { id: 'pos', name: 'POS Checkout Mode', icon: ShoppingCart, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER] },
     { id: 'shift', name: 'Shift drawer', icon: LockKeyhole, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER] },
     { id: 'calculator', name: 'Tile Coverage Calc', icon: Calculator, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF] },
-    { id: 'branches', name: 'Branches Profile', icon: Building2, roles: [UserRole.ADMIN] },
-    { id: 'users', name: 'Employee Directory', icon: UsersIcon, roles: [UserRole.ADMIN] },
-    { id: 'system-settings', name: 'System Settings', icon: Sliders, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF] },
+    { id: 'branches', name: 'Branches Profile', icon: Building2, roles: [UserRole.ADMIN, UserRole.MANAGER] },
+    { id: 'users', name: 'Employee Directory', icon: UsersIcon, roles: [UserRole.ADMIN, UserRole.MANAGER] },
+    { id: 'system-settings', name: 'System Settings', icon: Sliders, roles: [UserRole.ADMIN, UserRole.MANAGER] },
     
     // ATPOS v2 Submodules
     { id: 'inventory-stocks', name: 'Catalog Stock Ledger', icon: Layers, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF] },

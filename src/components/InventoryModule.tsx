@@ -1580,9 +1580,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
         <>
           {/* Main Filter Controller Panel Card */}
           <div className="bg-m3-surface-low p-4 rounded-[28px] border border-m3-outline-variant/20 shadow-sm space-y-4">
-            <div className="flex flex-col xl:flex-row gap-4 items-center justify-between">
+            <div className="flex flex-col xl:flex-row gap-4 items-stretch xl:items-center justify-between">
               {/* Search query box */}
-              <div className="relative w-full xl:max-w-xs shrink-0">
+              <div className="relative w-full xl:max-w-md shrink-0">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-m3-primary">
                   <Search className="h-4 w-4" />
                 </span>
@@ -1591,12 +1591,12 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   placeholder="Filter by Name, SKU, design name, code..."
                   value={term}
                   onChange={e => setTerm(e.target.value)}
-                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2.5 pl-10 pr-8 text-xs text-m3-on-surface focus:outline-none transition-all rounded-t-md font-medium"
+                  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/25 focus:border-m3-primary px-3.5 py-2.5 pl-10 pr-8 text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary/10 transition-all rounded-xl font-medium"
                 />
                 {term && (
                   <button
                     onClick={() => setTerm('')}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-zinc-400 hover:text-rose-500 cursor-pointer text-sm font-black transition-colors"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-zinc-400 hover:text-rose-500 cursor-pointer text-xs font-black transition-colors"
                     title="Clear search"
                   >
                     ✗
@@ -1605,45 +1605,53 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
               </div>
 
               {/* Advanced catalog filters and commands */}
-              <div className="flex flex-wrap gap-2 w-full justify-start xl:justify-end items-center">
+              <div className="flex flex-wrap gap-2.5 w-full justify-start xl:justify-end items-center">
                 
                 {/* Branch view select / consolidated */}
-                <span className="text-[10px] uppercase font-black tracking-widest text-m3-on-surface-variant/70 pl-2">View scope:</span>
-                <select
-                  value={selectedViewBranchId}
-                  onChange={e => setSelectedViewBranchId(e.target.value)}
-                  className="p-2 border-b-2 border-emerald-500 bg-m3-surface-lowest text-xs text-m3-on-surface focus:outline-none rounded-t-md cursor-pointer transition-colors font-extrabold text-emerald-500"
-                >
-                  <option value="consolidated">HQ Consolidated (HQ Master)</option>
-                  {branches.filter(b => !b.isDeleted).map((b) => (
-                    <option key={b.id} value={b.id}>{b.name.replace('Emman Tile Center ', 'Branch: ')}</option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-1.5 bg-m3-surface-lowest border border-emerald-500/30 px-3 py-1.5 rounded-xl shadow-sm">
+                  <span className="text-[9px] uppercase font-black tracking-widest text-emerald-600 font-mono">View scope:</span>
+                  <select
+                    value={selectedViewBranchId}
+                    onChange={e => setSelectedViewBranchId(e.target.value)}
+                    className="bg-transparent text-xs text-emerald-500 focus:outline-none cursor-pointer transition-colors font-extrabold outline-none"
+                  >
+                    <option value="consolidated">HQ Consolidated (HQ Master)</option>
+                    {branches.filter(b => !b.isDeleted).map((b) => (
+                      <option key={b.id} value={b.id}>{b.name.replace('Emman Tile Center ', 'Branch: ')}</option>
+                    ))}
+                  </select>
+                </div>
 
                 {/* Category select */}
-                <select
-                  value={categoryFilter}
-                  onChange={e => setCategoryFilter(e.target.value)}
-                  className="p-2 border-b-2 border-m3-outline-variant/60 focus:border-m3-primary bg-m3-surface-lowest text-xs text-m3-on-surface focus:outline-none rounded-t-md cursor-pointer transition-colors font-medium"
-                >
-                  <option value="All">All Categories</option>
-                  {categories.slice(0, 16).map((cat, i) => (
-                    <option key={i} value={cat}>{cat}</option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-1.5 bg-m3-surface-lowest border border-m3-outline-variant/25 px-3 py-1.5 rounded-xl shadow-sm">
+                  <span className="text-[9px] uppercase font-black tracking-widest text-m3-on-surface-variant font-mono">Category:</span>
+                  <select
+                    value={categoryFilter}
+                    onChange={e => setCategoryFilter(e.target.value)}
+                    className="bg-transparent text-xs text-m3-on-surface focus:outline-none cursor-pointer transition-colors font-semibold outline-none"
+                  >
+                    <option value="All">All Categories</option>
+                    {categories.slice(0, 16).map((cat, i) => (
+                      <option key={i} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
 
                 {/* Status select */}
-                <select
-                  value={statusFilter}
-                  onChange={e => setStatusFilter(e.target.value)}
-                  className="p-2 border-b-2 border-m3-outline-variant/60 focus:border-m3-primary bg-m3-surface-lowest text-xs text-m3-on-surface focus:outline-none rounded-t-md cursor-pointer transition-colors font-medium"
-                >
-                  <option value="All">All Statuses</option>
-                  <option value="In Stock">In Stock</option>
-                  <option value="Low Stock">● Low Stock</option>
-                  <option value="Critical">● Critical Stock</option>
-                  <option value="Out of Stock">● Out of Stock</option>
-                </select>
+                <div className="flex items-center gap-1.5 bg-m3-surface-lowest border border-m3-outline-variant/25 px-3 py-1.5 rounded-xl shadow-sm">
+                  <span className="text-[9px] uppercase font-black tracking-widest text-m3-on-surface-variant font-mono">Status:</span>
+                  <select
+                    value={statusFilter}
+                    onChange={e => setStatusFilter(e.target.value)}
+                    className="bg-transparent text-xs text-m3-on-surface focus:outline-none cursor-pointer transition-colors font-semibold outline-none"
+                  >
+                    <option value="All">All Statuses</option>
+                    <option value="In Stock">In Stock</option>
+                    <option value="Low Stock">● Low Stock</option>
+                    <option value="Critical">● Critical Stock</option>
+                    <option value="Out of Stock">● Out of Stock</option>
+                  </select>
+                </div>
 
                 {allowedToModify && (
                   <>
@@ -1668,8 +1676,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
           </div>
 
           {/* Database Catalog Table List */}
-          <div className="m3-card shadow-sm overflow-x-auto p-0 scrollbar-thin scrollbar-thumb-m3-outline-variant">
-            <table className={`w-full text-left border-collapse table-auto text-xs transition-all ${isCompactColumns ? 'min-w-[700px]' : 'min-w-[1280px]'}`}>
+          <div className="m3-card shadow-sm p-0 overflow-hidden">
+            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-m3-outline-variant">
+              <table className={`w-full text-left border-collapse table-auto text-xs transition-all ${isCompactColumns ? 'min-w-[700px]' : 'min-w-[1280px]'}`}>
               <thead>
                 <tr className="border-b border-m3-outline-variant/20 bg-m3-surface/30 text-[10px] uppercase font-bold text-m3-on-surface-variant tracking-wider">
                   <th className="py-3 px-2 w-10 text-center bg-m3-surface-low/40 select-none"></th>
@@ -2051,73 +2060,74 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                 )}
               </tbody>
             </table>
+          </div>
 
-            {/* Pagination Controls bar */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-m3-surface-low/80 border-t border-m3-outline-variant/30 text-xs">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="font-medium text-m3-on-surface-variant font-mono">
-                  Showing {filteredProducts.length === 0 ? 0 : Math.min(filteredProducts.length, (prodPage - 1) * prodsPerPage + 1)}-{Math.min(filteredProducts.length, prodPage * prodsPerPage)} of {filteredProducts.length} entries
-                </span>
-                <span className="text-zinc-400">|</span>
-                <div className="flex items-center gap-1.5 font-sans">
-                  <span className="text-zinc-500 text-[11px]">Show</span>
-                  <select
-                    value={prodsPerPage}
-                    onChange={(e) => setProdsPerPage(Number(e.target.value))}
-                    className="bg-m3-surface-lowest text-m3-on-surface border border-m3-outline-variant/35 rounded-md px-1.5 py-1 text-xs focus:outline-none focus:border-m3-primary font-mono cursor-pointer"
-                  >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                  </select>
-                  <span className="text-zinc-500 text-[11px]">entries per page</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5 select-none">
-                <button
-                  type="button"
-                  disabled={prodPage === 1}
-                  onClick={() => setProdPage(prev => Math.max(1, prev - 1))}
-                  className="px-3.5 py-1.5 rounded-lg border border-m3-outline-variant/30 text-m3-on-surface hover:bg-m3-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[10px]"
+          {/* Pagination Controls bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-m3-surface-low/80 border-t border-m3-outline-variant/30 text-xs">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="font-medium text-m3-on-surface-variant font-mono">
+                Showing {filteredProducts.length === 0 ? 0 : Math.min(filteredProducts.length, (prodPage - 1) * prodsPerPage + 1)}-{Math.min(filteredProducts.length, prodPage * prodsPerPage)} of {filteredProducts.length} entries
+              </span>
+              <span className="text-zinc-400">|</span>
+              <div className="flex items-center gap-1.5 font-sans">
+                <span className="text-zinc-500 text-[11px]">Show</span>
+                <select
+                  value={prodsPerPage}
+                  onChange={(e) => setProdsPerPage(Number(e.target.value))}
+                  className="bg-m3-surface-lowest text-m3-on-surface border border-m3-outline-variant/35 rounded-md px-1.5 py-1 text-xs focus:outline-none focus:border-m3-primary font-mono cursor-pointer"
                 >
-                  Prev
-                </button>
-                {Array.from({ length: totalProdPages }).map((_, i) => {
-                  const pNum = i + 1;
-                  if (totalProdPages > 5 && Math.abs(pNum - prodPage) > 2 && pNum !== 1 && pNum !== totalProdPages) {
-                    if (pNum === 2 || pNum === totalProdPages - 1) {
-                      return <span key={pNum} className="px-1.5 text-zinc-400">...</span>;
-                    }
-                    return null;
-                  }
-                  return (
-                    <button
-                      key={pNum}
-                      type="button"
-                      onClick={() => setProdPage(pNum)}
-                      className={`h-7.5 w-7.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
-                        prodPage === pNum
-                          ? 'bg-m3-primary text-m3-on-primary shadow-sm'
-                          : 'border border-m3-outline-variant/20 hover:bg-m3-primary/10 text-m3-on-surface-variant'
-                      }`}
-                    >
-                      {pNum}
-                    </button>
-                  );
-                })}
-                <button
-                  type="button"
-                  disabled={prodPage === totalProdPages}
-                  onClick={() => setProdPage(prev => Math.min(totalProdPages, prev + 1))}
-                  className="px-3.5 py-1.5 rounded-lg border border-m3-outline-variant/30 text-m3-on-surface hover:bg-m3-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[10px]"
-                >
-                  Next
-                </button>
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+                <span className="text-zinc-500 text-[11px]">entries per page</span>
               </div>
             </div>
+            <div className="flex items-center gap-1.5 select-none">
+              <button
+                type="button"
+                disabled={prodPage === 1}
+                onClick={() => setProdPage(prev => Math.max(1, prev - 1))}
+                className="px-3.5 py-1.5 rounded-lg border border-m3-outline-variant/30 text-m3-on-surface hover:bg-m3-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[10px]"
+              >
+                Prev
+              </button>
+              {Array.from({ length: totalProdPages }).map((_, i) => {
+                const pNum = i + 1;
+                if (totalProdPages > 5 && Math.abs(pNum - prodPage) > 2 && pNum !== 1 && pNum !== totalProdPages) {
+                  if (pNum === 2 || pNum === totalProdPages - 1) {
+                    return <span key={pNum} className="px-1.5 text-zinc-400">...</span>;
+                  }
+                  return null;
+                }
+                return (
+                  <button
+                    key={pNum}
+                    type="button"
+                    onClick={() => setProdPage(pNum)}
+                    className={`h-7.5 w-7.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                      prodPage === pNum
+                        ? 'bg-m3-primary text-m3-on-primary shadow-sm'
+                        : 'border border-m3-outline-variant/20 hover:bg-m3-primary/10 text-m3-on-surface-variant'
+                    }`}
+                  >
+                    {pNum}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                disabled={prodPage === totalProdPages}
+                onClick={() => setProdPage(prev => Math.min(totalProdPages, prev + 1))}
+                className="px-3.5 py-1.5 rounded-lg border border-m3-outline-variant/30 text-m3-on-surface hover:bg-m3-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[10px]"
+              >
+                Next
+              </button>
+            </div>
           </div>
+        </div>
         </>
       )}
 
@@ -2126,9 +2136,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
         <>
           {/* Movement search filters */}
           <div className="bg-m3-surface-low p-4 rounded-[28px] border border-m3-outline-variant/20 shadow-sm">
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
               
-              <div className="relative w-full md:max-w-xs shrink-0">
+              <div className="relative w-full md:max-w-md shrink-0">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-m3-primary">
                   <Search className="h-4 w-4" />
                 </span>
@@ -2137,12 +2147,12 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   placeholder="Filter by ref ID, code, notes, user..."
                   value={movementSearch}
                   onChange={e => setMovementSearch(e.target.value)}
-                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2.5 pl-10 pr-8 text-xs text-m3-on-surface focus:outline-none transition-all rounded-t-md font-medium"
+                  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/25 focus:border-m3-primary px-3.5 py-2.5 pl-10 pr-8 text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary/10 transition-all rounded-xl font-medium"
                 />
                 {movementSearch && (
                   <button
                     onClick={() => setMovementSearch('')}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-zinc-400 hover:text-rose-500 cursor-pointer text-sm font-black transition-colors"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-zinc-400 hover:text-rose-500 cursor-pointer text-xs font-black transition-colors"
                     title="Clear search"
                   >
                     ✗
@@ -2151,21 +2161,23 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
               </div>
 
               <div className="flex items-center gap-2 w-full justify-start md:justify-end">
-                <span className="text-[10px] font-black uppercase tracking-widest text-m3-on-surface-variant">Type:</span>
-                <select
-                  value={movementTypeFilter}
-                  onChange={e => setMovementTypeFilter(e.target.value)}
-                  className="p-2 border-b-2 border-m3-outline-variant/60 focus:border-m3-primary bg-m3-surface-lowest text-xs text-m3-on-surface focus:outline-none rounded-t-md cursor-pointer transition-colors font-bold"
-                >
-                  <option value="All">All Movements</option>
-                  <option value="IN">Intake (IN)</option>
-                  <option value="OUT">Outtake (OUT)</option>
-                  <option value="ADJUST">Correction (ADJUST)</option>
-                  <option value="TRANSFER">Inter-Branch (TRANSFER)</option>
-                </select>
+                <div className="flex items-center gap-1.5 bg-m3-surface-lowest border border-m3-outline-variant/25 px-3 py-1.5 rounded-xl shadow-sm">
+                  <span className="text-[9px] uppercase font-black tracking-widest text-m3-on-surface-variant font-mono">Type:</span>
+                  <select
+                    value={movementTypeFilter}
+                    onChange={e => setMovementTypeFilter(e.target.value)}
+                    className="bg-transparent text-xs text-m3-on-surface focus:outline-none cursor-pointer transition-colors font-bold outline-none"
+                  >
+                    <option value="All">All Movements</option>
+                    <option value="IN">Intake (IN)</option>
+                    <option value="OUT">Outtake (OUT)</option>
+                    <option value="ADJUST">Correction (ADJUST)</option>
+                    <option value="TRANSFER">Inter-Branch (TRANSFER)</option>
+                  </select>
+                </div>
               </div>
-
             </div>
+
           </div>
 
           {/* Activity Logs Table */}

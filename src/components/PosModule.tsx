@@ -1535,8 +1535,9 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
             </div>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-auto rounded-xl border border-m3-outline-variant/20 shadow-inner bg-m3-surface scrollbar-thin">
-            <table className="w-full text-left border-collapse table-auto text-xs min-w-[1000px] font-sans">
+          <div className="flex-1 min-h-0 flex flex-col rounded-xl border border-m3-outline-variant/20 shadow-inner bg-m3-surface overflow-hidden">
+            <div className="flex-1 overflow-auto scrollbar-thin">
+              <table className="w-full text-left border-collapse table-auto text-xs min-w-[1000px] font-sans">
               <thead>
                 <tr className="border-b border-m3-outline-variant/30 bg-m3-surface/30 text-[9px] uppercase font-black text-zinc-400 tracking-wider">
                   <th className="py-3 px-4 w-28">Ref Invoice</th>
@@ -1555,7 +1556,7 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                   <tr
                     key={idx}
                     onClick={() => setSelectedSaleDetail(s)}
-                    className={`hover:bg-m3-surface-low/90 hover:text-white cursor-pointer transition-colors font-bold ${s.isDeleted ? 'bg-red-500/5 text-zinc-650 line-through decoration-rose-650' : ''}`}
+                    className={`hover:bg-m3-surface-low/90 hover:text-white cursor-pointer transition-colors font-bold ${s.isDeleted ? 'bg-red-500/5 text-zinc-500 line-through decoration-rose-500' : ''}`}
                     title="Click to view full transaction invoice ledger details"
                   >
                     <td className="py-3 px-4 text-m3-primary font-black uppercase hover:underline">{s.saleNumber}</td>
@@ -1604,56 +1605,57 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                 )}
               </tbody>
             </table>
+          </div>
 
-            {/* Pagination Controls bar */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-m3-surface-low border-t border-m3-outline-variant/20 text-xs font-sans">
-              <span className="font-semibold text-zinc-400 font-mono">
-                Showing {Math.min(filteredSales.length, (salesPage - 1) * SALES_PER_PAGE + 1)}-{Math.min(filteredSales.length, salesPage * SALES_PER_PAGE)} of {filteredSales.length} invoices
-              </span>
-              <div className="flex items-center gap-1.5 select-none font-sans">
-                <button
-                  type="button"
-                  disabled={salesPage === 1}
-                  onClick={() => setSalesPage(prev => Math.max(1, prev - 1))}
-                  className="px-3 py-1.5 rounded-lg border border-m3-outline-variant/60 hover:border-m3-primary hover:bg-m3-primary/10 text-m3-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px]"
-                >
-                  Prev
-                </button>
-                {Array.from({ length: totalSalesPages }).map((_, i) => {
-                  const pNum = i + 1;
-                  if (totalSalesPages > 5 && Math.abs(pNum - salesPage) > 2 && pNum !== 1 && pNum !== totalSalesPages) {
-                    if (pNum === 2 || pNum === totalSalesPages - 1) {
-                      return <span key={pNum} className="px-1 text-zinc-500">...</span>;
-                    }
-                    return null;
+          {/* Pagination Controls bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-m3-surface-low border-t border-m3-outline-variant/20 text-xs font-sans">
+            <span className="font-semibold text-zinc-400 font-mono">
+              Showing {Math.min(filteredSales.length, (salesPage - 1) * SALES_PER_PAGE + 1)}-{Math.min(filteredSales.length, salesPage * SALES_PER_PAGE)} of {filteredSales.length} invoices
+            </span>
+            <div className="flex items-center gap-1.5 select-none font-sans">
+              <button
+                type="button"
+                disabled={salesPage === 1}
+                onClick={() => setSalesPage(prev => Math.max(1, prev - 1))}
+                className="px-3 py-1.5 rounded-lg border border-m3-outline-variant/60 hover:border-m3-primary hover:bg-m3-primary/10 text-m3-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px]"
+              >
+                Prev
+              </button>
+              {Array.from({ length: totalSalesPages }).map((_, i) => {
+                const pNum = i + 1;
+                if (totalSalesPages > 5 && Math.abs(pNum - salesPage) > 2 && pNum !== 1 && pNum !== totalSalesPages) {
+                  if (pNum === 2 || pNum === totalSalesPages - 1) {
+                    return <span key={pNum} className="px-1 text-zinc-500">...</span>;
                   }
-                  return (
-                    <button
-                      key={pNum}
-                      type="button"
-                      onClick={() => setSalesPage(pNum)}
-                      className={`h-7 w-7 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
-                        salesPage === pNum
-                          ? 'bg-m3-primary text-m3-on-primary shadow-md'
-                          : 'border border-m3-outline-variant/20 hover:bg-m3-primary/10 text-zinc-300'
-                      }`}
-                    >
-                      {pNum}
-                    </button>
-                  );
-                })}
-                <button
-                  type="button"
-                  disabled={salesPage === totalSalesPages}
-                  onClick={() => setSalesPage(prev => Math.min(totalSalesPages, prev + 1))}
-                  className="px-3 py-1.5 rounded-lg border border-m3-outline-variant/60 hover:border-m3-primary hover:bg-m3-primary/10 text-m3-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px]"
-                >
-                  Next
-                </button>
-              </div>
+                  return null;
+                }
+                return (
+                  <button
+                    key={pNum}
+                    type="button"
+                    onClick={() => setSalesPage(pNum)}
+                    className={`h-7 w-7 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                      salesPage === pNum
+                        ? 'bg-m3-primary text-m3-on-primary shadow-md'
+                        : 'border border-m3-outline-variant/20 hover:bg-m3-primary/10 text-zinc-300'
+                    }`}
+                  >
+                    {pNum}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                disabled={salesPage === totalSalesPages}
+                onClick={() => setSalesPage(prev => Math.min(totalSalesPages, prev + 1))}
+                className="px-3 py-1.5 rounded-lg border border-m3-outline-variant/60 hover:border-m3-primary hover:bg-m3-primary/10 text-m3-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px]"
+              >
+                Next
+              </button>
             </div>
           </div>
         </div>
+      </div>
       )}      {/* MODAL 1: Cashier Shift Opener */}
       <AnimatePresence>
         {showShiftModal && (

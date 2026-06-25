@@ -18,14 +18,39 @@ import {
   HelpCircle,
   ShieldAlert,
   Download,
-  Clock
+  Clock,
+  Lock,
+  Shield
 } from 'lucide-react';
+import { useDb } from '../context/DbContext';
+import { UserRole } from '../types/db';
 
 interface SystemSettingsModuleProps {
   darkMode: boolean;
 }
 
 export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ darkMode }) => {
+  const { currentUser, updateCurrentUser } = useDb();
+  const isAuthorized = currentUser && (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER);
+
+  // Enterprise details states
+  const [companyName, setCompanyName] = useState<string>(() => {
+    return localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center';
+  });
+  const [currency, setCurrency] = useState<string>(() => {
+    return localStorage.getItem('tilepoint_currency_v1') || '₱';
+  });
+  const [taxRate, setTaxRate] = useState<number>(() => {
+    return Number(localStorage.getItem('tilepoint_tax_rate_v1') || '12');
+  });
+  const [managerPin, setManagerPin] = useState<string>('');
+
+  useEffect(() => {
+    if (currentUser?.managerPin) {
+      setManagerPin(currentUser.managerPin);
+    }
+  }, [currentUser]);
+
   // Settings states loaded from localStorage
   const [textSize, setTextSize] = useState<'normal' | 'large' | 'xlarge'>(() => {
     return (localStorage.getItem('tilepoint-text-size') as 'normal' | 'large' | 'xlarge') || 'normal';
@@ -67,6 +92,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ dark
 
   // Sync state changes with document element & localStorage, then dispatch global theme update event
   const updateSetting = (key: string, value: string | boolean) => {
+    if (!isAuthorized) return;
     const root = document.documentElement;
     const strVal = String(value);
 
@@ -165,6 +191,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ dark
   }, []);
 
   const handleResetToDefaults = () => {
+    if (!isAuthorized) return;
     localStorage.removeItem('tilepoint-text-size');
     localStorage.removeItem('tilepoint-color-contrast');
     localStorage.removeItem('tilepoint-maximize-text-contrast');
@@ -223,20 +250,40 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ dark
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleResetToDefaults}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-m3-outline-variant/30 hover:bg-m3-primary/10 text-m3-on-surface-variant hover:text-m3-primary text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
-          title="Reset to Factory Defaults"
-        >
-          <RotateCcw className="h-3.5 w-3.5" />
-          <span>Reset Defaults</span>
-        </button>
+        {isAuthorized ? (
+          <button
+            type="button"
+            onClick={handleResetToDefaults}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-m3-outline-variant/30 hover:bg-m3-primary/10 text-m3-on-surface-variant hover:text-m3-primary text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
+            title="Reset to Factory Defaults"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            <span>Reset Defaults</span>
+          </button>
+        ) : (
+          <div className="flex items-center gap-1 text-[10px] uppercase font-black tracking-wider text-amber-500 bg-amber-550/10 px-3 py-1.5 rounded-xl border border-amber-500/20">
+            <Lock className="h-3.5 w-3.5" />
+            <span>RBAC Protected</span>
+          </div>
+        )}
       </div>
 
       {/* SCROLLABLE SETTINGS CONTAINER */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         
+        {/* UNAUTHORIZED ROLE BLOCK */}
+        {!isAuthorized && (
+          <div className="p-4 bg-amber-500/10 border border-amber-500/25 text-amber-500 rounded-xl flex items-start gap-3">
+            <Shield className="h-5 w-5 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-black uppercase tracking-wider">Restricted View-Only Mode</p>
+              <p className="text-[11px] text-zinc-300 leading-normal mt-0.5 font-sans">
+                You do not possess the required administrator credentials to alter global system parameters. These features are read-only under role-based access control (RBAC).
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* SUCCESS EVENT CHIP */}
         {saveSuccess && (
           <div className="p-3 bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 rounded-xl text-center text-xs font-bold font-mono uppercase tracking-wider animate-pulse">
@@ -498,6 +545,110 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ dark
             </button>
           </div>
         </div>
+
+        {currentUser?.role === UserRole.ADMIN && (
+          <>
+            <div className="h-px bg-m3-outline-variant/15" />
+
+            {/* ENTERPRISE PROFILE & COMPLIANCE RULES */}
+            <div className="space-y-5">
+              <div>
+                <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
+                  Enterprise Profile & Business Rules
+                </h4>
+                <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed font-sans">
+                  Configure showroom brand headers, VAT rates, currency standards, and security manager PINs.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Enterprise Name */}
+                <div className="flex flex-col gap-1.5 bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-left">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono">
+                    Enterprise Name Prefix
+                  </label>
+                  <input
+                    type="text"
+                    value={companyName}
+                    disabled={!isAuthorized}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCompanyName(val);
+                      localStorage.setItem('tilepoint_company_name_v1', val);
+                      window.dispatchEvent(new Event('tilepoint-theme-updated'));
+                    }}
+                    className="bg-m3-surface-container border border-m3-outline-variant/35 rounded-xl text-xs font-bold p-2.5 w-full text-m3-on-surface outline-none focus:border-m3-primary disabled:opacity-65 font-sans"
+                  />
+                </div>
+
+                {/* Tax Rate */}
+                <div className="flex flex-col gap-1.5 bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-left">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono">
+                    Standard VAT Tax Rate (%)
+                  </label>
+                  <input
+                    type="number"
+                    value={taxRate}
+                    disabled={!isAuthorized}
+                    onChange={(e) => {
+                      const val = Math.max(0, Number(e.target.value));
+                      setTaxRate(val);
+                      localStorage.setItem('tilepoint_tax_rate_v1', String(val));
+                      window.dispatchEvent(new Event('tilepoint-theme-updated'));
+                    }}
+                    className="bg-m3-surface-container border border-m3-outline-variant/35 rounded-xl text-xs font-bold p-2.5 w-full text-m3-on-surface outline-none focus:border-m3-primary disabled:opacity-65 font-sans"
+                  />
+                </div>
+
+                {/* Currency Symbol */}
+                <div className="flex flex-col gap-1.5 bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-left">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono">
+                    Base Currency Symbol
+                  </label>
+                  <select
+                    value={currency}
+                    disabled={!isAuthorized}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCurrency(val);
+                      localStorage.setItem('tilepoint_currency_v1', val);
+                      window.dispatchEvent(new Event('tilepoint-theme-updated'));
+                    }}
+                    className="bg-m3-surface-container border border-m3-outline-variant/35 rounded-xl text-xs font-bold p-2.5 w-full text-m3-on-surface outline-none focus:border-m3-primary disabled:opacity-65 font-sans"
+                  >
+                    <option value="₱">₱ PHP Peso Sign</option>
+                    <option value="$">$ USD Dollar Symbol</option>
+                    <option value="€">€ EUR Euro Standard</option>
+                    <option value="¥">¥ JPY Yen Accent</option>
+                  </select>
+                </div>
+
+                {/* Manager PIN */}
+                <div className="flex flex-col gap-1.5 bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-left">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono">
+                    Manager Safety Authorization PIN
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={4}
+                    value={managerPin}
+                    disabled={!isAuthorized}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setManagerPin(val);
+                      if (val.length === 4) {
+                        updateCurrentUser({ managerPin: val });
+                        setSaveSuccess(true);
+                        setTimeout(() => setSaveSuccess(false), 2000);
+                      }
+                    }}
+                    className="bg-m3-surface-container border border-m3-outline-variant/35 rounded-xl text-xs font-bold p-2.5 w-full text-center font-mono tracking-widest text-m3-on-surface outline-none focus:border-m3-primary disabled:opacity-65"
+                  />
+                </div>
+              </div>
+            </div>
+          </>
+        )}
 
       </div>
 
