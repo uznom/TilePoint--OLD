@@ -16,7 +16,13 @@ import {
   X,
   MapPin,
   Mail,
-  ShieldAlert
+  ShieldAlert,
+  Activity,
+  Wifi,
+  Laptop,
+  PowerOff,
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
 
 interface UsersModuleProps {
@@ -30,8 +36,13 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
     createUser,
     updateUser,
     resetPassword,
-    currentUser
+    currentUser,
+    activeSessions,
+    activeSessionId,
+    terminateSession
   } = useDb();
+
+  const [subTab, setSubTab] = useState<'employees' | 'active_sessions'>('employees');
 
   // Create Modal state
   const [showModal, setShowModal] = useState(false);
@@ -147,6 +158,48 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
     showToast(`Temporary password initialized to default for ${name}.`);
   };
 
+  const getDeviceDescription = (ua?: string) => {
+    if (!ua) return 'Unknown Browser';
+    let browser = 'Web Browser';
+    let os = 'Unknown OS';
+    
+    if (ua.includes('Firefox')) browser = 'Firefox';
+    else if (ua.includes('Chrome')) browser = 'Chrome';
+    else if (ua.includes('Safari')) browser = 'Safari';
+    else if (ua.includes('Edge')) browser = 'Edge';
+
+    if (ua.includes('Windows')) os = 'Windows PC';
+    else if (ua.includes('Macintosh')) os = 'macOS';
+    else if (ua.includes('Android')) os = 'Android Mobile';
+    else if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS Device';
+    else if (ua.includes('Linux')) os = 'Linux Terminal';
+
+    return `${browser} on ${os}`;
+  };
+
+  const getRelativeTime = (isoString: string) => {
+    try {
+      const diffMs = Date.now() - new Date(isoString).getTime();
+      const diffSec = Math.floor(diffMs / 1000);
+      if (diffSec < 15) return 'Just now (Active)';
+      if (diffSec < 60) return `${diffSec}s ago`;
+      const diffMin = Math.floor(diffSec / 60);
+      if (diffMin < 60) return `${diffMin}m ago`;
+      return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (_) {
+      return 'Active';
+    }
+  };
+
+  const handleTerminateRemote = (sessionId: string, userName: string) => {
+    if (!isUserAdmin) {
+      showToast('Action Denied: Only Administrators can terminate active remote terminal sessions.');
+      return;
+    }
+    terminateSession(sessionId);
+    showToast(`Forcefully signed out active session for ${userName}.`);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in text-m3-on-surface">
       {/* Search Header */}
@@ -156,7 +209,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
           <p className="text-xs text-m3-on-surface-variant/80 mt-0.5">Role-Based Access Control list (RBAC)</p>
         </div>
 
-        {isUserAdmin && (
+        {isUserAdmin && subTab === 'employees' && (
           <button
             onClick={handleOpenAdd}
             className="m3-btn-primary flex items-center gap-1.5 cursor-pointer shadow-sm text-xs shrink-0"
@@ -166,8 +219,38 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
         )}
       </div>
 
-      {/* Grid of users card logs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      {/* Sub-tab Selection Header */}
+      <div className="flex gap-4 border-b border-m3-outline-variant/20 pb-0.5">
+        <button
+          onClick={() => setSubTab('employees')}
+          className={`pb-2 text-xs font-bold transition-all duration-200 border-b-2 flex items-center gap-2 cursor-pointer ${
+            subTab === 'employees'
+              ? 'border-m3-primary text-m3-primary'
+              : 'border-transparent text-m3-on-surface-variant/70 hover:text-m3-on-surface'
+          }`}
+        >
+          <Users className="h-4 w-4" />
+          Employees Directory ({users.length})
+        </button>
+        <button
+          onClick={() => setSubTab('active_sessions')}
+          className={`pb-2 text-xs font-bold transition-all duration-200 border-b-2 flex items-center gap-2 cursor-pointer ${
+            subTab === 'active_sessions'
+              ? 'border-m3-primary text-m3-primary'
+              : 'border-transparent text-m3-on-surface-variant/70 hover:text-m3-on-surface'
+          }`}
+        >
+          <div className="relative">
+            <Activity className="h-4 w-4" />
+            <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 bg-green-550 rounded-full animate-ping" />
+          </div>
+          Active Terminals ({activeSessions.length})
+        </button>
+      </div>
+
+      {subTab === 'employees' ? (
+        /* Grid of users card logs */
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in">
         {users.map((u) => {
           // Status badge coloring
           const activeClass = u.status === 'Active'
@@ -278,6 +361,120 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
           );
         })}
       </div>
+      ) : (
+        /* Active sessions panel view */
+        <div className="space-y-6 animate-fade-in">
+          {/* Security Banner alert box */}
+          <div className="flex gap-3 bg-amber-500/10 border border-amber-500/20 rounded-[20px] p-4 text-xs">
+            <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+            <div className="space-y-1 text-m3-on-surface">
+              <span className="font-bold text-amber-600 block">Tilepoint Authentication & Active Terminal Guard</span>
+              <p className="text-m3-on-surface-variant leading-relaxed">
+                The terminal system strictly enforces **single-device profile isolation**. Sharing a single cashier or admin account across multiple browsers or locations simultaneously is disabled to guarantee pristine audit logs and general ledger accuracy.
+              </p>
+              <p className="text-m3-on-surface-variant font-medium leading-relaxed">
+                Logging into a profile on a new terminal automatically signs out any older active session for that account. Admins can forcefully terminate remote active terminal links below.
+              </p>
+            </div>
+          </div>
+
+          {/* Active Sessions Grid */}
+          {activeSessions.length === 0 ? (
+            <div className="text-center py-12 bg-m3-surface-low rounded-[20px] border border-m3-outline-variant/10">
+              <Laptop className="h-10 w-10 text-m3-on-surface-variant/40 mx-auto mb-2.5" />
+              <p className="text-sm font-semibold text-m3-on-surface-variant">No Active Sessions Registered</p>
+              <p className="text-xs text-m3-on-surface-variant/70">Wait for a terminal to log in and update heartbeat.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {activeSessions.map((session) => {
+                const isCurrent = session.id === activeSessionId;
+                return (
+                  <div key={session.id} className="m3-card shadow-sm flex flex-col justify-between border border-m3-outline-variant/15 relative">
+                    <div className="space-y-4">
+                      {/* Live Header Status */}
+                      <div className="flex items-center justify-between border-b border-m3-outline-variant/20 pb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-600"></span>
+                          </span>
+                          <span className="text-[10px] font-black tracking-widest text-green-600 font-mono uppercase">Live Connection</span>
+                        </div>
+                        {isCurrent ? (
+                          <span className="bg-m3-primary/10 text-m3-primary border border-m3-primary/20 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
+                            This Terminal
+                          </span>
+                        ) : (
+                          <span className="bg-m3-outline-variant/40 text-m3-on-surface-variant border border-m3-outline-variant/20 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
+                            Remote Link
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Profile details */}
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-[12px] bg-m3-primary/10 text-m3-primary text-xs font-black flex items-center justify-center">
+                          {session.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-m3-on-surface">{session.fullName}</h4>
+                          <span className="text-[10px] text-m3-on-surface-variant font-mono uppercase font-bold tracking-wider">{session.role}</span>
+                        </div>
+                      </div>
+
+                      {/* Detailed specifications */}
+                      <div className="space-y-2 text-xs border-t border-m3-outline-variant/10 pt-3">
+                        <div className="flex justify-between">
+                          <span className="text-m3-on-surface-variant/80">User ID Code:</span>
+                          <span className="font-mono text-m3-on-surface font-semibold">@{session.username}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-m3-on-surface-variant/80 font-mono">Session ID:</span>
+                          <span className="font-mono text-m3-primary font-black bg-m3-primary/5 px-2 py-0.5 rounded border border-m3-primary/10 text-[10px]">{session.id}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-m3-on-surface-variant/80">Active Branch:</span>
+                          <span className="font-semibold flex items-center gap-1">
+                            <MapPin className="h-3 w-3 text-m3-primary" />
+                            {session.branchName}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-m3-on-surface-variant/80">Terminal Device:</span>
+                          <span className="font-medium text-m3-on-surface-variant max-w-[150px] truncate" title={session.userAgent}>
+                            {getDeviceDescription(session.userAgent)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-m3-on-surface-variant/80">Last Contact:</span>
+                          <span className="font-semibold text-green-600 flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {getRelativeTime(session.lastActive)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions panel */}
+                    {!isCurrent && isUserAdmin && (
+                      <div className="border-t border-m3-outline-variant/20 pt-3 mt-4 flex justify-end">
+                        <button
+                          onClick={() => handleTerminateRemote(session.id, session.fullName)}
+                          className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500 text-red-600 hover:text-white border border-red-500/25 text-[10.5px] font-bold rounded-full flex items-center gap-1 cursor-pointer transition-colors"
+                          title="Terminate remote session and force sign-out"
+                        >
+                          <PowerOff className="h-3.5 w-3.5" /> Terminate Session
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* MODAL: Add / Edit User profile form */}
       {showModal && (

@@ -41,6 +41,9 @@ export interface Branch {
   updatedAt: string;
   isDeleted: boolean;
   isDistributionBranch?: boolean;
+  branchCode?: string;
+  localIp?: string;
+  gatewayRules?: string;
 }
 
 export interface Supplier {
@@ -323,6 +326,18 @@ export interface Delivery {
   updatedAt: string;
   branchId: string;
   branchName: string;
+}
+
+export interface ActiveSession {
+  id: string; // unique session id
+  userId: string;
+  username: string;
+  fullName: string;
+  role: string;
+  branchId: string;
+  branchName: string;
+  lastActive: string; // ISO string
+  userAgent?: string;
 }
 
 export type DamageCategory = 'BOA' | 'Warehouse Breakage' | 'Showroom Casualty' | 'Delivery Transit';

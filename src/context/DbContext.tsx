@@ -32,7 +32,8 @@ import {
   BranchSalesReport,
   Delivery,
   DeliveryStatus,
-  DamageLog
+  DamageLog,
+  ActiveSession
 } from '../types/db';
 
 // Self-healing LocalStorage Interceptor to prevent QuotaExceededError crashes
@@ -293,10 +294,14 @@ interface DbContextType {
   importMasterForensicBackup: () => void;
   resetLockout: () => void;
   isHydrating: boolean;
+  isSystemHydrating: boolean;
   serverConnected: boolean;
   syncFromSharedServer: () => Promise<void>;
   lowPerformanceMode: boolean;
   setLowPerformanceMode: (val: boolean) => void;
+  activeSessions: ActiveSession[];
+  activeSessionId: string | null;
+  terminateSession: (sessionId: string) => void;
 }
 
 export interface DbSnapshot {
@@ -1012,6 +1017,7 @@ export const decryptString = (cipherStr: string, secretKey: string): string => {
 
 export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isHydrating, setIsHydrating] = useState<boolean>(true);
+  const [isSystemHydrating, setIsSystemHydrating] = useState<boolean>(true);
 
   const [lowPerformanceMode, setLowPerformanceModeState] = useState<boolean>(() => {
     const cached = localStorage.getItem('tp_performance_profile');
@@ -1047,7 +1053,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   // Load initial local data or populate with seed data from sessionStorage to isolate sessions
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     if (typeof window === 'undefined') return null;
-    const cached = sessionStorage.getItem('tp_current_user');
+    let cached = sessionStorage.getItem('tp_current_user');
+    if (!cached) {
+      cached = localStorage.getItem('tp_current_user');
+    }
     if (!cached) return null; // Mandatory null state if session is missing to trigger login redirect
     try {
       return JSON.parse(cached);
@@ -1058,7 +1067,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
-    const cached = sessionStorage.getItem('tp_is_logged_in');
+    let cached = sessionStorage.getItem('tp_is_logged_in');
+    if (!cached) {
+      cached = localStorage.getItem('tp_is_logged_in');
+    }
     return cached === 'true';
   });
 
@@ -1144,6 +1156,15 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     setFailedAttempts(0);
     setLockoutUntil(0);
     setRateLimitTimeLeft(0);
+  };
+
+  const terminateSession = (sessionId: string) => {
+    setActiveSessions(prev => {
+      const updated = prev.filter(s => s.id !== sessionId);
+      saveToStorageWithDebounce('tp_active_sessions', updated, true);
+      addAuditLog('SESSION_TERMINATED', `Administrative force logout executed for session ${sessionId}`, 'Users', sessionId);
+      return updated;
+    });
   };
 
   const login = async (username: string, password: string): Promise<{ success: boolean; error?: string; sqliBlocked?: boolean }> => {
@@ -1268,10 +1289,37 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         setIsLoggedIn(true);
         sessionStorage.setItem('tp_is_logged_in', 'true');
         sessionStorage.setItem('tp_current_user', JSON.stringify(simUsersList[0]));
+        localStorage.setItem('tp_is_logged_in', 'true');
+        localStorage.setItem('tp_current_user', JSON.stringify(simUsersList[0]));
+
+        // Register concurrent-safe unique session state
+        const newSessionId = 'SESS_' + Math.random().toString(36).substring(2, 11).toUpperCase();
+        setActiveSessionId(newSessionId);
+        localStorage.setItem('tp_active_session_id', newSessionId);
+        sessionStorage.setItem('tp_active_session_id', newSessionId);
+
+        const nowStr = new Date().toISOString();
+        const cleanSessions = activeSessions.filter(s => s.userId !== simUsersList[0].id);
+        const updatedSessions = [
+          ...cleanSessions,
+          {
+            id: newSessionId,
+            userId: simUsersList[0].id,
+            username: simUsersList[0].username,
+            fullName: simUsersList[0].fullName,
+            role: simUsersList[0].role,
+            branchId: simUsersList[0].branchAssignmentId || 'B1',
+            branchName: 'Main Branch',
+            lastActive: nowStr,
+            userAgent: navigator.userAgent
+          }
+        ];
+        setActiveSessions(updatedSessions);
+        saveToStorageWithDebounce('tp_active_sessions', updatedSessions, true);
 
         addAuditLog(
           'USER_LOGIN',
-          `Simulation Mode Activated: Store set to 'tilepoint'. Seeding completed.`,
+          `Simulation Mode Activated: Store set to 'tilepoint'. Seeding completed. Session ID: ${newSessionId}`,
           'Users',
           'sim_admin'
         );
@@ -1333,11 +1381,39 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     setIsLoggedIn(true);
     sessionStorage.setItem('tp_is_logged_in', 'true');
     sessionStorage.setItem('tp_current_user', JSON.stringify(targetUser));
+    localStorage.setItem('tp_is_logged_in', 'true');
+    localStorage.setItem('tp_current_user', JSON.stringify(targetUser));
+
+    // Register concurrent-safe unique session state
+    const newSessionId = 'SESS_' + Math.random().toString(36).substring(2, 11).toUpperCase();
+    setActiveSessionId(newSessionId);
+    localStorage.setItem('tp_active_session_id', newSessionId);
+    sessionStorage.setItem('tp_active_session_id', newSessionId);
+
+    const nowStr = new Date().toISOString();
+    const cleanSessions = activeSessions.filter(s => s.userId !== targetUser.id);
+    const activeBranchName = branches.find(b => b.id === targetUser.branchAssignmentId)?.name || 'Main Branch';
+    const updatedSessions = [
+      ...cleanSessions,
+      {
+        id: newSessionId,
+        userId: targetUser.id,
+        username: targetUser.username,
+        fullName: targetUser.fullName,
+        role: targetUser.role,
+        branchId: targetUser.branchAssignmentId || 'B1',
+        branchName: activeBranchName,
+        lastActive: nowStr,
+        userAgent: navigator.userAgent
+      }
+    ];
+    setActiveSessions(updatedSessions);
+    saveToStorageWithDebounce('tp_active_sessions', updatedSessions, true);
 
     // Audit logs of E2EE handshake
     addAuditLog(
       'USER_LOGIN',
-      `E2EE Secure Client Session cipher verified successfully. Active: ${targetUser.fullName} (E2EE payload: ${encryptedParcel.encryptedData.slice(0, 32)}...)`,
+      `E2EE Secure Client Session cipher verified successfully. Active: ${targetUser.fullName} (Session: ${newSessionId}, E2EE payload: ${encryptedParcel.encryptedData.slice(0, 32)}...)`,
       'Users',
       targetUser.id
     );
@@ -1349,10 +1425,29 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     setIsLoggedIn(false);
     sessionStorage.setItem('tp_is_logged_in', 'false');
     sessionStorage.removeItem('tp_current_user');
+    localStorage.removeItem('tp_is_logged_in');
+    localStorage.removeItem('tp_current_user');
+    localStorage.removeItem('tp_active_tab');
+    sessionStorage.removeItem('tp_active_tab');
+    localStorage.removeItem('tilepoint_active_tab');
+    sessionStorage.removeItem('tilepoint_active_tab');
+    localStorage.removeItem('tp_active_session_id');
+    sessionStorage.removeItem('tp_active_session_id');
+
+    // Remove our session from activeSessions list so other client notices immediately
+    if (activeSessionId) {
+      setActiveSessions(prev => {
+        const updated = prev.filter(s => s.id !== activeSessionId);
+        saveToStorageWithDebounce('tp_active_sessions', updated, true);
+        return updated;
+      });
+    }
+
     if (currentUser) {
       addAuditLog('USER_LOGOUT', `Cassette Terminal logged out: ${currentUser.fullName}`, 'Users', currentUser.id);
     }
     setCurrentUser(null);
+    setActiveSessionId(null);
   };
 
   const [branches, setBranches] = useState<Branch[]>(() => {
@@ -1479,6 +1574,15 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     return safeParse<DamageLog[]>('tp_damage_logs', []);
   });
 
+  const [activeSessions, setActiveSessions] = useState<ActiveSession[]>(() => {
+    return safeParse<ActiveSession[]>('tp_active_sessions', []);
+  });
+
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('tp_active_session_id') || sessionStorage.getItem('tp_active_session_id') || null;
+  });
+
   // Derived Active Branch
   const [activeBranch, setActiveBranch] = useState<Branch | null>(null);
 
@@ -1494,6 +1598,95 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     const openShift = currentUser ? shifts.find(s => s.cashierId === currentUser.id && s.status === 'OPEN') : null;
     setActiveShift(openShift || null);
   }, [shifts, currentUser]);
+
+  // Heartbeat to update our active session timestamp every 8 seconds
+  useEffect(() => {
+    if (!isLoggedIn || !currentUser || !activeSessionId) return;
+
+    const heartbeatInterval = setInterval(() => {
+      setActiveSessions(prev => {
+        const nowStr = new Date().toISOString();
+        let sessionExists = false;
+
+        // Prune sessions older than 3 minutes to keep list clean
+        const cutoffTime = Date.now() - 3 * 60 * 1000;
+        const freshSessions = prev.filter(s => new Date(s.lastActive).getTime() > cutoffTime);
+
+        const updatedSessions = freshSessions.map(s => {
+          if (s.id === activeSessionId) {
+            sessionExists = true;
+            return { ...s, lastActive: nowStr };
+          }
+          return s;
+        });
+
+        if (!sessionExists) {
+          // If we are not in the list, check if someone else is logged into our account
+          const hasConcurrent = freshSessions.some(s => s.userId === currentUser.id && s.id !== activeSessionId);
+          if (hasConcurrent) {
+            clearInterval(heartbeatInterval);
+            logout();
+            alert(`CONCURRENT LOGIN DETECTED:\n\nYour session was terminated because this account (${currentUser.fullName}) has logged in from another device or terminal. For security and ledger accuracy, concurrent multi-device logins on a single cashier/admin profile are strictly blocked.`);
+            return prev;
+          }
+
+          const activeBranchName = branches.find(b => b.id === currentUser.branchAssignmentId)?.name || 'Main Branch';
+          updatedSessions.push({
+            id: activeSessionId,
+            userId: currentUser.id,
+            username: currentUser.username,
+            fullName: currentUser.fullName,
+            role: currentUser.role,
+            branchId: currentUser.branchAssignmentId || 'B1',
+            branchName: activeBranchName,
+            lastActive: nowStr,
+            userAgent: navigator.userAgent
+          });
+        } else {
+          // If we exist, check if a newer session has taken over
+          const hasConcurrent = freshSessions.some(s => s.userId === currentUser.id && s.id !== activeSessionId);
+          if (hasConcurrent) {
+            const ourSessionIndex = freshSessions.findIndex(s => s.id === activeSessionId);
+            const concurrentSession = freshSessions.find(s => s.userId === currentUser.id && s.id !== activeSessionId);
+
+            if (concurrentSession && new Date(concurrentSession.lastActive).getTime() > new Date(updatedSessions[ourSessionIndex].lastActive).getTime()) {
+              clearInterval(heartbeatInterval);
+              logout();
+              alert(`CONCURRENT LOGIN DETECTED:\n\nYour session was terminated because this account (${currentUser.fullName}) has logged in from another device or terminal. For security and ledger accuracy, concurrent multi-device logins on a single cashier/admin profile are strictly blocked.`);
+              return prev;
+            }
+          }
+        }
+
+        saveToStorageWithDebounce('tp_active_sessions', updatedSessions, true);
+        return updatedSessions;
+      });
+    }, 8000);
+
+    return () => clearInterval(heartbeatInterval);
+  }, [isLoggedIn, currentUser?.id, activeSessionId, branches]);
+
+  // Watch activeSessions for incoming concurrent boot triggers from the server sync
+  useEffect(() => {
+    if (!isLoggedIn || !currentUser || !activeSessionId) return;
+
+    const cutoffTime = Date.now() - 3 * 60 * 1000;
+    const freshSessions = activeSessions.filter(s => new Date(s.lastActive).getTime() > cutoffTime);
+
+    const hasConcurrentSession = freshSessions.some(s => s.userId === currentUser.id && s.id !== activeSessionId);
+    if (hasConcurrentSession) {
+      const mySessionInList = freshSessions.some(s => s.id === activeSessionId);
+      const concurrentSession = freshSessions.find(s => s.userId === currentUser.id && s.id !== activeSessionId);
+      const mySession = freshSessions.find(s => s.id === activeSessionId);
+
+      const shouldBoot = !mySessionInList || (mySession && concurrentSession && new Date(concurrentSession.lastActive).getTime() > new Date(mySession.lastActive).getTime());
+
+      if (shouldBoot) {
+        logout();
+        alert(`CONCURRENT LOGIN DETECTED:\n\nYour session was terminated because this account (${currentUser.fullName}) has logged in from another device or terminal. For security and ledger accuracy, concurrent multi-device logins on a single cashier/admin profile are strictly blocked.`);
+      }
+    }
+  }, [activeSessions, isLoggedIn, currentUser?.id, activeSessionId]);
 
   // Self-heal and sync missing/zero branch stock entries for products with positive total stock (migrated/imported POS data)
   useEffect(() => {
@@ -1731,6 +1924,30 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         if (Object.keys(db).length > 0) {
           // Pre-populate localStorage so the auto-save hooks are immediately bypassed!
           Object.keys(db).forEach(k => {
+            // SYSTEM RECOVERY INTERCEPTOR SAFEGUARDS:
+            // Explicitly filter out and ignore client configuration keys, navigation routes, active filters, and current user configurations.
+            const lowerKey = k.toLowerCase();
+            const isBlockedKey = 
+              k === 'tp_current_user' || 
+              k === 'tp_is_logged_in' || 
+              k === 'tp_session_token' || 
+              k === 'tp_active_session_id' ||
+              k === 'tp_active_tab' ||
+              lowerKey.includes('active_tab') ||
+              lowerKey.includes('active_filter') ||
+              lowerKey.includes('navigation') ||
+              lowerKey.includes('filter_') ||
+              lowerKey.includes('theme') ||
+              lowerKey.includes('contrast') ||
+              lowerKey.includes('sidebar') ||
+              lowerKey.includes('animation') ||
+              lowerKey.includes('blur') ||
+              lowerKey.startsWith('tilepoint_') ||
+              lowerKey.includes('tp_active_cart'); // protect active checkout session cart from remote override
+
+            if (isBlockedKey) {
+              return; // Ignore and completely skip overwriting device-specific client view coordinates
+            }
             const valStr = typeof db[k] === 'string' ? db[k] : JSON.stringify(db[k]);
             localStorage.setItem(k, valStr);
           });
@@ -1756,6 +1973,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
           if (db['tp_branch_sales_reports']) setBranchSalesReports(db['tp_branch_sales_reports']);
           if (db['tp_deliveries']) setDeliveries(db['tp_deliveries']);
           if (db['tp_damage_logs']) setDamageLogs(db['tp_damage_logs']);
+          if (db['tp_active_sessions']) {
+            const parsedSessions = typeof db['tp_active_sessions'] === 'string' ? JSON.parse(db['tp_active_sessions']) : db['tp_active_sessions'];
+            setActiveSessions(parsedSessions);
+          }
           
           if (db['tp_is_configured'] !== undefined) {
             setIsConfigured(db['tp_is_configured'] === 'true' || db['tp_is_configured'] === true);
@@ -1812,10 +2033,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   useEffect(() => {
     const initializeDatabase = async () => {
       try {
+        setIsSystemHydrating(true);
         await syncFromSharedServer();
       } catch (err) {
         console.error('[Hydration Guard] Initial state resolution failed:', err);
       } finally {
+        setIsSystemHydrating(false);
         setIsHydrating(false);
       }
       // Start the backoff scheduling loop once initialized
@@ -2025,7 +2248,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   const saveToStorageWithDebounce = (key: string, value: any, bypassDebounce = false) => {
     // 1. PERSISTENT HYDRATION GUARD: Block saving completely while hydration loop is in progress
-    if (isHydrating) {
+    if (isHydrating || isSystemHydrating) {
       return;
     }
 
@@ -2038,6 +2261,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     }
 
     const writeToServer = async () => {
+      if (key === 'tp_current_user' || key === 'tp_is_logged_in' || key === 'tp_session_token' || key === 'tp_active_session_id') {
+        return; // Device-Specific Isolation: Do not write session states to the shared centralized server
+      }
       try {
         if (!navigator.onLine) {
           throw new Error('Navigator reports offline state');
@@ -2093,7 +2319,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   const forceSyncAll = () => {
-    if (isHydrating) return;
+    if (isHydrating || isSystemHydrating) return;
     // Save everything immediately
     if (currentUser) {
       sessionStorage.setItem('tp_current_user', JSON.stringify(currentUser));
@@ -2556,6 +2782,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     setIsLoggedIn(true);
     sessionStorage.setItem('tp_is_logged_in', 'true');
     sessionStorage.setItem('tp_current_user', JSON.stringify(firstAdmin));
+    localStorage.setItem('tp_is_logged_in', 'true');
+    localStorage.setItem('tp_current_user', JSON.stringify(firstAdmin));
 
     // Audit log
     const seedLogs = [
@@ -3202,6 +3430,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       };
       setAuditLogs([truncateLog]);
     }
+    // Clean up active sessions list on reset/truncate to keep the system pristine and remove all session seeds
+    setActiveSessions(prev => {
+      const updated = prev.filter(s => s.id === activeSessionId);
+      saveToStorageWithDebounce('tp_active_sessions', updated, true);
+      return updated;
+    });
     setSimulationModeActive(false);
     localStorage.removeItem('tp_simulation_mode_active');
   };
@@ -3926,6 +4160,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     setIsLoggedIn(true);
     sessionStorage.setItem('tp_is_logged_in', 'true');
     sessionStorage.setItem('tp_current_user', JSON.stringify(data.users[0]));
+    localStorage.setItem('tp_is_logged_in', 'true');
+    localStorage.setItem('tp_current_user', JSON.stringify(data.users[0]));
 
     addAuditLog('DB_BACKUP_RESTORE', 'Imported complete Master Forensic Database Suite and System Audit Logs successfully.', 'SYSTEM', 'FORENSIC_MASTER');
   };
@@ -5120,10 +5356,14 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         importMasterForensicBackup,
         resetLockout,
         isHydrating,
+        isSystemHydrating,
         serverConnected,
         syncFromSharedServer,
         lowPerformanceMode,
         setLowPerformanceMode,
+        activeSessions,
+        activeSessionId,
+        terminateSession,
       }}
     >
       {children}

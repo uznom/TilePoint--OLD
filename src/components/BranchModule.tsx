@@ -55,6 +55,9 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
   const [staffCount, setStaffCount] = useState(5);
   const [activeCashiers, setActiveCashiers] = useState(1);
   const [isDistributionBranch, setIsDistributionBranch] = useState(false);
+  const [branchCode, setBranchCode] = useState('');
+  const [localIp, setLocalIp] = useState('192.168.1.1');
+  const [gatewayRules, setGatewayRules] = useState('ALLOW-LOCAL-ONLY');
 
   // Custom states for employees visibility
   const [expandedBranchUsers, setExpandedBranchUsers] = useState<Record<string, boolean>>({});
@@ -91,6 +94,9 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
     setStaffCount(5);
     setActiveCashiers(1);
     setIsDistributionBranch(false);
+    setBranchCode('');
+    setLocalIp('192.168.1.1');
+    setGatewayRules('ALLOW-LOCAL-ONLY');
 
     setIsEditMode(false);
     setShowModal(true);
@@ -106,6 +112,9 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
     setStaffCount(b.staffCount);
     setActiveCashiers(b.activeCashiers);
     setIsDistributionBranch(b.isDistributionBranch || false);
+    setBranchCode(b.branchCode || '');
+    setLocalIp(b.localIp || '192.168.1.1');
+    setGatewayRules(b.gatewayRules || 'ALLOW-LOCAL-ONLY');
 
     setIsEditMode(true);
     setShowModal(true);
@@ -119,6 +128,21 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
       return;
     }
 
+    // Validate Branch Code
+    const trimmedCode = branchCode.trim().toUpperCase();
+    if (trimmedCode && !/^[A-Z0-9_-]{3,15}$/.test(trimmedCode)) {
+      showToast('Validation Error: Branch Code must be 3-15 characters (A-Z, 0-9, _, -).');
+      return;
+    }
+
+    // Validate Local IP
+    const trimmedIp = localIp.trim();
+    const ipRegex = /^(127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})$/;
+    if (trimmedIp && !ipRegex.test(trimmedIp)) {
+      showToast('Validation Error: Must be a valid local private IPv4 address (e.g., 192.168.1.50).');
+      return;
+    }
+
     const payload = {
       name,
       manager,
@@ -128,6 +152,9 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
       staffCount: Number(staffCount),
       activeCashiers: Number(activeCashiers),
       isDistributionBranch,
+      branchCode: trimmedCode,
+      localIp: trimmedIp,
+      gatewayRules: gatewayRules.trim()
     };
 
     if (isEditMode) {
@@ -143,6 +170,10 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
   const triggerDelete = (id: string, branchName: string) => {
     if (!isUserAdmin) {
       showToast('Permission Denied: Branch deletion is restricted to Admins.');
+      return;
+    }
+    if (id === 'B1') {
+      showToast('Violation Blocked: Deleting the primary Main Branch (HQ) is restricted to maintain transactional ledger continuity.');
       return;
     }
     setConfirmDeleteId(id);
@@ -244,6 +275,22 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
                 <div className="flex items-center gap-2 text-m3-on-surface-variant/90 leading-normal">
                   <Phone className="h-4 w-4 shrink-0 text-m3-tertiary" />
                   <span>Phone Ref: <strong className="font-mono">{b.phone || 'None declared.'}</strong></span>
+                </div>
+
+                {/* Secure network variables */}
+                <div className="bg-m3-surface-low/50 p-2.5 rounded-xl border border-m3-outline-variant/10 space-y-1.5 font-mono text-[10.5px] mt-2 text-left">
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400 font-bold">SECURE CODE:</span>
+                    <span className="text-m3-primary font-black uppercase">{b.branchCode || 'PENDING'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400 font-bold">IP BINDING:</span>
+                    <span className="text-m3-on-surface font-extrabold">{b.localIp || '192.168.1.1'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400 font-bold">GATEWAY:</span>
+                    <span className="text-m3-tertiary font-black uppercase">{b.gatewayRules || 'ALLOW-LOCAL-ONLY'}</span>
+                  </div>
                 </div>
               </div>
 
@@ -576,6 +623,45 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
                   onChange={e => setActiveCashiers(Number(e.target.value))}
                   className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
                 />
+              </div>
+            </div>
+
+            <div className="space-y-1 relative">
+              <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">Branch Security Code</label>
+              <input
+                type="text"
+                required
+                value={branchCode}
+                onChange={e => setBranchCode(e.target.value)}
+                placeholder="BR-SILAY"
+                className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1 relative">
+                <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">Local IP Binding</label>
+                <input
+                  type="text"
+                  required
+                  value={localIp}
+                  onChange={e => setLocalIp(e.target.value)}
+                  placeholder="192.168.1.50"
+                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
+                />
+              </div>
+
+              <div className="space-y-1 relative">
+                <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">Gateway Rules</label>
+                <select
+                  value={gatewayRules}
+                  onChange={e => setGatewayRules(e.target.value)}
+                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
+                >
+                  <option value="ALLOW-LOCAL-ONLY">Local Only</option>
+                  <option value="RESTRICTED-OUTBOUND">Restricted</option>
+                  <option value="ALLOW-ALL-TRAFFIC">Allow All</option>
+                </select>
               </div>
             </div>
 

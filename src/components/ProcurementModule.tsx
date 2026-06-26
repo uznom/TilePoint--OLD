@@ -59,6 +59,8 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
   const [poFilterTab, setPoFilterTab] = useState<'all' | 'pending' | 'outsourcing'>('all');
 
   const [isConfirmingConsolidation, setIsConfirmingConsolidation] = useState(false);
+  const [procurementProductSearch, setProcurementProductSearch] = useState('');
+  const [showProcurementProductDropdown, setShowProcurementProductDropdown] = useState(false);
 
   React.useEffect(() => {
     if (currentUser.role !== UserRole.ADMIN && activeSubTab === 'suppliers') {
@@ -1158,60 +1160,114 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({ darkMode, 
 
             {/* Quick manual item adder to Restock Queue */}
             <div className="bg-m3-surface/30 p-3.5 rounded-xl border border-m3-outline-variant/10 flex flex-wrap gap-3 items-end">
-              <div className="space-y-1">
+              <div className="space-y-1 relative w-80">
                 <label className="text-[10px] font-bold text-m3-primary uppercase pl-0.5">Quick-Add catalog item to consolidation:</label>
-                <select
-                  id="quick-add-product-select"
-                  className="bg-m3-surface border border-m3-outline-variant rounded-lg px-3 py-1 text-xs font-bold text-m3-on-surface max-w-xs"
-                  onChange={e => {
-                    const select = e.target as HTMLSelectElement;
-                    const val = select.value;
-                    if (val) {
-                      const exists = poCart.some(item => item.productId === val);
-                      if (exists) {
-                        showToast('Item already queued.');
-                      } else {
-                        const updated = [...poCart, { productId: val, quantity: 50 }];
-                        syncPoCart(updated);
-                        showToast('Added product to restock queue.');
-                      }
-                      select.value = '';
-                    }
-                  }}
-                >
-                  <option value="">-- Choose Product to Queue --</option>
-                  {(() => {
-                    let firstSupplierId: string | null = null;
-                    if (poCart.length > 0) {
-                      const firstItem = poCart[0];
-                      const firstProd = products.find(p => p.id === firstItem.productId);
-                      if (firstProd) {
-                        const brandMatch = brands.find(
-                          b => b.name.toLowerCase().trim() === firstProd.brand?.toLowerCase().trim() && !b.isDeleted
-                        );
-                        firstSupplierId = brandMatch ? brandMatch.supplierId : 'S1';
-                      }
-                    }
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="quick-add-product-select-search"
+                    placeholder="🔍 Search product or brand name..."
+                    value={procurementProductSearch}
+                    onFocus={() => setShowProcurementProductDropdown(true)}
+                    onChange={e => {
+                      setProcurementProductSearch(e.target.value);
+                      setShowProcurementProductDropdown(true);
+                    }}
+                    className="w-full bg-m3-surface border border-m3-outline-variant/60 rounded-xl px-3.5 py-2 text-xs font-bold text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary transition-all placeholder-zinc-500"
+                  />
+                  {procurementProductSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setProcurementProductSearch('')}
+                      className="absolute right-3 top-2 text-zinc-400 hover:text-rose-500 text-xs font-black cursor-pointer"
+                    >
+                      ✗
+                    </button>
+                  )}
+                </div>
 
-                    return products
-                      .filter(p => !p.isDeleted)
-                      .filter(p => {
-                        if (!firstSupplierId) return true;
-                        const brandMatch = brands.find(
-                          b => b.name.toLowerCase().trim() === p.brand?.toLowerCase().trim() && !b.isDeleted
-                        );
-                        const prodSupplierId = brandMatch ? brandMatch.supplierId : 'S1';
-                        return prodSupplierId === firstSupplierId;
-                      })
-                      .map(p => (
-                        <option key={p.id} value={p.id}>
-                          {p.productName} [{p.brand || 'No Brand'}] (Stock: {p.stockQuantity})
-                        </option>
-                      ));
-                  })()}
-                </select>
+                {showProcurementProductDropdown && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setShowProcurementProductDropdown(false)} 
+                    />
+                    <div className="absolute left-0 right-0 mt-1.5 bg-m3-surface-low border border-m3-outline-variant/50 rounded-xl shadow-2xl z-50 max-h-56 overflow-y-auto divide-y divide-m3-outline-variant/15 text-xs text-left">
+                      {(() => {
+                        let firstSupplierId: string | null = null;
+                        if (poCart.length > 0) {
+                          const firstItem = poCart[0];
+                          const firstProd = products.find(p => p.id === firstItem.productId);
+                          if (firstProd) {
+                            const brandMatch = brands.find(
+                              b => b.name.toLowerCase().trim() === firstProd.brand?.toLowerCase().trim() && !b.isDeleted
+                            );
+                            firstSupplierId = brandMatch ? brandMatch.supplierId : 'S1';
+                          }
+                        }
+
+                        const pool = products
+                          .filter(p => !p.isDeleted)
+                          .filter(p => {
+                            if (!firstSupplierId) return true;
+                            const brandMatch = brands.find(
+                              b => b.name.toLowerCase().trim() === p.brand?.toLowerCase().trim() && !b.isDeleted
+                            );
+                            const prodSupplierId = brandMatch ? brandMatch.supplierId : 'S1';
+                            return prodSupplierId === firstSupplierId;
+                          })
+                          .filter(p => {
+                            if (!procurementProductSearch.trim()) return true;
+                            const term = procurementProductSearch.toLowerCase();
+                            return (
+                              p.productName.toLowerCase().includes(term) ||
+                              (p.brand && p.brand.toLowerCase().includes(term)) ||
+                              (p.sku && p.sku.toLowerCase().includes(term))
+                            );
+                          });
+
+                        if (pool.length === 0) {
+                          return (
+                            <div className="p-3 text-zinc-500 italic text-center">
+                              No compatible products found
+                            </div>
+                          );
+                        }
+
+                        return pool.map(p => (
+                          <div
+                            key={p.id}
+                            onClick={() => {
+                              const exists = poCart.some(item => item.productId === p.id);
+                              if (exists) {
+                                showToast('Item already queued.');
+                              } else {
+                                const updated = [...poCart, { productId: p.id, quantity: 50 }];
+                                syncPoCart(updated);
+                                showToast(`Added ${p.productName} to restock queue.`);
+                              }
+                              setProcurementProductSearch('');
+                              setShowProcurementProductDropdown(false);
+                            }}
+                            className="p-2.5 hover:bg-m3-primary/10 cursor-pointer flex justify-between items-center transition-colors text-left font-bold"
+                          >
+                            <div className="space-y-0.5">
+                              <div className="text-m3-on-surface text-xs font-extrabold">{p.productName}</div>
+                              <div className="text-[10px] text-zinc-400 font-mono font-medium">
+                                Brand: {p.brand || 'No Brand'} • Stock: {p.stockQuantity}
+                              </div>
+                            </div>
+                            <span className="text-[10px] bg-m3-primary/15 text-m3-primary px-2 py-0.5 rounded-full font-mono">
+                              ₱{p.costPrice.toFixed(2)}
+                            </span>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </>
+                )}
               </div>
-              <p className="text-[10.5px] text-m3-on-surface-variant italic pb-1">Choose a product from the list to instantly append it to the current restocking worksheet.</p>
+              <p className="text-[10.5px] text-m3-on-surface-variant italic pb-1">Search or choose a product from the list to instantly append it to the current restocking worksheet.</p>
             </div>
 
             {poCart.length > 0 ? (

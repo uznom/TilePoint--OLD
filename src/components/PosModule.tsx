@@ -24,7 +24,8 @@ import {
   Truck,
   FileText,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  ShieldAlert
 } from 'lucide-react';
 
 interface PosModuleProps {
@@ -107,13 +108,79 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
   const [selectedPoolBranchId, setSelectedPoolBranchId] = useState<string>(currentUser.branchAssignmentId || 'All');
 
   // Cart & POS Screen States
-  const [cart, setCart] = useState<{ product: Product; quantity: number; overridePrice?: number }[]>([]);
+  const [cart, setCart] = useState<{ product: Product; quantity: number; overridePrice?: number }[]>(() => {
+    try {
+      const cached = localStorage.getItem('tp_active_cart');
+      return cached ? JSON.parse(cached) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [customerName, setCustomerName] = useState('Walk-in Customer');
-  const [customerNotes, setCustomerNotes] = useState('');
+  const [customerName, setCustomerName] = useState(() => {
+    return localStorage.getItem('tp_active_customer_name') || 'Walk-in Customer';
+  });
+  const [customerNotes, setCustomerNotes] = useState(() => {
+    return localStorage.getItem('tp_active_customer_notes') || '';
+  });
   const [isCategoryFilterCollapsed, setIsCategoryFilterCollapsed] = useState(false);
   const [isCustomerMetadataCollapsed, setIsCustomerMetadataCollapsed] = useState(false);
+
+  // Active Cart Write-Through Persistence to survive page refreshes and browser glitches
+  useEffect(() => {
+    localStorage.setItem('tp_active_cart', JSON.stringify(cart));
+  }, [cart]);
+
+  // Point of Sale Safeguard Guard: Block/intercept page refreshes and tab closures if there are items in the basket
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (cart.length > 0) {
+        event.preventDefault();
+        const warningText = 'Warning: You have an active customer checkout session with items in the cart. Refreshing or closing will interrupt the ledger flow.';
+        event.returnValue = warningText;
+        return warningText;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [cart]);
+
+  // Back-Navigation Protection Guard: pushState dummy URLs to intercept popstate when cart is active
+  useEffect(() => {
+    if (cart.length > 0) {
+      // Push dummy state to capture back click
+      window.history.pushState(null, '', window.location.href);
+
+      const handlePopState = (event: PopStateEvent) => {
+        if (cart.length > 0) {
+          const confirmLeave = window.confirm(
+            "POINT OF SALE SECURITY GUARD:\n\nWarning: You have an active transaction in the POS basket.\n\nAre you sure you want to navigate back or leave the terminal register? We recommend completing the transaction first to keep the receipt printing chain intact."
+          );
+          if (!confirmLeave) {
+            // Push state back to prevent leaving
+            window.history.pushState(null, '', window.location.href);
+          }
+        }
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+      };
+    }
+  }, [cart]);
+
+  useEffect(() => {
+    localStorage.setItem('tp_active_customer_name', customerName);
+  }, [customerName]);
+
+  useEffect(() => {
+    localStorage.setItem('tp_active_customer_notes', customerNotes);
+  }, [customerNotes]);
 
   // Reset salesPage when filters change
   useEffect(() => {
@@ -1127,6 +1194,19 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                       )}
                     </AnimatePresence>
                   </div>
+
+                  {/* Point of Sale Intercept Safeguard Info box */}
+                  {cart.length > 0 && (
+                    <div className="mt-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-3 flex gap-2.5 items-start text-[10.5px] animate-fade-in">
+                      <ShieldAlert className="h-4 w-4 text-indigo-400 mt-0.5 shrink-0 animate-pulse" />
+                      <div className="text-zinc-300">
+                        <span className="font-extrabold text-indigo-400 uppercase tracking-wider text-[9.5px]">🛡️ Terminal Shield Safeguard Active</span>
+                        <p className="mt-0.5 text-zinc-400 leading-normal">
+                          Accidental page refreshes, tab closures, and back clicks are blocked to protect this live customer basket session from being lost.
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
 
 

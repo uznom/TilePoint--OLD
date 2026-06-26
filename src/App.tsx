@@ -74,7 +74,8 @@ import {
   Sliders,
   AlertTriangle,
   Palette,
-  Settings
+  Settings,
+  ShieldAlert
 } from 'lucide-react';
 
 function AppContent() {
@@ -88,6 +89,7 @@ function AppContent() {
     logout, 
     isConfigured,
     isHydrating,
+    isSystemHydrating,
     dbSnapshots,
     createDbSnapshot,
     restoreDbSnapshot,
@@ -125,7 +127,16 @@ function AppContent() {
     lowPerformanceMode,
     setLowPerformanceMode
   } = useDb();
+  const initialSavedTabRef = useRef<string | null>(null);
+  if (initialSavedTabRef.current === null && typeof window !== 'undefined') {
+    initialSavedTabRef.current = localStorage.getItem('tilepoint_active_tab') || 'none';
+  }
+
   const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedTab = localStorage.getItem('tilepoint_active_tab');
+      if (savedTab) return savedTab;
+    }
     const isFirstTime = typeof window !== 'undefined' && localStorage.getItem('tp_first_login_done') !== 'true';
     if (isFirstTime) return 'tutorials';
     if (currentUser && currentUser.role === UserRole.CASHIER) {
@@ -137,6 +148,9 @@ function AppContent() {
   const [previousTab, setPreviousTab] = useState('dashboard');
 
   useEffect(() => {
+    if (activeTab) {
+      localStorage.setItem('tilepoint_active_tab', activeTab);
+    }
     if (activeTab !== 'pos') {
       setPreviousTab(activeTab);
     }
@@ -145,6 +159,13 @@ function AppContent() {
   // Dynamic automatic routing on login/identity-switch to ensure Admin sees dashboard first
   useEffect(() => {
     if (isLoggedIn && currentUser) {
+      const savedTab = initialSavedTabRef.current && initialSavedTabRef.current !== 'none'
+        ? initialSavedTabRef.current
+        : localStorage.getItem('tilepoint_active_tab');
+      if (savedTab && savedTab !== 'none') {
+        setActiveTab(savedTab);
+        return;
+      }
       const isFirstTime = typeof window !== 'undefined' && localStorage.getItem('tp_first_login_done') !== 'true';
       if (isFirstTime) {
         setActiveTab('tutorials');
@@ -312,6 +333,8 @@ function AppContent() {
   const [showLogoutConfirmModal, setShowLogoutConfirmModal] = useState(false);
   const [showAccountSettingsModal, setShowAccountSettingsModal] = useState(false);
   const [showSetupWizard, setShowSetupWizard] = useState(false);
+  const [showPosExitConfirmModal, setShowPosExitConfirmModal] = useState(false);
+  const [pendingTabId, setPendingTabId] = useState<string | null>(null);
 
   useEffect(() => {
     const handleOpenWizard = () => {
@@ -539,7 +562,7 @@ function AppContent() {
     };
   }, []);
 
-  if (isHydrating) {
+  if (isHydrating || isSystemHydrating) {
     return (
       <div className="fixed inset-0 bg-zinc-950 flex flex-col items-center justify-center p-6 z-[9999] select-none text-center">
         <div className="w-full max-w-md space-y-6">
@@ -606,6 +629,27 @@ function AppContent() {
       return;
     }
 
+    // INTERCEPT ACTIVE POS CHECKOUT EXIT: If we are in 'pos' and there is an active checkout (cart contains items), block exiting pos mode and ask via a beautiful modal.
+    if (activeTab === 'pos') {
+      const activeCartRaw = localStorage.getItem('tp_active_cart');
+      if (activeCartRaw) {
+        try {
+          const parsedCart = JSON.parse(activeCartRaw);
+          if (Array.isArray(parsedCart) && parsedCart.length > 0) {
+            setPendingTabId(tabId);
+            setShowPosExitConfirmModal(true);
+            return;
+          }
+        } catch (_) {
+          // ignore
+        }
+      }
+    }
+
+    proceedWithTabChange(tabId);
+  };
+
+  const proceedWithTabChange = (tabId: string) => {
     setIsTabChanging(true);
     setPercentProgress(15);
     
@@ -1494,6 +1538,59 @@ function AppContent() {
                 className="flex-1 py-2.5 rounded-full bg-rose-500 hover:bg-rose-400 text-black font-extrabold text-xs uppercase tracking-wide cursor-pointer active:scale-95 transition-all text-center shadow-lg shadow-rose-500/10"
               >
                 Yes, Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRMATORY DIALOG: POS Exit Prevention */}
+      {showPosExitConfirmModal && (
+        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm" onClick={() => {
+            setShowPosExitConfirmModal(false);
+            setPendingTabId(null);
+          }} />
+          <div className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left font-sans">
+            <div className="flex items-center gap-3 border-b border-m3-outline-variant/15 pb-3">
+              <div className="p-2.5 rounded-2xl bg-amber-500/10 text-amber-500">
+                <ShieldAlert className="h-5 w-5 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-m3-on-surface uppercase tracking-wider">Unsaved Checkout Warning</h3>
+                <p className="text-[10px] text-amber-500 font-bold font-mono uppercase tracking-wider">Active Transaction Guard</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-zinc-300 font-medium leading-relaxed">
+              Are you sure you want to leave this site? Changes you made may not be saved.
+              <br /><br />
+              Leaving the Point of Sale terminal now will disrupt the current active customer checkout session and clear the basket.
+            </p>
+
+            <div className="flex gap-3 pt-2 font-sans">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPosExitConfirmModal(false);
+                  setPendingTabId(null);
+                }}
+                className="flex-1 py-2.5 rounded-full bg-m3-surface hover:bg-m3-outline-variant/15 text-m3-on-surface font-extrabold text-xs uppercase tracking-wide border border-m3-outline-variant/10 cursor-pointer active:scale-95 transition-all text-center"
+              >
+                Cancel, Keep Basket
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPosExitConfirmModal(false);
+                  if (pendingTabId) {
+                    proceedWithTabChange(pendingTabId);
+                  }
+                  setPendingTabId(null);
+                }}
+                className="flex-1 py-2.5 rounded-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs uppercase tracking-wide cursor-pointer active:scale-95 transition-all text-center shadow-lg shadow-amber-500/10"
+              >
+                Yes, Leave Mode
               </button>
             </div>
           </div>
