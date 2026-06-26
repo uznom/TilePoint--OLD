@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DbProvider, useDb, DbSnapshot } from './context/DbContext';
 import { UserRole, User } from './types/db';
 import { motion, AnimatePresence, MotionConfig } from 'motion/react';

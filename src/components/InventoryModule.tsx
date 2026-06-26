@@ -370,41 +370,48 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     }[] = [];
 
     const activeProds = products.filter(p => !p.isDeleted);
+    const activeBranches = branches.filter(b => !b.isDeleted);
+    
+    // Dynamically identify the main distribution branch (either B1 or a branch marked as isDistributionBranch)
+    const mainBranch = activeBranches.find(b => b.isDistributionBranch || b.id === 'B1') || activeBranches[0];
+    if (!mainBranch) return [];
+
+    const retailBranches = activeBranches.filter(b => b.id !== mainBranch.id);
+
     activeProds.forEach(p => {
-      // Find B1 stock
-      const b1Stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === 'B1')?.quantity || 0;
+      // Find main stock dynamically
+      const mainStock = branchStock.find(bs => bs.productId === p.id && bs.branchId === mainBranch.id)?.quantity || 0;
       
-      // Let's check other branches
-      ['B2', 'B3', 'B4'].forEach(bId => {
-        const bStock = branchStock.find(bs => bs.productId === p.id && bs.branchId === bId)?.quantity || 0;
-        const bName = branches.find(b => b.id === bId)?.name || bId;
+      // Check other active branches
+      retailBranches.forEach(b => {
+        const bStock = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id)?.quantity || 0;
         
-        // Recommendation 1: Deficit (Low stock) and Main branch B1 has plenty of stock (e.g. > 100)
-        if (bStock < 25 && b1Stock > 100) {
+        // Recommendation 1: Deficit (Low stock) and Main branch has plenty of stock (e.g. > 100)
+        if (bStock < 25 && mainStock > 100) {
           recommendations.push({
-            id: `REC-DEF-${p.id}-${bId}`,
+            id: `REC-DEF-${p.id}-${b.id}`,
             productId: p.id,
             productName: p.productName,
-            fromBranchId: 'B1',
-            toBranchId: bId,
+            fromBranchId: mainBranch.id,
+            toBranchId: b.id,
             suggestedQty: 50,
-            reason: `REPLENISHMENT ALERT: ${bName} is low on stock (${bStock} boxes remaining). Main Branch has a robust buffer of ${b1Stock} boxes. Transfer 50 boxes to balance availability.`,
+            reason: `REPLENISHMENT ALERT: ${b.name} is low on stock (${bStock} boxes remaining). ${mainBranch.name} has a robust buffer of ${mainStock} boxes. Transfer 50 boxes to balance availability.`,
             type: 'Deficit'
           });
         }
         
-        // Recommendation 2: Slow moving items at B2/B3/B4 that can be pulled back to Main B1
+        // Recommendation 2: Slow moving items at retail branch that can be pulled back to Main branch
         const ages: Record<string, number> = { 'P1': 14, 'P2': 210, 'P3': 45, 'P4': 185 }; // simulated last sold age
         const age = ages[p.id] || 35;
-        if (age > 120 && bStock > 40 && bId !== 'B1') {
+        if (age > 120 && bStock > 40) {
           recommendations.push({
-            id: `REC-SLOW-${p.id}-${bId}`,
+            id: `REC-SLOW-${p.id}-${b.id}`,
             productId: p.id,
             productName: p.productName,
-            fromBranchId: bId,
-            toBranchId: 'B1',
+            fromBranchId: b.id,
+            toBranchId: mainBranch.id,
             suggestedQty: Math.max(20, Math.round(bStock * 0.5)),
-            reason: `SLOW-MOVING PULL OUT: ${p.productName} has been idle for ${age} days at ${bName} (${bStock} boxes holding down capital). Recommend pulling out ${Math.round(bStock * 0.5)} boxes back to Main HQ Hub for immediate retail clearance and liquidating capital.`,
+            reason: `SLOW-MOVING PULL OUT: ${p.productName} has been idle for ${age} days at ${b.name} (${bStock} boxes holding down capital). Recommend pulling out ${Math.round(bStock * 0.5)} boxes back to ${mainBranch.name} HQ Hub for immediate retail clearance and liquidating capital.`,
             type: 'Overstock'
           });
         }
