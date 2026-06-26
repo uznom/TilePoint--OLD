@@ -302,6 +302,7 @@ interface DbContextType {
   activeSessions: ActiveSession[];
   activeSessionId: string | null;
   terminateSession: (sessionId: string) => void;
+  completeOnboarding: (newProducts: Product[], newBranchesList?: Branch[]) => Promise<void>;
 }
 
 export interface DbSnapshot {
@@ -1093,7 +1094,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       localStorage.removeItem('tp_users');
       localStorage.setItem('tp_hash_version_v3', 'true');
     }
-    return safeParse<User[]>('tp_users', SEED_USERS);
+    const isSetup = typeof window !== 'undefined' && localStorage.getItem('tilepoint_onboarded_setup') === 'true';
+    return safeParse<User[]>('tp_users', isSetup ? SEED_USERS : []);
   });
 
   // Dynamic seed passwords initialization
@@ -1451,7 +1453,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   const [branches, setBranches] = useState<Branch[]>(() => {
-    return safeParse<Branch[]>('tp_branches', SEED_BRANCHES);
+    const isSetup = typeof window !== 'undefined' && localStorage.getItem('tilepoint_onboarded_setup') === 'true';
+    return safeParse<Branch[]>('tp_branches', isSetup ? SEED_BRANCHES : []);
   });
 
   const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
@@ -2508,6 +2511,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   // Write changes to cache - now debounced to eliminate LocalStorage / Database I/O strain in high-volume POS environments!
   useEffect(() => {
+    if (isConfigured) {
+      saveToStorageWithDebounce('tp_is_configured', 'true', true);
+    }
+  }, [isConfigured]);
+
+  useEffect(() => {
     saveToStorageWithDebounce('tp_current_user', currentUser);
   }, [currentUser]);
 
@@ -2800,6 +2809,61 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     ];
     setAuditLogs(seedLogs);
     localStorage.setItem('tp_audit_logs', JSON.stringify(seedLogs));
+
+    // Immediately write configurations to the server bypassing debounce to prevent any loss on refresh
+    const syncData = {
+      'tp_users': newUsers,
+      'tp_branches': newBranches,
+      'tp_audit_logs': seedLogs,
+      'tp_is_configured': 'true',
+      'tilepoint_onboarded_setup': 'false',
+      'tilepoint_company_name_v1': branchData.name
+    };
+
+    fetch('/api/db/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: syncData })
+    }).then(res => {
+      if (res.ok) {
+        console.log('[Setup Sync] Successfully synced fresh configuration to central server.');
+      }
+    }).catch(err => {
+      console.error('[Setup Sync] Failed to sync to server:', err);
+    });
+  };
+
+  const completeOnboarding = async (newProducts: Product[], newBranchesList?: Branch[]) => {
+    setProducts(newProducts);
+    localStorage.setItem('tp_products', JSON.stringify(newProducts));
+    
+    if (newBranchesList && newBranchesList.length > 0) {
+      setBranches(newBranchesList);
+      localStorage.setItem('tp_branches', JSON.stringify(newBranchesList));
+    }
+    
+    localStorage.setItem('tilepoint_onboarded_setup', 'true');
+    
+    const syncData: Record<string, any> = {
+      'tp_products': newProducts,
+      'tilepoint_onboarded_setup': 'true',
+    };
+    if (newBranchesList && newBranchesList.length > 0) {
+      syncData['tp_branches'] = newBranchesList;
+    }
+    
+    try {
+      const res = await fetch('/api/db/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: syncData })
+      });
+      if (res.ok) {
+        console.log('[Onboarding Sync] Successfully synced onboarding data to central server.');
+      }
+    } catch (err) {
+      console.error('[Onboarding Sync] Failed to sync onboarding data:', err);
+    }
   };
 
   // --- ACTIONS - BRANCH SALES REPORTS TRANSMISSION ---
@@ -5364,6 +5428,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         activeSessions,
         activeSessionId,
         terminateSession,
+        completeOnboarding,
       }}
     >
       {children}

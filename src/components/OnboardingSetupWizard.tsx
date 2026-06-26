@@ -76,21 +76,22 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
       return;
     }
 
-    pendingBranches.forEach(b => {
-      db.createBranch({
-        name: b.name,
-        manager: b.manager,
-        address: b.address,
-        phone: b.phone,
-        monthlySales: 0,
-        staffCount: b.staffCount,
-        activeCashiers: 1,
-        isDistributionBranch: b.isDistributionBranch
-      });
-    });
+    const newBranchesList = pendingBranches.map((b, idx) => ({
+      id: `B-${Date.now()}-${idx}-${Math.floor(Math.random() * 1000)}`,
+      name: b.name,
+      manager: b.manager,
+      address: b.address,
+      phone: b.phone,
+      monthlySales: 0,
+      staffCount: b.staffCount,
+      activeCashiers: 1,
+      isDistributionBranch: b.isDistributionBranch,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isDeleted: false
+    }));
 
-    localStorage.setItem('tp_products', JSON.stringify(pendingProducts));
-    localStorage.setItem('tilepoint_onboarded_setup', 'true');
+    db.completeOnboarding(pendingProducts, newBranchesList);
 
     setImportStatus({
       type: 'success',
@@ -404,8 +405,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
           })));
           setStep('configure_branches');
         } else {
-          localStorage.setItem('tp_products', JSON.stringify(cleanProducts));
-          localStorage.setItem('tilepoint_onboarded_setup', 'true');
+          db.completeOnboarding(cleanProducts);
           
           setImportStatus({
             type: 'success',
@@ -457,8 +457,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
       updatedBy: 'system-initial'
     };
 
-    localStorage.setItem('tp_products', JSON.stringify([singleProduct]));
-    localStorage.setItem('tilepoint_onboarded_setup', 'true');
+    db.completeOnboarding([singleProduct]);
 
     setImportStatus({
       type: 'success',
@@ -471,8 +470,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
   };
 
   const handleInitializeFreshBlank = () => {
-    localStorage.setItem('tp_products', JSON.stringify([]));
-    localStorage.setItem('tilepoint_onboarded_setup', 'true');
+    db.completeOnboarding([]);
     setImportStatus({
       type: 'success',
       message: 'System cleared and primed with a fresh database context. Launching...'
