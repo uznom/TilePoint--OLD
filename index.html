@@ -28,10 +28,40 @@
           navigator.serviceWorker.register('./sw.js')
             .then((registration) => {
               console.log('⚡ TilePoint PWA Service Worker loaded successfully:', registration.scope);
+              
+              // Handle update checking on intervals to make sure updates are processed proactively
+              setInterval(() => {
+                registration.update();
+                console.log('[PWA Update Checker] Triggered proactive background check for service worker updates...');
+              }, 60000); // check for updates every 60 seconds
+
+              registration.addEventListener('updatefound', () => {
+                const installingWorker = registration.installing;
+                if (installingWorker) {
+                  installingWorker.addEventListener('statechange', () => {
+                    if (installingWorker.state === 'installed') {
+                      if (navigator.serviceWorker.controller) {
+                        // New content is available; prompt or automatically reload
+                        console.log('[PWA Update Core] New update downloaded. Triggering automatic skipWaiting & active claim reload...');
+                        installingWorker.postMessage({ action: 'skipWaiting' });
+                      }
+                    }
+                  });
+                }
+              });
             })
             .catch((error) => {
               console.warn('❌ TilePoint PWA Service Worker registration failed:', error);
             });
+        });
+
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            refreshing = true;
+            console.log('[PWA Lifecycle] Service worker controller changed. Performing window reload to activate changes...');
+            window.location.reload();
+          }
         });
       }
     </script>

@@ -122,8 +122,8 @@ interface SummaryStats {
 
 interface DbContextType {
   // Authentication & Session
-  currentUser: User;
-  setCurrentUser: (user: User) => void;
+  currentUser: User | null;
+  setCurrentUser: (user: User | null) => void;
   updateCurrentUser: (updates: Partial<User>) => void;
   isLoggedIn: boolean;
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string; sqliBlocked?: boolean }>;
@@ -292,8 +292,11 @@ interface DbContextType {
   generateMasterForensicBackup: () => any;
   importMasterForensicBackup: () => void;
   resetLockout: () => void;
+  isHydrating: boolean;
   serverConnected: boolean;
   syncFromSharedServer: () => Promise<void>;
+  lowPerformanceMode: boolean;
+  setLowPerformanceMode: (val: boolean) => void;
 }
 
 export interface DbSnapshot {
@@ -1008,6 +1011,30 @@ export const decryptString = (cipherStr: string, secretKey: string): string => {
 };
 
 export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isHydrating, setIsHydrating] = useState<boolean>(true);
+
+  const [lowPerformanceMode, setLowPerformanceModeState] = useState<boolean>(() => {
+    const cached = localStorage.getItem('tp_performance_profile');
+    if (cached) {
+      return cached === 'low';
+    }
+    const lowCores = navigator.hardwareConcurrency !== undefined && navigator.hardwareConcurrency <= 4;
+    const lowMemory = (navigator as any).deviceMemory !== undefined && (navigator as any).deviceMemory <= 4;
+    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const shouldDefaultLow = lowCores || lowMemory || (isMobileDevice && (lowCores || lowMemory));
+    if (shouldDefaultLow) {
+      console.warn('[Performance scaling] Lower-end device attributes detected! Initializing in Low Performance Profile to mitigate thermal degradation and preserve battery runway.');
+      return true;
+    }
+    return false;
+  });
+
+  const setLowPerformanceMode = (val: boolean) => {
+    setLowPerformanceModeState(val);
+    localStorage.setItem('tp_performance_profile', val ? 'low' : 'high');
+    console.log(`[Performance scaling] Profile updated: ${val ? 'LOW PERFORMANCE (Hardware-Optimized)' : 'HIGH PERFORMANCE (Full Presentation)'}`);
+  };
+
   const [simulationModeActive, setSimulationModeActive] = useState<boolean>(() => {
     return localStorage.getItem('tp_simulation_mode_active') === 'true';
   });
@@ -1017,13 +1044,21 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     return cached === 'true';
   });
 
-  // Load initial local data or populate with seed data
-  const [currentUser, setCurrentUser] = useState<User>(() => {
-    return safeParse<User>('tp_current_user', SEED_USERS[0] || GUEST_USER);
+  // Load initial local data or populate with seed data from sessionStorage to isolate sessions
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const cached = sessionStorage.getItem('tp_current_user');
+    if (!cached) return null; // Mandatory null state if session is missing to trigger login redirect
+    try {
+      return JSON.parse(cached);
+    } catch (e) {
+      return null;
+    }
   });
 
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    const cached = localStorage.getItem('tp_is_logged_in');
+    if (typeof window === 'undefined') return false;
+    const cached = sessionStorage.getItem('tp_is_logged_in');
     return cached === 'true';
   });
 
@@ -1034,6 +1069,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   const updateCurrentUser = (updates: Partial<User>) => {
     setCurrentUser(prev => {
+      if (!prev) return null;
       const updated = { ...prev, ...updates } as User;
       return updated;
     });
@@ -1230,8 +1266,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         setRateLimitTimeLeft(0);
         setCurrentUser(simUsersList[0]);
         setIsLoggedIn(true);
-        localStorage.setItem('tp_is_logged_in', 'true');
-        localStorage.setItem('tp_current_user', JSON.stringify(simUsersList[0]));
+        sessionStorage.setItem('tp_is_logged_in', 'true');
+        sessionStorage.setItem('tp_current_user', JSON.stringify(simUsersList[0]));
 
         addAuditLog(
           'USER_LOGIN',
@@ -1295,8 +1331,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     setRateLimitTimeLeft(0);
     setCurrentUser(targetUser);
     setIsLoggedIn(true);
-    localStorage.setItem('tp_is_logged_in', 'true');
-    localStorage.setItem('tp_current_user', JSON.stringify(targetUser));
+    sessionStorage.setItem('tp_is_logged_in', 'true');
+    sessionStorage.setItem('tp_current_user', JSON.stringify(targetUser));
 
     // Audit logs of E2EE handshake
     addAuditLog(
@@ -1311,8 +1347,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   const logout = () => {
     setIsLoggedIn(false);
-    localStorage.setItem('tp_is_logged_in', 'false');
-    addAuditLog('USER_LOGOUT', `Cassette Terminal logged out: ${currentUser.fullName}`, 'Users', currentUser.id);
+    sessionStorage.setItem('tp_is_logged_in', 'false');
+    sessionStorage.removeItem('tp_current_user');
+    if (currentUser) {
+      addAuditLog('USER_LOGOUT', `Cassette Terminal logged out: ${currentUser.fullName}`, 'Users', currentUser.id);
+    }
+    setCurrentUser(null);
   };
 
   const [branches, setBranches] = useState<Branch[]>(() => {
@@ -1386,9 +1426,19 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   });
 
   // Hold / park transactions - standard in cashiers POS
-  const [parkedSales, setParkedSales] = useState<{ id: string; customerName: string; notes: string; items: { product: Product; quantity: number }[]; timestamp: string }[]>(() => {
+  const [parkedSales, rawSetParkedSales] = useState<{ id: string; customerName: string; notes: string; items: { product: Product; quantity: number }[]; timestamp: string }[]>(() => {
     return safeParse<{ id: string; customerName: string; notes: string; items: { product: Product; quantity: number }[]; timestamp: string }[]>('tp_parked_sales', []);
   });
+
+  const setParkedSales = (updater: any) => {
+    rawSetParkedSales(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      localStorage.setItem('tp_parked_sales', JSON.stringify(next));
+      // background write-through immediately
+      saveToStorageWithDebounce('tp_parked_sales', next, true);
+      return next;
+    });
+  };
 
   const [stockTransfers, setStockTransfers] = useState<StockTransfer[]>(() => {
     return safeParse<StockTransfer[]>('tp_stock_transfers', []);
@@ -1433,7 +1483,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const [activeBranch, setActiveBranch] = useState<Branch | null>(null);
 
   useEffect(() => {
-    const currentBranch = branches.find(b => b.id === currentUser.branchAssignmentId);
+    const currentBranch = currentUser ? branches.find(b => b.id === currentUser.branchAssignmentId) : null;
     setActiveBranch(currentBranch || branches[0] || null);
   }, [currentUser, branches]);
 
@@ -1441,7 +1491,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
 
   useEffect(() => {
-    const openShift = shifts.find(s => s.cashierId === currentUser.id && s.status === 'OPEN');
+    const openShift = currentUser ? shifts.find(s => s.cashierId === currentUser.id && s.status === 'OPEN') : null;
     setActiveShift(openShift || null);
   }, [shifts, currentUser]);
 
@@ -1463,7 +1513,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
           // If catalog says we have positive stock, but total branch stock is 0 (classic migrated/imported signature)
           if (p.stockQuantity > 0 && totalBranchQty === 0) {
             // Assign full quantity to the current user's branch or the first non-deleted branch
-            const targetBranchId = currentUser.branchAssignmentId || branches.find(b => !b.isDeleted)?.id || 'B1';
+            const targetBranchId = currentUser?.branchAssignmentId || branches.find(b => !b.isDeleted)?.id || 'B1';
             
             const existingIdx = updated.findIndex(bs => bs.productId === p.id && bs.branchId === targetBranchId);
             if (existingIdx !== -1) {
@@ -1486,7 +1536,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         return hasChanges ? updated : prevStock;
       });
     }
-  }, [products, branches, currentUser.branchAssignmentId]);
+  }, [products, branches, currentUser?.branchAssignmentId]);
 
   // DB Tuning debouncer settings & stats
   const [debounceDelay, setDebounceDelay] = useState<number>(() => {
@@ -1606,6 +1656,71 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     }
   };
 
+  const [offlineQueue, setOfflineQueue] = useState<{ key: string; value: any; id: string }[]>(() => {
+    try {
+      const q = localStorage.getItem('tp_offline_queue');
+      return q ? JSON.parse(q) : [];
+    } catch (_) {
+      return [];
+    }
+  });
+
+  const enqueueOfflineRequest = (key: string, value: any) => {
+    setOfflineQueue(prev => {
+      const filtered = prev.filter(item => item.key !== key);
+      const updated = [...filtered, { key, value, id: `${key}-${Date.now()}` }];
+      try {
+        localStorage.setItem('tp_offline_queue', JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
+  };
+
+  const isProcessingQueue = useRef(false);
+  const processOfflineQueue = async () => {
+    if (isProcessingQueue.current || !navigator.onLine) return;
+    let queue: { key: string; value: any; id: string }[] = [];
+    try {
+      const q = localStorage.getItem('tp_offline_queue');
+      queue = q ? JSON.parse(q) : [];
+    } catch (_) {
+      return;
+    }
+    if (queue.length === 0) return;
+
+    isProcessingQueue.current = true;
+    console.log(`[Offline Queue] Processing ${queue.length} pending queued requests sequentially...`);
+
+    for (const item of queue) {
+      try {
+        const res = await fetch('/api/db', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: item.key, value: item.value })
+        });
+        if (res.ok) {
+          // Remove from local storage queue
+          setOfflineQueue(currentQueue => {
+            const updated = currentQueue.filter(q => q.id !== item.id);
+            try {
+              localStorage.setItem('tp_offline_queue', JSON.stringify(updated));
+            } catch (_) {}
+            return updated;
+          });
+          // Small throttle delay to prevent flooding
+          await new Promise(r => setTimeout(r, 150));
+        } else {
+          // If server failed, we halt sequential processing until next reconnection
+          break;
+        }
+      } catch (err) {
+        console.warn('[Offline Queue] Connection failed during sequential dequeue:', err);
+        break;
+      }
+    }
+    isProcessingQueue.current = false;
+  };
+
   const syncFromSharedServer = async () => {
     try {
       const res = await fetch('/api/db');
@@ -1659,16 +1774,71 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     }
   };
 
-  // Synchronize on mount and poll periodically
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const currentSyncDelay = useRef<number>(5000);
+
+  const scheduleNextSync = (delayMs: number) => {
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+    }
+    syncTimeoutRef.current = setTimeout(async () => {
+      let success = false;
+      try {
+        await syncFromSharedServer();
+        success = true;
+      } catch (err) {
+        console.warn('[Sync Loop] Failure during auto-sync, backing off.', err);
+      }
+
+      if (success) {
+        // Reset delay to baseline 5000ms
+        currentSyncDelay.current = 5000;
+        // Trigger offline queue processing upon successful sync recovery
+        processOfflineQueue();
+      } else {
+        // Exponential backoff with jitter: double current delay up to max 60,000ms
+        const nextDelay = Math.min(60000, currentSyncDelay.current * 2);
+        const jitter = Math.random() * 2000; // randomize up to 2 seconds of jitter
+        currentSyncDelay.current = nextDelay;
+        console.log(`[Sync Loop] Backoff triggered. Scheduling next sync in ${Math.round(nextDelay + jitter)}ms`);
+        scheduleNextSync(nextDelay + jitter);
+        return;
+      }
+      scheduleNextSync(currentSyncDelay.current);
+    }, delayMs);
+  };
+
+  // Synchronize on mount and poll periodically with exponential backoff & jitter
   useEffect(() => {
-    syncFromSharedServer();
+    const initializeDatabase = async () => {
+      try {
+        await syncFromSharedServer();
+      } catch (err) {
+        console.error('[Hydration Guard] Initial state resolution failed:', err);
+      } finally {
+        setIsHydrating(false);
+      }
+      // Start the backoff scheduling loop once initialized
+      scheduleNextSync(5000);
+    };
+    initializeDatabase();
     
-    // Check every 5 seconds to sync data in real-time between PC and mobile devices!
-    const interval = setInterval(() => {
-      syncFromSharedServer();
-    }, 5000);
-    
-    return () => clearInterval(interval);
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Listen to browser network online event to trigger immediate recovery & flush queue
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('[Network Handshake] Browser reported ONLINE! Resetting backoff interval and triggering immediate queue flush.');
+      currentSyncDelay.current = 5000;
+      scheduleNextSync(200);
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
   }, []);
 
   // Persist auto backup settings
@@ -1768,8 +1938,97 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   const [dbSyncStatus, setDbSyncStatus] = useState<'idle' | 'queued' | 'syncing'>('idle');
   const timeoutRefs = useRef<Record<string, any>>({});
+  
+  // Concurrency & Race Management: Strict sequential execution write queue
+  const writeQueue = useRef<Promise<any>>(Promise.resolve());
+
+  const safeLocalStorageSetItem = (key: string, dataStr: string): boolean => {
+    try {
+      localStorage.setItem(key, dataStr);
+      return true;
+    } catch (e: any) {
+      if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22) {
+        console.warn('[Quota Guardian] QuotaExceededError captured! Running emergency database pruning...');
+        runDatabasePruning();
+        try {
+          localStorage.setItem(key, dataStr);
+          return true;
+        } catch (retryError) {
+          console.error('[Quota Guardian] LocalStorage write failed completely even after emergency pruning:', retryError);
+          return false;
+        }
+      }
+      console.error('[Quota Guardian] Unknown storage write failure:', e);
+      return false;
+    }
+  };
+
+  const runDatabasePruning = () => {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - 30); // 30 days threshold
+    const cutoffTime = cutoffDate.getTime();
+
+    // 1. Prune historical archived/received/approved transmittals older than 30 days
+    setTransmittals(prev => {
+      const filtered = prev.filter(t => {
+        const isOldAndDone = (t.status === 'Archived' || t.status === 'Received' || t.status === 'Approved') && 
+          new Date(t.submittedAt).getTime() < cutoffTime;
+        return !isOldAndDone;
+      });
+      try {
+        localStorage.setItem('tp_transmittals', JSON.stringify(filtered));
+      } catch (_) {}
+      return filtered;
+    });
+
+    // 2. Prune old audit logs older than 30 days
+    setAuditLogs(prev => {
+      const filtered = prev.filter(log => {
+        return new Date(log.timestamp).getTime() >= cutoffTime;
+      });
+      try {
+        localStorage.setItem('tp_audit_logs', JSON.stringify(filtered));
+      } catch (_) {}
+      return filtered;
+    });
+
+    console.log('[Quota Guardian] Automated database pruning completed successfully: Old transmittals and audit logs older than 30 days have been cleared to preserve storage runway.');
+  };
+
+  const checkAndPruneIfHighUsage = () => {
+    let currentUsageBytes = 0;
+    try {
+      currentUsageBytes = JSON.stringify(localStorage).length;
+    } catch (_) {
+      return;
+    }
+    const MAX_LIMIT = 5 * 1024 * 1024; // 5MB limit
+    const THRESHOLD = MAX_LIMIT * 0.85; // 85% capacity
+
+    if (currentUsageBytes > THRESHOLD) {
+      console.warn(`[Quota Guardian] High storage usage detected: ${Math.round(currentUsageBytes / 1024)}KB of 5000KB used. Initializing auto-pruning.`);
+      runDatabasePruning();
+    }
+  };
+
+  const queueAtomicWrite = (key: string, dataStr: string, writeToServerFn: () => Promise<void>) => {
+    writeQueue.current = writeQueue.current
+      .then(async () => {
+        checkAndPruneIfHighUsage();
+        safeLocalStorageSetItem(key, dataStr);
+        await writeToServerFn();
+      })
+      .catch((err) => {
+        console.error('[Concurrency Queue] Atomic local write chain failed:', err);
+      });
+  };
 
   const saveToStorageWithDebounce = (key: string, value: any, bypassDebounce = false) => {
+    // 1. PERSISTENT HYDRATION GUARD: Block saving completely while hydration loop is in progress
+    if (isHydrating) {
+      return;
+    }
+
     const dataStr = JSON.stringify(value);
     
     // Quick check to avoid redundant operations if current local value matches exactly
@@ -1780,19 +2039,29 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
     const writeToServer = async () => {
       try {
-        await fetch('/api/db', {
+        if (!navigator.onLine) {
+          throw new Error('Navigator reports offline state');
+        }
+        const res = await fetch('/api/db', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ key, value })
         });
+        if (!res.ok) {
+          throw new Error('Server returned unsuccessful status ' + res.status);
+        }
+        setServerConnected(true);
+        // Process offline queue immediately upon successful write
+        processOfflineQueue();
       } catch (e) {
-        console.warn('[Shared DB Client] Failed to write to offline server database:', e);
+        console.warn(`[Shared DB Client] Write failed for "${key}". Enqueuing payload for offline recovery:`, e);
+        setServerConnected(false);
+        enqueueOfflineRequest(key, value);
       }
     };
 
     if (bypassDebounce || debounceDelay === 0) {
-      localStorage.setItem(key, dataStr);
-      writeToServer();
+      queueAtomicWrite(key, dataStr, writeToServer);
       setDbSyncStatus('syncing');
       setTimeout(() => setDbSyncStatus('idle'), 150);
       return;
@@ -1812,8 +2081,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     }
 
     timeoutRefs.current[key] = setTimeout(() => {
-      localStorage.setItem(key, dataStr);
-      writeToServer();
+      queueAtomicWrite(key, dataStr, writeToServer);
       delete timeoutRefs.current[key];
       
       const pendingKeys = Object.keys(timeoutRefs.current);
@@ -1825,8 +2093,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   const forceSyncAll = () => {
+    if (isHydrating) return;
     // Save everything immediately
-    localStorage.setItem('tp_current_user', JSON.stringify(currentUser));
+    if (currentUser) {
+      sessionStorage.setItem('tp_current_user', JSON.stringify(currentUser));
+    }
     localStorage.setItem('tp_users', JSON.stringify(users));
     localStorage.setItem('tp_branches', JSON.stringify(branches));
     localStorage.setItem('tp_suppliers', JSON.stringify(suppliers));
@@ -2099,8 +2370,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     const newLog: AuditLog = {
       id: `AL-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       timestamp: new Date().toISOString(),
-      userId: currentUser.id,
-      username: currentUser.username,
+      userId: currentUser?.id || 'SYSTEM',
+      username: currentUser?.username || 'system',
       action,
       description,
       tableAffected,
@@ -2283,8 +2554,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     // Auto log-in as this administrator
     setCurrentUser(firstAdmin);
     setIsLoggedIn(true);
-    localStorage.setItem('tp_is_logged_in', 'true');
-    localStorage.setItem('tp_current_user', JSON.stringify(firstAdmin));
+    sessionStorage.setItem('tp_is_logged_in', 'true');
+    sessionStorage.setItem('tp_current_user', JSON.stringify(firstAdmin));
 
     // Audit log
     const seedLogs = [
@@ -3653,8 +3924,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
     setCurrentUser(data.users[0]);
     setIsLoggedIn(true);
-    localStorage.setItem('tp_is_logged_in', 'true');
-    localStorage.setItem('tp_current_user', JSON.stringify(data.users[0]));
+    sessionStorage.setItem('tp_is_logged_in', 'true');
+    sessionStorage.setItem('tp_current_user', JSON.stringify(data.users[0]));
 
     addAuditLog('DB_BACKUP_RESTORE', 'Imported complete Master Forensic Database Suite and System Audit Logs successfully.', 'SYSTEM', 'FORENSIC_MASTER');
   };
@@ -4046,9 +4317,20 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     const saleId = `SL-${Date.now()}`;
     const saleNum = `SL-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
 
+    const userBranchId = currentUser?.branchAssignmentId || 'B1';
+
+    // Anti-collision Lock: Defensive stock verification immediately before deductions
+    for (const item of cartItems) {
+      const branchStockRec = branchStock.find(bs => bs.productId === item.product.id && bs.branchId === userBranchId);
+      const currentQty = branchStockRec ? branchStockRec.quantity : 0;
+      if (currentQty < item.quantity) {
+        throw new Error(`Insufficient inventory: Product "${item.product.productName}" has only ${currentQty} units available in local branch stock, but ${item.quantity} units were requested.`);
+      }
+    }
+
     // Totals calculations
     const subtotal = cartItems.reduce((acc, item) => {
-      const branchStockRec = branchStock.find(bs => bs.productId === item.product.id && bs.branchId === currentUser.branchAssignmentId);
+      const branchStockRec = branchStock.find(bs => bs.productId === item.product.id && bs.branchId === userBranchId);
       const basePrice = (branchStockRec && branchStockRec.sellingPriceOverride !== undefined && branchStockRec.sellingPriceOverride > 0)
         ? branchStockRec.sellingPriceOverride
         : item.product.sellingPrice;
@@ -4064,9 +4346,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       id: saleId,
       saleNumber: saleNum,
       shiftId: activeShift ? activeShift.id : 'NO-SHIFT-ACTIVE',
-      branchId: currentUser.branchAssignmentId,
-      cashierId: currentUser.id,
-      cashierName: currentUser.fullName,
+      branchId: userBranchId,
+      cashierId: currentUser?.id || 'SYSTEM',
+      cashierName: currentUser?.fullName || 'System Automated',
       customerName: customerName || 'Walk-in Customer',
       subtotal,
       vat,
@@ -4082,7 +4364,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
     // Save sale items
     const newSaleItems: SaleItem[] = cartItems.map((item, idx) => {
-      const branchStockRec = branchStock.find(bs => bs.productId === item.product.id && bs.branchId === currentUser.branchAssignmentId);
+      const branchStockRec = branchStock.find(bs => bs.productId === item.product.id && bs.branchId === userBranchId);
       const basePrice = (branchStockRec && branchStockRec.sellingPriceOverride !== undefined && branchStockRec.sellingPriceOverride > 0)
         ? branchStockRec.sellingPriceOverride
         : item.product.sellingPrice;
@@ -4107,7 +4389,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     setBranchStock(prevList => {
       const nextList = [...prevList];
       cartItems.forEach(item => {
-        const matchIdx = nextList.findIndex(bs => bs.productId === item.product.id && bs.branchId === currentUser.branchAssignmentId);
+        const matchIdx = nextList.findIndex(bs => bs.productId === item.product.id && bs.branchId === userBranchId);
         if (matchIdx !== -1) {
           nextList[matchIdx] = {
             ...nextList[matchIdx],
@@ -4115,8 +4397,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
           };
         } else {
           nextList.push({
-            id: `${currentUser.branchAssignmentId}_${item.product.id}`,
-            branchId: currentUser.branchAssignmentId || 'HQ',
+            id: `${userBranchId}_${item.product.id}`,
+            branchId: userBranchId,
             productId: item.product.id,
             quantity: 0
           });
@@ -4837,8 +5119,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         generateMasterForensicBackup,
         importMasterForensicBackup,
         resetLockout,
+        isHydrating,
         serverConnected,
         syncFromSharedServer,
+        lowPerformanceMode,
+        setLowPerformanceMode,
       }}
     >
       {children}

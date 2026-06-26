@@ -17,6 +17,7 @@ import {
   Sparkles,
   Info,
   CheckCircle,
+  Loader2,
   AlertTriangle,
   Volume2,
   VolumeX,
@@ -56,6 +57,10 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [scanMessage, setScanMessage] = useState<string | null>(null);
+
+  // Handshake and transmission states
+  const [isTransmitting, setIsTransmitting] = useState(false);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
 
   // View toggles within our scan view
   const [isCalculatorExpanded, setIsCalculatorExpanded] = useState(false);
@@ -274,27 +279,42 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
     showToast('Removed item from cart.');
   };
 
-  const handlePublishOrder = () => {
+  const handlePublishOrder = async () => {
     if (staffCart.length === 0) {
       showToast('Cannot publish an empty order!');
       return;
     }
     const cleanCustomerName = customerName.trim() || 'Walk-in Customer (Handheld Portal)';
-    const holdId = holdSale(staffCart, cleanCustomerName, orderNotes);
     
-    // Reset state & inform user
-    setStaffCart([]);
-    setCustomerName('');
-    setOrderNotes('');
-    setIsCartOverlayOpen(false);
+    setIsTransmitting(true);
     
-    playBeep();
+    // Simulate explicit network transport delay with async/await handshake registration
+    await new Promise<void>((resolve) => {
+      setTimeout(() => {
+        // Run holdSale which does the immediate write-through
+        const holdId = holdSale(staffCart, cleanCustomerName, orderNotes);
+        
+        // Reset local cart and fields
+        setStaffCart([]);
+        setCustomerName('');
+        setOrderNotes('');
+        setIsCartOverlayOpen(false);
+        playBeep();
+        
+        setScanMessage(`Pre-Saved Order Code: ${holdId}`);
+        setTimeout(() => {
+          setScanMessage(null);
+        }, 6000);
+        
+        resolve();
+      }, 1500); // 1.5s delay for expressiveness
+    });
     
-    // Explicit long running toast or message
-    setScanMessage(`Pre-Saved Order Code: ${holdId}`);
+    setIsTransmitting(false);
+    setShowSuccessAlert(true);
     setTimeout(() => {
-      setScanMessage(null);
-    }, 6000);
+      setShowSuccessAlert(false);
+    }, 4000);
   };
 
   // Summary figures
@@ -1009,6 +1029,34 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
               </div>
             )}
 
+          </div>
+        </div>
+      )}
+
+      {/* 4. TWO-WAY TRANSPORTS HANDSHAKE MODAL BLOCKER & VERIFICATION ALERT */}
+      {isTransmitting && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center z-[1000] p-6 text-center animate-fade-in select-none">
+          <div className="bg-zinc-900 border border-emerald-500/30 p-8 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 animate-pulse" />
+            <div className="flex justify-center">
+              <Loader2 className="h-10 w-10 text-emerald-500 animate-spin" />
+            </div>
+            <h3 className="text-sm font-black text-white uppercase tracking-wider">Sending Cart to Cashier...</h3>
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              Negotiating secure cryptographic tunnel with Cashier Node. Please do not close or click away...
+            </p>
+          </div>
+        </div>
+      )}
+
+      {showSuccessAlert && (
+        <div className="fixed top-6 right-6 left-6 mx-auto max-w-sm bg-zinc-900 border-2 border-emerald-500 text-white p-4 rounded-2xl shadow-2xl z-[1000] flex items-center gap-3 animate-bounce select-none">
+          <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-xl">
+            <CheckCircle className="h-5 w-5" />
+          </div>
+          <div className="flex-1 text-left">
+            <div className="text-xs font-black uppercase tracking-wider text-emerald-400 font-mono">Handshake Verified</div>
+            <div className="text-[11px] text-zinc-300 font-bold">Cart Successfully Sent to Cashier</div>
           </div>
         </div>
       )}

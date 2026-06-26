@@ -808,6 +808,30 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                           </p>
                         </div>
                       </button>
+
+                      {/* LOW PERFORMANCE MODE / THERMAL MITIGATION toggle */}
+                      <button
+                        type="button"
+                        onClick={() => db.setLowPerformanceMode(!db.lowPerformanceMode)}
+                        className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
+                          db.lowPerformanceMode
+                            ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface'
+                            : 'bg-m3-surface border-m3-outline-variant/15 hover:bg-m3-primary/5'
+                        }`}
+                      >
+                        <div className={`p-2 rounded-lg shrink-0 ${db.lowPerformanceMode ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
+                          <Cpu className="h-4.5 w-4.5" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
+                            <span>Mobile Battery & Thermal Saver</span>
+                            {db.lowPerformanceMode && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
+                          </div>
+                          <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+                            Mitigates thermal throttling and battery drainage on mobile client hardware. Programmatically scales presentation effects, strips blurs, and speeds up layouts.
+                          </p>
+                        </div>
+                      </button>
                     </div>
 
                   </div>
@@ -1224,7 +1248,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                       <div className="space-y-1">
                         <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">1. No Third-Party Telemetry Promise</h5>
                         <p className="text-[11px] text-m3-on-surface-variant">
-                          Unlike alternative point-of-sale systems, TilePoint is engineered with high-security sandboxed boundaries. We guarantee that your company data, customer rosters, inventory ledger transactions, tax receipts, and cash drawer readings are never transmitted. Every transaction is preserved on-premises inside certified storage servers.
+                          Unlike alternative point-of-sale systems, TilePoint is engineered with high-security sandboxed boundaries. We guarantee that your company data, customer rosters, inventory ledger transactions, tax receipts, and cash drawer readings are never transmitted to third parties. Every transaction is preserved on-premises inside certified storage servers.
                         </p>
                       </div>
 
@@ -1236,21 +1260,42 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                       </div>
 
                       <div className="space-y-1">
-                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">3. Employee Session TTL Expirations</h5>
+                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">3. Offline Replication & Consent Logs</h5>
+                        <p className="text-[11px] text-m3-on-surface-variant">
+                          By operating TilePoint in offline or hybrid mode, users explicitly consent to local database queue tracking. Transaction packets, sync handshakes, and ledger modifications are buffered locally and automatically synchronized with the server when a connection is established. Explicit logs of connection handshakes and offline state queue sizes are stored on-device to prevent transactional collisions.
+                        </p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">4. Cache Purge Liability Disclaimer</h5>
+                        <p className="text-[11px] text-m3-on-surface-variant">
+                          TilePoint utilizes local storage structures to support resilient, uninterrupted billing operations during Wi-Fi drops. The corporate entity assumes no liability for data loss resulting from unauthorized or manual browser cache purges, incognito window usage, or severe device storage wipes prior to successfully transmitting queued local transaction logs to the primary server.
+                        </p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">5. Local Network IP Encrypted Transmissions</h5>
+                        <p className="text-[11px] text-m3-on-surface-variant">
+                          All peer-to-peer data transmittals, branch synchronization handshakes, and remote cashier requests conducted over local IP networks are processed using standardized TLS/SSL cryptographic wrappers. Sensitive business transaction trails, manager cash approvals, and active billing carts are shielded against man-in-the-middle spoofing vectors within the physical facility's intranet.
+                        </p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">6. Employee Session TTL Expirations</h5>
                         <p className="text-[11px] text-m3-on-surface-variant">
                           To protect system integrity, employee log-in packets, secure signature handshake packages, and manager cash overrides are bound to individual browser-session cookies that expire automatically on user logout or after 8 hours of idle activity.
                         </p>
                       </div>
 
                       <div className="space-y-1">
-                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">4. Access Control Under RBAC Policy</h5>
+                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">7. Access Control Under RBAC Policy</h5>
                         <p className="text-[11px] text-m3-on-surface-variant">
                           Every write transaction is logged as an automated audit trail. You can review active data access policies or audit entries under the secure Backups & Core sub-settings to monitor security and compliance status instantly.
                         </p>
                       </div>
 
                       <div className="space-y-1">
-                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">5. Legal & Regulatory Compliance (BIR)</h5>
+                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">8. Legal & Regulatory Compliance (BIR)</h5>
                         <p className="text-[11px] text-m3-on-surface-variant">
                           TilePoint adheres to strict national tax register guidelines. Daily X & Z Readings, BIR transmittals, and historical tax log records are structurally protected and marked read-only to ensure strict compliance with audit standards, preventing any database tamper vectors.
                         </p>

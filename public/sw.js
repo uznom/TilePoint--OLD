@@ -81,3 +81,11 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// Proactive activation listener from clients
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.action === 'skipWaiting') {
+    console.log('[PWA Service Worker] skipWaiting requested by client message.');
+    self.skipWaiting();
+  }
+});

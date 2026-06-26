@@ -33552,14 +33552,34 @@
   "tp_movements": [],
   "tp_audit_logs": [
     {
-      "id": "AL-AUTO-BACKUP-1782436732745",
-      "timestamp": "2026-06-26T01:18:52.752Z",
+      "id": "AL-AUTO-BACKUP-1782458217738",
+      "timestamp": "2026-06-26T07:16:57.772Z",
       "userId": "SYSTEM",
       "username": "auto_scheduler",
       "action": "DB_BACKUP_CREATE",
       "description": "Automatically created background backup snapshot: Automated Backup - 1hr Interval",
       "tableAffected": "ALL",
-      "recordId": "SNAP-AUTO-1782436732745"
+      "recordId": "SNAP-AUTO-1782458217738"
+    },
+    {
+      "id": "AL-AUTO-BACKUP-1782457693160",
+      "timestamp": "2026-06-26T07:08:13.206Z",
+      "userId": "SYSTEM",
+      "username": "auto_scheduler",
+      "action": "DB_BACKUP_CREATE",
+      "description": "Automatically created background backup snapshot: Automated Backup - 1hr Interval",
+      "tableAffected": "ALL",
+      "recordId": "SNAP-AUTO-1782457693160"
+    },
+    {
+      "id": "AL-AUTO-BACKUP-1782447790334",
+      "timestamp": "2026-06-26T04:23:10.351Z",
+      "userId": "SYSTEM",
+      "username": "auto_scheduler",
+      "action": "DB_BACKUP_CREATE",
+      "description": "Automatically created background backup snapshot: Automated Backup - 1hr Interval",
+      "tableAffected": "ALL",
+      "recordId": "SNAP-AUTO-1782447790334"
     },
     {
       "id": "AL-1782435942410-228",

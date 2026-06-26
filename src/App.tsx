@@ -87,6 +87,7 @@ function AppContent() {
     isLoggedIn, 
     logout, 
     isConfigured,
+    isHydrating,
     dbSnapshots,
     createDbSnapshot,
     restoreDbSnapshot,
@@ -120,7 +121,9 @@ function AppContent() {
     ledgerEntries,
     branchSalesReports,
     deliveries,
-    serverConnected
+    serverConnected,
+    lowPerformanceMode,
+    setLowPerformanceMode
   } = useDb();
   const [activeTab, setActiveTab] = useState(() => {
     const isFirstTime = typeof window !== 'undefined' && localStorage.getItem('tp_first_login_done') !== 'true';
@@ -172,7 +175,7 @@ function AppContent() {
   });
 
   // Smoothly transition all elements when changing dark/light theme
-  const isFirstThemeRender = useRef(true);
+  const isFirstThemeRender = React.useRef(true);
   useEffect(() => {
     if (isFirstThemeRender.current) {
       isFirstThemeRender.current = false;
@@ -293,6 +296,18 @@ function AppContent() {
       window.removeEventListener('tilepoint-theme-updated', handleSync);
     };
   }, [darkMode]);
+
+  useEffect(() => {
+    if (lowPerformanceMode) {
+      document.documentElement.classList.add('accessibility-no-blur');
+      document.documentElement.classList.add('accessibility-no-animation');
+    } else {
+      const noAnim = localStorage.getItem('tilepoint-disable-animations') === 'true';
+      const noBlur = localStorage.getItem('tilepoint-disable-blurs') === 'true';
+      if (!noBlur) document.documentElement.classList.remove('accessibility-no-blur');
+      if (!noAnim) document.documentElement.classList.remove('accessibility-no-animation');
+    }
+  }, [lowPerformanceMode]);
 
   const [showLogoutConfirmModal, setShowLogoutConfirmModal] = useState(false);
   const [showAccountSettingsModal, setShowAccountSettingsModal] = useState(false);
@@ -523,6 +538,27 @@ function AppContent() {
       document.removeEventListener('mouseover', handleMouseOver);
     };
   }, []);
+
+  if (isHydrating) {
+    return (
+      <div className="fixed inset-0 bg-zinc-950 flex flex-col items-center justify-center p-6 z-[9999] select-none text-center">
+        <div className="w-full max-w-md space-y-6">
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-m3-primary" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-sm font-black text-white tracking-widest uppercase font-mono">TilePoint Secure Core</h2>
+            <p className="text-xs text-zinc-400 font-medium">Resolving decentralized offline database states...</p>
+          </div>
+          <div className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-3">
+            <div className="h-4 bg-zinc-800 rounded-lg animate-pulse w-3/4" />
+            <div className="h-3 bg-zinc-800/60 rounded-lg animate-pulse w-5/6" />
+            <div className="h-3 bg-zinc-800/40 rounded-lg animate-pulse w-2/3" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!isConfigured) {
     return (

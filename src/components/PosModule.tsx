@@ -56,7 +56,8 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     createDelivery,
     triggerSystemProcessing,
     branches,
-    branchStock
+    branchStock,
+    syncFromSharedServer
   } = useDb();
 
   const getBranchPrice = (p: Product) => {
@@ -338,11 +339,14 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
     });
   };
 
-  const updateCartQty = (productId: string, newQty: number, maxStock: number) => {
-    if (newQty <= 0) {
+  const updateCartQty = (productId: string, val: any, maxStock: number) => {
+    let parsedQty = parseInt(val, 10);
+    if (isNaN(parsedQty) || parsedQty <= 0) {
       removeFromCart(productId);
       return;
     }
+    const newQty = Math.max(1, parsedQty);
+
     if (newQty > maxStock) {
       showToast(`Excess Volume: Cannot exceed active stock level of ${maxStock}.`);
       return;
@@ -503,6 +507,36 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
         undefined,
         'Deducting products from branch stock and computing taxes...'
       );
+
+      // CONCURRENT STOCK CONFLICT RESOLUTION (ANTI-COLLISION LOCKS):
+      // Double-Check Validation against server database state right before writing
+      try {
+        const latestRes = await fetch('/api/db');
+        if (latestRes.ok) {
+          const responseData = await latestRes.json();
+          if (responseData && responseData.success && responseData.data) {
+            const freshDb = responseData.data;
+            const freshBranchStock = freshDb['tp_branch_stock'] || [];
+            
+            // Validate each item in cart
+            for (const item of cart) {
+              const serverStockRec = freshBranchStock.find(
+                (bs: any) => bs.productId === item.product.id && bs.branchId === (currentUser?.branchAssignmentId || 'B1')
+              );
+              const serverQty = serverStockRec ? serverStockRec.quantity : 0;
+              if (serverQty < item.quantity) {
+                // Stock dropped or changed below required amount!
+                // Cancel write, update local parameters/states, and alert cashier with resolution prompt.
+                await syncFromSharedServer(); // Update local React states to match actual database values
+                setErrorMessage(`CONCURRENT STOCK CONFLICT DETECTED: The product "${item.product.productName}" has only ${serverQty} units remaining in the master database, but your billing basket requested ${item.quantity}. The transaction has been aborted to prevent inventory deficit. Local stock counters have been synchronized to match server state.`);
+                return;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[Anti-Collision Check] Could not verify host repository stock levels:', err);
+      }
 
       const completedInvoice = checkoutSale(
         cart,
@@ -1070,7 +1104,8 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                             <input
                               type="text"
                               value={customerName}
-                              onChange={e => setCustomerName(e.target.value)}
+                              onChange={e => setCustomerName(e.target.value.slice(0, 100))}
+                              maxLength={100}
                               placeholder="Manuel Santos / Walk-in"
                               className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-bold"
                             />
@@ -1082,7 +1117,8 @@ export const PosModule: React.FC<PosModuleProps> = ({ darkMode, onNavigate, view
                             <input
                               type="text"
                               value={customerNotes}
-                              onChange={e => setCustomerNotes(e.target.value)}
+                              onChange={e => setCustomerNotes(e.target.value.slice(0, 100))}
+                              maxLength={100}
                               placeholder="e.g. Master Bedroom Toilet tiles, Travertine Matt"
                               className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-bold"
                             />
