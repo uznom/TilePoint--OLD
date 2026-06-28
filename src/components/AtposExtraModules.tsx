@@ -1432,7 +1432,7 @@ export default function AtposExtraModules({
                 (item) => item.poId === po.id,
               );
               const poSum = relatedItems.reduce(
-                (s, it) => s + it.costPrice * item.quantityRequested,
+                (s, it) => s + (it.costPrice || 0) * (it.quantityRequested || 0),
                 0,
               );
 

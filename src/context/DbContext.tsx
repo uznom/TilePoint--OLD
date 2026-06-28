@@ -2237,6 +2237,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     return cached !== null ? Number(cached) : 500;
   });
 
+  const [dbSyncStatus, setDbSyncStatus] = useState<"idle" | "queued" | "syncing">("idle");
+
   const [writeStatsCount, setWriteStatsCount] = useState<number>(() => {
     const cached = localStorage.getItem("tp_write_stats_prevented");
     return cached !== null ? Number(cached) : 0;
@@ -2432,6 +2434,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const syncFromSharedServer = async () => {
+    if (typeof window !== 'undefined' && localStorage.getItem('tp_setting_up') === 'true') {
+      console.log('[Shared DB Client] System setup in progress. Bypassing server sync to avoid overwrite race condition.');
+      return;
+    }
     try {
       const res = await fetch("/api/db");
       if (!res.ok)
@@ -2451,6 +2457,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
               k === "tp_session_token" ||
               k === "tp_active_session_id" ||
               k === "tp_active_tab" ||
+              (k === "tp_is_configured" && localStorage.getItem("tp_is_configured") === "true") || // prevent downgrade of configured status
               lowerKey.includes("active_tab") ||
               lowerKey.includes("active_filter") ||
               lowerKey.includes("navigation") ||
@@ -2507,10 +2514,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
           }
 
           if (db["tp_is_configured"] !== undefined) {
-            setIsConfigured(
-              db["tp_is_configured"] === "true" ||
-                db["tp_is_configured"] === true,
-            );
+            const serverConfigured = db["tp_is_configured"] === "true" || db["tp_is_configured"] === true;
+            const locallyConfigured = localStorage.getItem("tp_is_configured") === "true";
+            setIsConfigured(serverConfigured || locallyConfigured);
           }
         } else {
           // Shared server db is empty (first-time launch of the server!)
@@ -3399,6 +3405,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       storeLogo?: string;
     },
   ) => {
+    // Prevent sync overrides while setup is in progress
+    localStorage.setItem("tp_setting_up", "true");
+
     // 1. Create first branches list
     const firstBranch: Branch = {
       id: "B1",
@@ -3503,6 +3512,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       })
       .catch((err) => {
         console.error("[Setup Sync] Failed to sync to server:", err);
+      })
+      .finally(() => {
+        localStorage.removeItem("tp_setting_up");
       });
   };
 
@@ -3510,6 +3522,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     newProducts: Product[],
     newBranchesList?: Branch[],
   ) => {
+    localStorage.setItem("tp_setting_up", "true");
     setProducts(newProducts);
     localStorage.setItem("tp_products", JSON.stringify(newProducts));
 
@@ -3541,6 +3554,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     } catch (err) {
       console.error("[Onboarding Sync] Failed to sync onboarding data:", err);
+    } finally {
+      localStorage.removeItem("tp_setting_up");
     }
   };
 
@@ -5233,7 +5248,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     );
     addAuditLog(
       "SUPPLIER_UPDATE",
-      `Updated supplier ID ${id}', 'Suppliers', id`,
+      `Updated supplier ID ${id}`,
+      "Suppliers",
+      id,
     );
   };
 

@@ -26,7 +26,9 @@ import {
   ChevronDown,
   ChevronUp,
   ShieldAlert,
+  Calculator,
 } from "lucide-react";
+import { CalculatorModule } from "./CalculatorModule";
 
 interface PosModuleProps {
   darkMode: boolean;
@@ -85,6 +87,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
   // Closing shift states
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
   const [closeShiftCashInput, setCloseShiftCashInput] = useState("");
+  const [showTileCalculatorModal, setShowTileCalculatorModal] = useState(false);
 
   // Find the last closed shift at this branch to pre-fill starting cash
   const previouslyClosedShift = React.useMemo(() => {
@@ -1119,7 +1122,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
         <div className="flex border-b border-m3-outline-variant/20 pb-3.5 items-center justify-between mb-2 text-left sticky top-0 bg-m3-surface/90 backdrop-blur-md z-20 pt-2 shadow-sm rounded-b-xl px-2 flex-shrink-0">
           <div>
             <h2 className="text-sm font-black uppercase tracking-widest text-m3-primary pl-1 flex items-center gap-2">
-              {activeSubModule === "checkout" ? (
+              {(activeSubModule as string) === "checkout" ? (
                 <>
                   <ShoppingCart className="h-4.5 w-4.5 text-emerald-400" />
                   <span>POS TERMINAL CHECKOUT MODE</span>
@@ -1132,7 +1135,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
               )}
             </h2>
             <p className="text-[10.5px] text-zinc-400 font-semibold pl-1 mt-1">
-              {activeSubModule === "checkout"
+              {(activeSubModule as string) === "checkout"
                 ? "Process and settle materials queued and staged on-the-floor by yard staff."
                 : "Audit corporate ledgers, reprint receipts, and execute manager-guarded void overrides."}
             </p>
@@ -1297,6 +1300,16 @@ export const PosModule: React.FC<PosModuleProps> = ({
                         <span>Active Order list of materials</span>
                       </h3>
                       <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[10px] font-black uppercase tracking-wide">
+                        <button
+                          type="button"
+                          onClick={() => setShowTileCalculatorModal(true)}
+                          className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer transition-colors px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[9.5px]"
+                          title="Open Tile Coverage Calculator"
+                        >
+                          <Calculator className="h-3.5 w-3.5 text-emerald-400" />
+                          <span>Tile Calculator</span>
+                        </button>
+                        <span className="text-zinc-500">•</span>
                         <button
                           type="button"
                           onClick={() =>
@@ -1622,6 +1635,14 @@ export const PosModule: React.FC<PosModuleProps> = ({
                         Active Cashier billing basket is empty. Select a staged
                         ticket from the hold queue to begin.
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowTileCalculatorModal(true)}
+                        className="mt-3 py-2 px-4 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 text-[10.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                      >
+                        <Calculator className="h-4 w-4 text-emerald-400" />
+                        <span>Open Tile Calculator</span>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -3526,6 +3547,57 @@ export const PosModule: React.FC<PosModuleProps> = ({
           </div>
         </div>
       )}
+
+      {/* MODAL: Tile Coverage Estimator Calculator */}
+      <AnimatePresence>
+        {showTileCalculatorModal && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4 font-sans text-m3-on-surface">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
+              onClick={() => setShowTileCalculatorModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              className="relative w-full max-w-4xl max-h-[90vh] rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low flex flex-col"
+            >
+              <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-3.5 mb-4 shrink-0 text-left">
+                <h3 className="text-base font-black text-m3-primary flex items-center gap-2">
+                  <Calculator className="h-5 w-5 text-emerald-400 animate-pulse" />
+                  <span>Tile Coverage & Area Estimator Calculator</span>
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowTileCalculatorModal(false)}
+                  className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1.5 rounded-full hover:bg-m3-primary/10 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto pr-1">
+                <CalculatorModule darkMode={darkMode} />
+              </div>
+
+              <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-4 mt-4 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowTileCalculatorModal(false)}
+                  className="px-6 py-2.5 bg-m3-primary hover:bg-m3-primary/95 text-m3-on-primary text-xs font-black uppercase tracking-wider rounded-full shadow-sm cursor-pointer transition-colors active:scale-95"
+                >
+                  Close Calculator
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Success toast alert bar */}
       {toastMessage && (

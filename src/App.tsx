@@ -988,8 +988,6 @@ function AppContent() {
       icon: ShoppingCart,
       subItems: [
         { id: "pos", name: "POS Checkout Mode" },
-        { id: "shift", name: "Shift drawer" },
-        { id: "calculator", name: "Tile Coverage Calc" },
       ],
     },
     {
