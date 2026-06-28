@@ -4,13 +4,31 @@
  */
 
 export enum UserRole {
-  ADMIN = 'Admin',
-  MANAGER = 'Manager',
-  CASHIER = 'Cashier',
-  STAFF = 'Staff',
+  ADMIN = "Admin",
+  MANAGER = "Manager",
+  CASHIER = "Cashier",
+  STAFF = "Staff",
 }
 
-export type UserStatus = 'Active' | 'Disabled';
+export type PaymentMethod =
+  | "Cash"
+  | "GCash"
+  | "Maya"
+  | "Credit Card"
+  | "Bank Transfer";
+export type ShiftStatus = "OPEN" | "CLOSED";
+export type DeliveryStatus =
+  | "PENDING"
+  | "IN_TRANSIT"
+  | "DELIVERED"
+  | "CANCELLED";
+export type BillStatus = "ACTIVE" | "SETTLED" | "SUSPENDED";
+export type PaymentFrequency =
+  | "WEEKLY"
+  | "MONTHLY"
+  | "SEMI_QUARTERLY"
+  | "QUARTERLY"
+  | "YEARLY";
 
 export interface User {
   id: string;
@@ -19,11 +37,11 @@ export interface User {
   username: string;
   email: string;
   role: UserRole;
-  branchAssignmentId: string;
-  status: UserStatus;
-  passwordHash?: string; // Salted cryptographic pbkdf2 hash token
-  managerPin?: string; // 4-6 digit passcode distinct from password for manager-level overrides
-  profilePicture?: string; // Custom profile photo or SVG URL
+  branchAssignmentId: string | null; // null for Corporate Office
+  status: "Active" | "Restricted";
+  managerPin?: string; // 4-digit PIN for overrides
+  passwordHash?: string; // PBKDF2 secure token
+  profilePicture?: string; // Base64 or URI asset pointer
   createdAt: string;
   updatedAt: string;
 }
@@ -40,157 +58,125 @@ export interface Branch {
   createdAt: string;
   updatedAt: string;
   isDeleted: boolean;
-  isDistributionBranch?: boolean;
-  branchCode?: string;
-  localIp?: string;
-  gatewayRules?: string;
+  isDistributionBranch: boolean; // HQ distribution center vs retail branch node
+  storeLogo?: string; // Base64 context handle
 }
 
 export interface Supplier {
   id: string;
   name: string;
   contactPerson: string;
-  phone: string;
   email: string;
+  phone: string;
   address: string;
   createdAt: string;
+  updatedAt: string;
   isDeleted: boolean;
 }
 
 export interface Brand {
   id: string;
   name: string;
-  supplierId: string; // Supplier supplying this brand
-  description?: string;
-  isDeleted: boolean;
+  supplierId: string;
   createdAt: string;
+  isDeleted: boolean;
 }
 
 export interface Product {
   id: string;
-  productCode: string;
-  sku: string;
-  barcode: string;
-  qrCode: string;
-  designName: string;
+  productCode: string; // Unique enterprise alpha-numeric identifier
   productName: string;
   category: string;
   brand: string;
-  supplierId: string;
-  unit: string;
-  size: string; // e.g. "60x60 cm"
-  boxQuantity: number; // tiles per box
-  coveragePerBox?: number; // coverage per box in sqm
-  image?: string; // base64 string or image URL
+  sku: string;
+  barcode: string;
+  unit: string; // e.g., Pcs, Boxes, Sqm
   costPrice: number;
   sellingPrice: number;
-  stockQuantity: number;
-  minimumStock: number;
+  stockQuantity: number; // Aggregate inventory counter across enterprise
+  lowStockThreshold: number;
+  designName: string;
   isDeleted: boolean;
   createdAt: string;
   updatedAt: string;
-  createdBy: string;
-  updatedBy: string;
-  origin?: string; // where the product/stock came from
 }
 
-export type POStatus =
-  | 'Draft'
-  | 'Pending'
-  | 'Approved'
-  | 'Ordered'
-  | 'Partially Received'
-  | 'Completed'
-  | 'Cancelled';
+export interface BranchStock {
+  id: string;
+  branchId: string;
+  productId: string;
+  quantity: number;
+  lowStockThreshold: number;
+  sellingPriceOverride?: number; // Local custom pricing override per branch layout rules
+  updatedAt: string;
+}
 
 export interface PurchaseOrder {
   id: string;
-  poNumber: string;
+  poNumber: string; // e.g., PO-2026-001
   supplierId: string;
-  branchId: string;
-  status: POStatus;
-  requestedBy: string; // User Name
-  date: string;
+  supplierName: string;
+  totalAmount: number;
+  status: "PENDING" | "APPROVED" | "RECEIVED" | "CANCELLED";
   notes?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface PurchaseOrderItem {
+export interface PoItem {
   id: string;
   poId: string;
   productId: string;
-  costPrice: number;
-  quantityRequested: number;
+  productName: string;
+  quantityOrdered: number;
   quantityReceived: number;
+  unitCost: number;
+  totalCost: number;
 }
-
-export type TransmittalDocType =
-  | 'Daily Sales Report'
-  | 'Inventory Count Report'
-  | 'Purchase Order'
-  | 'Receiving Report'
-  | 'Branch Request'
-  | 'Full Branch State Snapshot';
-
-export type TransmittalStatus =
-  | 'Draft'
-  | 'Submitted'
-  | 'Received'
-  | 'Approved'
-  | 'Archived';
 
 export interface Transmittal {
   id: string;
-  documentType: TransmittalDocType;
-  fromBranchId: string;
-  toBranchId: string;
-  submittedBy: string;
-  status: TransmittalStatus;
-  payloadJson: string; // raw file contents (JSON)
+  transmittalNumber: string;
+  sourceBranchId: string;
+  destinationBranchId: string;
+  status: "PENDING" | "ACCEPTED" | "REJECTED";
   notes?: string;
-  submittedAt: string;
-  isDeleted: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 }
-
-export type ShiftStatus = 'OPEN' | 'CLOSED';
 
 export interface Shift {
   id: string;
+  branchId: string;
   cashierId: string;
   cashierName: string;
-  branchId: string;
-  status: ShiftStatus;
-  startCash: number;
-  endCash: number;
-  cashCount: number;
-  variance: number;
   openedAt: string;
-  closedAt: string | null;
-  shiftSalesCount: number;
-  shiftSalesTotal: number;
-  shiftVatTotal: number;
-  shiftDiscountTotal: number;
+  closedAt?: string;
+  startingCash: number;
+  cashCount: number; // Final physical drawer count on closing
+  status: ShiftStatus;
+  notes?: string;
 }
 
 export interface Sale {
   id: string;
-  saleNumber: string;
+  saleNumber: string; // e.g., INV-10001
   shiftId: string;
   branchId: string;
   cashierId: string;
   cashierName: string;
   customerName: string;
   subtotal: number;
-  vat: number; // 12%
-  discount: number; // flat amount or rate
+  vat: number; // 12% Output VAT metrics
+  discount: number;
   grandTotal: number;
-  paymentMethod: 'Cash' | 'GCash' | 'Maya' | 'Credit Card' | 'Bank Transfer';
+  paymentMethod: PaymentMethod;
   amountTendered: number;
   changeAmount: number;
   notes?: string;
+  isDeleted: boolean; // true if invoice has been voided via supervisor PIN
   createdAt: string;
-  isDeleted: boolean;
 }
 
 export interface SaleItem {
@@ -198,106 +184,29 @@ export interface SaleItem {
   saleId: string;
   productId: string;
   productName: string;
+  quantity: number;
   unitPrice: number;
-  quantity: number;
   total: number;
-  isDeleted: boolean;
 }
 
-export interface InventoryMovement {
+export interface StockMovement {
   id: string;
   productId: string;
-  type: 'IN' | 'OUT' | 'ADJUST' | 'TRANSFER';
-  quantity: number; // change quantity (+ for in, - for out)
-  sourceBranchId?: string;
-  destinationBranchId?: string;
-  referenceId: string; // saleId or poId or manual adjust reference
-  notes: string;
-  timestamp: string;
-  userId: string;
-  username: string;
-}
-
-export interface AuditLog {
-  id: string;
-  timestamp: string;
-  userId: string;
-  username: string;
-  action: string;
-  description: string;
-  tableAffected: string;
-  recordId: string;
-}
-
-export type TransferStatus = 'Pending' | 'Approved' | 'In Transit' | 'Received' | 'Declined' | 'Cancelled';
-export type TransferType = 'Replenishment' | 'Pull Out' | 'Redistribution' | 'Return to Warehouse';
-
-export interface StockTransferItem {
-  id: string;
-  transferId: string;
-  productId: string;
-  productName: string;
-  quantity: number;
-}
-
-export interface StockTransfer {
-  id: string; // matches transfer_no
-  transferNo: string;
-  fromBranchId: string;
-  toBranchId: string;
-  transferType: TransferType;
-  requestedBy: string; // username
-  approvedBy?: string; // username
-  status: TransferStatus;
-  reason: string;
-  createdAt: string;
-  updatedAt: string;
-  items: StockTransferItem[];
-}
-
-export interface InventoryLocationStock {
-  id: string; // branchId + '_' + productId
   branchId: string;
-  productId: string;
+  type:
+    | "IN"
+    | "OUT"
+    | "ADJUSTMENT_ADD"
+    | "ADJUSTMENT_SUB"
+    | "TRANSFER_OUT"
+    | "TRANSFER_IN"
+    | "DAMAGE_BOA";
   quantity: number;
-  sellingPriceOverride?: number;
-  lowStockThresholdOverride?: number;
-}
-
-export interface LedgerEntry {
-  id: string;
-  date: string;
-  productId: string;
-  productName: string;
-  branchId: string;
-  movementType: 'IN' | 'OUT' | 'ADJUST' | 'TRANSFER' | 'PURCHASE' | 'SALE';
-  quantity: number;
-  referenceNo: string;
-  remarks: string;
-}
-
-export interface BranchSalesReport {
-  id: string;
-  branchId: string;
-  branchName: string;
-  transferredAt: string;
-  reportingDate: string;
-  totalSalesCount: number;
-  totalSalesAmount: number;
-  totalVatAmount: number;
-  totalDiscountAmount: number;
-  transmissionType: 'Online' | 'Manual';
-  status: 'Pending Audit' | 'Verified';
-  sales: Sale[];
-  saleItems: SaleItem[];
-  auditedBy?: string;
-  auditedAt?: string;
+  referenceId: string; // ID linking to Sale, PO, Transmittal, or Damage Log
   notes?: string;
-  importVerificationId?: string;
-  securitySignature?: string;
+  createdBy: string;
+  createdAt: string;
 }
-
-export type DeliveryStatus = 'Pending Scheduling' | 'Scheduled' | 'Out For Delivery' | 'Delivered' | 'Failed Delivery' | 'Cancelled' | 'Packed';
 
 export interface Delivery {
   id: string;
@@ -312,53 +221,81 @@ export interface Delivery {
   landmark?: string;
   deliveryDate: string;
   deliveryTime?: string;
-  notes?: string;
   status: DeliveryStatus;
-  truck?: string;
-  driver?: string;
-  helper?: string;
-  deliveredBy?: string;
-  deliveredAt?: string;
-  proofPhotoUrl?: string; // base64 mockup or photo string
-  customerSignature?: string; // signature text / doodle mock
-  receiverName?: string;
+  notes?: string;
   createdAt: string;
   updatedAt: string;
-  branchId: string;
-  branchName: string;
 }
-
-export interface ActiveSession {
-  id: string; // unique session id
-  userId: string;
-  username: string;
-  fullName: string;
-  role: string;
-  branchId: string;
-  branchName: string;
-  lastActive: string; // ISO string
-  userAgent?: string;
-}
-
-export type DamageCategory = 'BOA' | 'Warehouse Breakage' | 'Showroom Casualty' | 'Delivery Transit';
-export type DamageActionTaken = 'Disposed / Scrapped' | 'Saved for Mosaic' | 'Claimed from Supplier / Insurance Code' | 'Returned for Credit';
 
 export interface DamageLog {
   id: string;
   productId: string;
   productName: string;
-  productSku: string;
   branchId: string;
-  branchName: string;
   quantity: number;
-  unitType: 'Box' | 'Piece';
-  category: DamageCategory;
-  actionTaken: DamageActionTaken;
+  reason: "BROKEN" | "FACTORY_DEFECT" | "BOA" | "YARD_ACCIDENT";
+  notes?: string;
   reportedBy: string;
-  notes: string;
-  reportedAt: string;
+  createdAt: string;
 }
 
+export interface LedgerEntry {
+  id: string;
+  branchId: string;
+  type: "DEBIT" | "CREDIT";
+  category:
+    | "SALES"
+    | "PROCUREMENT"
+    | "EXPENSE"
+    | "FLOAT_ADJUSTMENT"
+    | "BILL_PAYMENT";
+  amount: number;
+  referenceId: string;
+  description: string;
+  createdAt: string;
+}
 
+export interface AuditLog {
+  id: string;
+  actionCode: string; // e.g., POS_OVERRIDE_APPROVED, POS_VOID_PIN, USER_RESTRICT
+  description: string;
+  module:
+    | "Sales"
+    | "Inventory"
+    | "Procurement"
+    | "Users"
+    | "Branches"
+    | "Settings";
+  userId: string;
+  userName: string;
+  referenceId?: string;
+  createdAt: string;
+}
 
+/**
+ * FIXED: SCHEMA EXTENSIONS TO FULLY ALIGN PROCUREMENT & RECURRING BILLS WITH THE PAYMENT CALENDAR
+ */
+export interface CustomCorporateBill {
+  id: string;
+  title: string; // Name of liability/bill (e.g., "Meralco Utility HQ", "Holcim Cement Fleet Installment")
+  supplierId?: string; // Links to Supplier if tied to raw wholesale materials
+  purchaseOrderId?: string; // Links to PurchaseOrder if initialized from a specific PO split terms
+  totalAmount: number; // Absolute debt initialized
+  remainingBalance: number; // Decremented upon every partial billing payout
+  frequency: PaymentFrequency; // Recurrence index rule
+  nextDueDate: string; // Tracking calculation marker string used to build calendar dots
+  installmentsCount: number; // Running count of cycles completed
+  status: BillStatus;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
+export interface DbSnapshot {
+  id: string;
+  name: string;
+  timestamp: string;
+  creator: string;
+  sizeBytes: number;
+  data: string; // Raw compiled database JSON string snapshot context
+}

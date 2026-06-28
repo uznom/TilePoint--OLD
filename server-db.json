@@ -33445,6 +33445,26 @@
   "tp_movements": [],
   "tp_audit_logs": [
     {
+      "id": "AL-1782484002638-850",
+      "timestamp": "2026-06-26T14:26:42.638Z",
+      "userId": "U1",
+      "username": "erica_admin",
+      "action": "POS_PARK_SALE",
+      "description": "Held order for customer Walk-in Customer (Hold ID: HLD-1782484002638)",
+      "tableAffected": "Sales",
+      "recordId": "HLD-1782484002638"
+    },
+    {
+      "id": "AL-1782481212477-647",
+      "timestamp": "2026-06-26T13:40:12.477Z",
+      "userId": "U1",
+      "username": "erica_admin",
+      "action": "POS_PARK_SALE",
+      "description": "Held order for customer Walk-in Customer (Hold ID: HLD-1782481212476)",
+      "tableAffected": "Sales",
+      "recordId": "HLD-1782481212476"
+    },
+    {
       "id": "AL-1782479114636-80",
       "timestamp": "2026-06-26T13:05:14.636Z",
       "userId": "U1",

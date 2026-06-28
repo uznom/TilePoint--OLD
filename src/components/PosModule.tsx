@@ -425,8 +425,14 @@ export const PosModule: React.FC<PosModuleProps> = ({
           setShowReceiptModal(true);
         }
       } else if (e.key === "F9" || e.key === "F10") {
+        // FIX: Re-purposed F9/F10 to serve as the automatic terminal toggle shortcut for shift controls
         e.preventDefault();
-        onNavigate("shift");
+        if (activeShift) {
+          setCloseShiftCashInput("");
+          setShowCloseShiftModal(true);
+        } else {
+          setShowShiftModal(true);
+        }
       } else if (e.ctrlKey && e.key === "/") {
         e.preventDefault();
         setShortcutsCollapsed((prev) => !prev);
@@ -438,7 +444,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [cart, customerName, activeReceipt]);
+  }, [cart, customerName, activeReceipt, activeShift]);
 
   // Cart operations
   const addToCart = (product: Product) => {
@@ -648,7 +654,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
       );
 
       // CONCURRENT STOCK CONFLICT RESOLUTION (ANTI-COLLISION LOCKS):
-      // Double-Check Validation against server database state right before writing
       try {
         const latestRes = await fetch("/api/db");
         if (latestRes.ok) {
@@ -666,8 +671,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
               );
               const serverQty = serverStockRec ? serverStockRec.quantity : 0;
               if (serverQty < item.quantity) {
-                // Stock dropped or changed below required amount!
-                await syncFromSharedServer(); // Update local React states to match actual database values
+                await syncFromSharedServer();
                 setErrorMessage(
                   `CONCURRENT STOCK CONFLICT DETECTED: The product "${item.product.productName}" has only ${serverQty} units remaining in the master database, but your billing basket requested ${item.quantity}. The transaction has been aborted to prevent inventory deficit. Local stock counters have been synchronized to match server state.`,
                 );
@@ -897,7 +901,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
         originalPrice: getBranchPrice(item.product),
         overridePrice: targetPrice,
         tempCartItemIndex: overrideItemIndex,
-        requiredRole: UserRole.MANAGER, // Manager or Admin can verify
+        requiredRole: UserRole.MANAGER,
       });
       setOverrideModalOpen(false);
       setApproverUsername("");
@@ -926,7 +930,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
     }
 
     const required = pendingApproval?.requiredRole || UserRole.MANAGER;
-    // Admin overrides everything, Manager can authorize Manager level.
     const isAuth =
       approver.role === UserRole.ADMIN ||
       (required === UserRole.MANAGER && approver.role === UserRole.MANAGER);
@@ -1111,68 +1114,71 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden pb-1 gap-4">
-      <div className="flex border-b border-m3-outline-variant/20 pb-3.5 items-center justify-between mb-2 text-left sticky top-0 bg-m3-surface/90 backdrop-blur-md z-20 pt-2 shadow-sm rounded-b-xl px-2">
-        <div>
-          <h2 className="text-sm font-black uppercase tracking-widest text-m3-primary pl-1 flex items-center gap-2">
-            {activeSubModule === "checkout" ? (
-              <>
-                <ShoppingCart className="h-4.5 w-4.5 text-emerald-400" />
-                <span>POS TERMINAL CHECKOUT MODE</span>
-              </>
-            ) : (
-              <>
-                <History className="h-4.5 w-4.5 text-indigo-400" />
-                <span>DAILY SALES LEDGER & VOID TERMINAL</span>
-              </>
-            )}
-          </h2>
-          <p className="text-[10.5px] text-zinc-400 font-semibold pl-1 mt-1">
-            {activeSubModule === "checkout"
-              ? "Process and settle materials queued and staged on-the-floor by yard staff."
-              : "Audit corporate ledgers, reprint receipts, and execute manager-guarded void overrides."}
-          </p>
-        </div>
+      {/* FIX: WRAPPED THE ENTIRE ROW IN A CONDITIONAL BLOCK TO HIDE IT IN POS CHECKOUT MODE */}
+      {activeSubModule !== "checkout" && (
+        <div className="flex border-b border-m3-outline-variant/20 pb-3.5 items-center justify-between mb-2 text-left sticky top-0 bg-m3-surface/90 backdrop-blur-md z-20 pt-2 shadow-sm rounded-b-xl px-2 flex-shrink-0">
+          <div>
+            <h2 className="text-sm font-black uppercase tracking-widest text-m3-primary pl-1 flex items-center gap-2">
+              {activeSubModule === "checkout" ? (
+                <>
+                  <ShoppingCart className="h-4.5 w-4.5 text-emerald-400" />
+                  <span>POS TERMINAL CHECKOUT MODE</span>
+                </>
+              ) : (
+                <>
+                  <History className="h-4.5 w-4.5 text-indigo-400" />
+                  <span>DAILY SALES LEDGER & VOID TERMINAL</span>
+                </>
+              )}
+            </h2>
+            <p className="text-[10.5px] text-zinc-400 font-semibold pl-1 mt-1">
+              {activeSubModule === "checkout"
+                ? "Process and settle materials queued and staged on-the-floor by yard staff."
+                : "Audit corporate ledgers, reprint receipts, and execute manager-guarded void overrides."}
+            </p>
+          </div>
 
-        <div className="flex items-center gap-3">
-          {activeShift ? (
-            <div className="flex items-center gap-3 bg-zinc-900/80 border border-zinc-800 p-1.5 pl-3.5 rounded-full shadow-inner">
-              <div className="flex flex-col text-right">
-                <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">
-                  Shift Active
-                </span>
-                <span className="text-[10px] font-bold text-zinc-200 font-sans">
-                  {activeShift.cashierName}
-                </span>
+          <div className="flex items-center gap-3">
+            {activeShift ? (
+              <div className="flex items-center gap-3 bg-zinc-900/80 border border-zinc-800 p-1.5 pl-3.5 rounded-full shadow-inner">
+                <div className="flex flex-col text-right">
+                  <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">
+                    Shift Active
+                  </span>
+                  <span className="text-[10px] font-bold text-zinc-200 font-sans">
+                    {activeShift.cashierName}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCloseShiftCashInput("");
+                    setShowCloseShiftModal(true);
+                  }}
+                  className="py-1.5 px-3.5 bg-rose-500/10 hover:bg-rose-600 hover:text-white border border-rose-500/30 text-rose-400 text-[10px] font-black uppercase tracking-wider rounded-full transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+                >
+                  <LockKeyhole className="h-3 w-3" />
+                  <span>Close Shift</span>
+                </button>
               </div>
+            ) : (
               <button
                 type="button"
-                onClick={() => {
-                  setCloseShiftCashInput("");
-                  setShowCloseShiftModal(true);
-                }}
-                className="py-1.5 px-3.5 bg-rose-500/10 hover:bg-rose-600 hover:text-white border border-rose-500/30 text-rose-400 text-[10px] font-black uppercase tracking-wider rounded-full transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+                onClick={() => setShowShiftModal(true)}
+                className="py-1.5 px-3.5 bg-amber-500/15 hover:bg-amber-500 hover:text-black border border-amber-500/30 text-amber-400 hover:border-amber-400 text-[10px] font-black uppercase tracking-wider rounded-full transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
               >
-                <LockKeyhole className="h-3 w-3" />
-                <span>Close Shift</span>
+                <LockKeyhole className="h-3 w-3 animate-pulse" />
+                <span>Open Shift</span>
               </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowShiftModal(true)}
-              className="py-1.5 px-3.5 bg-amber-500/15 hover:bg-amber-500 hover:text-black border border-amber-500/30 text-amber-400 hover:border-amber-400 text-[10px] font-black uppercase tracking-wider rounded-full transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
-            >
-              <LockKeyhole className="h-3 w-3 animate-pulse" />
-              <span>Open Shift</span>
-            </button>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {activeSubModule === "checkout" ? (
         <div className="flex-1 min-h-0 flex flex-col justify-between gap-4 w-full overflow-hidden">
           {/* MOBILE ONLY TAB SWITCHER */}
-          <div className="flex lg:hidden bg-m3-surface-low border border-m3-outline-variant/15 p-1 rounded-2xl w-full gap-1">
+          <div className="flex lg:hidden bg-m3-surface-low border border-m3-outline-variant/15 p-1 rounded-2xl w-full gap-1 flex-shrink-0">
             <button
               onClick={() => setMobilePosTab("basket")}
               className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 ${
@@ -1202,14 +1208,15 @@ export const PosModule: React.FC<PosModuleProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 animate-fade-in text-m3-on-surface items-stretch flex-1 min-h-0 overflow-hidden">
-            {/* LEFT COLUMN: YARD STAFF TRANSACTIONS HOLD QUEUE */}
+          {/* MAIN GRID FRAMEWORK: ATTACHED DIRECTLY TO VIEWPORT */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 animate-fade-in text-m3-on-surface items-stretch flex-1 min-h-0 lg:h-full overflow-hidden">
+            {/* LEFT COLUMN: HOLD QUEUE */}
             <div
-              className={`lg:col-span-4 bg-m3-surface-low p-3.5 sm:p-4 rounded-2xl sm:rounded-[28px] border border-m3-outline-variant/20 shadow-sm space-y-4 text-left self-stretch flex flex-col lg:h-full lg:overflow-hidden lg:min-h-0 ${
+              className={`lg:col-span-4 bg-m3-surface-low p-3.5 sm:p-4 rounded-2xl sm:rounded-[28px] border border-m3-outline-variant/20 shadow-sm space-y-4 text-left self-stretch flex flex-col h-full overflow-hidden min-h-0 ${
                 mobilePosTab === "queue" ? "block" : "hidden lg:flex"
               }`}
             >
-              <div className="border-b border-m3-outline-variant/15 pb-2 cursor-default">
+              <div className="border-b border-m3-outline-variant/15 pb-2 cursor-default flex-shrink-0">
                 <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest flex items-center gap-1.5">
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -1220,9 +1227,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
                   </span>
                 </h3>
                 <p className="text-[10px] text-zinc-400 font-semibold mt-1 leading-tight">
-                  Materials staged on-the-floor by Santi Santos & Logan Perez
-                  are queued below. Select to load basket inside terminal
-                  drawer.
+                  Materials staged on-the-floor by floor staff are queued below.
+                  Select to load basket inside terminal drawer.
                 </p>
               </div>
 
@@ -1264,7 +1270,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                     ))}
                   </div>
                 ) : (
-                  <div className="py-10 px-4 text-center text-xs text-zinc-400 font-bold border border-dashed border-m3-outline-variant/20 rounded-2xl bg-m3-surface-lowest flex flex-col items-center justify-center gap-2 min-h-[180px]">
+                  <div className="py-10 px-4 text-center text-xs text-zinc-400 font-bold border border-dashed border-m3-outline-variant/20 rounded-2xl bg-m3-surface-lowest flex flex-col items-center justify-center gap-2 min-h-[180px] h-full">
                     <History className="h-5 w-5 text-zinc-500" />
                     <span className="animate-pulse text-zinc-500 leading-relaxed">
                       Staged Lobby Clear: Waiting for floor staff to upload
@@ -1275,16 +1281,15 @@ export const PosModule: React.FC<PosModuleProps> = ({
               </div>
             </div>
 
-            {/* RIGHT COLUMN: ACTIVE ORDER LIST OF MATERIALS */}
+            {/* RIGHT COLUMN: ACTIVE ORDER LIST */}
             <div
-              className={`lg:col-span-8 text-left lg:h-full lg:flex lg:flex-col lg:overflow-hidden lg:min-h-0 ${
+              className={`lg:col-span-8 text-left h-full flex flex-col overflow-hidden min-h-0 ${
                 mobilePosTab === "basket" ? "block" : "hidden lg:flex"
               }`}
             >
-              <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-[28px] border border-m3-outline-variant/35 bg-m3-surface-low shadow-sm flex flex-col h-full overflow-hidden">
-                {/* Fixed Top Layout Context */}
-                <div className="flex-shrink-0 space-y-3">
-                  {/* Basket Header */}
+              <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-[28px] border border-m3-outline-variant/35 bg-m3-surface-low shadow-sm flex flex-col h-full overflow-hidden min-h-0">
+                {/* Header Metadata block */}
+                <div className="flex-shrink-0 space-y-2.5">
                   <div className="border-b border-m3-outline-variant/15 pb-2">
                     <div className="flex flex-wrap items-center justify-between gap-2 pl-1 mb-1">
                       <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest flex items-center gap-2">
@@ -1300,7 +1305,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
                             )
                           }
                           className="text-m3-primary hover:text-m3-primary/85 flex items-center gap-1 cursor-pointer transition-colors"
-                          title="Toggle customer profile details"
                         >
                           {isCustomerMetadataCollapsed
                             ? "Show Profile"
@@ -1311,7 +1315,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
                           type="button"
                           onClick={handleCancelSale}
                           className="text-rose-500 hover:text-rose-650 flex items-center gap-1 cursor-pointer transition-colors"
-                          title="Discard active order list"
                         >
                           Clear Active Order
                         </button>
@@ -1319,7 +1322,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                     </div>
                   </div>
 
-                  {/* Customer input metadata Section */}
+                  {/* Customer context assignment */}
                   <div>
                     <button
                       type="button"
@@ -1355,7 +1358,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                           animate={{ opacity: 1, height: "auto" }}
                           exit={{ opacity: 0, height: 0 }}
                           transition={{ duration: 0.15 }}
-                          className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2.5 overflow-hidden"
+                          className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2 overflow-hidden"
                         >
                           <div className="relative pl-0">
                             <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest pl-1 block mb-1">
@@ -1392,27 +1395,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
                     </AnimatePresence>
                   </div>
 
-                  {/* Terminal Shield Safeguard Info box */}
-                  {cart.length > 0 && (
-                    <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-3 flex gap-2.5 items-start text-[10.5px] animate-fade-in">
-                      <ShieldAlert className="h-4 w-4 text-indigo-400 mt-0.5 shrink-0 animate-pulse" />
-                      <div className="text-zinc-300">
-                        <span className="font-extrabold text-indigo-400 uppercase tracking-wider text-[9.5px]">
-                          🛡️ Terminal Shield Safeguard Active
-                        </span>
-                        <p className="mt-0.5 text-zinc-400 leading-normal">
-                          Accidental page refreshes, tab closures, and back
-                          clicks are blocked to protect this live customer
-                          basket session from being lost.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Barcode scan input search bar */}
                   <form
                     onSubmit={handleBarcodeSubmit}
-                    className="bg-m3-surface-low border border-m3-primary/15 hover:border-m3-primary/35 p-3 rounded-2xl transition-all relative"
+                    className="bg-m3-surface-low border border-m3-primary/15 hover:border-m3-primary/35 p-2.5 rounded-2xl transition-all relative"
                   >
                     <div className="flex flex-col md:flex-row gap-2 items-center">
                       <div className="flex-1 w-full text-left">
@@ -1427,25 +1413,23 @@ export const PosModule: React.FC<PosModuleProps> = ({
                               setBarcodeSearchTerm(e.target.value)
                             }
                             placeholder="Type product name, SKU, or custom design... (e.g. BLD01, SLVR-40, hit Enter)"
-                            className="w-full bg-m3-surface-lowest text-xs text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary/50 border border-m3-outline-variant/30 px-3.5 py-2 pr-12 rounded-xl placeholder-zinc-500 font-bold"
+                            className="w-full bg-m3-surface-lowest text-xs text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary/50 border border-m3-outline-variant/30 px-3.5 py-1.5 pr-12 rounded-xl placeholder-zinc-500 font-bold"
                           />
                           {barcodeSearchTerm && (
                             <button
                               type="button"
                               onClick={() => setBarcodeSearchTerm("")}
-                              className="absolute right-16 top-2 text-zinc-400 hover:text-rose-500 text-xs font-black cursor-pointer px-1 py-0.5"
-                              title="Clear input"
+                              className="absolute right-16 top-1.5 text-zinc-400 hover:text-rose-500 text-xs font-black px-1"
                             >
                               ✗
                             </button>
                           )}
-                          <span className="absolute right-3.5 top-2.5 text-zinc-500 text-[9px] uppercase font-mono font-bold select-none pointer-events-none">
+                          <span className="absolute right-3 top-2 text-zinc-500 text-[9px] uppercase font-mono font-bold select-none pointer-events-none">
                             [ ENTER ]
                           </span>
 
-                          {/* Instant Product suggestions dropdown */}
                           {barcodeSearchTerm.trim().length > 0 && (
-                            <div className="absolute left-0 right-0 mt-2 bg-white dark:bg-zinc-950 border border-m3-outline-variant/60 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-m3-outline-variant/20 text-xs max-h-[220px] overflow-y-auto">
+                            <div className="absolute left-0 right-0 mt-2 bg-white dark:bg-zinc-950 border border-m3-outline-variant/60 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-m3-outline-variant/20 text-xs max-h-[180px] overflow-y-auto">
                               {products
                                 .filter(
                                   (p) =>
@@ -1463,16 +1447,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
                                           barcodeSearchTerm.toLowerCase(),
                                         ) ||
                                       p.barcode
-                                        .toLowerCase()
-                                        .includes(
-                                          barcodeSearchTerm.toLowerCase(),
-                                        ) ||
-                                      p.productCode
-                                        .toLowerCase()
-                                        .includes(
-                                          barcodeSearchTerm.toLowerCase(),
-                                        ) ||
-                                      p.designName
                                         .toLowerCase()
                                         .includes(
                                           barcodeSearchTerm.toLowerCase(),
@@ -1499,35 +1473,22 @@ export const PosModule: React.FC<PosModuleProps> = ({
                                         3000,
                                       );
                                     }}
-                                    className="p-3 hover:bg-m3-primary/10 cursor-pointer flex justify-between items-center transition-colors text-left"
+                                    className="p-2.5 hover:bg-m3-primary/10 cursor-pointer flex justify-between items-center transition-colors text-left"
                                   >
                                     <div className="space-y-0.5">
                                       <div className="font-extrabold text-m3-on-surface text-xs">
                                         {p.productName}
                                       </div>
-                                      <div className="text-[10px] text-zinc-400 font-mono font-bold flex items-center gap-1.5">
-                                        <span className="text-m3-primary">
-                                          SKU: {p.sku}
-                                        </span>
-                                        <span>•</span>
-                                        <span>Brand: {p.brand}</span>
-                                        <span>•</span>
-                                        <span className="text-zinc-500 bg-m3-surface/30 px-1 rounded font-black">
-                                          Total Stock: {p.stockQuantity}
-                                        </span>
+                                      <div className="text-[10px] text-zinc-400 font-mono font-bold">
+                                        SKU: {p.sku} • Stock: {p.stockQuantity}
                                       </div>
                                     </div>
-                                    <div className="text-right">
-                                      <div className="font-black text-emerald-400 text-xs">
-                                        ₱
-                                        {getBranchPrice(p).toLocaleString(
-                                          undefined,
-                                          { minimumFractionDigits: 2 },
-                                        )}
-                                      </div>
-                                      <div className="text-[9px] text-zinc-500 uppercase font-mono">
-                                        {p.unit}
-                                      </div>
+                                    <div className="text-right font-black text-emerald-400 text-xs">
+                                      ₱
+                                      {getBranchPrice(p).toLocaleString(
+                                        undefined,
+                                        { minimumFractionDigits: 2 },
+                                      )}
                                     </div>
                                   </div>
                                 ))}
@@ -1537,21 +1498,16 @@ export const PosModule: React.FC<PosModuleProps> = ({
                       </div>
                       <button
                         type="submit"
-                        className="w-full md:w-auto px-5 py-2 bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer self-end shrink-0 transition-all flex items-center gap-1.5 h-[34px] shadow-sm justify-center"
+                        className="w-full md:w-auto px-4 py-1.5 bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer self-end shrink-0 transition-all flex items-center gap-1.5 h-[32px] shadow-sm justify-center"
                       >
                         SKU Scan
                       </button>
                     </div>
-                    {barcodeAddFeedback && (
-                      <div className="absolute -top-3 left-4 bg-m3-tertiary-container text-m3-on-tertiary-container text-[10px] font-black px-2.5 py-0.5 rounded-full border border-m3-tertiary/25 shadow-sm animate-bounce flex items-center gap-1">
-                        {barcodeAddFeedback}
-                      </div>
-                    )}
                   </form>
                 </div>
 
-                {/* FIX: INNER ITEM CONTAINER - TRANSITIONED TO DYNAMIC SCROLL CONTAINER */}
-                <div className="flex-1 h-0 overflow-y-auto my-3 pr-1 space-y-1.5 border border-m3-outline-variant/10 rounded-2xl p-2 bg-m3-surface/20 scrollbar-thin">
+                {/* DYNAMIC INDEPENDENT OVERFLOW SCROLL TRACK */}
+                <div className="flex-1 h-0 overflow-y-auto my-3 pr-1 space-y-1.5 border border-m3-outline-variant/10 rounded-2xl p-2.5 bg-m3-surface/20 scrollbar-thin">
                   <AnimatePresence initial={false}>
                     {cart.map((item, idx) => (
                       <motion.div
@@ -1564,9 +1520,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
                           stiffness: 450,
                           damping: 30,
                         }}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 py-3 border-b border-m3-outline-variant/10 last:border-0 pl-1 overflow-hidden"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 py-2.5 border-b border-m3-outline-variant/10 last:border-0 pl-1 overflow-hidden"
                       >
-                        <div className="space-y-0.5 max-w-2xl text-left w-full sm:w-auto">
+                        <div className="space-y-0.5 text-left w-full sm:w-auto">
                           <h5 className="text-xs font-black leading-tight text-m3-on-surface">
                             {item.product.productName}
                           </h5>
@@ -1591,20 +1547,17 @@ export const PosModule: React.FC<PosModuleProps> = ({
                               SKU: {item.product.sku}
                             </span>
                             <span>•</span>
-                            <span>Brand: {item.product.brand}</span>
-                            <span>•</span>
                             <button
                               type="button"
                               onClick={() => handleTriggerPriceOverride(idx)}
                               className="text-[9px] font-black text-m3-primary hover:text-m3-primary/80 transition-colors uppercase bg-m3-primary/5 px-1.5 py-0.2 rounded"
-                              title="Execute supervisor level override"
                             >
-                              [Override Price]
+                              [Override]
                             </button>
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
+                        <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 w-full sm:w-auto shrink-0">
                           <div className="flex items-center border border-m3-outline-variant rounded-lg overflow-hidden shrink-0 bg-m3-surface">
                             <button
                               type="button"
@@ -1615,11 +1568,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
                                   item.product.stockQuantity,
                                 )
                               }
-                              className="px-2.5 py-1 hover:bg-m3-outline-variant/20 text-xs font-mono font-bold transition-colors cursor-pointer text-m3-on-surface"
+                              className="px-2 py-0.5 hover:bg-m3-outline-variant/20 text-xs font-mono font-bold text-m3-on-surface"
                             >
                               -
                             </button>
-                            <span className="px-3 text-xs font-mono font-black text-m3-on-surface">
+                            <span className="px-2.5 text-xs font-mono font-black text-m3-on-surface">
                               {item.quantity}
                             </span>
                             <button
@@ -1631,14 +1584,14 @@ export const PosModule: React.FC<PosModuleProps> = ({
                                   item.product.stockQuantity,
                                 )
                               }
-                              className="px-2.5 py-1 hover:bg-m3-outline-variant/20 text-xs font-mono font-bold transition-colors cursor-pointer text-m3-on-surface"
+                              className="px-2 py-0.5 hover:bg-m3-outline-variant/20 text-xs font-mono font-bold text-m3-on-surface"
                             >
                               +
                             </button>
                           </div>
 
                           <div className="flex items-center gap-3">
-                            <span className="text-xs font-black font-mono min-w-[80px] sm:min-w-[90px] text-right text-m3-on-surface">
+                            <span className="text-xs font-black font-mono min-w-[80px] text-right text-m3-on-surface">
                               ₱
                               {(
                                 (item.overridePrice !== undefined
@@ -1649,14 +1602,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
                                 minimumFractionDigits: 2,
                               })}
                             </span>
-
                             <button
                               type="button"
                               onClick={() => removeFromCart(item.product.id)}
-                              className="text-zinc-400 hover:text-red-500 p-1.5 rounded-full hover:bg-red-500/10 transition-colors cursor-pointer"
-                              title="Delete entry row"
+                              className="text-zinc-400 hover:text-red-500 p-1 rounded-full hover:bg-red-500/10 transition-colors"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </button>
                           </div>
                         </div>
@@ -1665,20 +1616,19 @@ export const PosModule: React.FC<PosModuleProps> = ({
                   </AnimatePresence>
 
                   {cart.length === 0 && (
-                    <div className="text-center py-12 text-zinc-400 text-xs flex flex-col items-center justify-center gap-2 font-bold min-h-[160px]">
+                    <div className="text-center py-12 text-zinc-400 text-xs flex flex-col items-center justify-center gap-2 font-bold min-h-[160px] h-full">
                       <ShoppingCart className="h-8 w-8 text-m3-primary/30" />
                       <span className="max-w-xs leading-relaxed text-zinc-500">
                         Active Cashier billing basket is empty. Select a staged
-                        ticket from the Yard Staff HOLD Queue on the left to
-                        begin.
+                        ticket from the hold queue to begin.
                       </span>
                     </div>
                   )}
                 </div>
 
-                {/* Fixed Bottom Layout Analytics & Settle Block */}
+                {/* Fixed operational footer calculation layer */}
                 <div className="flex-shrink-0 border-t border-m3-outline-variant/20 pt-3 grid grid-cols-1 xl:grid-cols-12 gap-5">
-                  <div className="xl:col-span-5 xl:space-y-1.5 pt-0.5">
+                  <div className="xl:col-span-5 xl:space-y-1 pt-0.5">
                     <div className="flex justify-between text-xs font-bold text-zinc-400">
                       <span>
                         {discountType === "SENIOR" || discountType === "PWD"
@@ -1687,8 +1637,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                       </span>
                       <span className="font-mono">₱{subtotal.toFixed(2)}</span>
                     </div>
-
-                    <div className="flex justify-between text-xs font-bold text-zinc-400 mt-1">
+                    <div className="flex justify-between text-xs font-bold text-zinc-400 mt-0.5">
                       <span>
                         {discountType === "SENIOR" || discountType === "PWD"
                           ? "12% Output VAT (Exempt)"
@@ -1698,29 +1647,19 @@ export const PosModule: React.FC<PosModuleProps> = ({
                     </div>
 
                     {discountAmount > 0 && (
-                      <div className="flex justify-between text-xs font-black text-emerald-500 mt-1">
-                        <span>
-                          {discountType === "SENIOR"
-                            ? "Senior Citizen Exclusive (20%)"
-                            : discountType === "PWD"
-                              ? "PWD Exemption (20%)"
-                              : discountType === "CONTRACT"
-                                ? "Contractor Alliance Special (10%)"
-                                : discountType === "PERCENT"
-                                  ? `Discount Rate Custom (${discountValue}%)`
-                                  : "Standard Discount Voucher"}
-                        </span>
+                      <div className="flex justify-between text-xs font-black text-emerald-500 mt-0.5">
+                        <span>Discount Voucher Applied</span>
                         <span className="font-mono">
                           -₱{discountAmount.toFixed(2)}
                         </span>
                       </div>
                     )}
 
-                    <div className="flex justify-between text-sm font-black border-t border-dashed border-m3-outline-variant/30 pt-2.5 mt-2">
-                      <span className="text-m3-on-surface uppercase tracking-wide">
-                        GRAND TOTAL VALUE
+                    <div className="flex justify-between text-sm font-black border-t border-dashed border-m3-outline-variant/30 pt-2 mt-1.5">
+                      <span className="text-m3-on-surface text-xs uppercase tracking-wide">
+                        GRAND TOTAL DUE
                       </span>
-                      <span className="font-mono text-m3-primary text-xl font-extrabold">
+                      <span className="font-mono text-m3-primary text-lg font-extrabold">
                         ₱
                         {grandTotal.toLocaleString(undefined, {
                           minimumFractionDigits: 2,
@@ -1729,27 +1668,28 @@ export const PosModule: React.FC<PosModuleProps> = ({
                     </div>
 
                     <button
+                      type="button"
                       onClick={() => {
                         setDiscountInput("");
                         setShowDiscountModal(true);
                       }}
-                      className="w-full mt-2 flex items-center justify-center gap-1.5 text-[10.5px] py-2 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary font-black rounded-lg border border-m3-primary/25 cursor-pointer uppercase tracking-wider transition-colors"
+                      className="w-full mt-2 flex items-center justify-center gap-1.5 text-[10px] py-1.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary font-black rounded-lg border border-m3-primary/25 uppercase tracking-wider transition-colors"
                     >
-                      <Sparkles className="h-3.5 w-3.5" /> Apply Cardholder
-                      Discount (F6)
+                      <Sparkles className="h-3 w-3" /> Apply Cardholder Discount
+                      (F6)
                     </button>
                   </div>
 
                   <div
                     id="checkout-action-panel"
-                    className="xl:col-span-7 bg-m3-surface p-4 rounded-2xl border border-m3-outline-variant/35 space-y-3 shadow-inner text-left"
+                    className="xl:col-span-7 bg-m3-surface p-3.5 rounded-2xl border border-m3-outline-variant/35 space-y-2.5 shadow-inner text-left"
                   >
-                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
                       <div className="sm:col-span-6 space-y-1">
                         <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">
                           Settlement Method
                         </label>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                        <div className="grid grid-cols-3 gap-1">
                           {(
                             [
                               `Cash`,
@@ -1770,7 +1710,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                                   setAmountTendered("");
                                 }
                               }}
-                              className={`py-1.5 px-2 text-[10px] rounded-lg border font-black select-none cursor-pointer text-center transition-all ${
+                              className={`py-1 text-[9px] rounded-lg border font-black select-none text-center transition-all ${
                                 paymentMethod === method
                                   ? "bg-m3-primary border-m3-primary text-white shadow-md"
                                   : "bg-m3-surface-lowest border-m3-outline-variant/40 text-m3-on-surface hover:bg-m3-outline-variant/20"
@@ -1793,18 +1733,17 @@ export const PosModule: React.FC<PosModuleProps> = ({
                           value={amountTendered}
                           onChange={(e) => setAmountTendered(e.target.value)}
                           placeholder={grandTotal.toFixed(0)}
-                          className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface font-mono font-bold focus:outline-none focus:border-m3-primary transition-colors disabled:opacity-45 disabled:cursor-not-allowed rounded-t-lg"
+                          className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant px-3 py-1.5 text-xs text-m3-on-surface font-mono font-bold focus:outline-none focus:border-m3-primary transition-colors disabled:opacity-45 disabled:cursor-not-allowed rounded-t-lg"
                         />
 
                         {paymentMethod === "Cash" && grandTotal > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
+                          <div className="flex flex-wrap gap-1 mt-1">
                             <button
                               type="button"
                               onClick={() =>
                                 setAmountTendered(grandTotal.toString())
                               }
-                              className="text-[9px] font-black uppercase bg-m3-primary/10 text-m3-primary px-2 py-1 rounded border border-m3-primary/20 hover:bg-m3-primary/20 transition-all cursor-pointer"
-                              title="Tender Exact Total Amount"
+                              className="text-[9px] font-black uppercase bg-m3-primary/10 text-m3-primary px-1.5 py-0.5 rounded border border-m3-primary/20 hover:bg-m3-primary/20"
                             >
                               Exact
                             </button>
@@ -1817,20 +1756,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
                                     parseFloat(amountTendered) || 0;
                                   setAmountTendered((current + val).toString());
                                 }}
-                                className="text-[9px] font-black uppercase bg-zinc-800 text-white hover:bg-zinc-700 px-2 py-1 rounded transition-all cursor-pointer border border-zinc-700 shadow-sm"
-                                title={`Add ₱${val}`}
+                                className="text-[9px] font-black bg-zinc-800 text-white hover:bg-zinc-700 px-1.5 py-0.5 rounded shadow-sm"
                               >
                                 +₱{val}
                               </button>
                             ))}
-                            <button
-                              type="button"
-                              onClick={() => setAmountTendered("")}
-                              className="text-[9px] font-black uppercase bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 px-2 py-1 rounded transition-all cursor-pointer border border-rose-500/20 ml-auto"
-                              title="Clear input"
-                            >
-                              Clear
-                            </button>
                           </div>
                         )}
                       </div>
@@ -1838,102 +1768,43 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
                     {paymentMethod === "Cash" &&
                       parseFloat(amountTendered) >= grandTotal && (
-                        <div className="p-2 px-3 bg-m3-tertiary-container border border-m3-tertiary/25 text-m3-on-tertiary-container rounded-lg flex justify-between items-center text-xs font-mono font-extrabold shadow-sm animate-fade-in mb-1">
-                          <span className="text-[10px] font-bold uppercase tracking-wider">
-                            CHANGE DISPENSED DUE:
+                        <div className="p-1.5 px-3 bg-m3-tertiary-container border border-m3-tertiary/25 text-m3-on-tertiary-container rounded-lg flex justify-between items-center text-xs font-mono font-extrabold animate-fade-in mb-1">
+                          <span className="text-[9px] font-bold uppercase tracking-wider">
+                            CHANGE DISPENSE:
                           </span>
-                          <span className="text-sm">
+                          <span className="text-xs">
                             ₱{changeAmount.toFixed(2)}
                           </span>
                         </div>
                       )}
 
                     {errorMessage && (
-                      <div className="bg-red-500/10 border border-red-500/25 text-red-500 p-2 text-[10px] font-bold leading-tight rounded-lg">
+                      <div className="bg-red-500/10 border border-red-500/25 text-red-500 p-1.5 text-[9.5px] font-bold leading-tight rounded-lg">
                         {errorMessage}
                       </div>
                     )}
 
-                    <div className="pt-2 flex gap-3">
+                    <div className="pt-1 flex gap-2">
                       <button
                         type="button"
                         onClick={handleCancelSale}
-                        className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-colors cursor-pointer border border-zinc-750 shadow-sm"
+                        className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-black uppercase tracking-wider border border-zinc-750 shadow-sm"
                       >
-                        Cancel Cart
+                        Cancel
                       </button>
                       <button
                         type="button"
                         disabled={cart.length === 0}
                         onClick={clientCheckout}
-                        className="flex-1 py-2.5 bg-m3-primary hover:bg-m3-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-m3-on-primary text-xs font-black uppercase tracking-widest rounded-xl cursor-pointer transition-all text-center shadow-md shrink-0"
+                        className="flex-1 py-1.5 bg-m3-primary hover:bg-m3-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-m3-on-primary text-xs font-black uppercase tracking-widest rounded-xl shadow-md transition-all"
                       >
-                        Execute Complete Settlement (F7)
+                        Execute Settlement (F7)
                       </button>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* LOWER SECTION: POS KEYBOARD HOTKEYS */}
-          <div className="hidden md:block bg-m3-surface-low p-4 rounded-[28px] border border-m3-outline-variant/20 shadow-sm text-left transition-all duration-300 flex-shrink-0">
-            <button
-              type="button"
-              onClick={() => setShortcutsCollapsed(!shortcutsCollapsed)}
-              className="w-full flex items-center justify-between text-left focus:outline-none group pb-2 border-b border-m3-outline-variant/15 cursor-pointer"
-            >
-              <div className="flex items-center gap-2 select-none">
-                <Keyboard className="h-4 w-4 text-m3-primary" />
-                <h3 className="text-[11px] font-black text-m3-primary uppercase tracking-widest pl-1">
-                  CASHIER TERMINAL REGISTER SHORTCUTS & KEYPAD HOTKEYS
-                </h3>
-              </div>
-              <div className="flex items-center gap-2 text-zinc-450 group-hover:text-m3-primary transition-colors text-[9.5px] font-mono font-bold tracking-wider uppercase pr-1">
-                <span>{shortcutsCollapsed ? "Show (Ctrl + /)" : "Hide"}</span>
-                {shortcutsCollapsed ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronUp className="h-4 w-4" />
-                )}
-              </div>
-            </button>
-
-            {!shortcutsCollapsed && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-9 gap-2.5 mt-4 animate-fade-in">
-                {[
-                  { keys: ["F1", "ESC"], desc: "Clear/Cancel Cart" },
-                  { keys: ["F3"], desc: "Park/Hold Transaction" },
-                  { keys: ["F5"], desc: "Edit Client details" },
-                  { keys: ["F6"], desc: "Apply Discount rate" },
-                  { keys: ["F7"], desc: "Focus Payment Field" },
-                  { keys: ["F8"], desc: "Preview Last slip receipt" },
-                  { keys: ["F9", "F10"], desc: "Drawer Float detail" },
-                  { keys: ["Ctrl", "/"], desc: "Toggle Shortcuts Hint" },
-                  { keys: ["Alt", "ESC"], desc: "Exit Fullscreen & POS" },
-                ].map((shortcut, sIdx) => (
-                  <div
-                    key={sIdx}
-                    className="p-2.5 bg-m3-surface rounded-xl border border-m3-outline-variant/25 flex flex-col items-center justify-between gap-1.5 shadow-sm font-sans select-none"
-                  >
-                    <div className="flex gap-1 items-center justify-center flex-wrap">
-                      {shortcut.keys.map((k, kIdx) => (
-                        <kbd
-                          key={kIdx}
-                          className="px-1.5 py-0.5 text-[9px] font-mono font-black bg-m3-surface-container border-b-2 border-zinc-650 rounded text-amber-500 shadow-sm leading-none"
-                        >
-                          {k}
-                        </kbd>
-                      ))}
-                    </div>
-                    <span className="text-[8px] font-black text-zinc-400 tracking-tight text-center leading-tight uppercase">
-                      {shortcut.desc}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       ) : (
@@ -1982,80 +1853,83 @@ export const PosModule: React.FC<PosModuleProps> = ({
             <div className="flex-1 overflow-auto scrollbar-thin">
               <table className="w-full text-left border-collapse table-auto text-xs min-w-[1000px] font-sans">
                 <thead>
-                  <tr className="bg-m3-surface-low/50 text-zinc-400 border-b border-m3-outline-variant/15">
-                    <th className="py-2.5 px-3">Invoice Ref</th>
-                    <th className="py-2.5 px-3">Settled Timestamp</th>
-                    <th className="py-2.5 px-3">Buyer Name</th>
-                    <th className="py-2.5 px-3 text-right">Subtotal</th>
-                    <th className="py-2.5 px-3 text-right">VAT (12%)</th>
-                    <th className="py-2.5 px-3 text-right">Discounts</th>
-                    <th className="py-2.5 px-3 text-right">Grand Total</th>
-                    <th className="py-2.5 px-3 text-center">Method</th>
-                    <th className="py-2.5 px-3 text-center">Actions</th>
+                  <tr className="border-b border-m3-outline-variant/30 bg-m3-surface/30 text-[9px] uppercase font-black text-zinc-400 tracking-wider">
+                    <th className="py-3 px-4 w-28">Ref Invoice</th>
+                    <th className="py-3 px-4">timestamp settled</th>
+                    <th className="py-3 px-4">Client Profile</th>
+                    <th className="py-3 px-4 text-right">Subtotal</th>
+                    <th className="py-3 px-4 text-right">VAT (12%)</th>
+                    <th className="py-3 px-4 text-right">Discount Given</th>
+                    <th className="py-3 px-4 text-right">Grand Total Paid</th>
+                    <th className="py-3 px-4 text-center">Settlement Status</th>
+                    <th className="py-3 px-4 text-center w-48">
+                      Audit Controls
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-m3-outline-variant/10 font-mono text-zinc-300">
-                  {paginatedSales.map((sale) => (
+                <tbody className="divide-y divide-m3-outline-variant/10 font-mono text-[11px] text-zinc-300">
+                  {paginatedSales.map((s, idx) => (
                     <tr
-                      key={sale.id}
-                      onClick={() => setSelectedSaleDetail(sale)}
-                      className={`hover:bg-m3-primary/5 cursor-pointer transition-colors ${sale.isDeleted ? "opacity-50 line-through bg-rose-500/5" : ""}`}
+                      key={idx}
+                      onClick={() => setSelectedSaleDetail(s)}
+                      className={`hover:bg-m3-surface-low/90 hover:text-white cursor-pointer transition-colors font-bold ${s.isDeleted ? "bg-red-500/5 text-zinc-500 line-through decoration-rose-500" : ""}`}
+                      title="Click to view full transaction invoice ledger details"
                     >
-                      <td className="py-3 px-3 font-bold text-m3-primary">
-                        {sale.saleNumber}
-                      </td>
-                      <td className="py-3 px-3 text-zinc-400 text-[11px]">
-                        {new Date(sale.createdAt).toLocaleString()}
-                      </td>
-                      <td className="py-3 px-3 font-sans font-bold text-white truncate max-w-[150px]">
-                        {sale.customerName}
-                      </td>
-                      <td className="py-3 px-3 text-right">
-                        ₱
-                        {sale.subtotal.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                        })}
-                      </td>
-                      <td className="py-3 px-3 text-right text-zinc-400">
-                        ₱
-                        {sale.vat.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                        })}
-                      </td>
-                      <td className="py-3 px-3 text-right text-rose-400">
-                        ₱
-                        {sale.discount.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                        })}
-                      </td>
-                      <td className="py-3 px-3 text-right text-[#10B981] font-bold">
-                        ₱
-                        {sale.grandTotal.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                        })}
-                      </td>
-                      <td className="py-3 px-3 text-center font-sans">
-                        <span className="px-2 py-0.5 bg-zinc-800 text-zinc-300 rounded text-[10px] font-bold uppercase">
-                          {sale.paymentMethod}
-                        </span>
+                      <td className="py-3 px-4 text-m3-primary font-black uppercase hover:underline">
+                        {s.saleNumber}
                       </td>
                       <td
-                        className="py-3 px-3 text-center"
+                        className="py-3 px-4 text-zinc-550 font-sans font-medium hover:text-emerald-500"
+                        title="Settled instant transaction date"
+                      >
+                        {new Date(s.createdAt).toLocaleString()}
+                      </td>
+                      <td className="py-3 px-4 text-m3-on-surface font-sans font-extrabold">
+                        {s.customerName}
+                      </td>
+                      <td className="py-3 px-4 text-right text-zinc-400">
+                        ₱{s.subtotal.toFixed(2)}
+                      </td>
+                      <td className="py-3 px-4 text-right text-zinc-400">
+                        ₱{s.vat.toFixed(2)}
+                      </td>
+                      <td className="py-3 px-4 text-right text-rose-500">
+                        -₱{s.discount.toFixed(2)}
+                      </td>
+                      <td className="py-3 px-4 text-right text-m3-primary font-extrabold">
+                        ₱{s.grandTotal.toFixed(2)}
+                      </td>
+                      <td className="py-3 px-4 text-center uppercase text-[9.5px]">
+                        {s.isDeleted ? (
+                          <span className="bg-rose-500/10 text-rose-500 border border-rose-500/25 py-0.5 px-2.5 rounded-full font-black animate-pulse">
+                            Voided / Reclaimed
+                          </span>
+                        ) : (
+                          <span className="bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/25 py-0.5 px-2.5 rounded-full font-black">
+                            Settled
+                          </span>
+                        )}
+                      </td>
+                      <td
+                        className="py-3 px-4 text-center"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <div className="flex gap-1.5 justify-center items-center">
+                        <div className="flex gap-2 justify-center items-center">
                           <button
-                            onClick={() => triggerReprintWithPin(sale)}
-                            className="py-1 px-2.5 rounded-lg border border-m3-outline-variant/60 hover:border-m3-primary hover:bg-m3-primary/10 transition-all font-sans text-[10px] font-black uppercase text-m3-primary cursor-pointer"
+                            onClick={() => triggerReprintWithPin(s)}
+                            className="py-1 px-3 rounded-lg border border-m3-outline-variant/60 hover:border-m3-primary hover:bg-m3-primary/10 transition-all font-sans text-[10px] font-black uppercase text-m3-primary cursor-pointer"
+                            title="Reprint receipt (Guarded by Manager PIN)"
                           >
-                            Reprint
+                            Reprint Ticket
                           </button>
-                          {!sale.isDeleted && (
+
+                          {!s.isDeleted && (
                             <button
-                              onClick={() => triggerVoidWithPin(sale)}
-                              className="py-1 px-2.5 rounded-lg border border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white transition-all font-sans text-[10px] font-black uppercase cursor-pointer"
+                              onClick={() => triggerVoidWithPin(s)}
+                              className="py-1 px-3 rounded-lg border border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white transition-all font-sans text-[10px] font-black uppercase cursor-pointer"
+                              title="Void sale and reclaim inventory quantities (Guarded by Manager PIN)"
                             >
-                              Void
+                              Void Sale
                             </button>
                           )}
                         </div>
@@ -2076,6 +1950,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
               </table>
             </div>
 
+            {/* Pagination Controls bar */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-m3-surface-low border-t border-m3-outline-variant/20 text-xs font-sans">
               <span className="font-semibold text-zinc-400 font-mono">
                 Showing{" "}
@@ -2603,7 +2478,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
               >
                 <div className="text-center font-bold tracking-tight border-b border-dashed border-m3-outline-variant/30 pb-2">
                   <h4 className="text-xs font-black text-m3-primary tracking-widest font-mono uppercase">
-                    CAZA DESIGN TILE OUTLET
+                    TILEPOINT RETailing co.
                   </h4>
                   <div className="text-[10px] text-m3-on-surface-variant font-bold mt-0.5">
                     {activeBranch?.name || "Central Outlet Branch"}
@@ -2829,7 +2704,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
         )}
       </AnimatePresence>
 
-      {/* MODAL: Security Passcode Verification */}
+      {/* MODAL 4: Dynamic Security Override Verification */}
       <AnimatePresence>
         {pendingApproval && (
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
@@ -2953,7 +2828,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
         )}
       </AnimatePresence>
 
-      {/* MODAL: Single Item Price Override */}
+      {/* MODAL 5: Single Item Price Override dialog */}
       <AnimatePresence>
         {overrideModalOpen &&
           overrideItemIndex !== null &&
@@ -3039,7 +2914,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
           )}
       </AnimatePresence>
 
-      {/* MODAL: Fulfillment Assignment & Delivery Scheduling */}
+      {/* MODAL 6: Checkout Fulfillment Assignment & Delivery Scheduling Form */}
       <AnimatePresence>
         {showFulfillmentModal && pendingSaleForFulfillment && (
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
@@ -3286,7 +3161,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
         )}
       </AnimatePresence>
 
-      {/* MODAL: Supervisor PIN Verification Overrides */}
+      {/* MODAL 6: Security PIN verification passcode modal */}
       <AnimatePresence>
         {pinModalOpen && pinAction && pinTargetSale && (
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4 font-sans">
@@ -3456,7 +3331,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
         )}
       </AnimatePresence>
 
-      {/* MODAL: Historical Invoice Ledger Details */}
+      {/* MODAL 10: Selected Sale Transaction Details */}
       {selectedSaleDetail && (
         <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in text-left">
           <div

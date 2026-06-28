@@ -3,38 +3,46 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import { DbProvider, useDb, DbSnapshot } from './context/DbContext';
-import { UserRole, User } from './types/db';
-import { motion, AnimatePresence, MotionConfig } from 'motion/react';
-import { SkeletalLoader } from './components/SkeletalLoader';
-import { LoginModule } from './components/LoginModule';
-import { SetupModule } from './components/SetupModule';
-import { createSaltedHash, formatHashToken, verifyPasswordWithToken } from './lib/crypto';
+import React, { useState, useEffect, useRef } from "react";
+import { DbProvider, useDb, DbSnapshot } from "./context/DbContext";
+import { UserRole, User } from "./types/db";
+import { motion, AnimatePresence, MotionConfig } from "motion/react";
+import { SkeletalLoader } from "./components/SkeletalLoader";
+import { LoginModule } from "./components/LoginModule";
+import { SetupModule } from "./components/SetupModule";
+import {
+  createSaltedHash,
+  formatHashToken,
+  verifyPasswordWithToken,
+} from "./lib/crypto";
 
 // Modular components imports
-import { Dashboard } from './components/Dashboard';
-import { PosModule } from './components/PosModule';
-import { InventoryModule } from './components/InventoryModule';
-import { ProcurementModule } from './components/ProcurementModule';
-import { TransmittalModule } from './components/TransmittalModule';
-import { ShiftModule } from './components/ShiftModule';
-import { BranchModule } from './components/BranchModule';
-import { UsersModule } from './components/UsersModule';
-import { SystemSettingsModule } from './components/SystemSettingsModule';
-import { CalculatorModule } from './components/CalculatorModule';
-import { StaffPortal } from './components/StaffPortal';
-import AtposExtraModules from './components/AtposExtraModules';
-import { SalesTransmissionModule } from './components/SalesTransmissionModule';
-import { DeliveriesModule } from './components/DeliveriesModule';
-import { TutorialOnboarding } from './components/TutorialOnboarding';
-import { PrivacyAccessibilityHub } from './components/PrivacyAccessibilityHub';
-import { OnboardingSetupWizard } from './components/OnboardingSetupWizard';
-import { SystemLoadingOverlay } from './components/SystemLoadingOverlay';
-import { IdleScreen } from './components/IdleScreen';
-import { PwaInstallPrompt } from './components/PwaInstallPrompt';
-import { DamageRegisterModule } from './components/DamageRegisterModule';
-import { generateThemeFromSeed, applyM3ThemeToDOM, resetM3ThemeOverride } from './lib/themeGenerator';
+import { Dashboard } from "./components/Dashboard";
+import { PosModule } from "./components/PosModule";
+import { InventoryModule } from "./components/InventoryModule";
+import { ProcurementModule } from "./components/ProcurementModule";
+import { TransmittalModule } from "./components/TransmittalModule";
+import { ShiftModule } from "./components/ShiftModule";
+import { BranchModule } from "./components/BranchModule";
+import { UsersModule } from "./components/UsersModule";
+import { SystemSettingsModule } from "./components/SystemSettingsModule";
+import { CalculatorModule } from "./components/CalculatorModule";
+import { StaffPortal } from "./components/StaffPortal";
+import AtposExtraModules from "./components/AtposExtraModules";
+import { SalesTransmissionModule } from "./components/SalesTransmissionModule";
+import { DeliveriesModule } from "./components/DeliveriesModule";
+import { TutorialOnboarding } from "./components/TutorialOnboarding";
+import { PrivacyAccessibilityHub } from "./components/PrivacyAccessibilityHub";
+import { OnboardingSetupWizard } from "./components/OnboardingSetupWizard";
+import { SystemLoadingOverlay } from "./components/SystemLoadingOverlay";
+import { IdleScreen } from "./components/IdleScreen";
+import { PwaInstallPrompt } from "./components/PwaInstallPrompt";
+import { DamageRegisterModule } from "./components/DamageRegisterModule";
+import {
+  generateThemeFromSeed,
+  applyM3ThemeToDOM,
+  resetM3ThemeOverride,
+} from "./lib/themeGenerator";
 
 import {
   LayoutDashboard,
@@ -75,18 +83,18 @@ import {
   AlertTriangle,
   Palette,
   Settings,
-  ShieldAlert
-} from 'lucide-react';
+  ShieldAlert,
+} from "lucide-react";
 
 function AppContent() {
-  const { 
-    currentUser, 
-    updateCurrentUser, 
-    updateUser, 
+  const {
+    currentUser,
+    updateCurrentUser,
+    updateUser,
     users,
-    branches, 
-    isLoggedIn, 
-    logout, 
+    branches,
+    isLoggedIn,
+    logout,
     isConfigured,
     isHydrating,
     isSystemHydrating,
@@ -125,33 +133,36 @@ function AppContent() {
     deliveries,
     serverConnected,
     lowPerformanceMode,
-    setLowPerformanceMode
+    setLowPerformanceMode,
   } = useDb();
   const initialSavedTabRef = useRef<string | null>(null);
-  if (initialSavedTabRef.current === null && typeof window !== 'undefined') {
-    initialSavedTabRef.current = localStorage.getItem('tilepoint_active_tab') || 'none';
+  if (initialSavedTabRef.current === null && typeof window !== "undefined") {
+    initialSavedTabRef.current =
+      localStorage.getItem("tilepoint_active_tab") || "none";
   }
 
   const [activeTab, setActiveTab] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const savedTab = localStorage.getItem('tilepoint_active_tab');
+    if (typeof window !== "undefined") {
+      const savedTab = localStorage.getItem("tilepoint_active_tab");
       if (savedTab) return savedTab;
     }
-    const isFirstTime = typeof window !== 'undefined' && localStorage.getItem('tp_first_login_done') !== 'true';
-    if (isFirstTime) return 'tutorials';
+    const isFirstTime =
+      typeof window !== "undefined" &&
+      localStorage.getItem("tp_first_login_done") !== "true";
+    if (isFirstTime) return "tutorials";
     if (currentUser && currentUser.role === UserRole.CASHIER) {
-      return 'pos';
+      return "pos";
     }
-    return 'dashboard';
+    return "dashboard";
   });
 
-  const [previousTab, setPreviousTab] = useState('dashboard');
+  const [previousTab, setPreviousTab] = useState("dashboard");
 
   useEffect(() => {
     if (activeTab) {
-      localStorage.setItem('tilepoint_active_tab', activeTab);
+      localStorage.setItem("tilepoint_active_tab", activeTab);
     }
-    if (activeTab !== 'pos') {
+    if (activeTab !== "pos") {
       setPreviousTab(activeTab);
     }
   }, [activeTab]);
@@ -159,40 +170,49 @@ function AppContent() {
   // Dynamic automatic routing on login/identity-switch to ensure Admin sees dashboard first
   useEffect(() => {
     if (isLoggedIn && currentUser) {
-      const savedTab = initialSavedTabRef.current && initialSavedTabRef.current !== 'none'
-        ? initialSavedTabRef.current
-        : localStorage.getItem('tilepoint_active_tab');
-      if (savedTab && savedTab !== 'none') {
+      const savedTab =
+        initialSavedTabRef.current && initialSavedTabRef.current !== "none"
+          ? initialSavedTabRef.current
+          : localStorage.getItem("tilepoint_active_tab");
+      if (savedTab && savedTab !== "none") {
         setActiveTab(savedTab);
         return;
       }
-      const isFirstTime = typeof window !== 'undefined' && localStorage.getItem('tp_first_login_done') !== 'true';
+      const isFirstTime =
+        typeof window !== "undefined" &&
+        localStorage.getItem("tp_first_login_done") !== "true";
       if (isFirstTime) {
-        setActiveTab('tutorials');
-        localStorage.setItem('tp_first_login_done', 'true');
+        setActiveTab("tutorials");
+        localStorage.setItem("tp_first_login_done", "true");
       } else if (currentUser.role === UserRole.CASHIER) {
-        setActiveTab('pos');
-      } else if (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER) {
-        setActiveTab('dashboard');
+        setActiveTab("pos");
+      } else if (
+        currentUser.role === UserRole.ADMIN ||
+        currentUser.role === UserRole.MANAGER
+      ) {
+        setActiveTab("dashboard");
       } else {
-        setActiveTab('inventory-stocks');
+        setActiveTab("inventory-stocks");
       }
     }
   }, [isLoggedIn, currentUser?.id]);
   const [isSidebarMinimized, setIsSidebarMinimized] = useState(() => {
-    const saved = localStorage.getItem('tilepoint_sidebar_minimized');
-    return saved === 'true';
+    const saved = localStorage.getItem("tilepoint_sidebar_minimized");
+    return saved === "true";
   });
   const [isTabChanging, setIsTabChanging] = useState(false);
   const [percentProgress, setPercentProgress] = useState(0);
 
   useEffect(() => {
-    localStorage.setItem('tilepoint_sidebar_minimized', String(isSidebarMinimized));
+    localStorage.setItem(
+      "tilepoint_sidebar_minimized",
+      String(isSidebarMinimized),
+    );
   }, [isSidebarMinimized]);
 
   const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('tilepoint_dark_theme');
-    return saved !== null ? saved === 'true' : true;
+    const saved = localStorage.getItem("tilepoint_dark_theme");
+    return saved !== null ? saved === "true" : true;
   });
 
   // Smoothly transition all elements when changing dark/light theme
@@ -202,28 +222,33 @@ function AppContent() {
       isFirstThemeRender.current = false;
       return;
     }
-    if (document.documentElement.classList.contains('accessibility-no-animation')) {
+    if (
+      document.documentElement.classList.contains("accessibility-no-animation")
+    ) {
       return;
     }
-    document.documentElement.classList.add('theme-transition');
+    document.documentElement.classList.add("theme-transition");
     const timer = setTimeout(() => {
-      document.documentElement.classList.remove('theme-transition');
+      document.documentElement.classList.remove("theme-transition");
     }, 1000);
     return () => clearTimeout(timer);
   }, [darkMode]);
   const [isSubMenuCollapsed, setIsSubMenuCollapsed] = useState(false);
-  const [isSidebarProfileDropdownOpen, setIsSidebarProfileDropdownOpen] = useState(false);
+  const [isSidebarProfileDropdownOpen, setIsSidebarProfileDropdownOpen] =
+    useState(false);
 
   // Auto-minimize the sidebar when tab is POS Mode
   useEffect(() => {
-    if (activeTab === 'pos') {
+    if (activeTab === "pos") {
       setIsSidebarMinimized(true);
     }
   }, [activeTab]);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // ATPOS v2 Collapsible Folder States
-  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
+  const [expandedFolders, setExpandedFolders] = useState<
+    Record<string, boolean>
+  >({
     inventory: true,
     sale: false,
     adjustments: false,
@@ -231,43 +256,60 @@ function AppContent() {
     expenses: false,
     supplier: false,
     bir: false,
-    'admin-bi': false,
-    'admin-org': false,
-    'admin-data': false
+    "admin-bi": false,
+    "admin-org": false,
+    "admin-data": false,
   });
 
   const toggleFolder = (folderId: string) => {
-    setExpandedFolders(prev => ({
+    setExpandedFolders((prev) => ({
       ...prev,
-      [folderId]: !prev[folderId]
+      [folderId]: !prev[folderId],
     }));
   };
 
   // Account settings states & Logout confirmatory dialogs
   const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
-  const [colorContrast, setColorContrast] = useState<'default' | 'medium' | 'high'>(() => {
-    return (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'default';
+  const [colorContrast, setColorContrast] = useState<
+    "default" | "medium" | "high"
+  >(() => {
+    return (
+      (localStorage.getItem("tilepoint-color-contrast") as
+        | "default"
+        | "medium"
+        | "high") || "default"
+    );
   });
 
-  const [maximizeTextContrast, setMaximizeTextContrast] = useState<boolean>(() => {
-    return localStorage.getItem('tilepoint-maximize-text-contrast') === 'true';
-  });
+  const [maximizeTextContrast, setMaximizeTextContrast] = useState<boolean>(
+    () => {
+      return (
+        localStorage.getItem("tilepoint-maximize-text-contrast") === "true"
+      );
+    },
+  );
 
   const [disableAnimations, setDisableAnimations] = useState(() => {
-    return localStorage.getItem('tilepoint-disable-animations') === 'true';
+    return localStorage.getItem("tilepoint-disable-animations") === "true";
   });
 
   const [disableBlurs, setDisableBlurs] = useState(() => {
-    return localStorage.getItem('tilepoint-disable-blurs') === 'true';
+    return localStorage.getItem("tilepoint-disable-blurs") === "true";
   });
 
   useEffect(() => {
     const handleSync = () => {
-      const contrast = (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'default';
-      const maxText = localStorage.getItem('tilepoint-maximize-text-contrast') === 'true';
-      const savedSeed = localStorage.getItem('tilepoint_custom_theme_primary');
-      const noAnim = localStorage.getItem('tilepoint-disable-animations') === 'true';
-      const noBlur = localStorage.getItem('tilepoint-disable-blurs') === 'true';
+      const contrast =
+        (localStorage.getItem("tilepoint-color-contrast") as
+          | "default"
+          | "medium"
+          | "high") || "default";
+      const maxText =
+        localStorage.getItem("tilepoint-maximize-text-contrast") === "true";
+      const savedSeed = localStorage.getItem("tilepoint_custom_theme_primary");
+      const noAnim =
+        localStorage.getItem("tilepoint-disable-animations") === "true";
+      const noBlur = localStorage.getItem("tilepoint-disable-blurs") === "true";
 
       setColorContrast(contrast);
       setMaximizeTextContrast(maxText);
@@ -280,58 +322,71 @@ function AppContent() {
           const scheme = generateThemeFromSeed(savedSeed, darkMode, contrast);
           applyM3ThemeToDOM(scheme);
         } catch (err) {
-          console.error('[M3 Dynamic Theme] Failed to auto-apply saved color theme:', err);
+          console.error(
+            "[M3 Dynamic Theme] Failed to auto-apply saved color theme:",
+            err,
+          );
         }
       } else {
         resetM3ThemeOverride();
       }
 
       // Sync CSS accessibility high contrast and maximize text contrast flag classes
-      if (contrast === 'high') {
-        document.documentElement.classList.add('accessibility-high-contrast');
+      if (contrast === "high") {
+        document.documentElement.classList.add("accessibility-high-contrast");
       } else {
-        document.documentElement.classList.remove('accessibility-high-contrast');
+        document.documentElement.classList.remove(
+          "accessibility-high-contrast",
+        );
       }
 
       if (maxText) {
-        document.documentElement.classList.add('accessibility-maximize-text-contrast');
+        document.documentElement.classList.add(
+          "accessibility-maximize-text-contrast",
+        );
       } else {
-        document.documentElement.classList.remove('accessibility-maximize-text-contrast');
+        document.documentElement.classList.remove(
+          "accessibility-maximize-text-contrast",
+        );
       }
 
       if (noAnim) {
-        document.documentElement.classList.add('accessibility-no-animation');
+        document.documentElement.classList.add("accessibility-no-animation");
       } else {
-        document.documentElement.classList.remove('accessibility-no-animation');
+        document.documentElement.classList.remove("accessibility-no-animation");
       }
 
       if (noBlur) {
-        document.documentElement.classList.add('accessibility-no-blur');
+        document.documentElement.classList.add("accessibility-no-blur");
       } else {
-        document.documentElement.classList.remove('accessibility-no-blur');
+        document.documentElement.classList.remove("accessibility-no-blur");
       }
     };
-    window.addEventListener('tilepoint-theme-updated', handleSync);
+    window.addEventListener("tilepoint-theme-updated", handleSync);
     handleSync();
     return () => {
-      window.removeEventListener('tilepoint-theme-updated', handleSync);
+      window.removeEventListener("tilepoint-theme-updated", handleSync);
     };
   }, [darkMode]);
 
   useEffect(() => {
     if (lowPerformanceMode) {
-      document.documentElement.classList.add('accessibility-no-blur');
-      document.documentElement.classList.add('accessibility-no-animation');
+      document.documentElement.classList.add("accessibility-no-blur");
+      document.documentElement.classList.add("accessibility-no-animation");
     } else {
-      const noAnim = localStorage.getItem('tilepoint-disable-animations') === 'true';
-      const noBlur = localStorage.getItem('tilepoint-disable-blurs') === 'true';
-      if (!noBlur) document.documentElement.classList.remove('accessibility-no-blur');
-      if (!noAnim) document.documentElement.classList.remove('accessibility-no-animation');
+      const noAnim =
+        localStorage.getItem("tilepoint-disable-animations") === "true";
+      const noBlur = localStorage.getItem("tilepoint-disable-blurs") === "true";
+      if (!noBlur)
+        document.documentElement.classList.remove("accessibility-no-blur");
+      if (!noAnim)
+        document.documentElement.classList.remove("accessibility-no-animation");
     }
   }, [lowPerformanceMode]);
 
   const [showLogoutConfirmModal, setShowLogoutConfirmModal] = useState(false);
-  const [showAccountSettingsModal, setShowAccountSettingsModal] = useState(false);
+  const [showAccountSettingsModal, setShowAccountSettingsModal] =
+    useState(false);
   const [showSetupWizard, setShowSetupWizard] = useState(false);
   const [showPosExitConfirmModal, setShowPosExitConfirmModal] = useState(false);
   const [pendingTabId, setPendingTabId] = useState<string | null>(null);
@@ -340,39 +395,45 @@ function AppContent() {
     const handleOpenWizard = () => {
       setShowSetupWizard(true);
     };
-    window.addEventListener('open-setup-wizard', handleOpenWizard);
+    window.addEventListener("open-setup-wizard", handleOpenWizard);
     return () => {
-      window.removeEventListener('open-setup-wizard', handleOpenWizard);
+      window.removeEventListener("open-setup-wizard", handleOpenWizard);
     };
   }, []);
 
   const isCompactColumns = true;
   const [showDatabaseCoreModal, setShowDatabaseCoreModal] = useState(false);
-  const [dbCoreTab, setDbCoreTab] = useState<'scheduler' | 'ledger' | 'import-export'>('scheduler');
-  const [manualSnapshotName, setManualSnapshotName] = useState('');
-  const [dbBackupFileMessage, setDbBackupFileMessage] = useState<string | null>(null);
-  const [dbBackupFileError, setDbBackupFileError] = useState<string | null>(null);
+  const [dbCoreTab, setDbCoreTab] = useState<
+    "scheduler" | "ledger" | "import-export"
+  >("scheduler");
+  const [manualSnapshotName, setManualSnapshotName] = useState("");
+  const [dbBackupFileMessage, setDbBackupFileMessage] = useState<string | null>(
+    null,
+  );
+  const [dbBackupFileError, setDbBackupFileError] = useState<string | null>(
+    null,
+  );
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Password reset/update form localized states
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
-  const [settingsError, setSettingsError] = useState('');
+  const [settingsError, setSettingsError] = useState("");
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   // Profile customisation edit states
-  const [editFullName, setEditFullName] = useState('');
-  const [editUsername, setEditUsername] = useState('');
-  const [editProfilePicture, setEditProfilePicture] = useState('');
+  const [editFullName, setEditFullName] = useState("");
+  const [editUsername, setEditUsername] = useState("");
+  const [editProfilePicture, setEditProfilePicture] = useState("");
 
   useEffect(() => {
     if (showAccountSettingsModal && currentUser) {
       setEditFullName(currentUser.fullName);
       setEditUsername(currentUser.username);
-      setEditProfilePicture(currentUser.profilePicture || '');
+      setEditProfilePicture(currentUser.profilePicture || "");
     }
   }, [showAccountSettingsModal, currentUser]);
 
@@ -392,7 +453,7 @@ function AppContent() {
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSettingsError('');
+    setSettingsError("");
     setIsUpdatingPassword(true);
 
     try {
@@ -401,33 +462,42 @@ function AppContent() {
       // Parse password updates if any of the fields are populated
       if (currentPassword || newPassword || confirmPassword) {
         if (!currentPassword || !newPassword || !confirmPassword) {
-          setSettingsError('To change password, please fill out all password fields.');
+          setSettingsError(
+            "To change password, please fill out all password fields.",
+          );
           setIsUpdatingPassword(false);
           return;
         }
 
         // Verify current password match using our PBKDF2 hash
-        const isMatch = await verifyPasswordWithToken(currentPassword, currentUser.passwordHash || '');
+        const isMatch = await verifyPasswordWithToken(
+          currentPassword,
+          currentUser.passwordHash || "",
+        );
         if (!isMatch) {
-          setSettingsError('Verification Failed: Current password is incorrect.');
+          setSettingsError(
+            "Verification Failed: Current password is incorrect.",
+          );
           setIsUpdatingPassword(false);
           return;
         }
 
         if (newPassword.length < 6) {
-          setSettingsError('Security Policy: New password must be at least 6 characters.');
+          setSettingsError(
+            "Security Policy: New password must be at least 6 characters.",
+          );
           setIsUpdatingPassword(false);
           return;
         }
 
         if (newPassword !== confirmPassword) {
-          setSettingsError('Confirmation Error: New passwords do not match.');
+          setSettingsError("Confirmation Error: New passwords do not match.");
           setIsUpdatingPassword(false);
           return;
         }
 
         // Create new salted PBKDF2 bcrypt hash token
-        const salt = (editUsername || currentUser.username) + '_salt_tok';
+        const salt = (editUsername || currentUser.username) + "_salt_tok";
         const hashedVal = await createSaltedHash(newPassword, salt, 2500);
         const formattedToken = formatHashToken(salt, hashedVal, 2500);
         passwordUpdates.passwordHash = formattedToken;
@@ -435,21 +505,30 @@ function AppContent() {
 
       // Check name/username validations
       if (!editFullName.trim()) {
-        setSettingsError('Validation Error: Full Name is required.');
+        setSettingsError("Validation Error: Full Name is required.");
         setIsUpdatingPassword(false);
         return;
       }
 
       if (!editUsername.trim()) {
-        setSettingsError('Validation Error: Username is required.');
+        setSettingsError("Validation Error: Username is required.");
         setIsUpdatingPassword(false);
         return;
       }
 
-      const cleanUsername = editUsername.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+      const cleanUsername = editUsername
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, "");
 
       // Recalculate initials
-      const newInitials = editFullName.split(' ').map(n => n ? n[0] : '').join('').toUpperCase().slice(0, 2) || 'AD';
+      const newInitials =
+        editFullName
+          .split(" ")
+          .map((n) => (n ? n[0] : ""))
+          .join("")
+          .toUpperCase()
+          .slice(0, 2) || "AD";
 
       // Combine general updates
       const generalUpdates: Partial<User> = {
@@ -457,7 +536,7 @@ function AppContent() {
         username: cleanUsername,
         profilePicture: editProfilePicture || undefined,
         avatarInitials: newInitials,
-        ...passwordUpdates
+        ...passwordUpdates,
       };
 
       // Mutate database structure states
@@ -465,38 +544,45 @@ function AppContent() {
       updateCurrentUser(generalUpdates);
 
       // Clean success flow
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
       setShowCurrentPassword(false);
       setShowNewPassword(false);
       setShowAccountSettingsModal(false);
-      showToast('Account details successfully updated!');
+      showToast("Account details successfully updated!");
     } catch (err) {
       console.error(err);
-      setSettingsError('Dynamic crypt engine error: unable to update profile.');
+      setSettingsError("Dynamic crypt engine error: unable to update profile.");
     } finally {
       setIsUpdatingPassword(false);
     }
   };
 
   useEffect(() => {
-    localStorage.setItem('tilepoint_dark_theme', String(darkMode));
+    localStorage.setItem("tilepoint_dark_theme", String(darkMode));
     if (darkMode) {
-      document.documentElement.classList.add('dark');
+      document.documentElement.classList.add("dark");
     } else {
-      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.remove("dark");
     }
 
     // Auto-apply saved custom dynamic M3 theme color seed if exists
-    const savedSeed = localStorage.getItem('tilepoint_custom_theme_primary');
+    const savedSeed = localStorage.getItem("tilepoint_custom_theme_primary");
     if (savedSeed) {
       try {
-        const contrast = (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'default';
+        const contrast =
+          (localStorage.getItem("tilepoint-color-contrast") as
+            | "default"
+            | "medium"
+            | "high") || "default";
         const scheme = generateThemeFromSeed(savedSeed, darkMode, contrast);
         applyM3ThemeToDOM(scheme);
       } catch (err) {
-        console.error('[M3 Dynamic Theme] Failed to auto-apply saved color theme:', err);
+        console.error(
+          "[M3 Dynamic Theme] Failed to auto-apply saved color theme:",
+          err,
+        );
       }
     } else {
       resetM3ThemeOverride();
@@ -508,15 +594,19 @@ function AppContent() {
     const handleMouseMove = (e: MouseEvent) => {
       // Bypassed instantly when backdrop and UI blurs or animations are disabled
       if (
-        document.documentElement.classList.contains('accessibility-no-blur') ||
-        document.documentElement.classList.contains('accessibility-no-animation')
+        document.documentElement.classList.contains("accessibility-no-blur") ||
+        document.documentElement.classList.contains(
+          "accessibility-no-animation",
+        )
       ) {
         return;
       }
 
       const target = e.target as HTMLElement;
       // Resolve up the DOM tree to locate any active hover target card
-      const card = target.closest('.m3-card, .android-glass-card, .glowing-card') as HTMLElement | null;
+      const card = target.closest(
+        ".m3-card, .android-glass-card, .glowing-card",
+      ) as HTMLElement | null;
 
       if (card) {
         const rect = card.getBoundingClientRect();
@@ -524,41 +614,49 @@ function AppContent() {
         const y = e.clientY - rect.top;
 
         // Apply updated layout coordinates directly to DOM to bypass costly React re-renders
-        card.style.setProperty('--mouse-x', `${x}px`);
-        card.style.setProperty('--mouse-y', `${y}px`);
-        card.style.setProperty('--glow-opacity', '1');
+        card.style.setProperty("--mouse-x", `${x}px`);
+        card.style.setProperty("--mouse-y", `${y}px`);
+        card.style.setProperty("--glow-opacity", "1");
       }
     };
 
     const handleMouseOver = (e: MouseEvent) => {
       if (
-        document.documentElement.classList.contains('accessibility-no-blur') ||
-        document.documentElement.classList.contains('accessibility-no-animation')
+        document.documentElement.classList.contains("accessibility-no-blur") ||
+        document.documentElement.classList.contains(
+          "accessibility-no-animation",
+        )
       ) {
-        const cards = document.querySelectorAll('.m3-card, .android-glass-card, .glowing-card');
-        cards.forEach(el => {
-          (el as HTMLElement).style.setProperty('--glow-opacity', '0');
+        const cards = document.querySelectorAll(
+          ".m3-card, .android-glass-card, .glowing-card",
+        );
+        cards.forEach((el) => {
+          (el as HTMLElement).style.setProperty("--glow-opacity", "0");
         });
         return;
       }
 
       const target = e.target as HTMLElement;
-      const card = target.closest('.m3-card, .android-glass-card, .glowing-card') as HTMLElement | null;
+      const card = target.closest(
+        ".m3-card, .android-glass-card, .glowing-card",
+      ) as HTMLElement | null;
       if (!card) {
         // Safe reset coordinates and remove active glowing spotlight opacity on exit
-        const cards = document.querySelectorAll('.m3-card, .android-glass-card, .glowing-card');
-        cards.forEach(el => {
-          (el as HTMLElement).style.setProperty('--glow-opacity', '0');
+        const cards = document.querySelectorAll(
+          ".m3-card, .android-glass-card, .glowing-card",
+        );
+        cards.forEach((el) => {
+          (el as HTMLElement).style.setProperty("--glow-opacity", "0");
         });
       }
     };
 
-    document.addEventListener('mousemove', handleMouseMove, { passive: true });
-    document.addEventListener('mouseover', handleMouseOver, { passive: true });
+    document.addEventListener("mousemove", handleMouseMove, { passive: true });
+    document.addEventListener("mouseover", handleMouseOver, { passive: true });
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseover', handleMouseOver);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseover", handleMouseOver);
     };
   }, []);
 
@@ -570,8 +668,12 @@ function AppContent() {
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-m3-primary" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-sm font-black text-white tracking-widest uppercase font-mono">TilePoint Secure Core</h2>
-            <p className="text-xs text-zinc-400 font-medium">Resolving decentralized offline database states...</p>
+            <h2 className="text-sm font-black text-white tracking-widest uppercase font-mono">
+              TilePoint Secure Core
+            </h2>
+            <p className="text-xs text-zinc-400 font-medium">
+              Resolving decentralized offline database states...
+            </p>
           </div>
           <div className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-3">
             <div className="h-4 bg-zinc-800 rounded-lg animate-pulse w-3/4" />
@@ -599,7 +701,9 @@ function AppContent() {
     );
   }
 
-  const isOnboarded = typeof window !== 'undefined' && localStorage.getItem('tilepoint_onboarded_setup') === 'true';
+  const isOnboarded =
+    typeof window !== "undefined" &&
+    localStorage.getItem("tilepoint_onboarded_setup") === "true";
 
   if (!isOnboarded) {
     return (
@@ -614,7 +718,10 @@ function AppContent() {
     return (
       <>
         <StaffPortal darkMode={darkMode} setDarkMode={setDarkMode} />
-        <PrivacyAccessibilityHub darkMode={darkMode} hideFloatingButton={true} />
+        <PrivacyAccessibilityHub
+          darkMode={darkMode}
+          hideFloatingButton={true}
+        />
       </>
     );
   }
@@ -622,16 +729,16 @@ function AppContent() {
   // Tab change simulator timer with active linear progress
   const changeTab = (tabId: string) => {
     if (tabId === activeTab) return;
-    
+
     // Safety role clearance checker
-    const targetItem = menuItems.find(item => item.id === tabId);
+    const targetItem = menuItems.find((item) => item.id === tabId);
     if (targetItem && !targetItem.roles.includes(currentUser.role)) {
       return;
     }
 
     // INTERCEPT ACTIVE POS CHECKOUT EXIT: If we are in 'pos' and there is an active checkout (cart contains items), block exiting pos mode and ask via a beautiful modal.
-    if (activeTab === 'pos') {
-      const activeCartRaw = localStorage.getItem('tp_active_cart');
+    if (activeTab === "pos") {
+      const activeCartRaw = localStorage.getItem("tp_active_cart");
       if (activeCartRaw) {
         try {
           const parsedCart = JSON.parse(activeCartRaw);
@@ -652,10 +759,10 @@ function AppContent() {
   const proceedWithTabChange = (tabId: string) => {
     setIsTabChanging(true);
     setPercentProgress(15);
-    
+
     // Simulate progression loader
     const interval = setInterval(() => {
-      setPercentProgress(prev => {
+      setPercentProgress((prev) => {
         if (prev >= 90) {
           clearInterval(interval);
           return 90;
@@ -677,1587 +784,2132 @@ function AppContent() {
 
   // Flat list of All Submodules for global routing, role-mapping and mobile navigation anchors
   const menuItems = [
-    { id: 'tutorials', name: 'Operational Walkthrough', icon: BookOpen, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF] },
-    { id: 'dashboard', name: 'Branch Dashboard', icon: LayoutDashboard, roles: [UserRole.ADMIN, UserRole.MANAGER] },
-    { id: 'pos', name: 'POS Checkout Mode', icon: ShoppingCart, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER] },
-    { id: 'shift', name: 'Shift drawer', icon: LockKeyhole, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER] },
-    { id: 'calculator', name: 'Tile Coverage Calc', icon: Calculator, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF] },
-    { id: 'branches', name: 'Branches Profile', icon: Building2, roles: [UserRole.ADMIN, UserRole.MANAGER] },
-    { id: 'users', name: 'Employee Directory', icon: UsersIcon, roles: [UserRole.ADMIN, UserRole.MANAGER] },
-    { id: 'system-settings', name: 'System Settings', icon: Sliders, roles: [UserRole.ADMIN, UserRole.MANAGER] },
-    
+    {
+      id: "tutorials",
+      name: "Operational Walkthrough",
+      icon: BookOpen,
+      roles: [
+        UserRole.ADMIN,
+        UserRole.MANAGER,
+        UserRole.CASHIER,
+        UserRole.STAFF,
+      ],
+    },
+    {
+      id: "dashboard",
+      name: "Branch Dashboard",
+      icon: LayoutDashboard,
+      roles: [UserRole.ADMIN, UserRole.MANAGER],
+    },
+    {
+      id: "pos",
+      name: "POS Checkout Mode",
+      icon: ShoppingCart,
+      roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER],
+    },
+    {
+      id: "shift",
+      name: "Shift drawer",
+      icon: LockKeyhole,
+      roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER],
+    },
+    {
+      id: "calculator",
+      name: "Tile Coverage Calc",
+      icon: Calculator,
+      roles: [
+        UserRole.ADMIN,
+        UserRole.MANAGER,
+        UserRole.CASHIER,
+        UserRole.STAFF,
+      ],
+    },
+    {
+      id: "branches",
+      name: "Branches Profile",
+      icon: Building2,
+      roles: [UserRole.ADMIN, UserRole.MANAGER],
+    },
+    {
+      id: "users",
+      name: "Employee Directory",
+      icon: UsersIcon,
+      roles: [UserRole.ADMIN, UserRole.MANAGER],
+    },
+    {
+      id: "system-settings",
+      name: "System Settings",
+      icon: Sliders,
+      roles: [UserRole.ADMIN, UserRole.MANAGER],
+    },
+
     // ATPOS v2 Submodules
-    { id: 'inventory-stocks', name: 'Catalog Stock Ledger', icon: Layers, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF] },
-    { id: 'inventory-adjustments', name: 'Adjustments Logs', icon: Layers, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF] },
-    { id: 'inventory-transfer', name: 'Stock Transfers', icon: Send, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF] },
-    { id: 'inventory-logistics', name: 'Logistics Ledger & Heatmap', icon: Layers, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF] },
-    { id: 'inventory-import', name: 'Old POS Migration', icon: Layers, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF] },
-    { id: 'inventory-damage', name: 'Broken & BOA Register', icon: AlertTriangle, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF] },
+    {
+      id: "inventory-stocks",
+      name: "Catalog Stock Ledger",
+      icon: Layers,
+      roles: [
+        UserRole.ADMIN,
+        UserRole.MANAGER,
+        UserRole.CASHIER,
+        UserRole.STAFF,
+      ],
+    },
+    {
+      id: "inventory-adjustments",
+      name: "Adjustments Logs",
+      icon: Layers,
+      roles: [
+        UserRole.ADMIN,
+        UserRole.MANAGER,
+        UserRole.CASHIER,
+        UserRole.STAFF,
+      ],
+    },
+    {
+      id: "inventory-transfer",
+      name: "Stock Transfers",
+      icon: Send,
+      roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF],
+    },
+    {
+      id: "inventory-logistics",
+      name: "Logistics Ledger & Heatmap",
+      icon: Layers,
+      roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF],
+    },
+    {
+      id: "inventory-import",
+      name: "Old POS Migration",
+      icon: Layers,
+      roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF],
+    },
+    {
+      id: "inventory-damage",
+      name: "Broken & BOA Register",
+      icon: AlertTriangle,
+      roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF],
+    },
 
-    { id: 'adjustments-void', name: 'Search Voided Sales', icon: History, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER] },
-    { id: 'adjustments-return', name: 'Search Returned Products', icon: RefreshCw, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER] },
+    {
+      id: "adjustments-void",
+      name: "Search Voided Sales",
+      icon: History,
+      roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER],
+    },
+    {
+      id: "adjustments-return",
+      name: "Search Returned Products",
+      icon: RefreshCw,
+      roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER],
+    },
 
-    { id: 'members-manage', name: 'Manage Members', icon: UsersIcon, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER] },
-    { id: 'members-receivables', name: 'Account Receivables', icon: UsersIcon, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER] },
+    {
+      id: "members-manage",
+      name: "Manage Members",
+      icon: UsersIcon,
+      roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER],
+    },
+    {
+      id: "members-receivables",
+      name: "Account Receivables",
+      icon: UsersIcon,
+      roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER],
+    },
 
-    { id: 'expenses-add', name: 'Add Expenses', icon: DollarSign, roles: [UserRole.ADMIN, UserRole.MANAGER] },
-    { id: 'expenses-search', name: 'Search Expenses', icon: DollarSign, roles: [UserRole.ADMIN, UserRole.MANAGER] },
+    {
+      id: "expenses-add",
+      name: "Add Expenses",
+      icon: DollarSign,
+      roles: [UserRole.ADMIN, UserRole.MANAGER],
+    },
+    {
+      id: "expenses-search",
+      name: "Search Expenses",
+      icon: DollarSign,
+      roles: [UserRole.ADMIN, UserRole.MANAGER],
+    },
 
-    { id: 'suppliers-manage', name: 'Manage Suppliers', icon: Building2, roles: [UserRole.ADMIN] },
-    { id: 'suppliers-credits', name: 'Active Credits', icon: Building2, roles: [UserRole.ADMIN] },
-    { id: 'suppliers-calendar', name: 'Payment Calendar', icon: CalendarDays, roles: [UserRole.ADMIN] },
+    {
+      id: "suppliers-manage",
+      name: "Manage Suppliers",
+      icon: Building2,
+      roles: [UserRole.ADMIN],
+    },
+    {
+      id: "suppliers-credits",
+      name: "Active Credits",
+      icon: Building2,
+      roles: [UserRole.ADMIN],
+    },
+    {
+      id: "suppliers-calendar",
+      name: "Payment Calendar",
+      icon: CalendarDays,
+      roles: [UserRole.ADMIN],
+    },
 
-    { id: 'bir-xz', name: 'Search X&Z Reading', icon: FileText, roles: [UserRole.ADMIN, UserRole.MANAGER] },
-    { id: 'bir-summary', name: 'BIR Summary Report', icon: FileText, roles: [UserRole.ADMIN, UserRole.MANAGER] },
-    { id: 'reports-transmission', name: 'Sales reports Transmission', icon: Send, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER] },
-    { id: 'deliveries-panel', name: 'Delivery Center', icon: Truck, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF] }
+    {
+      id: "bir-xz",
+      name: "Search X&Z Reading",
+      icon: FileText,
+      roles: [UserRole.ADMIN, UserRole.MANAGER],
+    },
+    {
+      id: "bir-summary",
+      name: "BIR Summary Report",
+      icon: FileText,
+      roles: [UserRole.ADMIN, UserRole.MANAGER],
+    },
+    {
+      id: "reports-transmission",
+      name: "Sales reports Transmission",
+      icon: Send,
+      roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER],
+    },
+    {
+      id: "deliveries-panel",
+      name: "Delivery Center",
+      icon: Truck,
+      roles: [
+        UserRole.ADMIN,
+        UserRole.MANAGER,
+        UserRole.CASHIER,
+        UserRole.STAFF,
+      ],
+    },
   ];
 
   // ATPOS v2 Directory Hierarchical Folders
   const sidebarCategoryTree = [
     {
-      id: 'sale',
-      name: 'Sale',
+      id: "sale",
+      name: "Sale",
       icon: ShoppingCart,
       subItems: [
-        { id: 'pos', name: 'POS Checkout Mode' },
-        { id: 'shift', name: 'Shift drawer' },
-        { id: 'calculator', name: 'Tile Coverage Calc' }
-      ]
+        { id: "pos", name: "POS Checkout Mode" },
+        { id: "shift", name: "Shift drawer" },
+        { id: "calculator", name: "Tile Coverage Calc" },
+      ],
     },
     {
-      id: 'inventory',
-      name: 'Inventory',
+      id: "inventory",
+      name: "Inventory",
       icon: Layers,
       subItems: [
-        { id: 'inventory-stocks', name: 'Catalog Stock Ledger' },
-        { id: 'inventory-adjustments', name: 'Adjustments Logs' },
-        { id: 'inventory-transfer', name: 'Stock Transfers' },
-        { id: 'inventory-logistics', name: 'Logistics Ledger & Heatmap' },
-        { id: 'inventory-import', name: 'Old POS Migration' },
-        { id: 'inventory-damage', name: 'Broken & BOA Register' }
-      ]
+        { id: "inventory-stocks", name: "Catalog Stock Ledger" },
+        { id: "inventory-adjustments", name: "Adjustments Logs" },
+        { id: "inventory-transfer", name: "Stock Transfers" },
+        { id: "inventory-logistics", name: "Logistics Ledger & Heatmap" },
+        { id: "inventory-import", name: "Old POS Migration" },
+        { id: "inventory-damage", name: "Broken & BOA Register" },
+      ],
     },
     {
-      id: 'bir',
-      name: 'BIR & Sales Transmission',
+      id: "bir",
+      name: "BIR & Sales Transmission",
       icon: FileText,
       subItems: [
-        { id: 'reports-transmission', name: 'Sales reports Transmission' },
-        { id: 'bir-xz', name: 'Search X&Z Reading' },
-        { id: 'bir-summary', name: 'BIR Summary Report' }
-      ]
+        { id: "reports-transmission", name: "Sales reports Transmission" },
+        { id: "bir-xz", name: "Search X&Z Reading" },
+        { id: "bir-summary", name: "BIR Summary Report" },
+      ],
     },
     {
-      id: 'deliveries',
-      name: 'Cargo Deliveries',
+      id: "deliveries",
+      name: "Cargo Deliveries",
       icon: Truck,
-      subItems: [
-        { id: 'deliveries-panel', name: 'Delivery Center' }
-      ]
+      subItems: [{ id: "deliveries-panel", name: "Delivery Center" }],
     },
     {
-      id: 'members',
-      name: 'Members',
+      id: "members",
+      name: "Members",
       icon: UsersIcon,
       subItems: [
-        { id: 'members-manage', name: 'Manage Members' },
-        { id: 'members-receivables', name: 'Account Receivables' }
-      ]
+        { id: "members-manage", name: "Manage Members" },
+        { id: "members-receivables", name: "Account Receivables" },
+      ],
     },
     {
-      id: 'supplier',
-      name: 'Supplier',
+      id: "supplier",
+      name: "Supplier",
       icon: Building2,
       subItems: [
-        { id: 'suppliers-manage', name: 'Manage Suppliers' },
-        { id: 'suppliers-credits', name: 'Active Credits' },
-        { id: 'suppliers-calendar', name: 'Payment Calendar' }
-      ]
+        { id: "suppliers-manage", name: "Manage Suppliers" },
+        { id: "suppliers-credits", name: "Active Credits" },
+        { id: "suppliers-calendar", name: "Payment Calendar" },
+      ],
     },
     {
-      id: 'expenses',
-      name: 'Expenses',
+      id: "expenses",
+      name: "Expenses",
       icon: DollarSign,
       subItems: [
-        { id: 'expenses-add', name: 'Add Expenses' },
-        { id: 'expenses-search', name: 'Search Expenses' }
-      ]
+        { id: "expenses-add", name: "Add Expenses" },
+        { id: "expenses-search", name: "Search Expenses" },
+      ],
     },
     {
-      id: 'adjustments',
-      name: 'Sale Adjustments',
+      id: "adjustments",
+      name: "Sale Adjustments",
       icon: RefreshCw,
       subItems: [
-        { id: 'adjustments-void', name: 'Search Voided Sales' },
-        { id: 'adjustments-return', name: 'Search Returned Products' }
-      ]
+        { id: "adjustments-void", name: "Search Voided Sales" },
+        { id: "adjustments-return", name: "Search Returned Products" },
+      ],
     },
     {
-      id: 'admin-bi',
-      name: 'Business Intelligence',
+      id: "admin-bi",
+      name: "Business Intelligence",
       icon: LayoutDashboard,
-      subItems: [
-        { id: 'dashboard', name: 'Branch Dashboard' }
-      ]
+      subItems: [{ id: "dashboard", name: "Branch Dashboard" }],
     },
     {
-      id: 'admin-org',
-      name: 'Staff & Settings',
+      id: "admin-org",
+      name: "Staff & Settings",
       icon: UsersIcon,
       subItems: [
-        { id: 'branches', name: 'Branches Profile' },
-        { id: 'users', name: 'Employee Directory' },
-        { id: 'system-settings', name: 'System Settings' }
-      ]
-    }
+        { id: "branches", name: "Branches Profile" },
+        { id: "users", name: "Employee Directory" },
+        { id: "system-settings", name: "System Settings" },
+      ],
+    },
   ];
 
   const getBranchName = (id: string | null) => {
-    if (!id) return 'Corporate Office';
-    const b = branches.find(br => br.id === id);
-    return b ? b.name : 'Unknown Branch';
+    if (!id) return "Corporate Office";
+    const b = branches.find((br) => br.id === id);
+    return b ? b.name : "Unknown Branch";
   };
 
   return (
     <MotionConfig reducedMotion={disableAnimations ? "always" : "never"}>
-      <div className={`h-screen overflow-hidden flex flex-col font-sans transition-all duration-300 relative ${
-      darkMode ? 'dark bg-m3-surface text-m3-on-surface' : 'bg-m3-surface text-m3-on-surface'
-    }`}>
-      {/* Dynamic Ambient Background Color Accent Glow using core M3 primary color token */}
-      <div className="absolute top-[-10%] right-[-10%] w-[55vw] h-[55vw] rounded-full bg-m3-primary/[0.04] dark:bg-m3-primary/[0.07] blur-[130px] pointer-events-none z-0 transition-colors duration-500" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[48vw] h-[48vw] rounded-full bg-m3-primary/[0.03] dark:bg-m3-primary/[0.05] blur-[110px] pointer-events-none z-0 transition-colors duration-500" />
+      {/* FIXED: STRETCH-PROOING COMPONENT CORE WITH ABSOLUTE VIEWPORT CONSTRAINTS */}
+      <div
+        className={`h-screen max-h-screen w-screen overflow-hidden flex flex-col font-sans transition-all duration-300 relative ${
+          darkMode
+            ? "dark bg-m3-surface text-m3-on-surface"
+            : "bg-m3-surface text-m3-on-surface"
+        }`}
+      >
+        {/* Dynamic Ambient Background Color Accent Glow using core M3 primary color token */}
+        <div className="absolute top-[-10%] right-[-10%] w-[55vw] h-[55vw] rounded-full bg-m3-primary/[0.04] dark:bg-m3-primary/[0.07] blur-[130px] pointer-events-none z-0 transition-colors duration-500" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[48vw] h-[48vw] rounded-full bg-m3-primary/[0.03] dark:bg-m3-primary/[0.05] blur-[110px] pointer-events-none z-0 transition-colors duration-500" />
 
-      {/* TOP LINEAR HIGH-VIS PROGRESS BAR */}
-      {percentProgress > 0 && (
-        <div 
-          className="fixed top-0 left-0 h-1 bg-gradient-to-r from-m3-primary to-amber-500 z-50 transition-all duration-[80ms]"
-          style={{ width: `${percentProgress}%` }}
-        />
-      )}
+        {/* TOP LINEAR HIGH-VIS PROGRESS BAR */}
+        {percentProgress > 0 && (
+          <div
+            className="fixed top-0 left-0 h-1 bg-gradient-to-r from-m3-primary to-amber-500 lod-progress z-50 transition-all duration-[80ms]"
+            style={{ width: `${percentProgress}%` }}
+          />
+        )}
 
-      {/* HEADER SECTION with custom horizontal glowing accent bar & ambient overlay tint */}
-      <header className={`py-4 px-6 border-b border-m3-outline-variant/15 flex justify-between items-center z-[35] android-glass-header shadow-sm bg-m3-surface/75 dark:bg-m3-surface-low/80 backdrop-blur-md transition-all duration-300 overflow-visible md:hidden ${
-        activeTab === 'pos' 
-          ? `sticky top-0 z-[35] md:fixed md:top-0 md:left-0 md:right-0 md:transform ${showImmersiveControls ? 'md:translate-y-0 md:opacity-100 md:shadow-xl' : 'md:-translate-y-full md:opacity-0 md:pointer-events-none'}`
-          : 'sticky top-0 z-[35]'
-      }`}>
-        {/* Subtle header brand overlay reflecting user custom color choice */}
-        <div className="absolute inset-0 bg-gradient-to-b from-m3-primary/[0.03] to-transparent pointer-events-none z-[-1]" />
-        {/* Horizontal glowing accent line reflecting selected color */}
-        <div className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-m3-primary/35 via-m3-primary/10 to-transparent pointer-events-none" />
-        <div className="flex items-center gap-3">
-          {/* Logo */}
-          <div className="flex items-center gap-2.5">
-            <img src="/icon.svg" alt="TilePoint Favicon Logo" className="h-9 w-9 rounded-lg" referrerPolicy="no-referrer" />
-            <div>
-              <h1 className="text-base font-bold tracking-wide leading-none uppercase font-sans text-m3-primary">TilePoint</h1>
-              <span className="text-[9px] text-m3-on-surface-variant font-bold block uppercase mt-0.5 tracking-widest leading-none">HQ POS System</span>
+        {/* HEADER SECTION with custom horizontal glowing accent bar & ambient overlay tint */}
+        <header
+          className={`py-4 px-6 border-b border-m3-outline-variant/15 flex justify-between items-center z-[35] android-glass-header shadow-sm bg-m3-surface/75 dark:bg-m3-surface-low/80 backdrop-blur-md transition-all duration-300 overflow-visible md:hidden ${
+            activeTab === "pos"
+              ? `sticky top-0 z-[35] md:fixed md:top-0 md:left-0 md:right-0 md:transform ${showImmersiveControls ? "md:translate-y-0 md:opacity-100 md:shadow-xl" : "md:-translate-y-full md:opacity-0 md:pointer-events-none"}`
+              : "sticky top-0 z-[35]"
+          }`}
+        >
+          {/* Subtle header brand overlay reflecting user custom color choice */}
+          <div className="absolute inset-0 bg-gradient-to-b from-m3-primary/[0.03] to-transparent pointer-events-none z-[-1]" />
+          {/* Horizontal glowing accent line reflecting selected color */}
+          <div className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-m3-primary/35 via-m3-primary/10 to-transparent pointer-events-none" />
+          <div className="flex items-center gap-3">
+            {/* Logo */}
+            <div className="flex items-center gap-2.5">
+              <img
+                src="/icon.svg"
+                alt="TilePoint Favicon Logo"
+                className="h-9 w-9 rounded-lg"
+                referrerPolicy="no-referrer"
+              />
+              <div>
+                <h1 className="text-base font-bold tracking-wide leading-none uppercase font-sans text-m3-primary">
+                  TilePoint
+                </h1>
+                <span className="text-[9px] text-m3-on-surface-variant font-bold block uppercase mt-0.5 tracking-widest leading-none">
+                  HQ POS System
+                </span>
+              </div>
             </div>
-          </div>
 
-          {/* Branch tag indicator */}
-          <span className="hidden sm:inline-block px-3 py-1 rounded-xl text-[10px] font-extrabold uppercase bg-m3-secondary-container text-m3-on-secondary-container border border-m3-outline-variant/40">
-            {getBranchName(currentUser.branchAssignmentId)}
-          </span>
+            {/* Branch tag indicator */}
+            <span className="hidden sm:inline-block px-3 py-1 rounded-xl text-[10px] font-extrabold uppercase bg-m3-secondary-container text-m3-on-secondary-container border border-m3-outline-variant/40">
+              {getBranchName(currentUser.branchAssignmentId)}
+            </span>
 
-          {/* Shared DB status indicator */}
-          <span className={`px-2.5 py-1 rounded-xl text-[9px] font-bold uppercase border flex items-center gap-1.5 ${
-            serverConnected 
-              ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
-              : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-          }`} title={serverConnected ? 'Connected to central offline network database on host PC' : 'Offline. Storing data in browser storage only.'}>
-            <span className={`h-1.5 w-1.5 rounded-full ${serverConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-            <span>{serverConnected ? 'Shared Server Live' : 'Local Fallback'}</span>
-          </span>
-        </div>
-
-        {/* Right side controls with Dropdown Menu following strict user intent */}
-        <div className="flex items-center gap-3 relative">
-          <div className="relative animate-fade-in">
-            <button
-              id="account-dropdown-trigger"
-              onClick={() => setIsAccountDropdownOpen(!isAccountDropdownOpen)}
-              className="flex items-center gap-2 md:gap-3 p-1.5 pr-3 rounded-xl border border-m3-outline-variant/40 hover:bg-m3-primary/5 transition-all cursor-pointer text-left focus:outline-none bg-m3-surface-low select-none active:scale-[0.98]"
+            {/* Shared DB status indicator */}
+            <span
+              className={`px-2.5 py-1 rounded-xl text-[9px] font-bold uppercase border flex items-center gap-1.5 ${
+                serverConnected
+                  ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                  : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+              }`}
+              title={
+                serverConnected
+                  ? "Connected to central offline network database on host PC"
+                  : "Offline. Storing data in browser storage only."
+              }
             >
-              <div className="h-8 w-8 rounded-xl bg-m3-primary font-black text-xs items-center justify-center flex text-m3-on-primary shadow-sm m3-shape-asymmetric relative overflow-hidden">
-                {(() => {
-                  const isErica = currentUser.fullName.toLowerCase().includes('erica') || currentUser.username?.toLowerCase().includes('erica');
-                  if (isErica) {
-                    return "E";
-                  }
-                  
-                  const avatarSrc = currentUser.profilePicture || '';
-
-                  return (
-                    <>
-                      {avatarSrc ? (
-                        <img src={avatarSrc} alt={currentUser.fullName} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
-                      ) : (
-                        currentUser.avatarInitials
-                      )}
-                      <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 border border-m3-surface animate-pulse" />
-                    </>
-                  );
-                })()}
-              </div>
-              <div className="hidden sm:block">
-                <div className="text-xs font-extrabold leading-none text-m3-on-surface flex items-center gap-1">
-                  <span>{currentUser.fullName}</span>
-                </div>
-                <span className="text-[9px] text-m3-on-surface-variant font-mono capitalize leading-none font-medium block mt-0.5">{currentUser.role} Account</span>
-              </div>
-              <svg className={`h-3 w-3 text-m3-on-surface-variant transition-transform duration-200 ${isAccountDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            <AnimatePresence>
-              {isAccountDropdownOpen && (
-                <>
-                  {/* Backdrop overlay for dismissing dropdown on click-away */}
-                  <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsAccountDropdownOpen(false)} />
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: -8 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: -8 }}
-                    transition={{ duration: 0.15, ease: "easeOut" }}
-                    className="absolute right-0 mt-2 w-56 rounded-2xl bg-m3-surface-low border border-m3-outline-variant/40 text-m3-on-surface shadow-2xl z-50 p-2 space-y-1.5 font-sans"
-                  >
-                    <div className="px-3 py-2 border-b border-m3-outline-variant/15 bg-m3-surface-high/10 rounded-xl">
-                      <div className="text-xs font-black text-m3-on-surface truncate">{currentUser.fullName}</div>
-                      <div className="text-[9.5px] text-zinc-400 font-mono font-bold mt-0.5 uppercase tracking-wider">{currentUser.role} Mode</div>
-                    </div>
-
-                    {/* Dark / Light Toggle */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDarkMode(!darkMode);
-                        setIsAccountDropdownOpen(false);
-                      }}
-                      className="w-full flex items-center justify-between text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        {darkMode ? <Sun className="h-4 w-4 text-amber-500" /> : <Moon className="h-4 w-4 text-m3-primary" />}
-                        <span>{darkMode ? 'Light Theme' : 'Dark Theme'}</span>
-                      </div>
-                      <span className="text-[9px] font-black uppercase text-zinc-400 px-1.5 py-0.5 bg-m3-outline-variant/20 rounded font-mono">
-                        {darkMode ? 'LIGHT' : 'DARK'}
-                      </span>
-                    </button>
-
-                    {/* Account Settings (Guarded password change Only) */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsAccountDropdownOpen(false);
-                        setShowAccountSettingsModal(true);
-                      }}
-                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
-                    >
-                      <LockKeyhole className="h-4 w-4 text-amber-500" />
-                      <span>Account Settings</span>
-                    </button>
-
-                    {/* Operational Walkthrough */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsAccountDropdownOpen(false);
-                        changeTab('tutorials');
-                      }}
-                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
-                    >
-                      <BookOpen className="h-4 w-4 text-m3-primary" />
-                      <span>Operational Walkthrough</span>
-                    </button>
-
-                    {/* System Settings trigger */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsAccountDropdownOpen(false);
-                        window.dispatchEvent(new Event('open-privacy-hub'));
-                      }}
-                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
-                    >
-                      <Settings className="h-4 w-4 text-m3-primary" />
-                      <span>Settings</span>
-                    </button>
-
-                    <div className="h-px bg-m3-outline-variant/10 !my-1" />
-
-                    {/* Logout command trigger */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsAccountDropdownOpen(false);
-                        setShowLogoutConfirmModal(true);
-                      }}
-                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-rose-500/10 text-rose-500 cursor-pointer transition-colors"
-                    >
-                      <Power className="h-4 w-4 text-rose-500" />
-                      <span>Logout Account</span>
-                    </button>
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${serverConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`}
+              />
+              <span>
+                {serverConnected ? "Shared Server Live" : "Local Fallback"}
+              </span>
+            </span>
           </div>
-        </div>
-      </header>
 
-      {/* BODY CONTENT: Sidebar + Dynamic tab target */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* SIDEBAR NAVIGATION: Desktop (Unified with Brand Header & Profile) */}
-        <aside className={`border-r border-m3-outline-variant/15 select-none android-glass-sidebar py-5 px-3.5 transition-all duration-300 ease-in-out hidden md:flex md:flex-col md:justify-between h-screen sticky top-0 z-40 ${
-          isSidebarMinimized ? 'w-20 !px-2' : 'w-72'
-        }`}>
-          {/* TOP SECTION: Brand Logo, Name and Branch assignment */}
-          <div className="flex flex-col gap-4">
-            {/* Brand Logo & Name */}
-            <div className={`flex items-center gap-3 ${isSidebarMinimized ? 'justify-center' : 'pl-2'}`}>
-              <img src="/icon.svg" alt="TilePoint Favicon Logo" className="h-9 w-9 rounded-xl shrink-0 shadow-sm" referrerPolicy="no-referrer" />
-              {!isSidebarMinimized && (
-                <div className="animate-fade-in truncate">
-                  <h1 className="text-sm font-black tracking-wide leading-none uppercase font-sans text-m3-primary">TilePoint</h1>
-                  <span className="text-[8px] text-m3-on-surface-variant font-bold block uppercase mt-1 tracking-widest leading-none">HQ POS System</span>
-                  <span className={`text-[7.5px] font-extrabold uppercase tracking-wider block mt-1.5 ${
-                    serverConnected ? 'text-emerald-500' : 'text-amber-500'
-                  }`}>
-                    ● {serverConnected ? 'Shared Server Live' : 'Local Fallback'}
+          {/* Right side controls with Dropdown Menu following strict user intent */}
+          <div className="flex items-center gap-3 relative">
+            <div className="relative animate-fade-in">
+              <button
+                id="account-dropdown-trigger"
+                onClick={() => setIsAccountDropdownOpen(!isAccountDropdownOpen)}
+                className="flex items-center gap-2 md:gap-3 p-1.5 pr-3 rounded-xl border border-m3-outline-variant/40 hover:bg-m3-primary/5 transition-all cursor-pointer text-left focus:outline-none bg-m3-surface-low select-none active:scale-[0.98]"
+              >
+                <div className="h-8 w-8 rounded-xl bg-m3-primary font-black text-xs items-center justify-center flex text-m3-on-primary shadow-sm m3-shape-asymmetric relative overflow-hidden">
+                  {(() => {
+                    const isErica =
+                      currentUser.fullName.toLowerCase().includes("erica") ||
+                      currentUser.username?.toLowerCase().includes("erica");
+                    if (isErica) {
+                      return "E";
+                    }
+
+                    const avatarSrc = currentUser.profilePicture || "";
+
+                    return (
+                      <>
+                        {avatarSrc ? (
+                          <img
+                            src={avatarSrc}
+                            alt={currentUser.fullName}
+                            className="h-full w-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          currentUser.avatarInitials
+                        )}
+                        <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 border border-m3-surface animate-pulse" />
+                      </>
+                    );
+                  })()}
+                </div>
+                <div className="hidden sm:block">
+                  <div className="text-xs font-extrabold leading-none text-m3-on-surface flex items-center gap-1">
+                    <span>{currentUser.fullName}</span>
+                  </div>
+                  <span className="text-[9px] text-m3-on-surface-variant font-mono capitalize leading-none font-medium block mt-0.5">
+                    {currentUser.role} Account
                   </span>
                 </div>
-              )}
-            </div>
-
-            {/* Branch Assignment tag badge */}
-            {!isSidebarMinimized ? (
-              <div className="px-1.5 animate-fade-in">
-                <div className="w-full text-center px-3 py-1.5 rounded-xl text-[9px] font-extrabold uppercase bg-m3-secondary-container text-m3-on-secondary-container border border-m3-outline-variant/35 tracking-wider truncate">
-                  {getBranchName(currentUser.branchAssignmentId)}
-                </div>
-              </div>
-            ) : (
-              <div className="flex justify-center" title={getBranchName(currentUser.branchAssignmentId)}>
-                <span className="h-2.5 w-2.5 rounded-full bg-m3-primary animate-pulse" />
-              </div>
-            )}
-
-            <div className="h-px bg-m3-outline-variant/10" />
-
-            {/* Modules Label and Minimize/Maximize toggle handle */}
-            <div className={`flex items-center ${isSidebarMinimized ? 'justify-center mb-1' : 'justify-between pl-2 mb-1'}`}>
-              {!isSidebarMinimized && (
-                <span className="text-[10px] font-black tracking-widest text-m3-on-surface-variant uppercase font-mono animate-fade-in truncate">
-                  Modules
-                </span>
-              )}
-              <button
-                onClick={() => setIsSidebarMinimized(!isSidebarMinimized)}
-                className={`p-1.5 hover:bg-m3-primary/15 hover:text-m3-primary text-m3-on-surface-variant rounded-xl cursor-pointer transition-all duration-200 ${
-                  isSidebarMinimized ? 'hover:scale-110' : ''
-                }`}
-                title={isSidebarMinimized ? "Maximize Sidebar" : "Minimize Sidebar"}
-              >
-                <ChevronLeft className={`h-4 w-4 transition-transform duration-300 ${isSidebarMinimized ? 'rotate-180' : ''}`} />
+                <svg
+                  className={`h-3 w-3 text-m3-on-surface-variant transition-transform duration-200 ${isAccountDropdownOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
               </button>
+
+              <AnimatePresence>
+                {isAccountDropdownOpen && (
+                  <>
+                    {/* Backdrop overlay for dismissing dropdown on click-away */}
+                    <div
+                      className="fixed inset-0 z-40 bg-transparent"
+                      onClick={() => setIsAccountDropdownOpen(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -8 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                      transition={{ duration: 0.15, ease: "easeOut" }}
+                      className="absolute right-0 mt-2 w-56 rounded-2xl bg-m3-surface-low border border-m3-outline-variant/40 text-m3-on-surface shadow-2xl z-50 p-2 space-y-1.5 font-sans"
+                    >
+                      <div className="px-3 py-2 border-b border-m3-outline-variant/15 bg-m3-surface-high/10 rounded-xl">
+                        <div className="text-xs font-black text-m3-on-surface truncate">
+                          {currentUser.fullName}
+                        </div>
+                        <div className="text-[9.5px] text-zinc-400 font-mono font-bold mt-0.5 uppercase tracking-wider">
+                          {currentUser.role} Mode
+                        </div>
+                      </div>
+
+                      {/* Dark / Light Toggle */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDarkMode(!darkMode);
+                          setIsAccountDropdownOpen(false);
+                        }}
+                        className="w-full flex items-center justify-between text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          {darkMode ? (
+                            <Sun className="h-4 w-4 text-amber-500" />
+                          ) : (
+                            <Moon className="h-4 w-4 text-m3-primary" />
+                          )}
+                          <span>{darkMode ? "Light Theme" : "Dark Theme"}</span>
+                        </div>
+                        <span className="text-[9px] font-black uppercase text-zinc-400 px-1.5 py-0.5 bg-m3-outline-variant/20 rounded font-mono">
+                          {darkMode ? "LIGHT" : "DARK"}
+                        </span>
+                      </button>
+
+                      {/* Account Settings (Guarded password change Only) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAccountDropdownOpen(false);
+                          setShowAccountSettingsModal(true);
+                        }}
+                        className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                      >
+                        <LockKeyhole className="h-4 w-4 text-amber-500" />
+                        <span>Account Settings</span>
+                      </button>
+
+                      {/* Operational Walkthrough */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAccountDropdownOpen(false);
+                          changeTab("tutorials");
+                        }}
+                        className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                      >
+                        <BookOpen className="h-4 w-4 text-m3-primary" />
+                        <span>Operational Walkthrough</span>
+                      </button>
+
+                      {/* System Settings trigger */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAccountDropdownOpen(false);
+                          window.dispatchEvent(new Event("open-privacy-hub"));
+                        }}
+                        className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                      >
+                        <Settings className="h-4 w-4 text-m3-primary" />
+                        <span>Settings</span>
+                      </button>
+
+                      <div className="h-px bg-m3-outline-variant/10 !my-1" />
+
+                      {/* Logout command trigger */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAccountDropdownOpen(false);
+                          setShowLogoutConfirmModal(true);
+                        }}
+                        className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-rose-500/10 text-rose-500 cursor-pointer transition-colors"
+                      >
+                        <Power className="h-4 w-4 text-rose-500" />
+                        <span>Logout Account</span>
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
             </div>
+          </div>
+        </header>
 
-            {/* Navigation item lists */}
-            <nav id="sidebar-nav" className="space-y-1 overflow-y-auto overflow-x-hidden max-h-[calc(100vh-250px)] pr-1 scrollbar-thin">
-              {sidebarCategoryTree.map(category => {
-                const CategoryIcon = category.icon;
-                
-                // Strong dynamic RBAC: Filter sub-items to only those this user has permission to see
-                const authorizedSubItems = category.subItems.filter(sub => {
-                  const masterItem = menuItems.find(m => m.id === sub.id);
-                  return masterItem ? masterItem.roles.includes(currentUser.role) : false;
-                });
+        {/* BODY CONTENT: Sidebar + Dynamic tab target */}
+        <div className="flex-1 flex overflow-hidden min-h-0">
+          {/* SIDEBAR NAVIGATION: Desktop (Unified with Brand Header & Profile) */}
+          <aside
+            className={`border-r border-m3-outline-variant/15 select-none android-glass-sidebar py-5 px-3.5 transition-all duration-300 ease-in-out hidden md:flex md:flex-col md:justify-between h-screen sticky top-0 z-40 ${
+              isSidebarMinimized ? "w-20 !px-2" : "w-72"
+            }`}
+          >
+            {/* TOP SECTION: Brand Logo, Name and Branch assignment */}
+            <div className="flex flex-col gap-4">
+              {/* Brand Logo & Name */}
+              <div
+                className={`flex items-center gap-3 ${isSidebarMinimized ? "justify-center" : "pl-2"}`}
+              >
+                <img
+                  src="/icon.svg"
+                  alt="TilePoint Favicon Logo"
+                  className="h-9 w-9 rounded-xl shrink-0 shadow-sm"
+                  referrerPolicy="no-referrer"
+                />
+                {!isSidebarMinimized && (
+                  <div className="animate-fade-in truncate">
+                    <h1 className="text-sm font-black tracking-wide leading-none uppercase font-sans text-m3-primary">
+                      TilePoint
+                    </h1>
+                    <span className="text-[8px] text-m3-on-surface-variant font-bold block uppercase mt-1 tracking-widest leading-none">
+                      HQ POS System
+                    </span>
+                    <span
+                      className={`text-[7.5px] font-extrabold uppercase tracking-wider block mt-1.5 ${
+                        serverConnected ? "text-emerald-500" : "text-amber-500"
+                      }`}
+                    >
+                      ●{" "}
+                      {serverConnected
+                        ? "Shared Server Live"
+                        : "Local Fallback"}
+                    </span>
+                  </div>
+                )}
+              </div>
 
-                // Under strong RBAC, if there are no authorized sub-items, do not show the category folder at all
-                if (authorizedSubItems.length === 0) return null;
+              {/* Branch Assignment tag badge */}
+              {!isSidebarMinimized ? (
+                <div className="px-1.5 animate-fade-in">
+                  <div className="w-full text-center px-3 py-1.5 rounded-xl text-[9px] font-extrabold uppercase bg-m3-secondary-container text-m3-on-secondary-container border border-m3-outline-variant/35 tracking-wider truncate">
+                    {getBranchName(currentUser.branchAssignmentId)}
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className="flex justify-center"
+                  title={getBranchName(currentUser.branchAssignmentId)}
+                >
+                  <span className="h-2.5 w-2.5 rounded-full bg-m3-primary animate-pulse" />
+                </div>
+              )}
 
-                const hasActiveSubItem = authorizedSubItems.some(sub => activeTab === sub.id) || activeTab === category.id;
+              <div className="h-px bg-m3-outline-variant/10" />
 
-                if (isSidebarMinimized) {
+              {/* Modules Label and Minimize/Maximize toggle handle */}
+              <div
+                className={`flex items-center ${isSidebarMinimized ? "justify-center mb-1" : "justify-between pl-2 mb-1"}`}
+              >
+                {!isSidebarMinimized && (
+                  <span className="text-[10px] font-black tracking-widest text-m3-on-surface-variant uppercase font-mono animate-fade-in truncate">
+                    Modules
+                  </span>
+                )}
+                <button
+                  onClick={() => setIsSidebarMinimized(!isSidebarMinimized)}
+                  className={`p-1.5 hover:bg-m3-primary/15 hover:text-m3-primary text-m3-on-surface-variant rounded-xl cursor-pointer transition-all duration-200 ${
+                    isSidebarMinimized ? "hover:scale-110" : ""
+                  }`}
+                  title={
+                    isSidebarMinimized ? "Maximize Sidebar" : "Minimize Sidebar"
+                  }
+                >
+                  <ChevronLeft
+                    className={`h-4 w-4 transition-transform duration-300 ${isSidebarMinimized ? "rotate-180" : ""}`}
+                  />
+                </button>
+              </div>
+
+              {/* Navigation item lists */}
+              <nav
+                id="sidebar-nav"
+                className="space-y-1 overflow-y-auto overflow-x-hidden max-h-[calc(100vh-250px)] pr-1 scrollbar-thin"
+              >
+                {sidebarCategoryTree.map((category) => {
+                  const CategoryIcon = category.icon;
+
+                  // Strong dynamic RBAC: Filter sub-items to only those this user has permission to see
+                  const authorizedSubItems = category.subItems.filter((sub) => {
+                    const masterItem = menuItems.find((m) => m.id === sub.id);
+                    return masterItem
+                      ? masterItem.roles.includes(currentUser.role)
+                      : false;
+                  });
+
+                  // Under strong RBAC, if there are no authorized sub-items, do not show the category folder at all
+                  if (authorizedSubItems.length === 0) return null;
+
+                  const hasActiveSubItem =
+                    authorizedSubItems.some((sub) => activeTab === sub.id) ||
+                    activeTab === category.id;
+
+                  if (isSidebarMinimized) {
+                    return (
+                      <button
+                        key={category.id}
+                        onClick={() => {
+                          const firstSub =
+                            authorizedSubItems[0]?.id || category.id;
+                          changeTab(firstSub);
+                        }}
+                        className={`flex items-center justify-center w-11 h-11 rounded-xl mx-auto relative group transition-all duration-200 cursor-pointer ${
+                          hasActiveSubItem
+                            ? "bg-m3-primary/15 text-m3-primary border border-m3-primary/30 shadow-sm"
+                            : "hover:bg-m3-primary/10 text-m3-on-surface-variant"
+                        }`}
+                      >
+                        <CategoryIcon className="h-4.5 w-4.5 shrink-0" />
+                        <div className="absolute left-14 scale-0 group-hover:scale-100 transition-all duration-200 origin-left bg-m3-on-surface text-m3-surface text-[10px] font-extrabold px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none border border-m3-outline-variant/30">
+                          {category.name}
+                        </div>
+                      </button>
+                    );
+                  }
+
                   return (
                     <button
                       key={category.id}
                       onClick={() => {
-                        const firstSub = authorizedSubItems[0]?.id || category.id;
+                        const firstSub =
+                          authorizedSubItems[0]?.id || category.id;
                         changeTab(firstSub);
                       }}
-                      className={`flex items-center justify-center w-11 h-11 rounded-xl mx-auto relative group transition-all duration-200 cursor-pointer ${
-                        hasActiveSubItem 
-                          ? 'bg-m3-primary/15 text-m3-primary border border-m3-primary/30 shadow-sm' 
-                          : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
+                      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                        hasActiveSubItem
+                          ? "bg-m3-primary text-m3-on-primary shadow-md shadow-m3-primary/10 font-black scale-[1.01]"
+                          : "hover:bg-m3-primary/5 text-m3-on-surface-variant hover:text-m3-primary"
                       }`}
                     >
-                      <CategoryIcon className="h-4.5 w-4.5 shrink-0" />
-                      <div className="absolute left-14 scale-0 group-hover:scale-100 transition-all duration-200 origin-left bg-m3-on-surface text-m3-surface text-[10px] font-extrabold px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none border border-m3-outline-variant/30">
-                        {category.name}
+                      <div className="flex items-center gap-3">
+                        <CategoryIcon
+                          className={`h-4.5 w-4.5 shrink-0 ${hasActiveSubItem ? "text-m3-on-primary" : "text-m3-on-surface-variant"}`}
+                        />
+                        <span>{category.name}</span>
                       </div>
                     </button>
                   );
+                })}
+              </nav>
+            </div>
+
+            {/* BOTTOM SECTION: Profile card & Upward-opening popup Menu */}
+            <div className="pt-3 border-t border-m3-outline-variant/15 relative z-50">
+              <button
+                onClick={() =>
+                  setIsSidebarProfileDropdownOpen(!isSidebarProfileDropdownOpen)
                 }
+                className={`w-full flex items-center gap-2.5 p-2 rounded-xl border border-m3-outline-variant/40 hover:bg-m3-primary/5 transition-all cursor-pointer text-left focus:outline-none bg-m3-surface-low select-none active:scale-[0.98] ${
+                  isSidebarMinimized ? "justify-center" : ""
+                }`}
+              >
+                <div className="h-8.5 w-8.5 rounded-xl bg-m3-primary font-black text-xs items-center justify-center flex text-m3-on-primary shadow-sm m3-shape-asymmetric relative overflow-hidden shrink-0">
+                  {(() => {
+                    const isErica =
+                      currentUser.fullName.toLowerCase().includes("erica") ||
+                      currentUser.username?.toLowerCase().includes("erica");
+                    if (isErica) {
+                      return "E";
+                    }
 
-                return (
-                  <button
-                    key={category.id}
-                    onClick={() => {
-                      const firstSub = authorizedSubItems[0]?.id || category.id;
-                      changeTab(firstSub);
-                    }}
-                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
-                      hasActiveSubItem 
-                        ? 'bg-m3-primary text-m3-on-primary shadow-md shadow-m3-primary/10 font-black scale-[1.01]' 
-                        : 'hover:bg-m3-primary/5 text-m3-on-surface-variant hover:text-m3-primary'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <CategoryIcon className={`h-4.5 w-4.5 shrink-0 ${hasActiveSubItem ? 'text-m3-on-primary' : 'text-m3-on-surface-variant'}`} />
-                      <span>{category.name}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
+                    const avatarSrc = currentUser.profilePicture || "";
 
-          {/* BOTTOM SECTION: Profile card & Upward-opening popup Menu */}
-          <div className="pt-3 border-t border-m3-outline-variant/15 relative z-50">
-            <button
-              onClick={() => setIsSidebarProfileDropdownOpen(!isSidebarProfileDropdownOpen)}
-              className={`w-full flex items-center gap-2.5 p-2 rounded-xl border border-m3-outline-variant/40 hover:bg-m3-primary/5 transition-all cursor-pointer text-left focus:outline-none bg-m3-surface-low select-none active:scale-[0.98] ${
-                isSidebarMinimized ? 'justify-center' : ''
-              }`}
-            >
-              <div className="h-8.5 w-8.5 rounded-xl bg-m3-primary font-black text-xs items-center justify-center flex text-m3-on-primary shadow-sm m3-shape-asymmetric relative overflow-hidden shrink-0">
-                {(() => {
-                  const isErica = currentUser.fullName.toLowerCase().includes('erica') || currentUser.username?.toLowerCase().includes('erica');
-                  if (isErica) {
-                    return "E";
-                  }
-                  
-                  const avatarSrc = currentUser.profilePicture || '';
-
-                  return (
-                    <>
-                      {avatarSrc ? (
-                        <img src={avatarSrc} alt={currentUser.fullName} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
-                      ) : (
-                        currentUser.avatarInitials
-                      )}
-                      <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 border border-m3-surface animate-pulse" />
-                    </>
-                  );
-                })()}
-              </div>
-              
-              {!isSidebarMinimized && (
-                <div className="flex-1 min-w-0 animate-fade-in">
-                  <div className="text-[11px] font-extrabold leading-none text-m3-on-surface truncate">
-                    {currentUser.fullName}
-                  </div>
-                  <span className="text-[8.5px] text-m3-on-surface-variant font-mono capitalize leading-none font-bold block mt-1 truncate">
-                    {currentUser.role} Account
-                  </span>
+                    return (
+                      <>
+                        {avatarSrc ? (
+                          <img
+                            src={avatarSrc}
+                            alt={currentUser.fullName}
+                            className="h-full w-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          currentUser.avatarInitials
+                        )}
+                        <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 border border-m3-surface animate-pulse" />
+                      </>
+                    );
+                  })()}
                 </div>
-              )}
-              
-              {!isSidebarMinimized && (
-                <ChevronDown className={`h-3.5 w-3.5 text-m3-on-surface-variant transition-transform duration-200 shrink-0 ${isSidebarProfileDropdownOpen ? 'rotate-180' : ''}`} />
-              )}
-            </button>
 
-            {/* Upward Dropdown Menu */}
-            <AnimatePresence>
-              {isSidebarProfileDropdownOpen && (
-                <>
-                  <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsSidebarProfileDropdownOpen(false)} />
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: 8 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 8 }}
-                    transition={{ duration: 0.15, ease: "easeOut" }}
-                    className={`absolute bottom-full mb-2 w-56 rounded-2xl bg-m3-surface-low border border-m3-outline-variant/40 text-m3-on-surface shadow-2xl z-50 p-2 space-y-1.5 font-sans ${
-                      isSidebarMinimized ? 'left-0' : 'left-0 right-0'
-                    }`}
-                  >
-                    <div className="px-3 py-2 border-b border-m3-outline-variant/15 bg-m3-surface-high/10 rounded-xl">
-                      <div className="text-xs font-black text-m3-on-surface truncate">{currentUser.fullName}</div>
-                      <div className="text-[9.5px] text-zinc-400 font-mono font-bold mt-0.5 uppercase tracking-wider">{currentUser.role} Mode</div>
+                {!isSidebarMinimized && (
+                  <div className="flex-1 min-w-0 animate-fade-in">
+                    <div className="text-[11px] font-extrabold leading-none text-m3-on-surface truncate">
+                      {currentUser.fullName}
                     </div>
+                    <span className="text-[8.5px] text-m3-on-surface-variant font-mono capitalize leading-none font-bold block mt-1 truncate">
+                      {currentUser.role} Account
+                    </span>
+                  </div>
+                )}
 
-                    {/* Theme Toggle */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDarkMode(!darkMode);
-                        setIsSidebarProfileDropdownOpen(false);
-                      }}
-                      className="w-full flex items-center justify-between text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                {!isSidebarMinimized && (
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 text-m3-on-surface-variant transition-transform duration-200 shrink-0 ${isSidebarProfileDropdownOpen ? "rotate-180" : ""}`}
+                  />
+                )}
+              </button>
+
+              {/* Upward Dropdown Menu */}
+              <AnimatePresence>
+                {isSidebarProfileDropdownOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40 bg-transparent"
+                      onClick={() => setIsSidebarProfileDropdownOpen(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                      transition={{ duration: 0.15, ease: "easeOut" }}
+                      className={`absolute bottom-full mb-2 w-56 rounded-2xl bg-m3-surface-low border border-m3-outline-variant/40 text-m3-on-surface shadow-2xl z-50 p-2 space-y-1.5 font-sans ${
+                        isSidebarMinimized ? "left-0" : "left-0 right-0"
+                      }`}
                     >
-                      <div className="flex items-center gap-2">
-                        {darkMode ? <Sun className="h-4 w-4 text-amber-500" /> : <Moon className="h-4 w-4 text-m3-primary" />}
-                        <span>{darkMode ? 'Light Theme' : 'Dark Theme'}</span>
+                      <div className="px-3 py-2 border-b border-m3-outline-variant/15 bg-m3-surface-high/10 rounded-xl">
+                        <div className="text-xs font-black text-m3-on-surface truncate">
+                          {currentUser.fullName}
+                        </div>
+                        <div className="text-[9.5px] text-zinc-400 font-mono font-bold mt-0.5 uppercase tracking-wider">
+                          {currentUser.role} Mode
+                        </div>
                       </div>
-                      <span className="text-[9px] font-black uppercase text-zinc-400 px-1.5 py-0.5 bg-m3-outline-variant/20 rounded font-mono">
-                        {darkMode ? 'LIGHT' : 'DARK'}
-                      </span>
-                    </button>
 
-                    {/* Account Settings */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsSidebarProfileDropdownOpen(false);
-                        setShowAccountSettingsModal(true);
-                      }}
-                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
-                    >
-                      <LockKeyhole className="h-4 w-4 text-amber-500" />
-                      <span>Account Settings</span>
-                    </button>
+                      {/* Theme Toggle */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDarkMode(!darkMode);
+                          setIsSidebarProfileDropdownOpen(false);
+                        }}
+                        className="w-full flex items-center justify-between text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          {darkMode ? (
+                            <Sun className="h-4 w-4 text-amber-500" />
+                          ) : (
+                            <Moon className="h-4 w-4 text-m3-primary" />
+                          )}
+                          <span>{darkMode ? "Light Theme" : "Dark Theme"}</span>
+                        </div>
+                        <span className="text-[9px] font-black uppercase text-zinc-400 px-1.5 py-0.5 bg-m3-outline-variant/20 rounded font-mono">
+                          {darkMode ? "LIGHT" : "DARK"}
+                        </span>
+                      </button>
 
-                    {/* Operational Walkthrough */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsSidebarProfileDropdownOpen(false);
-                        changeTab('tutorials');
-                      }}
-                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
-                    >
-                      <BookOpen className="h-4 w-4 text-m3-primary" />
-                      <span>Walkthrough</span>
-                    </button>
+                      {/* Account Settings */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsSidebarProfileDropdownOpen(false);
+                          setShowAccountSettingsModal(true);
+                        }}
+                        className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                      >
+                        <LockKeyhole className="h-4 w-4 text-amber-500" />
+                        <span>Account Settings</span>
+                      </button>
 
-                    {/* System Settings */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsSidebarProfileDropdownOpen(false);
-                        window.dispatchEvent(new Event('open-privacy-hub'));
-                      }}
-                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
-                    >
-                      <Settings className="h-4 w-4 text-m3-primary" />
-                      <span>Settings</span>
-                    </button>
+                      {/* Operational Walkthrough */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsSidebarProfileDropdownOpen(false);
+                          changeTab("tutorials");
+                        }}
+                        className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                      >
+                        <BookOpen className="h-4 w-4 text-m3-primary" />
+                        <span>Walkthrough</span>
+                      </button>
 
-                    <div className="h-px bg-m3-outline-variant/10 !my-1" />
+                      {/* System Settings */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsSidebarProfileDropdownOpen(false);
+                          window.dispatchEvent(new Event("open-privacy-hub"));
+                        }}
+                        className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
+                      >
+                        <Settings className="h-4 w-4 text-m3-primary" />
+                        <span>Settings</span>
+                      </button>
 
-                    {/* Logout */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsSidebarProfileDropdownOpen(false);
-                        setShowLogoutConfirmModal(true);
-                      }}
-                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-rose-500/10 text-rose-500 cursor-pointer transition-colors"
-                    >
-                      <Power className="h-4 w-4 text-rose-500" />
-                      <span>Logout Account</span>
-                    </button>
+                      <div className="h-px bg-m3-outline-variant/10 !my-1" />
+
+                      {/* Logout */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsSidebarProfileDropdownOpen(false);
+                          setShowLogoutConfirmModal(true);
+                        }}
+                        className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-rose-500/10 text-rose-500 cursor-pointer transition-colors"
+                      >
+                        <Power className="h-4 w-4 text-rose-500" />
+                        <span>Logout Account</span>
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+          </aside>
+
+          {/* FIXED: ENFORCED RIGID VIEWPORT CONTAINER HEIGHT LIMITS ON COMPONENT MAIN MOUNT */}
+          <main
+            className={`flex-1 relative flex flex-col text-m3-on-surface transition-all duration-300 overflow-x-hidden min-h-0 ${
+              activeTab === "pos" || activeTab === "ledger"
+                ? "p-4 md:p-5 overflow-hidden h-full max-h-full"
+                : "p-4 md:p-6 pb-26 md:pb-6 overflow-y-auto"
+            } ${isCompactColumns ? "compact-fit" : ""}`}
+          >
+            {/* Elegant Collapsible Horizontal Sub-menu Navigation Pill Bar with Dynamic RBAC */}
+            {(() => {
+              const activeCategory = sidebarCategoryTree.find(
+                (cat) =>
+                  cat.subItems.some((sub) => sub.id === activeTab) ||
+                  cat.id === activeTab,
+              );
+              if (!activeCategory) return null;
+
+              // Enforce RBAC filtering for sub-pages so they match exactly what is authorized
+              const authorizedSubItems = activeCategory.subItems.filter(
+                (sub) => {
+                  const masterItem = menuItems.find((m) => m.id === sub.id);
+                  return masterItem
+                    ? masterItem.roles.includes(currentUser.role)
+                    : false;
+                },
+              );
+
+              if (authorizedSubItems.length <= 1 || activeTab === "pos")
+                return null;
+
+              return (
+                <div className="mb-4 bg-m3-surface-low border border-m3-outline-variant/15 rounded-2xl p-2.5 flex flex-col shrink-0">
+                  <div className="flex items-center justify-between px-1.5 pb-1 block">
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black tracking-widest text-m3-on-surface-variant uppercase font-mono">
+                          {activeCategory.name} Sub-navigation
+                        </span>
+                        <span className="h-1.5 w-1.5 rounded-full bg-m3-primary animate-pulse" />
+                      </div>
+                      <button
+                        onClick={() =>
+                          setIsSubMenuCollapsed(!isSubMenuCollapsed)
+                        }
+                        className="p-1 px-2 text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/10 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider"
+                        title={
+                          isSubMenuCollapsed
+                            ? "Expand Sub-menu"
+                            : "Collapse Sub-menu"
+                        }
+                      >
+                        <span>
+                          {isSubMenuCollapsed ? "Show Options" : "Hide Options"}
+                        </span>
+                        <ChevronDown
+                          className={`h-3.5 w-3.5 transition-transform duration-300 ${isSubMenuCollapsed ? "" : "rotate-180"}`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+
+                  <AnimatePresence initial={false}>
+                    {!isSubMenuCollapsed && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0, scaleY: 0.95 }}
+                        animate={{ height: "auto", opacity: 1, scaleY: 1 }}
+                        exit={{ height: 0, opacity: 0, scaleY: 0.95 }}
+                        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                        style={{ originY: 0 }}
+                        className="overflow-hidden w-full flex flex-nowrap gap-2.5 overflow-x-auto pt-2 pb-1 whitespace-nowrap scrollbar-none scroll-smooth touch-pan-x shrink-0"
+                      >
+                        {authorizedSubItems.map((sub) => {
+                          const isSelected = activeTab === sub.id;
+                          return (
+                            <button
+                              key={sub.id}
+                              onClick={() => changeTab(sub.id)}
+                              className={`px-4.5 py-2 text-xs font-bold tracking-wide rounded-2xl transition-all cursor-pointer shrink-0 ${
+                                isSelected
+                                  ? "bg-m3-primary text-m3-on-primary shadow-md shadow-m3-primary/10 font-black scale-[1.01]"
+                                  : "bg-m3-surface border border-m3-outline-variant/15 text-m3-on-surface-variant hover:bg-m3-primary/10 hover:text-m3-primary"
+                              }`}
+                            >
+                              {sub.name}
+                            </button>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })()}
+
+            <div className="flex-1 min-h-0">
+              <AnimatePresence mode="wait">
+                {isTabChanging ? (
+                  <motion.div
+                    key="skeleton"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <SkeletalLoader />
                   </motion.div>
-                </>
-              )}
-            </AnimatePresence>
+                ) : (
+                  <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, y: 12, scale: 0.995 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -12, scale: 0.995 }}
+                    transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                    className="h-full"
+                  >
+                    {activeTab === "tutorials" && <TutorialOnboarding />}
+                    {activeTab === "dashboard" && (
+                      <Dashboard darkMode={darkMode} onNavigate={changeTab} />
+                    )}
+                    {activeTab === "pos" && (
+                      <PosModule
+                        darkMode={darkMode}
+                        onNavigate={changeTab}
+                        viewMode="checkout"
+                        showImmersiveControls={showImmersiveControls}
+                      />
+                    )}
+                    {activeTab === "ledger" && (
+                      <PosModule
+                        darkMode={darkMode}
+                        onNavigate={changeTab}
+                        viewMode="ledger"
+                        showImmersiveControls={showImmersiveControls}
+                      />
+                    )}
+                    {activeTab === "inventory" && (
+                      <InventoryModule
+                        darkMode={darkMode}
+                        isCompactGlobal={isCompactColumns}
+                      />
+                    )}
+                    {activeTab === "procurement" && (
+                      <ProcurementModule darkMode={darkMode} />
+                    )}
+                    {activeTab === "transmittal" && (
+                      <TransmittalModule darkMode={darkMode} />
+                    )}
+                    {activeTab === "shift" && (
+                      <ShiftModule darkMode={darkMode} />
+                    )}
+                    {activeTab === "calculator" && (
+                      <CalculatorModule darkMode={darkMode} />
+                    )}
+                    {activeTab === "branches" && (
+                      <BranchModule darkMode={darkMode} />
+                    )}
+                    {activeTab === "system-settings" && (
+                      <SystemSettingsModule darkMode={darkMode} />
+                    )}
+                    {activeTab === "users" && (
+                      <UsersModule darkMode={darkMode} />
+                    )}
+                    {activeTab === "reports-transmission" && (
+                      <SalesTransmissionModule darkMode={darkMode} />
+                    )}
+                    {activeTab === "deliveries-panel" && (
+                      <DeliveriesModule darkMode={darkMode} />
+                    )}
+                    {activeTab === "inventory-damage" && (
+                      <DamageRegisterModule darkMode={darkMode} />
+                    )}
+
+                    {/* ATPOS v2 Sub-items routing to standard Core Modules */}
+                    {activeTab.startsWith("inventory-") &&
+                      (() => {
+                        const map: Record<
+                          string,
+                          | "catalog"
+                          | "movements"
+                          | "transfers"
+                          | "ledger"
+                          | "import"
+                        > = {
+                          "inventory-stocks": "catalog",
+                          "inventory-adjustments": "movements",
+                          "inventory-transfer": "transfers",
+                          "inventory-logistics": "ledger",
+                          "inventory-import": "import",
+                        };
+                        const subTab = map[activeTab] || "catalog";
+                        return (
+                          <InventoryModule
+                            darkMode={darkMode}
+                            initialSubTab={subTab}
+                            hideTabHeader={true}
+                            isCompactGlobal={isCompactColumns}
+                            onSubTabChange={(sub) => {
+                              const rMap: Record<string, string> = {
+                                catalog: "inventory-stocks",
+                                movements: "inventory-adjustments",
+                                transfers: "inventory-transfer",
+                                ledger: "inventory-logistics",
+                                import: "inventory-import",
+                              };
+                              if (rMap[sub]) {
+                                setActiveTab(rMap[sub]);
+                              }
+                            }}
+                          />
+                        );
+                      })()}
+
+                    {activeTab === "adjustments-void" && (
+                      <PosModule
+                        darkMode={darkMode}
+                        onNavigate={changeTab}
+                        viewMode="ledger"
+                      />
+                    )}
+                    {activeTab === "suppliers-manage" && (
+                      <ProcurementModule darkMode={darkMode} />
+                    )}
+
+                    {/* Integration of ATPOS v2 Specific Submodules */}
+                    {[
+                      "members-manage",
+                      "members-receivables",
+                      "members-search-sales",
+                      "expenses-add",
+                      "expenses-search",
+                      "suppliers-credits",
+                      "suppliers-calendar",
+                      "bir-xz",
+                      "bir-summary",
+                      "bir-pwd",
+                      "bir-athletes",
+                      "bir-solo",
+                      "bir-senior20",
+                      "bir-senior5",
+                      "bir-regular",
+                      "adjustments-return",
+                    ].includes(activeTab) && (
+                      <AtposExtraModules
+                        activeSubTab={activeTab}
+                        darkMode={darkMode}
+                        onNavigate={changeTab}
+                      />
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </main>
+        </div>
+
+        {/* BOTTOM NAVIGATION: Unified premium horizontal scrollbar across the system (Mobile Only) */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-m3-surface-low/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-m3-outline-variant/25 px-4 py-2 flex flex-row flex-nowrap items-center justify-start gap-3 rounded-t-[20px] shadow-2xl transition-all duration-300 overflow-x-auto scrollbar-none scroll-smooth touch-pan-x whitespace-nowrap">
+          {/* Brand Modules badge */}
+          <div className="flex items-center gap-2 shrink-0 pr-3 border-r border-m3-outline-variant/20 font-sans">
+            <span className="h-2 w-2 rounded-full bg-m3-primary animate-pulse" />
+            <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest font-mono">
+              Modules
+            </span>
           </div>
-        </aside>
 
-        {/* DYNAMIC COMPONENT PANEL AREA */}
-        <main className={`flex-1 relative flex flex-col text-m3-on-surface transition-all duration-300 overflow-x-hidden ${
-          activeTab === 'pos' || activeTab === 'ledger'
-            ? 'p-4 md:p-5 overflow-hidden h-full'
-            : 'p-4 md:p-6 pb-26 md:pb-6 overflow-y-auto'
-        } ${isCompactColumns ? 'compact-fit' : ''}`}>
-          {/* Elegant Collapsible Horizontal Sub-menu Navigation Pill Bar with Dynamic RBAC */}
-          {(() => {
-            const activeCategory = sidebarCategoryTree.find(cat => 
-              cat.subItems.some(sub => sub.id === activeTab) || cat.id === activeTab
-            );
-            if (!activeCategory) return null;
-
-            // Enforce RBAC filtering for sub-pages so they match exactly what is authorized
-            const authorizedSubItems = activeCategory.subItems.filter(sub => {
-              const masterItem = menuItems.find(m => m.id === sub.id);
-              return masterItem ? masterItem.roles.includes(currentUser.role) : false;
+          {sidebarCategoryTree.map((category) => {
+            // Dynamic RBAC filtering
+            const authorizedSubItems = category.subItems.filter((sub) => {
+              const masterItem = menuItems.find((m) => m.id === sub.id);
+              return masterItem
+                ? masterItem.roles.includes(currentUser.role)
+                : false;
             });
 
-            if (authorizedSubItems.length <= 1 || activeTab === 'pos') return null;
+            // Branch authorization filter
+            const filteredSubItems = authorizedSubItems.filter((sub) => {
+              const currentBranch = branches.find(
+                (b) => b.id === currentUser.branchAssignmentId,
+              );
+              const isAuthorizedBranch =
+                currentUser.branchAssignmentId === "B1" ||
+                !!currentBranch?.isDistributionBranch ||
+                currentUser.role === "Admin";
+              if (sub.id === "transmittal" && !isAuthorizedBranch) return false;
+              return true;
+            });
+
+            if (filteredSubItems.length === 0) return null;
+
+            // Routing goes to first authorized sub-item of category
+            const firstSubTabId = filteredSubItems[0].id;
+            const Icon = category.icon;
+            const isSelected =
+              filteredSubItems.some((sub) => sub.id === activeTab) ||
+              activeTab === category.id;
+
+            // Short friendly labels for bottom bar
+            let shortLabel = category.name;
+            if (category.id === "sale") shortLabel = "Sale";
+            else if (category.id === "inventory") shortLabel = "Inventory";
+            else if (category.id === "bir") shortLabel = "Reports";
+            else if (category.id === "deliveries") shortLabel = "Cargo";
+            else if (category.id === "members") shortLabel = "Members";
+            else if (category.id === "supplier") shortLabel = "Suppliers";
+            else if (category.id === "expenses") shortLabel = "Expenses";
+            else if (category.id === "adjustments") shortLabel = "Voids";
+            else if (category.id === "admin-bi") shortLabel = "BI";
+            else if (category.id === "admin-org") shortLabel = "Staff";
 
             return (
-              <div className="mb-4 bg-m3-surface-low border border-m3-outline-variant/15 rounded-2xl p-2.5 flex flex-col shrink-0">
-                <div className="flex items-center justify-between px-1.5 pb-1 block">
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black tracking-widest text-m3-on-surface-variant uppercase font-mono">
-                        {activeCategory.name} Sub-navigation
-                      </span>
-                      <span className="h-1.5 w-1.5 rounded-full bg-m3-primary animate-pulse" />
-                    </div>
-                    <button
-                      onClick={() => setIsSubMenuCollapsed(!isSubMenuCollapsed)}
-                      className="p-1 px-2 text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/10 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider"
-                      title={isSubMenuCollapsed ? "Expand Sub-menu" : "Collapse Sub-menu"}
-                    >
-                      <span>{isSubMenuCollapsed ? "Show Options" : "Hide Options"}</span>
-                      <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-300 ${isSubMenuCollapsed ? '' : 'rotate-180'}`} />
-                    </button>
-                  </div>
+              <button
+                key={category.id}
+                onClick={() => changeTab(firstSubTabId)}
+                className="flex flex-col items-center gap-0.5 focus:outline-none cursor-pointer shrink-0 py-1 px-2.5 min-w-[58px] group transition-transform active:scale-95"
+              >
+                {/* Visual state capsule indicator */}
+                <div
+                  className={`px-4 py-1 rounded-2xl transition-[background-color,color,transform] duration-200 ${
+                    isSelected
+                      ? "bg-m3-primary text-m3-on-primary shadow-sm shadow-m3-primary/10 scale-[1.03]"
+                      : "text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/5"
+                  }`}
+                >
+                  <Icon className="h-4.5 w-4.5 shrink-0 transition-transform group-hover:scale-110" />
                 </div>
-
-                <AnimatePresence initial={false}>
-                  {!isSubMenuCollapsed && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0, scaleY: 0.95 }}
-                      animate={{ height: "auto", opacity: 1, scaleY: 1 }}
-                      exit={{ height: 0, opacity: 0, scaleY: 0.95 }}
-                      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                      style={{ originY: 0 }}
-                      className="overflow-hidden w-full flex flex-nowrap gap-2.5 overflow-x-auto pt-2 pb-1 whitespace-nowrap scrollbar-none scroll-smooth touch-pan-x shrink-0"
-                    >
-                      {authorizedSubItems.map(sub => {
-                        const isSelected = activeTab === sub.id;
-                        return (
-                          <button
-                            key={sub.id}
-                            onClick={() => changeTab(sub.id)}
-                            className={`px-4.5 py-2 text-xs font-bold tracking-wide rounded-2xl transition-all cursor-pointer shrink-0 ${
-                              isSelected
-                                ? 'bg-m3-primary text-m3-on-primary shadow-md shadow-m3-primary/10 font-black scale-[1.01]'
-                                : 'bg-m3-surface border border-m3-outline-variant/15 text-m3-on-surface-variant hover:bg-m3-primary/10 hover:text-m3-primary'
-                            }`}
-                          >
-                            {sub.name}
-                          </button>
-                        );
-                      })}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            );
-          })()}
-
-          <div className="flex-1">
-            <AnimatePresence mode="wait">
-            {isTabChanging ? (
-              <motion.div
-                key="skeleton"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                <SkeletalLoader />
-              </motion.div>
-            ) : (
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 12, scale: 0.995 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -12, scale: 0.995 }}
-                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                className="h-full"
-              >
-                {activeTab === 'tutorials' && <TutorialOnboarding />}
-                {activeTab === 'dashboard' && <Dashboard darkMode={darkMode} onNavigate={changeTab} />}
-                {activeTab === 'pos' && <PosModule darkMode={darkMode} onNavigate={changeTab} viewMode="checkout" showImmersiveControls={showImmersiveControls} />}
-                {activeTab === 'ledger' && <PosModule darkMode={darkMode} onNavigate={changeTab} viewMode="ledger" showImmersiveControls={showImmersiveControls} />}
-                {activeTab === 'inventory' && <InventoryModule darkMode={darkMode} isCompactGlobal={isCompactColumns} />}
-                {activeTab === 'procurement' && <ProcurementModule darkMode={darkMode} />}
-                {activeTab === 'transmittal' && <TransmittalModule darkMode={darkMode} />}
-                {activeTab === 'shift' && <ShiftModule darkMode={darkMode} />}
-                {activeTab === 'calculator' && <CalculatorModule darkMode={darkMode} />}
-                {activeTab === 'branches' && <BranchModule darkMode={darkMode} />}
-                {activeTab === 'system-settings' && <SystemSettingsModule darkMode={darkMode} />}
-                {activeTab === 'users' && <UsersModule darkMode={darkMode} />}
-                {activeTab === 'reports-transmission' && <SalesTransmissionModule darkMode={darkMode} />}
-                {activeTab === 'deliveries-panel' && <DeliveriesModule darkMode={darkMode} />}
-                {activeTab === 'inventory-damage' && <DamageRegisterModule darkMode={darkMode} />}
-
-                {/* ATPOS v2 Sub-items routing to standard Core Modules */}
-                {activeTab.startsWith('inventory-') && (() => {
-                  const map: Record<string, 'catalog' | 'movements' | 'transfers' | 'ledger' | 'import'> = {
-                    'inventory-stocks': 'catalog',
-                    'inventory-adjustments': 'movements',
-                    'inventory-transfer': 'transfers',
-                    'inventory-logistics': 'ledger',
-                    'inventory-import': 'import'
-                  };
-                  const subTab = map[activeTab] || 'catalog';
-                  return (
-                    <InventoryModule 
-                      darkMode={darkMode} 
-                      initialSubTab={subTab} 
-                      hideTabHeader={true}
-                      isCompactGlobal={isCompactColumns}
-                      onSubTabChange={(sub) => {
-                        const rMap: Record<string, string> = {
-                          catalog: 'inventory-stocks',
-                          movements: 'inventory-adjustments',
-                          transfers: 'inventory-transfer',
-                          ledger: 'inventory-logistics',
-                          import: 'inventory-import'
-                        };
-                        if (rMap[sub]) {
-                          setActiveTab(rMap[sub]);
-                        }
-                      }}
-                    />
-                  );
-                })()}
-
-                {activeTab === 'adjustments-void' && <PosModule darkMode={darkMode} onNavigate={changeTab} viewMode="ledger" />}
-                {activeTab === 'suppliers-manage' && <ProcurementModule darkMode={darkMode} />}
-
-                {/* Integration of ATPOS v2 Specific Submodules */}
-                {[
-                  'members-manage', 'members-receivables', 'members-search-sales',
-                  'expenses-add', 'expenses-search',
-                  'suppliers-credits', 'suppliers-calendar',
-                  'bir-xz', 'bir-summary', 'bir-pwd', 'bir-athletes', 'bir-solo', 'bir-senior20', 'bir-senior5', 'bir-regular',
-                  'adjustments-return'
-                ].includes(activeTab) && (
-                  <AtposExtraModules activeSubTab={activeTab} darkMode={darkMode} onNavigate={changeTab} />
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </main>
-      </div>
-
-      {/* BOTTOM NAVIGATION: Unified premium horizontal scrollbar across the system (Mobile Only) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-m3-surface-low/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-m3-outline-variant/25 px-4 py-2 flex flex-row flex-nowrap items-center justify-start gap-3 rounded-t-[20px] shadow-2xl transition-all duration-300 overflow-x-auto scrollbar-none scroll-smooth touch-pan-x whitespace-nowrap">
-        {/* Brand Modules badge */}
-        <div className="flex items-center gap-2 shrink-0 pr-3 border-r border-m3-outline-variant/20 font-sans">
-          <span className="h-2 w-2 rounded-full bg-m3-primary animate-pulse" />
-          <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest font-mono">Modules</span>
-        </div>
-
-        {sidebarCategoryTree.map(category => {
-          // Dynamic RBAC filtering
-          const authorizedSubItems = category.subItems.filter(sub => {
-            const masterItem = menuItems.find(m => m.id === sub.id);
-            return masterItem ? masterItem.roles.includes(currentUser.role) : false;
-          });
-
-          // Branch authorization filter
-          const filteredSubItems = authorizedSubItems.filter(sub => {
-            const currentBranch = branches.find(b => b.id === currentUser.branchAssignmentId);
-            const isAuthorizedBranch = currentUser.branchAssignmentId === 'B1' || !!currentBranch?.isDistributionBranch || currentUser.role === 'Admin';
-            if (sub.id === 'transmittal' && !isAuthorizedBranch) return false;
-            return true;
-          });
-
-          if (filteredSubItems.length === 0) return null;
-
-          // Routing goes to first authorized sub-item of category
-          const firstSubTabId = filteredSubItems[0].id;
-          const Icon = category.icon;
-          const isSelected = filteredSubItems.some(sub => sub.id === activeTab) || activeTab === category.id;
-
-          // Short friendly labels for bottom bar
-          let shortLabel = category.name;
-          if (category.id === 'sale') shortLabel = 'Sale';
-          else if (category.id === 'inventory') shortLabel = 'Inventory';
-          else if (category.id === 'bir') shortLabel = 'Reports';
-          else if (category.id === 'deliveries') shortLabel = 'Cargo';
-          else if (category.id === 'members') shortLabel = 'Members';
-          else if (category.id === 'supplier') shortLabel = 'Suppliers';
-          else if (category.id === 'expenses') shortLabel = 'Expenses';
-          else if (category.id === 'adjustments') shortLabel = 'Voids';
-          else if (category.id === 'admin-bi') shortLabel = 'BI';
-          else if (category.id === 'admin-org') shortLabel = 'Staff';
-
-          return (
-            <button
-              key={category.id}
-              onClick={() => changeTab(firstSubTabId)}
-              className="flex flex-col items-center gap-0.5 focus:outline-none cursor-pointer shrink-0 py-1 px-2.5 min-w-[58px] group transition-transform active:scale-95"
-            >
-              {/* Visual state capsule indicator */}
-              <div className={`px-4 py-1 rounded-2xl transition-[background-color,color,transform] duration-200 ${
-                isSelected 
-                  ? 'bg-m3-primary text-m3-on-primary shadow-sm shadow-m3-primary/10 scale-[1.03]' 
-                  : 'text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/5'
-              }`}>
-                <Icon className="h-4.5 w-4.5 shrink-0 transition-transform group-hover:scale-110" />
-              </div>
-              <span className={`text-[9px] font-black tracking-tight text-center leading-none mt-1 whitespace-nowrap ${
-                isSelected ? 'text-m3-primary font-black' : 'text-zinc-400 dark:text-zinc-500 group-hover:text-m3-primary'
-              }`}>
-                {shortLabel}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-
-
-      {/* CONFIRMATORY DIALOG: Logout verification check trigger */}
-      {showLogoutConfirmModal && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm" onClick={() => setShowLogoutConfirmModal(false)} />
-          <div className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left font-sans">
-            <div className="flex items-center gap-3 border-b border-m3-outline-variant/15 pb-3">
-              <div className="p-2.5 rounded-2xl bg-rose-500/10 text-rose-500">
-                <Power className="h-5 w-5 animate-pulse" />
-              </div>
-              <div>
-                <h3 className="text-sm font-black text-m3-on-surface uppercase tracking-wider">Confirm Sign Out</h3>
-                <p className="text-[10px] text-zinc-400 font-bold font-mono">TILEPOINT SESSION CONTROL</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-zinc-300 font-medium leading-relaxed">
-              Are you sure you want to log out of TilePoint terminal? Any unsaved active checkout carts will be lost.
-            </p>
-
-            <div className="flex gap-3 pt-2 font-sans">
-              <button
-                type="button"
-                onClick={() => setShowLogoutConfirmModal(false)}
-                className="flex-1 py-2.5 rounded-full bg-m3-surface hover:bg-m3-outline-variant/15 text-m3-on-surface font-extrabold text-xs uppercase tracking-wide border border-m3-outline-variant/10 cursor-pointer active:scale-95 transition-all text-center"
-              >
-                No, Keep Active
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowLogoutConfirmModal(false);
-                  logout();
-                }}
-                className="flex-1 py-2.5 rounded-full bg-rose-500 hover:bg-rose-400 text-black font-extrabold text-xs uppercase tracking-wide cursor-pointer active:scale-95 transition-all text-center shadow-lg shadow-rose-500/10"
-              >
-                Yes, Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* CONFIRMATORY DIALOG: POS Exit Prevention */}
-      {showPosExitConfirmModal && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm" onClick={() => {
-            setShowPosExitConfirmModal(false);
-            setPendingTabId(null);
-          }} />
-          <div className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left font-sans">
-            <div className="flex items-center gap-3 border-b border-m3-outline-variant/15 pb-3">
-              <div className="p-2.5 rounded-2xl bg-amber-500/10 text-amber-500">
-                <ShieldAlert className="h-5 w-5 animate-pulse" />
-              </div>
-              <div>
-                <h3 className="text-sm font-black text-m3-on-surface uppercase tracking-wider">Unsaved Checkout Warning</h3>
-                <p className="text-[10px] text-amber-500 font-bold font-mono uppercase tracking-wider">Active Transaction Guard</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-zinc-300 font-medium leading-relaxed">
-              Are you sure you want to leave this site? Changes you made may not be saved.
-              <br /><br />
-              Leaving the Point of Sale terminal now will disrupt the current active customer checkout session and clear the basket.
-            </p>
-
-            <div className="flex gap-3 pt-2 font-sans">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowPosExitConfirmModal(false);
-                  setPendingTabId(null);
-                }}
-                className="flex-1 py-2.5 rounded-full bg-m3-surface hover:bg-m3-outline-variant/15 text-m3-on-surface font-extrabold text-xs uppercase tracking-wide border border-m3-outline-variant/10 cursor-pointer active:scale-95 transition-all text-center"
-              >
-                Cancel, Keep Basket
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowPosExitConfirmModal(false);
-                  if (pendingTabId) {
-                    proceedWithTabChange(pendingTabId);
-                  }
-                  setPendingTabId(null);
-                }}
-                className="flex-1 py-2.5 rounded-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs uppercase tracking-wide cursor-pointer active:scale-95 transition-all text-center shadow-lg shadow-amber-500/10"
-              >
-                Yes, Leave Mode
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: Database Core & Disaster Recovery Settings */}
-      {showDatabaseCoreModal && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in font-sans">
-          <div className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm" onClick={() => {
-            setShowDatabaseCoreModal(false);
-            setDbBackupFileMessage(null);
-            setDbBackupFileError(null);
-            setManualSnapshotName('');
-          }} />
-          
-          <div className="relative w-full max-w-2xl rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface flex flex-col max-h-[90vh] text-left">
-            
-            {/* Modal Header */}
-            <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-2xl">
-                  <Database className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="text-base font-black uppercase tracking-wider text-m3-on-surface flex items-center gap-2">
-                    Database Core Management
-                    <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full font-bold uppercase ${
-                      dbSyncStatus === 'syncing' ? 'bg-amber-500/20 text-amber-500 animate-pulse' : 'bg-emerald-500/10 text-emerald-400'
-                    }`}>
-                      {dbSyncStatus === 'syncing' ? '● Sync active' : '● Connected'}
-                    </span>
-                  </h3>
-                  <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-mono font-bold">
-                    Disaster Recovery & Automated Backup Engine
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDatabaseCoreModal(false);
-                  setDbBackupFileMessage(null);
-                  setDbBackupFileError(null);
-                  setManualSnapshotName('');
-                }}
-                className="text-m3-on-surface-variant hover:text-rose-500 cursor-pointer p-1.5 rounded-full hover:bg-m3-outline-variant/10 transition-colors"
-                title="Close Database Panel"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Modal Navigation Tabs */}
-            <div className="flex border-b border-m3-outline-variant/10 my-4 p-1 bg-m3-surface-low/50 rounded-xl">
-              <button
-                onClick={() => setDbCoreTab('scheduler')}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center ${
-                  dbCoreTab === 'scheduler'
-                    ? 'bg-m3-primary text-m3-on-primary shadow-sm font-black'
-                    : 'text-m3-on-surface-variant hover:bg-m3-primary/10 hover:text-m3-primary'
-                }`}
-              >
-                Auto-Backup Configuration
-              </button>
-              <button
-                onClick={() => setDbCoreTab('ledger')}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 ${
-                  dbCoreTab === 'ledger'
-                    ? 'bg-m3-primary text-m3-on-primary shadow-sm font-black'
-                    : 'text-m3-on-surface-variant hover:bg-m3-primary/10 hover:text-m3-primary'
-                }`}
-              >
-                Recovery Ledger
-                <span className="bg-m3-primary-container text-m3-on-primary-container text-[10px] font-bold px-1.5 py-0.2 rounded-full font-sans">
-                  {dbSnapshots.length}
+                <span
+                  className={`text-[9px] font-black tracking-tight text-center leading-none mt-1 whitespace-nowrap ${
+                    isSelected
+                      ? "text-m3-primary font-black"
+                      : "text-zinc-400 dark:text-zinc-500 group-hover:text-m3-primary"
+                  }`}
+                >
+                  {shortLabel}
                 </span>
               </button>
-              <button
-                onClick={() => setDbCoreTab('import-export')}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center ${
-                  dbCoreTab === 'import-export'
-                    ? 'bg-m3-primary text-m3-on-primary shadow-sm font-black'
-                    : 'text-m3-on-surface-variant hover:bg-m3-primary/10 hover:text-m3-primary'
-                }`}
-              >
-                Offline Portability
-              </button>
-            </div>
-
-            {/* Modal Main Content (Flexible Scroll Area) */}
-            <div className="flex-1 overflow-y-auto pr-1 space-y-4 max-h-[50vh]">
-              
-              {/* Tab A: SCHEDULER & AUTO BACKUPS */}
-              {dbCoreTab === 'scheduler' && (
-                <div className="space-y-4">
-                  
-                  {/* Performance stats banner */}
-                  <div className="p-3.5 rounded-2xl bg-m3-primary/5 border border-m3-primary/10 flex justify-between items-center text-xs">
-                    <div>
-                      <div className="font-extrabold text-m3-primary uppercase text-[10px] tracking-wide">Optimization Status</div>
-                      <div className="text-zinc-400 mt-1 font-sans">
-                        Debounce cache buffer operates at <span className="font-mono font-bold text-m3-on-surface">{debounceDelay}ms</span>.
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-mono text-emerald-400 font-extrabold">{writeStatsCount.toLocaleString()}</div>
-                      <div className="text-[9px] text-zinc-500 uppercase font-mono mt-0.5">Database Writes Saved</div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-m3-outline-variant/20 p-4 space-y-4 bg-m3-surface-low">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-m3-primary">Automatic Background Scheduler</h4>
-                    
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-xs font-bold">Hourly Data Preservation</div>
-                        <div className="text-[10px] text-zinc-400 mt-0.5">Protect inventory journals and sales invoices against localStorage eviction.</div>
-                      </div>
-                      <button
-                        type="button"
-                        disabled={currentUser.role !== UserRole.ADMIN}
-                        onClick={() => {
-                          if (currentUser.role !== UserRole.ADMIN) {
-                            showToast("Access Denied: Admin authorization required.");
-                            return;
-                          }
-                          setAutoBackupEnabled(!autoBackupEnabled);
-                          showToast(`Automated backup scheduler is now ${!autoBackupEnabled ? 'ENABLED' : 'DISABLED'}`);
-                        }}
-                        className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
-                          autoBackupEnabled
-                            ? 'bg-emerald-500 text-black hover:bg-emerald-400'
-                            : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
-                        } ${currentUser.role !== UserRole.ADMIN ? 'opacity-60 cursor-not-allowed' : ''}`}
-                      >
-                        {autoBackupEnabled ? '✓ Active scheduler' : '✗ Deactivated'}
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-1 block">
-                          Reserve Frequency
-                        </label>
-                        <select
-                          disabled={currentUser.role !== UserRole.ADMIN || !autoBackupEnabled}
-                          value={backupIntervalHours}
-                          onChange={e => {
-                            const val = Number(e.target.value);
-                            setBackupIntervalHours(val);
-                            showToast(`Automated backup frequency is configured to every ${val} hr.`);
-                          }}
-                          className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 text-xs px-3 py-2 rounded-xl text-m3-on-surface font-extrabold focus:outline-none focus:ring-1 focus:ring-m3-primary/40 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <option value={1}>Every 1 Hour (Standard)</option>
-                          <option value={2}>Every 2 Hours (Mid-Day)</option>
-                          <option value={6}>Every 6 Hours (Periodic)</option>
-                          <option value={12}>Every 12 Hours (Half-Day)</option>
-                          <option value={24}>Every 24 Hours (End-of-Day)</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-1 block">
-                          Last Successful Backup Run
-                        </label>
-                        <div className="w-full bg-m3-surface-lowest border border-m3-outline-variant/15 text-xs px-3 py-2 rounded-xl text-m3-on-surface-variant font-medium flex items-center gap-1.5 min-h-[36px]">
-                          <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                          {lastAutoBackupTime ? (
-                            <span className="font-mono text-[11px] font-bold">
-                              {new Date(lastAutoBackupTime).toLocaleString()}
-                            </span>
-                          ) : (
-                            <span className="italic text-zinc-500 font-bold">Never executed</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-m3-outline-variant/20 p-4 space-y-3">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-m3-primary">Instantiate Manual Backup Snapshot</h4>
-                    <div className="flex gap-2 font-sans">
-                      <input
-                        type="text"
-                        value={manualSnapshotName}
-                        onChange={e => setManualSnapshotName(e.target.value)}
-                        placeholder="e.g. Pre-Audit Bulk Load Snapshot..."
-                        className="flex-1 bg-m3-surface-lowest text-xs text-m3-on-surface border border-m3-outline-variant/30 px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-m3-primary/40 placeholder-zinc-500 font-bold"
-                      />
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const name = manualSnapshotName.trim() || `Manual Snapshot - ${new Date().toLocaleTimeString()}`;
-                          await triggerSystemProcessing(
-                            `Compiling ${name}...`,
-                            1400,
-                            'db',
-                            undefined,
-                            'Compressing tables, locking databases, and serializing snapshot packet...'
-                          );
-                          createDbSnapshot(name);
-                          setManualSnapshotName('');
-                          showToast(`Successfully registered database snapshot: "${name}"`);
-                        }}
-                        className="px-4 py-2.5 bg-m3-primary hover:bg-m3-primary/95 text-m3-on-primary text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm transition-all"
-                      >
-                        Capture Snapshot
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Tab B: DATABASE SNAPSHOTS LEDGER */}
-              {dbCoreTab === 'ledger' && (
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center px-1">
-                    <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Saved Backup History</span>
-                    <button
-                      onClick={() => {
-                        dbSnapshots.forEach(snap => deleteDbSnapshot(snap.id));
-                        showToast("Cleared recovery snapshot catalog.");
-                      }}
-                      className="text-[10px] font-black uppercase tracking-wider text-rose-500 hover:text-rose-400 transition-colors cursor-pointer"
-                      title="Clear database list"
-                    >
-                      Clear All Catalog
-                    </button>
-                  </div>
-
-                  {dbSnapshots.length === 0 ? (
-                    <div className="text-center py-10 bg-m3-surface-lowest border border-dashed border-m3-outline-variant/30 rounded-2xl text-zinc-500 space-y-2">
-                      <p className="text-sm font-bold">Digital Snapshot Archive is Empty</p>
-                      <p className="text-[10px] uppercase font-mono tracking-wider text-zinc-400">Automated or manual snapshots will register here.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
-                      {dbSnapshots.map(snap => (
-                        <div
-                          key={snap.id}
-                          className="p-3 bg-m3-surface-lowest hover:bg-m3-primary/5 rounded-2xl border border-m3-outline-variant/15 flex items-center justify-between transition-all"
-                        >
-                          <div className="space-y-1">
-                            <div className="text-xs font-black text-m3-on-surface">{snap.name}</div>
-                            <div className="text-[9.5px] text-zinc-400 font-mono font-bold flex items-center gap-2 flex-wrap">
-                              <span className="text-m3-primary text-[10px]">{snap.creator}</span>
-                              <span>•</span>
-                              <span>{new Date(snap.timestamp).toLocaleString()}</span>
-                              <span>•</span>
-                              <span className="text-zinc-500 bg-m3-surface-low/55 px-1.5 rounded">{((snap.sizeBytes || 0) / 1024).toFixed(1)} KB</span>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                const ok = confirm(`CRITICAL CONTEXT DISPATCH CONFLICT!\n\nAre you sure you want to restore all tables to the state in snap "${snap.name}"?\nThis replaces current data in local browser storage.`);
-                                if (ok) {
-                                  await triggerSystemProcessing(
-                                    `Restoring Database State: ${snap.name}...`,
-                                    1800,
-                                    'db',
-                                    undefined,
-                                    'Shutting down write engines, swapping table pointers, and updating local indices...'
-                                  );
-                                  const success = restoreDbSnapshot(snap.id);
-                                  if (success) {
-                                    showToast(`Snapshot ${snap.id} restored successfully! Reloading UI...`);
-                                    setTimeout(() => window.location.reload(), 250);
-                                  } else {
-                                    showToast("Corruption Error: Snapshot load failure!");
-                                  }
-                                }
-                              }}
-                              className="px-3 py-1.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary text-[10px] font-black cursor-pointer uppercase tracking-wider rounded-lg transition-colors"
-                              title="Overwrite current state with backup snapshot font"
-                            >
-                              Restore
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                deleteDbSnapshot(snap.id);
-                                showToast(`Removed backup snapshot ${snap.id}`);
-                              }}
-                              className="p-1 px-1.5 text-zinc-400 hover:text-rose-500 hover:bg-rose-500/15 cursor-pointer rounded transition-colors"
-                              title="Delete snapshot"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Tab C: LOCAL JSON PORTABILITY */}
-              {dbCoreTab === 'import-export' && (
-                <div className="space-y-4">
-                  
-                  {/* Local JSON Export */}
-                  <div className="rounded-2xl border border-m3-outline-variant/15 p-4 space-y-2.5 bg-m3-surface-low">
-                    <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider">Export Database Records</h4>
-                    <p className="text-[10px] text-zinc-400 font-medium">
-                      Physically package your corporate configuration, stock level logs, employee tables and POS sales ledgers inside an offline executable JSON block.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const payload = {
-                          isConfigured,
-                          users,
-                          branches,
-                          suppliers,
-                          products,
-                          purchaseOrders,
-                          poItems,
-                          transmittals,
-                          shifts,
-                          sales,
-                          saleItems,
-                          movements,
-                          auditLogs,
-                          parkedSales,
-                          stockTransfers,
-                          branchStock,
-                          ledgerEntries,
-                          branchSalesReports,
-                          deliveries
-                        };
-                        const dataStr = JSON.stringify(payload, null, 2);
-                        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-                        
-                        const element = document.createElement('a');
-                        element.setAttribute('href', dataUri);
-                        element.setAttribute('download', `tilepoint_full_backup_${Date.now()}.json`);
-                        element.style.display = 'none';
-                        document.body.appendChild(element);
-                        element.click();
-                        document.body.removeChild(element);
-                        
-                        showToast("Raw physical database JSON file downloaded successfully!");
-                      }}
-                      className="w-full py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-xs font-extrabold uppercase tracking-wider rounded-xl border border-emerald-500/30 flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
-                    >
-                      <Download className="h-4 w-4" /> Export Raw JSON Database File
-                    </button>
-                  </div>
-
-                  {/* Local JSON Import */}
-                  <div className="rounded-2xl border border-m3-outline-variant/15 p-4 space-y-3 bg-m3-surface-low">
-                    <h4 className="text-xs font-black uppercase text-amber-500 tracking-wider">State Migration Recovery (Import JSON)</h4>
-                    <p className="text-[10px] text-zinc-400 font-medium">
-                      Overwrites the client dataset fully with a local JSON block. Approved files are validated on format before matching structure schemas.
-                    </p>
-                    
-                    <label className="flex flex-col items-center justify-center p-6 bg-m3-surface-lowest border-2 border-dashed border-m3-outline-variant/30 rounded-2xl hover:bg-m3-outline-variant/5 cursor-pointer transition-colors group">
-                      <Upload className="h-6 w-6 text-zinc-400 group-hover:text-amber-500 transition-colors" />
-                      <span className="text-[11px] font-extrabold mt-2">Select or Drop Portable Backup JSON file</span>
-                      <span className="text-[9px] text-zinc-500 uppercase font-mono mt-1 font-bold">Standard .json matches only</span>
-                      <input
-                        type="file"
-                        accept=".json"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          
-                          const reader = new FileReader();
-                          reader.onload = (evt) => {
-                            try {
-                              const rawText = evt.target?.result as string;
-                              const parsed = JSON.parse(rawText);
-                              
-                              if (!parsed.products || !parsed.users || !parsed.branches) {
-                                throw new Error("Schema validator failure: Missing core lists.");
-                              }
-
-                              // Create snapshot entry to allow reversibility
-                              const newSnap: DbSnapshot = {
-                                id: `SNAP-IMPORT-${Date.now()}`,
-                                name: `Imported Backup File: ${file.name}`,
-                                timestamp: new Date().toISOString(),
-                                creator: currentUser.fullName,
-                                sizeBytes: new Blob([rawText]).size,
-                                data: rawText
-                              };
-
-                              const cachedListStr = localStorage.getItem('tp_db_snapshots');
-                              const cachedList = cachedListStr ? JSON.parse(cachedListStr) : [];
-                              const updatedList = [newSnap, ...cachedList].slice(0, 2);
-                              localStorage.setItem('tp_db_snapshots', JSON.stringify(updatedList));
-
-                              // Apply changes directly using atomic restore
-                              restoreDbSnapshot(newSnap.id);
-                              
-                              setDbBackupFileMessage(`SUCCESSFULLY IMPORTED PORTABLE BACKUP: "${file.name}" APPROVED. Reloading UI...`);
-                              setDbBackupFileError(null);
-                              showToast(`Successfully restored imported backup!`);
-                              
-                              setTimeout(() => {
-                                window.location.reload();
-                              }, 1500);
-
-                            } catch (err: any) {
-                              setDbBackupFileError(`ERROR: APPROVED FILE IS CORRUPTED OR INVALID SCHEMA: ${err.message}`);
-                              setDbBackupFileMessage(null);
-                              showToast(`Import rejected due to structural validation faults.`);
-                            }
-                          };
-                          reader.readAsText(file);
-                        }}
-                      />
-                    </label>
-
-                    {dbBackupFileMessage && (
-                      <div className="p-3 text-[10.5px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/15 rounded-xl text-center">
-                        {dbBackupFileMessage}
-                      </div>
-                    )}
-                    {dbBackupFileError && (
-                      <div className="p-3 text-[10.5px] font-bold text-rose-400 bg-rose-500/10 border border-rose-500/15 rounded-xl text-center">
-                        {dbBackupFileError}
-                      </div>
-                    )}
-                  </div>
-
-                </div>
-              )}
-
-            </div>
-
-            {/* Modal Actions Footer */}
-            <div className="pt-4 mt-4 border-t border-m3-outline-variant/15 flex justify-end">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDatabaseCoreModal(false);
-                  setDbBackupFileMessage(null);
-                  setDbBackupFileError(null);
-                  setManualSnapshotName('');
-                }}
-                className="px-5 py-2.5 bg-m3-surface hover:bg-m3-outline-variant/15 text-m3-on-surface font-extrabold text-xs uppercase tracking-wide border border-m3-outline-variant/10 rounded-full cursor-pointer transition-all hover:scale-[1.01]"
-              >
-                Done
-              </button>
-            </div>
-
-          </div>
+            );
+          })}
         </div>
-      )}
 
-      {/* MODAL: Account Settings Password update form (Cashiers can ONLY change password) */}
-      {showAccountSettingsModal && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm" onClick={() => {
-            setCurrentPassword('');
-            setNewPassword('');
-            setConfirmPassword('');
-            setSettingsError('');
-            setShowAccountSettingsModal(false);
-          }} />
-          <form
-            onSubmit={handleUpdatePassword}
-            className="relative w-full max-w-md rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left font-sans"
-          >
-            <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 mr-0.5 bg-amber-500/10 text-amber-500 rounded-2xl">
-                  <LockKeyhole className="h-5 w-5" />
+        {/* CONFIRMATORY DIALOG: Logout verification check trigger */}
+        {showLogoutConfirmModal && (
+          <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
+            <div
+              className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
+              onClick={() => setShowLogoutConfirmModal(false)}
+            />
+            <div className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left font-sans">
+              <div className="flex items-center gap-3 border-b border-m3-outline-variant/15 pb-3">
+                <div className="p-2.5 rounded-2xl bg-rose-500/10 text-rose-500">
+                  <Power className="h-5 w-5 animate-pulse" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-m3-on-surface uppercase tracking-wider">Account Settings</h3>
-                  <p className="text-[10px] text-amber-500 font-extrabold font-mono uppercase tracking-widest">
-                    {currentUser.role === UserRole.CASHIER ? 'Password Change Only' : 'Corporate Identity Settings'}
+                  <h3 className="text-sm font-black text-m3-on-surface uppercase tracking-wider">
+                    Confirm Sign Out
+                  </h3>
+                  <p className="text-[10px] text-zinc-400 font-bold font-mono">
+                    TILEPOINT SESSION CONTROL
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setCurrentPassword('');
-                  setNewPassword('');
-                  setConfirmPassword('');
-                  setSettingsError('');
-                  setShowAccountSettingsModal(false);
-                }}
-                className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full hover:bg-m3-outline-variant/10 transition-colors"
-                title="Dismiss Account Settings Window"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
 
-            {/* Profile Overview Card (Editable details & Avatar selector) */}
-            <div className="space-y-4">
-              <div className="text-[10.5px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1 pl-1">
-                <span>Corporate Identity Details</span>
+              <p className="text-xs text-zinc-300 font-medium leading-relaxed">
+                Are you sure you want to log out of TilePoint terminal? Any
+                unsaved active checkout carts will be lost.
+              </p>
+
+              <div className="flex gap-3 pt-2 font-sans">
+                <button
+                  type="button"
+                  onClick={() => setShowLogoutConfirmModal(false)}
+                  className="flex-1 py-2.5 rounded-full bg-m3-surface hover:bg-m3-outline-variant/15 text-m3-on-surface font-extrabold text-xs uppercase tracking-wide border border-m3-outline-variant/10 cursor-pointer active:scale-95 transition-all text-center"
+                >
+                  No, Keep Active
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLogoutConfirmModal(false);
+                    logout();
+                  }}
+                  className="flex-1 py-2.5 rounded-full bg-rose-500 hover:bg-rose-400 text-black font-extrabold text-xs uppercase tracking-wide cursor-pointer active:scale-95 transition-all text-center shadow-lg shadow-rose-500/10"
+                >
+                  Yes, Sign Out
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* CONFIRMATORY DIALOG: POS Exit Prevention */}
+        {showPosExitConfirmModal && (
+          <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
+            <div
+              className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
+              onClick={() => {
+                setShowPosExitConfirmModal(false);
+                setPendingTabId(null);
+              }}
+            />
+            <div className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left font-sans">
+              <div className="flex items-center gap-3 border-b border-m3-outline-variant/15 pb-3">
+                <div className="p-2.5 rounded-2xl bg-amber-500/10 text-amber-500">
+                  <ShieldAlert className="h-5 w-5 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-m3-on-surface uppercase tracking-wider">
+                    Unsaved Checkout Warning
+                  </h3>
+                  <p className="text-[10px] text-amber-500 font-bold font-mono uppercase tracking-wider">
+                    Active Transaction Guard
+                  </p>
+                </div>
               </div>
 
-              {/* Full Name & Username inputs */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={editFullName}
-                    onChange={e => setEditFullName(e.target.value)}
-                    placeholder="Enter full name"
-                    className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-sans"
-                  />
+              <p className="text-xs text-zinc-300 font-medium leading-relaxed">
+                Are you sure you want to leave this site? Changes you made may
+                not be saved.
+                <br />
+                <br />
+                Leaving the Point of Sale terminal now will disrupt the current
+                active customer checkout session and clear the basket.
+              </p>
+
+              <div className="flex gap-3 pt-2 font-sans">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPosExitConfirmModal(false);
+                    setPendingTabId(null);
+                  }}
+                  className="flex-1 py-2.5 rounded-full bg-m3-surface hover:bg-m3-outline-variant/15 text-m3-on-surface font-extrabold text-xs uppercase tracking-wide border border-m3-outline-variant/10 cursor-pointer active:scale-95 transition-all text-center"
+                >
+                  Cancel, Keep Basket
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPosExitConfirmModal(false);
+                    if (pendingTabId) {
+                      proceedWithTabChange(pendingTabId);
+                    }
+                    setPendingTabId(null);
+                  }}
+                  className="flex-1 py-2.5 rounded-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs uppercase tracking-wide cursor-pointer active:scale-95 transition-all text-center shadow-lg shadow-amber-500/10"
+                >
+                  Yes, Leave Mode
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL: Database Core & Disaster Recovery Settings */}
+        {showDatabaseCoreModal && (
+          <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in font-sans">
+            <div
+              className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
+              onClick={() => {
+                setShowDatabaseCoreModal(false);
+                setDbBackupFileMessage(null);
+                setDbBackupFileError(null);
+                setManualSnapshotName("");
+              }}
+            />
+
+            <div className="relative w-full max-w-2xl rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface flex flex-col max-h-[90vh] text-left">
+              {/* Modal Header */}
+              <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-2xl">
+                    <Database className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black uppercase tracking-wider text-m3-on-surface flex items-center gap-2">
+                      Database Core Management
+                      <span
+                        className={`text-[9px] font-mono px-2 py-0.5 rounded-full font-bold uppercase ${
+                          dbSyncStatus === "syncing"
+                            ? "bg-amber-500/20 text-amber-500 animate-pulse"
+                            : "bg-emerald-500/10 text-emerald-400"
+                        }`}
+                      >
+                        {dbSyncStatus === "syncing"
+                          ? "● Sync active"
+                          : "● Connected"}
+                      </span>
+                    </h3>
+                    <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-mono font-bold">
+                      Disaster Recovery & Automated Backup Engine
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">Username</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2 text-zinc-500 text-xs font-mono select-none">@</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDatabaseCoreModal(false);
+                    setDbBackupFileMessage(null);
+                    setDbBackupFileError(null);
+                    setManualSnapshotName("");
+                  }}
+                  className="text-m3-on-surface-variant hover:text-rose-500 cursor-pointer p-1.5 rounded-full hover:bg-m3-outline-variant/10 transition-colors"
+                  title="Close Database Panel"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Modal Navigation Tabs */}
+              <div className="flex border-b border-m3-outline-variant/10 my-4 p-1 bg-m3-surface-low/50 rounded-xl">
+                <button
+                  onClick={() => setDbCoreTab("scheduler")}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center ${
+                    dbCoreTab === "scheduler"
+                      ? "bg-m3-primary text-m3-on-primary shadow-sm font-black"
+                      : "text-m3-on-surface-variant hover:bg-m3-primary/10 hover:text-m3-primary"
+                  }`}
+                >
+                  Auto-Backup Configuration
+                </button>
+                <button
+                  onClick={() => setDbCoreTab("ledger")}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 ${
+                    dbCoreTab === "ledger"
+                      ? "bg-m3-primary text-m3-on-primary shadow-sm font-black"
+                      : "text-m3-on-surface-variant hover:bg-m3-primary/10 hover:text-m3-primary"
+                  }`}
+                >
+                  Recovery Ledger
+                  <span className="bg-m3-primary-container text-m3-on-primary-container text-[10px] font-bold px-1.5 py-0.2 rounded-full font-sans">
+                    {dbSnapshots.length}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setDbCoreTab("import-export")}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center ${
+                    dbCoreTab === "import-export"
+                      ? "bg-m3-primary text-m3-on-primary shadow-sm font-black"
+                      : "text-m3-on-surface-variant hover:bg-m3-primary/10 hover:text-m3-primary"
+                  }`}
+                >
+                  Offline Portability
+                </button>
+              </div>
+
+              {/* Modal Main Content (Flexible Scroll Area) */}
+              <div className="flex-1 overflow-y-auto pr-1 space-y-4 max-h-[50vh]">
+                {/* Tab A: SCHEDULER & AUTO BACKUPS */}
+                {dbCoreTab === "scheduler" && (
+                  <div className="space-y-4">
+                    {/* Performance stats banner */}
+                    <div className="p-3.5 rounded-2xl bg-m3-primary/5 border border-m3-primary/10 flex justify-between items-center text-xs">
+                      <div>
+                        <div className="font-extrabold text-m3-primary uppercase text-[10px] tracking-wide">
+                          Optimization Status
+                        </div>
+                        <div className="text-zinc-400 mt-1 font-sans">
+                          Debounce cache buffer operates at{" "}
+                          <span className="font-mono font-bold text-m3-on-surface">
+                            {debounceDelay}ms
+                          </span>
+                          .
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-mono text-emerald-400 font-extrabold">
+                          {writeStatsCount.toLocaleString()}
+                        </div>
+                        <div className="text-[9px] text-zinc-500 uppercase font-mono mt-0.5">
+                          Database Writes Saved
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-m3-outline-variant/20 p-4 space-y-4 bg-m3-surface-low">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-m3-primary">
+                        Automatic Background Scheduler
+                      </h4>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xs font-bold">
+                            Hourly Data Preservation
+                          </div>
+                          <div className="text-[10px] text-zinc-400 mt-0.5">
+                            Protect inventory journals and sales invoices
+                            against localStorage eviction.
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={currentUser.role !== UserRole.ADMIN}
+                          onClick={() => {
+                            if (currentUser.role !== UserRole.ADMIN) {
+                              showToast(
+                                "Access Denied: Admin authorization required.",
+                              );
+                              return;
+                            }
+                            setAutoBackupEnabled(!autoBackupEnabled);
+                            showToast(
+                              `Automated backup scheduler is now ${!autoBackupEnabled ? "ENABLED" : "DISABLED"}`,
+                            );
+                          }}
+                          className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                            autoBackupEnabled
+                              ? "bg-emerald-500 text-black hover:bg-emerald-400"
+                              : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                          } ${currentUser.role !== UserRole.ADMIN ? "opacity-60 cursor-not-allowed" : ""}`}
+                        >
+                          {autoBackupEnabled
+                            ? "✓ Active scheduler"
+                            : "✗ Deactivated"}
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-1 block">
+                            Reserve Frequency
+                          </label>
+                          <select
+                            disabled={
+                              currentUser.role !== UserRole.ADMIN ||
+                              !autoBackupEnabled
+                            }
+                            value={backupIntervalHours}
+                            onChange={(e) => {
+                              const val = Number(e.target.value);
+                              setBackupIntervalHours(val);
+                              showToast(
+                                `Automated backup frequency is configured to every ${val} hr.`,
+                              );
+                            }}
+                            className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 text-xs px-3 py-2 rounded-xl text-m3-on-surface font-extrabold focus:outline-none focus:ring-1 focus:ring-m3-primary/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <option value={1}>Every 1 Hour (Standard)</option>
+                            <option value={2}>Every 2 Hours (Mid-Day)</option>
+                            <option value={6}>Every 6 Hours (Periodic)</option>
+                            <option value={12}>
+                              Every 12 Hours (Half-Day)
+                            </option>
+                            <option value={24}>
+                              Every 24 Hours (End-of-Day)
+                            </option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-1 block">
+                            Last Successful Backup Run
+                          </label>
+                          <div className="w-full bg-m3-surface-lowest border border-m3-outline-variant/15 text-xs px-3 py-2 rounded-xl text-m3-on-surface-variant font-medium flex items-center gap-1.5 min-h-[36px]">
+                            <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            {lastAutoBackupTime ? (
+                              <span className="font-mono text-[11px] font-bold">
+                                {new Date(lastAutoBackupTime).toLocaleString()}
+                              </span>
+                            ) : (
+                              <span className="italic text-zinc-500 font-bold">
+                                Never executed
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-m3-outline-variant/20 p-4 space-y-3">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-m3-primary">
+                        Instantiate Manual Backup Snapshot
+                      </h4>
+                      <div className="flex gap-2 font-sans">
+                        <input
+                          type="text"
+                          value={manualSnapshotName}
+                          onChange={(e) =>
+                            setManualSnapshotName(e.target.value)
+                          }
+                          placeholder="e.g. Pre-Audit Bulk Load Snapshot..."
+                          className="flex-1 bg-m3-surface-lowest text-xs text-m3-on-surface border border-m3-outline-variant/30 px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-m3-primary/40 placeholder-zinc-500 font-bold"
+                        />
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const name =
+                              manualSnapshotName.trim() ||
+                              `Manual Snapshot - ${new Date().toLocaleTimeString()}`;
+                            await triggerSystemProcessing(
+                              `Compiling ${name}...`,
+                              1400,
+                              "db",
+                              undefined,
+                              "Compressing tables, locking databases, and serializing snapshot packet...",
+                            );
+                            createDbSnapshot(name);
+                            setManualSnapshotName("");
+                            showToast(
+                              `Successfully registered database snapshot: "${name}"`,
+                            );
+                          }}
+                          className="px-4 py-2.5 bg-m3-primary hover:bg-m3-primary/95 text-m3-on-primary text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm transition-all"
+                        >
+                          Capture Snapshot
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab B: DATABASE SNAPSHOTS LEDGER */}
+                {dbCoreTab === "ledger" && (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center px-1">
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                        Saved Backup History
+                      </span>
+                      <button
+                        onClick={() => {
+                          dbSnapshots.forEach((snap) =>
+                            deleteDbSnapshot(snap.id),
+                          );
+                          showToast("Cleared recovery snapshot catalog.");
+                        }}
+                        className="text-[10px] font-black uppercase tracking-wider text-rose-500 hover:text-rose-400 transition-colors cursor-pointer"
+                        title="Clear database list"
+                      >
+                        Clear All Catalog
+                      </button>
+                    </div>
+
+                    {dbSnapshots.length === 0 ? (
+                      <div className="text-center py-10 bg-m3-surface-lowest border border-dashed border-m3-outline-variant/30 rounded-2xl text-zinc-500 space-y-2">
+                        <p className="text-sm font-bold">
+                          Digital Snapshot Archive is Empty
+                        </p>
+                        <p className="text-[10px] uppercase font-mono tracking-wider text-zinc-400">
+                          Automated or manual snapshots will register here.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
+                        {dbSnapshots.map((snap) => (
+                          <div
+                            key={snap.id}
+                            className="p-3 bg-m3-surface-lowest hover:bg-m3-primary/5 rounded-2xl border border-m3-outline-variant/15 flex items-center justify-between transition-all"
+                          >
+                            <div className="space-y-1">
+                              <div className="text-xs font-black text-m3-on-surface">
+                                {snap.name}
+                              </div>
+                              <div className="text-[9.5px] text-zinc-400 font-mono font-bold flex items-center gap-2 flex-wrap">
+                                <span className="text-m3-primary text-[10px]">
+                                  {snap.creator}
+                                </span>
+                                <span>•</span>
+                                <span>
+                                  {new Date(snap.timestamp).toLocaleString()}
+                                </span>
+                                <span>•</span>
+                                <span className="text-zinc-500 bg-m3-surface-low/55 px-1.5 rounded">
+                                  {((snap.sizeBytes || 0) / 1024).toFixed(1)} KB
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const ok = confirm(
+                                    `CRITICAL CONTEXT DISPATCH CONFLICT!\n\nAre you sure you want to restore all tables to the state in snap "${snap.name}"?\nThis replaces current data in local browser storage.`,
+                                  );
+                                  if (ok) {
+                                    await triggerSystemProcessing(
+                                      `Restoring Database State: ${snap.name}...`,
+                                      1800,
+                                      "db",
+                                      undefined,
+                                      "Shutting down write engines, swapping table pointers, and updating local indices...",
+                                    );
+                                    const success = restoreDbSnapshot(snap.id);
+                                    if (success) {
+                                      showToast(
+                                        `Snapshot ${snap.id} restored successfully! Reloading UI...`,
+                                      );
+                                      setTimeout(
+                                        () => window.location.reload(),
+                                        250,
+                                      );
+                                    } else {
+                                      showToast(
+                                        "Corruption Error: Snapshot load failure!",
+                                      );
+                                    }
+                                  }
+                                }}
+                                className="px-3 py-1.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary text-[10px] font-black cursor-pointer uppercase tracking-wider rounded-lg transition-colors"
+                                title="Overwrite current state with backup snapshot font"
+                              >
+                                Restore
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  deleteDbSnapshot(snap.id);
+                                  showToast(
+                                    `Removed backup snapshot ${snap.id}`,
+                                  );
+                                }}
+                                className="p-1 px-1.5 text-zinc-400 hover:text-rose-500 hover:bg-rose-500/15 cursor-pointer rounded transition-colors"
+                                title="Delete snapshot"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab C: LOCAL JSON PORTABILITY */}
+                {dbCoreTab === "import-export" && (
+                  <div className="space-y-4">
+                    {/* Local JSON Export */}
+                    <div className="rounded-2xl border border-m3-outline-variant/15 p-4 space-y-2.5 bg-m3-surface-low">
+                      <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider">
+                        Export Database Records
+                      </h4>
+                      <p className="text-[10px] text-zinc-400 font-medium">
+                        Physically package your corporate configuration, stock
+                        level logs, employee tables and POS sales ledgers inside
+                        an offline executable JSON block.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const payload = {
+                            isConfigured,
+                            users,
+                            branches,
+                            suppliers,
+                            products,
+                            purchaseOrders,
+                            poItems,
+                            transmittals,
+                            shifts,
+                            sales,
+                            saleItems,
+                            movements,
+                            auditLogs,
+                            parkedSales,
+                            stockTransfers,
+                            branchStock,
+                            ledgerEntries,
+                            branchSalesReports,
+                            deliveries,
+                          };
+                          const dataStr = JSON.stringify(payload, null, 2);
+                          const dataUri =
+                            "data:application/json;charset=utf-8," +
+                            encodeURIComponent(dataStr);
+
+                          const element = document.createElement("a");
+                          element.setAttribute("href", dataUri);
+                          element.setAttribute(
+                            "download",
+                            `tilepoint_full_backup_${Date.now()}.json`,
+                          );
+                          element.style.display = "none";
+                          document.body.appendChild(element);
+                          element.click();
+                          document.body.removeChild(element);
+
+                          showToast(
+                            "Raw physical database JSON file downloaded successfully!",
+                          );
+                        }}
+                        className="w-full py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-xs font-extrabold uppercase tracking-wider rounded-xl border border-emerald-500/30 flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                      >
+                        <Download className="h-4 w-4" /> Export Raw JSON
+                        Database File
+                      </button>
+                    </div>
+
+                    {/* Local JSON Import */}
+                    <div className="rounded-2xl border border-m3-outline-variant/15 p-4 space-y-3 bg-m3-surface-low">
+                      <h4 className="text-xs font-black uppercase text-amber-500 tracking-wider">
+                        State Migration Recovery (Import JSON)
+                      </h4>
+                      <p className="text-[10px] text-zinc-400 font-medium">
+                        Overwrites the client dataset fully with a local JSON
+                        block. Approved files are validated on format before
+                        matching structure schemas.
+                      </p>
+
+                      <label className="flex flex-col items-center justify-center p-6 bg-m3-surface-lowest border-2 border-dashed border-m3-outline-variant/30 rounded-2xl hover:bg-m3-outline-variant/5 cursor-pointer transition-colors group">
+                        <Upload className="h-6 w-6 text-zinc-400 group-hover:text-amber-500 transition-colors" />
+                        <span className="text-[11px] font-extrabold mt-2">
+                          Select or Drop Portable Backup JSON file
+                        </span>
+                        <span className="text-[9px] text-zinc-500 uppercase font-mono mt-1 font-bold">
+                          Standard .json matches only
+                        </span>
+                        <input
+                          type="file"
+                          accept=".json"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+
+                            const reader = new FileReader();
+                            reader.onload = (evt) => {
+                              try {
+                                const rawText = evt.target?.result as string;
+                                const parsed = JSON.parse(rawText);
+
+                                if (
+                                  !parsed.products ||
+                                  !parsed.users ||
+                                  !parsed.branches
+                                ) {
+                                  throw new Error(
+                                    "Schema validator failure: Missing core lists.",
+                                  );
+                                }
+
+                                // Create snapshot entry to allow reversibility
+                                const newSnap: DbSnapshot = {
+                                  id: `SNAP-IMPORT-${Date.now()}`,
+                                  name: `Imported Backup File: ${file.name}`,
+                                  timestamp: new Date().toISOString(),
+                                  creator: currentUser.fullName,
+                                  sizeBytes: new Blob([rawText]).size,
+                                  data: rawText,
+                                };
+
+                                const cachedListStr =
+                                  localStorage.getItem("tp_db_snapshots");
+                                const cachedList = cachedListStr
+                                  ? JSON.parse(cachedListStr)
+                                  : [];
+                                const updatedList = [
+                                  newSnap,
+                                  ...cachedList,
+                                ].slice(0, 2);
+                                localStorage.setItem(
+                                  "tp_db_snapshots",
+                                  JSON.stringify(updatedList),
+                                );
+
+                                // Apply changes directly using atomic restore
+                                restoreDbSnapshot(newSnap.id);
+
+                                setDbBackupFileMessage(
+                                  `SUCCESSFULLY IMPORTED PORTABLE BACKUP: "${file.name}" APPROVED. Reloading UI...`,
+                                );
+                                setDbBackupFileError(null);
+                                showToast(
+                                  `Successfully restored imported backup!`,
+                                );
+
+                                setTimeout(() => {
+                                  window.location.reload();
+                                }, 1500);
+                              } catch (err: any) {
+                                setDbBackupFileError(
+                                  `ERROR: APPROVED FILE IS CORRUPTED OR INVALID SCHEMA: ${err.message}`,
+                                );
+                                setDbBackupFileMessage(null);
+                                showToast(
+                                  `Import rejected due to structural validation faults.`,
+                                );
+                              }
+                            };
+                            reader.readAsText(file);
+                          }}
+                        />
+                      </label>
+
+                      {dbBackupFileMessage && (
+                        <div className="p-3 text-[10.5px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/15 rounded-xl text-center">
+                          {dbBackupFileMessage}
+                        </div>
+                      )}
+                      {dbBackupFileError && (
+                        <div className="p-3 text-[10.5px] font-bold text-rose-400 bg-rose-500/10 border border-rose-500/15 rounded-xl text-center">
+                          {dbBackupFileError}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Actions Footer */}
+              <div className="pt-4 mt-4 border-t border-m3-outline-variant/15 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDatabaseCoreModal(false);
+                    setDbBackupFileMessage(null);
+                    setDbBackupFileError(null);
+                    setManualSnapshotName("");
+                  }}
+                  className="px-5 py-2.5 bg-m3-surface hover:bg-m3-outline-variant/15 text-m3-on-surface font-extrabold text-xs uppercase tracking-wide border border-m3-outline-variant/10 rounded-full cursor-pointer transition-all hover:scale-[1.01]"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL: Account Settings Password update form (Cashiers can ONLY change password) */}
+        {showAccountSettingsModal && (
+          <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
+            <div
+              className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
+              onClick={() => {
+                setCurrentPassword("");
+                setNewPassword("");
+                setConfirmPassword("");
+                setSettingsError("");
+                setShowAccountSettingsModal(false);
+              }}
+            />
+            <form
+              onSubmit={handleUpdatePassword}
+              className="relative w-full max-w-md rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left font-sans"
+            >
+              <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 mr-0.5 bg-amber-500/10 text-amber-500 rounded-2xl">
+                    <LockKeyhole className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-m3-on-surface uppercase tracking-wider">
+                      Account Settings
+                    </h3>
+                    <p className="text-[10px] text-amber-500 font-extrabold font-mono uppercase tracking-widest">
+                      {currentUser.role === UserRole.CASHIER
+                        ? "Password Change Only"
+                        : "Corporate Identity Settings"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentPassword("");
+                    setNewPassword("");
+                    setConfirmPassword("");
+                    setSettingsError("");
+                    setShowAccountSettingsModal(false);
+                  }}
+                  className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full hover:bg-m3-outline-variant/10 transition-colors"
+                  title="Dismiss Account Settings Window"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Profile Overview Card (Editable details & Avatar selector) */}
+              <div className="space-y-4">
+                <div className="text-[10.5px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1 pl-1">
+                  <span>Corporate Identity Details</span>
+                </div>
+
+                {/* Full Name & Username inputs */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">
+                      Full Name
+                    </label>
                     <input
                       type="text"
                       required
-                      value={editUsername}
-                      onChange={e => setEditUsername(e.target.value)}
-                      placeholder="Username"
-                      className="w-full bg-m3-surface border-b-2 border-m3-outline-variant pl-7 pr-3 py-2 text-xs text-m3-on-surface font-mono focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg"
+                      value={editFullName}
+                      onChange={(e) => setEditFullName(e.target.value)}
+                      placeholder="Enter full name"
+                      className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-sans"
                     />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">
+                      Username
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2 text-zinc-500 text-xs font-mono select-none">
+                        @
+                      </span>
+                      <input
+                        type="text"
+                        required
+                        value={editUsername}
+                        onChange={(e) => setEditUsername(e.target.value)}
+                        placeholder="Username"
+                        className="w-full bg-m3-surface border-b-2 border-m3-outline-variant pl-7 pr-3 py-2 text-xs text-m3-on-surface font-mono focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
 
+              {/* Change Password Form Container */}
+              <div className="space-y-3 pt-1 border-t border-m3-outline-variant/15">
+                <div className="text-[10.5px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1 pl-1">
+                  <span>Update Security Password (Optional)</span>
+                </div>
 
-            </div>
+                {/* Current Password field */}
+                <div className="space-y-1 relative">
+                  <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">
+                    Current Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showCurrentPassword ? "text" : "password"}
+                      value={currentPassword}
+                      onChange={(e) => {
+                        setCurrentPassword(e.target.value);
+                        setSettingsError("");
+                      }}
+                      placeholder="Provide current login password to verify"
+                      className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-sans"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowCurrentPassword(!showCurrentPassword)
+                      }
+                      className="absolute right-2.5 top-2.5 text-zinc-400 hover:text-m3-on-surface transition-colors cursor-pointer"
+                    >
+                      {showCurrentPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
 
-            {/* Change Password Form Container */}
-            <div className="space-y-3 pt-1 border-t border-m3-outline-variant/15">
-              <div className="text-[10.5px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1 pl-1">
-                <span>Update Security Password (Optional)</span>
-              </div>
+                {/* New Password field */}
+                <div className="space-y-1 relative">
+                  <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">
+                    New Password (Min 6 Characters)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => {
+                        setNewPassword(e.target.value);
+                        setSettingsError("");
+                      }}
+                      placeholder="Enter brand new terminal password"
+                      className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-sans"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-2.5 top-2.5 text-zinc-400 hover:text-m3-on-surface transition-colors cursor-pointer"
+                    >
+                      {showNewPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
 
-              {/* Current Password field */}
-              <div className="space-y-1 relative">
-                <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">Current Password</label>
-                <div className="relative">
+                {/* Confirm New Password field */}
+                <div className="space-y-1 relative">
+                  <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">
+                    Confirm New Password
+                  </label>
                   <input
-                    type={showCurrentPassword ? 'text' : 'password'}
-                    value={currentPassword}
-                    onChange={e => {
-                      setCurrentPassword(e.target.value);
-                      setSettingsError('');
+                    type={showNewPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      setSettingsError("");
                     }}
-                    placeholder="Provide current login password to verify"
+                    placeholder="Repeat brand new password to confirm"
                     className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-sans"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    className="absolute right-2.5 top-2.5 text-zinc-400 hover:text-m3-on-surface transition-colors cursor-pointer"
-                  >
-                    {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
                 </div>
+
+                {settingsError ? (
+                  <p className="text-[9.5px] font-bold text-rose-500 px-1 animate-pulse leading-normal">
+                    {settingsError}
+                  </p>
+                ) : (
+                  <p className="text-[9px] text-zinc-400 px-1 leading-normal font-medium flex items-center gap-1">
+                    <span>
+                      Your account security credentials will be encrypted and
+                      updated securely.
+                    </span>
+                  </p>
+                )}
               </div>
 
-              {/* New Password field */}
-              <div className="space-y-1 relative">
-                <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">New Password (Min 6 Characters)</label>
-                <div className="relative">
-                  <input
-                    type={showNewPassword ? 'text' : 'password'}
-                    value={newPassword}
-                    onChange={e => {
-                      setNewPassword(e.target.value);
-                      setSettingsError('');
-                    }}
-                    placeholder="Enter brand new terminal password"
-                    className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-sans"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-2.5 top-2.5 text-zinc-400 hover:text-m3-on-surface transition-colors cursor-pointer"
-                  >
-                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Confirm New Password field */}
-              <div className="space-y-1 relative">
-                <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">Confirm New Password</label>
-                <input
-                  type={showNewPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={e => {
-                    setConfirmPassword(e.target.value);
-                    setSettingsError('');
+              <div className="flex justify-end gap-3 pt-3 border-t border-m3-outline-variant/15 font-sans">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentPassword("");
+                    setNewPassword("");
+                    setConfirmPassword("");
+                    setSettingsError("");
+                    setShowAccountSettingsModal(false);
                   }}
-                  placeholder="Repeat brand new password to confirm"
-                  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-sans"
-                />
+                  className="px-4 py-2 bg-m3-outline-variant/10 hover:bg-m3-outline-variant/20 rounded-full text-zinc-300 font-extrabold text-[10px] uppercase tracking-wider transition-all cursor-pointer text-center"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingPassword}
+                  className="px-5 py-2 rounded-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[10px] uppercase tracking-wider transition-all cursor-pointer shadow-md disabled:brightness-50"
+                >
+                  {isUpdatingPassword
+                    ? "Saving Hashed Token..."
+                    : "Update Password"}
+                </button>
               </div>
+            </form>
+          </div>
+        )}
 
-              {settingsError ? (
-                <p className="text-[9.5px] font-bold text-rose-500 px-1 animate-pulse leading-normal">
-                  {settingsError}
-                </p>
-              ) : (
-                <p className="text-[9px] text-zinc-400 px-1 leading-normal font-medium flex items-center gap-1">
-                  <span>Your account security credentials will be encrypted and updated securely.</span>
-                </p>
-              )}
-            </div>
+        {/* FLOAT TOAST ALERT CHIP */}
+        {toastMessage && (
+          <div className="fixed bottom-24 md:bottom-6 right-6 bg-m3-on-surface text-m3-surface text-xs font-black py-3 px-5 rounded-[16px] shadow-2xl z-50 border border-m3-outline-variant/20 flex items-center gap-2 animate-slide-up max-w-[340px]">
+            <span>{toastMessage}</span>
+          </div>
+        )}
 
-            <div className="flex justify-end gap-3 pt-3 border-t border-m3-outline-variant/15 font-sans">
-              <button
-                type="button"
-                onClick={() => {
-                  setCurrentPassword('');
-                  setNewPassword('');
-                  setConfirmPassword('');
-                  setSettingsError('');
-                  setShowAccountSettingsModal(false);
-                }}
-                className="px-4 py-2 bg-m3-outline-variant/10 hover:bg-m3-outline-variant/20 rounded-full text-zinc-300 font-extrabold text-[10px] uppercase tracking-wider transition-all cursor-pointer text-center"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isUpdatingPassword}
-                className="px-5 py-2 rounded-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[10px] uppercase tracking-wider transition-all cursor-pointer shadow-md disabled:brightness-50"
-              >
-                {isUpdatingPassword ? 'Saving Hashed Token...' : 'Update Password'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+        {/* PRIVACY SHIELD & ACCESSIBILITY HUB FLOATING SUITE */}
+        <PrivacyAccessibilityHub
+          darkMode={darkMode}
+          hideFloatingButton={true}
+        />
 
-      {/* FLOAT TOAST ALERT CHIP */}
-      {toastMessage && (
-        <div className="fixed bottom-24 md:bottom-6 right-6 bg-m3-on-surface text-m3-surface text-xs font-black py-3 px-5 rounded-[16px] shadow-2xl z-50 border border-m3-outline-variant/20 flex items-center gap-2 animate-slide-up max-w-[340px]">
-          <span>{toastMessage}</span>
-        </div>
-      )}
+        {/* GLOBAL SYSTEM PROCESSING OVERLAY */}
+        <SystemLoadingOverlay />
 
-      {/* PRIVACY SHIELD & ACCESSIBILITY HUB FLOATING SUITE */}
-      <PrivacyAccessibilityHub darkMode={darkMode} hideFloatingButton={true} />
+        {/* EXPRESSIVE MATERIAL 3 IDLE SCREEN OVERLAY */}
+        <IdleScreen />
 
-      {/* GLOBAL SYSTEM PROCESSING OVERLAY */}
-      <SystemLoadingOverlay />
+        {/* DYNAMIC ALWAYS-ON PWA INSTALL CONVERSION PROMPT */}
+        <PwaInstallPrompt />
 
-      {/* EXPRESSIVE MATERIAL 3 IDLE SCREEN OVERLAY */}
-      <IdleScreen />
-
-      {/* DYNAMIC ALWAYS-ON PWA INSTALL CONVERSION PROMPT */}
-      <PwaInstallPrompt />
-
-      {/* SHOW SETUP WIZARD OVERLAY MODAL */}
-      {showSetupWizard && (
-        <OnboardingSetupWizard onClose={() => setShowSetupWizard(false)} />
-      )}
-    </div>
+        {/* SHOW SETUP WIZARD OVERLAY MODAL */}
+        {showSetupWizard && (
+          <OnboardingSetupWizard onClose={() => setShowSetupWizard(false)} />
+        )}
+      </div>
     </MotionConfig>
   );
 }
