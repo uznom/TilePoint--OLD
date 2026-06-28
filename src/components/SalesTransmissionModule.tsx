@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { useDb, encryptString, decryptString } from '../context/DbContext';
+import { useDb, encryptString, decryptString, getSecuritySecretKey, preprocessAndVerifyClipboardText, isStrictInboundReportSchema } from '../context/DbContext';
 import { UserRole, BranchSalesReport, Sale, SaleItem } from '../types/db';
 import { ActionButton } from './ActionButton';
 import {
@@ -32,6 +32,189 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
+export function validateAndMapInboundReport(parsed: any): { errors: string[]; mapped?: any } {
+  const errors: string[] = [];
+
+  if (!parsed || typeof parsed !== 'object') {
+    return { errors: ['Root payload must be a valid JSON object.'] };
+  }
+
+  // Root fields validation
+  if (typeof parsed.branchId !== 'string' || !parsed.branchId.trim()) {
+    errors.push('branchId is missing or must be a non-empty string.');
+  }
+  if (typeof parsed.branchName !== 'string' || !parsed.branchName.trim()) {
+    errors.push('branchName is missing or must be a non-empty string.');
+  }
+  if (typeof parsed.reportingDate !== 'string' || !parsed.reportingDate.trim()) {
+    errors.push('reportingDate is missing or must be a non-empty string.');
+  } else {
+    const d = new Date(parsed.reportingDate);
+    if (isNaN(d.getTime())) {
+      errors.push('reportingDate must be a valid ISO or YYYY-MM-DD date format.');
+    }
+  }
+
+  if (!Array.isArray(parsed.sales)) {
+    errors.push('sales must be a valid array.');
+  }
+
+  // Validate sales and their nested properties
+  const validatedSales: any[] = [];
+  if (Array.isArray(parsed.sales)) {
+    parsed.sales.forEach((s: any, idx: number) => {
+      const salePrefix = `sales[${idx}]`;
+      if (!s || typeof s !== 'object') {
+        errors.push(`${salePrefix} must be a valid object.`);
+        return;
+      }
+
+      // Check mandatory Sale fields
+      if (typeof s.id !== 'string' || !s.id.trim()) {
+        errors.push(`${salePrefix} is missing "id" (string).`);
+      }
+      if (typeof s.saleNumber !== 'string' || !s.saleNumber.trim()) {
+        errors.push(`${salePrefix} is missing "saleNumber" (string).`);
+      }
+      if (typeof s.shiftId !== 'string' || !s.shiftId.trim()) {
+        errors.push(`${salePrefix} is missing "shiftId" (string).`);
+      }
+      if (typeof s.branchId !== 'string' || !s.branchId.trim()) {
+        errors.push(`${salePrefix} is missing "branchId" (string).`);
+      }
+      if (typeof s.cashierId !== 'string' || !s.cashierId.trim()) {
+        errors.push(`${salePrefix} is missing "cashierId" (string).`);
+      }
+      if (typeof s.cashierName !== 'string' || !s.cashierName.trim()) {
+        errors.push(`${salePrefix} is missing "cashierName" (string).`);
+      }
+      
+      const subtotal = Number(s.subtotal);
+      if (typeof s.subtotal === 'undefined' || isNaN(subtotal)) {
+        errors.push(`${salePrefix}.subtotal must be a valid number.`);
+      }
+      const vat = Number(s.vat);
+      if (typeof s.vat === 'undefined' || isNaN(vat)) {
+        errors.push(`${salePrefix}.vat must be a valid number.`);
+      }
+      const discount = Number(s.discount);
+      if (typeof s.discount === 'undefined' || isNaN(discount)) {
+        errors.push(`${salePrefix}.discount must be a valid number.`);
+      }
+      const grandTotal = Number(s.grandTotal);
+      if (typeof s.grandTotal === 'undefined' || isNaN(grandTotal)) {
+        errors.push(`${salePrefix}.grandTotal must be a valid number.`);
+      }
+      const amountTendered = Number(s.amountTendered);
+      if (typeof s.amountTendered === 'undefined' || isNaN(amountTendered)) {
+        errors.push(`${salePrefix}.amountTendered must be a valid number.`);
+      }
+      const changeAmount = Number(s.changeAmount);
+      if (typeof s.changeAmount === 'undefined' || isNaN(changeAmount)) {
+        errors.push(`${salePrefix}.changeAmount must be a valid number.`);
+      }
+
+      validatedSales.push({
+        id: String(s.id || '').trim(),
+        saleNumber: String(s.saleNumber || '').trim(),
+        shiftId: String(s.shiftId || '').trim(),
+        branchId: String(s.branchId || '').trim(),
+        cashierId: String(s.cashierId || '').trim(),
+        cashierName: String(s.cashierName || '').trim(),
+        customerName: String(s.customerName || 'Walk-in Customer').trim(),
+        subtotal: isNaN(subtotal) ? 0 : subtotal,
+        vat: isNaN(vat) ? 0 : vat,
+        discount: isNaN(discount) ? 0 : discount,
+        grandTotal: isNaN(grandTotal) ? 0 : grandTotal,
+        paymentMethod: String(s.paymentMethod || 'Cash').trim(),
+        amountTendered: isNaN(amountTendered) ? 0 : amountTendered,
+        changeAmount: isNaN(changeAmount) ? 0 : changeAmount,
+        notes: s.notes ? String(s.notes).trim() : undefined,
+        isDeleted: !!s.isDeleted,
+        createdAt: String(s.createdAt || new Date().toISOString()).trim(),
+      });
+    });
+  }
+
+  // Validate saleItems and their nested properties
+  const validatedSaleItems: any[] = [];
+  if (parsed.saleItems !== undefined) {
+    if (!Array.isArray(parsed.saleItems)) {
+      errors.push('saleItems must be an array when provided.');
+    } else {
+      parsed.saleItems.forEach((item: any, idx: number) => {
+        const itemPrefix = `saleItems[${idx}]`;
+        if (!item || typeof item !== 'object') {
+          errors.push(`${itemPrefix} must be a valid object.`);
+          return;
+        }
+
+        if (typeof item.id !== 'string' || !item.id.trim()) {
+          errors.push(`${itemPrefix} is missing "id" (string).`);
+        }
+        if (typeof item.saleId !== 'string' || !item.saleId.trim()) {
+          errors.push(`${itemPrefix} is missing "saleId" (string).`);
+        }
+        if (typeof item.productId !== 'string' || !item.productId.trim()) {
+          errors.push(`${itemPrefix} is missing "productId" (string).`);
+        }
+        if (typeof item.productName !== 'string' || !item.productName.trim()) {
+          errors.push(`${itemPrefix} is missing "productName" (string).`);
+        }
+
+        const quantity = Number(item.quantity);
+        if (typeof item.quantity === 'undefined' || isNaN(quantity)) {
+          errors.push(`${itemPrefix}.quantity must be a valid number.`);
+        }
+        const unitPrice = Number(item.unitPrice);
+        if (typeof item.unitPrice === 'undefined' || isNaN(unitPrice)) {
+          errors.push(`${itemPrefix}.unitPrice must be a valid number.`);
+        }
+        const total = Number(item.total);
+        if (typeof item.total === 'undefined' || isNaN(total)) {
+          errors.push(`${itemPrefix}.total must be a valid number.`);
+        }
+
+        validatedSaleItems.push({
+          id: String(item.id || '').trim(),
+          saleId: String(item.saleId || '').trim(),
+          productId: String(item.productId || '').trim(),
+          productName: String(item.productName || '').trim(),
+          quantity: isNaN(quantity) ? 0 : quantity,
+          unitPrice: isNaN(unitPrice) ? 0 : unitPrice,
+          total: isNaN(total) ? 0 : total,
+          isDeleted: item.isDeleted !== undefined ? !!item.isDeleted : undefined,
+        });
+      });
+    }
+  }
+
+  if (errors.length > 0) {
+    return { errors };
+  }
+
+  const mapped = {
+    id: parsed.id ? String(parsed.id).trim() : undefined,
+    branchId: String(parsed.branchId).trim(),
+    branchName: String(parsed.branchName).trim(),
+    reportingDate: String(parsed.reportingDate).trim(),
+    totalSalesCount: typeof parsed.totalSalesCount === 'number' ? parsed.totalSalesCount : validatedSales.length,
+    totalSalesAmount: typeof parsed.totalSalesAmount === 'number' ? parsed.totalSalesAmount : validatedSales.reduce((acc, s) => acc + s.grandTotal, 0),
+    totalVatAmount: typeof parsed.totalVatAmount === 'number' ? parsed.totalVatAmount : validatedSales.reduce((acc, s) => acc + s.vat, 0),
+    totalDiscountAmount: typeof parsed.totalDiscountAmount === 'number' ? parsed.totalDiscountAmount : validatedSales.reduce((acc, s) => acc + s.discount, 0),
+    sales: validatedSales,
+    saleItems: validatedSaleItems,
+    notes: parsed.notes ? String(parsed.notes).trim() : undefined,
+    importVerificationId: parsed.importVerificationId ? String(parsed.importVerificationId).trim() : undefined,
+    securitySignature: parsed.securitySignature ? String(parsed.securitySignature).trim() : undefined,
+    approvedBy: parsed.approvedBy ? String(parsed.approvedBy).trim() : undefined,
+    auditedBy: parsed.auditedBy ? String(parsed.auditedBy).trim() : undefined,
+    auditedAt: parsed.auditedAt ? String(parsed.auditedAt).trim() : undefined,
+  };
+
+  return { errors, mapped };
+}
+
 interface SalesTransmissionModuleProps {
   darkMode: boolean;
 }
@@ -43,10 +226,13 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
     sales,
     saleItems,
     branchSalesReports,
+    rollbackSnapshots,
+    performRollbackToSnapshot,
     transmitSalesReport,
     importManualSalesReport,
     auditSalesReport,
-    addAuditLog
+    addAuditLog,
+    shifts
   } = useDb();
 
   // Selected date for compiling current branch report
@@ -78,6 +264,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
       isSignatureValid: false,
       isTotalsCorrect: false,
       isDuplicate: false,
+      isReplay: false,
       branchId: '',
       branchName: '',
       reportingDate: '',
@@ -89,38 +276,86 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
       errors: [] as string[]
     };
 
+    const prep = preprocessAndVerifyClipboardText(pastedJson);
+    if (!prep.success) {
+      checks.errors.push(prep.error || "Pre-parsing verification failed.");
+      return checks;
+    }
+
     let parsed: any = null;
     // 1. JSON parse
     try {
-      parsed = JSON.parse(pastedJson);
+      parsed = JSON.parse(prep.cleanedJson!);
       checks.isParsed = true;
     } catch (e: any) {
       checks.errors.push(`JSON Syntax Error: ${e.message}`);
       return checks;
     }
 
+    // 1.5 Strict structural schema check
+    if (!isStrictInboundReportSchema(parsed)) {
+      checks.errors.push("Strict Schema Error: Inbound payload elements do not conform to the strict corporate sales report schema layout.");
+    }
+
     // 2. Schema check
-    const required = ['branchId', 'branchName', 'reportingDate', 'sales'];
-    const missing = required.filter(f => parsed[f] === undefined);
-    if (missing.length === 0) {
+    const validationResult = validateAndMapInboundReport(parsed);
+    if (validationResult.errors.length === 0 && validationResult.mapped) {
       checks.hasRequiredFields = true;
-      checks.branchId = parsed.branchId;
-      checks.branchName = parsed.branchName;
-      checks.reportingDate = parsed.reportingDate;
-      checks.totalSalesCount = parsed.totalSalesCount || 0;
-      checks.totalSalesAmount = parsed.totalSalesAmount || 0;
+      checks.branchId = validationResult.mapped.branchId;
+      checks.branchName = validationResult.mapped.branchName;
+      checks.reportingDate = validationResult.mapped.reportingDate;
+      checks.totalSalesCount = validationResult.mapped.totalSalesCount || 0;
+      checks.totalSalesAmount = validationResult.mapped.totalSalesAmount || 0;
     } else {
-      checks.errors.push(`Missing mandatory fields: ${missing.join(', ')}`);
+      checks.errors.push(...validationResult.errors);
     }
 
     // 3. Security signature verification
     if (parsed.securitySignature) {
       try {
-        const decrypted = decryptString(parsed.securitySignature, "EmmanTileCenterSecretKey");
-        const sig = JSON.parse(decrypted);
+        let decrypted = decryptString(parsed.securitySignature, getSecuritySecretKey());
+        let sig = null;
+        
+        try {
+          sig = JSON.parse(decrypted);
+        } catch (e) {
+          // Fallback to legacy key for backwards compatibility
+          const legacyDecrypted = decryptString(parsed.securitySignature, "EmmanTileCenterSecretKey");
+          sig = JSON.parse(legacyDecrypted);
+          if (sig) {
+            console.warn("[Security Alert] Ledger packet verified using legacy insecure key.");
+          }
+        }
+
         if (sig && sig.branchId === parsed.branchId) {
           checks.isSignatureValid = true;
           checks.signatureMeta = sig;
+
+          // Cryptographic Replay Protection checks
+          const signedNonce = sig.nonce;
+          const signedImportId = sig.importVerificationId;
+          const signedTransmissionId = sig.transmissionId;
+          const transmissionId = parsed.transmissionId || signedTransmissionId;
+
+          const usedNoncesRaw = localStorage.getItem("tp_used_nonces");
+          const usedNonces: string[] = usedNoncesRaw ? JSON.parse(usedNoncesRaw) : [];
+
+          if (transmissionId && usedNonces.includes(transmissionId)) {
+            checks.isReplay = true;
+            checks.errors.push("Error: Payload already indexed.");
+          }
+          if (signedNonce && usedNonces.includes(signedNonce)) {
+            checks.isReplay = true;
+            checks.errors.push("Replay Attack Detected: The signature's unique cryptographic nonce has already been processed in another transaction.");
+          }
+          if (signedImportId && usedNonces.includes(signedImportId)) {
+            checks.isReplay = true;
+            checks.errors.push("Replay Attack Detected: The transaction identifier has already been processed.");
+          }
+          if (signedImportId && parsed.importVerificationId && signedImportId !== parsed.importVerificationId) {
+            checks.isReplay = true;
+            checks.errors.push("Signature Forgery Blocked: Signed transaction identifier does not match the payload header.");
+          }
         } else {
           checks.errors.push("Security Signature verification mismatch: Branch ID in signature does not match header.");
         }
@@ -443,15 +678,41 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
     setTimeout(() => {
       const establishmentName = localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center';
       const importVerificationId = `IMPID-EXP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      
+      // Auto-incrementing sequence index tracked per branch
+      const seqKey = `tp_export_sequence_${currentBranchMeta.id}`;
+      const currentSeq = parseInt(localStorage.getItem(seqKey) || '0', 10) + 1;
+      localStorage.setItem(seqKey, currentSeq.toString());
+
+      // Unique cryptographically signed nonce combining sequence, timestamp, and randomness
+      const nonce = `NONCE-${currentBranchMeta.id}-${currentSeq}-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+
+      // Deterministically calculate shift number(s) included in this transmission
+      const saleShiftIds = Array.from(new Set(compiledLocalSalesData.sales.map(s => s.shiftId).filter(Boolean)));
+      const shiftNumbers = saleShiftIds.map(sid => {
+        const allBranchShifts = (shifts || [])
+          .filter(sh => sh.branchId === currentBranchMeta.id)
+          .sort((a, b) => a.openedAt.localeCompare(b.openedAt));
+        const idx = allBranchShifts.findIndex(sh => sh.id === sid);
+        return idx !== -1 ? (idx + 1).toString() : '1';
+      });
+      const primaryShiftNo = shiftNumbers.length > 0 ? shiftNumbers.sort().join('_') : '1';
+      const branchCode = currentBranchMeta.id;
+      const shiftDate = reportingDate;
+      const transmissionId = `TRANS-${branchCode}-${shiftDate}-S${primaryShiftNo}`.toUpperCase();
+
       const sigPayload = {
         importVerificationId,
         branchId: currentBranchMeta.id,
         exportedByRole: currentUser.role,
         exportedBy: currentUser.fullName,
         establishmentName,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        nonce,
+        sequenceIndex: currentSeq,
+        transmissionId
       };
-      const signature = encryptString(JSON.stringify(sigPayload), "EmmanTileCenterSecretKey");
+      const signature = encryptString(JSON.stringify(sigPayload), getSecuritySecretKey());
 
       const payload = {
         id: `REP-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -466,6 +727,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
         transmissionType: 'Manual',
         exportedByRole: currentUser.role,
         securitySignature: signature,
+        transmissionId,
         sales: compiledLocalSalesData.sales,
         saleItems: compiledLocalSalesData.saleItems,
         notes: `Offline encrypted sales package generated securely with validation signatures.`
@@ -521,8 +783,25 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
     setImportError(null);
     setImportSuccess(false);
 
-    if (!pastedJson.trim()) {
-      setImportError('Please provide a valid JSON sales packet before committing.');
+    const prep = preprocessAndVerifyClipboardText(pastedJson);
+    if (!prep.success) {
+      setImportError(prep.error || "Pre-parsing verification failed.");
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(prep.cleanedJson!);
+      if (!isStrictInboundReportSchema(parsed)) {
+        setImportError("Strict Schema Error: Inbound payload elements do not conform to the strict corporate sales report schema layout.");
+        return;
+      }
+      const validation = validateAndMapInboundReport(parsed);
+      if (validation.errors.length > 0) {
+        setImportError(`Data structure verification failed:\n${validation.errors.slice(0, 5).join('\n')}${validation.errors.length > 5 ? `\n...and ${validation.errors.length - 5} more errors` : ''}`);
+        return;
+      }
+    } catch (e: any) {
+      setImportError(`Invalid JSON Syntax: ${e.message}`);
       return;
     }
 
@@ -590,6 +869,16 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
       return true;
     });
   }, [branchSalesReports, adminBranchFilter, adminStatusFilter, adminSearchQuery]);
+
+  // Immutable registry list of previously processed payload IDs from localStorage
+  const usedNoncesList = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("tp_used_nonces");
+      return raw ? (JSON.parse(raw) as string[]) : [];
+    } catch (_) {
+      return [];
+    }
+  }, [branchSalesReports, pastedJson, importSuccess]);
 
   return (
     <div className="w-full text-m3-on-surface space-y-6 animate-fade-in font-sans pb-12">
@@ -846,6 +1135,63 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
 
         {/* RIGHT CENTRAL COMPILATION LEDGER AND AUDIT WORK - Visible to HQ/Admin to review reports */}
         <div className="xl:col-span-8 space-y-6">
+          {currentUser.role === UserRole.ADMIN && rollbackSnapshots.length > 0 && (
+            <div className="bg-[#1c1316] border border-rose-500/20 rounded-[28px] p-6 space-y-4 text-left shadow-sm">
+              <div className="space-y-0.5 border-b border-rose-500/20 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-widest text-rose-400 font-mono flex items-center gap-1.5">
+                    <span className="shrink-0 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                    State Recovery & Rollback Center
+                  </h3>
+                  <p className="text-[10.5px] text-zinc-400">
+                    Active rolling buffers of the 5 most recent ledger states. Restore database instantly to revert accidental manual imports.
+                  </p>
+                </div>
+                <div className="px-3 py-1 rounded-full text-[9px] font-mono tracking-wider bg-rose-950/30 text-rose-300 font-bold uppercase border border-rose-500/30">
+                  {rollbackSnapshots.length} Active Buffers
+                </div>
+              </div>
+
+              <div className="space-y-2 max-h-[220px] overflow-y-auto scrollbar-thin pr-1">
+                {rollbackSnapshots.map((snap) => (
+                  <div
+                    key={snap.id}
+                    className="p-3 bg-zinc-900/50 border border-m3-outline-variant/15 rounded-xl hover:border-rose-500/30 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-zinc-200 bg-zinc-800 px-1.5 py-0.5 rounded font-mono">
+                          {snap.id}
+                        </span>
+                        <span className="text-rose-400 font-black font-mono text-[10px]">
+                          {snap.branchName}
+                        </span>
+                        <span className="text-zinc-500">•</span>
+                        <span className="text-zinc-400 font-semibold">{snap.reportingDate}</span>
+                      </div>
+                      <div className="text-[10px] text-zinc-500 font-mono">
+                        Snapshot captured on {new Date(snap.timestamp).toLocaleString()}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const res = performRollbackToSnapshot(snap.id);
+                        if (res.success) {
+                          triggerToast("Ledger rolled back successfully. Database states restored.", "success");
+                        } else {
+                          triggerToast(res.error || "Rollback failed.", "error");
+                        }
+                      }}
+                      className="px-3.5 py-1.5 bg-rose-950/30 hover:bg-rose-900/40 border border-rose-500/30 hover:border-rose-500 text-rose-300 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer active:scale-95 shrink-0 self-end sm:self-center"
+                    >
+                      One-Click Rollback State
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[28px] p-6 space-y-5 text-left shadow-sm">
             <div className="space-y-0.5 border-b border-m3-outline-variant/20 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
@@ -987,6 +1333,63 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
               </table>
             </div>
           </div>
+
+          {currentUser.role === UserRole.ADMIN && (
+            <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[28px] p-6 space-y-4 text-left shadow-sm">
+              <div className="space-y-0.5 border-b border-m3-outline-variant/20 pb-3 flex justify-between items-center">
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-widest text-rose-450 font-mono flex items-center gap-1.5">
+                    <ShieldAlert className="h-4 w-4 text-rose-500" />
+                    Anti-Replay Signature Registry (Immutable)
+                  </h3>
+                  <p className="text-[10.5px] text-zinc-400">Immutable ledger of processed payload and transmission signatures. Duplicate entries are rejected instantly.</p>
+                </div>
+                <span className="px-3 py-1 rounded-full text-[9px] font-mono tracking-widest bg-rose-500/10 text-rose-400 font-extrabold uppercase border border-rose-500/20">
+                  {usedNoncesList.length} INDEXED
+                </span>
+              </div>
+
+              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                {usedNoncesList.map((id, index) => {
+                  let typeLabel = "Signature Identifier";
+                  let badgeColor = "bg-zinc-850 text-zinc-400 border-zinc-750";
+                  if (id.startsWith("TRANS-")) {
+                    typeLabel = "Deterministic Transmission";
+                    badgeColor = "bg-purple-500/10 text-purple-400 border-purple-500/20";
+                  } else if (id.startsWith("NONCE-")) {
+                    typeLabel = "Cryptographic Nonce";
+                    badgeColor = "bg-blue-500/10 text-blue-400 border-blue-500/20";
+                  } else if (id.startsWith("IMPID-")) {
+                    typeLabel = "Ingestion Reference";
+                    badgeColor = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+                  }
+
+                  return (
+                    <div key={index} className="p-3 bg-m3-surface border border-m3-outline-variant/10 rounded-xl flex items-center justify-between gap-4 font-mono text-[10.5px]">
+                      <div className="truncate pr-2">
+                        <span className="text-zinc-500 mr-2 text-[9px] select-none">[{index + 1}]</span>
+                        <span className="text-zinc-200 font-extrabold">{id}</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold border uppercase tracking-wider ${badgeColor}`}>
+                          {typeLabel}
+                        </span>
+                        <span className="text-[9px] text-emerald-400 bg-emerald-500/5 border border-emerald-500/15 px-1.5 py-0.5 rounded font-bold uppercase select-none tracking-widest">
+                          INDEXED
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {usedNoncesList.length === 0 && (
+                  <div className="py-8 text-center text-zinc-500 text-xs font-semibold">
+                    No security signatures have been registered in this terminal session yet.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1520,6 +1923,16 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                         {liveValidation.isDuplicate 
                           ? 'Duplicate Entry: This daily batch has already been imported and processed.' 
                           : 'Duplicate Check Clear: Brand new report packet.'}
+                      </span>
+                    </div>
+
+                    {/* Check 6: Replay Status */}
+                    <div className="pt-2 border-t border-m3-outline-variant/10 text-[9.5px] flex items-center gap-1.5">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${liveValidation.isReplay ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'}`} />
+                      <span className="text-zinc-450 font-medium">
+                        {liveValidation.isReplay 
+                          ? 'Replay Protection Blocked: Repetitive cryptosequence or signature reuse detected!' 
+                          : 'Replay Shield Active: Nonce authenticity verified. Safe for import.'}
                       </span>
                     </div>
 

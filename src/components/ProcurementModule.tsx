@@ -58,6 +58,8 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
     customBills,
     setCustomBills,
     addAuditLog,
+    isRowClearingBlocked,
+    getRowClearingBlockedReason,
   } = useDb();
 
   // Active submodule tab selection
@@ -424,6 +426,10 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
   };
 
   const handleDeleteSupplier = (id: string, name: string) => {
+    if (isRowClearingBlocked()) {
+      alert(`[System Guard] Action Blocked: Cannot clear or remove supplier records because the register is currently holding: ${getRowClearingBlockedReason()}`);
+      return;
+    }
     if (
       confirm(
         `Are you absolutely sure you want to remove supplier "${name}"? Existing purchase orders and catalog records will be kept.`,
@@ -476,6 +482,10 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
   };
 
   const handleDeleteBrand = (id: string, name: string) => {
+    if (isRowClearingBlocked()) {
+      alert(`[System Guard] Action Blocked: Cannot clear or remove brand records because the register is currently holding: ${getRowClearingBlockedReason()}`);
+      return;
+    }
     if (
       confirm(`Are you sure you want to remove brand partnership "${name}"?`)
     ) {
@@ -2030,6 +2040,10 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                 <button
                   type="button"
                   onClick={() => {
+                    if (isRowClearingBlocked()) {
+                      alert(`[System Guard] Action Blocked: Cannot clear templates because the register is currently holding: ${getRowClearingBlockedReason()}`);
+                      return;
+                    }
                     if (
                       confirm(
                         "Are you sure you want to clear the templates database? This is permanent.",
@@ -2040,7 +2054,8 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                       showToast("All templates deleted.");
                     }
                   }}
-                  className="text-[9px] text-red-500 hover:underline font-bold font-mono tracking-wide uppercase"
+                  className="text-[9px] text-red-500 hover:underline font-bold font-mono tracking-wide uppercase disabled:opacity-40"
+                  disabled={isRowClearingBlocked()}
                 >
                   Clear Saved
                 </button>

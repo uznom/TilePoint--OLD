@@ -26,6 +26,7 @@ import {
   UserPlus,
   AlertCircle,
   Sliders,
+  Trash2,
 } from "lucide-react";
 import { useDb } from "../context/DbContext";
 
@@ -60,6 +61,8 @@ interface Expense {
   recordedBy: string;
   notes: string;
   branchId: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
 }
 
 interface ProductReturn {
@@ -71,6 +74,8 @@ interface ProductReturn {
   damageRestockFee: number;
   status: "Restocked" | "Defective/Damaged";
   dateTime: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
 }
 
 interface CustomCorporateBill {
@@ -80,6 +85,8 @@ interface CustomCorporateBill {
   frequency: "WEEKLY" | "MONTHLY" | "SEMI_QUARTERLY" | "QUARTERLY" | "YEARLY";
   nextDueDate: string;
   status: "ACTIVE" | "SETTLED";
+  isDeleted?: boolean;
+  deletedAt?: string;
 }
 
 export default function AtposExtraModules({
@@ -345,6 +352,34 @@ export default function AtposExtraModules({
     alert(
       "Monthly branch expense securely registered & deducted from general branch ledger!",
     );
+  };
+
+  const handleDeleteExpense = (id: string) => {
+    const updated = expenses.map((ex) =>
+      ex.id === id ? { ...ex, isDeleted: true, deletedAt: new Date().toISOString() } : ex
+    );
+    saveExpenses(updated);
+    db.addAuditLog(
+      "EXPENSE_DELETE",
+      `Soft-deleted expense ID ${id}`,
+      "Expenses",
+      id,
+    );
+    alert("Expense successfully soft-deleted (compliance preserved).");
+  };
+
+  const handleDeleteReturn = (id: string) => {
+    const updated = productReturns.map((r) =>
+      r.id === id ? { ...r, isDeleted: true, deletedAt: new Date().toISOString() } : r
+    );
+    saveReturns(updated);
+    db.addAuditLog(
+      "RETURN_DELETE",
+      `Soft-deleted product return ID ${id}`,
+      "Expenses",
+      id,
+    );
+    alert("Return transaction successfully soft-deleted (compliance preserved).");
   };
 
   // Add Product Return
@@ -998,18 +1033,20 @@ export default function AtposExtraModules({
                       <th className="p-3">Officer</th>
                       <th className="p-3">Branch ID</th>
                       <th className="p-3 text-right">Amount</th>
+                      <th className="p-3 text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {expenses
                       .filter(
                         (ex) =>
-                          ex.notes
+                          !ex.isDeleted &&
+                          (ex.notes
                             .toLowerCase()
                             .includes(expenseSearch.toLowerCase()) ||
                           ex.category
                             .toLowerCase()
-                            .includes(expenseSearch.toLowerCase()),
+                            .includes(expenseSearch.toLowerCase())),
                       )
                       .map((ex) => (
                         <tr
@@ -1035,6 +1072,15 @@ export default function AtposExtraModules({
                           </td>
                           <td className="p-3 text-right font-mono text-rose-500 font-bold">
                             -₱{ex.amount.toLocaleString()}
+                          </td>
+                          <td className="p-3 text-center">
+                            <button
+                              onClick={() => handleDeleteExpense(ex.id)}
+                              className="p-1 hover:bg-red-500/10 text-red-500 rounded transition border-0 cursor-pointer bg-transparent"
+                              title="Soft-delete Expense"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -1095,10 +1141,11 @@ export default function AtposExtraModules({
                       <th className="p-3">Category</th>
                       <th className="p-3">Detail</th>
                       <th className="p-3 text-right">Amount</th>
+                      <th className="p-3 text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {expenses.map((ex) => (
+                    {expenses.filter(ex => !ex.isDeleted).map((ex) => (
                       <tr
                         key={ex.id}
                         className="border-b border-m3-outline-variant/10"
@@ -1110,6 +1157,15 @@ export default function AtposExtraModules({
                         <td className="p-3 text-zinc-400">{ex.notes}</td>
                         <td className="p-3 text-right font-mono text-rose-500 font-bold">
                           -₱{ex.amount.toLocaleString()}
+                        </td>
+                        <td className="p-3 text-center">
+                          <button
+                            onClick={() => handleDeleteExpense(ex.id)}
+                            className="p-1 hover:bg-red-500/10 text-red-500 rounded transition border-0 cursor-pointer bg-transparent"
+                            title="Soft-delete Expense"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -1264,10 +1320,11 @@ export default function AtposExtraModules({
                       <th className="p-3">Inventory Status</th>
                       <th className="p-3 text-right">Fee Deduction</th>
                       <th className="p-3 text-right">Net Refunded</th>
+                      <th className="p-3 text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {productReturns.map((rt) => (
+                    {productReturns.filter(rt => !rt.isDeleted).map((rt) => (
                       <tr
                         key={rt.id}
                         className="border-b border-m3-outline-variant/10 hover:bg-m3-primary/5 transition-all"
@@ -1300,6 +1357,15 @@ export default function AtposExtraModules({
                         </td>
                         <td className="p-3 text-right font-mono text-emerald-500 font-extrabold">
                           ₱{rt.amountRefunded.toLocaleString()}
+                        </td>
+                        <td className="p-3 text-center">
+                          <button
+                            onClick={() => handleDeleteReturn(rt.id)}
+                            className="p-1 hover:bg-red-500/10 text-red-500 rounded transition border-0 cursor-pointer bg-transparent"
+                            title="Soft-delete Return"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -1523,6 +1589,7 @@ export default function AtposExtraModules({
              * and maps recurrences into the active June 2026 calendar viewport frame automatically.
              */
             customBills.forEach((bill) => {
+              if (bill.isDeleted) return;
               try {
                 const baseDate = new Date(bill.nextDueDate);
 
@@ -1612,7 +1679,11 @@ export default function AtposExtraModules({
               billId: string,
               billTitle: string,
             ) => {
-              const updated = customBills.filter((b) => b.id !== billId);
+              const updated = customBills.map((b) =>
+                b.id === billId
+                  ? { ...b, isDeleted: true, deletedAt: new Date().toISOString() }
+                  : b,
+              );
               saveCustomBills(updated);
               alert(
                 `Settle Recurring Liability: Corporate payout for "${billTitle}" was authorized and closed successfully.`,

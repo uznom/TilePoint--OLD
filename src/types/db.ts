@@ -146,6 +146,8 @@ export interface PurchaseOrder {
   branchId?: string;
   requestedBy?: string;
   date?: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
 }
 
 export interface PurchaseOrderItem {
@@ -159,6 +161,8 @@ export interface PurchaseOrderItem {
   totalCost?: number;
   costPrice?: number;
   quantityRequested?: number;
+  isDeleted?: boolean;
+  deletedAt?: string;
 }
 
 // Alias for backwards compatibility
@@ -215,6 +219,7 @@ export interface Sale {
   changeAmount: number;
   notes?: string;
   isDeleted: boolean; // true if invoice has been voided via supervisor PIN
+  deletedAt?: string;
   createdAt: string;
 }
 
@@ -227,6 +232,7 @@ export interface SaleItem {
   unitPrice: number;
   total: number;
   isDeleted?: boolean;
+  deletedAt?: string;
 }
 
 export interface StockMovement {
@@ -246,6 +252,8 @@ export interface StockMovement {
   notes?: string;
   createdBy: string;
   createdAt: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
 }
 
 export interface InventoryMovement {
@@ -260,6 +268,8 @@ export interface InventoryMovement {
   timestamp: string;
   userId: string;
   username: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
 }
 
 export interface Delivery {
@@ -306,6 +316,8 @@ export interface DamageLog {
   reportedAt?: string;
   productSku?: string;
   unitType?: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
 }
 
 export interface LedgerEntry {
@@ -318,6 +330,8 @@ export interface LedgerEntry {
   quantity: number;
   referenceNo: string;
   remarks: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
 }
 
 export interface AuditLog {
@@ -409,6 +423,8 @@ export interface StockTransferItem {
   productId: string;
   productName: string;
   quantity: number;
+  isDeleted?: boolean;
+  deletedAt?: string;
 }
 
 export interface StockTransfer {
@@ -424,4 +440,6 @@ export interface StockTransfer {
   updatedAt: string;
   items: StockTransferItem[];
   approvedBy?: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
 }

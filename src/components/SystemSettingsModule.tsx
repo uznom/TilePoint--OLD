@@ -26,13 +26,14 @@ import {
 } from 'lucide-react';
 import { useDb } from '../context/DbContext';
 import { UserRole } from '../types/db';
+import { HoldToConfirmButton } from './HoldToConfirmButton';
 
 interface SystemSettingsModuleProps {
   darkMode: boolean;
 }
 
 export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ darkMode }) => {
-  const { currentUser, updateCurrentUser, truncateDatabase } = useDb();
+  const { currentUser, updateCurrentUser, truncateDatabase, isRowClearingBlocked, getRowClearingBlockedReason } = useDb();
   const isAuthorized = currentUser && (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER);
 
   // Enterprise details states
@@ -661,24 +662,34 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ dark
                     Permanently clear transactions, wipe inventory counts, or restore standard enterprise seed profiles. 
                     <span className="text-rose-400 font-extrabold ml-1">Warning: These operations are destructive and cannot be undone.</span>
                   </p>
-                </div>
-
-                <div className="bg-rose-500/5 border border-rose-500/20 p-5 rounded-2xl space-y-4">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-black uppercase tracking-wider text-rose-400 font-mono">
-                      Reset Safety Guard
-                    </label>
-                    <p className="text-[10.5px] text-zinc-300">
-                      To unlock the reset triggers, type <span className="font-extrabold text-rose-400 select-all font-mono">RESET</span> below:
-                    </p>
-                    <input
-                      type="text"
-                      value={resetConfirmation}
-                      onChange={(e) => setResetConfirmation(e.target.value)}
-                      placeholder="Type RESET to authorize"
-                      className="bg-m3-surface border border-rose-500/30 rounded-xl text-xs font-mono font-bold p-2.5 w-full max-w-xs mt-1.5 text-rose-400 outline-none focus:border-rose-500 text-center tracking-widest uppercase"
-                    />
-                  </div>
+                          <div className="bg-rose-500/5 border border-rose-500/20 p-5 rounded-2xl space-y-4">
+                  {isRowClearingBlocked() ? (
+                    <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl text-left space-y-1.5 animate-pulse">
+                      <span className="text-[10px] font-black uppercase text-amber-500 font-mono tracking-wider block">⚠️ System Clearing Operations Locked</span>
+                      <p className="text-[10.5px] text-zinc-300 leading-relaxed font-sans">
+                        Row-clearing and database truncations are deactivated because the register is currently holding: <strong className="text-amber-400 font-extrabold">{getRowClearingBlockedReason()}</strong>.
+                      </p>
+                      <p className="text-[9.5px] text-zinc-400 font-mono">
+                        Please resolve/export these pending transactions to unlock.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-black uppercase tracking-wider text-rose-400 font-mono">
+                        Reset Safety Guard
+                      </label>
+                      <p className="text-[10.5px] text-zinc-300">
+                        To unlock the reset triggers, type <span className="font-extrabold text-rose-400 select-all font-mono">RESET</span> below:
+                      </p>
+                      <input
+                        type="text"
+                        value={resetConfirmation}
+                        onChange={(e) => setResetConfirmation(e.target.value)}
+                        placeholder="Type RESET to authorize"
+                        className="bg-m3-surface border border-rose-500/30 rounded-xl text-xs font-mono font-bold p-2.5 w-full max-w-xs mt-1.5 text-rose-400 outline-none focus:border-rose-500 text-center tracking-widest uppercase"
+                      />
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-rose-500/10">
                     {/* Restore Seeds */}
@@ -690,18 +701,17 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ dark
                           Restores standard demo products, suppliers, stock counts, and simulated transactions to showcase clean terminal operations.
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        disabled={resetConfirmation !== 'RESET'}
-                        onClick={() => {
+                      <HoldToConfirmButton
+                        disabled={resetConfirmation !== 'RESET' || isRowClearingBlocked()}
+                        onConfirm={() => {
                           truncateDatabase('seeds');
                           setResetConfirmation('');
                           alert('System database restored successfully to factory seed parameters!');
                         }}
-                        className="w-full py-2 bg-m3-primary/10 hover:bg-m3-primary text-m3-primary hover:text-m3-on-primary text-xs rounded-lg font-black uppercase tracking-wider transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        variant="primary"
                       >
-                        Restore Seeds
-                      </button>
+                        Hold to Restore Seeds
+                      </HoldToConfirmButton>
                     </div>
 
                     {/* Clear Transactions */}
@@ -713,18 +723,17 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ dark
                           Purges sales history, purchase orders, ledger journals, and sets all local branch product stock levels to zero. Catalog stays intact.
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        disabled={resetConfirmation !== 'RESET'}
-                        onClick={() => {
+                      <HoldToConfirmButton
+                        disabled={resetConfirmation !== 'RESET' || isRowClearingBlocked()}
+                        onConfirm={() => {
                           truncateDatabase('transactions');
                           setResetConfirmation('');
                           alert('All transactions cleared and product inventory levels reset to 0 successfully!');
                         }}
-                        className="w-full py-2 bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black text-xs rounded-lg font-black uppercase tracking-wider transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        variant="amber"
                       >
-                        Reset Stocks & Sales
-                      </button>
+                        Hold to Reset Stocks
+                      </HoldToConfirmButton>
                     </div>
 
                     {/* Complete Wipe */}
@@ -736,21 +745,20 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ dark
                           Completely purges all products, custom suppliers, local warehouse stocks, and checkout histories. Starts with an empty database.
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        disabled={resetConfirmation !== 'RESET'}
-                        onClick={() => {
+                      <HoldToConfirmButton
+                        disabled={resetConfirmation !== 'RESET' || isRowClearingBlocked()}
+                        onConfirm={() => {
                           truncateDatabase('all');
                           setResetConfirmation('');
                           alert('Full database truncation completed. All custom catalog items and transactions have been purged.');
                         }}
-                        className="w-full py-2 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white text-xs rounded-lg font-black uppercase tracking-wider transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        variant="rose"
                       >
-                        Truncate All
-                      </button>
+                        Hold to Truncate All
+                      </HoldToConfirmButton>
                     </div>
                   </div>
-                </div>
+                </div>        </div>
               </div>
             </div>
           </>

@@ -89,7 +89,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
   // Weekly Corporate Sales Trend parameters
   const [weeklyMetric, setWeeklyMetric] = useState<'revenue' | 'orders' | 'boxes'>('revenue');
   const [selectedWeeklyDay, setSelectedWeeklyDay] = useState<number | null>(null);
-  const [daysSimulatedSales, setDaysSimulatedSales] = useState<Record<string, number>>({});
 
   // 6-Month Enterprise Revenue Wave parameters
   const [waveStyle, setWaveStyle] = useState<'spline' | 'step' | 'linear'>('spline');
@@ -207,9 +206,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
   // Chart values calculation
   const getWeeklyChartData = () => {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const baseValues = sales.length > 0 ? [32000, 48000, 41000, 62000, 55000, 78000, 45000] : [0, 0, 0, 0, 0, 0, 0];
-    const baseOrders = sales.length > 0 ? [5, 8, 7, 12, 10, 15, 9] : [0, 0, 0, 0, 0, 0, 0];
-    const baseBoxes = sales.length > 0 ? [160, 240, 205, 310, 275, 390, 225] : [0, 0, 0, 0, 0, 0, 0];
     const today = new Date();
     const currentDayIdx = today.getDay(); // 0 is Sunday, 1 is Monday ... 6 is Saturday
     const adjustedCurrentDayIdx = currentDayIdx === 0 ? 6 : currentDayIdx - 1;
@@ -231,23 +227,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
         liveValue = saleItems.filter(si => saleIds.has(si.saleId) && !si.isDeleted).reduce((sum, si) => sum + si.quantity, 0);
       }
 
-      const branchMultiplier = activeBranchId 
-        ? (activeBranchId === 'B1' ? 0.9 : activeBranchId === 'B4' ? 0.65 : 0.45)
-        : 1.0;
-
-      let baseline = 0;
-      const simValue = daysSimulatedSales[day] || 0;
-      if (weeklyMetric === 'revenue') {
-        baseline = Math.round((baseValues[idx] + simValue) * branchMultiplier);
-      } else if (weeklyMetric === 'orders') {
-        baseline = Math.round((baseOrders[idx] + (simValue ? Math.ceil(simValue / 15000) : 0)) * branchMultiplier);
-      } else if (weeklyMetric === 'boxes') {
-        baseline = Math.round((baseBoxes[idx] + (simValue ? Math.ceil(simValue / 500) : 0)) * branchMultiplier);
-      }
-
       return {
         day,
-        amount: baseline + liveValue,
+        amount: liveValue,
         rawSales: daySales
       };
     });
@@ -445,44 +427,52 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
       targetBranchId: string;
     }> = [];
 
-    products.forEach((p) => {
-      if (p.id === 'P1') {
-        const b = branches.find(br => br.id === 'B3');
-        list.push({
-          productId: p.id,
-          productName: p.productName,
-          branchId: 'B3',
-          branchName: b?.name || 'Talisay Depot',
-          daysUnsold: 145,
-          riskLevel: 'HIGH',
-          suggestedAction: 'Redistribute to Main showroom',
-          targetBranchId: 'B1'
-        });
-      } else if (p.id === 'P2') {
-        const b = branches.find(br => br.id === 'B2');
-        list.push({
-          productId: p.id,
-          productName: p.productName,
-          branchId: 'B2',
-          branchName: b?.name || 'Bacolod Showroom',
-          daysUnsold: 110,
-          riskLevel: 'MEDIUM',
-          suggestedAction: 'Local Discounted Bundle Clearance',
-          targetBranchId: 'B1'
-        });
-      } else if (p.id === 'P4' || p.id === 'P3') {
-        const b = branches.find(br => br.id === 'B4');
-        list.push({
-          productId: p.id,
-          productName: p.productName,
-          branchId: 'B4',
-          branchName: b?.name || 'Silay Warehouse',
-          daysUnsold: 88,
-          riskLevel: 'LOW',
-          suggestedAction: 'Consolidate directly to Main hub',
-          targetBranchId: 'B1'
-        });
-      }
+    products.filter(p => !p.isDeleted).forEach((p) => {
+      branches.filter(b => !b.isDeleted).forEach((b) => {
+        const stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id)?.quantity || 0;
+        if (stock <= 0) return;
+
+        // Find sales for this product at this branch
+        const bSaleItems = saleItems.filter(si => si.productId === p.id && !si.isDeleted);
+        const bSaleIds = new Set(bSaleItems.map(si => si.saleId));
+        const bSales = sales.filter(s => bSaleIds.has(s.id) && s.branchId === b.id && !s.isDeleted);
+
+        let lastSaleDate = new Date(p.createdAt || '2026-01-01');
+        if (bSales.length > 0) {
+          const saleTimes = bSales.map(s => new Date(s.createdAt).getTime());
+          const latestTime = Math.max(...saleTimes);
+          if (!isNaN(latestTime)) {
+            lastSaleDate = new Date(latestTime);
+          }
+        }
+
+        const now = new Date();
+        const diffTime = now.getTime() - lastSaleDate.getTime();
+        const daysUnsold = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+
+        if (daysUnsold >= 30 && b.id !== 'B1') {
+          let riskLevel: 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
+          let suggestedAction = 'Consolidate directly to Main hub';
+          if (daysUnsold >= 120) {
+            riskLevel = 'HIGH';
+            suggestedAction = 'Redistribute to Main showroom';
+          } else if (daysUnsold >= 60) {
+            riskLevel = 'MEDIUM';
+            suggestedAction = 'Local Discounted Bundle Clearance';
+          }
+
+          list.push({
+            productId: p.id,
+            productName: p.productName,
+            branchId: b.id,
+            branchName: b.name,
+            daysUnsold,
+            riskLevel,
+            suggestedAction,
+            targetBranchId: 'B1'
+          });
+        }
+      });
     });
 
     return list;
@@ -524,314 +514,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
     }
   };
 
-  const handleCompleteSetup = () => {};
 
-  const renderSetupWizardModal = () => {
-    return null;
-    const showSetupWizard = false;
-    const setupStep = 1 as number;
-    const customCompanyName = '';
-    const customStoreLogo = '';
-    const customTaxRate = 12;
-    const customCurrency = '₱';
-    const customTargets: Record<string, number> = {};
-    const customStaff: Record<string, number> = {};
-    const setupAdminEmail = '';
-    const setupManagerPin = '';
-    const setSetupStep = (v: any) => {};
-    const setCustomCompanyName = (v: any) => {};
-    const setCustomStoreLogo = (v: any) => {};
-    const setCustomCurrency = (v: any) => {};
-    const setCustomTaxRate = (v: any) => {};
-    const setCustomTargets = (v: any) => {};
-    const setCustomStaff = (v: any) => {};
-    const setSetupAdminEmail = (v: any) => {};
-    const setSetupManagerPin = (v: any) => {};
-    const handleWizardLogoChange = (e: any) => {};
-
-    if (!showSetupWizard) return null;
-
-    return (
-      <div className="fixed inset-0 z-55 flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-md animate-fade-in [color-scheme:dark]">
-        <div className="bg-zinc-900 border border-m3-outline-variant/35 rounded-[32px] max-w-2xl w-full p-8 shadow-2xl overflow-hidden relative flex flex-col max-h-[90vh]">
-          
-          {/* Accent decoration */}
-          <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 h-44 w-44 bg-m3-primary/10 rounded-full blur-2xl pointer-events-none" />
-
-          {/* Stepper Header */}
-          <div className="flex items-center justify-between border-b border-m3-outline-variant/15 pb-5 shrink-0">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[9px] bg-m3-primary/15 text-m3-primary px-2.5 py-0.5 rounded-full font-mono font-bold uppercase tracking-widest border border-m3-primary/20">
-                  Initial Launch Walkthrough
-                </span>
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              </div>
-              <h2 className="text-xl font-black mt-1 text-m3-primary tracking-tight">Enterprise ERP Initialization</h2>
-            </div>
-            
-            <div className="flex items-center gap-1.5">
-              {[1, 2, 3, 4].map((step) => (
-                <div 
-                  key={step} 
-                  className={`h-2.5 rounded-full transition-all duration-300 ${
-                    setupStep === step 
-                      ? 'w-8 bg-m3-primary font-bold' 
-                      : setupStep > step 
-                      ? 'w-2.5 bg-emerald-500' 
-                      : 'w-2.5 bg-zinc-800'
-                  }`} 
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Step Contents */}
-          <div className="py-6 overflow-y-auto flex-1 h-full pr-1">
-            {setupStep === 1 && (
-              <div className="space-y-5 animate-slide-left">
-                <div className="p-4 rounded-2xl bg-m3-primary/5 border border-m3-primary/10 text-m3-on-surface-variant text-xs leading-relaxed flex gap-3">
-                  <Building className="h-5 w-5 text-m3-primary mt-0.5 shrink-0" />
-                  <p>
-                    Set up your overarching corporate identity profile. Changing the brand prefix updates all branch showroom listings, transmittal sheets, and receipt headers dynamically over the system cache.
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-black text-m3-primary uppercase font-mono pl-1">Enterprise Retail Name Prefix:</label>
-                    <input 
-                      type="text"
-                      value={customCompanyName}
-                      onChange={(e) => setCustomCompanyName(e.target.value)}
-                      placeholder="e.g. Diamond Tile Emporium"
-                      className="bg-zinc-800/80 border border-m3-outline-variant/35 rounded-2xl text-xs font-bold p-3 w-full text-white focus:border-m3-primary outline-none transition-colors"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5 bg-zinc-800/20 border border-m3-outline-variant/15 p-4 rounded-2xl">
-                    <label className="text-xs font-black text-m3-primary uppercase font-mono pl-1">Store Corporate Logo:</label>
-                    <div className="flex items-center gap-4">
-                      <div className="relative w-16 h-16 rounded-xl border border-dashed border-zinc-750 bg-zinc-950/20 flex items-center justify-center overflow-hidden shrink-0">
-                        {customStoreLogo ? (
-                          <img src={customStoreLogo} alt="Corporate logo" className="w-full h-full object-contain" />
-                        ) : (
-                          <Image className="h-6 w-6 text-zinc-650" />
-                        )}
-                      </div>
-                      <div className="flex-1 space-y-1.5 text-left">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleWizardLogoChange}
-                          className="hidden"
-                          id="wizard-logo-upload"
-                        />
-                        <label
-                          htmlFor="wizard-logo-upload"
-                          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-[10px] font-black uppercase tracking-wider text-white border border-zinc-700/60 rounded-xl cursor-pointer transition-colors"
-                        >
-                          <Upload className="h-3.5 w-3.5" /> Upload Brand Logo
-                        </label>
-                        <p className="text-[10px] text-zinc-500">Suggested: Square aspect ratio, PNG/JPG under 1.5MB.</p>
-                        {customStoreLogo && (
-                          <button
-                            type="button"
-                            onClick={() => setCustomStoreLogo('')}
-                            className="block text-[10px] text-red-500 hover:underline font-bold"
-                          >
-                            Remove Logo File
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-black text-m3-primary uppercase font-mono pl-1">Base Currency Symbol:</label>
-                      <select 
-                        value={customCurrency}
-                        onChange={(e) => setCustomCurrency(e.target.value)}
-                        className="bg-zinc-800 border border-m3-outline-variant/35 rounded-2xl text-xs font-bold p-3 text-white [color-scheme:dark]"
-                      >
-                        <option value="₱">₱ PHP Peso Sign</option>
-                        <option value="$">$ USD Dollar Symbol</option>
-                        <option value="€">€ EUR Euro Standard</option>
-                        <option value="¥">¥ JPY Yen Accent</option>
-                      </select>
-                    </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-black text-m3-primary uppercase font-mono pl-1">Standard VAT Tax Standard (%):</label>
-                      <input 
-                        type="number"
-                        value={customTaxRate}
-                        onChange={(e) => setCustomTaxRate(Math.max(0, Number(e.target.value)))}
-                        className="bg-zinc-800/80 border border-m3-outline-variant/35 rounded-2xl text-xs font-bold p-3 text-white outline-none focus:border-m3-primary"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {setupStep === 2 && (
-              <div className="space-y-5 animate-slide-left">
-                <div className="p-4 rounded-2xl bg-sky-500/5 border border-sky-500/10 text-m3-on-surface-variant text-xs leading-relaxed flex gap-3">
-                  <Users className="h-5 w-5 text-sky-400 mt-0.5 shrink-0" />
-                  <p>
-                    Customize branch operational boundaries. Establishing initial sales targets computes appropriate target achievement percentages dynamically in performance trackers.
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="text-xs font-black uppercase text-sky-400 pl-1">Active Storefront Allocations & Sales Quotas</h4>
-                  
-                  <div className="grid grid-cols-1 gap-3.5">
-                    {branches.filter(b => !b.isDeleted).map((b) => (
-                      <div key={b.id} className="p-3.5 rounded-2xl bg-zinc-800/50 border border-m3-outline-variant/20 flex flex-col gap-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs font-black text-white">{b.id}: {b.name.replace('Emman Tile Center', '').trim() || b.name}</span>
-                          <span className="text-[10px] font-mono text-zinc-400">Current Sales: ₱{b.monthlySales.toLocaleString()}</span>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="flex flex-col gap-1">
-                            <span className="text-[10px] font-bold text-zinc-400 pl-0.5">Target Monthly Sales Goal (PHP):</span>
-                            <input 
-                              type="number"
-                              value={customTargets[b.id] ?? b.monthlySales}
-                              onChange={(e) => setCustomTargets({ ...customTargets, [b.id]: Number(e.target.value) })}
-                              className="bg-zinc-900 border border-m3-outline-variant/30 rounded-xl text-xs font-bold p-2 text-white outline-none"
-                            />
-                          </div>
-
-                          <div className="flex flex-col gap-1">
-                            <span className="text-[10px] font-bold text-zinc-400 pl-0.5">Assigned Floor Staff Count:</span>
-                            <input 
-                              type="number"
-                              value={customStaff[b.id] ?? b.staffCount}
-                              onChange={(e) => setCustomStaff({ ...customStaff, [b.id]: Number(e.target.value) })}
-                              className="bg-zinc-900 border border-m3-outline-variant/30 rounded-xl text-xs font-bold p-2 text-white outline-none"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {setupStep === 3 && (
-              <div className="space-y-5 animate-slide-left">
-                <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-m3-on-surface-variant text-xs leading-relaxed flex gap-3">
-                  <Package className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
-                  <p>
-                    Establish your active trading catalog inventory profiles. The system seeds standard sizes like 60x60 cm glazed porcelain slabs. You may instantly certify starting parameters.
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="text-xs font-black uppercase text-amber-500 pl-1">Starting Inventory Catalogs Status Check</h4>
-                  
-                  <div className="p-5 rounded-2xl bg-amber-500/5 border border-amber-500/15 flex items-center justify-between">
-                    <div>
-                      <span className="text-sm font-black text-amber-500">Standard Tiles Dataset Cached</span>
-                      <p className="text-[10.5px] font-semibold text-zinc-400 leading-relaxed mt-1">
-                        Currently tracking {products.length} distinct high-performance product items across Metro Manila & Visayas depots!
-                      </p>
-                    </div>
-                    <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold font-mono text-[10.5px]">
-                      READY
-                    </span>
-                  </div>
-
-                  <div className="p-4 rounded-xl border border-m3-outline-variant/15 text-[11px] font-mono text-zinc-400 flex flex-col gap-1">
-                    <span>• System-Certified Standard: Polished Granite Slab, Glazed Slate Tile, Hexagon Ceramic</span>
-                    <span>• Base pricing indices: Box coverage, bulk pricing parameters, distribution margins check</span>
-                    <span>• Auto-calculations: Live margins and stock asset calculations are verified and matched!</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {setupStep === 4 && (
-              <div className="space-y-5 animate-slide-left">
-                <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/10 text-m3-on-surface-variant text-xs leading-relaxed flex gap-3">
-                  <ShieldCheck className="h-5 w-5 text-rose-500 mt-0.5 shrink-0" />
-                  <p>
-                    Lock executive passwords and authorization codes. The Manager Security PIN authorizes override events (such as price alterations or cashier shift voids).
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="text-xs font-black uppercase text-rose-400 pl-1">Executive Compliance Credentials</h4>
-                  
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-black text-m3-primary uppercase font-mono pl-1">Administrator Primary Email:</label>
-                    <input 
-                      type="email"
-                      value={setupAdminEmail}
-                      onChange={(e) => setSetupAdminEmail(e.target.value)}
-                      className="bg-zinc-800 border border-m3-outline-variant/35 rounded-2xl text-xs font-bold p-3 text-white outline-none cursor-text w-full"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-black text-m3-primary uppercase font-mono pl-1">Manager Security PIN (4 Digits Override Code):</label>
-                    <input 
-                      type="text"
-                      maxLength={4}
-                      value={setupManagerPin}
-                      onChange={(e) => setSetupManagerPin(e.target.value)}
-                      className="bg-zinc-800 border border-m3-outline-variant/35 rounded-2xl text-xs font-bold p-3 text-white outline-none tracking-widest font-mono text-center max-w-[150px]"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Stepper Footer Controls */}
-          <div className="border-t border-m3-outline-variant/15 pt-5 flex items-center justify-between shrink-0">
-            <button
-              onClick={() => {
-                if (setupStep === 1) {
-                  setShowSetupWizard(false);
-                  localStorage.setItem('tilepoint_setup_completed', 'true');
-                  showToastMsg('ℹ️ Walkthrough setup postponed. Settings can be completed anytime.', 'info');
-                } else {
-                  setSetupStep(setupStep - 1);
-                }
-              }}
-              className="px-5 py-2.5 rounded-xl border border-m3-outline-variant/30 text-xs text-zinc-400 hover:text-white font-bold transition-all cursor-pointer"
-            >
-              {setupStep === 1 ? "Postpone Setup" : "Back Step"}
-            </button>
-
-            {setupStep < 4 ? (
-              <button
-                onClick={() => setSetupStep(setupStep + 1)}
-                className="px-5 py-2.5 rounded-xl bg-m3-primary hover:bg-m3-primary/95 text-m3-on-primary text-xs font-black flex items-center gap-1 cursor-pointer transition-all active:scale-95 shadow-lg"
-              >
-                Next Step →
-              </button>
-            ) : (
-              <button
-                onClick={handleCompleteSetup}
-                className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 font-bold text-xs text-white flex items-center gap-1 cursor-pointer transition-all active:scale-95 shadow-xl"
-              >
-                Finalize Setup & System Lock ➔
-              </button>
-            )}
-          </div>
-
-        </div>
-      </div>
-    );
-  };
 
   /*****************************************************************************
    * 1. ADMIN COMMAND CENTER VIEWS
@@ -872,7 +555,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
     return (
       <div className="space-y-6 animate-fade-in text-m3-on-surface">
-        {renderSetupWizardModal()}
         
         {/* Dynamic Toast feedback panel */}
         {toast && (

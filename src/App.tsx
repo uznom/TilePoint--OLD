@@ -444,6 +444,19 @@ function AppContent() {
     }, 4000);
   };
 
+  useEffect(() => {
+    const handleStorageFailure = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const message = customEvent.detail?.message || "Local storage full. Transaction not saved to drive!";
+      showToast(message);
+    };
+
+    window.addEventListener("tp_storage_failure", handleStorageFailure);
+    return () => {
+      window.removeEventListener("tp_storage_failure", handleStorageFailure);
+    };
+  }, []);
+
   // Immersive POS terminal distraction-free mode state
   const [showImmersiveControls, setShowImmersiveControls] = useState(true);
 

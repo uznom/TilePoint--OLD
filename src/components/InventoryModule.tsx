@@ -7,6 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useDb } from '../context/DbContext';
 import { Product, UserRole, TransferType, TransferStatus } from '../types/db';
+import { HoldToConfirmButton } from './HoldToConfirmButton';
 import {
   Plus,
   Edit2,
@@ -131,6 +132,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     products,
     suppliers,
     branches,
+    sales,
+    saleItems,
     createProduct,
     updateProduct,
     deleteProduct,
@@ -148,7 +151,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     triggerSystemProcessing,
     createManualLedgerEntry,
     updateBranchPriceOverride,
-    updateBranchLowStockThreshold
+    updateBranchLowStockThreshold,
+    isRowClearingBlocked,
+    getRowClearingBlockedReason
   } = useDb();
 
   // Primary navigation sub-tabs: "catalog" | "movements" | "transfers" | "ledger" | "import" | "branch-prices"
@@ -247,6 +252,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   // Branch Specific pricing filter states
   const [branchPriceSearch, setBranchPriceSearch] = useState('');
   const [selectedPoolBranchId, setSelectedPoolBranchId] = useState<string>(currentUser?.branchAssignmentId || (branches[0]?.id || ''));
+  const [priceOverridesInput, setPriceOverridesInput] = useState<Record<string, string>>({});
 
   // Pagination State for lists inside Inventory
   const [prodPage, setProdPage] = useState(1);
@@ -401,8 +407,23 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
         }
         
         // Recommendation 2: Slow moving items at retail branch that can be pulled back to Main branch
-        const ages: Record<string, number> = { 'P1': 14, 'P2': 210, 'P3': 45, 'P4': 185 }; // simulated last sold age
-        const age = ages[p.id] || 35;
+        const bSaleItems = saleItems.filter(si => si.productId === p.id && !si.isDeleted);
+        const bSaleIds = new Set(bSaleItems.map(si => si.saleId));
+        const bSales = sales.filter(s => bSaleIds.has(s.id) && s.branchId === b.id && !s.isDeleted);
+
+        let lastSaleDate = new Date(p.createdAt || '2026-01-01');
+        if (bSales.length > 0) {
+          const saleTimes = bSales.map(s => new Date(s.createdAt).getTime());
+          const latestTime = Math.max(...saleTimes);
+          if (!isNaN(latestTime)) {
+            lastSaleDate = new Date(latestTime);
+          }
+        }
+
+        const now = new Date();
+        const diffTime = now.getTime() - lastSaleDate.getTime();
+        const age = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+
         if (age > 120 && bStock > 40) {
           recommendations.push({
             id: `REC-SLOW-${p.id}-${b.id}`,
@@ -419,7 +440,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     });
 
     return recommendations;
-  }, [products, branchStock, branches]);
+  }, [products, branchStock, branches, sales, saleItems]);
 
   const handleExecuteRecommendation = (rec: {
     id: string;
@@ -2930,8 +2951,23 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                         .filter(bs => bs.productId === p.id && branches.some(b => b.id === bs.branchId && !b.isDeleted))
                         .reduce((acc, curr) => acc + curr.quantity, 0);
 
-                      const ages: Record<string, number> = { 'P1': 14, 'P2': 210, 'P3': 45, 'P4': 185 };
-                      const ageDays = ages[p.id] || 35;
+                      // Calculate real idle days since last sale globally
+                      const pSaleItems = saleItems.filter(si => si.productId === p.id && !si.isDeleted);
+                      const pSaleIds = new Set(pSaleItems.map(si => si.saleId));
+                      const pSales = sales.filter(s => pSaleIds.has(s.id) && !s.isDeleted);
+
+                      let lastSaleDateGlobal = new Date(p.createdAt || '2026-01-01');
+                      if (pSales.length > 0) {
+                        const saleTimes = pSales.map(s => new Date(s.createdAt).getTime());
+                        const latestTime = Math.max(...saleTimes);
+                        if (!isNaN(latestTime)) {
+                          lastSaleDateGlobal = new Date(latestTime);
+                        }
+                      }
+
+                      const now = new Date();
+                      const diffTimeGlobal = now.getTime() - lastSaleDateGlobal.getTime();
+                      const ageDays = Math.max(0, Math.floor(diffTimeGlobal / (1000 * 60 * 60 * 24)));
                       
                       let agingLabel = 'Fast-Moving';
                       let agingBadge = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/15';
@@ -3284,10 +3320,13 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
                           <td className="py-3.5 px-4">
                             <div className="flex items-center justify-center gap-2">
                               <input
-                                id={`input-price-${stateKey}`}
                                 type="number"
                                 placeholder={p.sellingPrice.toString()}
-                                defaultValue={currentOverride > 0 ? currentOverride : ''}
+                                value={priceOverridesInput[stateKey] ?? (currentOverride > 0 ? currentOverride.toString() : '')}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setPriceOverridesInput(prev => ({ ...prev, [stateKey]: val }));
+                                }}
                                 className="w-24 bg-m3-surface-low border border-m3-outline-variant/30 hover:border-m3-primary focus:border-m3-primary text-center px-2 py-1 text-xs rounded-lg font-bold font-mono focus:outline-none focus:ring-1 focus:ring-m3-primary text-m3-on-surface"
                               />
                               <button
@@ -3296,9 +3335,8 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
                                     showToast("Error: No branch selected or assigned!");
                                     return;
                                   }
-                                  const inputEl = document.getElementById(`input-price-${stateKey}`) as HTMLInputElement;
-                                  if (!inputEl) return;
-                                  const priceVal = parseFloat(inputEl.value);
+                                  const rawVal = priceOverridesInput[stateKey] ?? (currentOverride > 0 ? currentOverride.toString() : '');
+                                  const priceVal = parseFloat(rawVal);
                                   if (isNaN(priceVal) || priceVal < 0) {
                                     showToast("Error: Please provide a valid positive price override value.");
                                     return;
@@ -3315,8 +3353,11 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
                                   onClick={() => {
                                     if (!activeBranchId) return;
                                     updateBranchPriceOverride(p.id, activeBranchId, 0);
-                                    const inputEl = document.getElementById(`input-price-${stateKey}`) as HTMLInputElement;
-                                    if (inputEl) inputEl.value = '';
+                                    setPriceOverridesInput(prev => {
+                                      const next = { ...prev };
+                                      delete next[stateKey];
+                                      return next;
+                                    });
                                     showToast(`Reset SRP suggestion for ${p.productName} back to basic catalog price.`);
                                   }}
                                   className="text-zinc-400 hover:text-rose-500 p-1 rounded-full hover:bg-rose-500/10 transition-colors"
@@ -4110,28 +4151,43 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
               <h3 className="text-base font-black text-m3-primary uppercase tracking-wide flex items-center gap-2">
                 <AlertTriangle className="text-rose-500 h-5 w-5" /> Archive Product safe-listing?
               </h3>
-              <p className="text-xs text-m3-on-surface-variant/85 leading-relaxed">
-                Confirm soft-deletion of <strong className="text-m3-on-surface font-black">{confirmDeleteName}</strong>? All warehouse catalog configurations and stats metrics will adjust.
-              </p>
+              {isRowClearingBlocked() ? (
+                <div className="bg-amber-500/15 border border-amber-500/30 p-3 rounded-xl text-left space-y-1 mt-2">
+                  <span className="text-[10px] font-black uppercase text-amber-500 font-mono tracking-wider block">⚠️ Archiving Blocked</span>
+                  <p className="text-[10.5px] text-zinc-300 leading-normal font-sans">
+                    Row-clearing and product archiving are disabled because the register has: <strong className="text-amber-400 font-black">{getRowClearingBlockedReason()}</strong>.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-m3-on-surface-variant/85 leading-relaxed">
+                  Confirm soft-deletion of <strong className="text-m3-on-surface font-black">{confirmDeleteName}</strong>? All warehouse catalog configurations and stats metrics will adjust.
+                </p>
+              )}
             </div>
-            <div className="flex justify-end gap-2 border-t border-m3-outline-variant/15 pt-4">
-              <button
-                type="button"
-                onClick={() => setConfirmDeleteId(null)}
-                className="px-4 py-2 text-xs font-black uppercase tracking-wider rounded-full hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  deleteProduct(confirmDeleteId!);
-                  setConfirmDeleteId(null);
-                  showToast('Listing archived and soft-deleted successfully.');
-                }}
-                className="px-5 py-2 text-xs font-black uppercase tracking-wider rounded-full bg-rose-600 text-white hover:bg-rose-700 shadow-md cursor-pointer transition-colors border"
-              >
-                Archive Product
-              </button>
+            <div className="flex flex-col gap-2 border-t border-m3-outline-variant/15 pt-4">
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteId(null)}
+                  className="px-4 py-2 text-xs font-black uppercase tracking-wider rounded-full hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
+                >
+                  Cancel
+                </button>
+                {!isRowClearingBlocked() && (
+                  <div className="w-48">
+                    <HoldToConfirmButton
+                      onConfirm={() => {
+                        deleteProduct(confirmDeleteId!);
+                        setConfirmDeleteId(null);
+                        showToast('Listing archived and soft-deleted successfully.');
+                      }}
+                      variant="rose"
+                    >
+                      Hold 3s to Archive
+                    </HoldToConfirmButton>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

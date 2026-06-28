@@ -40,8 +40,11 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
     branches,
     damageLogs,
     createDamageLog,
+    deleteDamageLog,
     currentUser,
-    addAuditLog
+    addAuditLog,
+    isRowClearingBlocked,
+    getRowClearingBlockedReason,
   } = useDb();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -111,6 +114,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
 
   // Filter existing logs
   const filteredLogs = damageLogs.filter(log => {
+    if (log.isDeleted) return false;
     const prod = products.find(p => p.id === log.productId);
     const prodName = prod ? prod.productName : log.productName;
     const prodSku = prod ? prod.sku : log.productSku;
@@ -128,27 +132,31 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
 
   // Calculate Aggregates
   const statsTotalShatteredBoxes = damageLogs
-    .filter(l => l.unitType === 'Box')
+    .filter(l => !l.isDeleted && l.unitType === 'Box')
     .reduce((sum, curr) => sum + curr.quantity, 0);
 
   const statsTotalShatteredPieces = damageLogs
-    .filter(l => l.unitType === 'Piece')
+    .filter(l => !l.isDeleted && l.unitType === 'Piece')
     .reduce((sum, curr) => sum + curr.quantity, 0);
 
   // Financial impact calculation (estimate)
-  const statsFinancialImpact = damageLogs.reduce((sum, curr) => {
-    const prod = products.find(p => p.id === curr.productId);
-    if (!prod) return sum;
-    // Calculate fractional cost if Pieces vs Box
-    const costPerUnit = curr.unitType === 'Box' ? prod.costPrice : (prod.costPrice / (prod.boxQuantity || 4));
-    return sum + (costPerUnit * curr.quantity);
-  }, 0);
+  const statsFinancialImpact = damageLogs
+    .filter(l => !l.isDeleted)
+    .reduce((sum, curr) => {
+      const prod = products.find(p => p.id === curr.productId);
+      if (!prod) return sum;
+      // Calculate fractional cost if Pieces vs Box
+      const costPerUnit = curr.unitType === 'Box' ? prod.costPrice : (prod.costPrice / (prod.boxQuantity || 4));
+      return sum + (costPerUnit * curr.quantity);
+    }, 0);
 
   // Count by Category
-  const categorySummaryCount = damageLogs.reduce((acc, curr) => {
-    acc[curr.category] = (acc[curr.category] || 0) + curr.quantity;
-    return acc;
-  }, {} as Record<DamageCategory, number>);
+  const categorySummaryCount = damageLogs
+    .filter(l => !l.isDeleted)
+    .reduce((acc, curr) => {
+      acc[curr.category] = (acc[curr.category] || 0) + curr.quantity;
+      return acc;
+    }, {} as Record<DamageCategory, number>);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-2" id="tilepoint-damage-logs-panel">
@@ -552,6 +560,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
                     <th className="py-2.5 px-4 text-[10px] font-black uppercase text-zinc-400 tracking-wider text-right">Quantity</th>
                     <th className="py-2.5 px-4 text-[10px] font-black uppercase text-zinc-400 tracking-wider">Breakage Reason</th>
                     <th className="py-2.5 px-4 text-[10px] font-black uppercase text-zinc-400 tracking-wider">Action / Treatment</th>
+                    <th className="py-2.5 px-4 text-[10px] font-black uppercase text-zinc-400 tracking-wider text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-m3-outline-variant/20">
@@ -597,13 +606,31 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
                           </span>
                           <span className="text-[9px] text-zinc-500 block truncate max-w-[160px] italic mt-1" title={log.notes}>"{log.notes}"</span>
                         </td>
+                        <td className="py-3 px-4 text-center">
+                          <button
+                            onClick={() => {
+                              if (isRowClearingBlocked()) {
+                                alert(`[System Guard] Action Blocked: Cannot delete damage log records because the register is currently holding: ${getRowClearingBlockedReason()}`);
+                                return;
+                              }
+                              if (confirm("Are you sure you want to soft-delete this damage log entry?")) {
+                                deleteDamageLog(log.id);
+                              }
+                            }}
+                            className="p-1 hover:bg-red-500/10 text-red-500 rounded transition border-0 cursor-pointer bg-transparent disabled:opacity-40"
+                            title={isRowClearingBlocked() ? `Deactivated: register is holding ${getRowClearingBlockedReason()}` : "Soft-delete damage log"}
+                            disabled={isRowClearingBlocked()}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
 
                   {filteredLogs.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="text-center py-12 text-zinc-400 italic bg-m3-surface-container-low">
+                      <td colSpan={8} className="text-center py-12 text-zinc-400 italic bg-m3-surface-container-low">
                         <Archive className="h-8 w-8 mx-auto stroke-[1.5] text-zinc-300 mb-2" />
                         No breakage incidents or BOA claims are found matching current filters.
                       </td>
