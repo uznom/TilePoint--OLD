@@ -4,6 +4,7 @@ import fs from 'fs';
 import http from 'http';
 import https from 'https';
 import { fileURLToPath } from 'url';
+import crypto from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -64,6 +65,74 @@ const writeDatabase = (data) => {
   }
 };
 
+// Global Promise lock to execute all read-modify-write database operations atomically
+let dbLockPromise = Promise.resolve();
+
+const runInTransaction = async (operationFn) => {
+  const nextLock = dbLockPromise.then(async () => {
+    try {
+      return await operationFn();
+    } catch (err) {
+      console.error('[Transaction Lock] Operation error:', err);
+      throw err;
+    }
+  });
+  dbLockPromise = nextLock.catch(() => {});
+  return nextLock;
+};
+
+const SECRET = "TILEPOINT_SECURE_PERIMETER_HMAC_SECRET_2026";
+
+function sha256Pure(str) {
+  return crypto.createHash('sha256').update(str).digest('hex');
+}
+
+function verifyAndExtractToken(req) {
+  const authHeader = req.headers['authorization'];
+  let token = req.headers['x-session-token'];
+
+  if (!token && authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7);
+  }
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 2) return null;
+
+    const [payloadBase64, signature] = parts;
+    const expectedSignature = sha256Pure(payloadBase64 + "." + SECRET);
+
+    if (signature !== expectedSignature) {
+      console.warn("[Security Alert] Cryptographic signature mismatch on session token.");
+      return null;
+    }
+
+    const payloadJson = Buffer.from(payloadBase64, 'base64').toString('utf8');
+    const payload = JSON.parse(payloadJson);
+
+    // Enforce expiry within 24 hours
+    if (Date.now() - payload.timestamp > 24 * 60 * 60 * 1000) {
+      console.warn("[Security Alert] Session token has expired.");
+      return null;
+    }
+
+    return payload; // { id, username, role, timestamp }
+  } catch (err) {
+    console.error("[Security error] Token extraction failed:", err);
+    return null;
+  }
+}
+
+const isDatabaseConfigured = () => {
+  const db = readDatabase();
+  return db['tp_is_configured'] === 'true' || db['tp_is_configured'] === true;
+};
+
+
 // API: Get entire shared database
 app.get('/api/db', (req, res) => {
   const db = readDatabase();
@@ -74,45 +143,305 @@ app.get('/api/db', (req, res) => {
   });
 });
 
-// API: Save single key-value state to shared database
-app.post('/api/db', (req, res) => {
+// API: Append-Only Transaction Log Delta Processor
+app.post('/api/db/delta', async (req, res) => {
+  const delta = req.body;
+  if (!delta || !delta.type || !delta.id) {
+    return res.status(400).json({ success: false, error: 'Invalid transaction delta payload' });
+  }
+
+  if (isDatabaseConfigured()) {
+    const user = verifyAndExtractToken(req);
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Valid session token or identity header required.' });
+    }
+
+    const payload = delta.payload || {};
+    const key = payload.key;
+
+    // Check specific table RBAC
+    if (key === 'tp_users') {
+      if (user.role !== 'Admin') {
+        return res.status(403).json({ success: false, error: 'Forbidden: Role-Management updates are strictly restricted to system administrators.' });
+      }
+    } else if (key === 'atpos_v2_expenses') {
+      if (user.role !== 'Admin' && user.role !== 'Manager') {
+        return res.status(403).json({ success: false, error: 'Forbidden: Expenses management is restricted to Administrators and Managers.' });
+      }
+    } else if (['tp_branches', 'tp_products', 'tp_suppliers', 'tp_brands', 'tp_purchase_orders', 'tp_po_items'].includes(key)) {
+      if (user.role !== 'Admin' && user.role !== 'Manager') {
+        return res.status(403).json({ success: false, error: 'Forbidden: Central resource configuration is restricted to Admin/Manager accounts.' });
+      }
+    } else if (key === 'tp_db_snapshots') {
+      if (user.role !== 'Admin') {
+        return res.status(403).json({ success: false, error: 'Forbidden: Database backups/restore is restricted to Admins.' });
+      }
+    }
+  }
+
+  try {
+    const result = await runInTransaction(async () => {
+      const db = readDatabase();
+      
+      // Initialize processed delta tracker
+      if (!db.tp_processed_delta_ids) {
+        db.tp_processed_delta_ids = [];
+      }
+      
+      // Idempotency guard: If delta was already executed, return success immediately
+      if (db.tp_processed_delta_ids.includes(delta.id)) {
+        console.log(`[Shared DB Server] Delta ${delta.id} already processed. Skipping...`);
+        return { success: true, alreadyProcessed: true };
+      }
+
+      console.log(`[Shared DB Server] Processing Delta [${delta.type}] ID: ${delta.id}`);
+
+      const getCollection = (colKey) => {
+        if (!db[colKey] || !Array.isArray(db[colKey])) {
+          db[colKey] = [];
+        }
+        return db[colKey];
+      };
+
+      const payload = delta.payload || {};
+      const key = payload.key;
+
+      switch (delta.type) {
+        case 'APPEND_SALE':
+        case 'APPEND_SALE_ITEM':
+        case 'APPEND_MOVEMENT':
+        case 'APPEND_AUDIT_LOG':
+        case 'APPEND_LEDGER_ENTRY':
+        case 'APPEND_EXPENSE':
+        case 'APPEND_ROW': {
+          const row = payload.row;
+          if (row && row.id && key) {
+            const list = getCollection(key);
+            const existingIdx = list.findIndex(item => item.id === row.id);
+            if (existingIdx === -1) {
+              list.unshift(row); // Prepend new records
+            } else {
+              list[existingIdx] = row; // Update in place if duplicate
+            }
+          }
+          break;
+        }
+
+        case 'UPDATE_ROW': {
+          const row = payload.row;
+          if (row && row.id && key) {
+            const list = getCollection(key);
+            const existingIdx = list.findIndex(item => item.id === row.id);
+            if (existingIdx !== -1) {
+              list[existingIdx] = row;
+            } else {
+              list.push(row);
+            }
+          }
+          break;
+        }
+
+        case 'INCREMENT_STOCK': {
+          const { id, productId, branchId, change } = payload;
+          const changeVal = Number(change) || 0;
+          
+          if (productId) {
+            const products = getCollection('tp_products');
+            const pIdx = products.findIndex(p => p.id === productId);
+            if (pIdx !== -1) {
+              products[pIdx].stockQuantity = (products[pIdx].stockQuantity || 0) + changeVal;
+              products[pIdx].updatedAt = new Date().toISOString();
+            }
+          }
+          
+          if (id && key === 'tp_branch_stock') {
+            const branchStock = getCollection('tp_branch_stock');
+            const bsIdx = branchStock.findIndex(bs => bs.id === id);
+            if (bsIdx !== -1) {
+              branchStock[bsIdx].quantity = (branchStock[bsIdx].quantity || 0) + changeVal;
+            } else if (branchId && productId) {
+              branchStock.push({
+                id,
+                branchId,
+                productId,
+                quantity: changeVal
+              });
+            }
+          }
+          break;
+        }
+
+        case 'DECREMENT_STOCK': {
+          const { id, productId, branchId, change } = payload;
+          const changeVal = Number(change) || 0;
+          
+          if (productId) {
+            const products = getCollection('tp_products');
+            const pIdx = products.findIndex(p => p.id === productId);
+            if (pIdx !== -1) {
+              products[pIdx].stockQuantity = Math.max(0, (products[pIdx].stockQuantity || 0) - changeVal);
+              products[pIdx].updatedAt = new Date().toISOString();
+            }
+          }
+          
+          if (id && key === 'tp_branch_stock') {
+            const branchStock = getCollection('tp_branch_stock');
+            const bsIdx = branchStock.findIndex(bs => bs.id === id);
+            if (bsIdx !== -1) {
+              branchStock[bsIdx].quantity = Math.max(0, (branchStock[bsIdx].quantity || 0) - changeVal);
+            } else if (branchId && productId) {
+              branchStock.push({
+                id,
+                branchId,
+                productId,
+                quantity: 0
+              });
+            }
+          }
+          break;
+        }
+
+        default:
+          console.warn(`[Shared DB Server] Unknown delta type: ${delta.type}`);
+          break;
+      }
+
+      // Record this delta ID to ensure idempotency
+      db.tp_processed_delta_ids.push(delta.id);
+      if (db.tp_processed_delta_ids.length > 5000) {
+        db.tp_processed_delta_ids.shift();
+      }
+
+      if (writeDatabase(db)) {
+        return { success: true };
+      } else {
+        throw new Error('Failed to commit database write');
+      }
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('[Shared DB Server] Delta processing error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// API: Save single key-value state to shared database (Legacy Fallback)
+app.post('/api/db', async (req, res) => {
   const { key, value } = req.body;
   if (!key) {
     return res.status(400).json({ success: false, error: 'Key is required' });
   }
 
-  const db = readDatabase();
-  db[key] = value;
-  
-  if (writeDatabase(db)) {
-    res.json({ success: true, key });
-  } else {
-    res.status(500).json({ success: false, error: 'Failed to write data' });
+  if (isDatabaseConfigured()) {
+    const user = verifyAndExtractToken(req);
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Valid session token or identity header required.' });
+    }
+
+    // Check specific table RBAC
+    if (key === 'tp_users') {
+      if (user.role !== 'Admin') {
+        return res.status(403).json({ success: false, error: 'Forbidden: Role-Management updates are strictly restricted to system administrators.' });
+      }
+    } else if (key === 'atpos_v2_expenses') {
+      if (user.role !== 'Admin' && user.role !== 'Manager') {
+        return res.status(403).json({ success: false, error: 'Forbidden: Expenses management is restricted to Administrators and Managers.' });
+      }
+    } else if (['tp_branches', 'tp_products', 'tp_suppliers', 'tp_brands', 'tp_purchase_orders', 'tp_po_items'].includes(key)) {
+      if (user.role !== 'Admin' && user.role !== 'Manager') {
+        return res.status(403).json({ success: false, error: 'Forbidden: Central resource configuration is restricted to Admin/Manager accounts.' });
+      }
+    } else if (key === 'tp_db_snapshots') {
+      if (user.role !== 'Admin') {
+        return res.status(403).json({ success: false, error: 'Forbidden: Database backups/restore is restricted to Admins.' });
+      }
+    }
+  }
+
+  try {
+    const result = await runInTransaction(async () => {
+      const db = readDatabase();
+      db[key] = value;
+      if (writeDatabase(db)) {
+        return { success: true, key };
+      } else {
+        throw new Error('Failed to write key to database');
+      }
+    });
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
 // API: Save multiple keys at once (bulk sync)
-app.post('/api/db/bulk', (req, res) => {
+app.post('/api/db/bulk', async (req, res) => {
   const { data } = req.body;
   if (!data || typeof data !== 'object') {
     return res.status(400).json({ success: false, error: 'Payload object data is required' });
   }
 
-  const db = readDatabase();
-  Object.keys(data).forEach((key) => {
-    db[key] = data[key];
-  });
+  if (isDatabaseConfigured()) {
+    const user = verifyAndExtractToken(req);
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Valid session token or identity header required.' });
+    }
 
-  if (writeDatabase(db)) {
-    res.json({ success: true, count: Object.keys(data).length });
-  } else {
-    res.status(500).json({ success: false, error: 'Failed to write bulk data' });
+    // Since bulk writes multiple keys, check each key being modified
+    const keys = Object.keys(data);
+    for (const key of keys) {
+      if (key === 'tp_users') {
+        if (user.role !== 'Admin') {
+          return res.status(403).json({ success: false, error: 'Forbidden: Role-Management updates via bulk sync are restricted to system administrators.' });
+        }
+      } else if (key === 'atpos_v2_expenses') {
+        if (user.role !== 'Admin' && user.role !== 'Manager') {
+          return res.status(403).json({ success: false, error: 'Forbidden: Expenses updates via bulk sync are restricted to Administrators and Managers.' });
+        }
+      } else if (['tp_branches', 'tp_products', 'tp_suppliers', 'tp_brands', 'tp_purchase_orders', 'tp_po_items'].includes(key)) {
+        if (user.role !== 'Admin' && user.role !== 'Manager') {
+          return res.status(403).json({ success: false, error: 'Forbidden: Resource updates via bulk sync are restricted to Admin/Manager accounts.' });
+        }
+      } else if (key === 'tp_db_snapshots') {
+        if (user.role !== 'Admin') {
+          return res.status(403).json({ success: false, error: 'Forbidden: Database backups/restore via bulk sync are restricted to Admins.' });
+        }
+      }
+    }
+  }
+
+  try {
+    const result = await runInTransaction(async () => {
+      const db = readDatabase();
+      Object.keys(data).forEach((key) => {
+        db[key] = data[key];
+      });
+      if (writeDatabase(db)) {
+        return { success: true, count: Object.keys(data).length };
+      } else {
+        throw new Error('Failed to write bulk data to database');
+      }
+    });
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
 // API: Reset / Purge shared database
 app.post('/api/db/truncate', (req, res) => {
   const { mode } = req.body; // 'seeds' | 'transactions' | 'all'
+
+  if (isDatabaseConfigured()) {
+    const user = verifyAndExtractToken(req);
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Valid session token or identity header required.' });
+    }
+    if (user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Forbidden: Resetting or truncating the database is strictly restricted to system administrators.' });
+    }
+  }
   
   if (!fs.existsSync(DB_FILE_PATH)) {
     return res.json({ success: true, message: 'Database was already clean' });

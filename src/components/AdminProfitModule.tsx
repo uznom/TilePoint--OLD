@@ -59,6 +59,9 @@ export function AdminProfitModule({
     shifts,
     branches,
     currentUser,
+    expenses,
+    setExpenses,
+    addAuditLog,
   } = useDb();
 
   // Localized tab inside the accounting console
@@ -89,17 +92,6 @@ export function AdminProfitModule({
   const [expenseNotes, setExpenseNotes] = useState<string>("");
   const [expenseBranch, setExpenseBranch] = useState<string>("B1");
 
-  // Expenses data from localStorage
-  const [expenses, setExpenses] = useState<Expense[]>(() => {
-    try {
-      const saved = localStorage.getItem("atpos_v2_expenses");
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error("Failed to parse expenses list", e);
-      return [];
-    }
-  });
-
   const handleAddExpense = (e: React.FormEvent) => {
     e.preventDefault();
     const amt = parseFloat(expenseAmount);
@@ -121,7 +113,14 @@ export function AdminProfitModule({
 
     const updated = [newExpense, ...expenses];
     setExpenses(updated);
-    localStorage.setItem("atpos_v2_expenses", JSON.stringify(updated));
+    
+    addAuditLog(
+      "EXPENSE_LOG",
+      `Spent ₱${amt.toLocaleString()} on ${expenseCategory}: ${expenseNotes}`,
+      "Expenses",
+      newExpense.id,
+      JSON.stringify(newExpense),
+    );
     
     // Reset fields
     setExpenseAmount("");
@@ -130,12 +129,19 @@ export function AdminProfitModule({
   };
 
   const handleDeleteExpense = (id: string) => {
+    const target = expenses.find(exp => exp.id === id);
     const updated = expenses.map(exp => {
-      if (exp.id === id) return { ...exp, isDeleted: true };
+      if (exp.id === id) return { ...exp, isDeleted: true, deletedAt: new Date().toISOString() };
       return exp;
     });
     setExpenses(updated);
-    localStorage.setItem("atpos_v2_expenses", JSON.stringify(updated));
+    addAuditLog(
+      "EXPENSE_DELETE",
+      `Soft-deleted expense ID ${id}`,
+      "Expenses",
+      id,
+      JSON.stringify({ expenseId: id, oldRecord: target, action: "soft_delete" }),
+    );
     showToastMsg("Expense log deleted successfully.", "info");
   };
 

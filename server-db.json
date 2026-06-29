@@ -38211,21 +38211,42 @@
   "tp_branch_sales_reports": [],
   "tp_deliveries": [],
   "tp_damage_logs": [],
-  "atpos_v2_custom_bills": [],
   "tp_is_configured": "true",
-  "tilepoint_onboarded_setup": "true",
+  "tilepoint_onboarded_setup": "false",
   "tilepoint_company_name_v1": "ETC_DIPOLOG MAIN",
-  "tp_active_sessions": [
-    {
-      "id": "SESS_K2JLT9RXE",
-      "userId": "U1",
-      "username": "erica_admin",
-      "fullName": "erica manaban",
-      "role": "Admin",
-      "branchId": "B1",
-      "branchName": "ETC_DIPOLOG MAIN",
-      "lastActive": "2026-06-29T14:47:24.756Z",
-      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
-    }
-  ]
+  "tp_bootstrap_init": {
+    "tp_is_configured": "true",
+    "tp_users": [
+      {
+        "id": "U1",
+        "avatarInitials": "EM",
+        "fullName": "erica manaban",
+        "username": "erica_admin",
+        "email": "erica@ajaja",
+        "role": "Admin",
+        "branchAssignmentId": "B1",
+        "status": "Active",
+        "managerPin": "4321",
+        "passwordHash": "$argon2-pbkdf2$i=2500$s=erica_admin_salt_tok$h=NDc0YTU1MzQ3YTM1OGRlZGJiZGM0OGRmNTMxYzJjZGEzMWFmYWYyOGUyYjliMTA0",
+        "createdAt": "2026-06-26T12:52:33.836Z",
+        "updatedAt": "2026-06-26T12:52:33.836Z"
+      }
+    ],
+    "tp_branches": [
+      {
+        "id": "B1",
+        "name": "ETC_DIPOLOG MAIN",
+        "manager": "erica manaban",
+        "address": "ddsdsd",
+        "phone": "sdsds",
+        "monthlySales": 0,
+        "staffCount": 1,
+        "activeCashiers": 1,
+        "createdAt": "2026-06-26T12:52:33.836Z",
+        "updatedAt": "2026-06-26T12:52:33.836Z",
+        "isDeleted": false,
+        "isDistributionBranch": true
+      }
+    ]
+  }
 }

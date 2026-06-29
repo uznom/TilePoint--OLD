@@ -298,3 +298,22 @@ export function detectSQLi(input: string): SQLiCheckResult {
 
   return { isSafe: true };
 }
+
+/**
+ * GENERATE CRYPTOGRAPHICALLY SECURE SESSION TOKEN FOR USER IDENTITY
+ * Signs the user profile and role with a shared secret to carry to server.
+ */
+export function generateSessionToken(user: { id: string; username: string; role: string }): string {
+  const payload = {
+    id: user.id,
+    username: user.username,
+    role: user.role,
+    timestamp: Date.now()
+  };
+  const payloadJson = JSON.stringify(payload);
+  const payloadBase64 = btoa(unescape(encodeURIComponent(payloadJson)));
+  const secret = "TILEPOINT_SECURE_PERIMETER_HMAC_SECRET_2026";
+  const signature = sha256Pure(payloadBase64 + "." + secret);
+  return `${payloadBase64}.${signature}`;
+}
+

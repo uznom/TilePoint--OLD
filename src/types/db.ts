@@ -356,6 +356,7 @@ export interface AuditLog {
   action?: string;
   tableAffected?: string;
   recordId?: string;
+  changePayload?: string; // JSON or text payload of details/state change
 }
 
 export interface CustomCorporateBill {
@@ -372,6 +373,8 @@ export interface CustomCorporateBill {
   notes?: string;
   createdAt?: string;
   updatedAt?: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
 }
 
 export interface DbSnapshot {
@@ -443,3 +446,42 @@ export interface StockTransfer {
   isDeleted?: boolean;
   deletedAt?: string;
 }
+
+export interface Member {
+  id: string;
+  fullName: string;
+  phone: string;
+  email: string;
+  points: number;
+  creditLimit: number;
+  outstandingBalance: number;
+  status: "Active" | "Suspended";
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Expense {
+  id: string;
+  dateTime: string;
+  category: string;
+  amount: number;
+  recordedBy: string;
+  notes: string;
+  branchId: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
+}
+
+export interface ProductReturn {
+  id: string;
+  saleId: string;
+  productName: string;
+  quantityReturned: number;
+  amountRefunded: number;
+  damageRestockFee: number;
+  status: "Restocked" | "Defective/Damaged";
+  dateTime: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
+}
+

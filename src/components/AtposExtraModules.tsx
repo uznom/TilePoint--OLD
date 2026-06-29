@@ -29,6 +29,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useDb } from "../context/DbContext";
+import { Member, Expense, ProductReturn, CustomCorporateBill } from "../types/db";
 
 interface AtposExtraModulesProps {
   activeSubTab: string;
@@ -42,53 +43,6 @@ const LOCAL_STORAGE_EXPENSES = "atpos_v2_expenses";
 const LOCAL_STORAGE_RETURNS = "atpos_v2_returns";
 const LOCAL_STORAGE_CUSTOM_BILLS = "atpos_v2_custom_bills";
 
-interface Member {
-  id: string;
-  fullName: string;
-  phone: string;
-  email: string;
-  points: number;
-  creditLimit: number;
-  outstandingBalance: number;
-  status: "Active" | "Suspended";
-}
-
-interface Expense {
-  id: string;
-  dateTime: string;
-  category: string;
-  amount: number;
-  recordedBy: string;
-  notes: string;
-  branchId: string;
-  isDeleted?: boolean;
-  deletedAt?: string;
-}
-
-interface ProductReturn {
-  id: string;
-  saleId: string;
-  productName: string;
-  quantityReturned: number;
-  amountRefunded: number;
-  damageRestockFee: number;
-  status: "Restocked" | "Defective/Damaged";
-  dateTime: string;
-  isDeleted?: boolean;
-  deletedAt?: string;
-}
-
-interface CustomCorporateBill {
-  id: string;
-  title: string;
-  totalAmount: number;
-  frequency: "WEEKLY" | "MONTHLY" | "SEMI_QUARTERLY" | "QUARTERLY" | "YEARLY";
-  nextDueDate: string;
-  status: "ACTIVE" | "SETTLED";
-  isDeleted?: boolean;
-  deletedAt?: string;
-}
-
 export default function AtposExtraModules({
   activeSubTab,
   darkMode,
@@ -96,11 +50,17 @@ export default function AtposExtraModules({
 }: AtposExtraModulesProps) {
   const db = useDb();
 
-  // States
-  const [members, setMembers] = useState<Member[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [productReturns, setProductReturns] = useState<ProductReturn[]>([]);
-  const [customBills, setCustomBills] = useState<CustomCorporateBill[]>([]);
+  // States from DbContext
+  const {
+    members,
+    setMembers,
+    expenses,
+    setExpenses,
+    productReturns,
+    setProductReturns,
+    customBills,
+    setCustomBills,
+  } = db;
 
   // Form states - Member
   const [newMemberName, setNewMemberName] = useState("");
@@ -142,81 +102,18 @@ export default function AtposExtraModules({
     null,
   );
 
-  // Initial Load
-  useEffect(() => {
-    let membersList: Member[] = [];
-    const cachedMembers = localStorage.getItem(LOCAL_STORAGE_MEMBERS);
-    if (cachedMembers) {
-      try {
-        membersList = JSON.parse(cachedMembers);
-      } catch (e) {
-        console.error("Error parsing members storage", e);
-      }
-    }
-    setMembers(membersList);
-    if (!cachedMembers) {
-      localStorage.setItem(LOCAL_STORAGE_MEMBERS, JSON.stringify(membersList));
-    }
-
-    let expensesList: Expense[] = [];
-    const cachedExpenses = localStorage.getItem(LOCAL_STORAGE_EXPENSES);
-    if (cachedExpenses) {
-      try {
-        expensesList = JSON.parse(cachedExpenses);
-      } catch (e) {
-        console.error("Error parsing expenses storage", e);
-      }
-    }
-    setExpenses(expensesList);
-    if (!cachedExpenses) {
-      localStorage.setItem(
-        LOCAL_STORAGE_EXPENSES,
-        JSON.stringify(expensesList),
-      );
-    }
-
-    let returnsList: ProductReturn[] = [];
-    const cachedReturns = localStorage.getItem(LOCAL_STORAGE_RETURNS);
-    if (cachedReturns) {
-      try {
-        returnsList = JSON.parse(cachedReturns);
-      } catch (e) {
-        console.error("Error parsing returns storage", e);
-      }
-    }
-    setProductReturns(returnsList);
-    if (!cachedReturns) {
-      localStorage.setItem(LOCAL_STORAGE_RETURNS, JSON.stringify(returnsList));
-    }
-
-    let billsList: CustomCorporateBill[] = [];
-    const cachedBills = localStorage.getItem(LOCAL_STORAGE_CUSTOM_BILLS);
-    if (cachedBills) {
-      try {
-        billsList = JSON.parse(cachedBills);
-      } catch (e) {
-        console.error("Error parsing custom bills storage", e);
-      }
-    }
-    setCustomBills(billsList);
-  }, []);
-
-  // Save utility triggers
+  // Save utility triggers bound to DbContext state setters
   const saveMembers = (list: Member[]) => {
     setMembers(list);
-    localStorage.setItem(LOCAL_STORAGE_MEMBERS, JSON.stringify(list));
   };
   const saveExpenses = (list: Expense[]) => {
     setExpenses(list);
-    localStorage.setItem(LOCAL_STORAGE_EXPENSES, JSON.stringify(list));
   };
   const saveReturns = (list: ProductReturn[]) => {
     setProductReturns(list);
-    localStorage.setItem(LOCAL_STORAGE_RETURNS, JSON.stringify(list));
   };
   const saveCustomBills = (list: CustomCorporateBill[]) => {
     setCustomBills(list);
-    localStorage.setItem(LOCAL_STORAGE_CUSTOM_BILLS, JSON.stringify(list));
   };
 
   // Add Member
@@ -251,6 +148,7 @@ export default function AtposExtraModules({
       `Registered member ${m.fullName} with credit ceiling of ₱${m.creditLimit.toLocaleString()}`,
       "Members",
       m.id,
+      JSON.stringify(m),
     );
 
     setNewMemberName("");
@@ -289,11 +187,13 @@ export default function AtposExtraModules({
     });
     saveMembers(updated);
 
+    const updatedMember = updated.find((m) => m.id === selectedMember.id);
     db.addAuditLog(
       "MEMBER_PAYMENT",
       `Processed payment of ₱${payNum.toLocaleString()} for member ${selectedMember.fullName}. New Outstanding: ₱${Math.max(0, selectedMember.outstandingBalance - payNum).toLocaleString()}`,
       "Members",
       selectedMember.id,
+      JSON.stringify({ paymentAmount: payNum, memberBefore: selectedMember, memberAfter: updatedMember }),
     );
 
     setPrintReceiptData({
@@ -343,6 +243,7 @@ export default function AtposExtraModules({
       `Spent ₱${amountNum.toLocaleString()} on ${finalCategory}: ${entry.notes}`,
       "Expenses",
       entry.id,
+      JSON.stringify(entry),
     );
 
     saveExpenses([entry, ...expenses]);
@@ -355,6 +256,7 @@ export default function AtposExtraModules({
   };
 
   const handleDeleteExpense = (id: string) => {
+    const target = expenses.find((ex) => ex.id === id);
     const updated = expenses.map((ex) =>
       ex.id === id ? { ...ex, isDeleted: true, deletedAt: new Date().toISOString() } : ex
     );
@@ -364,11 +266,13 @@ export default function AtposExtraModules({
       `Soft-deleted expense ID ${id}`,
       "Expenses",
       id,
+      JSON.stringify({ expenseId: id, oldRecord: target, action: "soft_delete" }),
     );
     alert("Expense successfully soft-deleted (compliance preserved).");
   };
 
   const handleDeleteReturn = (id: string) => {
+    const target = productReturns.find((r) => r.id === id);
     const updated = productReturns.map((r) =>
       r.id === id ? { ...r, isDeleted: true, deletedAt: new Date().toISOString() } : r
     );
@@ -378,6 +282,7 @@ export default function AtposExtraModules({
       `Soft-deleted product return ID ${id}`,
       "Expenses",
       id,
+      JSON.stringify({ returnId: id, oldRecord: target, action: "soft_delete" }),
     );
     alert("Return transaction successfully soft-deleted (compliance preserved).");
   };
@@ -436,6 +341,7 @@ export default function AtposExtraModules({
         `Logged product return of ${qtyReturnedNum}x "${foundProduct.productName}" (Refund: ₱${amountRefundedNum.toLocaleString()}). Restocked: ${retStatus === "Restocked"}`,
         "Products",
         foundProduct.id,
+        JSON.stringify(entry),
       );
     } else {
       db.addAuditLog(
@@ -443,6 +349,7 @@ export default function AtposExtraModules({
         `Logged system-wide return of ${qtyReturnedNum}x "${retProduct}" (Refund: ₱${amountRefundedNum.toLocaleString()}). Restocked: ${retStatus === "Restocked"}`,
         "Products",
         "N/A",
+        JSON.stringify(entry),
       );
     }
 
@@ -481,6 +388,7 @@ export default function AtposExtraModules({
       `Scheduled custom recurring bill "${newBill.title}" (₱${parsedAmt.toLocaleString()}) with interval frequency: ${billFrequency}`,
       "Settings",
       newBill.id,
+      JSON.stringify(newBill),
     );
 
     setBillTitle("");
@@ -1679,12 +1587,20 @@ export default function AtposExtraModules({
               billId: string,
               billTitle: string,
             ) => {
+              const target = customBills.find((b) => b.id === billId);
               const updated = customBills.map((b) =>
                 b.id === billId
                   ? { ...b, isDeleted: true, deletedAt: new Date().toISOString() }
                   : b,
               );
               saveCustomBills(updated);
+              db.addAuditLog(
+                "BILL_SETTLE",
+                `Settled recurring liability custom bill "${billTitle}"`,
+                "Settings",
+                billId,
+                JSON.stringify({ billId, billTitle, oldRecord: target, action: "settle_liability" })
+              );
               alert(
                 `Settle Recurring Liability: Corporate payout for "${billTitle}" was authorized and closed successfully.`,
               );

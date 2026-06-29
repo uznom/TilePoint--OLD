@@ -18,6 +18,7 @@ import {
   detectSQLi,
   encryptCredentialPacket,
   decryptCredentialPacket,
+  generateSessionToken,
 } from "../lib/crypto";
 import {
   User,
@@ -49,6 +50,9 @@ import {
   DamageLog,
   ActiveSession,
   CustomCorporateBill,
+  Member,
+  Expense,
+  ProductReturn,
 } from "../types/db";
 
 // Hard-locked database tables containing active transactions, shift summaries, and stock levels (absolutely exempt from auto-purging)
@@ -119,10 +123,14 @@ if (typeof window !== "undefined" && window.localStorage) {
           console.error("[System Guard] Failed to prune tp_db_snapshots:", e);
         }
 
-        // 2. Secondary self-heal: Only drop temporary logs (e.g., tp_audit_logs) and preserve business critical tables
+        // 2. Secondary self-heal: Drop temporary logs and older extended module items using LRU sorting
         if (!purgedSomething || key !== "tp_db_snapshots") {
           const largeKeysToPrune = [
             "tp_audit_logs",
+            "atpos_v2_expenses",
+            "atpos_v2_returns",
+            "atpos_v2_custom_bills",
+            "atpos_v2_members_list",
           ];
           for (const pruneKey of largeKeysToPrune) {
             if (HARD_LOCKED_KEYS.includes(pruneKey)) {
@@ -135,13 +143,19 @@ if (typeof window !== "undefined" && window.localStorage) {
                 const parsed = JSON.parse(cachedStr);
                 if (Array.isArray(parsed) && parsed.length > 25) {
                   console.log(
-                    `[System Guard] Self-healing: Trimming oldest entries from key "${pruneKey}" to free up space.`,
+                    `[System Guard] Self-healing: Trimming oldest entries from key "${pruneKey}" using LRU to free up space.`,
                   );
+                  const sorted = [...parsed];
+                  if (pruneKey === "tp_audit_logs") {
+                    sorted.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+                  } else if (pruneKey === "atpos_v2_expenses" || pruneKey === "atpos_v2_returns") {
+                    sorted.sort((a, b) => new Date(b.dateTime || 0).getTime() - new Date(a.dateTime || 0).getTime());
+                  }
                   originalSetItem.call(
                     window.localStorage,
                     pruneKey,
-                    JSON.stringify(parsed.slice(0, 25)),
-                    );
+                    JSON.stringify(sorted.slice(0, 25)),
+                  );
                   purgedSomething = true;
                 }
               }
@@ -315,6 +329,12 @@ interface DbContextType {
   ledgerEntries: LedgerEntry[];
   customBills: CustomCorporateBill[];
   setCustomBills: React.Dispatch<React.SetStateAction<CustomCorporateBill[]>>;
+  members: Member[];
+  setMembers: React.Dispatch<React.SetStateAction<Member[]>>;
+  expenses: Expense[];
+  setExpenses: React.Dispatch<React.SetStateAction<Expense[]>>;
+  productReturns: ProductReturn[];
+  setProductReturns: React.Dispatch<React.SetStateAction<ProductReturn[]>>;
 
   // Actions - Users
   createUser: (user: Omit<User, "id" | "createdAt" | "updatedAt">) => void;
@@ -453,6 +473,7 @@ interface DbContextType {
     description: string,
     tableAffected: string,
     recordId: string,
+    changePayload?: string,
   ) => void;
   logManualAdjustment: (
     productId: string,
@@ -1431,6 +1452,22 @@ export const getSecuritySecretKey = (): string => {
 export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const getAuthHeaders = (): Record<string, string> => {
+    const userStr = sessionStorage.getItem("tp_current_user") || localStorage.getItem("tp_current_user");
+    if (!userStr) return {};
+    try {
+      const user = JSON.parse(userStr);
+      if (!user || !user.id || !user.role) return {};
+      const token = generateSessionToken(user);
+      return {
+        "Authorization": `Bearer ${token}`,
+        "X-Session-Token": token,
+      };
+    } catch (e) {
+      return {};
+    }
+  };
+
   const [isHydrating, setIsHydrating] = useState<boolean>(true);
   const [isSystemHydrating, setIsSystemHydrating] = useState<boolean>(true);
 
@@ -2176,6 +2213,19 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     return safeParse<CustomCorporateBill[]>("atpos_v2_custom_bills", []);
   });
 
+  // SYSTEM INTEGRATION: Linked state provider variables for members, expenses, and product returns
+  const [members, setMembers] = useState<Member[]>(() => {
+    return safeParse<Member[]>("atpos_v2_members_list", []);
+  });
+
+  const [expenses, setExpenses] = useState<Expense[]>(() => {
+    return safeParse<Expense[]>("atpos_v2_expenses", []);
+  });
+
+  const [productReturns, setProductReturns] = useState<ProductReturn[]>(() => {
+    return safeParse<ProductReturn[]>("atpos_v2_returns", []);
+  });
+
   const [activeSessions, setActiveSessions] = useState<ActiveSession[]>(() => {
     return safeParse<ActiveSession[]>("tp_active_sessions", []);
   });
@@ -2514,6 +2564,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         tp_deliveries: deliveries,
         tp_damage_logs: damageLogs,
         atpos_v2_custom_bills: customBills,
+        atpos_v2_members_list: members,
+        atpos_v2_expenses: expenses,
+        atpos_v2_returns: productReturns,
         tp_is_configured: String(isConfigured),
         tilepoint_onboarded_setup:
           localStorage.getItem("tilepoint_onboarded_setup") || "false",
@@ -2524,7 +2577,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const res = await fetch("/api/db/bulk", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
         body: JSON.stringify({ data: payload }),
       });
       if (res.ok) {
@@ -2537,9 +2593,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const [offlineQueue, setOfflineQueue] = useState<
-    { key: string; value: any; id: string }[]
-  >(() => {
+  const [offlineQueue, setOfflineQueue] = useState<any[]>(() => {
     try {
       const q = localStorage.getItem("tp_offline_queue");
       return q ? JSON.parse(q) : [];
@@ -2548,10 +2602,15 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   });
 
-  const enqueueOfflineRequest = (key: string, value: any) => {
+  const enqueueOfflineRequest = (op: any) => {
     setOfflineQueue((prev) => {
-      const filtered = prev.filter((item) => item.key !== key);
-      const updated = [...filtered, { key, value, id: `${key}-${Date.now()}` }];
+      let filtered = prev;
+      if (op.isLegacy) {
+        filtered = prev.filter((item) => !item.isLegacy || item.key !== op.key);
+      } else if (op.id) {
+        filtered = prev.filter((item) => item.id !== op.id);
+      }
+      const updated = [...filtered, { ...op, queueId: `q-${Date.now()}-${Math.random()}` }];
       try {
         localStorage.setItem("tp_offline_queue", JSON.stringify(updated));
       } catch (_) {}
@@ -2562,7 +2621,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
   const isProcessingQueue = useRef(false);
   const processOfflineQueue = async () => {
     if (isProcessingQueue.current || !navigator.onLine) return;
-    let queue: { key: string; value: any; id: string }[] = [];
+    let queue: any[] = [];
     try {
       const q = localStorage.getItem("tp_offline_queue");
       queue = q ? JSON.parse(q) : [];
@@ -2578,24 +2637,36 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
     for (const item of queue) {
       try {
-        const res = await fetch("/api/db", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key: item.key, value: item.value }),
-        });
-        if (res.ok) {
-          // Remove from local storage queue
+        let res;
+        if (item.type) {
+          res = await fetch("/api/db/delta", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...getAuthHeaders(),
+            },
+            body: JSON.stringify(item),
+          });
+        } else {
+          res = await fetch("/api/db", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...getAuthHeaders(),
+            },
+            body: JSON.stringify({ key: item.key, value: item.value }),
+          });
+        }
+        if (res && res.ok) {
           setOfflineQueue((currentQueue) => {
-            const updated = currentQueue.filter((q) => q.id !== item.id);
+            const updated = currentQueue.filter((q) => q.queueId !== item.queueId);
             try {
               localStorage.setItem("tp_offline_queue", JSON.stringify(updated));
             } catch (_) {}
             return updated;
           });
-          // Small throttle delay to prevent flooding
           await new Promise((r) => setTimeout(r, 150));
         } else {
-          // If server failed, we halt sequential processing until next reconnection
           break;
         }
       } catch (err) {
@@ -2681,6 +2752,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
           if (db["tp_damage_logs"]) setDamageLogs(db["tp_damage_logs"]);
           if (db["atpos_v2_custom_bills"])
             setCustomBills(db["atpos_v2_custom_bills"]);
+          if (db["atpos_v2_members_list"])
+            setMembers(db["atpos_v2_members_list"]);
+          if (db["atpos_v2_expenses"])
+            setExpenses(db["atpos_v2_expenses"]);
+          if (db["atpos_v2_returns"])
+            setProductReturns(db["atpos_v2_returns"]);
           if (db["tp_active_sessions"]) {
             const parsedSessions =
               typeof db["tp_active_sessions"] === "string"
@@ -2841,6 +2918,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
           branchSalesReports,
           deliveries,
           atpos_v2_custom_bills: customBills,
+          atpos_v2_members_list: members,
+          atpos_v2_expenses: expenses,
+          atpos_v2_returns: productReturns,
         };
         const dataStr = JSON.stringify(payload);
         const name = `Automated Backup - ${backupIntervalHours}hr Interval`;
@@ -2963,18 +3043,63 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     cutoffDate.setDate(cutoffDate.getDate() - 30); // 30 days threshold
     const cutoffTime = cutoffDate.getTime();
 
-    // 1. Prune old audit logs older than 30 days (temporary logs)
+    // 1. Prune old audit logs with LRU (keep newest 50 max, sort descending)
     setAuditLogs((prev) => {
-      const filtered = prev.filter((log) => {
-        return new Date(log.timestamp).getTime() >= cutoffTime;
-      });
+      const sorted = [...prev].sort(
+        (a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()
+      );
+      const filtered = sorted.filter((log, idx) => {
+        return idx < 50 || new Date(log.timestamp).getTime() >= cutoffTime;
+      }).slice(0, 50);
       try {
         localStorage.setItem("tp_audit_logs", JSON.stringify(filtered));
       } catch (_) {}
       return filtered;
     });
 
-    // 2. Prune older background simulation db backups/snapshots (ephemeral interface analytics/backups)
+    // 2. Prune old expenses (extended module items) - limit to newest 50 (LRU)
+    setExpenses((prev) => {
+      const sorted = [...prev].sort(
+        (a, b) => new Date(b.dateTime || 0).getTime() - new Date(a.dateTime || 0).getTime()
+      );
+      const filtered = sorted.slice(0, 50);
+      try {
+        localStorage.setItem("atpos_v2_expenses", JSON.stringify(filtered));
+      } catch (_) {}
+      return filtered;
+    });
+
+    // 3. Prune old product returns (extended module items) - limit to newest 50 (LRU)
+    setProductReturns((prev) => {
+      const sorted = [...prev].sort(
+        (a, b) => new Date(b.dateTime || 0).getTime() - new Date(a.dateTime || 0).getTime()
+      );
+      const filtered = sorted.slice(0, 50);
+      try {
+        localStorage.setItem("atpos_v2_returns", JSON.stringify(filtered));
+      } catch (_) {}
+      return filtered;
+    });
+
+    // 4. Prune old custom bills - limit to newest 30 (LRU)
+    setCustomBills((prev) => {
+      const filtered = prev.slice(0, 30);
+      try {
+        localStorage.setItem("atpos_v2_custom_bills", JSON.stringify(filtered));
+      } catch (_) {}
+      return filtered;
+    });
+
+    // 5. Prune old members list - limit to 100 items (LRU)
+    setMembers((prev) => {
+      const filtered = prev.slice(0, 100);
+      try {
+        localStorage.setItem("atpos_v2_members_list", JSON.stringify(filtered));
+      } catch (_) {}
+      return filtered;
+    });
+
+    // 6. Prune older background simulation db backups/snapshots (ephemeral interface analytics/backups)
     try {
       const cachedSnapshotsStr = localStorage.getItem("tp_db_snapshots");
       if (cachedSnapshotsStr) {
@@ -2983,14 +3108,14 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
           const filteredSnapshots = snapshots.filter((snap: any) => {
             const snapTime = snap.timestamp ? new Date(snap.timestamp).getTime() : 0;
             return snapTime >= cutoffTime;
-          });
+          }).slice(0, 2); // Keep only up to 2 snapshots to free up significant space
           localStorage.setItem("tp_db_snapshots", JSON.stringify(filteredSnapshots));
         }
       }
     } catch (_) {}
 
     console.log(
-      "[Quota Guardian] Automated database pruning completed successfully: Old ephemeral interface analytics and temporary logs older than 30 days have been cleared to preserve storage runway. Active transactions, shift summaries, and stock levels remain strictly hard-locked.",
+      "[Quota Guardian] Automated database pruning completed successfully: Old ephemeral interface analytics, temporary logs, and older extended module items (expenses, returns, custom bills, members) have been cleared using LRU caching to preserve storage runway. Active transactions, shift summaries, and stock levels remain strictly hard-locked.",
     );
   };
 
@@ -3031,6 +3156,111 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       });
   };
 
+  const computeDeltas = (key: string, oldVal: any, newVal: any): any[] => {
+    const deltas: any[] = [];
+    if (!Array.isArray(oldVal) || !Array.isArray(newVal)) {
+      return [];
+    }
+
+    const oldMap = new Map<string, any>();
+    oldVal.forEach((item) => {
+      if (item && item.id) {
+        oldMap.set(item.id, item);
+      }
+    });
+
+    const newMap = new Map<string, any>();
+    newVal.forEach((item) => {
+      if (item && item.id) {
+        newMap.set(item.id, item);
+      }
+    });
+
+    newVal.forEach((item) => {
+      if (!item || !item.id) return;
+      const oldItem = oldMap.get(item.id);
+
+      if (!oldItem) {
+        let type = 'APPEND_ROW';
+        if (key === 'tp_sales') type = 'APPEND_SALE';
+        else if (key === 'tp_sale_items') type = 'APPEND_SALE_ITEM';
+        else if (key === 'tp_movements') type = 'APPEND_MOVEMENT';
+        else if (key === 'tp_audit_logs') type = 'APPEND_AUDIT_LOG';
+        else if (key === 'tp_ledger_entries') type = 'APPEND_LEDGER_ENTRY';
+        else if (key === 'atpos_v2_expenses') type = 'APPEND_EXPENSE';
+
+        deltas.push({
+          id: `delta-add-${key}-${item.id}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          timestamp: new Date().toISOString(),
+          type,
+          payload: { key, row: item }
+        });
+      } else {
+        const isProduct = key === 'tp_products';
+        const isBranchStock = key === 'tp_branch_stock';
+
+        if (isProduct || isBranchStock) {
+          const oldQty = isProduct ? (oldItem.stockQuantity || 0) : (oldItem.quantity || 0);
+          const newQty = isProduct ? (item.stockQuantity || 0) : (item.quantity || 0);
+
+          if (oldQty !== newQty) {
+            if (newQty > oldQty) {
+              deltas.push({
+                id: `delta-inc-${key}-${item.id}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                timestamp: new Date().toISOString(),
+                type: 'INCREMENT_STOCK',
+                payload: {
+                  key,
+                  id: item.id,
+                  productId: item.productId || item.id,
+                  branchId: item.branchId || null,
+                  change: newQty - oldQty
+                }
+              });
+            } else {
+              deltas.push({
+                id: `delta-dec-${key}-${item.id}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                timestamp: new Date().toISOString(),
+                type: 'DECREMENT_STOCK',
+                payload: {
+                  key,
+                  id: item.id,
+                  productId: item.productId || item.id,
+                  branchId: item.branchId || null,
+                  change: oldQty - newQty
+                }
+              });
+            }
+          }
+
+          const oldStr = JSON.stringify({ ...oldItem, stockQuantity: 0, quantity: 0 });
+          const newStr = JSON.stringify({ ...item, stockQuantity: 0, quantity: 0 });
+          if (oldStr !== newStr) {
+            deltas.push({
+              id: `delta-upd-${key}-${item.id}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              timestamp: new Date().toISOString(),
+              type: 'UPDATE_ROW',
+              payload: { key, row: item }
+            });
+          }
+        } else {
+          const oldStr = JSON.stringify(oldItem);
+          const newStr = JSON.stringify(item);
+          if (oldStr !== newStr) {
+            deltas.push({
+              id: `delta-upd-${key}-${item.id}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              timestamp: new Date().toISOString(),
+              type: 'UPDATE_ROW',
+              payload: { key, row: item }
+            });
+          }
+        }
+      }
+    });
+
+    return deltas;
+  };
+
   const saveToStorageWithDebounce = (
     key: string,
     value: any,
@@ -3049,6 +3279,27 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
+    const transactionalKeys = [
+      "tp_products",
+      "tp_branch_stock",
+      "tp_sales",
+      "tp_sale_items",
+      "tp_movements",
+      "tp_audit_logs",
+      "tp_ledger_entries",
+      "atpos_v2_expenses"
+    ];
+
+    let deltas: any[] = [];
+    if (transactionalKeys.includes(key)) {
+      try {
+        const oldVal = currentCached ? JSON.parse(currentCached) : [];
+        deltas = computeDeltas(key, oldVal, value);
+      } catch (err) {
+        console.error("[Delta Sync] Failed to compute deltas:", err);
+      }
+    }
+
     const writeToServer = async () => {
       if (
         key === "tp_current_user" ||
@@ -3062,24 +3313,53 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         if (!navigator.onLine) {
           throw new Error("Navigator reports offline state");
         }
-        const res = await fetch("/api/db", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key, value }),
-        });
-        if (!res.ok) {
-          throw new Error("Server returned unsuccessful status " + res.status);
+
+        if (transactionalKeys.includes(key) && deltas.length > 0) {
+          console.log(`[Delta Sync] Sending ${deltas.length} transactional deltas sequentially for key "${key}"...`);
+          for (const delta of deltas) {
+            const res = await fetch("/api/db/delta", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                ...getAuthHeaders(),
+              },
+              body: JSON.stringify(delta),
+            });
+            if (!res.ok) {
+              throw new Error(`Server returned status ${res.status} for delta ${delta.id}`);
+            }
+          }
+          setServerConnected(true);
+          processOfflineQueue();
+        } else if (!transactionalKeys.includes(key)) {
+          const res = await fetch("/api/db", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...getAuthHeaders(),
+            },
+            body: JSON.stringify({ key, value }),
+          });
+          if (!res.ok) {
+            throw new Error("Server returned unsuccessful status " + res.status);
+          }
+          setServerConnected(true);
+          processOfflineQueue();
         }
-        setServerConnected(true);
-        // Process offline queue immediately upon successful write
-        processOfflineQueue();
       } catch (e) {
         console.warn(
           `[Shared DB Client] Write failed for "${key}". Enqueuing payload for offline recovery:`,
           e,
         );
         setServerConnected(false);
-        enqueueOfflineRequest(key, value);
+
+        if (transactionalKeys.includes(key) && deltas.length > 0) {
+          deltas.forEach((delta) => {
+            enqueueOfflineRequest(delta);
+          });
+        } else {
+          enqueueOfflineRequest({ key, value, isLegacy: true });
+        }
       }
     };
 
@@ -3208,6 +3488,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       branchSalesReports,
       deliveries,
       atpos_v2_custom_bills: customBills,
+      atpos_v2_members_list: members,
+      atpos_v2_expenses: expenses,
+      atpos_v2_returns: productReturns,
     };
     const dataStr = JSON.stringify(payload);
     const id = `SNAP-${Date.now()}`;
@@ -3268,6 +3551,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       branchSalesReports,
       deliveries,
       atpos_v2_custom_bills: customBills,
+      atpos_v2_members_list: members,
+      atpos_v2_expenses: expenses,
+      atpos_v2_returns: productReturns,
     };
     const dataStr = JSON.stringify(payload);
     const id = `SNAP-${Date.now()}`;
@@ -3328,6 +3614,18 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       if (payload.deliveries) setDeliveries(payload.deliveries);
       if (payload.atpos_v2_custom_bills)
         setCustomBills(payload.atpos_v2_custom_bills);
+      if (payload.atpos_v2_members_list)
+        setMembers(payload.atpos_v2_members_list);
+      else if (payload.members)
+        setMembers(payload.members);
+      if (payload.atpos_v2_expenses)
+        setExpenses(payload.atpos_v2_expenses);
+      else if (payload.expenses)
+        setExpenses(payload.expenses);
+      if (payload.atpos_v2_returns)
+        setProductReturns(payload.atpos_v2_returns);
+      else if (payload.productReturns)
+        setProductReturns(payload.productReturns);
       if (payload.damageLogs) {
         setDamageLogs(payload.damageLogs);
       } else if (payload.tp_damage_logs) {
@@ -3360,6 +3658,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         tp_deliveries: payload.deliveries,
         tp_damage_logs: payload.damageLogs || payload.tp_damage_logs || [],
         atpos_v2_custom_bills: payload.atpos_v2_custom_bills || [],
+        atpos_v2_members_list: payload.atpos_v2_members_list || payload.members || [],
+        atpos_v2_expenses: payload.atpos_v2_expenses || payload.expenses || [],
+        atpos_v2_returns: payload.atpos_v2_returns || payload.productReturns || [],
         tp_is_configured: String(payload.isConfigured),
       };
 
@@ -3508,12 +3809,28 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     saveToStorageWithDebounce("atpos_v2_custom_bills", customBills);
   }, [customBills]);
 
+  // WRITER LINK FOR MEMBERS LIST
+  useEffect(() => {
+    saveToStorageWithDebounce("atpos_v2_members_list", members);
+  }, [members]);
+
+  // WRITER LINK FOR EXPENSES
+  useEffect(() => {
+    saveToStorageWithDebounce("atpos_v2_expenses", expenses);
+  }, [expenses]);
+
+  // WRITER LINK FOR PRODUCT RETURNS
+  useEffect(() => {
+    saveToStorageWithDebounce("atpos_v2_returns", productReturns);
+  }, [productReturns]);
+
   // General Audit Log function
   const addAuditLog = (
     action: string,
     description: string,
     tableAffected: string,
     recordId: string,
+    changePayload?: string,
   ) => {
     const newLog: AuditLog = {
       id: `AL-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -3524,6 +3841,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       description,
       tableAffected,
       recordId,
+      changePayload,
     };
     setAuditLogs((prev) => [newLog, ...prev]);
   };
@@ -3757,7 +4075,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
     fetch("/api/db/bulk", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
       body: JSON.stringify({ data: syncData }),
     })
       .then((res) => {
@@ -3801,7 +4122,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       const res = await fetch("/api/db/bulk", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
         body: JSON.stringify({ data: syncData }),
       });
       if (res.ok) {
@@ -4792,7 +5116,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       await fetch("/api/db/truncate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
         body: JSON.stringify({ mode }),
       });
     } catch (e) {
@@ -7294,6 +7621,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         ledgerEntries,
         customBills,
         setCustomBills,
+        members,
+        setMembers,
+        expenses,
+        setExpenses,
+        productReturns,
+        setProductReturns,
         createUser,
         updateUser,
         resetPassword,
