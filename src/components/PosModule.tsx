@@ -3582,7 +3582,33 @@ export const PosModule: React.FC<PosModuleProps> = ({
               </div>
 
               <div className="flex-1 overflow-y-auto pr-1">
-                <CalculatorModule darkMode={darkMode} />
+                <CalculatorModule
+                  darkMode={darkMode}
+                  onApply={(product, quantity) => {
+                    if (product.stockQuantity === 0) {
+                      showToast("Depleted Stock: Selected product is currently out of stock.");
+                      return;
+                    }
+                    setCart((prev) => {
+                      const idx = prev.findIndex((item) => item.product.id === product.id);
+                      if (idx !== -1) {
+                        const currentQty = prev[idx].quantity;
+                        if (currentQty + quantity > product.stockQuantity) {
+                          showToast(`Stock Limit: Only ${product.stockQuantity} available. Added remaining stock.`);
+                          const updated = [...prev];
+                          updated[idx] = { ...updated[idx], quantity: product.stockQuantity };
+                          return updated;
+                        }
+                        const updated = [...prev];
+                        updated[idx] = { ...updated[idx], quantity: currentQty + quantity };
+                        return updated;
+                      }
+                      return [...prev, { product, quantity }];
+                    });
+                    showToast(`Added ${quantity} ${product.unit} of ${product.productName} to active invoice.`);
+                    setShowTileCalculatorModal(false);
+                  }}
+                />
               </div>
 
               <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-4 mt-4 shrink-0">

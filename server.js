@@ -164,13 +164,25 @@ app.post('/api/db/truncate', (req, res) => {
   }
 });
 
-// Serve static files from the Vite production build directory
-app.use(express.static(path.join(__dirname, 'dist')));
-
-// SPA route fallback (redirects all other requests to index.html)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
+// Vite middleware setup or production static files
+if (process.env.NODE_ENV !== 'production') {
+  console.log('[Shared DB Server] Running in DEVELOPMENT mode with Vite middleware...');
+  const { createServer: createViteServer } = await import('vite');
+  const vite = await createViteServer({
+    server: { middlewareMode: true },
+    appType: 'spa'
+  });
+  app.use(vite.middlewares);
+} else {
+  console.log('[Shared DB Server] Running in PRODUCTION mode serving static files...');
+  // Serve static files from the Vite production build directory
+  app.use(express.static(path.join(__dirname, 'dist')));
+  
+  // SPA route fallback (redirects all other requests to index.html)
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  });
+}
 
 let server;
 if (useSsl) {

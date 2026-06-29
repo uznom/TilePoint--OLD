@@ -18,6 +18,7 @@ import {
 
 // Modular components imports
 import { Dashboard } from "./components/Dashboard";
+import { AdminProfitModule } from "./components/AdminProfitModule";
 import { PosModule } from "./components/PosModule";
 import { InventoryModule } from "./components/InventoryModule";
 import { ProcurementModule } from "./components/ProcurementModule";
@@ -157,6 +158,10 @@ function AppContent() {
   });
 
   const [previousTab, setPreviousTab] = useState("dashboard");
+  const [selectedBranchId, setSelectedBranchId] = useState<string>("all");
+  const showToastMsg = (msg: string, type: "success" | "info" | "error") => {
+    showToast(msg);
+  };
 
   useEffect(() => {
     if (activeTab) {
@@ -815,6 +820,12 @@ function AppContent() {
       roles: [UserRole.ADMIN, UserRole.MANAGER],
     },
     {
+      id: "profit-analytics",
+      name: "P&L Accounting Desk",
+      icon: DollarSign,
+      roles: [UserRole.ADMIN],
+    },
+    {
       id: "pos",
       name: "POS Checkout Mode",
       icon: ShoppingCart,
@@ -1073,7 +1084,10 @@ function AppContent() {
       id: "admin-bi",
       name: "Business Intelligence",
       icon: LayoutDashboard,
-      subItems: [{ id: "dashboard", name: "Branch Dashboard" }],
+      subItems: [
+        { id: "dashboard", name: "Branch Dashboard" },
+        { id: "profit-analytics", name: "P&L Accounting Desk" },
+      ],
     },
     {
       id: "admin-org",
@@ -1778,6 +1792,15 @@ function AppContent() {
                     {activeTab === "tutorials" && <TutorialOnboarding />}
                     {activeTab === "dashboard" && (
                       <Dashboard darkMode={darkMode} onNavigate={changeTab} />
+                    )}
+                    {activeTab === "profit-analytics" && (
+                      <AdminProfitModule
+                        darkMode={darkMode}
+                        selectedBranchId={selectedBranchId}
+                        setSelectedBranchId={setSelectedBranchId}
+                        getBranchName={getBranchName}
+                        showToastMsg={showToastMsg}
+                      />
                     )}
                     {activeTab === "pos" && (
                       <PosModule
