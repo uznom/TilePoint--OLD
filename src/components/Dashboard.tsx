@@ -42,6 +42,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { UserRole } from '../types/db';
+import { AdminProfitDashboard } from './AdminProfitDashboard';
 
 interface DashboardProps {
   darkMode: boolean;
@@ -114,6 +115,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
   const [activeDailyPaymentFilter, setActiveDailyPaymentFilter] = useState<string>('all');
   const [showAllDailyTransactions, setShowAllDailyTransactions] = useState<boolean>(false);
   const [showDailySalesMonitor, setShowDailySalesMonitor] = useState<boolean>(true);
+  const [activeDashboardTab, setActiveDashboardTab] = useState<'operations' | 'profit-loss'>('operations');
 
   const showToastMsg = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     setToast({ message, type });
@@ -624,8 +626,50 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
           </div>
         </div>
 
-        {/* REAL-TIME ADMIN DAILY SALES TRANSMISSION MONITOR */}
-        <div className="bg-m3-surface-low rounded-[32px] border border-m3-outline-variant/35 shadow-lg p-6 mb-6">
+        {/* Admin Dashboard Navigation Tabs */}
+        <div className="flex items-center gap-2 bg-m3-surface-low p-1.5 rounded-[20px] border border-m3-outline-variant/35 w-full max-w-md">
+          <button
+            onClick={() => {
+              setActiveDashboardTab('operations');
+              showToastMsg('Accessing Operations Control Desk', 'success');
+            }}
+            className={`flex-1 py-3 px-4 rounded-[16px] font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              activeDashboardTab === 'operations'
+                ? 'bg-m3-primary text-m3-on-primary shadow-md font-black'
+                : 'text-zinc-400 hover:text-m3-on-surface hover:bg-m3-primary/5'
+            }`}
+          >
+            <Activity className="h-4 w-4" />
+            Operations
+          </button>
+          <button
+            onClick={() => {
+              setActiveDashboardTab('profit-loss');
+              showToastMsg('Accessing Consolidated P&L Dashboard', 'success');
+            }}
+            className={`flex-1 py-3 px-4 rounded-[16px] font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              activeDashboardTab === 'profit-loss'
+                ? 'bg-m3-primary text-m3-on-primary shadow-md font-black'
+                : 'text-zinc-400 hover:text-m3-on-surface hover:bg-m3-primary/5'
+            }`}
+          >
+            <DollarSign className="h-4 w-4" />
+            Profit & Loss
+          </button>
+        </div>
+
+        {activeDashboardTab === 'profit-loss' ? (
+          <AdminProfitDashboard
+            darkMode={darkMode}
+            selectedBranchId={selectedBranchId}
+            setSelectedBranchId={setSelectedBranchId}
+            getBranchName={getBranchName}
+            showToastMsg={showToastMsg}
+          />
+        ) : (
+          <>
+            {/* REAL-TIME ADMIN DAILY SALES TRANSMISSION MONITOR */}
+            <div className="bg-m3-surface-low rounded-[32px] border border-m3-outline-variant/35 shadow-lg p-6 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-m3-outline-variant/15 pb-4">
             <div className="flex items-center gap-3">
               <span className="relative flex h-3.5 w-3.5 shrink-0">
@@ -2612,6 +2656,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
             )}
           </div>
         </div>
+
+          </>
+        )}
 
       </div>
     );
