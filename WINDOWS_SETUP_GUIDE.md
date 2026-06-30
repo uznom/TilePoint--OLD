@@ -4,6 +4,17 @@ This guide describes how to run and manage the **TilePoint Shared Database Serve
 
 ---
 
+## 🚀 1-Click Automated Installation (RECOMMENDED)
+We have built a single, fully-automated utility that sets up everything for you. It installs dependencies, creates your `.env` configuration file, detects your local IP address, generates correct SSL certificates, configures your Windows Firewall, and boots PM2 cleanly in the background.
+
+To run it:
+1. Locate **`setup-tilepoint.bat`** in your project folder.
+2. Double-click it or run it from a standard command window.
+3. If prompted by Windows User Account Control (UAC) to configure the firewall, click **Yes** or **Allow**.
+4. Once completed, you are fully deployed and ready to go!
+
+---
+
 ## 🛠️ Step 1: Install Dependencies
 To run the server locally, ensure you have these installed on your Windows laptop:
 1. **Node.js (LTS version)**: [Download Node.js](https://nodejs.org/)
@@ -84,6 +95,84 @@ If your log says `Error: listen EADDRINUSE: address already in use 0.0.0.0:3000`
 
 ---
 
+## 🔒 Troubleshooting ERR_SSL_PROTOCOL_ERROR (Invalid Response)
+If you try to go to `https://192.168.1.38:3000` and get an **`ERR_SSL_PROTOCOL_ERROR`** or if PM2 logs show **`ERR_OSSL_UNSUPPORTED` / `nested asn1 error` / `wrong tag`**, it means your generated certificates are corrupted or encoded with an invalid format (like a raw PKCS#12 binary disguised as a PEM file).
+
+Node.js expects a clean, decrypted **PKCS#8 Private Key** inside `key.pem`.
+
+### How to resolve it:
+
+#### Option A: Quick Bypass (Run in HTTP mode)
+If you do not want to set up SSL certificates right now, you can simply delete the invalid certificate files:
+1. Delete `key.pem` and `cert.pem` from your project folder.
+2. Restart PM2:
+   ```cmd
+   pm2 restart tilepoint-hq-server
+   ```
+3. Access the site via plain HTTP:
+   ```
+   http://192.168.1.38:3000
+   ```
+*(Note: Some advanced browser features like camera access for receipt scanning might be restricted on non-localhost HTTP connections. If you plan to use mobile camera scanning, follow Option B instead).*
+
+#### Option B: Active SSL Mode (Recommended & Fully Compliant)
+We have included a built-in PowerShell script that generates **100% correct PKCS#8 keys** natively without any errors.
+
+1. **Delete any corrupted certificate files first**:
+   Make sure you delete any existing `key.pem` and `cert.pem` from your project root.
+
+2. **Run our native PowerShell script**:
+   Open **PowerShell as Administrator**, navigate to your project directory, and run:
+   ```powershell
+   Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+   .\generate-certs.ps1
+   ```
+   *(This will run our native generator script, which exports the correct decrypted PKCS#8 key block. It will output a green success message once completed).*
+
+3. **Alternative (Git Bash OpenSSL Method)**:
+   If you have Git for Windows installed, you can also just double-click **`generate-certs.bat`** to generate the certificates using Git's built-in OpenSSL.
+
+4. **Restart your PM2 server** to load the clean files:
+   ```cmd
+   pm2 restart tilepoint-hq-server
+   ```
+
+5. Now, open your browser and navigate to:
+   ```
+   https://192.168.1.38:3000
+   ```
+   Click **Advanced -> Proceed to 192.168.1.38 (unsafe)** when the browser shows its standard local certificate warning.
+
+---
+
+## ⚙️ Setting Up Environment Variables (.env) on Windows
+### Do I need to configure `.env`?
+* **For offline operations (Standalone/Local only)**: No, you do not *need* it. The system has smart offline fallbacks that automatically generate secure keys and mock endpoints if the variables are empty.
+* **For production, security, and AI integrations**: **Yes, it is highly recommended!**
+
+### How to configure your `.env` file:
+1. In your project root folder, locate the `.env.example` file.
+2. Duplicate it and rename the copy to **`.env`** (make sure your explorer doesn't accidentally save it as `.env.txt`).
+3. Open `.env` in Notepad or VS Code and update these lines:
+   * **`VITE_SECURITY_SECRET`**: Replace this with a random secure password of at least 16 characters. This is used to cryptographically sign your offline branch data packets.
+     ```env
+     VITE_SECURITY_SECRET="EmmanTilePointSecPass2026!"
+     ```
+   * **`GEMINI_API_KEY`**: If you want to use the optional local AI features (such as receipt categorization, AI help hub, or automated inventory audit reviews), get a key from Google AI Studio and enter it here:
+     ```env
+     GEMINI_API_KEY="AIzaSy..."
+     ```
+   * **`APP_URL`**: Set this to your local address to point back to your laptop:
+     ```env
+     APP_URL="https://192.168.1.38:3000"
+     ```
+4. Restart your PM2 server to apply the `.env` settings:
+   ```cmd
+   pm2 restart tilepoint-hq-server
+   ```
+
+---
+
 ## 🚀 Step 3: Run with PM2 on Windows
 PM2 is a production process manager that keeps your application running 24/7.
 
@@ -142,7 +231,7 @@ If you prefer running a dedicated reverse proxy (Nginx) on Windows rather than l
 
 ---
 
-## 📶 Step 5: Connecting Mobile Devices (Staff POS)
+## 📶 Step 5: Connecting Mobile Devices (Staff POS) & Configuring Windows 11 Firewall
 If you want tablet or phone screens to connect securely over local Wi-Fi:
 1. Make sure your Windows laptop and mobile devices are connected to the **same Wi-Fi router**.
 2. Find your laptop's Local IP address. In **Command Prompt**, run:
@@ -150,11 +239,26 @@ If you want tablet or phone screens to connect securely over local Wi-Fi:
    ipconfig
    ```
    Look for the **IPv4 Address** (typically `192.168.1.XX` or `10.0.0.XX`).
-3. On your mobile devices, open the browser and navigate to:
+3. **⚠️ Configure Windows 11 Defender Firewall (CRITICAL STEP)**:
+   By default, Windows 11 blocks incoming network connections on port `3000` from external devices. You must explicitly allow port `3000` through the firewall to let staff tablets connect:
+   * **The Quick PowerShell Method (Recommended)**:
+     Open **PowerShell as Administrator** and run this single command:
+     ```powershell
+     New-NetFirewallRule -DisplayName "TilePoint Server Port 3000" -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow
+     ```
+   * **The Manual Control Panel Method**:
+     1. Press the Windows Key, search for **"Windows Defender Firewall with Advanced Security"** and open it.
+     2. Click **Inbound Rules** in the left sidebar, then click **New Rule...** in the right sidebar.
+     3. Select **Port** and click Next.
+     4. Select **TCP** and enter `3000` in **Specific local ports**, then click Next.
+     5. Select **Allow the connection** and click Next.
+     6. Keep Domain, Private, and Public checked, and click Next.
+     7. Name the rule `TilePoint Port 3000` and click **Finish**.
+4. On your mobile devices, open the browser and navigate to:
    ```
    https://192.168.1.XX:3000
    ```
-4. **Note about Self-Signed Certificates**: Because this is a local self-signed certificate, your browser will show a "Your connection is not private" warning on first load. Simply click **"Advanced"** and select **"Proceed to Local IP (unsafe)"** to connect securely.
+5. **Note about Self-Signed Certificates**: Because this is a local self-signed certificate, your browser will show a "Your connection is not private" warning on first load. Simply click **"Advanced"** and select **"Proceed to Local IP (unsafe)"** to connect securely.
 
 ---
 

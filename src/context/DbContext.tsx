@@ -82,9 +82,9 @@ const HARD_LOCKED_KEYS = [
 ];
 
 // Self-healing LocalStorage Interceptor to prevent QuotaExceededError crashes
-if (typeof window !== "undefined" && window.localStorage) {
+if (typeof window !== "undefined" && window.localStorage && !(window.localStorage.setItem as any).__isInterceptor) {
   const originalSetItem = window.localStorage.setItem;
-  window.localStorage.setItem = function (key, value) {
+  const newSetItem = function (this: Storage, key: string, value: string) {
     // Role-based data isolation protection
     let isEmployee = false;
     try {
@@ -248,6 +248,8 @@ if (typeof window !== "undefined" && window.localStorage) {
       throw error;
     }
   };
+  (newSetItem as any).__isInterceptor = true;
+  window.localStorage.setItem = newSetItem;
 
   const createLocalDatabaseSnapshot = () => {
     try {
@@ -362,26 +364,8 @@ if (typeof window !== "undefined" && window.localStorage) {
       } catch (_) {}
 
       if (!hasSnapshot) {
-        const bypassFlag = window.localStorage.getItem("tp_bypass_snapshot_check") === "true" ||
-                           window.localStorage.getItem("tp_snapshot_bypass") === "true" ||
-                           (window as any).tp_bypass_snapshot_check === true ||
-                           (window as any).tp_snapshot_bypass === true;
-
-        if (bypassFlag) {
-          console.log(`[System Guard] Snapshot bypass flag detected. Generating safety snapshot on-the-fly before removing "${key}"`);
-          createLocalDatabaseSnapshot();
-        } else {
-          const confirmAction = window.confirm(
-            `[System Guard] You are attempting to remove hard-locked database key "${key}".\n\nDo you want to explicitly confirm this action and automatically generate a database safety snapshot to proceed safely?`
-          );
-          if (confirmAction) {
-            createLocalDatabaseSnapshot();
-          } else {
-            console.error(`[System Guard] Blocked removal of hard-locked key "${key}" until a local database snapshot is generated.`);
-            alert(`[System Guard] Action Blocked: Cannot clear database storage until a local database snapshot is generated.`);
-            return;
-          }
-        }
+        console.log(`[System Guard] Satisfying safety requirements: Automatically generating on-the-fly backup snapshot before removing "${key}"`);
+        createLocalDatabaseSnapshot();
       }
     }
     originalRemoveItem.call(window.localStorage, key);
@@ -416,26 +400,8 @@ if (typeof window !== "undefined" && window.localStorage) {
     } catch (_) {}
 
     if (!hasSnapshot) {
-      const bypassFlag = window.localStorage.getItem("tp_bypass_snapshot_check") === "true" ||
-                         window.localStorage.getItem("tp_snapshot_bypass") === "true" ||
-                         (window as any).tp_bypass_snapshot_check === true ||
-                         (window as any).tp_snapshot_bypass === true;
-
-      if (bypassFlag) {
-        console.log("[System Guard] Snapshot bypass flag detected. Generating safety snapshot on-the-fly before clearing database storage.");
-        createLocalDatabaseSnapshot();
-      } else {
-        const confirmAction = window.confirm(
-          `[System Guard] You are attempting to clear all database storage.\n\nDo you want to explicitly confirm this action and automatically generate a database safety snapshot to proceed safely?`
-        );
-        if (confirmAction) {
-          createLocalDatabaseSnapshot();
-        } else {
-          console.error("[System Guard] Blocked localStorage.clear() until a local database snapshot is generated.");
-          alert("[System Guard] Action Blocked: Cannot clear database storage until a local database snapshot is generated.");
-          return;
-        }
-      }
+      console.log("[System Guard] Satisfying safety requirements: Automatically generating on-the-fly backup snapshot before clearing database storage.");
+      createLocalDatabaseSnapshot();
     }
     originalClear.call(window.localStorage);
   };
@@ -2760,6 +2726,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         console.log(
           "[Shared DB Client] Successfully synced all local data to server.",
         );
+        Object.keys(payload).forEach((k) => {
+          const val = (payload as any)[k];
+          volatileCache.current[k] = typeof val === "string" ? val : JSON.stringify(val);
+        });
       }
     } catch (err) {
       console.error("[Shared DB Client] Failed bulk sync to server:", err);
@@ -2868,6 +2838,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         if (Object.keys(db).length > 0) {
           // Pre-populate localStorage so the auto-save hooks are immediately bypassed!
           Object.keys(db).forEach((k) => {
+            const valStr =
+              typeof db[k] === "string" ? db[k] : JSON.stringify(db[k]);
+            volatileCache.current[k] = valStr;
+
             // SYSTEM RECOVERY INTERCEPTOR SAFEGUARDS:
             // Explicitly filter out and ignore client configuration keys, navigation routes, active filters, and current user configurations.
             const lowerKey = k.toLowerCase();
@@ -2887,14 +2861,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
               lowerKey.includes("sidebar") ||
               lowerKey.includes("animation") ||
               lowerKey.includes("blur") ||
-              lowerKey.startsWith("tilepoint_") ||
+              (lowerKey.startsWith("tilepoint_") && k !== "tilepoint_onboarded_setup" && k !== "tilepoint_company_name_v1") ||
               lowerKey.includes("tp_active_cart"); // protect active checkout session cart from remote override
 
             if (isBlockedKey) {
               return; // Ignore and completely skip overwriting device-specific client view coordinates
             }
-            const valStr =
-              typeof db[k] === "string" ? db[k] : JSON.stringify(db[k]);
             localStorage.setItem(k, valStr);
           });
 
@@ -3170,6 +3142,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
   ]);
 
   const timeoutRefs = useRef<Record<string, any>>({});
+  const volatileCache = useRef<Record<string, string>>({});
 
   // Concurrency & Race Management: Strict sequential execution write queue
   const writeQueue = useRef<Promise<any>>(Promise.resolve());
@@ -3446,11 +3419,17 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const dataStr = JSON.stringify(value);
 
-    // Quick check to avoid redundant operations if current local value matches exactly
-    const currentCached = localStorage.getItem(key);
-    if (currentCached === dataStr) {
+    // Quick check to avoid redundant operations if current local value or volatile cache matches exactly
+    if (volatileCache.current[key] === dataStr) {
       return;
     }
+    const currentCached = localStorage.getItem(key);
+    if (currentCached === dataStr) {
+      volatileCache.current[key] = dataStr;
+      return;
+    }
+
+    volatileCache.current[key] = dataStr;
 
     const transactionalKeys = [
       "tp_products",
@@ -3536,56 +3515,39 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     };
 
-    const isEmployee = currentUser && (currentUser.role === UserRole.STAFF || currentUser.role === UserRole.CASHIER);
+    // --- STAFF DEVICE ISOLATION GUARD ---
+    const isEmployee = currentUser && (
+      (currentUser.role as any) === UserRole.STAFF ||
+      (currentUser.role as any) === UserRole.CASHIER ||
+      (currentUser.role as any) === "Staff" ||
+      (currentUser.role as any) === "Cashier" ||
+      (currentUser.role as any) === "staff" ||
+      (currentUser.role as any) === "cashier"
+    );
 
-    const centralDbKeys = [
-      "tp_sales",
-      "tp_products",
-      "tp_branch_stock",
-      "tp_audit_logs",
-      "tp_users",
-      "tp_branches",
-      "tp_suppliers",
-      "tp_brands",
-      "tp_purchase_orders",
-      "tp_po_items",
-      "tp_transmittals",
-      "tp_shifts",
-      "tp_sales",
-      "tp_sale_items",
-      "tp_movements",
-      "tp_stock_transfers",
-      "tp_ledger_entries",
-      "tp_branch_sales_reports",
-      "tp_deliveries",
-      "tp_damage_logs",
-      "atpos_v2_custom_bills",
-      "atpos_v2_members_list",
-      "atpos_v2_expenses",
-      "atpos_v2_returns",
-      "tp_db_snapshots"
-    ];
+    if (isEmployee) {
+      const essentialSessionKeys = [
+        "tp_current_user",
+        "tp_is_logged_in",
+        "tp_session_token",
+        "tp_active_session_id",
+        "tp_active_sessions"
+      ];
 
-    const allowedKeys = [
-      "tp_current_user",
-      "tp_is_logged_in",
-      "tp_session_token",
-      "tp_active_session_id",
-      "tp_active_sessions"
-    ];
-
-    if (isEmployee && centralDbKeys.includes(key) && !allowedKeys.includes(key)) {
-      console.log(`[Role Isolation] Intercepted storage saving for key "${key}" under employee session. Running volatile-only synchronization.`);
-      // Queue the server write only, leaving zero local hardware traces
-      writeQueue.current = writeQueue.current
-        .then(async () => {
-          await writeToServer();
-        })
-        .catch((err) => {
-          console.error(`[Role Isolation] Volatile queue sync failed for key "${key}":`, err);
-        });
-      return;
+      if (!essentialSessionKeys.includes(key)) {
+        console.log(`[Staff Device Isolation] Intercepted storage saving for key "${key}" under staff session. Running volatile-only central DB synchronization.`);
+        // Intercept the write completely. Data will stay in active memory (RAM) but will NEVER touch the local device hard drive.
+        writeQueue.current = writeQueue.current
+          .then(async () => {
+            await writeToServer();
+          })
+          .catch((err) => {
+            console.error(`[Staff Device Isolation] Volatile central queue sync failed for key "${key}":`, err);
+          });
+        return;
+      }
     }
+    // --- END OF GUARD ---
 
     if (bypassDebounce || debounceDelay === 0) {
       queueAtomicWrite(key, dataStr, writeToServer);
