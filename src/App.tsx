@@ -719,9 +719,11 @@ function AppContent() {
     );
   }
 
+  const isEmployee = currentUser && (currentUser.role === UserRole.STAFF || currentUser.role === UserRole.CASHIER);
   const isOnboarded =
-    typeof window !== "undefined" &&
-    localStorage.getItem("tilepoint_onboarded_setup") === "true";
+    isEmployee ||
+    (typeof window !== "undefined" &&
+      localStorage.getItem("tilepoint_onboarded_setup") === "true");
 
   if (!isOnboarded) {
     return (

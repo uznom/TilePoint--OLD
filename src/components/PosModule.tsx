@@ -3327,13 +3327,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
                 </button>
               </div>
 
-              <div className="pt-2 text-[8.5px] font-semibold text-zinc-500 text-center border-t border-m3-outline-variant/10">
-                Demopack PIN:{" "}
-                <span className="text-amber-500 font-bold">9988</span> (Manager
-                Juan) or <span className="text-amber-500 font-bold">4321</span>{" "}
-                (Admin Erica)
-              </div>
-
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
