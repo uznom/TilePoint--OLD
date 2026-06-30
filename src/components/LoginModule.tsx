@@ -144,7 +144,7 @@ export const LoginModule: React.FC = () => {
 
           <div className="flex items-center gap-3 text-xs font-medium text-m3-on-surface-variant pl-2">
             <Wifi className="h-4 w-4 text-emerald-500" />
-            <span>Active Local Database Connection Verified • Online Sync Ready</span>
+            <span>Connected • Ready</span>
           </div>
         </div>
 

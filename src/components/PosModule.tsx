@@ -72,7 +72,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
   const getBranchPrice = (p: Product) => {
     const branchStockItem = branchStock.find(
       (bs) =>
-        bs.productId === p.id && bs.branchId === currentUser.branchAssignmentId,
+        bs.productId === p.id && bs.branchId === currentUser?.branchAssignmentId,
     );
     return branchStockItem &&
       branchStockItem.sellingPriceOverride !== undefined &&
@@ -98,7 +98,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
         .filter(
           (s) =>
             s.status === "CLOSED" &&
-            s.branchId === currentUser.branchAssignmentId,
+            s.branchId === currentUser?.branchAssignmentId,
         )
         .sort(
           (a, b) =>
@@ -106,7 +106,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
             new Date(a.closedAt || 0).getTime(),
         )[0] || null
     );
-  }, [shifts, currentUser.branchAssignmentId]);
+  }, [shifts, currentUser?.branchAssignmentId]);
 
   // Pre-fill starting cash when modal opens
   React.useEffect(() => {
@@ -132,7 +132,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
     null,
   );
   const [selectedPoolBranchId, setSelectedPoolBranchId] = useState<string>(
-    currentUser.branchAssignmentId || "All",
+    currentUser?.branchAssignmentId || "All",
   );
 
   // Cart & POS Screen States
@@ -586,11 +586,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
       pct = (numericVal / subtotal) * 100;
     }
 
-    if (currentUser.role === UserRole.ADMIN) {
+    if (currentUser?.role === UserRole.ADMIN) {
       return { required: false, pct };
     }
 
-    if (currentUser.role === UserRole.MANAGER) {
+    if (currentUser?.role === UserRole.MANAGER) {
       if (pct > 20) {
         return { required: true, roleNeeded: UserRole.ADMIN, pct };
       }
@@ -663,7 +663,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
   async function clientCheckout() {
     if (cart.length === 0) return;
 
-    if (currentUser.role === UserRole.STAFF) {
+    if (currentUser?.role === UserRole.STAFF) {
       setErrorMessage(
         "ACCESS RESTRICTED: Logistics Floor Staff (Santi Santos) is unauthorized to execute customer checkouts from this terminal. Please login as Cashier, Manager, or Admin to execute client checkouts.",
       );
@@ -919,8 +919,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
     }
 
     if (
-      currentUser.role === UserRole.ADMIN ||
-      currentUser.role === UserRole.MANAGER
+      currentUser?.role === UserRole.ADMIN ||
+      currentUser?.role === UserRole.MANAGER
     ) {
       // Direct apply
       const updatedCart = [...cart];
@@ -930,7 +930,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
       showToast(`Applied Custom Price Override: ₱${targetPrice.toFixed(2)}`);
       addAuditLog(
         "POS_OVERRIDE_DIRECT",
-        `Manager/Admin ${currentUser.fullName} applied price override of ₱${targetPrice.toFixed(2)} directly on ${item.product.productName}`,
+        `Manager/Admin ${currentUser?.fullName} applied price override of ₱${targetPrice.toFixed(2)} directly on ${item.product.productName}`,
         "Sales",
         item.product.id,
       );
@@ -1004,7 +1004,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
       }
       addAuditLog(
         "POS_OVERRIDE_APPROVED",
-        `${approver.role} ${approver.fullName} authorized discount override: ${pendingApproval.discountType}, value: ${pendingApproval.discountValue} for Cashier ${currentUser.fullName}`,
+        `${approver.role} ${approver.fullName} authorized discount override: ${pendingApproval.discountType}, value: ${pendingApproval.discountValue} for Cashier ${currentUser?.fullName}`,
         "Sales",
         "OVERRIDE",
       );
@@ -1019,7 +1019,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
         setCart(updatedCart);
         addAuditLog(
           "POS_OVERRIDE_APPROVED",
-          `${approver.role} ${approver.fullName} authorized price override: ₱${pendingApproval.overridePrice?.toFixed(2)} (was ₱${pendingApproval.originalPrice?.toFixed(2)}) on ${cart[idx].product.productName} for Cashier ${currentUser.fullName}`,
+          `${approver.role} ${approver.fullName} authorized price override: ₱${pendingApproval.overridePrice?.toFixed(2)} (was ₱${pendingApproval.originalPrice?.toFixed(2)}) on ${cart[idx].product.productName} for Cashier ${currentUser?.fullName}`,
           "Sales",
           pendingApproval.productId!,
         );
@@ -2971,7 +2971,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                     className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold font-mono"
                   />
                   <span className="text-[9px] text-m3-on-surface-variant pl-1 block mt-1 font-medium">
-                    {currentUser.role === UserRole.CASHIER
+                    {currentUser?.role === UserRole.CASHIER
                       ? "Changing the standard price requires Manager override verification."
                       : "Your role has privileges to direct-apply this override."}
                   </span>

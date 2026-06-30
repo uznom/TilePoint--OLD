@@ -1588,6 +1588,40 @@ export const getSecuritySecretKey = (): string => {
   return obfuscatedStableSeed;
 };
 
+const getCreatedAt = (item: any): number => {
+  if (item && item.createdAt) return Number(item.createdAt);
+  if (item && item.id && item.id.startsWith("HLD-")) {
+    const parts = item.id.split("-");
+    if (parts.length > 1) {
+      const ts = Number(parts[1]);
+      if (!isNaN(ts)) return ts;
+    }
+  }
+  return 0;
+};
+
+const mergeParkedSales = (local: any[], remote: any[]): any[] => {
+  if (!Array.isArray(local)) local = [];
+  if (!Array.isArray(remote)) remote = [];
+  
+  const merged = [...remote];
+  const remoteIds = new Set(remote.map(item => item.id));
+  
+  local.forEach(localItem => {
+    if (localItem && localItem.id && !remoteIds.has(localItem.id)) {
+      const createdAt = getCreatedAt(localItem);
+      const ageMs = Date.now() - createdAt;
+      
+      // If it was created within the last 30 seconds, keep/merge it to prevent race conditions during upload
+      if (createdAt > 0 && ageMs < 30000) {
+        merged.push(localItem);
+      }
+    }
+  });
+  
+  return merged;
+};
+
 
 export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -1599,9 +1633,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       const user = JSON.parse(userStr);
       if (!user || !user.id || !user.role) return {};
       const token = generateSessionToken(user);
+      const activeSessionId = localStorage.getItem("tp_active_session_id") || sessionStorage.getItem("tp_active_session_id") || "unknown";
       return {
         "Authorization": `Bearer ${token}`,
         "X-Session-Token": token,
+        "X-Client-ID": activeSessionId,
       };
     } catch (e) {
       return {};
@@ -2268,14 +2304,48 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     >("tp_parked_sales", []);
   });
 
+  const deletedParkedSaleIds = useRef<Set<string>>(new Set());
+
   const setParkedSales = (updater: any) => {
+    let nextValue: any;
     rawSetParkedSales((prev) => {
-      const next = typeof updater === "function" ? updater(prev) : updater;
+      let next = typeof updater === "function" ? updater(prev) : updater;
+      
+      // If we are NOT syncing from the server, detect any deletions from local state changes
+      if (!isSyncingFromServer.current && Array.isArray(prev) && Array.isArray(next)) {
+        const nextIds = new Set(next.map(item => item?.id).filter(Boolean));
+        prev.forEach(item => {
+          if (item && item.id && !nextIds.has(item.id)) {
+            deletedParkedSaleIds.current.add(item.id);
+            // Automatically clean up from tracked deleted set after 5 minutes
+            setTimeout(() => {
+              deletedParkedSaleIds.current.delete(item.id);
+            }, 300000);
+          }
+        });
+      }
+
+      // Protect local un-synced hold sales from being wiped out by server-side pull
+      if (isSyncingFromServer.current && Array.isArray(next)) {
+        next = mergeParkedSales(prev, next);
+      }
+      
+      // Always filter out deleted parked sales to prevent race-condition merge-backs
+      if (Array.isArray(next)) {
+        next = next.filter(item => item && item.id && !deletedParkedSaleIds.current.has(item.id));
+      }
+      
       localStorage.setItem("tp_parked_sales", JSON.stringify(next));
-      // background write-through immediately
-      saveToStorageWithDebounce("tp_parked_sales", next, true);
+      nextValue = next;
       return next;
     });
+
+    // Run debounced/atomic storage update out of the render loop to remain pure
+    setTimeout(() => {
+      if (nextValue !== undefined) {
+        saveToStorageWithDebounce("tp_parked_sales", nextValue, true);
+      }
+    }, 0);
   };
 
   const [syncStatus, setSyncStatus] = useState<Record<string, "Live" | "Syncing">>({});
@@ -2522,11 +2592,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       const mySession = freshSessions.find((s) => s.id === activeSessionId);
 
       const shouldBoot =
-        !mySessionInList ||
-        (mySession &&
-          concurrentSession &&
-          new Date(concurrentSession.lastActive).getTime() >
-            new Date(mySession.lastActive).getTime());
+        mySession &&
+        concurrentSession &&
+        new Date(concurrentSession.lastActive).getTime() >
+          new Date(mySession.lastActive).getTime();
 
       if (shouldBoot) {
         logout();
@@ -2896,51 +2965,117 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
             localStorage.setItem(k, valStr);
           });
 
-          // Now safely update all React states!
-          if (db["tp_users"]) setUsers(db["tp_users"]);
-          if (db["tp_branches"]) setBranches(db["tp_branches"]);
-          if (db["tp_suppliers"]) setSuppliers(db["tp_suppliers"]);
-          if (db["tp_brands"]) setBrands(db["tp_brands"]);
-          if (db["tp_products"]) setProducts(db["tp_products"]);
+          // Helper to only trigger React state updates when the data content actually changes.
+          // This avoids unnecessary re-renders of the entire app component tree during polling checks.
+          // It implements a highly optimized, key-order-independent deep equality check designed for database tables.
+          const areEntitiesEqual = (a: any, b: any): boolean => {
+            if (a === b) return true;
+            if (a == null || b == null) return a === b;
+            if (typeof a !== typeof b) return false;
+
+            if (Array.isArray(a)) {
+              if (!Array.isArray(b)) return false;
+              if (a.length !== b.length) return false;
+              for (let i = 0; i < a.length; i++) {
+                if (!areEntitiesEqual(a[i], b[i])) return false;
+              }
+              return true;
+            }
+
+            if (typeof a === "object") {
+              const keysA = Object.keys(a).filter((k) => a[k] !== undefined);
+              const keysB = Object.keys(b).filter((k) => b[k] !== undefined);
+              if (keysA.length !== keysB.length) return false;
+
+              for (const key of keysA) {
+                if (!Object.prototype.hasOwnProperty.call(b, key)) return false;
+                if (!areEntitiesEqual(a[key], b[key])) return false;
+              }
+              return true;
+            }
+
+            return a === b;
+          };
+
+          const updateIfChanged = (currentVal: any, newVal: any, setter: (val: any) => void) => {
+            if (!areEntitiesEqual(currentVal, newVal)) {
+              setter(newVal);
+            }
+          };
+
+          // Now safely update all React states dynamically only when content changes!
+          if (db["tp_users"]) updateIfChanged(users, db["tp_users"], setUsers);
+          if (db["tp_branches"]) updateIfChanged(branches, db["tp_branches"], setBranches);
+          if (db["tp_suppliers"]) updateIfChanged(suppliers, db["tp_suppliers"], setSuppliers);
+          if (db["tp_brands"]) updateIfChanged(brands, db["tp_brands"], setBrands);
+          if (db["tp_products"]) updateIfChanged(products, db["tp_products"], setProducts);
           if (db["tp_purchase_orders"])
-            setPurchaseOrders(db["tp_purchase_orders"]);
-          if (db["tp_po_items"]) setPoItems(db["tp_po_items"]);
-          if (db["tp_transmittals"]) setTransmittals(db["tp_transmittals"]);
-          if (db["tp_shifts"]) setShifts(db["tp_shifts"]);
-          if (db["tp_sales"]) setSales(db["tp_sales"]);
-          if (db["tp_sale_items"]) setSaleItems(db["tp_sale_items"]);
-          if (db["tp_movements"]) setMovements(db["tp_movements"]);
-          if (db["tp_audit_logs"]) setAuditLogs(db["tp_audit_logs"]);
-          if (db["tp_parked_sales"]) setParkedSales(db["tp_parked_sales"]);
+            updateIfChanged(purchaseOrders, db["tp_purchase_orders"], setPurchaseOrders);
+          if (db["tp_po_items"]) updateIfChanged(poItems, db["tp_po_items"], setPoItems);
+          if (db["tp_transmittals"]) updateIfChanged(transmittals, db["tp_transmittals"], setTransmittals);
+          if (db["tp_shifts"]) updateIfChanged(shifts, db["tp_shifts"], setShifts);
+          if (db["tp_sales"]) updateIfChanged(sales, db["tp_sales"], setSales);
+          if (db["tp_sale_items"]) updateIfChanged(saleItems, db["tp_sale_items"], setSaleItems);
+          if (db["tp_movements"]) updateIfChanged(movements, db["tp_movements"], setMovements);
+          if (db["tp_audit_logs"]) updateIfChanged(auditLogs, db["tp_audit_logs"], setAuditLogs);
+          if (db["tp_parked_sales"]) updateIfChanged(parkedSales, db["tp_parked_sales"], setParkedSales);
           if (db["tp_stock_transfers"])
-            setStockTransfers(db["tp_stock_transfers"]);
-          if (db["tp_branch_stock"]) setBranchStock(db["tp_branch_stock"]);
+            updateIfChanged(stockTransfers, db["tp_stock_transfers"], setStockTransfers);
+          if (db["tp_branch_stock"]) updateIfChanged(branchStock, db["tp_branch_stock"], setBranchStock);
           if (db["tp_ledger_entries"])
-            setLedgerEntries(db["tp_ledger_entries"]);
+            updateIfChanged(ledgerEntries, db["tp_ledger_entries"], setLedgerEntries);
           if (db["tp_branch_sales_reports"])
-            setBranchSalesReports(db["tp_branch_sales_reports"]);
-          if (db["tp_deliveries"]) setDeliveries(db["tp_deliveries"]);
-          if (db["tp_damage_logs"]) setDamageLogs(db["tp_damage_logs"]);
+            updateIfChanged(branchSalesReports, db["tp_branch_sales_reports"], setBranchSalesReports);
+          if (db["tp_deliveries"]) updateIfChanged(deliveries, db["tp_deliveries"], setDeliveries);
+          if (db["tp_damage_logs"]) updateIfChanged(damageLogs, db["tp_damage_logs"], setDamageLogs);
           if (db["atpos_v2_custom_bills"])
-            setCustomBills(db["atpos_v2_custom_bills"]);
+            updateIfChanged(customBills, db["atpos_v2_custom_bills"], setCustomBills);
           if (db["atpos_v2_members_list"])
-            setMembers(db["atpos_v2_members_list"]);
+            updateIfChanged(members, db["atpos_v2_members_list"], setMembers);
           if (db["atpos_v2_expenses"])
-            setExpenses(db["atpos_v2_expenses"]);
+            updateIfChanged(expenses, db["atpos_v2_expenses"], setExpenses);
           if (db["atpos_v2_returns"])
-            setProductReturns(db["atpos_v2_returns"]);
+            updateIfChanged(productReturns, db["atpos_v2_returns"], setProductReturns);
           if (db["tp_active_sessions"]) {
             const parsedSessions =
               typeof db["tp_active_sessions"] === "string"
                 ? JSON.parse(db["tp_active_sessions"])
                 : db["tp_active_sessions"];
-            setActiveSessions(parsedSessions);
+            
+            // Protect our current active session from being wiped out or older-stamped due to sync latency
+            let updatedSessions = Array.isArray(parsedSessions) ? [...parsedSessions] : [];
+            if (isLoggedIn && currentUser && activeSessionId) {
+              const myLocalSession = activeSessions.find(s => s.id === activeSessionId);
+              const existsInServer = updatedSessions.some(s => s.id === activeSessionId);
+              
+              if (myLocalSession) {
+                if (!existsInServer) {
+                  updatedSessions.push(myLocalSession);
+                } else {
+                  // Keep the newer timestamp
+                  updatedSessions = updatedSessions.map(s => {
+                    if (s.id === activeSessionId) {
+                      const serverTime = new Date(s.lastActive).getTime();
+                      const localTime = new Date(myLocalSession.lastActive).getTime();
+                      if (localTime > serverTime) {
+                        return { ...s, lastActive: myLocalSession.lastActive };
+                      }
+                    }
+                    return s;
+                  });
+                }
+              }
+            }
+            updateIfChanged(activeSessions, updatedSessions, setActiveSessions);
           }
 
           if (db["tp_is_configured"] !== undefined) {
             const serverConfigured = db["tp_is_configured"] === "true" || db["tp_is_configured"] === true;
             const locallyConfigured = localStorage.getItem("tp_is_configured") === "true";
-            setIsConfigured(serverConfigured || locallyConfigured);
+            const targetConfigured = serverConfigured || locallyConfigured;
+            if (isConfigured !== targetConfigured) {
+              setIsConfigured(targetConfigured);
+            }
           }
         } else {
           // Shared server db is empty (first-time launch of the server!)
@@ -2971,7 +3106,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const currentSyncDelay = useRef<number>(5000);
+  const currentSyncDelay = useRef<number>(15000);
   const isSseConnected = useRef<boolean>(false);
 
   const scheduleNextSync = (delayMs: number) => {
@@ -2997,8 +3132,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       if (success) {
-        // Reset delay to baseline 5000ms
-        currentSyncDelay.current = 5000;
+        // Reset delay to baseline 15000ms
+        currentSyncDelay.current = 15000;
         // Trigger offline queue processing upon successful sync recovery
         processOfflineQueue();
       } else {
@@ -3032,7 +3167,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         setIsHydrating(false);
       }
       // Start the backoff scheduling loop once initialized
-      scheduleNextSync(5000);
+      scheduleNextSync(15000);
     };
     initializeDatabase();
 
@@ -3049,7 +3184,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       console.log(
         "[Network Handshake] Browser reported ONLINE! Resetting backoff interval and triggering immediate queue flush.",
       );
-      currentSyncDelay.current = 5000;
+      currentSyncDelay.current = 15000;
       scheduleNextSync(200);
     };
     window.addEventListener("online", handleOnline);
@@ -3060,14 +3195,17 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     let eventSource: EventSource | null = null;
     let reconnectTimeout: any = null;
+    let reconnectDelay = 5000;
 
     const connectRealTimeChannel = () => {
       console.log("[Real-Time Sync] Subscribing to central server event channel...");
-      eventSource = new EventSource("/api/db/events");
+      const activeSessionId = localStorage.getItem("tp_active_session_id") || sessionStorage.getItem("tp_active_session_id") || "unknown";
+      eventSource = new EventSource(`/api/db/events?clientId=${encodeURIComponent(activeSessionId)}`);
 
       eventSource.onopen = () => {
         console.log("[Real-Time Sync] SSE Channel established. Switching to event-driven push mode.");
         isSseConnected.current = true;
+        reconnectDelay = 5000; // Reset backoff on success
       };
 
       eventSource.onmessage = async (event) => {
@@ -3076,6 +3214,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
           if (payload.type === 'handshake') {
             console.log("[Real-Time Sync] Server handshake verified.");
             isSseConnected.current = true;
+            reconnectDelay = 5000; // Reset backoff on success
           } else if (payload.type === 'db_update') {
             console.log("[Real-Time Sync] Central database updated. Pulling changes immediately...");
             // Execute silent pull sync to update cashier or staff screens instantly
@@ -3087,14 +3226,22 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       };
 
       eventSource.onerror = () => {
-        console.warn("[Real-Time Sync] Event stream disconnected. Falling back to active recovery polling and re-connecting in 5 seconds...");
+        const wasConnected = isSseConnected.current;
         isSseConnected.current = false;
         if (eventSource) {
           eventSource.close();
         }
-        // Force an immediate scheduleNextSync retry to recover offline logs or start backoff
-        scheduleNextSync(1000);
-        reconnectTimeout = setTimeout(connectRealTimeChannel, 5000);
+        
+        if (wasConnected) {
+          console.warn("[Real-Time Sync] Active event stream disconnected. Scheduling immediate recovery pull.");
+          scheduleNextSync(1000);
+          reconnectDelay = 5000;
+        } else {
+          console.warn(`[Real-Time Sync] Event stream connection failed. Reconnecting with exponential backoff in ${reconnectDelay / 1000}s...`);
+          reconnectDelay = Math.min(60000, reconnectDelay * 2);
+        }
+
+        reconnectTimeout = setTimeout(connectRealTimeChannel, reconnectDelay);
       };
     };
 
@@ -3520,15 +3667,16 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     const dataStr = JSON.stringify(value);
 
     // Quick check to avoid redundant operations if current local value or volatile cache matches exactly
-    if (volatileCache.current[key] === dataStr) {
+    if (volatileCache.current[key] === dataStr && !bypassDebounce) {
       return;
     }
     const currentCached = localStorage.getItem(key);
-    if (currentCached === dataStr) {
+    if (currentCached === dataStr && !bypassDebounce) {
       volatileCache.current[key] = dataStr;
       return;
     }
 
+    const previousVolatileCached = volatileCache.current[key];
     volatileCache.current[key] = dataStr;
 
     const transactionalKeys = [
@@ -3545,7 +3693,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     let deltas: any[] = [];
     if (transactionalKeys.includes(key)) {
       try {
-        const oldVal = currentCached ? JSON.parse(currentCached) : [];
+        const cachedStr = previousVolatileCached || currentCached;
+        const oldVal = cachedStr ? JSON.parse(cachedStr) : [];
         deltas = computeDeltas(key, oldVal, value);
       } catch (err) {
         console.error("[Delta Sync] Failed to compute deltas:", err);
@@ -3651,7 +3800,15 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       ];
 
       if (!essentialSessionKeys.includes(key)) {
-        console.log(`[Staff Device Isolation] Intercepted storage saving for key "${key}" under staff session. Running volatile-only central DB synchronization.`);
+        // Under employee isolation guard: if there are no deltas for a transactional key,
+        // or if it's a non-transactional key (which employees cannot modify), do NOT trigger any write to the server.
+        const isTransactional = transactionalKeys.includes(key);
+        if (!isTransactional || deltas.length === 0) {
+          console.log(`[Staff Device Isolation] Intercepted storage saving for key "${key}" under staff session. Bypassing writeToServer as no local changes were detected.`);
+          return;
+        }
+
+        console.log(`[Staff Device Isolation] Intercepted storage saving for key "${key}" under staff session. Running volatile-only central DB synchronization for ${deltas.length} deltas.`);
         // Intercept the write completely. Data will stay in active memory (RAM) but will NEVER touch the local device hard drive.
         writeQueue.current = writeQueue.current
           .then(async () => {
@@ -6944,6 +7101,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         notes,
         items: cartItems,
         timestamp: new Date().toLocaleTimeString(),
+        createdAt: Date.now(), // High-precision timestamp for merge safety
       },
     ]);
     addAuditLog(
@@ -7117,12 +7275,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       productId: item.product.id,
       type: "OUT",
       quantity: -item.quantity,
-      sourceBranchId: currentUser.branchAssignmentId,
+      sourceBranchId: currentUser?.branchAssignmentId || "B1",
       referenceId: saleId,
       notes: `Sold to ${customerName || "Walk-in"} in Invoice ${saleNum}`,
       timestamp: new Date().toISOString(),
-      userId: currentUser.id,
-      username: currentUser.username,
+      userId: currentUser?.id || "SYSTEM",
+      username: currentUser?.username || "system",
     }));
 
     setMovements((prev) => [...newMovements, ...prev]);
@@ -7151,7 +7309,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     // Dynamic Monthly sales updates for Branch Card
     setBranches((prev) =>
       prev.map((b) => {
-        if (b.id === currentUser.branchAssignmentId) {
+        if (b.id === (currentUser?.branchAssignmentId || "B1")) {
           return {
             ...b,
             monthlySales: b.monthlySales + grandTotal,

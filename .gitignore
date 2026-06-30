@@ -9,3 +9,7 @@ coverage/
 *.pem
 key.pem
 cert.pem
+.eslintcache
+*.tsbuildinfo
+.vercel/
+.vite/

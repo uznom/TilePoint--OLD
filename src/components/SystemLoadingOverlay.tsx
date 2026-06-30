@@ -34,24 +34,24 @@ export const SystemLoadingOverlay: React.FC = () => {
     switch (systemProcessingType) {
       case 'db':
         return [
-          'Verifying local application storage...',
-          'Compiling system database records...',
-          'Applying data configurations...',
-          'Saving changes to local storage...'
+          'Checking local application storage...',
+          'Updating database records...',
+          'Applying configurations...',
+          'Saving database changes...'
         ];
       case 'verification':
         return [
-          'Encrypting credentials securely...',
-          'Running security validation checks...',
-          'Generating secure session credentials...',
-          'Establishing account privileges...'
+          'Verifying your login...',
+          'Checking account permissions...',
+          'Creating secure session...',
+          'Loading your profile...'
         ];
       default:
         return [
-          'Connecting to system gateway...',
-          'Preparing transaction request...',
-          'Validating operational stock values...',
-          'Synchronizing system index...'
+          'Connecting to server...',
+          'Preparing request...',
+          'Checking stock levels...',
+          'Updating database records...'
         ];
     }
   };

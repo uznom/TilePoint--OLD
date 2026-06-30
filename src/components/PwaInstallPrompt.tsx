@@ -225,14 +225,14 @@ export const PwaInstallPrompt: React.FC = () => {
               </div>
             ) : (
               /* Features List */
-              <div className="grid grid-cols-2 gap-2 text-[10px] text-[var(--m3-on-surface-variant)] font-mono">
+              <div className="grid grid-cols-2 gap-2 text-[10px] text-[var(--m3-on-surface-variant)] font-sans">
                 <div className="flex items-center gap-1.5 bg-m3-surface/10 p-2 rounded-xl border border-m3-outline-variant/5">
                   <Monitor className="h-3.5 w-3.5 text-[var(--m3-primary)]" />
-                  <span>Desktop Launcher</span>
+                  <span>Desktop App</span>
                 </div>
                 <div className="flex items-center gap-1.5 bg-m3-surface/10 p-2 rounded-xl border border-m3-outline-variant/5">
                   <ShieldCheck className="h-3.5 w-3.5 text-[var(--m3-primary)]" />
-                  <span>Offline Sync ready</span>
+                  <span>Offline Ready</span>
                 </div>
               </div>
             )}

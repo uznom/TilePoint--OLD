@@ -54,11 +54,15 @@ const readDatabase = () => {
 
 // Real-time clients array and notifier
 let clients = [];
-const notifyClients = (type, info) => {
+const notifyClients = (type, info, senderClientId) => {
   const payload = JSON.stringify({ type, info });
-  clients.forEach(res => {
+  clients.forEach(client => {
+    if (senderClientId && client.id === senderClientId) {
+      console.log(`[Real-Time Sync] Skipping broadcast notification for sender client "${senderClientId}"`);
+      return;
+    }
     try {
-      res.write(`data: ${payload}\n\n`);
+      client.res.write(`data: ${payload}\n\n`);
     } catch (e) {
       // client connection is dead
     }
@@ -66,13 +70,13 @@ const notifyClients = (type, info) => {
 };
 
 // Helper to write database safely with atomic updates
-const writeDatabase = (data) => {
+const writeDatabase = (data, senderClientId) => {
   try {
     const tempPath = `${DB_FILE_PATH}.tmp`;
     fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf-8');
     fs.renameSync(tempPath, DB_FILE_PATH);
-    // Broadcast real-time change to all active cashier/staff devices
-    notifyClients('db_update', {});
+    // Broadcast real-time change to all active cashier/staff devices, skipping the sender
+    notifyClients('db_update', {}, senderClientId);
     return true;
   } catch (error) {
     console.error('[Shared DB Server] Error writing server-db.json:', error);
@@ -150,6 +154,8 @@ const isDatabaseConfigured = () => {
 
 // SSE real-time event subscription endpoint
 app.get('/api/db/events', (req, res) => {
+  const clientId = req.query.clientId || 'anonymous';
+
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
@@ -159,10 +165,10 @@ app.get('/api/db/events', (req, res) => {
   // Send initial connected ping
   res.write(`data: ${JSON.stringify({ type: 'handshake', info: { connected: true } })}\n\n`);
 
-  clients.push(res);
+  clients.push({ id: clientId, res });
 
   req.on('close', () => {
-    clients = clients.filter(c => c !== res);
+    clients = clients.filter(c => c.res !== res);
   });
 });
 
@@ -345,7 +351,7 @@ app.post('/api/db/delta', async (req, res) => {
         db.tp_processed_delta_ids.shift();
       }
 
-      if (writeDatabase(db)) {
+      if (writeDatabase(db, req.headers['x-client-id'])) {
         return { success: true };
       } else {
         throw new Error('Failed to commit database write');
@@ -396,7 +402,7 @@ app.post('/api/db', async (req, res) => {
     const result = await runInTransaction(async () => {
       const db = readDatabase();
       db[key] = value;
-      if (writeDatabase(db)) {
+      if (writeDatabase(db, req.headers['x-client-id'])) {
         return { success: true, key };
       } else {
         throw new Error('Failed to write key to database');
@@ -450,7 +456,7 @@ app.post('/api/db/bulk', async (req, res) => {
       Object.keys(data).forEach((key) => {
         db[key] = data[key];
       });
-      if (writeDatabase(db)) {
+      if (writeDatabase(db, req.headers['x-client-id'])) {
         return { success: true, count: Object.keys(data).length };
       } else {
         throw new Error('Failed to write bulk data to database');

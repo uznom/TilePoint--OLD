@@ -610,7 +610,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
                           <button
                             onClick={() => {
                               if (isRowClearingBlocked()) {
-                                alert(`[System Guard] Action Blocked: Cannot delete damage log records because the register is currently holding: ${getRowClearingBlockedReason()}`);
+                                alert(`Action Restricted: Cannot delete damage log records because the register is currently holding: ${getRowClearingBlockedReason()}`);
                                 return;
                               }
                               if (confirm("Are you sure you want to soft-delete this damage log entry?")) {

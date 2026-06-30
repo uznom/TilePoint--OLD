@@ -54,22 +54,22 @@ export class ErrorBoundary extends React.Component<Props, State> {
                 <ShieldAlert className="h-8 w-8" />
               </div>
               <div>
-                <span className="text-[10px] font-mono tracking-widest text-red-400 font-bold uppercase block">
-                  System Guard Recovery Console
+                <span className="text-[10px] tracking-widest text-red-400 font-bold uppercase block">
+                  System Recovery
                 </span>
                 <h1 className="text-lg font-black tracking-tight text-[#F8FAFC]">
-                  Rendering Interface Exception
+                  Application Error
                 </h1>
               </div>
             </div>
 
             <p className="text-xs text-zinc-400 leading-relaxed">
-              TilePoint's system kernel caught an active view crash or rendering conflict. This could be due to browser incompatibilities, restricted storage permissions, or corrupt session state caches.
+              An unexpected error occurred while loading this page. This could be caused by browser storage limitations or a temporary connection problem.
             </p>
 
             <div className="p-4 rounded-xl bg-black/40 border border-zinc-800 space-y-2.5">
-              <span className="text-[10px] font-mono text-zinc-500 block uppercase font-bold">
-                Diagnostic Trace Log (System &amp; Browser info)
+              <span className="text-[10px] text-zinc-500 block uppercase font-bold">
+                Error Details
               </span>
               <div className="max-h-[140px] overflow-y-auto text-[10.5px] font-mono text-red-300 leading-relaxed pr-1 space-y-1.5 scrollbar-thin">
                 <div className="font-bold text-red-400">
@@ -99,17 +99,17 @@ export class ErrorBoundary extends React.Component<Props, State> {
               <button
                 type="button"
                 onClick={this.handleWipeClean}
-                className="px-4 py-2.5 bg-zinc-900 hover:bg-red-950/40 text-zinc-450 hover:text-red-400 border border-zinc-800 hover:border-red-900/45 font-mono text-xs uppercase font-bold tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
-                title="Wipe state clean and start fresh if database config corruption exists"
+                className="px-4 py-2.5 bg-zinc-900 hover:bg-red-950/40 text-zinc-450 hover:text-red-400 border border-zinc-800 hover:border-red-900/45 text-xs uppercase font-bold tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                title="Clear app cache and start fresh if the page does not reload"
               >
                 <Trash2 className="h-4 w-4" />
-                <span>Reset Safe-Storage Code</span>
+                <span>Clear App Cache</span>
               </button>
             </div>
 
             <div className="text-center">
-              <span className="text-[9px] font-mono text-zinc-650">
-                TilePoint Core Engine Recovery Sub-Service • Terminal Locked
+              <span className="text-[9px] text-zinc-600">
+                TilePoint Recovery Service
               </span>
             </div>
           </div>

@@ -567,7 +567,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                   }`}
                 >
                   <Shield className="h-4 w-4" />
-                  <span>Features & Priv</span>
+                  <span>Permissions & Access</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('about')}
@@ -578,7 +578,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                   }`}
                 >
                   <Info className="h-4 w-4" />
-                  <span>About System</span>
+                  <span>About</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('accessibility')}
@@ -601,7 +601,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                     }`}
                   >
                     <Database className="h-4 w-4" />
-                    <span>Backups & Core</span>
+                    <span>Database & Backups</span>
                   </button>
                 )}
               </div>
@@ -1237,76 +1237,76 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                     <div className="space-y-4 text-xs leading-relaxed text-m3-on-surface">
                       <div className="border-b border-m3-outline-variant/15 pb-4">
                         <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
-                          TilePoint Privacy Shield Compliance Charter
+                          Privacy & Security Policy
                         </h4>
                         <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed font-sans">
-                          Last Refreshed: June 8, 2026. This Privacy Charter details the standard, transparent, zero-telemetry client architecture used inside our full-stack container environments.
+                          Last Refreshed: June 8, 2026. This policy details how data privacy, local offline storage, and system security are handled.
                         </p>
                       </div>
 
                     <div className="space-y-4 font-sans select-text max-h-[340px] overflow-y-auto pr-2">
                       <div className="space-y-1">
-                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">1. No Third-Party Telemetry Promise</h5>
+                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">1. No Third-Party Tracking</h5>
                         <p className="text-[11px] text-m3-on-surface-variant">
-                          Unlike alternative point-of-sale systems, TilePoint is engineered with high-security sandboxed boundaries. We guarantee that your company data, customer rosters, inventory ledger transactions, tax receipts, and cash drawer readings are never transmitted to third parties. Every transaction is preserved on-premises inside certified storage servers.
+                          We guarantee that your company data, customer rosters, inventory records, and sales transactions are never transmitted or shared with third parties. All operational data is stored securely.
                         </p>
                       </div>
 
                       <div className="space-y-1">
-                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">2. Data Indexing & Local Sandboxing</h5>
+                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">2. Local Data Storage</h5>
                         <p className="text-[11px] text-m3-on-surface-variant">
-                          All operational logs, employee roles, cryptographic salted hashing seeds, tax information summaries, and branch records are stored locally under encrypted database scopes. Users may wipe all cache tables from the Database Studio tab (Admin Access Required) to immediately de-register or delete all records.
+                          All operational logs, employee assignments, and branch records are stored locally in the database. Administrators can clear local data through the Backups settings if needed to delete history.
                         </p>
                       </div>
 
                       <div className="space-y-1">
-                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">3. Offline Replication & Consent Logs</h5>
+                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">3. Offline Saving</h5>
                         <p className="text-[11px] text-m3-on-surface-variant">
-                          By operating TilePoint in offline or hybrid mode, users explicitly consent to local database queue tracking. Transaction packets, sync handshakes, and ledger modifications are buffered locally and automatically synchronized with the server when a connection is established. Explicit logs of connection handshakes and offline state queue sizes are stored on-device to prevent transactional collisions.
+                          When working offline, sales transactions and stock changes are saved securely in your browser and automatically synchronized with the main server as soon as connection is restored.
                         </p>
                       </div>
 
                       <div className="space-y-1">
-                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">4. Cache Purge Liability Disclaimer</h5>
+                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">4. Data Preservation and Browser Cache</h5>
                         <p className="text-[11px] text-m3-on-surface-variant">
-                          TilePoint utilizes local storage structures to support resilient, uninterrupted billing operations during Wi-Fi drops. The corporate entity assumes no liability for data loss resulting from unauthorized or manual browser cache purges, incognito window usage, or severe device storage wipes prior to successfully transmitting queued local transaction logs to the primary server.
+                          The system stores pending offline data locally to prevent interruptions during network dropouts. Clearing your browser cache or using private/incognito windows before offline data is synced may result in data loss.
                         </p>
                       </div>
 
                       <div className="space-y-1">
-                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">5. Local Network IP Encrypted Transmissions</h5>
+                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">5. Encrypted Network Transmissions</h5>
                         <p className="text-[11px] text-m3-on-surface-variant">
-                          All peer-to-peer data transmittals, branch synchronization handshakes, and remote cashier requests conducted over local IP networks are processed using standardized TLS/SSL cryptographic wrappers. Sensitive business transaction trails, manager cash approvals, and active billing carts are shielded against man-in-the-middle spoofing vectors within the physical facility's intranet.
+                          All data transmitted between cashiers and the central database is fully encrypted. Business transactions, manager approvals, and active checkout carts are protected over local networks.
                         </p>
                       </div>
 
                       <div className="space-y-1">
-                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">6. Employee Session TTL Expirations</h5>
+                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">6. Automatic Logouts</h5>
                         <p className="text-[11px] text-m3-on-surface-variant">
-                          To protect system integrity, employee log-in packets, secure signature handshake packages, and manager cash overrides are bound to individual browser-session cookies that expire automatically on user logout or after 8 hours of idle activity.
+                          To protect system security, user sessions are automatically logged out after 8 hours of inactivity or when the browser session ends.
                         </p>
                       </div>
 
                       <div className="space-y-1">
-                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">7. Access Control Under RBAC Policy</h5>
+                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">7. Access Controls & Permissions</h5>
                         <p className="text-[11px] text-m3-on-surface-variant">
-                          Every write transaction is logged as an automated audit trail. You can review active data access policies or audit entries under the secure Backups & Core sub-settings to monitor security and compliance status instantly.
+                          Every data update is recorded for security tracking. Administrators can review database settings and manage security profiles under the Backups tab.
                         </p>
                       </div>
 
                       <div className="space-y-1">
-                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">8. Legal & Regulatory Compliance (BIR)</h5>
+                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">8. Tax Compliance</h5>
                         <p className="text-[11px] text-m3-on-surface-variant">
-                          TilePoint adheres to strict national tax register guidelines. Daily X & Z Readings, BIR transmittals, and historical tax log records are structurally protected and marked read-only to ensure strict compliance with audit standards, preventing any database tamper vectors.
+                          TilePoint complies with tax register guidelines. Daily sales reports, tax transmittals, and historical tax logs are protected and marked read-only to comply with audit requirements.
                         </p>
                       </div>
 
                       <div className="space-y-2 pt-2 border-t border-m3-outline-variant/15 text-[10.5px]">
                         <p className="text-zinc-400 font-bold">
-                          If you have security inquiries regarding TilePoint POS architectures or on-premises server environments, consult with your Corporate Security Officer.
+                          If you have security inquiries regarding TilePoint, please contact system administration.
                         </p>
-                        <span className="inline-flex items-center gap-1.5 text-[9px] font-mono uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-full font-bold">
-                          <Check className="h-3 w-3" /> Certified Secure POS Node No. 11917622
+                        <span className="inline-flex items-center gap-1.5 text-[9px] uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-full font-bold">
+                          <Check className="h-3 w-3" /> System Status: Certified & Secured
                         </span>
                       </div>
                     </div>
@@ -1627,9 +1627,9 @@ startxref
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-1 border-t border-m3-outline-variant/10 text-[9px] font-mono text-m3-on-surface-variant/70">
-                      <span>POS Node Version 2.4.1</span>
-                      <span className="text-emerald-500 font-bold">Node Status: Online & Secured</span>
+                    <div className="flex items-center justify-between pt-1 border-t border-m3-outline-variant/10 text-[10px] text-m3-on-surface-variant/70">
+                      <span>Version 2.4.1</span>
+                      <span className="text-emerald-500 font-bold">Status: Online</span>
                     </div>
                   </div>
                 )}
@@ -1640,19 +1640,19 @@ startxref
                     <div>
                       <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono flex items-center gap-2">
                         <Database className="h-4 w-4" />
-                        On-Premises Database Studio & Security Shield
+                        Database Settings & Backups
                       </h4>
                       <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
-                        Fine-tune database write debouncers to reduce I/O cost, enforce strict Firebase Firestore storage rules, and configure local disaster recovery snapshots.
+                        Adjust database saving delay, view system security rules, and manage data backup points.
                       </p>
                     </div>
 
                     {/* Sub-tab Pill navigation inside dbtuning */}
                     <div className="flex border-b border-m3-outline-variant/15 pb-2 gap-1.5 select-none shrink-0">
                       {[
-                        { id: 'performance', name: 'Performance Tuning' },
+                        { id: 'performance', name: 'Save Settings' },
                         { id: 'rules', name: 'Security Rules' },
-                        { id: 'backup', name: 'Disaster Recovery' }
+                        { id: 'backup', name: 'Backups' }
                       ].map(sub => (
                         <button
                           key={sub.id}
@@ -1689,18 +1689,19 @@ startxref
                                 'bg-m3-primary'
                               }`} />
                             </div>
+
                             <div>
                               <div className="text-[11px] font-black uppercase font-mono text-m3-on-surface">
-                                DB Sync State: <span className={
+                                Database Status: <span className={
                                   db.dbSyncStatus === 'idle' ? 'text-emerald-400' :
                                   db.dbSyncStatus === 'queued' ? 'text-amber-400' :
                                   'text-m3-primary'
-                                }>{db.dbSyncStatus.toUpperCase()}</span>
+                                }>{db.dbSyncStatus === 'idle' ? 'UP TO DATE' : db.dbSyncStatus.toUpperCase()}</span>
                               </div>
                               <p className="text-[10px] text-m3-on-surface-variant leading-relaxed mt-0.5">
-                                {db.dbSyncStatus === 'idle' && 'All local changes secured. Storage write threads are suspended.'}
-                                {db.dbSyncStatus === 'queued' && 'Caching transactional queue. Awaiting delay cutoff to persist changes...'}
-                                {db.dbSyncStatus === 'syncing' && 'Streaming data packets to safe LocalStorage blocks.'}
+                                {db.dbSyncStatus === 'idle' && 'All changes saved. Database is currently idle.'}
+                                {db.dbSyncStatus === 'queued' && 'Changes are queued for saving...'}
+                                {db.dbSyncStatus === 'syncing' && 'Saving database changes...'}
                               </p>
                             </div>
                           </div>
@@ -1711,25 +1712,25 @@ startxref
                             className="bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-lg transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-sm"
                           >
                             <RefreshCw className="h-3 w-3 animate-spin-slow" />
-                            Force Flush Sync
+                            Save Now
                           </button>
                         </div>
 
                         {/* Debounce delay control */}
                         <div className="space-y-2 p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/30">
                           <label className="text-[10px] font-black uppercase tracking-widest text-m3-primary font-mono block">
-                            Database Write Debounce Limit Range
+                            Database Save Frequency Delay
                           </label>
                           <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
-                            Increasing write debounce inserts a timing break before committing updates of POS checkout logs, inventories, and shifts to browser storage. This dramatically increases performance and removes redundant storage strain.
+                            Adding a small save delay pools database writes together. This reduces database requests and improves application performance.
                           </p>
                           <div className="grid grid-cols-5 gap-2 pt-2 text-[10.5px]">
                             {[
-                              { id: 0, label: 'Instant (0ms)', desc: 'Brute load' },
-                              { id: 250, label: 'Fast (250ms)', desc: 'Low hold' },
-                              { id: 500, label: 'Optimal (500ms)', desc: 'Balanced' },
-                              { id: 1000, label: 'Safe (1000ms)', desc: 'Aggressive' },
-                              { id: 2000, label: 'Max (2000ms)', desc: 'Minimum IO' }
+                              { id: 0, label: 'Instant', desc: 'No delay' },
+                              { id: 250, label: 'Fast', desc: '0.25s delay' },
+                              { id: 500, label: 'Optimal', desc: '0.5s delay' },
+                              { id: 1000, label: 'Safe', desc: '1s delay' },
+                              { id: 2000, label: 'Max', desc: '2s delay' }
                             ].map(op => (
                               <button
                                 key={op.id}
@@ -1755,7 +1756,7 @@ startxref
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-1">
                           <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/30 space-y-1">
                             <span className="text-[9px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">
-                              Prevented Storage Thrashing Writes
+                              Consolidated Write Requests
                             </span>
                             <div className="flex items-center justify-between pt-1">
                               <span className="text-xl font-bold font-mono text-m3-primary">
@@ -1770,13 +1771,13 @@ startxref
                               </button>
                             </div>
                             <p className="text-[9.5px] text-zinc-400 font-sans pt-1">
-                              Indicates count of storage thrash writes skipped and consolidated by active timers.
+                              Number of database save operations pooled to optimize performance.
                             </p>
                           </div>
 
                           <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/30 space-y-1">
                             <span className="text-[9px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">
-                              Storage Overhead Reduction Rate
+                              Database Load Reduction
                             </span>
                             <div className="flex items-center justify-between pt-1">
                               <span className="text-xl font-bold font-mono text-emerald-400">
@@ -1787,7 +1788,7 @@ startxref
                               </span>
                             </div>
                             <p className="text-[9.5px] text-zinc-400 font-sans pt-1">
-                              Mathematical estimation of disk IO wear-and-tear strain prevented based on actual batch operations.
+                              Estimated percentage of database load saved by pooling requests.
                             </p>
                           </div>
                         </div>
@@ -1942,16 +1943,16 @@ startxref
                             e.preventDefault();
                             db.createDbSnapshot(snapshotName);
                             setSnapshotName('');
-                            setBackupActionStatus('Successfully generated automated secure database backup snapshot.');
+                            setBackupActionStatus('Successfully created database backup.');
                             setTimeout(() => setBackupActionStatus(null), 2500);
                           }}
                           className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/30 space-y-3 shrink-0"
                         >
                           <label className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono block">
-                            Create Hot Snapshot Recovery Point
+                            Create Database Backup
                           </label>
                           <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
-                            Generates an encrypted local snapshot bundle of your complete enterprise profiles including active shifts, checkout carts, item logs, tax registries, and audit diaries.
+                            Generates a secure backup point of your complete store records, including products, stock levels, shifts, and transactions.
                           </p>
                           <div className="flex gap-2">
                             <input
@@ -1965,7 +1966,7 @@ startxref
                               type="submit"
                               className="bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 text-[10px] font-black uppercase tracking-wider px-4 py-2 rounded-lg cursor-pointer transition-all shrink-0 font-sans shadow-sm"
                             >
-                              Take Snapshot
+                              Create Backup
                             </button>
                           </div>
                         </form>
@@ -1979,12 +1980,12 @@ startxref
                         {/* Existing Snapshots */}
                         <div className="space-y-2">
                           <span className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">
-                            Available Manual Snapshots Index ({db.dbSnapshots.length})
+                            Available Backups ({db.dbSnapshots.length})
                           </span>
                           <div className="max-h-[120px] overflow-y-auto pr-2 space-y-2 hover:scrollbar scrollbar text-[10.5px]">
                             {db.dbSnapshots.length === 0 ? (
                               <div className="p-4 rounded-xl border border-dashed border-m3-outline-variant/20 text-center text-zinc-500 italic">
-                                No active snapshots found. Create a snapshot using the form above to protect your database.
+                                No backups found. Create a backup using the form above to safeguard your records.
                               </div>
                             ) : (
                               db.dbSnapshots.map(snap => (
@@ -2003,10 +2004,10 @@ startxref
                                       type="button"
                                       onClick={() => {
                                         if (db.restoreDbSnapshot(snap.id)) {
-                                          setBackupActionStatus(`RESTORED ENTIRE SCHEMA FROM SNAPSHOT "${snap.name}" SUCCESSFULLY.`);
+                                          setBackupActionStatus(`Successfully restored database records from backup "${snap.name}".`);
                                           setTimeout(() => setBackupActionStatus(null), 3000);
                                         } else {
-                                          setBackupActionStatus('RESTORE FAIL: CORRUPTED SNAPSHOT PAYLOAD CHECKSUM.');
+                                          setBackupActionStatus('Failed to restore database: invalid backup file format.');
                                           setTimeout(() => setBackupActionStatus(null), 3500);
                                         }
                                       }}

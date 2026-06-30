@@ -368,12 +368,12 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
           <div className="flex gap-3 bg-amber-500/10 border border-amber-500/20 rounded-[20px] p-4 text-xs">
             <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
             <div className="space-y-1 text-m3-on-surface">
-              <span className="font-bold text-amber-600 block">Tilepoint Authentication & Active Terminal Guard</span>
+              <span className="font-bold text-amber-600 block">Account Security Notice</span>
               <p className="text-m3-on-surface-variant leading-relaxed">
-                The terminal system strictly enforces **single-device profile isolation**. Sharing a single cashier or admin account across multiple browsers or locations simultaneously is disabled to guarantee pristine audit logs and general ledger accuracy.
+                Each staff account can only be logged in on one browser or device at a time. This prevents conflicting entries and keeps accurate records.
               </p>
               <p className="text-m3-on-surface-variant font-medium leading-relaxed">
-                Logging into a profile on a new terminal automatically signs out any older active session for that account. Admins can forcefully terminate remote active terminal links below.
+                Logging in on a new device will automatically log out of any previous active sessions. Admins can view and manage active logins below.
               </p>
             </div>
           </div>

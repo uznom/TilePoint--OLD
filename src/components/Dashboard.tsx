@@ -1129,10 +1129,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                         {(() => {
                           const searchedTodaySales = todaySalesItems.filter(s => {
                             const query = dailySalesSearch.toLowerCase();
-                            const matchesSearch = s.saleNumber.toLowerCase().includes(query) ||
-                                                 s.customerName.toLowerCase().includes(query) ||
-                                                 s.cashierName.toLowerCase().includes(query);
-                            const matchesPayment = activeDailyPaymentFilter === 'all' || s.paymentMethod.toLowerCase() === activeDailyPaymentFilter.toLowerCase();
+                            const matchesSearch = (s.saleNumber || '').toLowerCase().includes(query) ||
+                                                 (s.customerName || '').toLowerCase().includes(query) ||
+                                                 (s.cashierName || '').toLowerCase().includes(query);
+                            const matchesPayment = activeDailyPaymentFilter === 'all' || (s.paymentMethod || '').toLowerCase() === activeDailyPaymentFilter.toLowerCase();
                             return matchesSearch && matchesPayment;
                           });
 
@@ -1179,10 +1179,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                   {(() => {
                     const searchedTodaySales = todaySalesItems.filter(s => {
                       const query = dailySalesSearch.toLowerCase();
-                      const matchesSearch = s.saleNumber.toLowerCase().includes(query) ||
-                                           s.customerName.toLowerCase().includes(query) ||
-                                           s.cashierName.toLowerCase().includes(query);
-                      const matchesPayment = activeDailyPaymentFilter === 'all' || s.paymentMethod.toLowerCase() === activeDailyPaymentFilter.toLowerCase();
+                      const matchesSearch = (s.saleNumber || '').toLowerCase().includes(query) ||
+                                           (s.customerName || '').toLowerCase().includes(query) ||
+                                           (s.cashierName || '').toLowerCase().includes(query);
+                      const matchesPayment = activeDailyPaymentFilter === 'all' || (s.paymentMethod || '').toLowerCase() === activeDailyPaymentFilter.toLowerCase();
                       return matchesSearch && matchesPayment;
                     });
 
@@ -1532,7 +1532,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
             </div>
             
             <div className="border-t border-m3-outline-variant/10 pt-4 mt-4 flex justify-between items-center bg-m3-surface-low/30 -mx-6 -mb-6 p-6 rounded-b-3xl">
-              <span className="text-[10.5px] text-zinc-400 font-mono">Real-time sync matching active caching database</span>
+              <span className="text-[10.5px] text-zinc-400 font-sans">Synced with central database</span>
               <button onClick={() => onNavigate('branches')} className="m3-btn text-xs font-bold py-1.5 flex items-center gap-1 select-none pr-3">
                 Edit Branch Profiles <ArrowUpRight className="h-3.5 w-3.5" />
               </button>
@@ -1545,7 +1545,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
               <h3 className="text-sm font-extrabold text-m3-primary tracking-tight uppercase tracking-wider flex items-center gap-1.5 mb-2.5">
                 <AlertTriangle className="h-4.5 w-4.5 text-amber-500 shrink-0" /> Enterprise Live Alerts
               </h3>
-              <p className="text-[11.5px] text-m3-on-surface-variant mb-4">Urgent operations flagged by database engines</p>
+              <p className="text-[11.5px] text-m3-on-surface-variant mb-4">Urgent operational alerts requiring attention</p>
               
               <div className="space-y-3">
                 {alarmsList.map((alarm) => (
@@ -2580,9 +2580,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
           <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
             {auditLogs.slice(0, 12).map((log, idx) => {
-              const isDanger = log.action.includes('VOID') || log.action.includes('DELETE') || log.action.includes('REJECT');
-              const isSuccess = log.action.includes('APPROVE') || log.action.includes('RECEIVE') || log.action.includes('SUCCESS');
-              const isInfo = log.action.includes('LOGIN') || log.action.includes('CREATE') || log.action.includes('UPDATE');
+              const actionText = log.action || log.actionCode || '';
+              const isDanger = actionText.includes('VOID') || actionText.includes('DELETE') || actionText.includes('REJECT');
+              const isSuccess = actionText.includes('APPROVE') || actionText.includes('RECEIVE') || actionText.includes('SUCCESS');
+              const isInfo = actionText.includes('LOGIN') || actionText.includes('CREATE') || actionText.includes('UPDATE');
               
               return (
                 <div key={idx} className="flex justify-between items-start text-xs border-b border-m3-outline-variant/10 pb-2.5 last:border-0 last:pb-0 hover:bg-m3-surface-low rounded p-1 transition-colors">
@@ -2594,7 +2595,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                         ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
                         : 'bg-sky-500/10 text-sky-400 border-sky-500/20'
                     }`}>
-                      {log.action}
+                      {log.action || log.actionCode || 'SYSTEM'}
                     </span>
                     <span className="text-m3-on-surface font-medium block leading-snug">{log.description}</span>
                     <span className="text-[10px] text-zinc-400 block font-mono pl-1">
@@ -3150,9 +3151,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
           <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
             {auditLogs.slice(0, 12).map((log, idx) => {
-              const isDanger = log.action.includes('VOID') || log.action.includes('DELETE') || log.action.includes('REJECT');
-              const isSuccess = log.action.includes('APPROVE') || log.action.includes('RECEIVE') || log.action.includes('SUCCESS');
-              const isInfo = log.action.includes('LOGIN') || log.action.includes('CREATE') || log.action.includes('UPDATE');
+              const actionText = log.action || log.actionCode || '';
+              const isDanger = actionText.includes('VOID') || actionText.includes('DELETE') || actionText.includes('REJECT');
+              const isSuccess = actionText.includes('APPROVE') || actionText.includes('RECEIVE') || actionText.includes('SUCCESS');
+              const isInfo = actionText.includes('LOGIN') || actionText.includes('CREATE') || actionText.includes('UPDATE');
               
               return (
                 <div key={idx} className="flex justify-between items-start text-xs border-b border-m3-outline-variant/10 pb-2.5 last:border-0 last:pb-0 hover:bg-m3-surface-low rounded p-1 transition-colors">
@@ -3164,7 +3166,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                         ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
                         : 'bg-sky-500/10 text-sky-400 border-sky-500/20'
                     }`}>
-                      {log.action}
+                      {log.action || log.actionCode || 'SYSTEM'}
                     </span>
                     <span className="text-m3-on-surface font-medium block leading-snug">{log.description}</span>
                     <span className="text-[10px] text-zinc-400 block font-mono pl-1">

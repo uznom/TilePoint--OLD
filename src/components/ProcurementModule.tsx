@@ -424,7 +424,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
 
   const handleDeleteSupplier = (id: string, name: string) => {
     if (isRowClearingBlocked()) {
-      alert(`[System Guard] Action Blocked: Cannot clear or remove supplier records because the register is currently holding: ${getRowClearingBlockedReason()}`);
+      alert(`Action Restricted: Cannot remove supplier records because the register is currently holding: ${getRowClearingBlockedReason()}`);
       return;
     }
     if (
@@ -480,7 +480,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
 
   const handleDeleteBrand = (id: string, name: string) => {
     if (isRowClearingBlocked()) {
-      alert(`[System Guard] Action Blocked: Cannot clear or remove brand records because the register is currently holding: ${getRowClearingBlockedReason()}`);
+      alert(`Action Restricted: Cannot remove brand records because the register is currently holding: ${getRowClearingBlockedReason()}`);
       return;
     }
     if (
@@ -2038,12 +2038,12 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                   type="button"
                   onClick={() => {
                     if (isRowClearingBlocked()) {
-                      alert(`[System Guard] Action Blocked: Cannot clear templates because the register is currently holding: ${getRowClearingBlockedReason()}`);
+                      alert(`Action Restricted: Cannot clear templates because the register is currently holding: ${getRowClearingBlockedReason()}`);
                       return;
                     }
                     if (
                       confirm(
-                        "Are you sure you want to clear the templates database? This is permanent.",
+                        "Are you sure you want to clear the templates? This is permanent.",
                       )
                     ) {
                       localStorage.removeItem("tp_po_templates");
