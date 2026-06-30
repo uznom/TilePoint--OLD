@@ -274,6 +274,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
           `Auto-dispatched accounts payable credit voucher for ${supRecord ? supRecord.name : supId} via Consolidation Desk. Amount: ₱${totalOrderAmount.toLocaleString()}`,
           "PurchaseOrders",
           linkedBillId,
+          JSON.stringify(newCreditEntry),
         );
       }
 
@@ -283,10 +284,6 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
     if (poCreatedCount > 0) {
       if (targetStatus === "Approved") {
         setCustomBills(updatedBillsList);
-        localStorage.setItem(
-          "atpos_v2_custom_bills",
-          JSON.stringify(updatedBillsList),
-        );
       }
 
       syncPoCart([]);
@@ -652,13 +649,13 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
 
     const nextBills = [...customBills, newCreditEntry];
     setCustomBills(nextBills);
-    localStorage.setItem("atpos_v2_custom_bills", JSON.stringify(nextBills));
 
     addAuditLog(
       "PO_CREDIT_SYNC",
       `Auto-dispatched accounts payable credit voucher for ${supRecord.name}. Amount: ₱${totalOrderAmount.toLocaleString()} aligned to schedule: ${paymentFrequency}`,
       "PurchaseOrders",
       linkedBillId,
+      JSON.stringify(newCreditEntry),
     );
 
     setDraftItems([]);

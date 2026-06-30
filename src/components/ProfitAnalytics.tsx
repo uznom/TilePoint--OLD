@@ -51,6 +51,7 @@ export function ProfitAnalytics({
     damageLogs,
     shifts,
     branches,
+    expenses,
   } = useDb();
 
   // Period state: '7d' | '15d' | '30d' | 'monthly'
@@ -59,14 +60,8 @@ export function ProfitAnalytics({
 
   // Expenses state
   const expensesList = useMemo(() => {
-    try {
-      const saved = localStorage.getItem("atpos_v2_expenses");
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error("Failed to parse expenses", e);
-      return [];
-    }
-  }, [sales]);
+    return expenses || [];
+  }, [expenses]);
 
   // Branch Landing Cost Modifiers
   const branchLandingModifiers = useMemo(() => {

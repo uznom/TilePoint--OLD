@@ -69,6 +69,9 @@ const HARD_LOCKED_KEYS = [
   "tp_deliveries",
   "tp_damage_logs",
   "atpos_v2_custom_bills",
+  "atpos_v2_members_list",
+  "atpos_v2_expenses",
+  "atpos_v2_returns",
   "tp_users",
   "tp_branches",
   "tp_suppliers",
@@ -82,6 +85,59 @@ const HARD_LOCKED_KEYS = [
 if (typeof window !== "undefined" && window.localStorage) {
   const originalSetItem = window.localStorage.setItem;
   window.localStorage.setItem = function (key, value) {
+    // Role-based data isolation protection
+    let isEmployee = false;
+    try {
+      const userStr = window.localStorage.getItem("tp_current_user");
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user && (user.role === "Staff" || user.role === "Cashier")) {
+          isEmployee = true;
+        }
+      }
+    } catch (_) {}
+
+    const centralDbKeys = [
+      "tp_sales",
+      "tp_products",
+      "tp_branch_stock",
+      "tp_audit_logs",
+      "tp_users",
+      "tp_branches",
+      "tp_suppliers",
+      "tp_brands",
+      "tp_purchase_orders",
+      "tp_po_items",
+      "tp_transmittals",
+      "tp_shifts",
+      "tp_sales",
+      "tp_sale_items",
+      "tp_movements",
+      "tp_stock_transfers",
+      "tp_ledger_entries",
+      "tp_branch_sales_reports",
+      "tp_deliveries",
+      "tp_damage_logs",
+      "atpos_v2_custom_bills",
+      "atpos_v2_members_list",
+      "atpos_v2_expenses",
+      "atpos_v2_returns",
+      "tp_db_snapshots"
+    ];
+
+    const allowedKeys = [
+      "tp_current_user",
+      "tp_is_logged_in",
+      "tp_session_token",
+      "tp_active_session_id",
+      "tp_active_sessions"
+    ];
+
+    if (isEmployee && centralDbKeys.includes(key) && !allowedKeys.includes(key)) {
+      console.warn(`[System Guard] Role isolation block: Bypassed disk storage write for central DB key "${key}" under employee role.`);
+      return;
+    }
+
     try {
       originalSetItem.call(window.localStorage, key, value);
     } catch (error: any) {
@@ -193,6 +249,89 @@ if (typeof window !== "undefined" && window.localStorage) {
     }
   };
 
+  const createLocalDatabaseSnapshot = () => {
+    try {
+      const payload: any = {};
+      const keysToSave = [
+        "tp_is_configured", "tp_users", "tp_branches", "tp_suppliers", "tp_products",
+        "tp_purchase_orders", "tp_po_items", "tp_transmittals", "tp_shifts", "tp_sales",
+        "tp_sale_items", "tp_movements", "tp_audit_logs", "tp_parked_sales",
+        "tp_stock_transfers", "tp_branch_stock", "tp_ledger_entries", "tp_branch_sales_reports",
+        "tp_deliveries", "tp_damage_logs", "atpos_v2_custom_bills", "atpos_v2_members_list",
+        "atpos_v2_expenses", "atpos_v2_returns"
+      ];
+      
+      const keyMapping: Record<string, string> = {
+        tp_is_configured: "isConfigured",
+        tp_users: "users",
+        tp_branches: "branches",
+        tp_suppliers: "suppliers",
+        tp_products: "products",
+        tp_purchase_orders: "purchaseOrders",
+        tp_po_items: "poItems",
+        tp_transmittals: "transmittals",
+        tp_shifts: "shifts",
+        tp_sales: "sales",
+        tp_sale_items: "saleItems",
+        tp_movements: "movements",
+        tp_audit_logs: "auditLogs",
+        tp_parked_sales: "parkedSales",
+        tp_stock_transfers: "stockTransfers",
+        tp_branch_stock: "branchStock",
+        tp_ledger_entries: "ledgerEntries",
+        tp_branch_sales_reports: "branchSalesReports",
+        tp_deliveries: "deliveries",
+        tp_damage_logs: "damageLogs",
+        atpos_v2_custom_bills: "atpos_v2_custom_bills",
+        atpos_v2_members_list: "atpos_v2_members_list",
+        atpos_v2_expenses: "atpos_v2_expenses",
+        atpos_v2_returns: "atpos_v2_returns",
+      };
+
+      for (const rawKey of keysToSave) {
+        const storedVal = window.localStorage.getItem(rawKey);
+        if (storedVal !== null) {
+          try {
+            payload[keyMapping[rawKey]] = JSON.parse(storedVal);
+          } catch (_) {
+            payload[keyMapping[rawKey]] = storedVal === "true" ? true : storedVal === "false" ? false : storedVal;
+          }
+        } else {
+          payload[keyMapping[rawKey]] = null;
+        }
+      }
+
+      const dataStr = JSON.stringify(payload);
+      const id = `SNAP-ON-THE-FLY-${Date.now()}`;
+      const newSnapshot = {
+        id,
+        name: `On-the-Fly Safety Snapshot - ${new Date().toLocaleTimeString()}`,
+        timestamp: new Date().toISOString(),
+        creator: "System Guard Auto-Gen",
+        sizeBytes: typeof Blob !== "undefined" ? new Blob([dataStr]).size : dataStr.length,
+        data: dataStr,
+      };
+
+      const existingStr = window.localStorage.getItem("tp_db_snapshots");
+      let existingSnapshots: any[] = [];
+      if (existingStr) {
+        try {
+          existingSnapshots = JSON.parse(existingStr);
+          if (!Array.isArray(existingSnapshots)) {
+            existingSnapshots = [];
+          }
+        } catch (_) {}
+      }
+      const updatedSnapshots = [newSnapshot, ...existingSnapshots].slice(0, 2);
+      originalSetItem.call(window.localStorage, "tp_db_snapshots", JSON.stringify(updatedSnapshots));
+      console.log("[System Guard] Successfully generated on-the-fly safety snapshot:", id);
+    } catch (err) {
+      console.error("[System Guard] Failed to generate on-the-fly safety snapshot:", err);
+    }
+  };
+
+  (window as any).createLocalDatabaseSnapshot = createLocalDatabaseSnapshot;
+
   const originalRemoveItem = window.localStorage.removeItem;
   window.localStorage.removeItem = function (key) {
     if (HARD_LOCKED_KEYS.includes(key)) {
@@ -223,9 +362,26 @@ if (typeof window !== "undefined" && window.localStorage) {
       } catch (_) {}
 
       if (!hasSnapshot) {
-        console.error(`[System Guard] Blocked removal of hard-locked key "${key}" until a local database snapshot is generated.`);
-        alert(`[System Guard] Action Blocked: Cannot clear database storage until a local database snapshot is generated.`);
-        return;
+        const bypassFlag = window.localStorage.getItem("tp_bypass_snapshot_check") === "true" ||
+                           window.localStorage.getItem("tp_snapshot_bypass") === "true" ||
+                           (window as any).tp_bypass_snapshot_check === true ||
+                           (window as any).tp_snapshot_bypass === true;
+
+        if (bypassFlag) {
+          console.log(`[System Guard] Snapshot bypass flag detected. Generating safety snapshot on-the-fly before removing "${key}"`);
+          createLocalDatabaseSnapshot();
+        } else {
+          const confirmAction = window.confirm(
+            `[System Guard] You are attempting to remove hard-locked database key "${key}".\n\nDo you want to explicitly confirm this action and automatically generate a database safety snapshot to proceed safely?`
+          );
+          if (confirmAction) {
+            createLocalDatabaseSnapshot();
+          } else {
+            console.error(`[System Guard] Blocked removal of hard-locked key "${key}" until a local database snapshot is generated.`);
+            alert(`[System Guard] Action Blocked: Cannot clear database storage until a local database snapshot is generated.`);
+            return;
+          }
+        }
       }
     }
     originalRemoveItem.call(window.localStorage, key);
@@ -260,9 +416,26 @@ if (typeof window !== "undefined" && window.localStorage) {
     } catch (_) {}
 
     if (!hasSnapshot) {
-      console.error("[System Guard] Blocked localStorage.clear() until a local database snapshot is generated.");
-      alert("[System Guard] Action Blocked: Cannot clear database storage until a local database snapshot is generated.");
-      return;
+      const bypassFlag = window.localStorage.getItem("tp_bypass_snapshot_check") === "true" ||
+                         window.localStorage.getItem("tp_snapshot_bypass") === "true" ||
+                         (window as any).tp_bypass_snapshot_check === true ||
+                         (window as any).tp_snapshot_bypass === true;
+
+      if (bypassFlag) {
+        console.log("[System Guard] Snapshot bypass flag detected. Generating safety snapshot on-the-fly before clearing database storage.");
+        createLocalDatabaseSnapshot();
+      } else {
+        const confirmAction = window.confirm(
+          `[System Guard] You are attempting to clear all database storage.\n\nDo you want to explicitly confirm this action and automatically generate a database safety snapshot to proceed safely?`
+        );
+        if (confirmAction) {
+          createLocalDatabaseSnapshot();
+        } else {
+          console.error("[System Guard] Blocked localStorage.clear() until a local database snapshot is generated.");
+          alert("[System Guard] Action Blocked: Cannot clear database storage until a local database snapshot is generated.");
+          return;
+        }
+      }
     }
     originalClear.call(window.localStorage);
   };
@@ -3362,6 +3535,57 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       }
     };
+
+    const isEmployee = currentUser && (currentUser.role === UserRole.STAFF || currentUser.role === UserRole.CASHIER);
+
+    const centralDbKeys = [
+      "tp_sales",
+      "tp_products",
+      "tp_branch_stock",
+      "tp_audit_logs",
+      "tp_users",
+      "tp_branches",
+      "tp_suppliers",
+      "tp_brands",
+      "tp_purchase_orders",
+      "tp_po_items",
+      "tp_transmittals",
+      "tp_shifts",
+      "tp_sales",
+      "tp_sale_items",
+      "tp_movements",
+      "tp_stock_transfers",
+      "tp_ledger_entries",
+      "tp_branch_sales_reports",
+      "tp_deliveries",
+      "tp_damage_logs",
+      "atpos_v2_custom_bills",
+      "atpos_v2_members_list",
+      "atpos_v2_expenses",
+      "atpos_v2_returns",
+      "tp_db_snapshots"
+    ];
+
+    const allowedKeys = [
+      "tp_current_user",
+      "tp_is_logged_in",
+      "tp_session_token",
+      "tp_active_session_id",
+      "tp_active_sessions"
+    ];
+
+    if (isEmployee && centralDbKeys.includes(key) && !allowedKeys.includes(key)) {
+      console.log(`[Role Isolation] Intercepted storage saving for key "${key}" under employee session. Running volatile-only synchronization.`);
+      // Queue the server write only, leaving zero local hardware traces
+      writeQueue.current = writeQueue.current
+        .then(async () => {
+          await writeToServer();
+        })
+        .catch((err) => {
+          console.error(`[Role Isolation] Volatile queue sync failed for key "${key}":`, err);
+        });
+      return;
+    }
 
     if (bypassDebounce || debounceDelay === 0) {
       queueAtomicWrite(key, dataStr, writeToServer);

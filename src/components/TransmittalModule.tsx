@@ -42,6 +42,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
     movements,
     stockTransfers,
     triggerSystemProcessing,
+    expenses,
   } = useDb();
 
   // Create Modal state
@@ -145,16 +146,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
         });
 
       // 5. Operating Petty Cash Expenses registered under this branch from standard LocalStorage
-      const cachedExpenses = localStorage.getItem("atpos_v2_expenses");
-      let allExpenses: any[] = [];
-      if (cachedExpenses) {
-        try {
-          allExpenses = JSON.parse(cachedExpenses);
-        } catch (e) {
-          console.error("Failed to parse expenses", e);
-        }
-      }
-      const branchExpenses = allExpenses.filter(
+      const branchExpenses = expenses.filter(
         (ex: any) => ex.branchId === currentBranchId,
       );
 
@@ -354,17 +346,9 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
     const bShifts = shifts.filter((sh) => sh.branchId === fromBranchId);
 
     // Get Petty cash expenses from standard LocalStorage
-    let bExpenses: any[] = [];
-    try {
-      const cachedExpenses = localStorage.getItem("atpos_v2_expenses");
-      if (cachedExpenses) {
-        bExpenses = JSON.parse(cachedExpenses).filter(
-          (ex: any) => ex.branchId === fromBranchId,
-        );
-      }
-    } catch (err) {
-      console.warn("Could not read expenses for BI export", err);
-    }
+    const bExpenses = expenses.filter(
+      (ex: any) => ex.branchId === fromBranchId,
+    );
 
     // 2. Financial KPIs
     const totalRevenue = bSales.reduce((sum, s) => sum + s.grandTotal, 0);
