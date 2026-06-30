@@ -52,12 +52,27 @@ const readDatabase = () => {
   }
 };
 
+// Real-time clients array and notifier
+let clients = [];
+const notifyClients = (type, info) => {
+  const payload = JSON.stringify({ type, info });
+  clients.forEach(res => {
+    try {
+      res.write(`data: ${payload}\n\n`);
+    } catch (e) {
+      // client connection is dead
+    }
+  });
+};
+
 // Helper to write database safely with atomic updates
 const writeDatabase = (data) => {
   try {
     const tempPath = `${DB_FILE_PATH}.tmp`;
     fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf-8');
     fs.renameSync(tempPath, DB_FILE_PATH);
+    // Broadcast real-time change to all active cashier/staff devices
+    notifyClients('db_update', {});
     return true;
   } catch (error) {
     console.error('[Shared DB Server] Error writing server-db.json:', error);
@@ -132,6 +147,24 @@ const isDatabaseConfigured = () => {
   return db['tp_is_configured'] === 'true' || db['tp_is_configured'] === true;
 };
 
+
+// SSE real-time event subscription endpoint
+app.get('/api/db/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.flushHeaders();
+
+  // Send initial connected ping
+  res.write(`data: ${JSON.stringify({ type: 'handshake', info: { connected: true } })}\n\n`);
+
+  clients.push(res);
+
+  req.on('close', () => {
+    clients = clients.filter(c => c !== res);
+  });
+});
 
 // API: Get entire shared database
 app.get('/api/db', (req, res) => {

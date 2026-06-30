@@ -474,6 +474,7 @@ interface DbContextType {
   setExpenses: React.Dispatch<React.SetStateAction<Expense[]>>;
   productReturns: ProductReturn[];
   setProductReturns: React.Dispatch<React.SetStateAction<ProductReturn[]>>;
+  syncStatus: Record<string, "Live" | "Syncing">;
 
   // Actions - Users
   createUser: (user: Omit<User, "id" | "createdAt" | "updatedAt">) => void;
@@ -2277,6 +2278,22 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
+  const [syncStatus, setSyncStatus] = useState<Record<string, "Live" | "Syncing">>({});
+
+  useEffect(() => {
+    setSyncStatus((prev) => {
+      const next = { ...prev };
+      let updated = false;
+      branches.forEach((branch) => {
+        if (!next[branch.id]) {
+          next[branch.id] = "Live";
+          updated = true;
+        }
+      });
+      return updated ? next : prev;
+    });
+  }, [branches]);
+
   const [stockTransfers, setStockTransfers] = useState<StockTransfer[]>(() => {
     return safeParse<StockTransfer[]>("tp_stock_transfers", []);
   });
@@ -2762,6 +2779,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const isProcessingQueue = useRef(false);
+  const isSyncingFromServer = useRef(false);
   const processOfflineQueue = async () => {
     if (isProcessingQueue.current || !navigator.onLine) return;
     let queue: any[] = [];
@@ -2828,7 +2846,15 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       console.log('[Shared DB Client] System setup in progress. Bypassing server sync to avoid overwrite race condition.');
       return;
     }
+    setSyncStatus((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((k) => {
+        next[k] = "Syncing";
+      });
+      return next;
+    });
     try {
+      isSyncingFromServer.current = true;
       const res = await fetch("/api/db");
       if (!res.ok)
         throw new Error("Shared server returned status " + res.status);
@@ -2932,17 +2958,36 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         error,
       );
       setServerConnected(false);
+    } finally {
+      isSyncingFromServer.current = false;
+      setSyncStatus((prev) => {
+        const next = { ...prev };
+        Object.keys(next).forEach((k) => {
+          next[k] = "Live";
+        });
+        return next;
+      });
     }
   };
 
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const currentSyncDelay = useRef<number>(5000);
+  const isSseConnected = useRef<boolean>(false);
 
   const scheduleNextSync = (delayMs: number) => {
     if (syncTimeoutRef.current) {
       clearTimeout(syncTimeoutRef.current);
     }
     syncTimeoutRef.current = setTimeout(async () => {
+      // EVENT-DRIVEN PUSH OPTIMIZATION: If the real-time push channel (SSE) is alive and connected,
+      // bypass the constant 5-second polling loop to prevent heavy DB read queries and client overhead.
+      // Instead, we schedule a relaxed 60-second backup heartbeat check.
+      if (isSseConnected.current) {
+        console.log("[Push Optimization] SSE push connection is active. Bypassing active polling; scheduled 60s fallback heartbeat.");
+        scheduleNextSync(60000);
+        return;
+      }
+
       let success = false;
       try {
         await syncFromSharedServer();
@@ -3009,6 +3054,61 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     };
     window.addEventListener("online", handleOnline);
     return () => window.removeEventListener("online", handleOnline);
+  }, []);
+
+  // Real-time server-sent events (SSE) listener for instant synchronization across all staff & cashier devices
+  useEffect(() => {
+    let eventSource: EventSource | null = null;
+    let reconnectTimeout: any = null;
+
+    const connectRealTimeChannel = () => {
+      console.log("[Real-Time Sync] Subscribing to central server event channel...");
+      eventSource = new EventSource("/api/db/events");
+
+      eventSource.onopen = () => {
+        console.log("[Real-Time Sync] SSE Channel established. Switching to event-driven push mode.");
+        isSseConnected.current = true;
+      };
+
+      eventSource.onmessage = async (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.type === 'handshake') {
+            console.log("[Real-Time Sync] Server handshake verified.");
+            isSseConnected.current = true;
+          } else if (payload.type === 'db_update') {
+            console.log("[Real-Time Sync] Central database updated. Pulling changes immediately...");
+            // Execute silent pull sync to update cashier or staff screens instantly
+            await syncFromSharedServer();
+          }
+        } catch (e) {
+          console.warn("[Real-Time Sync] Failed parsing push message payload:", e);
+        }
+      };
+
+      eventSource.onerror = () => {
+        console.warn("[Real-Time Sync] Event stream disconnected. Falling back to active recovery polling and re-connecting in 5 seconds...");
+        isSseConnected.current = false;
+        if (eventSource) {
+          eventSource.close();
+        }
+        // Force an immediate scheduleNextSync retry to recover offline logs or start backoff
+        scheduleNextSync(1000);
+        reconnectTimeout = setTimeout(connectRealTimeChannel, 5000);
+      };
+    };
+
+    connectRealTimeChannel();
+
+    return () => {
+      isSseConnected.current = false;
+      if (eventSource) {
+        eventSource.close();
+      }
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+    };
   }, []);
 
   // Persist auto backup settings
@@ -3413,7 +3513,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     bypassDebounce = false,
   ) => {
     // 1. PERSISTENT HYDRATION GUARD: Block saving completely while hydration loop is in progress
-    if (isHydrating || isSystemHydrating) {
+    if (isHydrating || isSystemHydrating || isSyncingFromServer.current) {
       return;
     }
 
@@ -3461,6 +3561,13 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       ) {
         return; // Device-Specific Isolation: Do not write session states to the shared centralized server
       }
+      setSyncStatus((prev) => {
+        const next = { ...prev };
+        Object.keys(next).forEach((k) => {
+          next[k] = "Syncing";
+        });
+        return next;
+      });
       try {
         if (!navigator.onLine) {
           throw new Error("Navigator reports offline state");
@@ -3512,6 +3619,14 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         } else {
           enqueueOfflineRequest({ key, value, isLegacy: true });
         }
+      } finally {
+        setSyncStatus((prev) => {
+          const next = { ...prev };
+          Object.keys(next).forEach((k) => {
+            next[k] = "Live";
+          });
+          return next;
+        });
       }
     };
 
@@ -3531,7 +3646,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         "tp_is_logged_in",
         "tp_session_token",
         "tp_active_session_id",
-        "tp_active_sessions"
+        "tp_active_sessions",
+        "tp_parked_sales"
       ];
 
       if (!essentialSessionKeys.includes(key)) {
@@ -7813,6 +7929,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         setExpenses,
         productReturns,
         setProductReturns,
+        syncStatus,
         createUser,
         updateUser,
         resetPassword,

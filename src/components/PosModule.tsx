@@ -66,6 +66,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
     branches,
     branchStock,
     syncFromSharedServer,
+    syncStatus,
   } = useDb();
 
   const getBranchPrice = (p: Product) => {
@@ -324,6 +325,43 @@ export const PosModule: React.FC<PosModuleProps> = ({
       setToastMessage(null);
     }, 4000);
   };
+
+  const playNotificationSound = () => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const playBeep = (freq: number, start: number, duration: number) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + start);
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime + start);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + start + duration);
+        osc.start(audioCtx.currentTime + start);
+        osc.stop(audioCtx.currentTime + start + duration);
+      };
+      playBeep(660, 0, 0.12);
+      playBeep(880, 0.15, 0.18);
+    } catch (e) {
+      console.warn("Notification audio blocked by browser policy:", e);
+    }
+  };
+
+  const prevParkedSalesRef = useRef<any[]>([]);
+
+  useEffect(() => {
+    if (prevParkedSalesRef.current.length > 0) {
+      const prevIds = new Set(prevParkedSalesRef.current.map((ps) => ps.id));
+      const newSales = parkedSales.filter((ps) => !prevIds.has(ps.id));
+      if (newSales.length > 0) {
+        const newest = newSales[newSales.length - 1];
+        showToast(`🔔 NEW YARD ORDER RECEIVED: ${newest.customerName || "Walk-in Customer"}`);
+        playNotificationSound();
+      }
+    }
+    prevParkedSalesRef.current = parkedSales;
+  }, [parkedSales]);
 
   // Search input referencer for hotkey focus
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -1220,14 +1258,27 @@ export const PosModule: React.FC<PosModuleProps> = ({
               }`}
             >
               <div className="border-b border-m3-outline-variant/15 pb-2 cursor-default flex-shrink-0">
-                <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest flex items-center gap-1.5">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </span>
-                  <span>
-                    Yard Staff Transactions HOLD Queue ({parkedSales.length})
-                  </span>
+                <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest flex items-center justify-between gap-1.5 w-full">
+                  <div className="flex items-center gap-1.5">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span>
+                      Yard Staff Transactions HOLD Queue ({parkedSales.length})
+                    </span>
+                  </div>
+                  {syncStatus?.[currentUser?.branchAssignmentId || "B1"] === "Syncing" ? (
+                    <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-400 border border-amber-500/25 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full animate-pulse">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping"></span>
+                      Syncing
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+                      Live
+                    </span>
+                  )}
                 </h3>
                 <p className="text-[10px] text-zinc-400 font-semibold mt-1 leading-tight">
                   Materials staged on-the-floor by floor staff are queued below.
@@ -1298,6 +1349,17 @@ export const PosModule: React.FC<PosModuleProps> = ({
                       <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest flex items-center gap-2">
                         <ShoppingCart className="h-4 w-4" />
                         <span>Active Order list of materials</span>
+                        {syncStatus?.[currentUser?.branchAssignmentId || "B1"] === "Syncing" ? (
+                          <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-400 border border-amber-500/25 text-[9px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded-full animate-pulse ml-1.5">
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping"></span>
+                            Syncing
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-[9px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded-full ml-1.5">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+                            Live
+                          </span>
+                        )}
                       </h3>
                       <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[10px] font-black uppercase tracking-wide">
                         <button
