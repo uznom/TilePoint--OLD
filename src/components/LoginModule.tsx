@@ -33,11 +33,11 @@ export const LoginModule: React.FC = () => {
   const [isSQLiBlocked, setIsSQLiBlocked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // List of seeded accounts for quick simulation select
+  // List of simulation accounts for quick selection
   const simulatedAccounts: any[] = simulationModeActive ? [
     { name: 'Simulated Admin', username: 'admin', pass: 'admin123', role: 'ADMIN', avatar: 'AD', desc: 'Full authority, bypasses standard restrictions.' },
     { name: 'Simulated Manager', username: 'manager', pass: 'tilepoint', role: 'MANAGER', avatar: 'MN', desc: 'Approves transmittals, manages stock & pricing.' },
-    { name: 'Simulated Cashier', username: 'cashier', pass: 'tilepoint', role: 'CASHIER', avatar: 'CS', desc: 'Performs checkout sales in POS module.' },
+    { name: 'Simulated Cashier', username: 'cashier', pass: 'tilepoint', role: 'CASHIER', avatar: 'CS', desc: 'Performs checkout sales in ERP OS module.' },
     { name: 'Simulated Staff', username: 'staff', pass: 'tilepoint', role: 'STAFF', avatar: 'ST', desc: 'Checks prices & scans catalogs in staff portal.' }
   ] : [];
 
@@ -102,10 +102,10 @@ export const LoginModule: React.FC = () => {
               <ShieldCheck className="h-4 w-4" /> SECURE TERMINAL GATEWAY
             </div>
             <h2 className="text-3xl md:text-5xl font-black tracking-tight text-m3-on-surface leading-none uppercase">
-              TilePoint <span className="text-m3-primary">HQ POS</span>
+              TilePoint <span className="text-m3-primary">HQ ERP OS</span>
             </h2>
             <p className="text-sm md:text-base text-m3-on-surface-variant max-w-lg mt-2.5 font-medium">
-              Enterprise-grade Point-of-Sale and Stock Management Terminal. Protected with real-time access control policies and secure localized database integrity.
+              Enterprise-grade Resource Planning and Stock Management Terminal. Protected with real-time access control policies and secure localized database integrity.
             </p>
           </div>
 
@@ -116,7 +116,7 @@ export const LoginModule: React.FC = () => {
                 <Cpu className="h-4 w-4" /> Simulation & Role Pre-selectors
               </h3>
               <p className="text-xs text-m3-on-surface-variant font-medium mb-4">
-                Instantly switch accounts to preview the specific role layouts, clearance tiers, and permissions across the POS, Inventory, and Admin panels:
+                Instantly switch accounts to preview the specific role layouts, clearance tiers, and permissions across the ERP OS, Inventory, and Admin panels:
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">

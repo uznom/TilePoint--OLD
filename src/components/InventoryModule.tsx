@@ -1164,7 +1164,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   const executeBulkImport = async () => {
     const trimmedInput = rawImportText.trim();
     if (!trimmedInput) {
-      showToast('Error: Please input valid JSON or CSV older POS product data.');
+      showToast('Error: Please input valid JSON or CSV older ERP OS product data.');
       return;
     }
 
@@ -1375,7 +1375,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
           showToast(`Detected ${newLocations.length} new branch location(s)! Please fill in their details to finalize migration.`);
         } else {
           await triggerSystemProcessing(
-            `Executing Legacy POS Data Importer (${formatType})...`,
+            `Executing Legacy ERP OS Data Importer (${formatType})...`,
             1600,
             'db',
             undefined,
@@ -1386,7 +1386,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
           if (result.success) {
             setShowImportModal(false);
             setShowPortabilityHubModal(false);
-            showToast(`Successfully migrated ${result.count} tile products from old POS system!`);
+            showToast(`Successfully migrated ${result.count} tile products from old ERP OS system!`);
           } else {
             showToast(`Import Failure: ${result.error}`);
           }
@@ -2976,7 +2976,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                       if (ageDays >= 30 && ageDays < 90) {
                         agingLabel = 'Stable';
                         agingBadge = 'bg-blue-500/10 text-blue-500 border-blue-500/15';
-                        recommendationText = 'Baseline performance. Keep standard order levels linked to monthly POS logs.';
+                        recommendationText = 'Baseline performance. Keep standard order levels linked to monthly ERP OS logs.';
                       } else if (ageDays >= 90 && ageDays < 180) {
                         agingLabel = 'Slow-Moving';
                         agingBadge = 'bg-amber-500/10 text-amber-500 border-amber-500/15';
@@ -3019,7 +3019,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
         </div>
       )}
 
-      {/* VIEW 5: LEGACY POS DATA MIGRATION ENGINE */}
+      {/* VIEW 5: LEGACY ERP OS DATA MIGRATION ENGINE */}
       {activeSubTab === 'import' && (
         <div className="space-y-6 animate-fade-in text-left">
           <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] p-6 shadow-sm space-y-6">
@@ -3027,10 +3027,10 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
               <div>
                 <h3 className="text-base font-black text-m3-primary uppercase tracking-wider flex items-center gap-2">
                   <Upload className="h-5 w-5 text-emerald-500" />
-                  <span>Legacy POS Data Migration Hub &amp; Smart Import Engine</span>
+                  <span>Legacy ERP OS Data Migration Hub &amp; Smart Import Engine</span>
                 </h3>
                 <p className="text-xs text-m3-on-surface-variant font-medium mt-1">
-                  Import inventory stock, prices, SKUs, and categories directly from your legacy point-of-sale systems.
+                  Import inventory stock, prices, SKUs, and categories directly from your legacy ERP / POS systems.
                 </p>
               </div>
               <span className="bg-emerald-500 text-white font-black text-[9px] tracking-widest px-2.5 py-1 rounded-full uppercase">
@@ -3063,7 +3063,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
             {/* Paste Space */}
             <div className="space-y-3">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <label className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">Paste raw older POS CSV rows or JSON data here</label>
+                <label className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">Paste raw older ERP OS CSV rows or JSON data here</label>
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
@@ -3095,7 +3095,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                         }
                       ];
                       setRawImportText(JSON.stringify(sample, null, 2));
-                      showToast("Loaded high-fidelity Sample older POS JSON Dataset!");
+                      showToast("Loaded high-fidelity Sample older ERP OS JSON Dataset!");
                     }}
                     className="text-[10px] font-black uppercase text-m3-primary hover:text-m3-primary/80 bg-m3-primary/10 px-3.5 py-1.5 rounded-full transition-all cursor-pointer font-sans"
                   >
@@ -3106,7 +3106,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                     onClick={() => {
                       const sampleCsv = `Product Name,Product Code,SKU,Barcode,Category,Brand,Cost Price,Selling Price,Size,Quantity\n"Heritage White Glazed Porcelain",HW-GL-80,SKU-HW-80,4801122334455,Porcelain Tiles,Heritage Slabs,420,650,80x80 cm,150\n"EcoSlate Anti-Slip Terracotta",ES-AS-30,SKU-ES-30,4805566778899,Ceramic Tiles,EcoStone,180,280,30x30 cm,320`;
                       setRawImportText(sampleCsv);
-                      showToast("Loaded high-fidelity Sample older POS CSV Dataset!");
+                      showToast("Loaded high-fidelity Sample older ERP OS CSV Dataset!");
                     }}
                     className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 hover:opacity-85 bg-emerald-500/10 px-3.5 py-1.5 rounded-full transition-all cursor-pointer font-sans"
                   >
@@ -3136,7 +3136,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                 />
                 <Upload className="h-8 w-8 text-m3-primary mx-auto animate-bounce" />
                 <div>
-                  <h4 className="text-sm font-black uppercase text-m3-on-surface">Drag &amp; Drop Older POS File Here</h4>
+                  <h4 className="text-sm font-black uppercase text-m3-on-surface">Drag &amp; Drop Older ERP OS File Here</h4>
                   <p className="text-[11px] text-m3-on-surface-variant mt-1.5 max-w-md mx-auto select-none font-medium">
                     Supports spreadsheet .csv exports, backup raw .json database copies, text tables. Or click inside to request manual file browser dialog.
                   </p>
@@ -3151,12 +3151,12 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   rows={8}
                   placeholder={`--- CSV FORMAT EXAMPLE ---
 Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
-"Old POS Tile X",OPT-001,120.00,190.00,80,Porcelain,"ETC_DIPOLOG MAIN"
+"Old ERP OS Tile X",OPT-001,120.00,190.00,80,Porcelain,"ETC_DIPOLOG MAIN"
 
 --- OR JSON FORMAT EXAMPLE ---
 [
   {
-    "productName": "Old POS Tile Y",
+    "productName": "Old ERP OS Tile Y",
     "productCode": "OPT-002",
     "costPrice": 150,
     "sellingPrice": 240,
@@ -3214,7 +3214,7 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
                   <span>Branch MSRP &amp; Localized SRP Suggestions</span>
                 </h3>
                 <p className="text-xs text-m3-on-surface-variant font-medium mt-1">
-                  Adjust product retail prices dynamically. Transport, freight, and logistics added cost vary by branch. Set overrides here to customize POS selling prices.
+                  Adjust product retail prices dynamically. Transport, freight, and logistics added cost vary by branch. Set overrides here to customize ERP OS selling prices.
                 </p>
               </div>
             </div>
@@ -4204,7 +4204,7 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
                   <span>Administrative Data Portability Hub</span>
                 </h3>
                 <p className="text-xs text-m3-on-surface-variant font-medium mt-1">
-                  Export standard inventory catalog data or import tiles and old legacy POS rosters.
+                  Export standard inventory catalog data or import tiles and old legacy ERP OS rosters.
                 </p>
               </div>
               <button
@@ -4268,11 +4268,11 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
                         }
                       ];
                       setRawImportText(JSON.stringify(sample, null, 2));
-                      showToast("Loaded trial POS dataset to workspace!");
+                      showToast("Loaded trial ERP OS dataset to workspace!");
                     }}
                     className="w-full py-2 bg-m3-surface-low hover:bg-m3-outline-variant/15 text-m3-primary font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 border border-m3-outline-variant/10"
                   >
-                    ⚡ Load TRIAL POS Roster
+                    ⚡ Load TRIAL ERP OS Roster
                   </button>
                 </div>
               </div>
@@ -4286,7 +4286,7 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
                   rows={8}
                   placeholder={`[
   {
-    "productName": "Old POS Ceramic Tile x5",
+    "productName": "Old ERP OS Ceramic Tile x5",
     "productCode": "OP-CER-01",
     "costPrice": 120,
     "sellingPrice": 190,

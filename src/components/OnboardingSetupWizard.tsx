@@ -473,7 +473,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
     db.completeOnboarding([]);
     setImportStatus({
       type: 'success',
-      message: 'System cleared and primed with a fresh database context. Launching...'
+      message: 'System cleared and primed with a fresh system journal. Launching...'
     });
     setTimeout(() => {
       window.location.reload();
@@ -496,24 +496,24 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
         )}
         
         {/* Wizard Header decor */}
-        <div className="absolute top-0 right-12 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-12 w-32 h-32 bg-m3-primary/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-12 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* STEP Rendering */}
         {step === 'welcome' && (
           <div className="space-y-6 text-center py-6 animate-fade-in">
-            <div className="h-16 w-16 bg-gradient-to-tr from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/15">
+            <div className="h-16 w-16 bg-gradient-to-tr from-m3-primary to-m3-primary/80 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-m3-primary/15">
               <Sparkles className="h-8 w-8 text-white animate-pulse" />
             </div>
             <div className="space-y-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400 font-mono bg-indigo-500/10 px-3 py-1.5 rounded-full">
+              <span className="text-[10px] font-black uppercase tracking-widest text-m3-primary font-mono bg-m3-primary/10 px-3 py-1.5 rounded-full">
                 Setup Assistant
               </span>
               <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">
                 Welcome to TilePoint ERP OS!
               </h1>
               <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto leading-relaxed">
-                Let's configure your workspace database. Get ready to experience tile retail automation, coverage intelligence, and compliant tax registers.
+                Let's configure your workspace register. Get ready to experience tile retail automation, coverage intelligence, and compliant tax registers.
               </p>
             </div>
 
@@ -521,7 +521,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
 
             <button
               onClick={() => setStep('question')}
-              className="py-3 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs tracking-wider uppercase rounded-full shadow-lg shadow-indigo-600/20 active:scale-95 transition-all inline-flex items-center gap-2 cursor-pointer"
+              className="py-3 px-6 bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary font-extrabold text-xs tracking-wider uppercase rounded-full shadow-lg shadow-m3-primary/20 active:scale-95 transition-all inline-flex items-center gap-2 cursor-pointer"
             >
               <span>Get Started</span>
               <ArrowRight className="h-4 w-4" />
@@ -535,7 +535,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
               <span className="text-[10px] font-black uppercase tracking-widest text-[#E2E8F0] font-mono bg-slate-800 px-3 py-1 rounded-full">
                 Database Step 1 of 2
               </span>
-              <h2 className="text-xl sm:text-2xl font-black text-white">Do you have an older ERP / POS system?</h2>
+              <h2 className="text-xl sm:text-2xl font-black text-white">Do you have an older legacy ERP / stock ledger?</h2>
               <p className="text-xs text-slate-400 max-w-sm mx-auto">
                 We support automated bulk migration from older cash register exports (pasted CSV or JSON arrays).
               </p>
@@ -544,9 +544,9 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
               <button
                 onClick={() => setStep('yes_migrate')}
-                className="p-5 bg-gradient-to-br from-indigo-950/40 to-indigo-900/40 border border-indigo-500/20 hover:border-indigo-500/50 rounded-2xl text-left transition-all space-y-3 shadow-md group active:scale-98 cursor-pointer"
+                className="p-5 bg-gradient-to-br from-m3-primary-container/20 to-m3-primary-container/10 border border-m3-primary/20 hover:border-m3-primary/50 rounded-2xl text-left transition-all space-y-3 shadow-md group active:scale-98 cursor-pointer"
               >
-                <div className="h-10 w-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-all">
+                <div className="h-10 w-10 bg-m3-primary/10 rounded-xl flex items-center justify-center text-m3-primary group-hover:bg-m3-primary group-hover:text-m3-on-primary transition-all">
                   <Database className="h-5 w-5" />
                 </div>
                 <div>
@@ -587,7 +587,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
         {step === 'yes_migrate' && (
           <div className="space-y-5 animate-fade-in text-left">
             <div className="space-y-1 text-center sm:text-left">
-              <h3 className="text-lg font-black uppercase tracking-wider text-indigo-400 flex items-center justify-center sm:justify-start gap-2">
+              <h3 className="text-lg font-black uppercase tracking-wider text-m3-primary flex items-center justify-center sm:justify-start gap-2">
                 <Upload className="h-5 w-5" />
                 Legacy Product Importer Hub
               </h3>
@@ -600,7 +600,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
             <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
               <button
                 onClick={() => handleApplySample('json')}
-                className="py-1 px-2.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 rounded-md text-[10px] font-mono font-bold uppercase cursor-pointer"
+                className="py-1 px-2.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary border border-m3-primary/20 rounded-md text-[10px] font-mono font-bold uppercase cursor-pointer"
               >
                 ⚡ Load JSON Sample
               </button>
@@ -620,7 +620,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
                 onClick={() => fileInputRef.current?.click()}
                 className={`p-6 border-2 border-dashed rounded-2xl text-center space-y-2 transition-all cursor-pointer ${
                   isDragging 
-                    ? 'border-indigo-400 bg-indigo-500/10' 
+                    ? 'border-m3-primary bg-m3-primary/10' 
                     : 'border-slate-800 hover:border-slate-700 bg-slate-900/50'
                 }`}
               >
@@ -631,11 +631,11 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
                   className="hidden" 
                   accept=".csv,.json,.txt"
                 />
-                <Upload className="h-6 w-6 text-indigo-400 mx-auto animate-bounce" />
+                <Upload className="h-6 w-6 text-m3-primary mx-auto animate-bounce" />
                 <div>
                   <p className="text-xs font-black uppercase tracking-wide text-slate-200">Drag &amp; Drop Old ERP OS File Here</p>
                   <p className="text-[10px] text-slate-400 mt-1 select-none">
-                    Drop your spreadsheet .csv or database backup .json file, or click inside to browse computer
+                    Drop your spreadsheet .csv or ledger backup .json file, or click inside to browse local files
                   </p>
                 </div>
               </div>
@@ -647,7 +647,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
                   onChange={(e) => setRawImportText(e.target.value)}
                   rows={6}
                   placeholder={`Product Name,Product Code,Cost Price,Selling Price,Quantity,Category\n"Legacy Premium Marble",L-PM-01,150,220,100,"Marble"\n"Eco Slate Tile",E-SL-02,80,130,150,"Porcelain"`}
-                  className="w-full bg-slate-950 border border-slate-800 p-3 text-xs font-mono text-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all placeholder:text-slate-600 leading-normal"
+                  className="w-full bg-slate-950 border border-slate-800 p-3 text-xs font-mono text-slate-200 rounded-xl focus:border-m3-primary focus:outline-none transition-all placeholder:text-slate-600 leading-normal"
                 />
               </div>
             </div>
@@ -674,7 +674,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
               </button>
               <button
                 onClick={handleImportMigrate}
-                className="py-2.5 px-5 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[11px] tracking-wider uppercase rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                className="py-2.5 px-5 bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary font-extrabold text-[11px] tracking-wider uppercase rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <CheckCircle className="h-4 w-4" />
                 <span>Verify & Migrate Data</span>
@@ -790,7 +790,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
             <div className="space-y-2">
               <h3 className="text-lg font-black uppercase text-white tracking-wide">Confirm Blank Initial System</h3>
               <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
-                This primes a completely empty database. You won't find any pre-loaded tile products or transaction details. 100% compliant fresh start!
+                This primes a completely empty ledger. You won't find any pre-loaded tile products or transaction details. 100% compliant fresh start!
               </p>
             </div>
 
@@ -806,7 +806,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
               <button
                 type="button"
                 onClick={handleInitializeFreshBlank}
-                className="py-2.5 px-5 bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white font-black text-[11px] tracking-wider uppercase rounded-xl shadow-lg shadow-indigo-500/15 transition-all cursor-pointer"
+                className="py-2.5 px-5 bg-gradient-to-r from-emerald-600 to-m3-primary hover:from-emerald-500 hover:to-m3-primary/90 text-white font-black text-[11px] tracking-wider uppercase rounded-xl shadow-lg shadow-m3-primary/15 transition-all cursor-pointer"
               >
                 Launch Empty ERP OS
               </button>
@@ -821,7 +821,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
                 📍 New Branch Outlets Detected!
               </h3>
               <p className="text-xs text-slate-400">
-                We found locations in your imported database that are not yet created in TilePoint. Please fill in their operational details to complete the migration:
+                We found locations in your imported records that are not yet created in TilePoint. Please fill in their operational details to complete the migration:
               </p>
             </div>
 
@@ -847,7 +847,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
                           setPendingBranches(updated);
                         }}
                         required
-                        className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 focus:outline-none text-slate-200 transition-colors"
+                        className="w-full bg-slate-950 border border-slate-800 focus:border-m3-primary rounded-xl px-3 py-2 focus:outline-none text-slate-200 transition-colors"
                         placeholder="e.g. Maria Clara"
                       />
                     </div>
@@ -863,7 +863,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
                           setPendingBranches(updated);
                         }}
                         required
-                        className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 focus:outline-none text-slate-200 transition-colors"
+                        className="w-full bg-slate-950 border border-slate-800 focus:border-m3-primary rounded-xl px-3 py-2 focus:outline-none text-slate-200 transition-colors"
                         placeholder="e.g. +63 920 123 4567"
                       />
                     </div>
@@ -879,7 +879,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
                           setPendingBranches(updated);
                         }}
                         required
-                        className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 focus:outline-none text-slate-200 transition-colors"
+                        className="w-full bg-slate-950 border border-slate-800 focus:border-m3-primary rounded-xl px-3 py-2 focus:outline-none text-slate-200 transition-colors"
                         placeholder="e.g. Rizal Ave, Central District, Dipolog Main Branch"
                       />
                     </div>
@@ -894,7 +894,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
                           updated[idx].isDistributionBranch = e.target.checked;
                           setPendingBranches(updated);
                         }}
-                        className="rounded border-slate-800 focus:ring-opacity-50 text-indigo-500"
+                        className="rounded border-slate-800 focus:ring-opacity-50 text-m3-primary"
                       />
                       <label htmlFor={`wizard-dist-hub-${idx}`} className="text-[10px] text-slate-300 font-bold uppercase cursor-pointer select-none">
                         Is Distribution Hub?
@@ -915,7 +915,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
                           updated[idx].staffCount = parseInt(e.target.value) || 3;
                           setPendingBranches(updated);
                         }}
-                        className="w-16 bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-xl px-2 py-1 focus:outline-none text-slate-200 transition-colors text-center text-xs font-mono"
+                        className="w-16 bg-slate-950 border border-slate-800 focus:border-m3-primary rounded-xl px-2 py-1 focus:outline-none text-slate-200 transition-colors text-center text-xs font-mono"
                       />
                     </div>
                   </div>
@@ -945,7 +945,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
               </button>
               <button
                 onClick={handleCompleteWithBranches}
-                className="py-2.5 px-5 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[11px] tracking-wider uppercase rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                className="py-2.5 px-5 bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary font-extrabold text-[11px] tracking-wider uppercase rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <CheckCircle className="h-4 w-4" />
                 <span>Initialize Branches & Catalog</span>

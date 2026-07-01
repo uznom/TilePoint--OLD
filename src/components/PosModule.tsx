@@ -168,48 +168,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
   // Point of Sale Safeguard Guard: Block/intercept page refreshes and tab closures if there are items in the basket
   useEffect(() => {
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (cart.length > 0) {
-        event.preventDefault();
-        const warningText =
-          "Warning: You have an active customer checkout session with items in the cart. Refreshing or closing will interrupt the ledger flow.";
-        event.returnValue = warningText;
-        return warningText;
-      }
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, [cart]);
-
-  // Back-Navigation Protection Guard: pushState dummy URLs to intercept popstate when cart is active
-  useEffect(() => {
-    if (cart.length > 0) {
-      // Push dummy state to capture back click
-      window.history.pushState(null, "", window.location.href);
-
-      const handlePopState = (event: PopStateEvent) => {
-        if (cart.length > 0) {
-          const confirmLeave = window.confirm(
-            "ERP OS SECURITY GUARD:\n\nWarning: You have an active transaction in the ERP OS basket.\n\nAre you sure you want to navigate back or leave the terminal register? We recommend completing the transaction first to keep the receipt printing chain intact.",
-          );
-          if (!confirmLeave) {
-            // Push state back to prevent leaving
-            window.history.pushState(null, "", window.location.href);
-          }
-        }
-      };
-
-      window.addEventListener("popstate", handlePopState);
-      return () => {
-        window.removeEventListener("popstate", handlePopState);
-      };
-    }
-  }, [cart]);
-
-  useEffect(() => {
     localStorage.setItem("tp_active_customer_name", customerName);
   }, [customerName]);
 
@@ -564,6 +522,15 @@ export const PosModule: React.FC<PosModuleProps> = ({
     const record = parkedSales.find((p) => p.id === parkedId);
     if (!record) return;
 
+    // Save current ongoing order if there are items in the cart
+    const ongoingCart = [...cart];
+    const ongoingCustomerName = customerName;
+    const ongoingCustomerNotes = customerNotes;
+
+    if (ongoingCart.length > 0) {
+      holdSale(ongoingCart, ongoingCustomerName, ongoingCustomerNotes);
+    }
+
     setCart(record.items);
     setCustomerName(record.customerName);
     setCustomerNotes(record.notes);
@@ -571,7 +538,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
     // Remove from parked
     setParkedSales((prev) => prev.filter((p) => p.id !== parkedId));
     setMobilePosTab("basket");
-    showToast("Resumed parked basket.");
+
+    if (ongoingCart.length > 0) {
+      showToast(`Current order auto-held. Resumed staged order for ${record.customerName || "Walk-in"}.`);
+    } else {
+      showToast(`Resumed staged order for ${record.customerName || "Walk-in"}.`);
+    }
   };
 
   const checkDiscountApprovalRequired = (type: string, numericVal: number) => {
@@ -688,7 +660,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
     try {
       await triggerSystemProcessing(
         "Processing Client ERP OS Checkout...",
-        1500,
+        50,
         "progress",
         undefined,
         "Deducting products from branch stock and computing taxes...",
@@ -2140,10 +2112,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
                 className="space-y-4 text-left"
               >
                 {previouslyClosedShift && (
-                  <div className="p-3 bg-zinc-900 border border-zinc-850 rounded-2xl space-y-1.5 text-[11px] leading-normal">
-                    <div className="flex justify-between items-center text-amber-500 font-bold">
+                  <div className="p-3 bg-m3-surface-low border border-m3-outline-variant/30 rounded-2xl space-y-1.5 text-[11px] leading-normal">
+                    <div className="flex justify-between items-center text-amber-600 dark:text-amber-500 font-bold">
                       <span>Previous Close Balance:</span>
-                      <span className="font-mono font-black text-xs text-white">
+                      <span className="font-mono font-black text-xs text-m3-on-surface">
                         ₱
                         {previouslyClosedShift.cashCount.toLocaleString(
                           undefined,
@@ -2151,9 +2123,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
                         )}
                       </span>
                     </div>
-                    <p className="text-[9.5px] text-zinc-400">
+                    <p className="text-[9.5px] text-m3-on-surface-variant/80">
                       Closed by{" "}
-                      <strong className="text-zinc-300">
+                      <strong className="text-m3-on-surface-variant font-semibold">
                         {previouslyClosedShift.cashierName}
                       </strong>{" "}
                       on{" "}
@@ -2177,7 +2149,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                           `Loaded previous shift balance of ₱${previouslyClosedShift.cashCount.toFixed(2)}`,
                         );
                       }}
-                      className="w-full py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-xl font-bold transition-all text-center text-[10px]"
+                      className="w-full py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl font-bold transition-all text-center text-[10px]"
                     >
                       Use Previous Shift Balance
                     </button>
@@ -3583,7 +3555,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
                 )}
                 <button
                   onClick={() => {
-                    triggerReprintWithPin(selectedSaleDetail);
+                    const s = selectedSaleDetail;
+                    setSelectedSaleDetail(null);
+                    triggerReprintWithPin(s);
                   }}
                   className="px-3.5 py-2 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary rounded-full text-[10px] uppercase font-black tracking-widest transition-all cursor-pointer shadow-sm active:scale-95"
                   title="Reprint Receipt Slip"

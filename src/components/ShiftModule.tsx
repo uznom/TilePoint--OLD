@@ -243,13 +243,13 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
 
           <form onSubmit={handleOpenLocalShift} className="space-y-4 text-xs text-left">
             {previouslyClosedShift && (
-              <div className="p-3 bg-zinc-900 border border-zinc-850 rounded-2xl space-y-1.5 text-[11px] leading-normal">
-                <div className="flex justify-between items-center text-amber-500 font-bold">
+              <div className="p-3 bg-m3-surface-low border border-m3-outline-variant/30 rounded-2xl space-y-1.5 text-[11px] leading-normal">
+                <div className="flex justify-between items-center text-amber-600 dark:text-amber-500 font-bold">
                   <span>Previous Close Balance:</span>
-                  <span className="font-mono font-black text-xs text-white">₱{previouslyClosedShift.cashCount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span className="font-mono font-black text-xs text-m3-on-surface">₱{previouslyClosedShift.cashCount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
-                <p className="text-[9.5px] text-zinc-400">
-                  Closed by <strong className="text-zinc-300">{previouslyClosedShift.cashierName}</strong> on {new Date(previouslyClosedShift.closedAt || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.
+                <p className="text-[9.5px] text-m3-on-surface-variant/80">
+                  Closed by <strong className="text-m3-on-surface-variant font-semibold">{previouslyClosedShift.cashierName}</strong> on {new Date(previouslyClosedShift.closedAt || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.
                 </p>
                 <button
                   type="button"
@@ -257,7 +257,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
                     setStartCashInput(previouslyClosedShift.cashCount.toString());
                     showToast(`Loaded previous shift balance of ₱${previouslyClosedShift.cashCount.toFixed(2)}`);
                   }}
-                  className="w-full py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-xl font-bold transition-all text-center text-[10px]"
+                  className="w-full py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl font-bold transition-all text-center text-[10px]"
                 >
                   Use Previous Shift Balance
                 </button>

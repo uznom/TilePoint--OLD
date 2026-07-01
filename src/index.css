@@ -101,6 +101,93 @@
   --m3-hover-overlay: rgba(59, 130, 246, 0.16); /* Bright active dark mode hover */
 }
 
+/* Accessibility legibility enhancement for Light Theme:
+   Upgrade standard gray/zinc/slate text classes to higher-contrast tones under light mode
+   while preserving soft gray colors in dark mode or nested dark elements. */
+html:not(.dark) .text-zinc-400 {
+  color: #52525b !important; /* zinc-600 */
+}
+html:not(.dark) .text-slate-400 {
+  color: #475569 !important; /* slate-600 */
+}
+html:not(.dark) .text-gray-400 {
+  color: #4b5563 !important; /* gray-600 */
+}
+html:not(.dark) .text-neutral-400 {
+  color: #525252 !important; /* neutral-600 */
+}
+
+html:not(.dark) .text-zinc-500 {
+  color: #3f3f46 !important; /* zinc-700 */
+}
+html:not(.dark) .text-slate-500 {
+  color: #334155 !important; /* slate-700 */
+}
+html:not(.dark) .text-gray-500 {
+  color: #374151 !important; /* gray-700 */
+}
+html:not(.dark) .text-neutral-500 {
+  color: #404040 !important; /* neutral-700 */
+}
+
+html:not(.dark) .text-zinc-300 {
+  color: #71717a !important; /* zinc-500 */
+}
+html:not(.dark) .text-slate-300 {
+  color: #64748b !important; /* slate-500 */
+}
+html:not(.dark) .text-gray-300 {
+  color: #6b7280 !important; /* gray-500 */
+}
+html:not(.dark) .text-neutral-300 {
+  color: #737373 !important; /* neutral-500 */
+}
+
+/* Restore native soft light gray text colors inside dark container components in light mode */
+html:not(.dark) .bg-slate-900 .text-zinc-400,
+html:not(.dark) .bg-slate-950 .text-zinc-400,
+html:not(.dark) .bg-zinc-900 .text-zinc-400,
+html:not(.dark) .bg-zinc-950 .text-zinc-400,
+html:not(.dark) .bg-black .text-zinc-400,
+html:not(.dark) .bg-slate-900 .text-slate-400,
+html:not(.dark) .bg-slate-950 .text-slate-400,
+html:not(.dark) .bg-zinc-900 .text-slate-400,
+html:not(.dark) .bg-zinc-950 .text-slate-400,
+html:not(.dark) .bg-black .text-slate-400,
+html:not(.dark) .bg-slate-900 .text-gray-400,
+html:not(.dark) .bg-slate-950 .text-gray-400,
+html:not(.dark) .bg-zinc-900 .text-gray-400,
+html:not(.dark) .bg-zinc-950 .text-gray-400,
+html:not(.dark) .bg-black .text-gray-400 {
+  color: #a1a1aa !important; /* zinc-400 */
+}
+
+html:not(.dark) .bg-slate-900 .text-zinc-300,
+html:not(.dark) .bg-slate-950 .text-zinc-300,
+html:not(.dark) .bg-zinc-900 .text-zinc-300,
+html:not(.dark) .bg-zinc-950 .text-zinc-300,
+html:not(.dark) .bg-black .text-zinc-300,
+html:not(.dark) .bg-slate-900 .text-slate-300,
+html:not(.dark) .bg-slate-950 .text-slate-300,
+html:not(.dark) .bg-zinc-900 .text-slate-300,
+html:not(.dark) .bg-zinc-950 .text-slate-300,
+html:not(.dark) .bg-black .text-slate-300 {
+  color: #d4d4d8 !important; /* zinc-300 */
+}
+
+html:not(.dark) .bg-slate-900 .text-zinc-500,
+html:not(.dark) .bg-slate-950 .text-zinc-500,
+html:not(.dark) .bg-zinc-900 .text-zinc-500,
+html:not(.dark) .bg-zinc-950 .text-zinc-500,
+html:not(.dark) .bg-black .text-zinc-500,
+html:not(.dark) .bg-slate-900 .text-slate-500,
+html:not(.dark) .bg-slate-950 .text-slate-500,
+html:not(.dark) .bg-zinc-900 .text-slate-500,
+html:not(.dark) .bg-zinc-950 .text-slate-500,
+html:not(.dark) .bg-black .text-slate-500 {
+  color: #71717a !important; /* zinc-500 */
+}
+
 body {
   font-family: var(--font-sans);
   background-color: var(--m3-surface);

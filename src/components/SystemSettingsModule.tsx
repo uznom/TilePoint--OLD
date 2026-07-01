@@ -96,7 +96,19 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ dark
 
   // Sync state changes with document element & localStorage, then dispatch global theme update event
   const updateSetting = (key: string, value: string | boolean) => {
-    if (!isAuthorized) return;
+    // Client-side visual, performance, and accessibility settings are customizable by any logged-in user
+    const clientSettings = [
+      'tilepoint-text-size',
+      'tilepoint-color-contrast',
+      'tilepoint-maximize-text-contrast',
+      'tilepoint-dyslexic-font',
+      'tilepoint-enhanced-outlines',
+      'tilepoint-disable-animations',
+      'tilepoint-disable-blurs',
+      'tilepoint-disable-install-prompt',
+      'tilepoint-disable-idle-clock'
+    ];
+    if (!isAuthorized && !clientSettings.includes(key)) return;
     const root = document.documentElement;
     const strVal = String(value);
 
@@ -195,7 +207,6 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ dark
   }, []);
 
   const handleResetToDefaults = () => {
-    if (!isAuthorized) return;
     localStorage.removeItem('tilepoint-text-size');
     localStorage.removeItem('tilepoint-color-contrast');
     localStorage.removeItem('tilepoint-maximize-text-contrast');
@@ -659,7 +670,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ dark
                     <ShieldAlert className="h-4 w-4" /> System Reset & Factory operations Center
                   </h4>
                   <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
-                    Permanently clear transactions, wipe inventory counts, or restore standard enterprise seed profiles. 
+                    Permanently clear transactions, wipe inventory counts, or perform full database schema truncation. 
                     <span className="text-rose-400 font-extrabold ml-1">Warning: These operations are destructive and cannot be undone.</span>
                   </p>
                           <div className="bg-rose-500/5 border border-rose-500/20 p-5 rounded-2xl space-y-4">
@@ -691,33 +702,11 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ dark
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-rose-500/10">
-                    {/* Restore Seeds */}
-                    <div className="flex flex-col justify-between bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-left space-y-3">
-                      <div>
-                        <span className="text-[10px] font-extrabold text-m3-primary font-mono uppercase block">Option A</span>
-                        <h5 className="font-black text-xs text-m3-on-surface mt-1">Restore Factory Seeds</h5>
-                        <p className="text-[10px] text-zinc-400 mt-1 leading-normal font-sans">
-                          Restores standard demo products, suppliers, stock counts, and simulated transactions to showcase clean terminal operations.
-                        </p>
-                      </div>
-                      <HoldToConfirmButton
-                        disabled={resetConfirmation !== 'RESET' || isRowClearingBlocked()}
-                        onConfirm={() => {
-                          truncateDatabase('seeds');
-                          setResetConfirmation('');
-                          alert('System database restored successfully to factory seed parameters!');
-                        }}
-                        variant="primary"
-                      >
-                        Hold to Restore Seeds
-                      </HoldToConfirmButton>
-                    </div>
-
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-rose-500/10">
                     {/* Clear Transactions */}
                     <div className="flex flex-col justify-between bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-left space-y-3">
                       <div>
-                        <span className="text-[10px] font-extrabold text-amber-500 font-mono uppercase block">Option B</span>
+                        <span className="text-[10px] font-extrabold text-amber-500 font-mono uppercase block">Option A</span>
                         <h5 className="font-black text-xs text-m3-on-surface mt-1">Reset All Stock Counts</h5>
                         <p className="text-[10px] text-zinc-400 mt-1 leading-normal font-sans">
                           Purges sales history, purchase orders, ledger journals, and sets all local branch product stock levels to zero. Catalog stays intact.
@@ -739,7 +728,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ dark
                     {/* Complete Wipe */}
                     <div className="flex flex-col justify-between bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-left space-y-3">
                       <div>
-                        <span className="text-[10px] font-extrabold text-rose-500 font-mono uppercase block">Option C</span>
+                        <span className="text-[10px] font-extrabold text-rose-500 font-mono uppercase block">Option B</span>
                         <h5 className="font-black text-xs text-m3-on-surface mt-1">Full Database Wipe</h5>
                         <p className="text-[10px] text-zinc-400 mt-1 leading-normal font-sans">
                           Completely purges all products, custom suppliers, local warehouse stocks, and checkout histories. Starts with an empty database.

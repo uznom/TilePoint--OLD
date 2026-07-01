@@ -115,8 +115,18 @@ export const IdleScreen: React.FC = () => {
   if (isDisabled || !isLoggedIn || !isDesktop) return null;
 
   // Format date and time
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+  const formatTimeParts = (date: Date) => {
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // the hour '0' should be '12'
+    const formattedHours = String(hours).padStart(2, '0');
+    return {
+      timeStr: `${formattedHours}:${minutes}:${seconds}`,
+      ampm
+    };
   };
 
   const formatDate = (date: Date) => {
@@ -245,12 +255,15 @@ export const IdleScreen: React.FC = () => {
               {/* Giant Clock Face */}
               <h1 
                 id="idle-screen-adaptive-clock"
-                className="animate-roboto-flex text-[11vw] font-black leading-none text-[var(--m3-on-surface)] select-none tracking-tighter whitespace-nowrap"
+                className="animate-roboto-flex text-[11vw] font-black leading-none text-[var(--m3-on-surface)] select-none tracking-tighter whitespace-nowrap flex items-baseline justify-center gap-4"
                 style={{
                   fontFamily: "'Roboto Flex', var(--font-sans)",
                 }}
               >
-                {formatTime(time).split(' ')[0]}
+                <span>{formatTimeParts(time).timeStr}</span>
+                <span className="text-[3.5vw] font-extrabold text-[var(--m3-primary)] tracking-wider uppercase font-mono">
+                  {formatTimeParts(time).ampm}
+                </span>
               </h1>
 
               {/* Date & Session Summary Card */}
@@ -273,8 +286,7 @@ export const IdleScreen: React.FC = () => {
             className="flex flex-col md:flex-row justify-between items-center text-center md:text-left gap-4 text-[9.5px] font-mono text-[var(--m3-on-surface-variant)]"
           >
             <div>
-              <p className="font-extrabold uppercase text-[var(--m3-primary)]">ATP-OS Enterprise Cloud Registers</p>
-              <p>Security Level: Shield-Enforced • Bi-directional sync active</p>
+              <p>Security Level: Shield-Enforced • Local server ledger synchronized</p>
             </div>
             <div className="text-center md:text-right">
               <p>Active System Mode: {currentUser?.role} Account Access</p>

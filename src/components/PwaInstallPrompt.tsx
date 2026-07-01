@@ -6,8 +6,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Download, Monitor, Sparkles, Smartphone, CheckCircle, X, ShieldCheck } from 'lucide-react';
+import { useDb } from '../context/DbContext';
 
 export const PwaInstallPrompt: React.FC = () => {
+  const { isLoggedIn } = useDb();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isDisabled, setIsDisabled] = useState(() => {
@@ -45,6 +47,11 @@ export const PwaInstallPrompt: React.FC = () => {
   });
 
   useEffect(() => {
+    if (!isLoggedIn) {
+      setShowPrompt(false);
+      return;
+    }
+
     // 1. Detect if already running in standalone mode (installed PWA)
     const checkStandalone = 
       window.matchMedia('(display-mode: standalone)').matches ||
@@ -82,7 +89,7 @@ export const PwaInstallPrompt: React.FC = () => {
       setDeferredPrompt(e);
       // Automatically prompt or show the banner when open
       setTimeout(() => {
-        if (localStorage.getItem('tp_pwa_installed') !== 'true') {
+        if (localStorage.getItem('tp_pwa_installed') !== 'true' && !localStorage.getItem('tilepoint-disable-install-prompt')) {
           setShowPrompt(true);
         }
       }, 1500); // 1.5 seconds delay after loading for perfect entrance timing
@@ -105,7 +112,7 @@ export const PwaInstallPrompt: React.FC = () => {
     window.addEventListener('appinstalled', handleAppInstalled);
 
     // If iOS Safari, we can display instructions after a delayed trigger because the event won't fire
-    if (iosDetected && localStorage.getItem('tp_pwa_installed') !== 'true') {
+    if (iosDetected && localStorage.getItem('tp_pwa_installed') !== 'true' && !localStorage.getItem('tilepoint-disable-install-prompt')) {
       setTimeout(() => {
         setShowPrompt(true);
       }, 2500);
@@ -113,7 +120,7 @@ export const PwaInstallPrompt: React.FC = () => {
 
     // Alternative trigger check if never prompt event fires but not installed
     const fallbackTimer = setTimeout(() => {
-      if (!deferredPrompt && !iosDetected && !checkStandalone && localStorage.getItem('tp_pwa_installed') !== 'true') {
+      if (!deferredPrompt && !iosDetected && !checkStandalone && localStorage.getItem('tp_pwa_installed') !== 'true' && !localStorage.getItem('tilepoint-disable-install-prompt')) {
         // Show install button as simulated setup anyway to give guide
         setShowPrompt(true);
       }
@@ -124,7 +131,13 @@ export const PwaInstallPrompt: React.FC = () => {
       window.removeEventListener('appinstalled', handleAppInstalled);
       clearTimeout(fallbackTimer);
     };
-  }, [deferredPrompt]);
+  }, [deferredPrompt, isLoggedIn]);
+
+  const handleDismiss = () => {
+    localStorage.setItem('tilepoint-disable-install-prompt', 'true');
+    setIsDisabled(true);
+    setShowPrompt(false);
+  };
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
@@ -198,7 +211,7 @@ export const PwaInstallPrompt: React.FC = () => {
               </div>
               
               <button 
-                onClick={() => setShowPrompt(false)}
+                onClick={handleDismiss}
                 className="p-1 rounded-full text-[var(--m3-on-surface-variant)] hover:bg-m3-outline-variant/10 hover:text-[var(--m3-on-surface)] transition-colors cursor-pointer"
               >
                 <X className="h-4 w-4" />
@@ -241,7 +254,7 @@ export const PwaInstallPrompt: React.FC = () => {
             {!isIOS && (
               <div className="flex gap-2 font-sans mt-1">
                 <button
-                  onClick={() => setShowPrompt(false)}
+                  onClick={handleDismiss}
                   className="flex-1 py-2.5 rounded-xl border border-m3-outline-variant text-xs text-[var(--m3-on-surface-variant)] font-bold hover:bg-m3-outline-variant/10 hover:text-[var(--m3-on-surface)] transition-colors cursor-pointer"
                 >
                   Later

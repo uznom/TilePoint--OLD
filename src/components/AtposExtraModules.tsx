@@ -1799,7 +1799,7 @@ export default function AtposExtraModules({
                                     <span
                                       className={`text-[8px] font-black px-1.5 uppercase tracking-widest rounded ${
                                         payVal.poNumber.startsWith("BILL-")
-                                          ? "bg-indigo-500/10 text-indigo-400"
+                                          ? "bg-m3-primary/10 text-m3-primary"
                                           : "bg-amber-500/10 text-amber-400"
                                       }`}
                                     >

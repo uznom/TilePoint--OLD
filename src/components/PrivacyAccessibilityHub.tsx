@@ -112,18 +112,27 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
     return localStorage.getItem('tilepoint-disable-blurs') === 'true';
   });
 
+  const isSyncingRef = React.useRef(false);
+
   // Listen to external theme sync events
   useEffect(() => {
     const handleSync = () => {
+      isSyncingRef.current = true;
       const persistedContrast = (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'default';
       const persistedMaxText = localStorage.getItem('tilepoint-maximize-text-contrast') === 'true';
       const persistedDisableAnimations = localStorage.getItem('tilepoint-disable-animations') === 'true';
       const persistedDisableBlurs = localStorage.getItem('tilepoint-disable-blurs') === 'true';
+      const persistedTextSize = (localStorage.getItem('tilepoint-text-size') as 'normal' | 'large' | 'xlarge') || 'normal';
+      const persistedDyslexic = localStorage.getItem('tilepoint-dyslexic-font') === 'true';
+      const persistedOutlines = localStorage.getItem('tilepoint-enhanced-outlines') === 'true';
       
       setColorContrast(persistedContrast);
       setMaximizeTextContrast(persistedMaxText);
       setDisableAnimations(persistedDisableAnimations);
       setDisableBlurs(persistedDisableBlurs);
+      setTextSize(persistedTextSize);
+      setDyslexicFont(persistedDyslexic);
+      setEnhancedOutlines(persistedOutlines);
     };
     window.addEventListener('tilepoint-theme-updated', handleSync);
     return () => {
@@ -353,6 +362,11 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
 
   // Sync state changes with the DOM layout of document.documentElement
   useEffect(() => {
+    if (isSyncingRef.current) {
+      isSyncingRef.current = false;
+      return;
+    }
+
     const root = document.documentElement;
 
     // 1. Sizing
@@ -1007,10 +1021,10 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                       {/* Dynamic Preview & Advanced Contrast validation checks */}
                       <div className="mt-4 p-4 rounded-2xl border border-m3-outline-variant/15 bg-m3-surface-low space-y-3.5 text-left">
                         <span className="text-[9px] font-black uppercase tracking-widest text-m3-on-surface-variant font-mono block border-b border-m3-outline-variant/10 pb-1.5">
-                          🎨 Dynamic Theme Scheme Tester & WCAG Contrast Metrics
+                          🎨 Dynamic Theme Scheme Tester, Tonal Swatches & WCAG Contrast Metrics
                         </span>
                         
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                           {/* Live UI Components preview */}
                           <div className="space-y-2 p-3 rounded-xl border border-m3-outline-variant/10 bg-m3-surface/50">
                             <span className="text-[8.5px] font-mono font-black text-m3-on-surface-variant/80 tracking-wider block uppercase">
@@ -1047,6 +1061,37 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                                 <span>SECONDARY STATUS PILL</span>
                                 <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: previewScheme.secondary }} />
                               </div>
+                            </div>
+                          </div>
+
+                          {/* Dynamic Tonal Swatches family */}
+                          <div className="space-y-2 p-3 rounded-xl border border-m3-outline-variant/10 bg-m3-surface/50">
+                            <span className="text-[8.5px] font-mono font-black text-m3-on-surface-variant/80 tracking-wider block uppercase">
+                              Material 3 Tonal Family
+                            </span>
+                            <div className="grid grid-cols-2 gap-1.5 text-[9px]">
+                              {[
+                                { label: 'Primary', bg: previewScheme.primary, text: previewScheme.onPrimary },
+                                { label: 'On-Primary', bg: previewScheme.onPrimary, text: previewScheme.primary },
+                                { label: 'Primary Container', bg: previewScheme.primaryContainer, text: previewScheme.onPrimaryContainer },
+                                { label: 'On-Primary Container', bg: previewScheme.onPrimaryContainer, text: previewScheme.primaryContainer },
+                                { label: 'Secondary', bg: previewScheme.secondary, text: previewScheme.onSecondary },
+                                { label: 'On-Secondary', bg: previewScheme.onSecondary, text: previewScheme.secondary },
+                                { label: 'Secondary Container', bg: previewScheme.secondaryContainer, text: previewScheme.onSecondaryContainer },
+                                { label: 'On-Sec Container', bg: previewScheme.onSecondaryContainer, text: previewScheme.secondaryContainer },
+                                { label: 'Surface Base', bg: previewScheme.surface, text: previewScheme.onSurface },
+                                { label: 'On-Surface Text', bg: previewScheme.onSurface, text: previewScheme.surface },
+                              ].map((swatch, idx) => (
+                                <div 
+                                  key={idx} 
+                                  style={{ backgroundColor: swatch.bg, color: swatch.text }}
+                                  className="p-1.5 rounded-lg border border-m3-outline-variant/10 font-bold flex flex-col justify-between h-10 select-none shadow-xs transition-transform duration-100 active:scale-98"
+                                  title={`${swatch.label}: ${swatch.bg}`}
+                                >
+                                  <span className="text-[7.5px] font-mono font-bold uppercase truncate tracking-tight">{swatch.label}</span>
+                                  <span className="text-[8px] font-mono opacity-80 select-all font-black leading-none">{swatch.bg}</span>
+                                </div>
+                              ))}
                             </div>
                           </div>
 
@@ -1165,7 +1210,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                             <span className="text-[8.5px] font-mono bg-m3-primary/10 text-m3-primary rounded px-1.5 font-bold uppercase tracking-wider">Active</span>
                           </div>
                           <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
-                            Saves light/dark mode states, active POS shopping baskets, custom branch profiles, and accessibility profiles to prevent re-configuring options on every system log-in.
+                            Saves light/dark mode states, active ERP OS shopping baskets, custom branch profiles, and accessibility profiles to prevent re-configuring options on every system log-in.
                           </p>
                         </div>
                       </div>
@@ -1210,8 +1255,8 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                     <div className="h-px bg-m3-outline-variant/15 my-6" />
 
                     {/* INTERACTIVE ONBOARDING SETUP ASSISTANT */}
-                    <div className="p-4 rounded-xl border border-indigo-500/20 bg-indigo-500/5 space-y-2.5">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-indigo-400 font-mono flex items-center gap-1.5">
+                    <div className="p-4 rounded-xl border border-m3-primary/25 bg-m3-primary/5 space-y-2.5">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono flex items-center gap-1.5">
                         <Sparkles className="h-3.5 w-3.5 animate-pulse" />
                         Interactive Setup Wizard
                       </span>
@@ -1224,7 +1269,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                           setIsOpen(false);
                           window.dispatchEvent(new Event('open-setup-wizard'));
                         }}
-                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-extrabold uppercase tracking-wider py-2.5 rounded-lg cursor-pointer transition-all text-center flex items-center justify-center gap-1.5 border border-indigo-500 shadow-md font-sans"
+                        className="w-full bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary text-[10px] font-extrabold uppercase tracking-wider py-2.5 rounded-lg cursor-pointer transition-all text-center flex items-center justify-center gap-1.5 border border-m3-outline-variant/30 shadow-md font-sans"
                       >
                         <Play className="h-3 w-3" />
                         Relaunch Setup Wizard
@@ -1433,7 +1478,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                             TilePoint Operating Manual &amp; Operators Handbook
                           </h5>
                           <span className="text-[10px] text-zinc-400 font-medium block">
-                            Natively formulated, portable PDF guidance document referencing inventory auditing and POS protocols.
+                            Natively formulated, portable PDF guidance document referencing inventory auditing and ERP OS protocols.
                           </span>
                         </div>
                       </div>
@@ -1445,7 +1490,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-mono pl-1">
                           <li className="flex items-center gap-1.5">
                             <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
-                            <span>Ch 1: POS Sales &amp; Coverage Calculators</span>
+                            <span>Ch 1: ERP OS Sales &amp; Coverage Calculators</span>
                           </li>
                           <li className="flex items-center gap-1.5">
                             <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
@@ -1514,7 +1559,7 @@ BT
 T*
 () Tj
 T*
-(CHAPTER 1: POS SALES & ESTIMATORS) Tj
+(CHAPTER 1: ERP OS SALES & ESTIMATORS) Tj
 T*
 (- Scan barcodes, search keys, and compute waste offsets \(+10% diagonal cuts\).) Tj
 T*
@@ -1833,7 +1878,7 @@ startxref
 
                           <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
                             {selectedRuleset === 'firestore' 
-                              ? 'This secure rule set defines Role-Based Access Controls (RBAC) on database schemas to protect transactions and POS configurations.'
+                              ? 'This secure rule set defines Role-Based Access Controls (RBAC) on database schemas to protect transactions and ERP OS configurations.'
                               : 'Provides public-read credentials for assets like receipt logs and barcode catalogs while enforcing strictly private limits on operational archives.'
                             }
                           </p>
@@ -2224,14 +2269,14 @@ startxref
 
                 <div className="grid grid-cols-1 gap-4">
                   {/* Chapter 1 */}
-                  {(!faqSearch || 'pos checkout desk area estimators calculators'.includes(faqSearch.toLowerCase())) && (
+                  {(!faqSearch || 'pos checkout desk area estimators calculators erp os'.includes(faqSearch.toLowerCase())) && (
                     <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
                       <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
                         <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 1</span>
-                        The POS Checkout Desk &amp; Area Estimators
+                        The ERP OS Checkout Desk &amp; Area Estimators
                       </h4>
                       <p className="text-[11px] text-zinc-350 leading-relaxed">
-                        The POS Checkout Desk accepts real-time barcode scans, manual item code lookups, and direct SKU lookups.
+                        The ERP OS Checkout Desk accepts real-time barcode scans, manual item code lookups, and direct SKU lookups.
                       </p>
                       <ul className="list-disc pl-5 text-[10.5px] text-zinc-400 space-y-1 mt-2 font-mono">
                         <li>Use the <strong className="text-zinc-200">Interactive Tile Coverage Estimator</strong> to dynamically translate physical floor dimensions (length and width in meters) into exact retail tile box counts.</li>

@@ -628,7 +628,7 @@ interface DbContextType {
     referenceNo: string;
     remarks: string;
   }) => void;
-  truncateDatabase: (mode: "all" | "transactions" | "seeds") => void;
+  truncateDatabase: (mode: "all" | "transactions") => void;
 
   // Actions - Branch Sales Reports Transmission
   branchSalesReports: BranchSalesReport[];
@@ -1024,6 +1024,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     console.log(
       `[Performance scaling] Profile updated: ${val ? "LOW PERFORMANCE (Hardware-Optimized)" : "HIGH PERFORMANCE (Full Presentation)"}`,
     );
+    // Dispatch theme updated event to instantly notify all settings and visual listeners
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('tilepoint-theme-updated'));
+    }
   };
 
   const [simulationModeActive, setSimulationModeActive] = useState<boolean>(
@@ -1855,12 +1859,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
             (s) => s.userId === currentUser.id && s.id !== activeSessionId,
           );
           if (hasConcurrent) {
-            clearInterval(heartbeatInterval);
-            logout();
-            alert(
-              `CONCURRENT LOGIN DETECTED:\n\nYour session was terminated because this account (${currentUser.fullName}) has logged in from another device or terminal. For security and ledger accuracy, concurrent multi-device logins on a single cashier/admin profile are strictly blocked.`,
-            );
-            return prev;
+            // Under offline ERP OS mode, support concurrent handheld lookups and multi-terminal operations on shared employee accounts
+            console.log("[Concurrent Monitor] Multi-device session active on account:", currentUser.fullName);
           }
 
           const activeBranchName =
@@ -1883,25 +1883,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
             (s) => s.userId === currentUser.id && s.id !== activeSessionId,
           );
           if (hasConcurrent) {
-            const ourSessionIndex = freshSessions.findIndex(
-              (s) => s.id === activeSessionId,
-            );
-            const concurrentSession = freshSessions.find(
-              (s) => s.userId === currentUser.id && s.id !== activeSessionId,
-            );
-
-            if (
-              concurrentSession &&
-              new Date(concurrentSession.lastActive).getTime() >
-                new Date(updatedSessions[ourSessionIndex].lastActive).getTime()
-            ) {
-              clearInterval(heartbeatInterval);
-              logout();
-              alert(
-                `CONCURRENT LOGIN DETECTED:\n\nYour session was terminated because this account (${currentUser.fullName}) has logged in from another device or terminal. For security and ledger accuracy, concurrent multi-device logins on a single cashier/admin profile are strictly blocked.`,
-              );
-              return prev;
-            }
+            // Under offline ERP OS mode, support concurrent handheld lookups and multi-terminal operations on shared employee accounts
+            console.log("[Concurrent Monitor] Multi-device session active on account:", currentUser.fullName);
           }
         }
 
@@ -1941,10 +1924,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
           new Date(mySession.lastActive).getTime();
 
       if (shouldBoot) {
-        logout();
-        alert(
-          `CONCURRENT LOGIN DETECTED:\n\nYour session was terminated because this account (${currentUser.fullName}) has logged in from another device or terminal. For security and ledger accuracy, concurrent multi-device logins on a single cashier/admin profile are strictly blocked.`,
-        );
+        // Under offline ERP OS mode, support concurrent handheld lookups and multi-terminal operations on shared employee accounts
+        console.log("[Concurrent Monitor] Multi-device login detected on account (non-boot):", currentUser.fullName);
       }
     }
   }, [activeSessions, isLoggedIn, currentUser?.id, activeSessionId]);
@@ -2075,6 +2056,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     onComplete?: () => void,
     subtext = "",
   ): Promise<void> => {
+    // Snappy, non-disruptive duration cap for professional, instant feedback
+    const optimizedDuration = Math.min(400, durationMs);
     setIsSystemProcessing(true);
     setSystemProcessingMessage(message);
     setSystemProcessingSubtext(subtext || "");
@@ -2084,7 +2067,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     return new Promise<void>((resolve) => {
       let interval: any;
       if (type === "progress") {
-        const step = 100 / (durationMs / 100);
+        const step = 100 / (optimizedDuration / 100);
         let curr = 0;
         interval = setInterval(() => {
           curr += step;
@@ -2104,7 +2087,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         setSystemProcessingProgress(0);
         if (onComplete) onComplete();
         resolve();
-      }, durationMs);
+      }, optimizedDuration);
     });
   };
 
@@ -2253,18 +2236,20 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     isProcessingQueue.current = false;
   };
 
-  const syncFromSharedServer = async () => {
+  const syncFromSharedServer = async (silent = false) => {
     if (typeof window !== 'undefined' && localStorage.getItem('tp_setting_up') === 'true') {
       console.log('[Shared DB Client] System setup in progress. Bypassing server sync to avoid overwrite race condition.');
       return;
     }
-    setSyncStatus((prev) => {
-      const next = { ...prev };
-      Object.keys(next).forEach((k) => {
-        next[k] = "Syncing";
+    if (!silent) {
+      setSyncStatus((prev) => {
+        const next = { ...prev };
+        Object.keys(next).forEach((k) => {
+          next[k] = "Syncing";
+        });
+        return next;
       });
-      return next;
-    });
+    }
     try {
       isSyncingFromServer.current = true;
       const res = await fetch("/api/db");
@@ -2438,13 +2423,26 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       setServerConnected(false);
     } finally {
       isSyncingFromServer.current = false;
-      setSyncStatus((prev) => {
-        const next = { ...prev };
-        Object.keys(next).forEach((k) => {
-          next[k] = "Live";
+      if (!silent) {
+        setSyncStatus((prev) => {
+          const next = { ...prev };
+          Object.keys(next).forEach((k) => {
+            next[k] = "Live";
+          });
+          return next;
         });
-        return next;
-      });
+      } else {
+        // Just make sure any lingering "Syncing" statuses are cleared back to "Live"
+        setSyncStatus((prev) => {
+          const next = { ...prev };
+          Object.keys(next).forEach((k) => {
+            if (next[k] === "Syncing") {
+              next[k] = "Live";
+            }
+          });
+          return next;
+        });
+      }
     }
   };
 
@@ -2468,7 +2466,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
       let success = false;
       try {
-        await syncFromSharedServer();
+        await syncFromSharedServer(true); // Silent sync for background polling fallback
         success = true;
       } catch (err) {
         console.warn("[Sync Loop] Failure during auto-sync, backing off.", err);
@@ -2559,9 +2557,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
             isSseConnected.current = true;
             reconnectDelay = 5000; // Reset backoff on success
           } else if (payload.type === 'db_update') {
-            console.log("[Real-Time Sync] Central database updated. Pulling changes immediately...");
+            console.log("[Real-Time Sync] Central database updated. Pulling changes silently...");
             // Execute silent pull sync to update cashier or staff screens instantly
-            await syncFromSharedServer();
+            await syncFromSharedServer(true);
           }
         } catch (e) {
           console.warn("[Real-Time Sync] Failed parsing push message payload:", e);
@@ -3053,13 +3051,16 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       ) {
         return; // Device-Specific Isolation: Do not write session states to the shared centralized server
       }
-      setSyncStatus((prev) => {
-        const next = { ...prev };
-        Object.keys(next).forEach((k) => {
-          next[k] = "Syncing";
+      const isSilentWrite = key === "tp_active_sessions";
+      if (!isSilentWrite) {
+        setSyncStatus((prev) => {
+          const next = { ...prev };
+          Object.keys(next).forEach((k) => {
+            next[k] = "Syncing";
+          });
+          return next;
         });
-        return next;
-      });
+      }
       try {
         if (!navigator.onLine) {
           throw new Error("Navigator reports offline state");
@@ -3112,13 +3113,15 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
           enqueueOfflineRequest({ key, value, isLegacy: true });
         }
       } finally {
-        setSyncStatus((prev) => {
-          const next = { ...prev };
-          Object.keys(next).forEach((k) => {
-            next[k] = "Live";
+        if (!isSilentWrite) {
+          setSyncStatus((prev) => {
+            const next = { ...prev };
+            Object.keys(next).forEach((k) => {
+              next[k] = "Live";
+            });
+            return next;
           });
-          return next;
-        });
+        }
       }
     };
 
@@ -3850,7 +3853,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem("tp_current_user", JSON.stringify(firstAdmin));
 
     // Audit log
-    const seedLogs = [
+    const installLogs = [
       {
         id: `L-${Date.now()}-1`,
         timestamp: new Date().toISOString(),
@@ -3862,14 +3865,14 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         username: adminData.username,
       },
     ];
-    setAuditLogs(seedLogs);
-    localStorage.setItem("tp_audit_logs", JSON.stringify(seedLogs));
+    setAuditLogs(installLogs);
+    localStorage.setItem("tp_audit_logs", JSON.stringify(installLogs));
 
     // Immediately write configurations to the server bypassing debounce to prevent any loss on refresh
     const syncData = {
       tp_users: newUsers,
       tp_branches: newBranches,
-      tp_audit_logs: seedLogs,
+      tp_audit_logs: installLogs,
       tp_is_configured: "true",
       tilepoint_onboarded_setup: "false",
       tilepoint_company_name_v1: branchData.name,
@@ -4895,7 +4898,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   // --- DATABASE FACTORY TRUNCATE & RE-SEED ENGINE ---
-  const truncateDatabase = async (mode: "all" | "transactions" | "seeds") => {
+  const truncateDatabase = async (mode: "all" | "transactions") => {
     if (currentUser.role !== UserRole.ADMIN) {
       console.error(
         "Unauthorized security violation: Only system administrators are authorized to reset or truncate the database.",
@@ -4931,130 +4934,61 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       );
     }
 
-    if (mode === "seeds") {
-      // Restore all original database seeds
-      setBranches(SEED_BRANCHES);
-      setProducts(SEED_PRODUCTS);
-      setSuppliers(SEED_SUPPLIERS);
-      setSales(SEED_SALES);
-      setSaleItems(SEED_SALE_ITEMS);
-      setPurchaseOrders(SEED_POS);
-      setPoItems(SEED_PO_ITEMS);
-      setTransmittals(SEED_TRANSMITTALS);
-      setShifts(SEED_SHIFTS);
-      setMovements(SEED_MOVEMENTS);
-      setParkedSales([]);
-      setStockTransfers([]);
-      setLedgerEntries([]);
-      setBranchSalesReports([]);
-      setDeliveries([]);
-      setCustomBills([]);
-      localStorage.removeItem("tp_branch_sales_reports");
-      localStorage.removeItem("tp_deliveries");
-      localStorage.removeItem("atpos_v2_custom_bills");
+    // Mode 'all' or 'transactions'
+    setSales([]);
+    setSaleItems([]);
+    setPurchaseOrders([]);
+    setPoItems([]);
+    setTransmittals([]);
+    setShifts([]);
+    setMovements([]);
+    setParkedSales([]);
+    setStockTransfers([]);
+    setLedgerEntries([]);
+    setBranchSalesReports([]);
+    setDeliveries([]);
+    setCustomBills([]);
+    setBranches((prev) => prev.map((b) => ({ ...b, monthlySales: 0 })));
 
-      // Recompute initial branch stocks
-      const initial: InventoryLocationStock[] = [];
-      SEED_PRODUCTS.forEach((p) => {
-        initial.push({
-          id: `B1_${p.id}`,
-          branchId: "B1",
-          productId: p.id,
-          quantity: p.stockQuantity,
-        });
-        initial.push({
-          id: `B2_${p.id}`,
-          branchId: "B2",
-          productId: p.id,
-          quantity: Math.round(p.stockQuantity * 0.35),
-        });
-        initial.push({
-          id: `B3_${p.id}`,
-          branchId: "B3",
-          productId: p.id,
-          quantity: Math.round(p.stockQuantity * 0.2),
-        });
-        initial.push({
-          id: `B4_${p.id}`,
-          branchId: "B4",
-          productId: p.id,
-          quantity: Math.round(p.stockQuantity * 0.15),
-        });
-      });
-      setBranchStock(initial);
+    localStorage.removeItem("atpos_v2_members_list");
+    localStorage.removeItem("atpos_v2_expenses");
+    localStorage.removeItem("atpos_v2_returns");
+    localStorage.removeItem("tp_branch_sales_reports");
+    localStorage.removeItem("tp_deliveries");
+    localStorage.removeItem("atpos_v2_custom_bills");
 
-      // Reset ATPOS v2 specific local storages
-      localStorage.removeItem("atpos_v2_members_list");
-      localStorage.removeItem("atpos_v2_expenses");
-      localStorage.removeItem("atpos_v2_returns");
+    if (mode === "all") {
+      setProducts([]);
+      setSuppliers([]);
+      setBranchStock([]);
 
-      const recoveryLog: AuditLog = {
-        id: `AL-RECOVERY-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        userId: currentUser.id,
-        username: currentUser.username,
-        action: "DB_RESEED",
-        description: `Successfully restored standard database schemas & enterprise seed profiles.`,
-        tableAffected: "ALL",
-        recordId: "SYSTEM",
-      };
-      setAuditLogs([recoveryLog]);
+      localStorage.removeItem("tp_products");
+      localStorage.removeItem("tp_suppliers");
+      localStorage.removeItem("tp_branch_stock");
     } else {
-      // Mode 'all' or 'transactions'
-      setSales([]);
-      setSaleItems([]);
-      setPurchaseOrders([]);
-      setPoItems([]);
-      setTransmittals([]);
-      setShifts([]);
-      setMovements([]);
-      setParkedSales([]);
-      setStockTransfers([]);
-      setLedgerEntries([]);
-      setBranchSalesReports([]);
-      setDeliveries([]);
-      setCustomBills([]);
-      setBranches((prev) => prev.map((b) => ({ ...b, monthlySales: 0 })));
+      // Mode 'transactions' (keep products and suppliers but clear stocks to 0)
+      const clearedBranchStock = branchStock.map((bs) => ({
+        ...bs,
+        quantity: 0,
+      }));
+      setBranchStock(clearedBranchStock);
 
-      localStorage.removeItem("atpos_v2_members_list");
-      localStorage.removeItem("atpos_v2_expenses");
-      localStorage.removeItem("atpos_v2_returns");
-      localStorage.removeItem("tp_branch_sales_reports");
-      localStorage.removeItem("tp_deliveries");
-      localStorage.removeItem("atpos_v2_custom_bills");
-
-      if (mode === "all") {
-        setProducts([]);
-        setSuppliers([]);
-        setBranchStock([]);
-
-        localStorage.removeItem("tp_products");
-        localStorage.removeItem("tp_suppliers");
-        localStorage.removeItem("tp_branch_stock");
-      } else {
-        // Mode 'transactions' (keep products and suppliers but clear stocks to 0)
-        const clearedBranchStock = branchStock.map((bs) => ({
-          ...bs,
-          quantity: 0,
-        }));
-        setBranchStock(clearedBranchStock);
-
-        const resetProducts = products.map((p) => ({ ...p, stockQuantity: 0 }));
-        setProducts(resetProducts);
-      }
-
-      const truncateLog: AuditLog = {
-        id: `AL-TRUNCATE-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        userId: currentUser.id,
-        username: currentUser.username,
-        action: "DB_TRUNCATE",
-        description: `Executed database truncation (Mode: ${mode.toUpperCase()}). Core tables purged.`,
-        tableAffected: "ALL",
-        recordId: "SYSTEM",
-      };
-      setAuditLogs([truncateLog]);
+      const resetProducts = products.map((p) => ({ ...p, stockQuantity: 0 }));
+      setProducts(resetProducts);
     }
+
+    const truncateLog: AuditLog = {
+      id: `AL-TRUNCATE-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      userId: currentUser.id,
+      username: currentUser.username,
+      action: "DB_TRUNCATE",
+      description: `Executed database truncation (Mode: ${mode.toUpperCase()}). Core tables purged.`,
+      tableAffected: "ALL",
+      recordId: "SYSTEM",
+    };
+    setAuditLogs([truncateLog]);
+
     // Clean up active sessions list on reset/truncate to keep the system pristine and remove all session seeds
     setActiveSessions((prev) => {
       const updated = prev.filter((s) => s.id === activeSessionId);
@@ -6831,17 +6765,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
   const closeShift = (cashCount: number) => {
     if (!activeShift) return;
 
-    // Enforce pre-closure backup snapshot & quiet recovery download requirements
+    // Enforce pre-closure backup snapshot in internal database records
     const snapshotName = `Shift Close Auto-Snapshot - ${activeShift.id} - ${new Date().toLocaleDateString()}`;
-    const snapshot = generateSystemSnapshot(snapshotName);
-    
-    // Parse recovery payload and download quietly
-    try {
-      const payload = JSON.parse(snapshot.data);
-      triggerQuietDownload(payload);
-    } catch (e) {
-      console.error("[System Guard] Pre-closure quiet download failed:", e);
-    }
+    generateSystemSnapshot(snapshotName);
 
     const statsResult = getShiftReportStats(activeShift);
     const expectedEndCash = activeShift.startCash + statsResult.netTotal;

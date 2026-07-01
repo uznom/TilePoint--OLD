@@ -34,10 +34,10 @@ export const SystemLoadingOverlay: React.FC = () => {
     switch (systemProcessingType) {
       case 'db':
         return [
-          'Checking local application storage...',
-          'Updating database records...',
+          'Checking local ledger records...',
+          'Updating account files...',
           'Applying configurations...',
-          'Saving database changes...'
+          'Saving ledger updates...'
         ];
       case 'verification':
         return [
@@ -48,10 +48,10 @@ export const SystemLoadingOverlay: React.FC = () => {
         ];
       default:
         return [
-          'Connecting to server...',
+          'Connecting to central network...',
           'Preparing request...',
           'Checking stock levels...',
-          'Updating database records...'
+          'Updating accounts journal...'
         ];
     }
   };
@@ -144,7 +144,7 @@ export const SystemLoadingOverlay: React.FC = () => {
           {/* Custom Status Bullet Steps */}
           <div className="mt-4 p-4 rounded-xl bg-zinc-950/40 border border-zinc-800/40 text-left space-y-2">
             <p className="font-mono text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 flex justify-between">
-              <span>Execution Pipeline</span>
+              <span>Execution Journal</span>
               <span>v2.4.0</span>
             </p>
             {currentSteps.map((step, idx) => {

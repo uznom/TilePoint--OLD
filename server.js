@@ -69,14 +69,26 @@ const notifyClients = (type, info, senderClientId) => {
   });
 };
 
+// Global SSE Keep-Alive ping to prevent proxy/browser idle disconnects
+setInterval(() => {
+  clients.forEach(client => {
+    try {
+      // Send standard SSE comment ping to keep connection open
+      client.res.write(': keep-alive\n\n');
+    } catch (e) {
+      // client connection is dead
+    }
+  });
+}, 15000);
+
 // Helper to write database safely with atomic updates
-const writeDatabase = (data, senderClientId) => {
+const writeDatabase = (data, senderClientId, eventType = 'db_update') => {
   try {
     const tempPath = `${DB_FILE_PATH}.tmp`;
     fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf-8');
     fs.renameSync(tempPath, DB_FILE_PATH);
     // Broadcast real-time change to all active cashier/staff devices, skipping the sender
-    notifyClients('db_update', {}, senderClientId);
+    notifyClients(eventType, {}, senderClientId);
     return true;
   } catch (error) {
     console.error('[Shared DB Server] Error writing server-db.json:', error);
@@ -402,7 +414,9 @@ app.post('/api/db', async (req, res) => {
     const result = await runInTransaction(async () => {
       const db = readDatabase();
       db[key] = value;
-      if (writeDatabase(db, req.headers['x-client-id'])) {
+      // Isolate active sessions heartbeat from triggering full DB updates
+      const eventType = key === 'tp_active_sessions' ? 'session_update' : 'db_update';
+      if (writeDatabase(db, req.headers['x-client-id'], eventType)) {
         return { success: true, key };
       } else {
         throw new Error('Failed to write key to database');
@@ -514,15 +528,6 @@ app.post('/api/db/truncate', (req, res) => {
     if (db['tp_branch_stock'] && Array.isArray(db['tp_branch_stock'])) {
       db['tp_branch_stock'] = db['tp_branch_stock'].map(s => ({ ...s, quantity: 0 }));
     }
-  } else if (mode === 'seeds') {
-    // Wipe configuration entirely to trigger re-seeding
-    delete db['tp_is_configured'];
-    delete db['tilepoint_onboarded_setup'];
-    keysToPurge.forEach(k => delete db[k]);
-    delete db['tp_products'];
-    delete db['tp_branch_stock'];
-    delete db['tp_suppliers'];
-    delete db['tp_branches'];
   }
 
   if (writeDatabase(db)) {

@@ -1,6 +1,6 @@
 {
   "name": "TilePoint",
-  "description": "Enterprise-grade POS, Inventory Management, Procurement, and Branch Management System for hardware and tile center chains.",
+  "description": "Enterprise-grade ERP OS, Inventory Management, Procurement, and Branch Management System for hardware and tile center chains.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

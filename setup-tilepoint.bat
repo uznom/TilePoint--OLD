@@ -3,8 +3,8 @@
 :: TILEPOINT POS SYSTEM - AUTOMATED WINDOWS 11 INSTALLER & DEPLOYER
 :: =====================================================================
 :: This script automates Node.js dependency installation, 
-:: local HTTPS certificate generation, Windows Firewall setup, 
-:: environment file configuration, and background execution via PM2.
+:: local HTTPS certificate generation using mkcert, Windows Firewall setup, 
+:: environment file configuration, and background execution.
 :: =====================================================================
 
 title TilePoint Local Server Installer
@@ -15,35 +15,79 @@ echo =====================================================================
 echo          TILEPOINT RETAIL SYSTEMS - WINDOWS DEPLOYMENT UTILITY
 echo =====================================================================
 echo.
-echo This utility will configure your Windows 11 machine as a resilient,
-echo offline-capable POS local server for all staff mobile devices.
+echo This utility will configure your Windows machine as a resilient,
+echo offline-capable POS local server for all staff devices.
 echo.
+
+:: Check for Administrator privileges
+net session >nul 2>&1
+if %errorLevel% neq 0 (
+    echo [INFO] This installer requires Administrator privileges to:
+    echo   1. Install missing prerequisites (Node.js, Git)
+    echo   2. Configure Windows Defender Firewall rules for Port 3000
+    echo   3. Setup trusted HTTPS certificates using mkcert
+    echo.
+    echo Requesting Administrator elevation...
+    powershell -Command "Start-Process '%~dpnx0' -Verb RunAs"
+    exit /b
+)
+
+echo [OK] Running with Administrator privileges.
 echo Checking system prerequisites...
 echo ---------------------------------------------------------------------
 
-:: 1. Verify Node.js and NPM Installation
+:: Verify/Install Git
+where git >nul 2>nul
+if %errorlevel% neq 0 (
+    echo [INFO] Git was not found on your system.
+    echo Attempting to install Git via winget...
+    winget install --id Git.Git -e --silent --accept-source-agreements --accept-package-agreements
+    if %errorlevel% neq 0 (
+        echo [!] Winget failed or is unavailable. Downloading Git installer directly...
+        curl -L -o git-setup.exe "https://github.com/git-for-windows/git/releases/download/v2.43.0.windows.1/Git-2.43.0-64-bit.exe"
+        echo Installing Git (silent mode)...
+        git-setup.exe /VERYSILENT /NORESTART /NOCANCEL /SP-
+        del git-setup.exe >nul 2>&1
+    )
+    call :RefreshPath
+) else (
+    echo [OK] Git is already installed.
+)
+
+:: Verify/Install Node.js
+where node >nul 2>nul
+if %errorlevel% neq 0 (
+    echo [INFO] Node.js was not found on your system.
+    echo Attempting to install Node.js LTS via winget...
+    winget install --id OpenJS.NodeJS.LTS -e --silent --accept-source-agreements --accept-package-agreements
+    if %errorlevel% neq 0 (
+        echo [!] Winget failed or is unavailable. Downloading Node.js MSI directly...
+        curl -L -o node-setup.msi "https://nodejs.org/dist/v20.11.1/node-v20.11.1-x64.msi"
+        echo Installing Node.js (silent mode)...
+        msiexec /i node-setup.msi /qn /norestart
+        del node-setup.msi >nul 2>&1
+    )
+    call :RefreshPath
+) else (
+    echo [OK] Node.js is already installed.
+)
+
+where npm >nul 2>nul
+if %errorlevel% neq 0 (
+    echo [!] npm was not found. Refreshing path once more...
+    call :RefreshPath
+)
+
 where node >nul 2>nul
 if %errorlevel% neq 0 (
     color 0C
-    echo ERROR: Node.js was not found on your system!
-    echo Please install Node.js (LTS version recommended) from:
-    echo https://nodejs.org/
-    echo.
-    echo After installing Node.js, reopen this script.
+    echo ERROR: Node.js was not successfully bound to the terminal path.
+    echo Please install Node.js manually from https://nodejs.org/ and restart the script.
     pause
     exit /b
 )
-
-echo [OK] Node.js is installed.
-where npm >nul 2>nul
-if %errorlevel% neq 0 (
-    color 0C
-    echo ERROR: npm (Node Package Manager) was not found on your system!
-    echo Please reinstall Node.js cleanly.
-    pause
-    exit /b
-)
-echo [OK] npm is installed.
+echo [OK] Node.js is ready: 
+node -v
 echo.
 
 :: 2. Install Project Dependencies
@@ -60,16 +104,14 @@ if %errorlevel% neq 0 (
 )
 echo.
 
+:: Get local IP address using PowerShell
+for /f "usebackq tokens=*" %%a in (`powershell -NoProfile -Command "(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127*' -and $_.IPAddress -notlike '169.254*' -and $_.InterfaceAlias -notlike '*Loopback*' } | Select-Object -First 1).IPAddress"`) do set "LOCAL_IP=%%a"
+if "%LOCAL_IP%"=="" set "LOCAL_IP=127.0.0.1"
+
 :: 3. Generate Local IP and Create .env
 echo ---------------------------------------------------------------------
 echo STEP 2: Creating local environment configuration (.env)...
 echo ---------------------------------------------------------------------
-:: Extract local IPv4 address
-set "LOCAL_IP=127.0.0.1"
-for /f "tokens=4 delims= " %%a in ('route print ^| find " 0.0.0.0 "') do (
-    set "LOCAL_IP=%%a"
-)
-
 if not exist .env (
     echo Copying .env.example to .env...
     copy .env.example .env >nul
@@ -84,46 +126,42 @@ if not exist .env (
 )
 echo.
 
-:: 4. Generate SSL Certificates
+:: 4. Generate SSL Certificates using mkcert
 echo ---------------------------------------------------------------------
-echo STEP 3: Generating clean, native SSL Certificates...
+echo STEP 3: Generating fully-trusted local SSL Certificates with mkcert...
 echo ---------------------------------------------------------------------
 if exist key.pem (
-    echo [INFO] An existing key.pem already exists. Deleting to ensure a clean PKCS#8 format...
     del key.pem >nul 2>&1
 )
 if exist cert.pem (
-    echo [INFO] An existing cert.pem already exists. Deleting...
     del cert.pem >nul 2>&1
 )
 
-echo Running high-fidelity PowerShell SSL generator...
-powershell -ExecutionPolicy Bypass -File .\generate-certs.ps1
-if %errorlevel% neq 0 (
-    echo [WARNING] Script-based generation failed. Attempting fallback generation inline...
-    powershell -Command "$cert = New-SelfSignedCertificate -DnsName 'localhost' -CertStoreLocation 'Cert:\CurrentUser\My' -FriendlyName 'TilePoint Local HTTPS' -NotAfter (Get-Date).AddDays(365); [System.IO.File]::WriteAllText('cert.pem', ('-----BEGIN CERTIFICATE-----`r`n' + [Convert]::ToBase64String($cert.Export([Security.Cryptography.X509Certificates.X509ContentType]::Cert), 'InsertLineBreaks') + '`r`n-----END CERTIFICATE-----')); [System.IO.File]::WriteAllText('key.pem', ('-----BEGIN PRIVATE KEY-----`r`n' + [Convert]::ToBase64String($cert.Export([Security.Cryptography.X509Certificates.X509ContentType]::Pkcs12), 'InsertLineBreaks') + '`r`n-----END PRIVATE KEY-----')); $store = New-Object Security.Cryptography.X509Certificates.X509Store 'My', 'CurrentUser'; $store.Open('ReadWrite'); $store.Remove($cert); $store.Close();" >nul 2>&1
+if not exist mkcert.exe (
+    echo Downloading mkcert for Windows (x64)...
+    curl -L -o mkcert.exe "https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-windows-amd64.exe"
 )
 
-if not exist key.pem (
-    color 0E
-    echo.
-    echo [WARNING] Could not automatically generate SSL certificate files.
-    echo The server will boot in standard HTTP mode safely.
-    echo If tablets fail to connect, run this file as an Administrator!
+if exist mkcert.exe (
+    echo Installing Local Certificate Authority to Windows Trust Store...
+    .\mkcert.exe -install
+    
+    echo Generating trusted certificates for localhost, 127.0.0.1, and %LOCAL_IP%...
+    .\mkcert.exe -key-file key.pem -cert-file cert.pem localhost 127.0.0.1 %LOCAL_IP%
+    echo [OK] Trusted SSL Certificate files successfully generated (key.pem, cert.pem).
 ) else (
-    echo [OK] SSL Certificate files successfully generated (key.pem, cert.pem).
+    echo [WARNING] mkcert download failed. Falling back to PowerShell certificate generator...
+    powershell -ExecutionPolicy Bypass -File .\generate-certs.ps1
 )
 echo.
 
 :: 5. Open Windows Defender Firewall Port
 echo ---------------------------------------------------------------------
-echo STEP 4: Requesting Windows Firewall Access for Port 3000...
+echo STEP 4: Setting Windows Defender Firewall rules for Inbound Port 3000...
 echo ---------------------------------------------------------------------
-echo If a User Account Control (UAC) prompt pops up, please select "YES" 
-echo to allow incoming mobile tablet connections to your laptop!
-echo.
-powershell -Command "Start-Process powershell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -Command \"New-NetFirewallRule -DisplayName ''TilePoint Server Port 3000'' -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow -ErrorAction SilentlyContinue; Write-Host ''Firewall Rule Added successfully!'' -ForegroundColor Green\"' -Verb RunAs" >nul 2>&1
-echo [OK] Sent firewall inbound authorization request.
+powershell -Command "Remove-NetFirewallRule -DisplayName 'TilePoint Server Port 3000' -ErrorAction SilentlyContinue" >nul 2>&1
+powershell -Command "New-NetFirewallRule -DisplayName 'TilePoint Server Port 3000' -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow" >nul 2>&1
+echo [OK] Inbound firewall rule added for TCP Port 3000.
 echo.
 
 :: 6. Build Client Application
@@ -134,9 +172,9 @@ call npm run build
 echo [OK] Assets built inside dist/ folder.
 echo.
 
-:: 7. PM2 Background Launch
+:: 7. Launch Background Server
 echo ---------------------------------------------------------------------
-echo STEP 6: Running Server in Background with PM2...
+echo STEP 6: Starting Server...
 echo ---------------------------------------------------------------------
 where pm2 >nul 2>nul
 if %errorlevel% neq 0 (
@@ -148,24 +186,54 @@ echo Starting background process via PM2...
 call pm2 delete tilepoint-hq-server >nul 2>&1
 call pm2 start server.js --name "tilepoint-hq-server"
 
+:: Fallback if PM2 is not active or fails
+if %errorlevel% neq 0 (
+    echo [WARNING] PM2 start failed. Launching Node server in a dedicated command window...
+    start "TilePoint ERP OS Server" cmd /k "node server.js"
+)
+
 echo.
 echo =====================================================================
 echo                SUCCESSFUL DEPLOYMENT SUMMARY
 echo =====================================================================
 echo.
-echo  Your local server is up and running in the background!
+echo  Your local server is up and running securely!
 echo.
-echo   * ADMIN SITE  (on this laptop) : http://localhost:3000
-echo   * STAFF MOBILE ACCESS (tablets) : http://%LOCAL_IP%:3000
+echo   * ADMINISTRATIVE CONSOLE (this PC) : https://localhost:3000
+echo   * MOBILE RETAIL DEVISE ACCESS      : https://%LOCAL_IP%:3000
 echo.
-echo  Note: If you are running in HTTPS mode, replace "http://" with 
-echo  "https://" when entering the addresses above.
-echo.
-echo  To view active server logs at any time, run:
-echo    pm2 logs tilepoint-hq-server
-echo.
-echo  To stop the background server, run:
-echo    pm2 stop tilepoint-hq-server
+echo =====================================================================
+echo                CHOOSE YOUR PREFERRED WEB BROWSER
+echo =====================================================================
+echo [1] Default Web Browser
+echo [2] Google Chrome
+echo [3] Microsoft Edge
+echo [4] Mozilla Firefox
+echo ---------------------------------------------------------------------
+set /p BROWSER_CHOICE="Select browser to open (1-4): "
+
+if "%BROWSER_CHOICE%"=="2" (
+    echo Launching TilePoint ERP OS in Google Chrome...
+    start chrome "https://%LOCAL_IP%:3000"
+) else if "%BROWSER_CHOICE%"=="3" (
+    echo Launching TilePoint ERP OS in Microsoft Edge...
+    start msedge "https://%LOCAL_IP%:3000"
+) else if "%BROWSER_CHOICE%"=="4" (
+    echo Launching TilePoint ERP OS in Mozilla Firefox...
+    start firefox "https://%LOCAL_IP%:3000"
+) else (
+    echo Launching TilePoint ERP OS in your default browser...
+    start "https://%LOCAL_IP%:3000"
+)
+
 echo.
 echo =====================================================================
 pause
+exit /b
+
+:RefreshPath
+:: Query the Registry to load the updated PATH variable instantly
+for /f "tokens=2*" %%A in ('reg query "HKLM\System\CurrentControlSet\Control\Session Manager\Environment" /v Path') do set "SYS_PATH=%%B"
+for /f "tokens=2*" %%A in ('reg query "HKCU\Environment" /v Path') do set "USER_PATH=%%B"
+set "PATH=%SYS_PATH%;%USER_PATH%"
+exit /b

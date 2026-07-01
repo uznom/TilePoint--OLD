@@ -37,21 +37,24 @@ interface LogLine {
 export const SetupModule: React.FC = () => {
   const { setupSystem, triggerSystemProcessing } = useDb();
 
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(() => {
+    const cached = sessionStorage.getItem("tp_setup_step");
+    return cached ? Number(cached) : 1;
+  });
 
   // Step 1: Admin Data
-  const [fullName, setFullName] = useState("");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState(() => sessionStorage.getItem("tp_setup_fullName") || "");
+  const [username, setUsername] = useState(() => sessionStorage.getItem("tp_setup_username") || "");
+  const [email, setEmail] = useState(() => sessionStorage.getItem("tp_setup_email") || "");
+  const [password, setPassword] = useState(() => sessionStorage.getItem("tp_setup_password") || "");
   const [showPassword, setShowPassword] = useState(false);
-  const [managerPin, setManagerPin] = useState("");
+  const [managerPin, setManagerPin] = useState(() => sessionStorage.getItem("tp_setup_managerPin") || "");
 
   // Step 2: Branch Data
-  const [branchName, setBranchName] = useState("");
-  const [branchAddress, setBranchAddress] = useState("");
-  const [branchPhone, setBranchPhone] = useState("");
-  const [storeLogo, setStoreLogo] = useState("");
+  const [branchName, setBranchName] = useState(() => sessionStorage.getItem("tp_setup_branchName") || "");
+  const [branchAddress, setBranchAddress] = useState(() => sessionStorage.getItem("tp_setup_branchAddress") || "");
+  const [branchPhone, setBranchPhone] = useState(() => sessionStorage.getItem("tp_setup_branchPhone") || "");
+  const [storeLogo, setStoreLogo] = useState(() => sessionStorage.getItem("tp_setup_storeLogo") || "");
 
   // Convert selected files to base64
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,11 +73,77 @@ export const SetupModule: React.FC = () => {
   };
 
   // Deployment States
-  const [isDeploying, setIsDeploying] = useState(false);
-  const [deployStep, setDeployStep] = useState(0);
-  const [terminalLogs, setTerminalLogs] = useState<LogLine[]>([]);
-  const [installSuccess, setInstallSuccess] = useState(false);
-  const [installProgress, setInstallProgress] = useState(0);
+  const [isDeploying, setIsDeploying] = useState(() => sessionStorage.getItem("tp_setup_isDeploying") === "true");
+  const [deployStep, setDeployStep] = useState(() => {
+    const cached = sessionStorage.getItem("tp_setup_deployStep");
+    return cached ? Number(cached) : 0;
+  });
+  const [terminalLogs, setTerminalLogs] = useState<LogLine[]>(() => {
+    const cached = sessionStorage.getItem("tp_setup_terminalLogs");
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [installSuccess, setInstallSuccess] = useState(() => sessionStorage.getItem("tp_setup_installSuccess") === "true");
+  const [installProgress, setInstallProgress] = useState(() => {
+    const cached = sessionStorage.getItem("tp_setup_installProgress");
+    return cached ? Number(cached) : 0;
+  });
+
+  // Track state changes to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem("tp_setup_step", String(step));
+    sessionStorage.setItem("tp_setup_fullName", fullName);
+    sessionStorage.setItem("tp_setup_username", username);
+    sessionStorage.setItem("tp_setup_email", email);
+    sessionStorage.setItem("tp_setup_password", password);
+    sessionStorage.setItem("tp_setup_managerPin", managerPin);
+    sessionStorage.setItem("tp_setup_branchName", branchName);
+    sessionStorage.setItem("tp_setup_branchAddress", branchAddress);
+    sessionStorage.setItem("tp_setup_branchPhone", branchPhone);
+    sessionStorage.setItem("tp_setup_storeLogo", storeLogo);
+    sessionStorage.setItem("tp_setup_isDeploying", String(isDeploying));
+    sessionStorage.setItem("tp_setup_deployStep", String(deployStep));
+    sessionStorage.setItem("tp_setup_installSuccess", String(installSuccess));
+    sessionStorage.setItem("tp_setup_installProgress", String(installProgress));
+    sessionStorage.setItem("tp_setup_terminalLogs", JSON.stringify(terminalLogs));
+  }, [
+    step,
+    fullName,
+    username,
+    email,
+    password,
+    managerPin,
+    branchName,
+    branchAddress,
+    branchPhone,
+    storeLogo,
+    isDeploying,
+    deployStep,
+    installSuccess,
+    installProgress,
+    terminalLogs,
+  ]);
+
+  // Clean setup credentials from sessionStorage upon final portal initialization
+  const clearSetupSession = () => {
+    const keys = [
+      "tp_setup_step",
+      "tp_setup_fullName",
+      "tp_setup_username",
+      "tp_setup_email",
+      "tp_setup_password",
+      "tp_setup_managerPin",
+      "tp_setup_branchName",
+      "tp_setup_branchAddress",
+      "tp_setup_branchPhone",
+      "tp_setup_storeLogo",
+      "tp_setup_isDeploying",
+      "tp_setup_deployStep",
+      "tp_setup_installSuccess",
+      "tp_setup_installProgress",
+      "tp_setup_terminalLogs"
+    ];
+    keys.forEach((k) => sessionStorage.removeItem(k));
+  };
 
   // Validation
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -141,24 +210,24 @@ export const SetupModule: React.FC = () => {
       setTerminalLogs([...logHistory]);
     };
 
-    addLog("Initializing local database node for TilePoint POS...", "info");
+    addLog("Initializing local ledger for TilePoint ERP OS...", "info");
     setInstallProgress(15);
     await new Promise((r) => setTimeout(r, 200));
 
-    addLog("✔ Client storage database bound successfully.", "success");
-    addLog("Allocating application tables...", "info");
+    addLog("✔ Local transaction journal bound successfully.", "success");
+    addLog("Allocating application records...", "info");
     setInstallProgress(30);
     await new Promise((r) => setTimeout(r, 200));
 
     addLog(
-      "Designing database schemas for Products, Sales, Suppliers and Orders...",
+      "Designing record structures for Products, Sales, Suppliers and Orders...",
       "info",
     );
     setInstallProgress(45);
     await new Promise((r) => setTimeout(r, 200));
 
     addLog(
-      "✔ Application data schema instantiated in local storage.",
+      "✔ Application records structures instantiated in local storage.",
       "success",
     );
     addLog(`Creating administrator profile [${username}]...`, "info");
@@ -175,7 +244,7 @@ export const SetupModule: React.FC = () => {
     setInstallProgress(85);
 
     try {
-      // Create seed records payload
+      // Create initial configuration records payload
       const initialDbState = {
         tp_is_configured: "true",
         tp_users: [
@@ -235,7 +304,7 @@ export const SetupModule: React.FC = () => {
       });
 
       if (!saveResponse.ok) {
-        throw new Error("Server storage disk rejected database seed arrays.");
+        throw new Error("Server storage disk rejected onboarding record arrays.");
       }
 
       setInstallProgress(95);
@@ -273,6 +342,8 @@ export const SetupModule: React.FC = () => {
       // Save tracking markers in client engine context memory map
       localStorage.setItem("tp_is_configured", "true");
       localStorage.setItem("tilepoint_onboarded_setup", "true");
+
+      clearSetupSession();
 
       setupSystem(
         {
@@ -717,8 +788,8 @@ export const SetupModule: React.FC = () => {
                   </div>
                   <p className="text-[10.5px] text-zinc-400 leading-normal">
                     {installSuccess
-                      ? "Local branch and database environment have been successfully created and secured."
-                      : "Configuring storage adapters, database indices, and creating administrative security profiles..."}
+                      ? "Local branch records and ERP ledger environment have been successfully created and secured."
+                      : "Configuring records, accounts register, ledger indices, and creating administrative security profiles..."}
                   </p>
                 </div>
 
@@ -742,7 +813,7 @@ export const SetupModule: React.FC = () => {
                   {!installSuccess && (
                     <div className="flex items-center gap-2 text-zinc-500 animate-pulse pt-1">
                       <RefreshCw className="h-3.5 w-3.5 animate-spin text-amber-500" />
-                      <span>CONFIGURING SYSTEM REPOSITORIES...</span>
+                      <span>CONFIGURING SYSTEM REGISTERS...</span>
                     </div>
                   )}
                 </div>
@@ -759,8 +830,8 @@ export const SetupModule: React.FC = () => {
                         Active Installation Completed
                       </p>
                       <p className="text-[10px] text-zinc-300 leading-normal">
-                        Branch database was created successfully with a secure
-                        superadministrator profile.
+                        Branch ledger was created successfully with a secure
+                        supervisor profile.
                       </p>
                     </div>
                   </motion.div>
@@ -783,10 +854,9 @@ export const SetupModule: React.FC = () => {
       </div>
 
       <div className="mt-8 text-center space-y-1 text-[10px] font-mono text-zinc-500 relative z-10">
-        <p>TILEPOINT POS DIRECT CLIENT-SIDE SESSION • DB ENCRYPT ACTIVE</p>
+        <p>TILEPOINT ERP OS SYSTEM • ACCOUNT REGISTER SECURE</p>
         <p className="opacity-60">
-          System running on clean-slate build isolated with localStorage
-          database layer.
+          System running on local transaction ledger and offline secure records.
         </p>
       </div>
     </div>

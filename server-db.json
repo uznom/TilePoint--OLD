@@ -35,7 +35,7 @@
       "manager": "erica manaban",
       "address": "ddsdsd",
       "phone": "sdsds",
-      "monthlySales": 87.36,
+      "monthlySales": 0,
       "staffCount": 1,
       "activeCashiers": 0,
       "createdAt": "2026-06-26T12:52:35.681Z",
@@ -48,25 +48,14 @@
   "tilepoint_company_name_v1": "ETC_DIPOLOG MAIN",
   "tp_active_sessions": [
     {
-      "id": "SESS_5W3OWF2WA",
-      "userId": "U-1782804196981",
-      "username": "test",
-      "fullName": "test",
-      "role": "Staff",
-      "branchId": "B1",
-      "branchName": "ETC_DIPOLOG MAIN",
-      "lastActive": "2026-06-30T09:39:35.274Z",
-      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
-    },
-    {
-      "id": "SESS_X4LHIR3EL",
+      "id": "SESS_3AWLB3T3T",
       "userId": "U1",
       "username": "erica_admin",
-      "fullName": "erica manaban",
+      "fullName": "Erica Manaban",
       "role": "Admin",
       "branchId": "B1",
       "branchName": "ETC_DIPOLOG MAIN",
-      "lastActive": "2026-07-01T01:30:19.609Z",
+      "lastActive": "2026-07-01T14:46:44.438Z",
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
     }
   ],
@@ -158,7 +147,7 @@
       "costPrice": 47,
       "MU%": "65%",
       "sellingPrice": 78,
-      "stockQuantity": 80,
+      "stockQuantity": 81,
       "unit": "PCS",
       "minimumStock": 0,
       "Tax Type": "VAT",
@@ -172,7 +161,7 @@
       "supplierId": "central",
       "boxQuantity": 4,
       "createdAt": "2026-06-30T07:23:50.931Z",
-      "updatedAt": "2026-07-01T01:32:21.410Z",
+      "updatedAt": "2026-06-30T07:23:50.931Z",
       "isDeleted": false
     },
     {
@@ -6434,46 +6423,16 @@
       "variance": 0,
       "openedAt": "2026-06-30T07:28:37.536Z",
       "closedAt": null,
-      "shiftSalesCount": 1,
-      "shiftSalesTotal": 78,
-      "shiftVatTotal": 9.36,
+      "shiftSalesCount": 0,
+      "shiftSalesTotal": 0,
+      "shiftVatTotal": 0,
       "shiftDiscountTotal": 0
     }
   ],
-  "tp_sales": [
-    {
-      "id": "SL-1782869541409",
-      "saleNumber": "SL-20260701-2768",
-      "shiftId": "SH-1782804517536",
-      "branchId": "B1",
-      "cashierId": "U1",
-      "cashierName": "erica manaban",
-      "customerName": "Walk-in Customer",
-      "subtotal": 78,
-      "vat": 9.36,
-      "discount": 0,
-      "grandTotal": 87.36,
-      "paymentMethod": "Cash",
-      "amountTendered": 87.36,
-      "changeAmount": 0,
-      "notes": "",
-      "createdAt": "2026-07-01T01:32:21.409Z",
-      "isDeleted": false
-    }
-  ],
+  "tp_sales": [],
   "tp_sale_items": [],
   "tp_movements": [],
   "tp_audit_logs": [
-    {
-      "id": "AL-AUTO-BACKUP-1782869360235",
-      "timestamp": "2026-07-01T01:29:20.236Z",
-      "userId": "SYSTEM",
-      "username": "auto_scheduler",
-      "action": "DB_BACKUP_CREATE",
-      "description": "Automatically created background backup snapshot: Automated Backup - 1hr Interval",
-      "tableAffected": "ALL",
-      "recordId": "SNAP-AUTO-1782869360235"
-    },
     {
       "id": "AL-1782812387890-675",
       "timestamp": "2026-06-30T09:39:47.890Z",
@@ -6625,6 +6584,10 @@
   "atpos_v2_returns": [],
   "tp_db_snapshots": [],
   "tp_processed_delta_ids": [
+    "delta-add-tp_branch_stock-B1_P-IMPORT-k8ph9nv-1782803304943-642",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-6nj8knq-1782804304746-761",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-wflbdil-1782804304746-3",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-yliaiqp-1782803304943-702",
     "delta-add-tp_branch_stock-B1_P-IMPORT-wcp7bq0-1782804304746-673",
     "delta-add-tp_branch_stock-B1_P-IMPORT-54iufbo-1782804304746-41",
     "delta-add-tp_branch_stock-B1_P-IMPORT-gsdkay0-1782803304943-638",
@@ -11620,10 +11583,6 @@
     "delta-add-tp_branch_stock-B1_P-IMPORT-hjwophy-1782803373721-52",
     "delta-add-tp_branch_stock-B1_P-IMPORT-w0z5o2f-1782803373721-174",
     "delta-add-tp_branch_stock-B1_P-IMPORT-jul2i77-1782803373721-375",
-    "delta-add-tp_branch_stock-B1_P-IMPORT-nakkcv5-1782803373721-500",
-    "delta-add-tp_audit_logs-AL-AUTO-BACKUP-1782869360235-1782869360241-583",
-    "delta-dec-tp_products-P-IMPORT-1782804230931-53-1782869541446-813",
-    "delta-upd-tp_products-P-IMPORT-1782804230931-53-1782869541446-341",
-    "delta-add-tp_sales-SL-1782869541409-1782869541446-206"
+    "delta-add-tp_branch_stock-B1_P-IMPORT-nakkcv5-1782803373721-500"
   ]
 }

@@ -2098,7 +2098,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                         handleCopyText(sharePayloadText, 'JSON report copied! Launching email...');
                         setTimeout(() => {
                           try {
-                            const mailtoUrl = `mailto:?subject=${encodeURIComponent(`TilePoint Sales Report - ${currentBranchMeta.name} (${reportingDate})`)}&body=${encodeURIComponent(`Dear Admin,\n\nAttached is the encrypted JSON sales report for ${currentBranchMeta.name} compiled on ${reportingDate}.\n\nPlease find the encrypted data string below. Copy and paste this directly into the HQ import portal to reconcile:\n\n${sharePayloadText}\n\nKind regards,\nTilePoint Offline POS System`)};`;
+                            const mailtoUrl = `mailto:?subject=${encodeURIComponent(`TilePoint Sales Report - ${currentBranchMeta.name} (${reportingDate})`)}&body=${encodeURIComponent(`Dear Admin,\n\nAttached is the encrypted JSON sales report for ${currentBranchMeta.name} compiled on ${reportingDate}.\n\nPlease find the encrypted data string below. Copy and paste this directly into the HQ import portal to reconcile:\n\n${sharePayloadText}\n\nKind regards,\nTilePoint Offline ERP OS System`)};`;
                             window.location.href = mailtoUrl;
                           } catch (err) {
                             console.warn('Mailto redirect failed:', err);

@@ -127,6 +127,7 @@ function AppContent() {
     movements,
     auditLogs,
     parkedSales,
+    holdSale,
     stockTransfers,
     branchStock,
     ledgerEntries,
@@ -406,7 +407,24 @@ function AppContent() {
     };
   }, []);
 
-  const isCompactColumns = true;
+  const [isCompactColumns, setIsCompactColumns] = useState<boolean>(() => {
+    const saved = localStorage.getItem("tilepoint_compact_columns");
+    return saved !== "false";
+  });
+
+  const [isSidebarHidden, setIsSidebarHidden] = useState<boolean>(() => {
+    const saved = localStorage.getItem("tilepoint_sidebar_hidden");
+    return saved === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("tilepoint_compact_columns", String(isCompactColumns));
+  }, [isCompactColumns]);
+
+  useEffect(() => {
+    localStorage.setItem("tilepoint_sidebar_hidden", String(isSidebarHidden));
+  }, [isSidebarHidden]);
+
   const [showDatabaseCoreModal, setShowDatabaseCoreModal] = useState(false);
   const [dbCoreTab, setDbCoreTab] = useState<
     "scheduler" | "ledger" | "import-export"
@@ -756,16 +774,24 @@ function AppContent() {
       return;
     }
 
-    // INTERCEPT ACTIVE ERP OS CHECKOUT EXIT: If we are in 'pos' and there is an active checkout (cart contains items), block exiting pos mode and ask via a beautiful modal.
+    // INTERCEPT ACTIVE ERP OS CHECKOUT EXIT: If we are in 'pos' and there is an active checkout (cart contains items), auto-hold/park the current order and clear the cart.
     if (activeTab === "pos") {
       const activeCartRaw = localStorage.getItem("tp_active_cart");
       if (activeCartRaw) {
         try {
           const parsedCart = JSON.parse(activeCartRaw);
           if (Array.isArray(parsedCart) && parsedCart.length > 0) {
-            setPendingTabId(tabId);
-            setShowPosExitConfirmModal(true);
-            return;
+            const customerName = localStorage.getItem("tp_active_customer_name") || "Walk-in Customer";
+            const customerNotes = localStorage.getItem("tp_active_customer_notes") || "";
+            // Auto hold current order!
+            holdSale(parsedCart, customerName, customerNotes);
+            
+            // Clear current cart so that POS is closed & reset
+            localStorage.setItem("tp_active_cart", JSON.stringify([]));
+            localStorage.setItem("tp_active_customer_name", "Walk-in Customer");
+            localStorage.setItem("tp_active_customer_notes", "");
+            
+            showToast("Active transaction automatically held in safe hold registers.");
           }
         } catch (_) {
           // ignore
@@ -777,6 +803,13 @@ function AppContent() {
   };
 
   const proceedWithTabChange = (tabId: string) => {
+    if (disableAnimations || lowPerformanceMode) {
+      setActiveTab(tabId);
+      setIsTabChanging(false);
+      setPercentProgress(0);
+      return;
+    }
+
     setIsTabChanging(true);
     setPercentProgress(15);
 
@@ -1110,7 +1143,7 @@ function AppContent() {
   };
 
   return (
-    <MotionConfig reducedMotion={disableAnimations ? "always" : "never"}>
+    <MotionConfig reducedMotion={(disableAnimations || lowPerformanceMode) ? "always" : "never"}>
       {/* FIXED: STRETCH-PROOING COMPONENT CORE WITH ABSOLUTE VIEWPORT CONSTRAINTS */}
       <div
         className={`h-screen max-h-screen w-screen overflow-hidden flex flex-col font-sans transition-all duration-300 relative ${
@@ -1356,11 +1389,24 @@ function AppContent() {
         </header>
 
         {/* BODY CONTENT: Sidebar + Dynamic tab target */}
-        <div className="flex-1 flex overflow-hidden min-h-0">
+        <div className="flex-1 flex overflow-hidden min-h-0 relative">
+          {/* FLOATING RESTORE SIDEBAR TRIGGER */}
+          {isSidebarHidden && (
+            <button
+              onClick={() => setIsSidebarHidden(false)}
+              className="fixed left-0 top-1/2 -translate-y-1/2 z-[45] p-2 bg-m3-primary text-m3-on-primary rounded-r-2xl border-y border-r border-m3-outline-variant/35 shadow-2xl hover:bg-m3-primary/95 hover:scale-110 active:scale-95 transition-all cursor-pointer flex items-center justify-center group"
+              title="Restore Navigation Sidebar"
+            >
+              <ChevronRight className="h-5 w-5 animate-pulse group-hover:translate-x-0.5 transition-transform" />
+            </button>
+          )}
+
           {/* SIDEBAR NAVIGATION: Desktop (Unified with Brand Header & Profile) */}
           <aside
-            className={`border-r border-m3-outline-variant/15 select-none android-glass-sidebar py-5 px-3.5 transition-all duration-300 ease-in-out hidden md:flex md:flex-col md:justify-between h-screen sticky top-0 z-40 ${
-              isSidebarMinimized ? "w-20 !px-2" : "w-72"
+            className={`border-r border-m3-outline-variant/15 select-none android-glass-sidebar py-5 px-3.5 transition-all duration-300 ease-in-out sticky top-0 z-40 ${
+              isSidebarHidden
+                ? "w-0 !p-0 overflow-hidden border-none pointer-events-none hidden"
+                : `hidden md:flex md:flex-col md:justify-between h-screen ${isSidebarMinimized ? "w-20 !px-2" : "w-72"}`
             }`}
           >
             {/* TOP SECTION: Brand Logo, Name and Branch assignment */}
@@ -1716,24 +1762,38 @@ function AppContent() {
                         </span>
                         <span className="h-1.5 w-1.5 rounded-full bg-m3-primary animate-pulse" />
                       </div>
-                      <button
-                        onClick={() =>
-                          setIsSubMenuCollapsed(!isSubMenuCollapsed)
-                        }
-                        className="p-1 px-2 text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/10 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider"
-                        title={
-                          isSubMenuCollapsed
-                            ? "Expand Sub-menu"
-                            : "Collapse Sub-menu"
-                        }
-                      >
-                        <span>
-                          {isSubMenuCollapsed ? "Show Options" : "Hide Options"}
-                        </span>
-                        <ChevronDown
-                          className={`h-3.5 w-3.5 transition-transform duration-300 ${isSubMenuCollapsed ? "" : "rotate-180"}`}
-                        />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setIsCompactColumns(!isCompactColumns)}
+                          className="p-1 px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/10 rounded-lg transition-all cursor-pointer border border-m3-outline-variant/15 bg-m3-surface flex items-center gap-1.5 shadow-sm"
+                          title={
+                            isCompactColumns
+                              ? "Switch to Spacious mode for expanded tables and wider panels"
+                              : "Switch to Compact mode for dense screen layouts"
+                          }
+                        >
+                          <Sliders className="h-3.5 w-3.5" />
+                          <span>{isCompactColumns ? "Spacious Layout" : "Compact Layout"}</span>
+                        </button>
+                        <button
+                          onClick={() =>
+                            setIsSubMenuCollapsed(!isSubMenuCollapsed)
+                          }
+                          className="p-1 px-2 text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/10 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider"
+                          title={
+                            isSubMenuCollapsed
+                              ? "Expand Sub-menu"
+                              : "Collapse Sub-menu"
+                          }
+                        >
+                          <span>
+                            {isSubMenuCollapsed ? "Show Options" : "Hide Options"}
+                          </span>
+                          <ChevronDown
+                            className={`h-3.5 w-3.5 transition-transform duration-300 ${isSubMenuCollapsed ? "" : "rotate-180"}`}
+                          />
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1779,6 +1839,7 @@ function AppContent() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.15 }}
+                    style={{ willChange: "opacity" }}
                   >
                     <SkeletalLoader />
                   </motion.div>
@@ -1789,6 +1850,7 @@ function AppContent() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -12, scale: 0.995 }}
                     transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                    style={{ willChange: "transform, opacity" }}
                     className="h-full"
                   >
                     {activeTab === "tutorials" && <TutorialOnboarding />}
