@@ -540,7 +540,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
               >
                 <option value={UserRole.ADMIN}>Admin - Full Corporate Access</option>
                 <option value={UserRole.MANAGER}>Manager - Branch Supervisor</option>
-                <option value={UserRole.CASHIER}>Cashier - POS Sales Clerk</option>
+                <option value={UserRole.CASHIER}>Cashier - ERP OS Sales Clerk</option>
                 <option value={UserRole.STAFF}>Staff - Mobile Stock Logistics Checker</option>
               </select>
             </div>

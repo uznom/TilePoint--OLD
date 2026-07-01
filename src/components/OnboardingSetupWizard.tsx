@@ -510,7 +510,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
                 Setup Assistant
               </span>
               <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">
-                Welcome to TilePoint POS!
+                Welcome to TilePoint ERP OS!
               </h1>
               <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto leading-relaxed">
                 Let's configure your workspace database. Get ready to experience tile retail automation, coverage intelligence, and compliant tax registers.
@@ -535,7 +535,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
               <span className="text-[10px] font-black uppercase tracking-widest text-[#E2E8F0] font-mono bg-slate-800 px-3 py-1 rounded-full">
                 Database Step 1 of 2
               </span>
-              <h2 className="text-xl sm:text-2xl font-black text-white">Do you have an older POS system?</h2>
+              <h2 className="text-xl sm:text-2xl font-black text-white">Do you have an older ERP / POS system?</h2>
               <p className="text-xs text-slate-400 max-w-sm mx-auto">
                 We support automated bulk migration from older cash register exports (pasted CSV or JSON arrays).
               </p>
@@ -633,7 +633,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
                 />
                 <Upload className="h-6 w-6 text-indigo-400 mx-auto animate-bounce" />
                 <div>
-                  <p className="text-xs font-black uppercase tracking-wide text-slate-200">Drag &amp; Drop Old POS File Here</p>
+                  <p className="text-xs font-black uppercase tracking-wide text-slate-200">Drag &amp; Drop Old ERP OS File Here</p>
                   <p className="text-[10px] text-slate-400 mt-1 select-none">
                     Drop your spreadsheet .csv or database backup .json file, or click inside to browse computer
                   </p>
@@ -808,7 +808,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
                 onClick={handleInitializeFreshBlank}
                 className="py-2.5 px-5 bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white font-black text-[11px] tracking-wider uppercase rounded-xl shadow-lg shadow-indigo-500/15 transition-all cursor-pointer"
               >
-                Launch Empty POS
+                Launch Empty ERP OS
               </button>
             </div>
           </div>

@@ -557,7 +557,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
                 </div>
 
                 <div className="bg-m3-surface-lowest p-2.5 rounded-xl border border-m3-outline-variant/10 space-y-0.5">
-                  <span className="text-[9px] font-black text-zinc-500 uppercase tracking-wider block">POS Receipt</span>
+                  <span className="text-[9px] font-black text-zinc-500 uppercase tracking-wider block">ERP OS Receipt</span>
                   <span className="font-mono text-xs font-black text-m3-primary select-all">{activeDelivery.saleNumber}</span>
                 </div>
 

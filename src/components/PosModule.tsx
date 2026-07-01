@@ -193,7 +193,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
       const handlePopState = (event: PopStateEvent) => {
         if (cart.length > 0) {
           const confirmLeave = window.confirm(
-            "POINT OF SALE SECURITY GUARD:\n\nWarning: You have an active transaction in the POS basket.\n\nAre you sure you want to navigate back or leave the terminal register? We recommend completing the transaction first to keep the receipt printing chain intact.",
+            "ERP OS SECURITY GUARD:\n\nWarning: You have an active transaction in the ERP OS basket.\n\nAre you sure you want to navigate back or leave the terminal register? We recommend completing the transaction first to keep the receipt printing chain intact.",
           );
           if (!confirmLeave) {
             // Push state back to prevent leaving
@@ -687,7 +687,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
     try {
       await triggerSystemProcessing(
-        "Processing Client POS Checkout...",
+        "Processing Client ERP OS Checkout...",
         1500,
         "progress",
         undefined,
@@ -1163,12 +1163,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
               {(activeSubModule as string) === "checkout" ? (
                 <>
                   <ShoppingCart className="h-4.5 w-4.5 text-emerald-400" />
-                  <span>POS TERMINAL CHECKOUT MODE</span>
+                  <span>ERP OS TERMINAL CHECKOUT MODE</span>
                 </>
               ) : (
                 <>
                   <History className="h-4.5 w-4.5 text-indigo-400" />
-                  <span>DAILY SALES LEDGER & VOID TERMINAL</span>
+                  <span>DAILY SALES LEDGER & VOID TERMINAL (ERP OS)</span>
                 </>
               )}
             </h2>
@@ -2130,7 +2130,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                   </h3>
                   <p className="text-xs text-m3-on-surface-variant mt-0.5 font-medium leading-relaxed">
                     Please register an active cashier starting drawer fund to
-                    accept POS payments.
+                    accept ERP OS payments.
                   </p>
                 </div>
               </div>
@@ -2823,7 +2823,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
               <div className="bg-rose-500/5 border border-rose-500/25 p-3 rounded-2xl text-[11px] leading-relaxed text-rose-300 font-bold space-y-1">
                 <div>
-                  <strong>REASON:</strong> POS Terminal requires authorization
+                  <strong>REASON:</strong> ERP OS Terminal requires authorization
                   to proceed.
                 </div>
                 {pendingApproval.type === "DISCOUNT" ? (

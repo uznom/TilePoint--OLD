@@ -1687,7 +1687,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
             <div className="border-t border-m3-outline-variant/10 pt-3.5 mt-4 text-[10.5px] font-mono text-zinc-400 flex justify-between items-center">
               <span>Bestseller tracking computed dynamically per invoice</span>
               <button onClick={() => onNavigate('pos')} className="text-m3-primary hover:underline font-black cursor-pointer">
-                Go to POS checkout terminal to record new sales ➔
+                Go to ERP OS checkout terminal to record new sales ➔
               </button>
             </div>
           </div>
@@ -3011,7 +3011,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
             onClick={() => onNavigate('pos')}
             className="m3-btn-tonal w-full mt-4 justify-center"
           >
-            Open Cashier POS <ArrowRight className="h-3.5 w-3.5" />
+            Open Cashier ERP OS <ArrowRight className="h-3.5 w-3.5" />
           </button>
         </div>
 

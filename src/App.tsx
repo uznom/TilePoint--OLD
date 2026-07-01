@@ -242,7 +242,7 @@ function AppContent() {
   const [isSidebarProfileDropdownOpen, setIsSidebarProfileDropdownOpen] =
     useState(false);
 
-  // Auto-minimize the sidebar when tab is POS Mode
+  // Auto-minimize the sidebar when tab is ERP OS Mode
   useEffect(() => {
     if (activeTab === "pos") {
       setIsSidebarMinimized(true);
@@ -462,7 +462,7 @@ function AppContent() {
     };
   }, []);
 
-  // Immersive POS terminal distraction-free mode state
+  // Immersive ERP OS terminal distraction-free mode state
   const [showImmersiveControls, setShowImmersiveControls] = useState(true);
 
   useEffect(() => {
@@ -756,7 +756,7 @@ function AppContent() {
       return;
     }
 
-    // INTERCEPT ACTIVE POS CHECKOUT EXIT: If we are in 'pos' and there is an active checkout (cart contains items), block exiting pos mode and ask via a beautiful modal.
+    // INTERCEPT ACTIVE ERP OS CHECKOUT EXIT: If we are in 'pos' and there is an active checkout (cart contains items), block exiting pos mode and ask via a beautiful modal.
     if (activeTab === "pos") {
       const activeCartRaw = localStorage.getItem("tp_active_cart");
       if (activeCartRaw) {
@@ -829,7 +829,7 @@ function AppContent() {
     },
     {
       id: "pos",
-      name: "POS Checkout Mode",
+      name: "ERP OS Checkout Mode",
       icon: ShoppingCart,
       roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER],
     },
@@ -906,7 +906,7 @@ function AppContent() {
     },
     {
       id: "inventory-import",
-      name: "Old POS Migration",
+      name: "Old ERP OS Migration",
       icon: Layers,
       roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF],
     },
@@ -1013,7 +1013,7 @@ function AppContent() {
       name: "Sale",
       icon: ShoppingCart,
       subItems: [
-        { id: "pos", name: "POS Checkout Mode" },
+        { id: "pos", name: "ERP OS Checkout Mode" },
       ],
     },
     {
@@ -1025,7 +1025,7 @@ function AppContent() {
         { id: "inventory-adjustments", name: "Adjustments Logs" },
         { id: "inventory-transfer", name: "Stock Transfers" },
         { id: "inventory-logistics", name: "Logistics Ledger & Heatmap" },
-        { id: "inventory-import", name: "Old POS Migration" },
+        { id: "inventory-import", name: "Old ERP OS Migration" },
         { id: "inventory-damage", name: "Broken & BOA Register" },
       ],
     },
@@ -1157,7 +1157,7 @@ function AppContent() {
                   TilePoint
                 </h1>
                 <span className="text-[9px] text-m3-on-surface-variant font-bold block uppercase mt-0.5 tracking-widest leading-none">
-                  HQ POS System
+                  HQ ERP OS
                 </span>
               </div>
             </div>
@@ -1381,7 +1381,7 @@ function AppContent() {
                       TilePoint
                     </h1>
                     <span className="text-[8px] text-m3-on-surface-variant font-bold block uppercase mt-1 tracking-widest leading-none">
-                      HQ POS System
+                      HQ ERP OS
                     </span>
                     <span
                       className={`text-[7.5px] font-extrabold uppercase tracking-wider block mt-1.5 ${
@@ -2074,7 +2074,7 @@ function AppContent() {
           </div>
         )}
 
-        {/* CONFIRMATORY DIALOG: POS Exit Prevention */}
+        {/* CONFIRMATORY DIALOG: ERP OS Exit Prevention */}
         {showPosExitConfirmModal && (
           <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
             <div
@@ -2104,7 +2104,7 @@ function AppContent() {
                 not be saved.
                 <br />
                 <br />
-                Leaving the Point of Sale terminal now will disrupt the current
+                Leaving the ERP OS terminal now will disrupt the current
                 active customer checkout session and clear the basket.
               </p>
 
@@ -2517,7 +2517,7 @@ function AppContent() {
                       </h4>
                       <p className="text-[10px] text-zinc-400 font-medium">
                         Physically package your corporate configuration, stock
-                        level logs, employee tables and POS sales ledgers inside
+                        level logs, employee tables and ERP OS sales ledgers inside
                         an offline executable JSON block.
                       </p>
                       <button
