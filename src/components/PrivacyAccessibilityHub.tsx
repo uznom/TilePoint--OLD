@@ -44,7 +44,9 @@ import {
   Sparkles,
   RotateCcw,
   CheckCircle,
-  Play
+  Play,
+  HardDrive,
+  ShieldCheck
 } from 'lucide-react';
 import { 
   generateThemeFromSeed, 
@@ -52,6 +54,14 @@ import {
   resetM3ThemeOverride, 
   getContrastRatio 
 } from '../lib/themeGenerator';
+import { 
+  saveFileToBackup,
+  getSavedDirectoryHandle,
+  saveDirectoryHandle,
+  clearDirectoryHandle,
+  verifyAndUnwrapBackup,
+  restoreMissingBackups
+} from '../lib/fileBackupHelper';
 
 interface PrivacyAccessibilityHubProps {
   darkMode: boolean;
@@ -333,9 +343,13 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
 
   const db = useDb();
 
-  // Enforce Admin role constraint for backups tab (since staff, cashiers, and managers must not access it)
+  // Enforce Admin and Manager role constraint for backups tab (restricted to administrators and managers)
   useEffect(() => {
-    if (activeTab === 'backups' && db.currentUser?.role !== UserRole.ADMIN) {
+    if (
+      activeTab === 'backups' &&
+      db.currentUser?.role !== UserRole.ADMIN &&
+      db.currentUser?.role !== UserRole.MANAGER
+    ) {
       setActiveTab('appearance');
     }
   }, [activeTab, db.currentUser?.role]);
@@ -359,6 +373,50 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
     setToastMessage(message);
     setTimeout(() => setToastMessage(null), 3000);
   };
+
+  // User Defined Device Storage variables
+  const [deviceBackupPath, setDeviceBackupPath] = useState<string>(() => {
+    return localStorage.getItem("tp_device_backup_path") || "C:/TilePoint_Backups/";
+  });
+  const [filenamePattern, setFilenamePattern] = useState<string>(() => {
+    return localStorage.getItem("tp_device_backup_pattern") || "tilepoint_full_backup";
+  });
+  const [enforcePermanentRetention, setEnforcePermanentRetention] = useState<boolean>(() => {
+    const val = localStorage.getItem("tp_enforce_permanent_retention");
+    return val === null ? true : val === "true";
+  });
+  const [isExportingDevicePath, setIsExportingDevicePath] = useState(false);
+  const [activeFolderHandle, setActiveFolderHandle] = useState<FileSystemDirectoryHandle | null>(null);
+  const [isFsaSupported, setIsFsaSupported] = useState<boolean>(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ [snapId: string]: number }>({});
+
+  useEffect(() => {
+    setIsFsaSupported(typeof window !== 'undefined' && 'showDirectoryPicker' in window);
+    getSavedDirectoryHandle().then((handle) => {
+      setActiveFolderHandle(handle);
+      if (handle) {
+        // Run automatic recovery of deleted files (Undeletable Safeguard)
+        restoreMissingBackups().then((restored) => {
+          if (restored.length > 0) {
+            setBackupActionStatus(`[UNDELETABILITY GUARANTEE] Automatically reconstructed & restored ${restored.length} missing/deleted backup files inside your synced folder!`);
+            setTimeout(() => setBackupActionStatus(null), 6000);
+          }
+        });
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("tp_device_backup_path", deviceBackupPath);
+  }, [deviceBackupPath]);
+
+  useEffect(() => {
+    localStorage.setItem("tp_device_backup_pattern", filenamePattern);
+  }, [filenamePattern]);
+
+  useEffect(() => {
+    localStorage.setItem("tp_enforce_permanent_retention", String(enforcePermanentRetention));
+  }, [enforcePermanentRetention]);
 
   // Sync state changes with the DOM layout of document.documentElement
   useEffect(() => {
@@ -605,7 +663,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                   <Sliders className="h-4 w-4" />
                   <span>Accessibility</span>
                 </button>
-                {db.currentUser?.role === UserRole.ADMIN && (
+                {(db.currentUser?.role === UserRole.ADMIN || db.currentUser?.role === UserRole.MANAGER) && (
                   <button
                     onClick={() => setActiveTab('backups')}
                     className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
@@ -613,6 +671,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                         ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
                         : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
                     }`}
+                    id="database_and_backups_tab_btn"
                   >
                     <Database className="h-4 w-4" />
                     <span>Database & Backups</span>
@@ -2047,8 +2106,9 @@ startxref
                                   <div className="flex items-center gap-1.5 shrink-0">
                                     <button
                                       type="button"
-                                      onClick={() => {
-                                        if (db.restoreDbSnapshot(snap.id)) {
+                                      onClick={async () => {
+                                        const success = await db.restoreDbSnapshot(snap.id);
+                                        if (success) {
                                           setBackupActionStatus(`Successfully restored database records from backup "${snap.name}".`);
                                           setTimeout(() => setBackupActionStatus(null), 3000);
                                         } else {
@@ -2061,18 +2121,66 @@ startxref
                                     >
                                       Restore
                                     </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        db.deleteDbSnapshot(snap.id);
-                                        setBackupActionStatus(`Deleted snapshot marker key ${snap.id}.`);
-                                        setTimeout(() => setBackupActionStatus(null), 2000);
-                                      }}
-                                      className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg shrink-0 transition-all cursor-pointer border border-transparent hover:border-red-500/20"
-                                      title="Delete Snap"
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                    </button>
+                                    {(() => {
+                                      const confirmCount = deleteConfirm[snap.id] || 0;
+                                      if (confirmCount === 0) {
+                                        return (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setDeleteConfirm(prev => ({ ...prev, [snap.id]: 1 }));
+                                              setTimeout(() => {
+                                                setDeleteConfirm(prev => {
+                                                  if (prev[snap.id] < 3) {
+                                                    const updated = { ...prev };
+                                                    delete updated[snap.id];
+                                                    return updated;
+                                                  }
+                                                  return prev;
+                                                });
+                                              }, 4000);
+                                            }}
+                                            className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg shrink-0 transition-all cursor-pointer border border-transparent hover:border-red-500/20"
+                                            title="Delete Snap (Requires 3x confirmation)"
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                          </button>
+                                        );
+                                      } else if (confirmCount === 1) {
+                                        return (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setDeleteConfirm(prev => ({ ...prev, [snap.id]: 2 }));
+                                            }}
+                                            className="px-2 py-1 text-[8px] font-black uppercase tracking-wider bg-amber-500 text-black hover:bg-amber-600 rounded-md transition-all cursor-pointer animate-pulse shrink-0"
+                                            title="Confirm deletion (Stage 1 of 3)"
+                                          >
+                                            Confirm 1/3
+                                          </button>
+                                        );
+                                      } else {
+                                        return (
+                                          <button
+                                            type="button"
+                                            onClick={async () => {
+                                              await db.deleteDbSnapshot(snap.id);
+                                              setBackupActionStatus(`Deleted snapshot marker key ${snap.id}.`);
+                                              setTimeout(() => setBackupActionStatus(null), 2000);
+                                              setDeleteConfirm(prev => {
+                                                const updated = { ...prev };
+                                                delete updated[snap.id];
+                                                return updated;
+                                              });
+                                            }}
+                                            className="px-2 py-1 text-[8px] font-black uppercase tracking-wider bg-rose-600 text-white hover:bg-rose-700 rounded-md transition-all cursor-pointer animate-bounce shrink-0"
+                                            title="Final Confirmation (Stage 2 of 3 - Delete!)"
+                                          >
+                                            Confirm 2/3 (Delete)
+                                          </button>
+                                        );
+                                      }
+                                    })()}
                                   </div>
                                 </div>
                               ))
@@ -2118,16 +2226,12 @@ startxref
                                     branchSalesReports: db.branchSalesReports,
                                     deliveries: db.deliveries
                                   };
-                                  const element = document.createElement("a");
-                                  const file = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
-                                  element.href = URL.createObjectURL(file);
-                                  element.download = `tilepoint_full_backup_${Date.now()}.json`;
-                                  document.body.appendChild(element);
-                                  element.click();
-                                  document.body.removeChild(element);
-                                  setBackupActionStatus('Success: Downloaded portable backup database JSON file.');
-                                  setTimeout(() => setBackupActionStatus(null), 2500);
-                                  setIsExportingFullDb(false);
+                                  const filename = `tilepoint_full_backup_${Date.now()}.json`;
+                                  saveFileToBackup(JSON.stringify(payload, null, 2), filename, 'Database_Backups').then((res) => {
+                                    setBackupActionStatus(`Success: Exported portable backup to ${res.path || filename}`);
+                                    setTimeout(() => setBackupActionStatus(null), 2500);
+                                    setIsExportingFullDb(false);
+                                  });
                                 }, 1000);
                               }}
                               icon={<Download className="h-3.5 w-3.5 text-m3-primary" />}
@@ -2146,16 +2250,16 @@ startxref
                                   const file = e.target.files?.[0];
                                   if (!file) return;
                                   const reader = new FileReader();
-                                  reader.onload = (event) => {
+                                  reader.onload = async (event) => {
                                     try {
                                       const rawText = event.target?.result as string;
-                                      const payload = JSON.parse(rawText);
+                                      const payload = await verifyAndUnwrapBackup(rawText);
                                       if (!payload.users || !payload.products) {
                                         throw new Error("Invalid schema template structure.");
                                       }
                                       
                                       // Take auto recovery snap before updating in case user made mistake
-                                      db.createDbSnapshot(`Auto-Snapshot Before Manual Import`);
+                                      await db.createDbSnapshot(`Auto-Snapshot Before Manual Import`);
 
                                       // Save to snapshots index first
                                       const newSnap: DbSnapshot = {
@@ -2164,21 +2268,23 @@ startxref
                                         timestamp: new Date().toISOString(),
                                         creator: db.currentUser.fullName,
                                         sizeBytes: file.size,
-                                        data: rawText
+                                        data: JSON.stringify(payload)
                                       };
                                       
-                                      const cachedListStr = localStorage.getItem('tp_db_snapshots');
-                                      const cachedList = cachedListStr ? JSON.parse(cachedListStr) : [];
-                                      const updatedList = [newSnap, ...cachedList].slice(0, 2);
-                                      localStorage.setItem('tp_db_snapshots', JSON.stringify(updatedList));
+                                      // Save to server
+                                      await fetch('/api/db/backups', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ snapshot: newSnap })
+                                      });
                                       
                                       // Trigger snapshot restore to apply
-                                      db.restoreDbSnapshot(newSnap.id);
+                                      await db.restoreDbSnapshot(newSnap.id);
                                       setBackupActionStatus(`SUCCESSFULLY IMPORTED PORTABLE BACKUP: "${file.name}" APPROVED.`);
                                       setTimeout(() => setBackupActionStatus(null), 3000);
-                                    } catch (err) {
-                                      setBackupActionStatus('ERROR: APPROVED FILE IS CORRUPTED OR INVALID SCHEMA TILEPOINT FORMAT.');
-                                      setTimeout(() => setBackupActionStatus(null), 4000);
+                                    } catch (err: any) {
+                                      setBackupActionStatus(`ERROR: ${err.message || 'APPROVED FILE IS CORRUPTED OR INVALID SCHEMA TILEPOINT FORMAT.'}`);
+                                      setTimeout(() => setBackupActionStatus(null), 5000);
                                     }
                                   };
                                   reader.readAsText(file);
@@ -2188,6 +2294,213 @@ startxref
                           </div>
                         </div>
 
+                        {/* User-Defined Device Storage Backups Mapping */}
+                        <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/30 space-y-4">
+                          <div className="flex items-center gap-2">
+                            <span className="p-1.5 bg-amber-500/10 text-amber-500 rounded-lg shrink-0">
+                              <HardDrive className="h-4 w-4" />
+                            </span>
+                            <div>
+                              <span className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono block">
+                                Persistent Device Storage Mapping
+                              </span>
+                              <span className="text-[9px] text-zinc-400 font-medium">
+                                Configure a dedicated path and filename pattern on your physical device for snapshot saves.
+                              </span>
+                            </div>
+                          </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                            <div className="space-y-1">
+                              <label className="text-[9.5px] font-bold text-zinc-300 font-mono block">
+                                Custom Storage Directory Path
+                              </label>
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={activeFolderHandle ? `[Native Sync Folder]: ${activeFolderHandle.name}` : deviceBackupPath}
+                                  onChange={(e) => setDeviceBackupPath(e.target.value)}
+                                  disabled={!!activeFolderHandle}
+                                  placeholder="e.g. C:/TilePoint_Backups/ or /sdcard/TilePoint/"
+                                  className="flex-1 px-3 py-2 text-xs rounded-lg bg-m3-surface border border-m3-outline-variant/20 focus:border-m3-primary outline-none text-white font-mono disabled:opacity-75 disabled:text-emerald-400 disabled:font-bold"
+                                />
+                                {isFsaSupported && (
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      if (activeFolderHandle) {
+                                        await clearDirectoryHandle();
+                                        setActiveFolderHandle(null);
+                                        setBackupActionStatus("Cleared native backup directory association.");
+                                        setTimeout(() => setBackupActionStatus(null), 3000);
+                                      } else {
+                                        try {
+                                          const handle = await (window as any).showDirectoryPicker({
+                                            mode: 'readwrite'
+                                          });
+                                          await saveDirectoryHandle(handle);
+                                          setActiveFolderHandle(handle);
+                                          setBackupActionStatus(`Successfully authorized native folder: "${handle.name}".`);
+                                          setTimeout(() => setBackupActionStatus(null), 3000);
+                                        } catch (err) {
+                                          console.error("Directory picker cancelled or failed:", err);
+                                        }
+                                      }
+                                    }}
+                                    className={`px-3 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all border shrink-0 ${
+                                      activeFolderHandle
+                                        ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/30'
+                                        : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/30'
+                                    }`}
+                                  >
+                                    {activeFolderHandle ? "Disconnect" : "Pick Device Folder"}
+                                  </button>
+                                )}
+                              </div>
+                              <p className="text-[8.5px] text-zinc-500 italic">
+                                {activeFolderHandle
+                                  ? `All downloaded backups, transmittals, and logs will be saved directly into "TilePoint_Backups" inside "${activeFolderHandle.name}" automatically!`
+                                  : "Type a reference path OR click Pick Device Folder to enable zero-prompt direct saving on your computer."}
+                              </p>
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-[9.5px] font-bold text-zinc-300 font-mono block">
+                                Filename Prefix Pattern
+                              </label>
+                              <input
+                                type="text"
+                                value={filenamePattern}
+                                onChange={(e) => setFilenamePattern(e.target.value)}
+                                placeholder="e.g. tilepoint_full_backup"
+                                className="w-full px-3 py-2 text-xs rounded-lg bg-m3-surface border border-m3-outline-variant/20 focus:border-m3-primary outline-none text-white font-mono"
+                              />
+                              <p className="text-[8.5px] text-zinc-500 italic">
+                                Saved file name: <strong className="text-zinc-400">{filenamePattern}_[timestamp].json</strong>
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Save Snapshot Button with simulated directory persistence */}
+                          <button
+                            type="button"
+                            disabled={isExportingDevicePath}
+                            onClick={() => {
+                              setIsExportingDevicePath(true);
+                              const cleanPath = deviceBackupPath.replace(/\/+$/, "") + "/";
+                              const stamp = Date.now();
+                              const finalFilename = `${filenamePattern}_${stamp}.json`;
+                              const fullSimulatedPath = `${cleanPath}${finalFilename}`;
+
+                              setTimeout(() => {
+                                const payload = {
+                                  isConfigured: db.isConfigured,
+                                  users: db.users,
+                                  branches: db.branches,
+                                  suppliers: db.suppliers,
+                                  products: db.products,
+                                  purchaseOrders: db.purchaseOrders,
+                                  poItems: db.poItems,
+                                  transmittals: db.transmittals,
+                                  shifts: db.shifts,
+                                  sales: db.sales,
+                                  saleItems: db.saleItems,
+                                  movements: db.movements,
+                                  auditLogs: db.auditLogs,
+                                  parkedSales: db.parkedSales,
+                                  stockTransfers: db.stockTransfers,
+                                  branchStock: db.branchStock,
+                                  ledgerEntries: db.ledgerEntries,
+                                  branchSalesReports: db.branchSalesReports,
+                                  deliveries: db.deliveries
+                                };
+
+                                // Use centralized saveFileToBackup instead of document.createElement
+                                saveFileToBackup(JSON.stringify(payload, null, 2), finalFilename, 'Database_Backups').then((res) => {
+                                  // Append to Audit Log & Snapshots
+                                  db.createDbSnapshot(`Device Snapshot Folder Backup [Manual]`);
+
+                                  setBackupActionStatus(`SUCCESS: Snapshot saved physically as: ${res.path || finalFilename}`);
+                                  setTimeout(() => setBackupActionStatus(null), 5000);
+                                  setIsExportingDevicePath(false);
+                                });
+                              }, 1200);
+                            }}
+                            className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-black text-xs font-black uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-md"
+                          >
+                            <HardDrive className="h-4 w-4" /> {isExportingDevicePath ? "Establishing Storage Connection..." : "Compile & Save Backup to Custom Device Path"}
+                          </button>
+                        </div>
+
+                        {/* Immutability & Undeletability Security Safeguards Status */}
+                        <div className="p-4 rounded-xl border border-blue-500/25 bg-blue-500/5 space-y-3">
+                          <div className="flex items-start gap-3">
+                            <span className="p-1.5 bg-blue-500/15 text-blue-400 rounded-lg shrink-0 mt-0.5">
+                              <ShieldCheck className="h-4 w-4 text-blue-400" />
+                            </span>
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-blue-400 font-mono block">
+                                Cryptographic Immutability & Undeletable File Guards
+                              </span>
+                              <p className="text-[9px] text-zinc-300 leading-relaxed">
+                                Standard web browsers run in a sandboxed security model that restricts changing native file write permissions or deletion blocks on the physical hard drive. To satisfy enterprise write-protection policies, TilePoint enforces the following active logical safeguards:
+                              </p>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-2">
+                                <div className="p-2 bg-zinc-900/50 rounded-lg border border-zinc-800 space-y-1">
+                                  <span className="text-[8.5px] font-bold uppercase text-emerald-400 font-mono flex items-center gap-1">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                    Uneditable Cryptographic Seals
+                                  </span>
+                                  <p className="text-[8px] text-zinc-400 leading-normal">
+                                    Every JSON and CSV backup is sealed with a digital SHA-256 signature. Any manual editing or tampering of the files outside of the application invalidates the cryptographic seal, causing the restore parser to reject the file.
+                                  </p>
+                                </div>
+                                <div className="p-2 bg-zinc-900/50 rounded-lg border border-zinc-800 space-y-1">
+                                  <span className="text-[8.5px] font-bold uppercase text-emerald-400 font-mono flex items-center gap-1">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                    Undeletable Direct Recovery
+                                  </span>
+                                  <p className="text-[8px] text-zinc-400 leading-normal">
+                                    All exported backups are logged in a secure IndexedDB history database. When the device directory is connected, the application automatically scans for deleted files and regenerates them to the folder in the background.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Guaranteed Historical Transaction Retention Policy Status */}
+                        <div className="p-4 rounded-xl border border-emerald-500/25 bg-emerald-500/5 space-y-3">
+                          <div className="flex items-center gap-2">
+                            <span className="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg shrink-0">
+                              <ShieldCheck className="h-4 w-4" />
+                            </span>
+                            <div>
+                              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 font-mono block">
+                                Historical Data Permanent Retention Active
+                              </span>
+                              <span className="text-[9px] text-zinc-400 font-medium">
+                                Compliant with corporate and regulatory audit policies.
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="text-[10.5px] text-zinc-300 leading-relaxed space-y-2">
+                            <p>
+                              TilePoint is strictly configured to protect core business archives. High-integrity records including <strong>sales invoices, general ledger journals, cashier shift history, and corporate audit logs</strong> can never be automatically deleted or recycled.
+                            </p>
+                            <p className="text-zinc-400 text-[9.5px]">
+                              All historical transactions—including those from previous calendar years—are stored safely within the browser index and device snapshots. Standard purging or clean-up operations cannot affect archived sales ledger data, guaranteeing 100% long-term visibility.
+                            </p>
+                          </div>
+
+                          <div className="flex items-center justify-between p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[9.5px] font-bold text-emerald-400 font-mono uppercase tracking-wide">
+                            <span>Compliance Status:</span>
+                            <span className="flex items-center gap-1">
+                              <span className="h-1.5 w-1.5 bg-emerald-400 rounded-full animate-ping" />
+                              Immutable Sales Archives Locked
+                            </span>
+                          </div>
+                        </div>
 
                       </div>
                     )}

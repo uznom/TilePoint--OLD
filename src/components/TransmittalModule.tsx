@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useDb } from "../context/DbContext";
+import { saveFileToBackup, verifyAndUnwrapBackup } from "../lib/fileBackupHelper";
 import { Transmittal, TransmittalDocType, UserRole } from "../types/db";
+import { useResponsivePageSize, TablePagination } from "./TablePagination";
 import {
   Send,
   Download,
@@ -47,6 +49,8 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
 
   // Create Modal state
   const [showModal, setShowModal] = useState(false);
+  const [transPage, setTransPage] = useState(1);
+  const transPageSize = useResponsivePageSize(64, 460, 10);
   const [selectedDocType, setSelectedDocType] = useState<TransmittalDocType>(
     "Full Branch State Snapshot",
   );
@@ -630,29 +634,18 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
     };
 
     const jsonString = JSON.stringify(slip, null, 2);
-    const blob = new Blob([jsonString], {
-      type: "application/json;charset=utf-8;",
+    const filename = `TilePoint_BI_Transmittal_Package_${t.id}.json`;
+    saveFileToBackup(jsonString, filename, 'Transmittals').then((res) => {
+      addAuditLog(
+        "TRANSMITTAL_EXPORT",
+        `Downloaded comprehensive BI transmittal slip JSON for ${t.id}`,
+        "Transmittals",
+        t.id,
+      );
+      showToast(
+        `BI Data Packet saved successfully to: ${res.path || filename}!`,
+      );
     });
-    const url = URL.createObjectURL(blob);
-    const dlAnchorElem = document.createElement("a");
-    dlAnchorElem.setAttribute("href", url);
-    dlAnchorElem.setAttribute(
-      "download",
-      `TilePoint_BI_Transmittal_Package_${t.id}.json`,
-    );
-    document.body.appendChild(dlAnchorElem);
-    dlAnchorElem.click();
-    document.body.removeChild(dlAnchorElem);
-    URL.revokeObjectURL(url);
-    addAuditLog(
-      "TRANSMITTAL_EXPORT",
-      `Downloaded comprehensive BI transmittal slip JSON for ${t.id}`,
-      "Transmittals",
-      t.id,
-    );
-    showToast(
-      `BI Data Packet downloaded successfully to TilePoint_BI_Transmittal_Package_${t.id}.json!`,
-    );
   };
 
   const handleOpenImport = () => {
@@ -660,14 +653,14 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
     setShowImportModal(true);
   };
 
-  const executeLocalImport = () => {
+  const executeLocalImport = async () => {
     if (!rawImportText.trim()) {
       showToast("Please paste a valid JSON transmittal packet.");
       return;
     }
 
     try {
-      const parsed = JSON.parse(rawImportText);
+      const parsed = await verifyAndUnwrapBackup(rawImportText);
       if (parsed.transmittalId && parsed.docType) {
         // Construct transmittal entry
         createTransmittal(
@@ -683,8 +676,8 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
           "Format Mismatch: Ledger packet lacks transmittal identification schema.",
         );
       }
-    } catch (err) {
-      showToast("Syntax Error: Failed to parse raw text packet contents.");
+    } catch (err: any) {
+      showToast(err.message || "Syntax Error: Failed to parse raw text packet contents.");
     }
   };
 
@@ -1230,7 +1223,9 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
-            {transmittals.map((t, idx) => {
+            {transmittals
+              .slice((transPage - 1) * transPageSize, transPage * transPageSize)
+              .map((t, idx) => {
               let badgeStyle = "bg-m3-outline-variant/20 text-m3-on-surface";
               if (t.status === "Submitted")
                 badgeStyle =
@@ -1320,6 +1315,16 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="mt-3">
+        <TablePagination
+          currentPage={transPage}
+          totalItems={transmittals.length}
+          pageSize={transPageSize}
+          onPageChange={setTransPage}
+          itemName="transmittals"
+        />
       </div>
 
       {/* MODAL 1: Create dispatch document form */}

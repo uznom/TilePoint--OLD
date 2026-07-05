@@ -6,8 +6,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useDb } from '../context/DbContext';
+import { saveFileToBackup } from '../lib/fileBackupHelper';
 import { Product, UserRole, TransferType, TransferStatus } from '../types/db';
 import { HoldToConfirmButton } from './HoldToConfirmButton';
+import { useResponsivePageSize } from './TablePagination';
 import {
   Plus,
   Edit2,
@@ -259,8 +261,21 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   // Pagination State for lists inside Inventory
   const [prodPage, setProdPage] = useState(1);
   const [ledgerPage, setLedgerPage] = useState(1);
+
+  const responsiveProdsPerPage = useResponsivePageSize(64, 450, 5); // product table row is 64px tall
+  const responsiveLedgerPerPage = useResponsivePageSize(48, 480, 10); // ledger table row is 48px tall
+
   const [prodsPerPage, setProdsPerPage] = useState<number>(5);
   const [ledgerPerPage, setLedgerPerPage] = useState<number>(10);
+
+  // Sync with responsive sizing
+  useEffect(() => {
+    setProdsPerPage(responsiveProdsPerPage);
+  }, [responsiveProdsPerPage]);
+
+  useEffect(() => {
+    setLedgerPerPage(responsiveLedgerPerPage);
+  }, [responsiveLedgerPerPage]);
 
   // Reset prodPage when filters or page size changes
   useEffect(() => {
@@ -1111,17 +1126,11 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   // Bulk Import / Export simulations
   const handleExportJSON = () => {
     const jsonString = JSON.stringify(products.filter(p => !p.isDeleted), null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const dlAnchorElem = document.createElement('a');
-    dlAnchorElem.setAttribute('href', url);
-    dlAnchorElem.setAttribute('download', `TilePoint_Inventory_${new Date().toISOString().slice(0, 10)}.json`);
-    document.body.appendChild(dlAnchorElem);
-    dlAnchorElem.click();
-    document.body.removeChild(dlAnchorElem);
-    URL.revokeObjectURL(url);
-    addAuditLog('INVENTORY_EXPORT', 'Exported product database as JSON file', 'Products', 'EXPORT');
-    showToast('Exported full non-deleted inventory roster as JSON file.');
+    const filename = `TilePoint_Inventory_${new Date().toISOString().slice(0, 10)}.json`;
+    saveFileToBackup(jsonString, filename, 'Inventory_Exports').then((res) => {
+      addAuditLog('INVENTORY_EXPORT', 'Exported product database as JSON file', 'Products', 'EXPORT');
+      showToast(`Exported full non-deleted inventory roster as JSON to: ${res.path || filename}.`);
+    });
   };
 
   const handleOpenImport = () => {
@@ -1223,15 +1232,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   };
 
   const downloadFile = (content: string, filename: string, contentType: string) => {
-    const blob = new Blob([content], { type: contentType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    saveFileToBackup(content, filename, 'Inventory_Exports', contentType);
   };
 
   const handleCopyExportText = (type: 'products' | 'suppliers' | 'branches', format: 'json' | 'csv') => {

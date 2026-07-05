@@ -1320,6 +1320,86 @@ export const PosModule: React.FC<PosModuleProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* Keyboard Shortcuts & Interactive Speed-Dials */}
+              <div className="border-t border-m3-outline-variant/15 pt-3 mt-auto flex-shrink-0 space-y-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShortcutsCollapsed(!shortcutsCollapsed)}
+                  className="flex items-center justify-between w-full hover:bg-m3-surface-high/15 p-1.5 rounded-xl transition-all cursor-pointer text-left"
+                >
+                  <span className="text-[10px] font-black text-m3-primary uppercase tracking-widest flex items-center gap-1.5 font-sans">
+                    <Keyboard className="h-3.5 w-3.5 text-m3-primary animate-pulse" />
+                    <span>POS Checkout Speed-Dials</span>
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] bg-m3-primary/10 text-m3-primary px-2 py-0.5 rounded-full font-black uppercase tracking-wider font-mono">
+                      Hotkeys Active
+                    </span>
+                    {shortcutsCollapsed ? (
+                      <ChevronDown className="h-4 w-4 text-m3-primary transition-transform duration-200" />
+                    ) : (
+                      <ChevronUp className="h-4 w-4 text-m3-primary transition-transform duration-200" />
+                    )}
+                  </div>
+                </button>
+
+                {!shortcutsCollapsed && (
+                  <div className="space-y-2.5 animate-fade-in">
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { key: "F1", desc: "Void Current Sale", action: () => handleCancelSale(), bg: "hover:bg-rose-500/10 hover:border-rose-500/30 text-rose-600 dark:text-rose-400" },
+                        { key: "F2", desc: "Focus Search Catalog", action: () => searchInputRef.current?.focus(), bg: "hover:bg-m3-primary/10 hover:border-m3-primary/30" },
+                        { key: "F3", desc: "Hold Order Stash", action: () => handleHold(), bg: "hover:bg-amber-500/10 hover:border-amber-500/30 text-amber-600 dark:text-amber-400" },
+                        { key: "F5", desc: "Assign Customer Name", action: () => { setCustomerModalInput(customerName); setShowCustomerModal(true); }, bg: "hover:bg-indigo-500/10 hover:border-indigo-500/30 text-indigo-600 dark:text-indigo-400" },
+                        { key: "F6", desc: "Apply Code/Discount", action: () => { setDiscountInput(""); setShowDiscountModal(true); }, bg: "hover:bg-teal-500/10 hover:border-teal-500/30 text-teal-600 dark:text-teal-400" },
+                        { key: "F7", desc: "Go to Pay Tender", action: () => {
+                          if (cart.length > 0) {
+                            const checkSection = document.getElementById("checkout-action-panel");
+                            checkSection?.scrollIntoView({ behavior: "smooth" });
+                            const tenderIdx = document.getElementById("cash-tendered-field");
+                            tenderIdx?.focus();
+                          } else {
+                            alert("Your active cart is currently empty.");
+                          }
+                        }, bg: "hover:bg-emerald-500/10 hover:border-emerald-500/30 text-emerald-600 dark:text-emerald-400" },
+                        { key: "F8", desc: "Reprint Last Receipt", action: () => {
+                          if (activeReceipt) {
+                            setShowReceiptModal(true);
+                          } else {
+                            alert("No transaction has been processed in this session yet.");
+                          }
+                        }, bg: "hover:bg-purple-500/10 hover:border-purple-500/30 text-purple-600 dark:text-purple-400" },
+                        { key: "F9/10", desc: "Shift Active Controls", action: () => {
+                          if (activeShift) {
+                            setCloseShiftCashInput("");
+                            setShowCloseShiftModal(true);
+                          } else {
+                            setShowShiftModal(true);
+                          }
+                        }, bg: "hover:bg-cyan-500/10 hover:border-cyan-500/30 text-cyan-600 dark:text-cyan-400" }
+                      ].map((sh, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={sh.action}
+                          className={`flex items-center gap-2 p-2 bg-m3-surface border border-m3-outline-variant/15 rounded-xl text-left transition-all active:scale-[0.98] group cursor-pointer ${sh.bg}`}
+                        >
+                          <kbd className="px-1.5 py-0.5 text-[9px] font-black font-mono bg-m3-surface-high/60 text-m3-on-surface border border-m3-outline-variant/30 rounded shadow-sm group-hover:bg-m3-primary group-hover:text-white group-hover:border-m3-primary transition-colors flex-shrink-0">
+                            {sh.key}
+                          </kbd>
+                          <span className="text-[10px] font-bold tracking-tight text-m3-on-surface-variant leading-tight truncate">
+                            {sh.desc}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[8.5px] text-zinc-500 text-center font-mono">
+                      Press physical keys directly, or click above as interactive speed dials.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* RIGHT COLUMN: ACTIVE ORDER LIST */}

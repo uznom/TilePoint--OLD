@@ -54,8 +54,8 @@ export function ProfitAnalytics({
     expenses,
   } = useDb();
 
-  // Period state: '7d' | '15d' | '30d' | 'monthly'
-  const [selectedPeriod, setSelectedPeriod] = useState<"7d" | "15d" | "30d" | "monthly">("30d");
+  // Period state: '7d' | '15d' | '30d' | 'monthly' | 'all-time'
+  const [selectedPeriod, setSelectedPeriod] = useState<"7d" | "15d" | "30d" | "monthly" | "all-time">("30d");
   const [chartType, setChartType] = useState<"area" | "bar">("area");
 
   // Expenses state
@@ -104,8 +104,11 @@ export function ProfitAnalytics({
     if (selectedPeriod === "7d") limitDays = 7;
     else if (selectedPeriod === "15d") limitDays = 15;
     else if (selectedPeriod === "30d") limitDays = 30;
-    else {
+    else if (selectedPeriod === "monthly") {
       limitDays = 180; // Monthly view covering past 6 months
+      viewFormat = "month";
+    } else {
+      limitDays = 365; // All-Time view covering past 12 months (last year + current year)
       viewFormat = "month";
     }
 
@@ -126,7 +129,8 @@ export function ProfitAnalytics({
       }
     } else {
       // Monthly keys
-      for (let i = 5; i >= 0; i--) {
+      const monthsToCover = selectedPeriod === "all-time" ? 12 : 6;
+      for (let i = monthsToCover - 1; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const label = formatDateLabel(d.toISOString(), "month");
         const key = `${d.getFullYear()}-${d.getMonth()}`;
@@ -325,6 +329,16 @@ export function ProfitAnalytics({
               }`}
             >
               6 Months
+            </button>
+            <button
+              onClick={() => setSelectedPeriod("all-time")}
+              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                selectedPeriod === "all-time"
+                  ? "bg-m3-primary text-m3-on-primary font-black shadow"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              All-Time (12M)
             </button>
           </div>
 

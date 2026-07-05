@@ -6,6 +6,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDb } from '../context/DbContext';
 import { Delivery, DeliveryStatus, UserRole } from '../types/db';
+import { useResponsivePageSize } from './TablePagination';
 import {
   Truck,
   User,
@@ -127,11 +128,12 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
     });
   }, [branchFilteredDeliveries, selectedStatusTab, searchTerm]);
 
-  const DELIV_PER_PAGE = 50;
+  const delivPageSize = useResponsivePageSize(48, 480, 10);
+  const DELIV_PER_PAGE = delivPageSize;
   const totalDelivPages = Math.ceil(displayDeliveries.length / DELIV_PER_PAGE) || 1;
   const paginatedDeliveries = useMemo(() => {
     return displayDeliveries.slice((delivPage - 1) * DELIV_PER_PAGE, delivPage * DELIV_PER_PAGE);
-  }, [displayDeliveries, delivPage]);
+  }, [displayDeliveries, delivPage, DELIV_PER_PAGE]);
 
   // Derived Statistics counts
   const stats = useMemo(() => {

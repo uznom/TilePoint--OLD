@@ -63,6 +63,10 @@ export default function AtposExtraModules({
     setProductReturns,
     customBills,
     setCustomBills,
+    calendarNotes,
+    setCalendarNotes,
+    dayMemos,
+    setDayMemos,
   } = db;
 
   // Form states - Member
@@ -129,9 +133,17 @@ export default function AtposExtraModules({
 
   // Left side panel tabs & list options
   const [leftPanelTab, setLeftPanelTab] = useState<"list" | "create" | "notes">("list");
-  const [calendarNotes, setCalendarNotes] = useState<string>(() => {
-    return localStorage.getItem("atpos_v2_calendar_notes") || "";
-  });
+  const [dayMemoInput, setDayMemoInput] = useState("");
+
+  useEffect(() => {
+    if (selectedCalendarDay !== null) {
+      const key = `${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}-${String(selectedCalendarDay).padStart(2, "0")}`;
+      setDayMemoInput(dayMemos[key] || "");
+    } else {
+      setDayMemoInput("");
+    }
+  }, [selectedCalendarDay, calendarMonth, calendarYear, dayMemos]);
+
   const [payableSearchQuery, setPayableSearchQuery] = useState("");
   const [payableStatusFilter, setPayableStatusFilter] = useState<"all" | "active" | "partial" | "paid">("all");
   const [payableSortField, setPayableSortField] = useState<"due" | "amount" | "supplier">("due");
@@ -1973,13 +1985,12 @@ export default function AtposExtraModules({
                           </h4>
                         </div>
                         <p className="text-[10px] text-zinc-400">
-                          Draft reminders or admin details here. All changes are instantly saved to browser storage.
+                          Draft reminders or admin details here. All changes are instantly saved to the secure database.
                         </p>
                         <textarea
                           value={calendarNotes}
                           onChange={(e) => {
                             setCalendarNotes(e.target.value);
-                            localStorage.setItem("atpos_v2_calendar_notes", e.target.value);
                           }}
                           placeholder="Type notes or specific reminders here..."
                           className="w-full flex-1 min-h-[350px] bg-m3-surface-lowest border border-m3-outline-variant rounded-xl p-3 outline-none text-m3-on-surface text-xs font-mono focus:border-m3-primary resize-none leading-relaxed"
@@ -2275,6 +2286,9 @@ export default function AtposExtraModules({
                           const isFullyPaid = hasPayment && totalRemaining <= 0;
                           const isPartiallyPaid = hasPayment && totalPaid > 0 && totalRemaining > 0;
 
+                          const dateKey = `${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                          const hasMemo = !!dayMemos[dateKey];
+
                           return (
                             <div
                               key={day}
@@ -2291,11 +2305,18 @@ export default function AtposExtraModules({
                                         : "border-m3-outline-variant/10 bg-m3-surface-high/20 hover:scale-[1.02] hover:border-zinc-350"
                               }`}
                             >
-                              <span
-                                className={`text-[10px] font-black leading-none ${isSelected ? "text-m3-primary" : "text-zinc-400"}`}
-                              >
-                                {day}
-                              </span>
+                              <div className="flex justify-between items-center w-full">
+                                <span
+                                  className={`text-[10px] font-black leading-none ${isSelected ? "text-m3-primary" : "text-zinc-400"}`}
+                                >
+                                  {day}
+                                </span>
+                                {hasMemo && (
+                                  <span className="flex items-center gap-0.5" title="Has calendar memo">
+                                    <FileText className="h-3 w-3 text-amber-500 animate-pulse" />
+                                  </span>
+                                )}
+                              </div>
                               {hasPayment && (
                                 <div className="text-[9px] font-bold leading-tight mt-1 space-y-1">
                                   {isFullyPaid ? (
@@ -2552,6 +2573,57 @@ export default function AtposExtraModules({
                                   </div>
                                 );
                               })}
+                            </div>
+
+                            {/* Daily Memo / Note Editor */}
+                            <div className="border-t border-m3-outline-variant/15 pt-3 mt-4 space-y-2 text-left">
+                              <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-black text-m3-primary uppercase tracking-widest flex items-center gap-1.5 font-sans">
+                                  <FileText className="h-3.5 w-3.5 text-amber-500 animate-pulse" />
+                                  <span>Daily Calendar Memo</span>
+                                </span>
+                                {dayMemos[`${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}-${String(selectedCalendarDay).padStart(2, "0")}`] && (
+                                  <span className="text-[8px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                    Saved
+                                  </span>
+                                )}
+                              </div>
+                              <textarea
+                                value={dayMemoInput}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setDayMemoInput(val);
+                                  
+                                  const key = `${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}-${String(selectedCalendarDay).padStart(2, "0")}`;
+                                  const updated = { ...dayMemos };
+                                  if (val.trim() === "") {
+                                    delete updated[key];
+                                  } else {
+                                    updated[key] = val;
+                                  }
+                                  setDayMemos(updated);
+                                }}
+                                placeholder="Type custom reminders, delivery alerts, or supplier appointments for this day..."
+                                className="w-full bg-m3-surface-lowest border border-m3-outline-variant/25 rounded-xl p-2.5 text-xs outline-none focus:border-m3-primary text-m3-on-surface resize-none leading-relaxed min-h-[90px]"
+                              />
+                              <div className="flex justify-between items-center text-[8px] text-zinc-500 font-mono">
+                                <span>Auto-saves securely</span>
+                                {dayMemoInput.length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setDayMemoInput("");
+                                      const key = `${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}-${String(selectedCalendarDay).padStart(2, "0")}`;
+                                      const updated = { ...dayMemos };
+                                      delete updated[key];
+                                      setDayMemos(updated);
+                                    }}
+                                    className="text-rose-500 hover:text-rose-600 font-bold cursor-pointer border-0 bg-transparent text-[8px] p-0"
+                                  >
+                                    Clear Note
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ) : (

@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useDb } from '../context/DbContext';
 import { Branch, UserRole } from '../types/db';
+import { useResponsivePageSize, TablePagination } from './TablePagination';
 import {
   Building2,
   Phone,
@@ -70,6 +71,29 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
   const [confirmDeleteName, setConfirmDeleteName] = useState<string>('');
 
   const isUserAdmin = currentUser.role === UserRole.ADMIN;
+
+  // Pagination states
+  const [branchPage, setBranchPage] = useState(1);
+  const [personnelPage, setPersonnelPage] = useState(1);
+
+  const branchPageSize = useResponsivePageSize(240, 420, 4); // each branch card is tall
+  const personnelPageSize = useResponsivePageSize(48, 550, 8); // each table row is standard 48px height
+
+  // Reset personnel page when search changes
+  useEffect(() => {
+    setPersonnelPage(1);
+  }, [personnelSearch]);
+
+  const filteredPersonnel = users.filter(u => {
+    if (!personnelSearch) return true;
+    const term = personnelSearch.toLowerCase();
+    return (
+      u.fullName.toLowerCase().includes(term) ||
+      u.role.toLowerCase().includes(term) ||
+      u.email.toLowerCase().includes(term) ||
+      u.username.toLowerCase().includes(term)
+    );
+  });
 
   const toggleBranchUsers = (branchId: string) => {
     setExpandedBranchUsers(prev => ({
@@ -208,8 +232,12 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
       </div>
 
       {/* Grid displays of branches */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {branches.filter(b => !b.isDeleted).map((b) => {
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {branches
+            .filter(b => !b.isDeleted)
+            .slice((branchPage - 1) * branchPageSize, branchPage * branchPageSize)
+            .map((b) => {
           const branchEmployees = users.filter(u => u.branchAssignmentId === b.id);
           const isExpanded = !!expandedBranchUsers[b.id];
           return (
@@ -395,6 +423,15 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
         {branches.filter(b => !b.isDeleted).length === 0 && (
           <div className="col-span-full py-12 text-center text-m3-on-surface-variant font-medium">No corporate branches logged. Use the launch button above.</div>
         )}
+        </div>
+
+        <TablePagination
+          currentPage={branchPage}
+          totalItems={branches.filter(b => !b.isDeleted).length}
+          pageSize={branchPageSize}
+          onPageChange={setBranchPage}
+          itemName="branches"
+        />
       </div>
 
       {/* SECTION E: GLOBAL CORPORATE DIRECTORY & STAFF ROSTER */}
@@ -455,17 +492,8 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-m3-outline-variant/10 text-xs font-semibold">
-                  {users
-                    .filter(u => {
-                      if (!personnelSearch) return true;
-                      const term = personnelSearch.toLowerCase();
-                      return (
-                        u.fullName.toLowerCase().includes(term) ||
-                        u.role.toLowerCase().includes(term) ||
-                        u.email.toLowerCase().includes(term) ||
-                        u.username.toLowerCase().includes(term)
-                      );
-                    })
+                  {filteredPersonnel
+                    .slice((personnelPage - 1) * personnelPageSize, personnelPage * personnelPageSize)
                     .map((item) => {
                       const assignedB = branches.find(b => b.id === item.branchAssignmentId);
                       return (
@@ -532,6 +560,14 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
                 </tbody>
               </table>
             </div>
+
+            <TablePagination
+              currentPage={personnelPage}
+              totalItems={filteredPersonnel.length}
+              pageSize={personnelPageSize}
+              onPageChange={setPersonnelPage}
+              itemName="employees"
+            />
           </div>
         )}
       </div>
