@@ -27,6 +27,7 @@ import {
   ChevronUp,
   ShieldAlert,
   Calculator,
+  Search,
 } from "lucide-react";
 import { CalculatorModule } from "./CalculatorModule";
 
@@ -134,6 +135,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
   const [selectedPoolBranchId, setSelectedPoolBranchId] = useState<string>(
     currentUser?.branchAssignmentId || "All",
   );
+  const [ledgerSearchQuery, setLedgerSearchQuery] = useState("");
 
   // Cart & POS Screen States
   const [cart, setCart] = useState<
@@ -1110,11 +1112,24 @@ export const PosModule: React.FC<PosModuleProps> = ({
   };
 
   const filteredSales = React.useMemo(() => {
+    const query = ledgerSearchQuery.trim().toLowerCase();
     return sales.filter((s) => {
-      if (selectedPoolBranchId === "All") return true;
-      return s.branchId === selectedPoolBranchId;
+      if (selectedPoolBranchId !== "All" && s.branchId !== selectedPoolBranchId) {
+        return false;
+      }
+      if (query) {
+        return (
+          (s.saleNumber || "").toLowerCase().includes(query) ||
+          (s.customerName || "").toLowerCase().includes(query) ||
+          (s.cashierName || "").toLowerCase().includes(query) ||
+          (s.paymentMethod || "").toLowerCase().includes(query) ||
+          (s.notes || "").toLowerCase().includes(query) ||
+          s.grandTotal.toString().includes(query)
+        );
+      }
+      return true;
     });
-  }, [sales, selectedPoolBranchId]);
+  }, [sales, selectedPoolBranchId, ledgerSearchQuery]);
 
   const SALES_PER_PAGE = 50;
   const totalSalesPages = Math.ceil(filteredSales.length / SALES_PER_PAGE) || 1;
@@ -1153,12 +1168,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
           <div className="flex items-center gap-3">
             {activeShift ? (
-              <div className="flex items-center gap-3 bg-zinc-900/80 border border-zinc-800 p-1.5 pl-3.5 rounded-full shadow-inner">
+              <div className="flex items-center gap-3 bg-m3-surface-low border border-m3-outline-variant/30 p-1.5 pl-3.5 rounded-full shadow-sm">
                 <div className="flex flex-col text-right">
-                  <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">
+                  <span className="text-[8px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
                     Shift Active
                   </span>
-                  <span className="text-[10px] font-bold text-zinc-200 font-sans">
+                  <span className="text-[10px] font-bold text-m3-on-surface font-sans">
                     {activeShift.cashierName}
                   </span>
                 </div>
@@ -1168,7 +1183,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                     setCloseShiftCashInput("");
                     setShowCloseShiftModal(true);
                   }}
-                  className="py-1.5 px-3.5 bg-rose-500/10 hover:bg-rose-600 hover:text-white border border-rose-500/30 text-rose-400 text-[10px] font-black uppercase tracking-wider rounded-full transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+                  className="py-1.5 px-3.5 bg-rose-500/10 hover:bg-rose-600 hover:text-white border border-rose-500/30 text-rose-600 dark:text-rose-400 text-[10px] font-black uppercase tracking-wider rounded-full transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
                 >
                   <LockKeyhole className="h-3 w-3" />
                   <span>Close Shift</span>
@@ -1178,7 +1193,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
               <button
                 type="button"
                 onClick={() => setShowShiftModal(true)}
-                className="py-1.5 px-3.5 bg-amber-500/15 hover:bg-amber-500 hover:text-black border border-amber-500/30 text-amber-400 hover:border-amber-400 text-[10px] font-black uppercase tracking-wider rounded-full transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+                className="py-1.5 px-3.5 bg-amber-500/10 dark:bg-amber-500/15 hover:bg-amber-500 hover:text-white dark:hover:text-black border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-wider rounded-full transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
               >
                 <LockKeyhole className="h-3 w-3 animate-pulse" />
                 <span>Open Shift</span>
@@ -1476,7 +1491,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                           </span>
 
                           {barcodeSearchTerm.trim().length > 0 && (
-                            <div className="absolute left-0 right-0 mt-2 bg-white dark:bg-zinc-950 border border-m3-outline-variant/60 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-m3-outline-variant/20 text-xs max-h-[180px] overflow-y-auto">
+                            <div className="absolute left-0 right-0 mt-2 bg-m3-surface-lowest border border-m3-outline-variant/60 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-m3-outline-variant/20 text-xs max-h-[180px] overflow-y-auto">
                               {products
                                 .filter(
                                   (p) =>
@@ -1530,7 +1545,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                                         SKU: {p.sku} • Stock: {p.stockQuantity}
                                       </div>
                                     </div>
-                                    <div className="text-right font-black text-emerald-400 text-xs">
+                                    <div className="text-right font-black text-emerald-600 dark:text-emerald-400 text-xs">
                                       ₱
                                       {getBranchPrice(p).toLocaleString(
                                         undefined,
@@ -1884,23 +1899,52 @@ export const PosModule: React.FC<PosModuleProps> = ({
                 are strictly guarded and require a Manager PIN validation.
               </p>
             </div>
-            <div className="flex items-center gap-2.5 shrink-0">
-              <span className="text-[10.5px] font-mono text-zinc-400 font-black uppercase tracking-widest flex items-center gap-1.5">
-                <span className="h-2 w-2 bg-[#10B981] rounded-full animate-pulse" />
-                <span>Active Pool:</span>
-              </span>
-              <select
-                value={selectedPoolBranchId}
-                onChange={(e) => setSelectedPoolBranchId(e.target.value)}
-                className="text-[11px] font-sans font-black bg-m3-surface border border-m3-outline-variant/40 focus:border-m3-primary px-3 py-2 rounded-xl text-m3-primary focus:outline-none uppercase tracking-wider transition-colors cursor-pointer shadow-sm"
-              >
-                <option value="All">All Pools (Corporate)</option>
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
+              {/* Search Invoice/Ledger bar */}
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-zinc-400" />
+                <input
+                  type="text"
+                  value={ledgerSearchQuery}
+                  onChange={(e) => {
+                    setLedgerSearchQuery(e.target.value);
+                    setSalesPage(1); // reset pagination to first page
+                  }}
+                  placeholder="Search invoice, customer, payment..."
+                  className="w-56 sm:w-64 bg-m3-surface border border-m3-outline-variant/40 focus:border-m3-primary pl-9 pr-8 py-1.5 text-[11px] font-sans font-black text-zinc-200 placeholder-zinc-500 rounded-xl outline-none focus:ring-1 focus:ring-m3-primary transition-all shadow-sm"
+                />
+                {ledgerSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLedgerSearchQuery("");
+                      setSalesPage(1);
+                    }}
+                    className="absolute right-2.5 top-2.5 text-zinc-500 hover:text-zinc-300 border-0 bg-transparent cursor-pointer"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[10.5px] font-mono text-zinc-400 font-black uppercase tracking-widest flex items-center gap-1.5">
+                  <span className="h-2 w-2 bg-[#10B981] rounded-full animate-pulse" />
+                  <span>Active Pool:</span>
+                </span>
+                <select
+                  value={selectedPoolBranchId}
+                  onChange={(e) => setSelectedPoolBranchId(e.target.value)}
+                  className="text-[11px] font-sans font-black bg-m3-surface border border-m3-outline-variant/40 focus:border-m3-primary px-3 py-2 rounded-xl text-m3-primary focus:outline-none uppercase tracking-wider transition-colors cursor-pointer shadow-sm"
+                >
+                  <option value="All">All Pools (Corporate)</option>
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -1997,7 +2041,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
                         colSpan={9}
                         className="py-12 text-center text-zinc-400 font-sans font-bold"
                       >
-                        No matching sales invoice ledgers recorded today.
+                        {ledgerSearchQuery
+                          ? `No matching sales invoice ledgers found for "${ledgerSearchQuery}".`
+                          : "No matching sales invoice ledgers recorded today."}
                       </td>
                     </tr>
                   )}
@@ -2238,16 +2284,16 @@ export const PosModule: React.FC<PosModuleProps> = ({
                       onSubmit={handleCloseShiftSubmit}
                       className="space-y-4 text-left"
                     >
-                      <div className="bg-zinc-900 border border-zinc-850 p-3.5 rounded-2xl space-y-2.5 text-xs">
-                        <div className="flex justify-between border-b border-zinc-800 pb-2">
-                          <span className="text-zinc-400">Active Cashier:</span>
-                          <span className="font-bold text-zinc-200">
+                      <div className="bg-m3-surface-lowest border border-m3-outline-variant/30 p-3.5 rounded-2xl space-y-2.5 text-xs">
+                        <div className="flex justify-between border-b border-m3-outline-variant/15 pb-2">
+                          <span className="text-m3-on-surface-variant">Active Cashier:</span>
+                          <span className="font-bold text-m3-on-surface">
                             {activeShift.cashierName}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-zinc-400">Starting Cash:</span>
-                          <span className="font-mono font-bold text-zinc-300">
+                          <span className="text-m3-on-surface-variant">Starting Cash:</span>
+                          <span className="font-mono font-bold text-m3-on-surface">
                             ₱
                             {activeShift.startCash.toLocaleString(undefined, {
                               minimumFractionDigits: 2,
@@ -2255,17 +2301,17 @@ export const PosModule: React.FC<PosModuleProps> = ({
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-zinc-400">
+                          <span className="text-m3-on-surface-variant">
                             Net Sales Added:
                           </span>
-                          <span className="font-mono font-bold text-zinc-300">
+                          <span className="font-mono font-bold text-m3-on-surface">
                             ₱
                             {stats.netTotal.toLocaleString(undefined, {
                               minimumFractionDigits: 2,
                             })}
                           </span>
                         </div>
-                        <div className="flex justify-between border-t border-dashed border-zinc-800 pt-2 text-sm font-bold">
+                        <div className="flex justify-between border-t border-dashed border-m3-outline-variant/25 pt-2 text-sm font-bold">
                           <span className="text-m3-primary">
                             Expected Drawer Cash:
                           </span>
@@ -2296,17 +2342,17 @@ export const PosModule: React.FC<PosModuleProps> = ({
                       </div>
 
                       {closeShiftCashInput !== "" && (
-                        <div className="p-3 bg-zinc-900/50 border border-zinc-850 rounded-2xl flex justify-between items-center">
-                          <span className="text-xs text-zinc-400 font-bold uppercase">
+                        <div className="p-3 bg-m3-surface-lowest border border-m3-outline-variant/30 rounded-2xl flex justify-between items-center">
+                          <span className="text-xs text-m3-on-surface-variant font-bold uppercase">
                             Variance:
                           </span>
                           <span
                             className={`font-mono font-black text-sm ${
                               variance === 0
-                                ? "text-zinc-400"
+                                ? "text-m3-on-surface-variant"
                                 : variance > 0
-                                  ? "text-emerald-400"
-                                  : "text-rose-400"
+                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  : "text-rose-600 dark:text-rose-400"
                             }`}
                           >
                             {variance > 0 ? "+" : ""}₱

@@ -1099,7 +1099,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                     type="button"
                     disabled={compiledLocalSalesData.count === 0 || !isAuthorizedToExport}
                     onClick={() => handleExportCSV('compiled', false)}
-                    className="py-2.5 bg-[#1a1b24] border border-m3-outline-variant/20 hover:border-emerald-500/30 text-zinc-300 hover:text-emerald-400 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent"
+                    className="py-2.5 bg-m3-surface-lowest hover:bg-m3-surface border border-m3-outline-variant/20 hover:border-emerald-500/30 text-m3-on-surface hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent"
                     title="Export Compiled Draft Ledger as Standard CSV Raw File"
                   >
                     <span className="text-[8px] uppercase font-bold text-zinc-500 font-mono block">CSV</span>
@@ -1110,7 +1110,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                     type="button"
                     disabled={compiledLocalSalesData.count === 0 || !isAuthorizedToExport}
                     onClick={() => handleExportCSV('compiled', true)}
-                    className="py-2.5 bg-[#1a1b24] border border-m3-outline-variant/20 hover:border-blue-500/30 text-zinc-300 hover:text-blue-400 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
+                    className="py-2.5 bg-m3-surface-lowest hover:bg-m3-surface border border-m3-outline-variant/20 hover:border-blue-500/30 text-m3-on-surface hover:text-blue-600 dark:hover:text-blue-400 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
                     title="Export Compiled Draft Ledger as Microsoft Excel Formatted CSV Sheet"
                   >
                     <span className="text-[8px] uppercase font-bold text-zinc-500 font-mono block">Excel</span>
@@ -1121,10 +1121,10 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                     type="button"
                     disabled={compiledLocalSalesData.count === 0 || !isAuthorizedToExport}
                     onClick={() => handleOpenPrintPreview('compiled')}
-                    className="py-2.5 bg-[#1a1b24] border border-m3-outline-variant/20 hover:border-amber-500/30 text-zinc-300 hover:text-amber-500 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
+                    className="py-2.5 bg-m3-surface-lowest hover:bg-m3-surface border border-m3-outline-variant/20 hover:border-amber-500/30 text-m3-on-surface hover:text-amber-600 dark:hover:text-amber-500 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
                     title="Open TilePoint Audit Station Print Layout and PDF Printer"
                   >
-                    <Printer className="h-3.5 w-3.5 text-zinc-400" />
+                    <Printer className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
                     <span>Print PDF</span>
                   </button>
                 </div>
@@ -1257,7 +1257,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
             {/* CENTRAL REGISTRY TABLE */}
             <div className="border border-m3-outline-variant/20 rounded-2xl overflow-hidden bg-m3-surface">
               <table className="w-full border-collapse text-left text-xs">
-                <thead className="bg-[#11131c]/60 font-mono text-[9px] uppercase tracking-widest text-zinc-500 border-b border-m3-outline-variant/15">
+                <thead className="bg-m3-surface-low font-mono text-[9px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 border-b border-m3-outline-variant/15">
                   <tr>
                     <th className="py-3 px-4">REPORT MATRIX ID</th>
                     <th className="py-3 px-3">BRANCH ORIGIN</th>
@@ -1282,26 +1282,26 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                           isSelected ? 'bg-m3-primary/10 font-medium' : ''
                         }`}
                       >
-                        <td className="py-3.5 px-4 font-mono text-[10.5px] text-zinc-300 font-bold">
+                        <td className="py-3.5 px-4 font-mono text-[10.5px] text-m3-on-surface font-bold">
                           {report.id}
                         </td>
                         <td className="py-3.5 px-3 font-semibold text-m3-on-surface">
                           {report.branchName}
                         </td>
-                        <td className="py-3.5 px-3 font-mono text-[11px] text-zinc-300">
+                        <td className="py-3.5 px-3 font-mono text-[11px] text-zinc-600 dark:text-zinc-300">
                           {report.reportingDate}
                         </td>
-                        <td className="py-3.5 px-3 text-center font-bold">
+                        <td className="py-3.5 px-3 text-center font-bold text-m3-on-surface">
                           {report.totalSalesCount}
                         </td>
-                        <td className="py-3.5 px-3 text-right font-bold text-emerald-400 font-mono">
+                        <td className="py-3.5 px-3 text-right font-bold text-emerald-600 dark:text-emerald-400 font-mono">
                           ₱{report.totalSalesAmount.toLocaleString()}
                         </td>
                         <td className="py-3.5 px-3 text-center">
                           <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${
                             report.transmissionType === 'Online'
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                              : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
                           }`}>
                             {report.transmissionType}
                           </span>
@@ -1309,8 +1309,8 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                         <td className="py-3.5 px-4 text-center">
                           <span className={`inline-block px-2.5 py-1 rounded-[10px] text-[10px] font-black uppercase tracking-wider ${
                             report.status === 'Verified'
-                              ? 'bg-emerald-500/20 text-emerald-300'
-                              : 'bg-amber-500/10 text-amber-500 animate-pulse'
+                              ? 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
+                              : 'bg-amber-500/10 text-amber-600 dark:text-amber-500 animate-pulse border border-amber-500/20'
                           }`}>
                             {report.status}
                           </span>
@@ -1523,7 +1523,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                             type="button"
                             disabled={!isAuthorizedToExport}
                             onClick={() => handleExportCSV('selected', false)}
-                            className="py-2.5 bg-[#1a1b24] border border-m3-outline-variant/20 hover:border-emerald-500/30 text-zinc-300 hover:text-emerald-400 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
+                            className="py-2.5 bg-m3-surface-lowest hover:bg-m3-surface border border-m3-outline-variant/20 hover:border-emerald-500/30 text-m3-on-surface hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
                             title="Export Selected Transmitted Report in CSV Format"
                           >
                             <span className="text-[8px] uppercase font-bold text-zinc-500 font-mono block">CSV</span>
@@ -1534,7 +1534,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                             type="button"
                             disabled={!isAuthorizedToExport}
                             onClick={() => handleExportCSV('selected', true)}
-                            className="py-2.5 bg-[#1a1b24] border border-m3-outline-variant/20 hover:border-blue-500/30 text-zinc-300 hover:text-blue-400 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
+                            className="py-2.5 bg-m3-surface-lowest hover:bg-m3-surface border border-m3-outline-variant/20 hover:border-blue-500/30 text-m3-on-surface hover:text-blue-600 dark:hover:text-blue-400 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
                             title="Export Selected Transmitted Report as Microsoft Excel CSV spreadsheet sheet"
                           >
                             <span className="text-[8px] uppercase font-bold text-zinc-500 font-mono block">Excel</span>
@@ -1545,10 +1545,10 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                             type="button"
                             disabled={!isAuthorizedToExport}
                             onClick={() => handleOpenPrintPreview('selected')}
-                            className="py-2.5 bg-[#1a1b24] border border-m3-outline-variant/20 hover:border-amber-500/30 text-zinc-300 hover:text-amber-500 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
+                            className="py-2.5 bg-m3-surface-lowest hover:bg-m3-surface border border-m3-outline-variant/20 hover:border-amber-500/30 text-m3-on-surface hover:text-amber-600 dark:hover:text-amber-500 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
                             title="Open layout template and prompt printer utility"
                           >
-                            <Printer className="h-3.5 w-3.5 text-zinc-400" />
+                            <Printer className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
                             <span>Print PDF</span>
                           </button>
                         </div>
@@ -1560,7 +1560,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                 {/* itemized transaction details included in report */}
                 <div className="lg:col-span-8 space-y-4">
                   <div className="bg-m3-surface border border-m3-outline-variant/15 rounded-2xl overflow-hidden">
-                    <div className="bg-[#11131c]/60 px-4 py-3 border-b border-m3-outline-variant/15 text-[10.5px] font-mono text-zinc-400 font-extrabold uppercase tracking-widest flex justify-between">
+                    <div className="bg-m3-surface-low px-4 py-3 border-b border-m3-outline-variant/15 text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 font-extrabold uppercase tracking-widest flex justify-between">
                       <span>Enclosed Sale Records list</span>
                       <span className="text-amber-500">{selectedReport.sales.length} Sales</span>
                     </div>
@@ -1648,21 +1648,21 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                   </div>
                   <div>
                     <span className="block text-[10px] uppercase font-bold text-zinc-400 tracking-wider font-mono">Date Settled</span>
-                    <span className="font-mono mt-0.5 block text-zinc-350">{new Date(selectedSale.createdAt).toLocaleString()}</span>
+                    <span className="font-mono mt-0.5 block text-zinc-600 dark:text-zinc-300">{new Date(selectedSale.createdAt).toLocaleString()}</span>
                   </div>
                   <div>
                     <span className="block text-[10px] uppercase font-bold text-zinc-400 tracking-wider font-mono">Cashier on Duty</span>
-                    <span className="font-bold mt-0.5 block text-zinc-350">{selectedSale.cashierName}</span>
+                    <span className="font-bold mt-0.5 block text-zinc-600 dark:text-zinc-300">{selectedSale.cashierName}</span>
                   </div>
                   <div>
                     <span className="block text-[10px] uppercase font-bold text-zinc-400 tracking-wider font-mono">Payment Mode</span>
-                    <span className="font-extrabold mt-0.5 block text-emerald-400 font-mono tracking-wide">{selectedSale.paymentMethod}</span>
+                    <span className="font-extrabold mt-0.5 block text-emerald-600 dark:text-emerald-400 font-mono tracking-wide">{selectedSale.paymentMethod}</span>
                   </div>
                 </div>
 
                 <div className="border border-m3-outline-variant/15 rounded-2xl overflow-hidden bg-m3-surface">
                   <table className="w-full text-left text-[11px] border-collapse">
-                    <thead className="bg-[#11131c] font-mono text-[9px] uppercase tracking-wider text-zinc-400 border-b border-m3-outline-variant/15">
+                    <thead className="bg-m3-surface-low font-mono text-[9px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 border-b border-m3-outline-variant/15">
                       <tr>
                         <th className="py-2.5 px-3">TILE SPECIFICATION</th>
                         <th className="py-2.5 px-3 text-right">UNIT PRICE</th>
@@ -1670,15 +1670,15 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                         <th className="py-2.5 px-3 text-right">TOTAL</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-m3-outline-variant/10 font-sans text-zinc-300">
+                    <tbody className="divide-y divide-m3-outline-variant/10 font-sans text-m3-on-surface">
                       {selectedReport.saleItems
                         .filter(item => item.saleId === selectedSale.id)
                         .map((item, idx) => (
                           <tr key={idx} className="hover:bg-m3-surface-low/35 transition-colors">
-                            <td className="py-2.5 px-3 font-semibold text-zinc-150">{item.productName}</td>
+                            <td className="py-2.5 px-3 font-semibold text-m3-on-surface">{item.productName}</td>
                             <td className="py-2.5 px-3 text-right font-mono">₱{item.unitPrice.toLocaleString()}</td>
-                            <td className="py-2.5 px-3 text-center font-bold text-zinc-100">{item.quantity}</td>
-                            <td className="py-2.5 px-3 text-right font-mono text-white">₱{item.total.toLocaleString()}</td>
+                            <td className="py-2.5 px-3 text-center font-bold text-m3-on-surface">{item.quantity}</td>
+                            <td className="py-2.5 px-3 text-right font-mono text-m3-on-surface font-extrabold">₱{item.total.toLocaleString()}</td>
                           </tr>
                         ))}
                       {selectedReport.saleItems.filter(item => item.saleId === selectedSale.id).length === 0 && (

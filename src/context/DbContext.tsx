@@ -585,7 +585,14 @@ interface DbContextType {
     status?: POStatus,
   ) => void;
   updatePOStatus: (id: string, status: POStatus) => void;
-  receivePOItems: (id: string, receivedMap: Record<string, number>) => void; // productId -> qty
+  receivePOItems: (
+    id: string,
+    receivedMap: Record<string, number>,
+    paymentMode?: "fully_paid" | "terms",
+    termStartDate?: string,
+    termEndDate?: string,
+    termsLength?: number
+  ) => void;
 
   // Actions - Transmittals
   createTransmittal: (
@@ -6895,7 +6902,14 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     );
   };
 
-  const receivePOItems = (id: string, receivedMap: Record<string, number>) => {
+  const receivePOItems = (
+    id: string,
+    receivedMap: Record<string, number>,
+    paymentMode?: "fully_paid" | "terms",
+    termStartDate?: string,
+    termEndDate?: string,
+    termsLength?: number
+  ) => {
     const originalPo = purchaseOrders.find((p) => p.id === id);
     if (!originalPo) return;
 
@@ -6970,6 +6984,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
           return {
             ...po,
             status: finalStatus,
+            paymentMode: paymentMode !== undefined ? paymentMode : po.paymentMode,
+            termStartDate: termStartDate !== undefined ? termStartDate : po.termStartDate,
+            termEndDate: termEndDate !== undefined ? termEndDate : po.termEndDate,
+            termsLength: termsLength !== undefined ? termsLength : po.termsLength,
             updatedAt: new Date().toISOString(),
           };
         }
@@ -6979,7 +6997,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
     addAuditLog(
       "PO_RECEIVE",
-      `Received cargo for PO ${originalPo.poNumber}. Consolidated Status: ${finalStatus}`,
+      `Received cargo for PO ${originalPo.poNumber}. Consolidated Status: ${finalStatus}${paymentMode ? ` (Payment Mode: ${paymentMode})` : ""}`,
       "PurchaseOrders",
       id,
     );

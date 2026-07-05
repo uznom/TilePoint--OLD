@@ -939,7 +939,7 @@ function AppContent() {
     },
     {
       id: "inventory-import",
-      name: "Old ERP OS Migration",
+      name: "Migration & Data Portability Tool",
       icon: Layers,
       roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF],
     },
@@ -1058,7 +1058,7 @@ function AppContent() {
         { id: "inventory-adjustments", name: "Adjustments Logs" },
         { id: "inventory-transfer", name: "Stock Transfers" },
         { id: "inventory-logistics", name: "Logistics Ledger & Heatmap" },
-        { id: "inventory-import", name: "Old ERP OS Migration" },
+        { id: "inventory-import", name: "Migration & Data Portability Tool" },
         { id: "inventory-damage", name: "Broken & BOA Register" },
       ],
     },
@@ -1846,11 +1846,11 @@ function AppContent() {
                 ) : (
                   <motion.div
                     key={activeTab}
-                    initial={{ opacity: 0, y: 12, scale: 0.995 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -12, scale: 0.995 }}
-                    transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                    style={{ willChange: "transform, opacity" }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.22, ease: "easeInOut" }}
+                    style={{ willChange: "opacity" }}
                     className="h-full"
                   >
                     {activeTab === "tutorials" && <TutorialOnboarding />}
