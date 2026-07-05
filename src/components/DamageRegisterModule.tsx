@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDb } from '../context/DbContext';
 import { DamageLog, DamageCategory, DamageActionTaken, UserRole, Product } from '../types/db';
 import { motion, AnimatePresence } from 'motion/react';
+import { useResponsivePageSize, TablePagination } from './TablePagination';
 import {
   AlertTriangle,
   Plus,
@@ -51,6 +52,15 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [branchFilter, setBranchFilter] = useState<string>('All');
   const [showAddForm, setShowAddForm] = useState(false);
+
+  // Pagination states
+  const [damagePage, setDamagePage] = useState(1);
+  const damagePageSize = useResponsivePageSize(64, 460, 10);
+
+  // Reset page when search or filters change
+  useEffect(() => {
+    setDamagePage(1);
+  }, [searchTerm, categoryFilter, branchFilter]);
 
   // Form States
   const [selectedProductId, setSelectedProductId] = useState('');
@@ -564,7 +574,9 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-m3-outline-variant/20">
-                  {filteredLogs.map(log => {
+                  {filteredLogs
+                    .slice((damagePage - 1) * damagePageSize, damagePage * damagePageSize)
+                    .map(log => {
                     let catColorAndLabel = 'bg-zinc-500/10 text-zinc-500 border-zinc-500/20';
                     if (log.category === 'BOA') catColorAndLabel = 'bg-rose-500/10 text-rose-500 border-rose-500/20';
                     if (log.category === 'Warehouse Breakage') catColorAndLabel = 'bg-amber-500/10 text-amber-500 border-amber-500/20';
@@ -639,6 +651,14 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
                 </tbody>
               </table>
             </div>
+
+            <TablePagination
+              currentPage={damagePage}
+              totalItems={filteredLogs.length}
+              pageSize={damagePageSize}
+              onPageChange={setDamagePage}
+              itemName="incidents"
+            />
           </div>
 
           {/* Operational Policy reminder footer Card */}

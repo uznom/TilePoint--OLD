@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDb } from '../context/DbContext';
 import { User, UserRole, UserStatus } from '../types/db';
+import { useResponsivePageSize, TablePagination } from './TablePagination';
 import {
   Users,
   ShieldCheck,
@@ -43,6 +44,15 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
   } = useDb();
 
   const [subTab, setSubTab] = useState<'employees' | 'active_sessions'>('employees');
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = useResponsivePageSize(240, 420, 6); // Each user card is ~240px tall
+
+  // Reset page when sub-tab changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [subTab]);
 
   // Create Modal state
   const [showModal, setShowModal] = useState(false);
@@ -250,117 +260,127 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
 
       {subTab === 'employees' ? (
         /* Grid of users card logs */
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in">
-        {users.map((u) => {
-          // Status badge coloring
-          const activeClass = u.status === 'Active'
-            ? 'bg-m3-tertiary-container text-m3-on-tertiary-container border-m3-tertiary/20'
-            : 'bg-m3-primary-container text-m3-on-primary-container border-m3-primary/20';
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in">
+          {users.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((u) => {
+            // Status badge coloring
+            const activeClass = u.status === 'Active'
+              ? 'bg-m3-tertiary-container text-m3-on-tertiary-container border-m3-tertiary/20'
+              : 'bg-m3-primary-container text-m3-on-primary-container border-m3-primary/20';
 
-          // Role Badge visual styles
-          let roleClass = 'bg-m3-outline-variant/30 text-m3-on-surface';
-          if (u.role === UserRole.ADMIN) roleClass = 'bg-m3-primary-container text-m3-on-primary-container border-m3-primary/30';
-          if (u.role === UserRole.MANAGER) roleClass = 'bg-m3-tertiary-container text-m3-on-tertiary-container border-m3-tertiary/30';
-          if (u.role === UserRole.CASHIER) roleClass = 'bg-m3-secondary-container text-m3-on-secondary-container';
+            // Role Badge visual styles
+            let roleClass = 'bg-m3-outline-variant/30 text-m3-on-surface';
+            if (u.role === UserRole.ADMIN) roleClass = 'bg-m3-primary-container text-m3-on-primary-container border-m3-primary/30';
+            if (u.role === UserRole.MANAGER) roleClass = 'bg-m3-tertiary-container text-m3-on-tertiary-container border-m3-tertiary/30';
+            if (u.role === UserRole.CASHIER) roleClass = 'bg-m3-secondary-container text-m3-on-secondary-container';
 
-          return (
-            <div
-              key={u.id}
-              className="m3-card shadow-sm flex flex-col justify-between hover:scale-[1.01] transition-transform duration-200"
-            >
-              <div className="space-y-4">
-                {/* Employee general headers */}
-                <div className="flex items-center justify-between border-b border-m3-outline-variant/20 pb-3">
-                  <div className="flex items-center gap-3">
-                    {/* Visual initials emblem circular badge */}
-                    <div className="h-11 w-11 rounded-[16px] bg-m3-primary/10 text-m3-primary text-sm font-black flex items-center justify-center tracking-tight shadow-inner border border-m3-outline-variant/15 overflow-hidden">
-                      {u.profilePicture ? (
-                        <img src={u.profilePicture} alt={u.fullName} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
-                      ) : (
-                        u.avatarInitials
-                      )}
+            return (
+              <div
+                key={u.id}
+                className="m3-card shadow-sm flex flex-col justify-between hover:scale-[1.01] transition-transform duration-200"
+              >
+                <div className="space-y-4">
+                  {/* Employee general headers */}
+                  <div className="flex items-center justify-between border-b border-m3-outline-variant/20 pb-3">
+                    <div className="flex items-center gap-3">
+                      {/* Visual initials emblem circular badge */}
+                      <div className="h-11 w-11 rounded-[16px] bg-m3-primary/10 text-m3-primary text-sm font-black flex items-center justify-center tracking-tight shadow-inner border border-m3-outline-variant/15 overflow-hidden">
+                        {u.profilePicture ? (
+                          <img src={u.profilePicture} alt={u.fullName} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                        ) : (
+                          u.avatarInitials
+                        )}
+                      </div>
+
+                      <div>
+                        <h4 className="text-sm font-bold tracking-tight text-m3-on-surface">{u.fullName}</h4>
+                        <p className="text-[10px] text-m3-on-surface-variant font-mono">@{u.username}</p>
+                      </div>
                     </div>
 
-                    <div>
-                      <h4 className="text-sm font-bold tracking-tight text-m3-on-surface">{u.fullName}</h4>
-                      <p className="text-[10px] text-m3-on-surface-variant font-mono">@{u.username}</p>
-                    </div>
-                  </div>
-
-                  <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest uppercase border ${activeClass}`}>
-                    {u.status}
-                  </span>
-                </div>
-
-                {/* Body Specs */}
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between items-center">
-                    <span className="text-m3-on-surface-variant/80 font-medium">Assigned Role:</span>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wide border uppercase ${roleClass}`}>{u.role}</span>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <span className="text-m3-on-surface-variant/80 font-medium">Department Branch:</span>
-                    <span className="flex items-center gap-1 font-semibold text-m3-on-surface">
-                      <MapPin className="h-3 w-3 text-m3-primary" />
-                      <span>{getBranchName(u.branchAssignmentId)}</span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest uppercase border ${activeClass}`}>
+                      {u.status}
                     </span>
                   </div>
 
-                  <div className="flex justify-between items-center text-[10.5px]">
-                    <span className="text-m3-on-surface-variant/80 font-medium font-mono">Corporate Email:</span>
-                    <span className="flex items-center gap-1 font-mono text-m3-on-surface-variant font-medium">
-                      <Mail className="h-3 w-3 text-m3-on-surface-variant/60" />
-                      {u.email}
-                    </span>
-                  </div>
+                  {/* Body Specs */}
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="text-m3-on-surface-variant/80 font-medium">Assigned Role:</span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wide border uppercase ${roleClass}`}>{u.role}</span>
+                    </div>
 
-                  {(u.role === UserRole.ADMIN || u.role === UserRole.MANAGER) && (
-                    <div className="flex justify-between items-center text-[10.5px]">
-                      <span className="text-m3-on-surface-variant/80 font-medium">Security PIN code:</span>
-                      <span className="font-mono text-amber-500 font-black bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-md">
-                        {u.managerPin || 'Not Set'}
+                    <div className="flex justify-between items-center">
+                      <span className="text-m3-on-surface-variant/80 font-medium">Department Branch:</span>
+                      <span className="flex items-center gap-1 font-semibold text-m3-on-surface">
+                        <MapPin className="h-3 w-3 text-m3-primary" />
+                        <span>{getBranchName(u.branchAssignmentId)}</span>
                       </span>
                     </div>
-                  )}
+
+                    <div className="flex justify-between items-center text-[10.5px]">
+                      <span className="text-m3-on-surface-variant/80 font-medium font-mono">Corporate Email:</span>
+                      <span className="flex items-center gap-1 font-mono text-m3-on-surface-variant font-medium">
+                        <Mail className="h-3 w-3 text-m3-on-surface-variant/60" />
+                        {u.email}
+                      </span>
+                    </div>
+
+                    {(u.role === UserRole.ADMIN || u.role === UserRole.MANAGER) && (
+                      <div className="flex justify-between items-center text-[10.5px]">
+                        <span className="text-m3-on-surface-variant/80 font-medium">Security PIN code:</span>
+                        <span className="font-mono text-amber-500 font-black bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-md">
+                          {u.managerPin || 'Not Set'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                {/* Commands for admin operation */}
+                {isUserAdmin && (
+                  <div className="flex gap-2 border-t border-m3-outline-variant/20 pt-3 mt-4 justify-end">
+                    <button
+                      onClick={() => handleResetPassword(u.id, u.fullName)}
+                      className="p-1.5 px-2.5 hover:bg-m3-primary/5 text-[10.5px] font-bold text-m3-primary rounded-full flex items-center gap-1 cursor-pointer transition-colors"
+                      title="Initialize configuration reset procedures"
+                    >
+                      <Lock className="h-3.5 w-3.5" /> Password reset
+                    </button>
+
+                    <button
+                      onClick={() => handleToggleStatus(u)}
+                      className={`p-1.5 px-3 text-[10.5px] font-bold rounded-full flex items-center gap-1 cursor-pointer transition-colors ${
+                        u.status === 'Active'
+                          ? 'text-m3-primary hover:bg-m3-primary/5'
+                          : 'text-m3-tertiary hover:bg-m3-tertiary/5'
+                      }`}
+                    >
+                      <Power className="h-3.5 w-3.5" />
+                      {u.status === 'Active' ? 'Deactivate' : 'Enable login'}
+                    </button>
+
+                    <button
+                      onClick={() => handleOpenEdit(u)}
+                      className="p-1.5 px-3 hover:bg-m3-outline-variant/15 text-[10.5px] font-bold text-m3-on-surface-variant rounded-full flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <Edit2 className="h-3.5 w-3.5" /> Edit details
+                    </button>
+                  </div>
+                )}
               </div>
+            );
+          })}
+          </div>
 
-              {/* Commands for admin operation */}
-              {isUserAdmin && (
-                <div className="flex gap-2 border-t border-m3-outline-variant/20 pt-3 mt-4 justify-end">
-                  <button
-                    onClick={() => handleResetPassword(u.id, u.fullName)}
-                    className="p-1.5 px-2.5 hover:bg-m3-primary/5 text-[10.5px] font-bold text-m3-primary rounded-full flex items-center gap-1 cursor-pointer transition-colors"
-                    title="Initialize configuration reset procedures"
-                  >
-                    <Lock className="h-3.5 w-3.5" /> Password reset
-                  </button>
-
-                  <button
-                    onClick={() => handleToggleStatus(u)}
-                    className={`p-1.5 px-3 text-[10.5px] font-bold rounded-full flex items-center gap-1 cursor-pointer transition-colors ${
-                      u.status === 'Active'
-                        ? 'text-m3-primary hover:bg-m3-primary/5'
-                        : 'text-m3-tertiary hover:bg-m3-tertiary/5'
-                    }`}
-                  >
-                    <Power className="h-3.5 w-3.5" />
-                    {u.status === 'Active' ? 'Deactivate' : 'Enable login'}
-                  </button>
-
-                  <button
-                    onClick={() => handleOpenEdit(u)}
-                    className="p-1.5 px-3 hover:bg-m3-outline-variant/15 text-[10.5px] font-bold text-m3-on-surface-variant rounded-full flex items-center gap-1 cursor-pointer transition-colors"
-                  >
-                    <Edit2 className="h-3.5 w-3.5" /> Edit details
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={users.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            itemName="employees"
+          />
+        </div>
       ) : (
         /* Active sessions panel view */
         <div className="space-y-6 animate-fade-in">
@@ -386,91 +406,101 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
               <p className="text-xs text-m3-on-surface-variant/70">Wait for a terminal to log in and update heartbeat.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {activeSessions.map((session) => {
-                const isCurrent = session.id === activeSessionId;
-                return (
-                  <div key={session.id} className="m3-card shadow-sm flex flex-col justify-between border border-m3-outline-variant/15 relative">
-                    <div className="space-y-4">
-                      {/* Live Header Status */}
-                      <div className="flex items-center justify-between border-b border-m3-outline-variant/20 pb-3">
-                        <div className="flex items-center gap-2">
-                          <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-600"></span>
-                          </span>
-                          <span className="text-[10px] font-black tracking-widest text-green-600 font-mono uppercase">Live Connection</span>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {activeSessions.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((session) => {
+                  const isCurrent = session.id === activeSessionId;
+                  return (
+                    <div key={session.id} className="m3-card shadow-sm flex flex-col justify-between border border-m3-outline-variant/15 relative">
+                      <div className="space-y-4">
+                        {/* Live Header Status */}
+                        <div className="flex items-center justify-between border-b border-m3-outline-variant/20 pb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-600"></span>
+                            </span>
+                            <span className="text-[10px] font-black tracking-widest text-green-600 font-mono uppercase">Live Connection</span>
+                          </div>
+                          {isCurrent ? (
+                            <span className="bg-m3-primary/10 text-m3-primary border border-m3-primary/20 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
+                              This Terminal
+                            </span>
+                          ) : (
+                            <span className="bg-m3-outline-variant/40 text-m3-on-surface-variant border border-m3-outline-variant/20 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
+                              Remote Link
+                            </span>
+                          )}
                         </div>
-                        {isCurrent ? (
-                          <span className="bg-m3-primary/10 text-m3-primary border border-m3-primary/20 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
-                            This Terminal
-                          </span>
-                        ) : (
-                          <span className="bg-m3-outline-variant/40 text-m3-on-surface-variant border border-m3-outline-variant/20 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
-                            Remote Link
-                          </span>
-                        )}
+
+                        {/* Profile details */}
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-[12px] bg-m3-primary/10 text-m3-primary text-xs font-black flex items-center justify-center">
+                            {session.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-m3-on-surface">{session.fullName}</h4>
+                            <span className="text-[10px] text-m3-on-surface-variant font-mono uppercase font-bold tracking-wider">{session.role}</span>
+                          </div>
+                        </div>
+
+                        {/* Detailed specifications */}
+                        <div className="space-y-2 text-xs border-t border-m3-outline-variant/10 pt-3">
+                          <div className="flex justify-between">
+                            <span className="text-m3-on-surface-variant/80">User ID Code:</span>
+                            <span className="font-mono text-m3-on-surface font-semibold">@{session.username}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-m3-on-surface-variant/80 font-mono">Session ID:</span>
+                            <span className="font-mono text-m3-primary font-black bg-m3-primary/5 px-2 py-0.5 rounded border border-m3-primary/10 text-[10px]">{session.id}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-m3-on-surface-variant/80">Active Branch:</span>
+                            <span className="font-semibold flex items-center gap-1">
+                              <MapPin className="h-3 w-3 text-m3-primary" />
+                              {session.branchName}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-m3-on-surface-variant/80">Terminal Device:</span>
+                            <span className="font-medium text-m3-on-surface-variant max-w-[150px] truncate" title={session.userAgent}>
+                              {getDeviceDescription(session.userAgent)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-m3-on-surface-variant/80">Last Contact:</span>
+                            <span className="font-semibold text-green-600 flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {getRelativeTime(session.lastActive)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Profile details */}
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-[12px] bg-m3-primary/10 text-m3-primary text-xs font-black flex items-center justify-center">
-                          {session.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                      {/* Actions panel */}
+                      {!isCurrent && isUserAdmin && (
+                        <div className="border-t border-m3-outline-variant/20 pt-3 mt-4 flex justify-end">
+                          <button
+                            onClick={() => handleTerminateRemote(session.id, session.fullName)}
+                            className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500 text-red-600 hover:text-white border border-red-500/25 text-[10.5px] font-bold rounded-full flex items-center gap-1 cursor-pointer transition-colors"
+                            title="Terminate remote session and force sign-out"
+                          >
+                            <PowerOff className="h-3.5 w-3.5" /> Terminate Session
+                          </button>
                         </div>
-                        <div>
-                          <h4 className="text-sm font-bold text-m3-on-surface">{session.fullName}</h4>
-                          <span className="text-[10px] text-m3-on-surface-variant font-mono uppercase font-bold tracking-wider">{session.role}</span>
-                        </div>
-                      </div>
-
-                      {/* Detailed specifications */}
-                      <div className="space-y-2 text-xs border-t border-m3-outline-variant/10 pt-3">
-                        <div className="flex justify-between">
-                          <span className="text-m3-on-surface-variant/80">User ID Code:</span>
-                          <span className="font-mono text-m3-on-surface font-semibold">@{session.username}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-m3-on-surface-variant/80 font-mono">Session ID:</span>
-                          <span className="font-mono text-m3-primary font-black bg-m3-primary/5 px-2 py-0.5 rounded border border-m3-primary/10 text-[10px]">{session.id}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-m3-on-surface-variant/80">Active Branch:</span>
-                          <span className="font-semibold flex items-center gap-1">
-                            <MapPin className="h-3 w-3 text-m3-primary" />
-                            {session.branchName}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-m3-on-surface-variant/80">Terminal Device:</span>
-                          <span className="font-medium text-m3-on-surface-variant max-w-[150px] truncate" title={session.userAgent}>
-                            {getDeviceDescription(session.userAgent)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-m3-on-surface-variant/80">Last Contact:</span>
-                          <span className="font-semibold text-green-600 flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {getRelativeTime(session.lastActive)}
-                          </span>
-                        </div>
-                      </div>
+                      )}
                     </div>
+                  );
+                })}
+              </div>
 
-                    {/* Actions panel */}
-                    {!isCurrent && isUserAdmin && (
-                      <div className="border-t border-m3-outline-variant/20 pt-3 mt-4 flex justify-end">
-                        <button
-                          onClick={() => handleTerminateRemote(session.id, session.fullName)}
-                          className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500 text-red-600 hover:text-white border border-red-500/25 text-[10.5px] font-bold rounded-full flex items-center gap-1 cursor-pointer transition-colors"
-                          title="Terminate remote session and force sign-out"
-                        >
-                          <PowerOff className="h-3.5 w-3.5" /> Terminate Session
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              <TablePagination
+                currentPage={currentPage}
+                totalItems={activeSessions.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                itemName="terminals"
+              />
             </div>
           )}
         </div>

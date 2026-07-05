@@ -15,6 +15,7 @@ import {
   formatHashToken,
   verifyPasswordWithToken,
 } from "./lib/crypto";
+import { verifyAndUnwrapBackup } from "./lib/fileBackupHelper";
 
 // Modular components imports
 import { Dashboard } from "./components/Dashboard";
@@ -430,6 +431,8 @@ function AppContent() {
     "scheduler" | "ledger" | "import-export"
   >("scheduler");
   const [manualSnapshotName, setManualSnapshotName] = useState("");
+  const [deleteSnapshotConfirm, setDeleteSnapshotConfirm] = useState<{ [snapId: string]: number }>({});
+  const [clearAllConfirm, setClearAllConfirm] = useState<number>(0);
   const [dbBackupFileMessage, setDbBackupFileMessage] = useState<string | null>(
     null,
   );
@@ -939,7 +942,7 @@ function AppContent() {
     },
     {
       id: "inventory-import",
-      name: "Migration & Data Portability Tool",
+      name: "Migration & Import/Export Tool",
       icon: Layers,
       roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF],
     },
@@ -1058,7 +1061,7 @@ function AppContent() {
         { id: "inventory-adjustments", name: "Adjustments Logs" },
         { id: "inventory-transfer", name: "Stock Transfers" },
         { id: "inventory-logistics", name: "Logistics Ledger & Heatmap" },
-        { id: "inventory-import", name: "Migration & Data Portability Tool" },
+        { id: "inventory-import", name: "Migration & Import/Export Tool" },
         { id: "inventory-damage", name: "Broken & BOA Register" },
       ],
     },
@@ -2463,18 +2466,50 @@ function AppContent() {
                       <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
                         Saved Backup History
                       </span>
-                      <button
-                        onClick={() => {
-                          dbSnapshots.forEach((snap) =>
-                            deleteDbSnapshot(snap.id),
+                      {(() => {
+                        if (clearAllConfirm === 0) {
+                          return (
+                            <button
+                              onClick={() => {
+                                setClearAllConfirm(1);
+                                setTimeout(() => {
+                                  setClearAllConfirm(prev => prev < 3 ? 0 : prev);
+                                }, 4000);
+                              }}
+                              className="text-[10px] font-black uppercase tracking-wider text-rose-500 hover:text-rose-400 transition-colors cursor-pointer"
+                              title="Clear database list (Requires 3x confirmation)"
+                            >
+                              Clear All Catalog
+                            </button>
                           );
-                          showToast("Cleared recovery snapshot catalog.");
-                        }}
-                        className="text-[10px] font-black uppercase tracking-wider text-rose-500 hover:text-rose-400 transition-colors cursor-pointer"
-                        title="Clear database list"
-                      >
-                        Clear All Catalog
-                      </button>
+                        } else if (clearAllConfirm === 1) {
+                          return (
+                            <button
+                              onClick={() => setClearAllConfirm(2)}
+                              className="text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded transition-colors cursor-pointer animate-pulse"
+                              title="Confirm Stage 1 of 3"
+                            >
+                              Confirm Clear All (1/3)
+                            </button>
+                          );
+                        } else {
+                          return (
+                            <button
+                              onClick={() => {
+                                dbSnapshots.forEach((snap) =>
+                                  deleteDbSnapshot(snap.id),
+                                );
+                                setClearAllConfirm(0);
+                                showToast("Cleared recovery snapshot catalog.");
+                              }}
+                              className="text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white px-2 py-0.5 rounded hover:bg-rose-700 transition-colors cursor-pointer animate-bounce"
+                              title="Confirm Stage 2 of 3 - Clear All!"
+                            >
+                              Confirm Clear All (2/3 - Clear!)
+                            </button>
+                          );
+                        }
+                      })()}
                     </div>
 
                     {dbSnapshots.length === 0 ? (
@@ -2527,7 +2562,7 @@ function AppContent() {
                                       undefined,
                                       "Shutting down write engines, swapping table pointers, and updating local indices...",
                                     );
-                                    const success = restoreDbSnapshot(snap.id);
+                                    const success = await restoreDbSnapshot(snap.id);
                                     if (success) {
                                       showToast(
                                         `Snapshot ${snap.id} restored successfully! Reloading UI...`,
@@ -2548,19 +2583,67 @@ function AppContent() {
                               >
                                 Restore
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  deleteDbSnapshot(snap.id);
-                                  showToast(
-                                    `Removed backup snapshot ${snap.id}`,
+                              {(() => {
+                                const confirmCount = deleteSnapshotConfirm[snap.id] || 0;
+                                if (confirmCount === 0) {
+                                  return (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setDeleteSnapshotConfirm(prev => ({ ...prev, [snap.id]: 1 }));
+                                        setTimeout(() => {
+                                          setDeleteSnapshotConfirm(prev => {
+                                            if (prev[snap.id] < 3) {
+                                              const updated = { ...prev };
+                                              delete updated[snap.id];
+                                              return updated;
+                                            }
+                                            return prev;
+                                          });
+                                        }, 4000);
+                                      }}
+                                      className="p-1 px-1.5 text-zinc-400 hover:text-rose-500 hover:bg-rose-500/15 cursor-pointer rounded transition-colors"
+                                      title="Delete snapshot (Requires 3x confirmation)"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
                                   );
-                                }}
-                                className="p-1 px-1.5 text-zinc-400 hover:text-rose-500 hover:bg-rose-500/15 cursor-pointer rounded transition-colors"
-                                title="Delete snapshot"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                                } else if (confirmCount === 1) {
+                                  return (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setDeleteSnapshotConfirm(prev => ({ ...prev, [snap.id]: 2 }));
+                                      }}
+                                      className="px-2 py-1 text-[9px] font-black uppercase tracking-wider bg-amber-500 text-black hover:bg-amber-600 rounded transition-all cursor-pointer animate-pulse shrink-0"
+                                      title="Confirm Stage 1 of 3"
+                                    >
+                                      Confirm 1/3
+                                    </button>
+                                  );
+                                } else {
+                                  return (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        deleteDbSnapshot(snap.id);
+                                        showToast(
+                                          `Removed backup snapshot ${snap.id}`,
+                                        );
+                                        setDeleteSnapshotConfirm(prev => {
+                                          const updated = { ...prev };
+                                          delete updated[snap.id];
+                                          return updated;
+                                        });
+                                      }}
+                                      className="px-2 py-1 text-[9px] font-black uppercase tracking-wider bg-rose-600 text-white hover:bg-rose-700 rounded transition-all cursor-pointer animate-bounce shrink-0"
+                                      title="Confirm Stage 2 of 3 - Delete!"
+                                    >
+                                      Confirm 2/3 (Delete)
+                                    </button>
+                                  );
+                                }
+                              })()}
                             </div>
                           </div>
                         ))}
@@ -2661,10 +2744,10 @@ function AppContent() {
                             if (!file) return;
 
                             const reader = new FileReader();
-                            reader.onload = (evt) => {
+                            reader.onload = async (evt) => {
                               try {
                                 const rawText = evt.target?.result as string;
-                                const parsed = JSON.parse(rawText);
+                                const parsed = await verifyAndUnwrapBackup(rawText);
 
                                 if (
                                   !parsed.products ||
@@ -2683,25 +2766,18 @@ function AppContent() {
                                   timestamp: new Date().toISOString(),
                                   creator: currentUser.fullName,
                                   sizeBytes: new Blob([rawText]).size,
-                                  data: rawText,
+                                  data: JSON.stringify(parsed),
                                 };
 
-                                const cachedListStr =
-                                  localStorage.getItem("tp_db_snapshots");
-                                const cachedList = cachedListStr
-                                  ? JSON.parse(cachedListStr)
-                                  : [];
-                                const updatedList = [
-                                  newSnap,
-                                  ...cachedList,
-                                ].slice(0, 2);
-                                localStorage.setItem(
-                                  "tp_db_snapshots",
-                                  JSON.stringify(updatedList),
-                                );
+                                // Save to server
+                                await fetch('/api/db/backups', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ snapshot: newSnap })
+                                });
 
                                 // Apply changes directly using atomic restore
-                                restoreDbSnapshot(newSnap.id);
+                                await restoreDbSnapshot(newSnap.id);
 
                                 setDbBackupFileMessage(
                                   `SUCCESSFULLY IMPORTED PORTABLE BACKUP: "${file.name}" APPROVED. Reloading UI...`,

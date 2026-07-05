@@ -20,6 +20,7 @@ import {
   decryptCredentialPacket,
   generateSessionToken,
 } from "../lib/crypto";
+import { saveFileToBackup } from "../lib/fileBackupHelper";
 import {
   User,
   UserRole,
@@ -72,6 +73,8 @@ const HARD_LOCKED_KEYS = [
   "atpos_v2_members_list",
   "atpos_v2_expenses",
   "atpos_v2_returns",
+  "atpos_v2_calendar_notes",
+  "atpos_v2_calendar_day_memos",
   "tp_users",
   "tp_branches",
   "tp_suppliers",
@@ -122,6 +125,8 @@ if (typeof window !== "undefined" && window.localStorage && !(window.localStorag
       "atpos_v2_members_list",
       "atpos_v2_expenses",
       "atpos_v2_returns",
+      "atpos_v2_calendar_notes",
+      "atpos_v2_calendar_day_memos",
       "tp_db_snapshots"
     ];
 
@@ -475,6 +480,10 @@ interface DbContextType {
   productReturns: ProductReturn[];
   setProductReturns: React.Dispatch<React.SetStateAction<ProductReturn[]>>;
   syncStatus: Record<string, "Live" | "Syncing">;
+  calendarNotes: string;
+  setCalendarNotes: (notes: string) => void;
+  dayMemos: Record<string, string>;
+  setDayMemos: React.Dispatch<React.SetStateAction<Record<string, string>>>;
 
   // Actions - Users
   createUser: (user: Omit<User, "id" | "createdAt" | "updatedAt">) => void;
@@ -705,9 +714,9 @@ interface DbContextType {
   resetWriteStats: () => void;
   forceSyncAll: () => void;
   dbSnapshots: DbSnapshot[];
-  createDbSnapshot: (name: string) => void;
-  restoreDbSnapshot: (snapshotId: string) => boolean;
-  deleteDbSnapshot: (snapshotId: string) => void;
+  createDbSnapshot: (name: string) => Promise<void>;
+  restoreDbSnapshot: (snapshotId: string) => Promise<boolean>;
+  deleteDbSnapshot: (snapshotId: string) => Promise<void>;
   autoBackupEnabled: boolean;
   setAutoBackupEnabled: (val: boolean) => void;
   backupIntervalHours: number;
@@ -1806,6 +1815,14 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     return safeParse<ProductReturn[]>("atpos_v2_returns", []);
   });
 
+  const [calendarNotes, setCalendarNotes] = useState<string>(() => {
+    return localStorage.getItem("atpos_v2_calendar_notes") || "";
+  });
+
+  const [dayMemos, setDayMemos] = useState<Record<string, string>>(() => {
+    return safeParse<Record<string, string>>("atpos_v2_calendar_day_memos", {});
+  });
+
   const [activeSessions, setActiveSessions] = useState<ActiveSession[]>(() => {
     return safeParse<ActiveSession[]>("tp_active_sessions", []);
   });
@@ -2031,6 +2048,21 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     return cached ? JSON.parse(cached) : [];
   });
 
+  const fetchDbSnapshots = async () => {
+    try {
+      const res = await fetch("/api/db/backups?metadataOnly=true");
+      if (res.ok) {
+        const body = await res.json();
+        if (body.success && body.data) {
+          setDbSnapshots(body.data);
+          localStorage.setItem("tp_db_snapshots", JSON.stringify(body.data));
+        }
+      }
+    } catch (e) {
+      console.error("[System Guard] Failed to fetch optimized backup metadata list:", e);
+    }
+  };
+
   const [autoBackupEnabled, setAutoBackupEnabled] = useState<boolean>(() => {
     const cached = localStorage.getItem("tp_autobackup_enabled");
     return cached !== null ? cached === "true" : true;
@@ -2125,6 +2157,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         atpos_v2_members_list: members,
         atpos_v2_expenses: expenses,
         atpos_v2_returns: productReturns,
+        atpos_v2_calendar_notes: calendarNotes,
+        atpos_v2_calendar_day_memos: dayMemos,
         tp_is_configured: String(isConfigured),
         tilepoint_onboarded_setup:
           localStorage.getItem("tilepoint_onboarded_setup") || "false",
@@ -2371,6 +2405,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
             updateIfChanged(expenses, db["atpos_v2_expenses"], setExpenses);
           if (db["atpos_v2_returns"])
             updateIfChanged(productReturns, db["atpos_v2_returns"], setProductReturns);
+          if (db["atpos_v2_calendar_notes"] !== undefined)
+            updateIfChanged(calendarNotes, db["atpos_v2_calendar_notes"], setCalendarNotes);
+          if (db["atpos_v2_calendar_day_memos"] !== undefined)
+            updateIfChanged(dayMemos, db["atpos_v2_calendar_day_memos"], setDayMemos);
           if (db["tp_active_sessions"]) {
             const parsedSessions =
               typeof db["tp_active_sessions"] === "string"
@@ -2505,6 +2543,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       try {
         setIsSystemHydrating(true);
         await syncFromSharedServer();
+        await fetchDbSnapshots();
       } catch (err) {
         console.error(
           "[Hydration Guard] Initial state resolution failed:",
@@ -3257,22 +3296,14 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem("tp_write_stats_prevented", "0");
   };
 
-  const triggerQuietDownload = (payload: any) => {
+  const triggerQuietDownload = async (payload: any) => {
     if (typeof window === "undefined") return;
     try {
       const dataStr = JSON.stringify(payload, null, 2);
-      const blob = new Blob([dataStr], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
       const dateStr = new Date().toISOString().slice(0, 10);
-      a.href = url;
-      a.download = `tilepoint-backup-${dateStr}.json`;
-      a.style.display = "none";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      console.log(`[Backup Safeguard] Quiet download of recovery file initiated successfully: tilepoint-backup-${dateStr}.json`);
+      const filename = `tilepoint-backup-${dateStr}.json`;
+      await saveFileToBackup(dataStr, filename, 'Database_Backups');
+      console.log(`[Backup Safeguard] Quiet download of recovery file initiated successfully via centralized backup helper: ${filename}`);
     } catch (e) {
       console.error("[Backup Safeguard] Quiet download failed:", e);
     }
@@ -3335,10 +3366,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     return newSnapshot;
   };
 
-  const createDbSnapshot = (name: string) => {
-    if (currentUser.role !== UserRole.ADMIN) {
+  const createDbSnapshot = async (name: string): Promise<void> => {
+    if (currentUser.role !== UserRole.ADMIN && currentUser.role !== UserRole.MANAGER) {
       console.error(
-        "Security alert: createDbSnapshot is restricted to system administrators.",
+        "Security alert: createDbSnapshot is restricted to system administrators and managers.",
       );
       return;
     }
@@ -3378,12 +3409,15 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       data: dataStr,
     };
 
-    const updatedSnapshots = [newSnapshot, ...dbSnapshots].slice(0, 2);
-    setDbSnapshots(updatedSnapshots);
     try {
-      localStorage.setItem("tp_db_snapshots", JSON.stringify(updatedSnapshots));
+      await fetch("/api/db/backups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ snapshot: newSnapshot })
+      });
+      await fetchDbSnapshots();
     } catch (e) {
-      console.error("[System Guard] Failed to save manual tp_db_snapshots:", e);
+      console.error("[System Guard] Failed to save manual snapshot to server:", e);
     }
 
     addAuditLog(
@@ -3394,14 +3428,27 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     );
   };
 
-  const restoreDbSnapshot = (snapshotId: string): boolean => {
-    if (currentUser.role !== UserRole.ADMIN) {
+  const restoreDbSnapshot = async (snapshotId: string): Promise<boolean> => {
+    if (currentUser.role !== UserRole.ADMIN && currentUser.role !== UserRole.MANAGER) {
       console.error(
-        "Security alert: restoreDbSnapshot is restricted to system administrators.",
+        "Security alert: restoreDbSnapshot is restricted to system administrators and managers.",
       );
       return false;
     }
-    const snap = dbSnapshots.find((s) => s.id === snapshotId);
+    
+    let snap: DbSnapshot | null = null;
+    try {
+      const res = await fetch(`/api/db/backups/${snapshotId}`);
+      if (res.ok) {
+        const body = await res.json();
+        if (body.success && body.data) {
+          snap = body.data;
+        }
+      }
+    } catch (e) {
+      console.error("[System Guard] Failed to load full snapshot details for restoration:", e);
+    }
+
     if (!snap) return false;
     try {
       const payload = JSON.parse(snap.data);
@@ -3438,6 +3485,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         setProductReturns(payload.atpos_v2_returns);
       else if (payload.productReturns)
         setProductReturns(payload.productReturns);
+      if (payload.atpos_v2_calendar_notes !== undefined)
+        setCalendarNotes(payload.atpos_v2_calendar_notes);
+      if (payload.atpos_v2_calendar_day_memos !== undefined)
+        setDayMemos(payload.atpos_v2_calendar_day_memos);
       if (payload.damageLogs) {
         setDamageLogs(payload.damageLogs);
       } else if (payload.tp_damage_logs) {
@@ -3473,6 +3524,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         atpos_v2_members_list: payload.atpos_v2_members_list || payload.members || [],
         atpos_v2_expenses: payload.atpos_v2_expenses || payload.expenses || [],
         atpos_v2_returns: payload.atpos_v2_returns || payload.productReturns || [],
+        atpos_v2_calendar_notes: payload.atpos_v2_calendar_notes,
+        atpos_v2_calendar_day_memos: payload.atpos_v2_calendar_day_memos,
         tp_is_configured: String(payload.isConfigured),
       };
 
@@ -3503,19 +3556,20 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const deleteDbSnapshot = (snapshotId: string) => {
-    if (currentUser.role !== UserRole.ADMIN) {
+  const deleteDbSnapshot = async (snapshotId: string): Promise<void> => {
+    if (currentUser.role !== UserRole.ADMIN && currentUser.role !== UserRole.MANAGER) {
       console.error(
-        "Security alert: deleteDbSnapshot is restricted to system administrators.",
+        "Security alert: deleteDbSnapshot is restricted to system administrators and managers.",
       );
       return;
     }
-    const updated = dbSnapshots.filter((s) => s.id !== snapshotId);
-    setDbSnapshots(updated);
     try {
-      localStorage.setItem("tp_db_snapshots", JSON.stringify(updated));
+      await fetch(`/api/db/backups/${snapshotId}`, {
+        method: "DELETE"
+      });
+      await fetchDbSnapshots();
     } catch (e) {
-      console.error("[System Guard] Failed to update snapshots on delete:", e);
+      console.error("[System Guard] Failed to delete backup from server:", e);
     }
     addAuditLog(
       "DB_BACKUP_DELETE",
@@ -3635,6 +3689,15 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     saveToStorageWithDebounce("atpos_v2_returns", productReturns);
   }, [productReturns]);
+
+  // WRITER LINK FOR CALENDAR MEMOS & NOTES
+  useEffect(() => {
+    saveToStorageWithDebounce("atpos_v2_calendar_notes", calendarNotes);
+  }, [calendarNotes]);
+
+  useEffect(() => {
+    saveToStorageWithDebounce("atpos_v2_calendar_day_memos", dayMemos);
+  }, [dayMemos]);
 
   // General Audit Log function
   const addAuditLog = (
@@ -7396,6 +7459,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         setExpenses,
         productReturns,
         setProductReturns,
+        calendarNotes,
+        setCalendarNotes,
+        dayMemos,
+        setDayMemos,
         syncStatus,
         createUser,
         updateUser,

@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from "react";
 import { useDb } from "../context/DbContext";
 import { PurchaseOrder, UserRole } from "../types/db";
+import { useResponsivePageSize, TablePagination } from "./TablePagination";
 import {
   FileText,
   Truck,
@@ -71,6 +72,14 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
   const [poFilterTab, setPoFilterTab] = useState<
     "all" | "pending" | "outsourcing"
   >("all");
+
+  const [poPage, setPoPage] = useState(1);
+  const poPageSize = useResponsivePageSize(64, 460, 10);
+
+  // Reset page when poFilterTab changes
+  useEffect(() => {
+    setPoPage(1);
+  }, [poFilterTab]);
 
   const [isConfirmingConsolidation, setIsConfirmingConsolidation] =
     useState(false);
@@ -1021,7 +1030,9 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-m3-outline-variant/10 font-mono text-[11px] text-zinc-300">
-                      {filteredPurchaseOrders.map((po) => {
+                      {filteredPurchaseOrders
+                        .slice((poPage - 1) * poPageSize, poPage * poPageSize)
+                        .map((po) => {
                         const relatedPoItems = poItems.filter(
                           (item) => item.poId === po.id,
                         );
@@ -1165,6 +1176,14 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                     </tbody>
                   </table>
                 </div>
+
+                <TablePagination
+                  currentPage={poPage}
+                  totalItems={filteredPurchaseOrders.length}
+                  pageSize={poPageSize}
+                  onPageChange={setPoPage}
+                  itemName="purchase orders"
+                />
               </>
             );
           })()}

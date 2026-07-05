@@ -184,14 +184,107 @@ app.get('/api/db/events', (req, res) => {
   });
 });
 
-// API: Get entire shared database
+// API: Get entire shared database (optimally excluding heavy backup snapshots)
 app.get('/api/db', (req, res) => {
   const db = readDatabase();
+  const dbCopy = { ...db };
+  delete dbCopy.tp_db_snapshots; // completely decouple backups to keep general sync lightweight
   res.json({
     success: true,
     timestamp: new Date().toISOString(),
-    data: db
+    data: dbCopy
   });
+});
+
+// API: Optimized Get backups/snapshots list (with metadataOnly support for lightweight fetching)
+app.get('/api/db/backups', (req, res) => {
+  const db = readDatabase();
+  const snapshots = db.tp_db_snapshots || [];
+  
+  const metadataOnly = req.query.metadataOnly === 'true';
+  if (metadataOnly) {
+    const list = snapshots.map(s => ({
+      id: s.id,
+      name: s.name,
+      timestamp: s.timestamp,
+      creator: s.creator,
+      sizeBytes: s.sizeBytes
+    }));
+    return res.json({ success: true, data: list });
+  }
+  
+  res.json({ success: true, data: snapshots });
+});
+
+// API: Get single full snapshot details (including the heavy data body on-demand)
+app.get('/api/db/backups/:id', (req, res) => {
+  const db = readDatabase();
+  const snapshots = db.tp_db_snapshots || [];
+  const snapshot = snapshots.find(s => s.id === req.params.id);
+  
+  if (!snapshot) {
+    return res.status(404).json({ success: false, error: 'Snapshot not found' });
+  }
+  
+  res.json({ success: true, data: snapshot });
+});
+
+// API: Save heavy snapshot directly on the server (bypassing Client LocalStorage limit)
+app.post('/api/db/backups', express.json({ limit: '100mb' }), async (req, res) => {
+  const { snapshot } = req.body;
+  if (!snapshot || !snapshot.id) {
+    return res.status(400).json({ success: false, error: 'Invalid snapshot payload' });
+  }
+
+  try {
+    const result = await runInTransaction(async () => {
+      const db = readDatabase();
+      if (!db.tp_db_snapshots) {
+        db.tp_db_snapshots = [];
+      }
+      
+      // Prevent duplicates and append
+      db.tp_db_snapshots = db.tp_db_snapshots.filter(s => s.id !== snapshot.id);
+      db.tp_db_snapshots.unshift(snapshot);
+      
+      // Retain a healthy buffer on server (e.g., last 50 historical snapshots instead of just 2!)
+      if (db.tp_db_snapshots.length > 50) {
+        db.tp_db_snapshots = db.tp_db_snapshots.slice(0, 50);
+      }
+      
+      if (writeDatabase(db, req.headers['x-client-id'], 'db_update')) {
+        return { success: true, id: snapshot.id };
+      } else {
+        throw new Error('Failed to write snapshot to server database');
+      }
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Delete single snapshot
+app.delete('/api/db/backups/:id', async (req, res) => {
+  try {
+    const result = await runInTransaction(async () => {
+      const db = readDatabase();
+      if (!db.tp_db_snapshots) {
+        db.tp_db_snapshots = [];
+      }
+      
+      db.tp_db_snapshots = db.tp_db_snapshots.filter(s => s.id !== req.params.id);
+      
+      if (writeDatabase(db, req.headers['x-client-id'], 'db_update')) {
+        return { success: true };
+      } else {
+        throw new Error('Failed to update server database after delete');
+      }
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // API: Append-Only Transaction Log Delta Processor

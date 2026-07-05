@@ -673,6 +673,12 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ dark
                     Permanently clear transactions, wipe inventory counts, or perform full database schema truncation. 
                     <span className="text-rose-400 font-extrabold ml-1">Warning: These operations are destructive and cannot be undone.</span>
                   </p>
+                  
+                  {/* Historical retention warning banner */}
+                  <div className="mt-3 p-3 rounded-xl border border-amber-500/15 bg-amber-500/5 text-[10px] text-zinc-300 leading-normal font-sans">
+                    <strong className="text-amber-400 uppercase tracking-wider block mb-0.5">⚠️ Historical Audit Notice (Retention Safeguard)</strong>
+                    To preserve last year's records and historical tax logs for compliance, managers and administrators are required to save a device snapshot in their user-defined directory folder (configured in the <span className="font-extrabold text-amber-500">Database & Backups</span> settings panel) before launching any system reset operations.
+                  </div>
                           <div className="bg-rose-500/5 border border-rose-500/20 p-5 rounded-2xl space-y-4">
                   {isRowClearingBlocked() ? (
                     <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl text-left space-y-1.5 animate-pulse">

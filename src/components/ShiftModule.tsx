@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDb } from '../context/DbContext';
 import { Shift, UserRole } from '../types/db';
+import { useResponsivePageSize, TablePagination } from './TablePagination';
 import {
   Lock,
   Unlock,
@@ -58,6 +59,9 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
 
   // Success notifications
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const [shiftPage, setShiftPage] = useState(1);
+  const shiftPageSize = useResponsivePageSize(48, 480, 10);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -308,7 +312,9 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
-              {shifts.map((s, idx) => (
+              {shifts
+                .slice((shiftPage - 1) * shiftPageSize, shiftPage * shiftPageSize)
+                .map((s, idx) => (
                 <tr key={idx} className="hover:bg-m3-surface-low/50">
                   <td className="py-2.5 px-3 font-mono text-[11px] font-bold text-m3-primary">{s.id}</td>
                   <td className="py-2.5 px-3">{s.cashierName}</td>
@@ -337,6 +343,16 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="mt-3">
+          <TablePagination
+            currentPage={shiftPage}
+            totalItems={shifts.length}
+            pageSize={shiftPageSize}
+            onPageChange={setShiftPage}
+            itemName="shifts"
+          />
         </div>
       </div>
 

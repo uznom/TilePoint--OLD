@@ -5,6 +5,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useDb, encryptString, decryptString, getSecuritySecretKey, preprocessAndVerifyClipboardText, isStrictInboundReportSchema } from '../context/DbContext';
+import { saveFileToBackup } from '../lib/fileBackupHelper';
 import { UserRole, BranchSalesReport, Sale, SaleItem } from '../types/db';
 import { ActionButton } from './ActionButton';
 import {
@@ -464,21 +465,12 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
 
   // Manual fallback download helper
   const handleManualDownload = () => {
-    try {
-      const blob = new Blob([sharePayloadText], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const element = document.createElement('a');
-      element.setAttribute('href', url);
-      element.setAttribute('download', shareFileName);
-      document.body.appendChild(element);
-      element.click();
-      document.body.removeChild(element);
-      URL.revokeObjectURL(url);
-      triggerToast('Downloaded offline JSON sales packet successfully!', 'success');
-    } catch (err) {
+    saveFileToBackup(sharePayloadText, shareFileName, 'Sales_Reports').then((res) => {
+      triggerToast(`Saved offline JSON sales packet successfully to: ${res.path || shareFileName}!`, 'success');
+    }).catch((err) => {
       console.error('Manual download failed:', err);
       triggerToast('Failed to download file. Try copying the raw JSON below instead.', 'error');
-    }
+    });
   };
 
   // Printing & Exporting states
@@ -560,18 +552,13 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
       csv += `"No transaction invoices attached to report vector."\n`;
     }
 
-    // Trigger download - prepending UTF-8 BOM to force Excel to read properly in UTF-8
-    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' }); 
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
     const formatSuffix = isExcel ? 'Excel_Format' : 'CSV_Format';
-    link.download = `TilePoint_${formatSuffix}_Report_${report.branchName.replace(/\s+/g, '_')}_${report.reportingDate}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    triggerToast(`Successfully exported ${isExcel ? 'Excel' : 'CSV'} sales report for ${report.branchName}.`, 'success');
+    const filename = `TilePoint_${formatSuffix}_Report_${report.branchName.replace(/\s+/g, '_')}_${report.reportingDate}.csv`;
+    // Prepend UTF-8 BOM to CSV content so Excel handles characters correctly
+    const csvWithBOM = "\uFEFF" + csv;
+    saveFileToBackup(csvWithBOM, filename, 'Sales_Reports', 'text/csv;charset=utf-8;').then((res) => {
+      triggerToast(`Successfully exported ${isExcel ? 'Excel' : 'CSV'} sales report to: ${res.path || filename}.`, 'success');
+    });
   };
 
   const handleOpenPrintPreview = (mode: 'compiled' | 'selected') => {
@@ -734,33 +721,24 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
       };
 
       const payloadString = JSON.stringify(payload, null, 2);
-      const blob = new Blob([payloadString], { type: 'application/json;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
       const fileName = `TilePoint_Sales_Report_${currentBranchMeta.id}_${reportingDate}.json`;
       
-      // Download file
-      const element = document.createElement('a');
-      element.setAttribute('href', url);
-      element.setAttribute('download', fileName);
-      document.body.appendChild(element);
-      element.click();
-      document.body.removeChild(element);
-      URL.revokeObjectURL(url);
+      saveFileToBackup(payloadString, fileName, 'Sales_Reports').then((res) => {
+        addAuditLog(
+          'SALES_OFFLINE_EXPORT',
+          `Downloaded offline JSON sales packet for ${currentBranchMeta.name} on ${reportingDate}. Transactions: ${compiledLocalSalesData.count}`,
+          'BranchSalesReport',
+          payload.id
+        );
 
-      addAuditLog(
-        'SALES_OFFLINE_EXPORT',
-        `Downloaded offline JSON sales packet for ${currentBranchMeta.name} on ${reportingDate}. Transactions: ${compiledLocalSalesData.count}`,
-        'BranchSalesReport',
-        payload.id
-      );
+        // Save to state to show custom Share dialog
+        setSharePayloadText(payloadString);
+        setShareFileName(fileName);
+        setShowShareModal(true);
 
-      // Save to state to show custom Share dialog
-      setSharePayloadText(payloadString);
-      setShareFileName(fileName);
-      setShowShareModal(true);
-
-      triggerToast('Secure JSON sales report package downloaded.', 'success');
-      setIsDownloadingManual(false);
+        triggerToast(`Secure JSON sales report package saved to: ${res.path || fileName}`, 'success');
+        setIsDownloadingManual(false);
+      });
     }, 1000);
   };
 
