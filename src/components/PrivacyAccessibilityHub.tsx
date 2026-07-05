@@ -533,7 +533,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-m3-on-surface/50 backdrop-blur-md animate-fade-in" onClick={() => setIsOpen(false)} />
           
-          <div className="relative w-full max-w-2xl h-[90vh] md:h-[620px] flex flex-col m3-card rounded-[32px] p-0 overflow-hidden bg-m3-surface-low border border-m3-outline-variant/40 shadow-2xl animate-scale-up text-m3-on-surface">
+          <div className="relative w-full max-w-4xl h-[90vh] md:h-[740px] md:max-h-[85vh] flex flex-col m3-card rounded-[32px] p-0 overflow-hidden bg-m3-surface-low border border-m3-outline-variant/40 shadow-2xl animate-scale-up text-m3-on-surface">
             {/* Header banner */}
             <div className="p-5 border-b border-m3-outline-variant/20 flex justify-between items-center bg-m3-surface shrink-0">
               <div className="flex items-center gap-3">
@@ -560,7 +560,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
             {/* Sidebar navigation tabs inside Dialog */}
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-m3-surface-low/30">
               {/* Tab options side-rack */}
-              <div className="w-full md:w-52 border-b md:border-b-0 md:border-r border-m3-outline-variant/15 p-3.5 flex md:flex-col gap-1.5 shrink-0 select-none overflow-x-auto md:overflow-x-visible">
+              <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-m3-outline-variant/15 p-4 flex md:flex-col gap-2 shrink-0 select-none overflow-x-auto md:overflow-x-visible">
                 <button
                   onClick={() => setActiveTab('appearance')}
                   className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${

@@ -38,7 +38,9 @@ import {
   Clock,
   Flame,
   ArrowRightLeft,
-  Truck
+  Truck,
+  Database,
+  Copy
 } from 'lucide-react';
 
 interface InventoryModuleProps {
@@ -346,6 +348,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   const [pendingProducts, setPendingProducts] = useState<Product[]>([]);
   const [pendingBranches, setPendingBranches] = useState<any[]>([]);
   const [showBranchConfigs, setShowBranchConfigs] = useState(false);
+  const [migrationSubTab, setMigrationSubTab] = useState<'import' | 'export'>('import');
+  const [exportDataType, setExportDataType] = useState<'products' | 'suppliers' | 'branches'>('products');
+  const [exportFormat, setExportFormat] = useState<'json' | 'csv'>('json');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Movement Ledger tracking states
@@ -1159,6 +1164,100 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleExportData = (type: 'products' | 'suppliers' | 'branches', format: 'json' | 'csv') => {
+    let dataToExport: any[] = [];
+    let filename = '';
+
+    if (type === 'products') {
+      dataToExport = products.filter(p => !p.isDeleted);
+      filename = `enterprise-products-catalog-${Date.now()}`;
+    } else if (type === 'suppliers') {
+      dataToExport = suppliers.filter(s => !s.isDeleted);
+      filename = `enterprise-suppliers-register-${Date.now()}`;
+    } else if (type === 'branches') {
+      dataToExport = branches.filter(b => !b.isDeleted);
+      filename = `enterprise-branches-register-${Date.now()}`;
+    }
+
+    if (format === 'json') {
+      const jsonString = JSON.stringify(dataToExport, null, 2);
+      downloadFile(jsonString, `${filename}.json`, 'application/json');
+      showToast(`Exported ${dataToExport.length} ${type} records successfully in JSON format!`);
+    } else {
+      if (dataToExport.length === 0) {
+        showToast(`No records to export for ${type}.`);
+        return;
+      }
+      const csvContent = convertToCSV(dataToExport, type);
+      downloadFile(csvContent, `${filename}.csv`, 'text/csv;charset=utf-8;');
+      showToast(`Exported ${dataToExport.length} ${type} records successfully in CSV format!`);
+    }
+  };
+
+  const convertToCSV = (data: any[], type: 'products' | 'suppliers' | 'branches'): string => {
+    let headers: string[] = [];
+    if (type === 'products') {
+      headers = ['productName', 'productCode', 'sku', 'barcode', 'category', 'brand', 'costPrice', 'sellingPrice', 'stockQuantity', 'size', 'unit', 'origin'];
+    } else if (type === 'suppliers') {
+      headers = ['id', 'name', 'contactPerson', 'email', 'phone', 'address'];
+    } else if (type === 'branches') {
+      headers = ['id', 'name', 'manager', 'address', 'phone', 'monthlySales', 'staffCount'];
+    }
+
+    const csvRows = [];
+    csvRows.push(headers.join(','));
+
+    for (const row of data) {
+      const values = headers.map(header => {
+        const val = row[header];
+        const stringVal = val === undefined || val === null ? '' : String(val);
+        const escaped = stringVal.replace(/"/g, '""');
+        return `"${escaped}"`;
+      });
+      csvRows.push(values.join(','));
+    }
+
+    return csvRows.join('\n');
+  };
+
+  const downloadFile = (content: string, filename: string, contentType: string) => {
+    const blob = new Blob([content], { type: contentType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCopyExportText = (type: 'products' | 'suppliers' | 'branches', format: 'json' | 'csv') => {
+    let dataToExport: any[] = [];
+    if (type === 'products') {
+      dataToExport = products.filter(p => !p.isDeleted);
+    } else if (type === 'suppliers') {
+      dataToExport = suppliers.filter(s => !s.isDeleted);
+    } else if (type === 'branches') {
+      dataToExport = branches.filter(b => !b.isDeleted);
+    }
+
+    let text = '';
+    if (format === 'json') {
+      text = JSON.stringify(dataToExport, null, 2);
+    } else {
+      text = convertToCSV(dataToExport, type);
+    }
+
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        showToast(`Copied ${dataToExport.length} ${type} records in ${format.toUpperCase()} format to your clipboard!`);
+      })
+      .catch(() => {
+        showToast('Failed to copy to clipboard. Please try again.');
+      });
   };
 
   const executeBulkImport = async () => {
@@ -3019,18 +3118,20 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
         </div>
       )}
 
-      {/* VIEW 5: LEGACY ERP OS DATA MIGRATION ENGINE */}
+      {/* VIEW 5: ENTERPRISE DATA PORTABILITY HUB & MIGRATION TOOL */}
       {activeSubTab === 'import' && (
         <div className="space-y-6 animate-fade-in text-left">
           <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] p-6 shadow-sm space-y-6">
+            
+            {/* Header Area */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-m3-outline-variant/15 pb-4">
               <div>
                 <h3 className="text-base font-black text-m3-primary uppercase tracking-wider flex items-center gap-2">
-                  <Upload className="h-5 w-5 text-emerald-500" />
-                  <span>Legacy ERP OS Data Migration Hub &amp; Smart Import Engine</span>
+                  <Database className="h-5 w-5 text-emerald-500" />
+                  <span>Migration &amp; Data Portability Hub</span>
                 </h3>
                 <p className="text-xs text-m3-on-surface-variant font-medium mt-1">
-                  Import inventory stock, prices, SKUs, and categories directly from your legacy ERP / POS systems.
+                  Import inventory catalog records from legacy files, or back up and export your real-time enterprise registers as secure, portable spreadsheets or raw database copies.
                 </p>
               </div>
               <span className="bg-emerald-500 text-white font-black text-[9px] tracking-widest px-2.5 py-1 rounded-full uppercase">
@@ -3038,118 +3139,149 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
               </span>
             </div>
 
-            {/* Instruction units */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
-                <span className="text-[10px] font-black text-indigo-500 uppercase tracking-wider block">STEP 1: Legacy Extraction</span>
-                <p className="text-xs text-m3-on-surface-variant font-medium">
-                  Export product database or copy inventory rows from your older checkout apps in <strong>CSV</strong> or <strong>JSON</strong> format.
-                </p>
-              </div>
-              <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
-                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-wider block">STEP 2: Smart Mapper</span>
-                <p className="text-xs text-m3-on-surface-variant font-medium">
-                  Paste the raw CSV rows or JSON array. The smart importer automatically maps keys like codes, quantities, and prices!
-                </p>
-              </div>
-              <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
-                <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider block">STEP 3: Verify & Commit</span>
-                <p className="text-xs text-m3-on-surface-variant font-medium">
-                  The engine parses columns, generates robust secure keys/IDs, and upserts product records into the system catalog.
-                </p>
-              </div>
-            </div>
-
-            {/* Paste Space */}
-            <div className="space-y-3">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <label className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">Paste raw older ERP OS CSV rows or JSON data here</label>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const sample = [
-                        {
-                          "productName": "Heritage White Glazed Porcelain",
-                          "productCode": "HW-GL-80",
-                          "skuCode": "SKU-HW-80",
-                          "barcode": "4801122334455",
-                          "category": "Porcelain Tiles",
-                          "brand": "Heritage Slabs",
-                          "costPrice": 420,
-                          "sellingPrice": 650,
-                          "size": "80x80 cm",
-                          "stockQuantity": 150
-                        },
-                        {
-                          "productName": "EcoSlate Anti-Slip Terracotta",
-                          "productCode": "ES-AS-30",
-                          "skuCode": "SKU-ES-30",
-                          "barcode": "4805566778899",
-                          "category": "Ceramic Tiles",
-                          "brand": "EcoStone",
-                          "costPrice": 180,
-                          "sellingPrice": 280,
-                          "size": "30x30 cm",
-                          "stockQuantity": 320
-                        }
-                      ];
-                      setRawImportText(JSON.stringify(sample, null, 2));
-                      showToast("Loaded high-fidelity Sample older ERP OS JSON Dataset!");
-                    }}
-                    className="text-[10px] font-black uppercase text-m3-primary hover:text-m3-primary/80 bg-m3-primary/10 px-3.5 py-1.5 rounded-full transition-all cursor-pointer font-sans"
-                  >
-                    ⚡ Load JSON Sample
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const sampleCsv = `Product Name,Product Code,SKU,Barcode,Category,Brand,Cost Price,Selling Price,Size,Quantity\n"Heritage White Glazed Porcelain",HW-GL-80,SKU-HW-80,4801122334455,Porcelain Tiles,Heritage Slabs,420,650,80x80 cm,150\n"EcoSlate Anti-Slip Terracotta",ES-AS-30,SKU-ES-30,4805566778899,Ceramic Tiles,EcoStone,180,280,30x30 cm,320`;
-                      setRawImportText(sampleCsv);
-                      showToast("Loaded high-fidelity Sample older ERP OS CSV Dataset!");
-                    }}
-                    className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 hover:opacity-85 bg-emerald-500/10 px-3.5 py-1.5 rounded-full transition-all cursor-pointer font-sans"
-                  >
-                    📊 Load CSV Sample
-                  </button>
-                </div>
-              </div>
-
-            <div className="space-y-4">
-              <div 
-                onDragOver={handleImportDragOver}
-                onDragLeave={handleImportDragLeave}
-                onDrop={handleImportDrop}
-                onClick={() => fileInputRef.current?.click()}
-                className={`p-10 border-2 border-dashed rounded-[24px] text-center space-y-3 transition-all cursor-pointer ${
-                  isDragging 
-                    ? 'border-m3-primary bg-m3-primary/10 shadow-lg' 
-                    : 'border-m3-outline-variant/45 hover:border-m3-primary/60 bg-m3-surface-low'
+            {/* Inner Sub-Navigation (Import vs Export) */}
+            <div className="flex border-b border-m3-outline-variant/10 pb-1 gap-2">
+              <button
+                type="button"
+                onClick={() => setMigrationSubTab('import')}
+                className={`px-4 py-2 text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 rounded-t-xl ${
+                  migrationSubTab === 'import'
+                    ? 'border-b-2 border-m3-primary text-m3-primary bg-m3-primary/5'
+                    : 'text-m3-on-surface-variant hover:text-m3-on-surface hover:bg-m3-surface-high/20'
                 }`}
               >
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileSelect} 
-                  className="hidden" 
-                  accept=".csv,.json,.txt"
-                />
-                <Upload className="h-8 w-8 text-m3-primary mx-auto animate-bounce" />
-                <div>
-                  <h4 className="text-sm font-black uppercase text-m3-on-surface">Drag &amp; Drop Older ERP OS File Here</h4>
-                  <p className="text-[11px] text-m3-on-surface-variant mt-1.5 max-w-md mx-auto select-none font-medium">
-                    Supports spreadsheet .csv exports, backup raw .json database copies, text tables. Or click inside to request manual file browser dialog.
-                  </p>
-                </div>
-              </div>
+                <Upload className="h-4 w-4" />
+                <span>Smart Import Engine</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMigrationSubTab('export')}
+                className={`px-4 py-2 text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 rounded-t-xl ${
+                  migrationSubTab === 'export'
+                    ? 'border-b-2 border-m3-primary text-m3-primary bg-m3-primary/5'
+                    : 'text-m3-on-surface-variant hover:text-m3-on-surface hover:bg-m3-surface-high/20'
+                }`}
+              >
+                <Download className="h-4 w-4" />
+                <span>Backup &amp; Export Center</span>
+              </button>
+            </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1 block font-mono">Or paste clipboard rows / raw database snippet text below:</label>
-                <textarea
-                  value={rawImportText}
-                  onChange={(e) => setRawImportText(e.target.value)}
-                  rows={8}
-                  placeholder={`--- CSV FORMAT EXAMPLE ---
+            {/* MIGRATION: IMPORT SECTION */}
+            {migrationSubTab === 'import' && (
+              <div className="space-y-6 animate-fade-in">
+                {/* Instruction units */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
+                    <span className="text-[10px] font-black text-indigo-500 uppercase tracking-wider block">STEP 1: Legacy Extraction</span>
+                    <p className="text-xs text-m3-on-surface-variant font-medium">
+                      Export product database or copy inventory rows from your older checkout apps in <strong>CSV</strong> or <strong>JSON</strong> format.
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
+                    <span className="text-[10px] font-black text-emerald-500 uppercase tracking-wider block">STEP 2: Smart Mapper</span>
+                    <p className="text-xs text-m3-on-surface-variant font-medium">
+                      Paste the raw CSV rows or JSON array. The smart importer automatically maps keys like codes, quantities, and prices!
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
+                    <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider block">STEP 3: Verify &amp; Commit</span>
+                    <p className="text-xs text-m3-on-surface-variant font-medium">
+                      The engine parses columns, generates robust secure keys/IDs, and upserts product records into the system catalog.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Paste Space */}
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <label className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">Paste raw older ERP OS CSV rows or JSON data here</label>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const sample = [
+                            {
+                              "productName": "Heritage White Glazed Porcelain",
+                              "productCode": "HW-GL-80",
+                              "skuCode": "SKU-HW-80",
+                              "barcode": "4801122334455",
+                              "category": "Porcelain Tiles",
+                              "brand": "Heritage Slabs",
+                              "costPrice": 420,
+                              "sellingPrice": 650,
+                              "size": "80x80 cm",
+                              "stockQuantity": 150
+                            },
+                            {
+                              "productName": "EcoSlate Anti-Slip Terracotta",
+                              "productCode": "ES-AS-30",
+                              "skuCode": "SKU-ES-30",
+                              "barcode": "4805566778899",
+                              "category": "Ceramic Tiles",
+                              "brand": "EcoStone",
+                              "costPrice": 180,
+                              "sellingPrice": 280,
+                              "size": "30x30 cm",
+                              "stockQuantity": 320
+                            }
+                          ];
+                          setRawImportText(JSON.stringify(sample, null, 2));
+                          showToast("Loaded high-fidelity Sample older ERP OS JSON Dataset!");
+                        }}
+                        className="text-[10px] font-black uppercase text-m3-primary hover:text-m3-primary/80 bg-m3-primary/10 px-3.5 py-1.5 rounded-full transition-all cursor-pointer font-sans"
+                      >
+                        ⚡ Load JSON Sample
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const sampleCsv = `Product Name,Product Code,SKU,Barcode,Category,Brand,Cost Price,Selling Price,Size,Quantity\n"Heritage White Glazed Porcelain",HW-GL-80,SKU-HW-80,4801122334455,Porcelain Tiles,Heritage Slabs,420,650,80x80 cm,150\n"EcoSlate Anti-Slip Terracotta",ES-AS-30,SKU-ES-30,4805566778899,Ceramic Tiles,EcoStone,180,280,30x30 cm,320`;
+                          setRawImportText(sampleCsv);
+                          showToast("Loaded high-fidelity Sample older ERP OS CSV Dataset!");
+                        }}
+                        className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 hover:opacity-85 bg-emerald-500/10 px-3.5 py-1.5 rounded-full transition-all cursor-pointer font-sans"
+                      >
+                        📊 Load CSV Sample
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div 
+                      onDragOver={handleImportDragOver}
+                      onDragLeave={handleImportDragLeave}
+                      onDrop={handleImportDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`p-10 border-2 border-dashed rounded-[24px] text-center space-y-3 transition-all cursor-pointer ${
+                        isDragging 
+                          ? 'border-m3-primary bg-m3-primary/10 shadow-lg' 
+                          : 'border-m3-outline-variant/45 hover:border-m3-primary/60 bg-m3-surface-low'
+                      }`}
+                    >
+                      <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        onChange={handleFileSelect} 
+                        className="hidden" 
+                        accept=".csv,.json,.txt"
+                      />
+                      <Upload className="h-8 w-8 text-m3-primary mx-auto animate-bounce" />
+                      <div>
+                        <h4 className="text-sm font-black uppercase text-m3-on-surface">Drag &amp; Drop Older ERP OS File Here</h4>
+                        <p className="text-[11px] text-m3-on-surface-variant mt-1.5 max-w-md mx-auto select-none font-medium">
+                          Supports spreadsheet .csv exports, backup raw .json database copies, text tables. Or click inside to request manual file browser dialog.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1 block font-mono">Or paste clipboard rows / raw database snippet text below:</label>
+                      <textarea
+                        value={rawImportText}
+                        onChange={(e) => setRawImportText(e.target.value)}
+                        rows={8}
+                        placeholder={`--- CSV FORMAT EXAMPLE ---
 Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
 "Old ERP OS Tile X",OPT-001,120.00,190.00,80,Porcelain,"ETC_DIPOLOG MAIN"
 
@@ -3164,41 +3296,203 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
     "origin": "ETC_DIPOLOG MAIN"
   }
 ]`}
-                  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/40 focus:border-m3-primary p-4 text-xs font-mono text-m3-on-surface rounded-3xl focus:outline-none transition-colors"
-                />
+                        className="w-full bg-m3-surface-lowest border border-m3-outline-variant/40 focus:border-m3-primary p-4 text-xs font-mono text-m3-on-surface rounded-3xl focus:outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={executeBulkImport}
+                    className="px-6 py-3 bg-m3-primary hover:bg-m3-primary/95 text-white font-black text-xs uppercase tracking-wider rounded-full shadow-lg transition-all active:scale-95 cursor-pointer flex items-center gap-2"
+                  >
+                    <Check className="h-4 w-4" />
+                    <span>Run Importer &amp; Commit Data</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRawImportText('')}
+                    className="px-5 py-3 bg-m3-surface-high/30 hover:bg-m3-surface-high/60 text-m3-on-surface font-black text-xs uppercase tracking-wide rounded-full transition-all cursor-pointer"
+                  >
+                    Clear zone
+                  </button>
+                </div>
+
+                {/* Smart Import Template Guidelines */}
+                <div className="bg-amber-500/5 border border-amber-500/20 p-4 rounded-3xl space-y-2 text-xs font-medium">
+                  <h4 className="font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>Auto-Mapping &amp; Validation Compliance</span>
+                  </h4>
+                  <p className="text-m3-on-surface-variant leading-relaxed">
+                    Our legacy sync engine maps key fields from other systems. 
+                    If any fields such as <code>barcode</code>, <code>size</code> or <code>sku</code> are missing, the importer generates clean defaults dynamically to maintain full database integrity.
+                  </p>
+                </div>
               </div>
-            </div>
-            </div>
+            )}
 
-            <div className="flex flex-wrap gap-2 pt-2">
-              <button
-                type="button"
-                onClick={executeBulkImport}
-                className="px-6 py-3 bg-m3-primary hover:bg-m3-primary/95 text-white font-black text-xs uppercase tracking-wider rounded-full shadow-lg transition-all active:scale-95 cursor-pointer flex items-center gap-2"
-              >
-                <Check className="h-4 w-4" />
-                <span>Run Importer &amp; Commit Data</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setRawImportText('')}
-                className="px-5 py-3 bg-m3-surface-high/30 hover:bg-m3-surface-high/60 text-m3-on-surface font-black text-xs uppercase tracking-wide rounded-full transition-all cursor-pointer"
-              >
-                Clear zone
-              </button>
-            </div>
+            {/* MIGRATION: EXPORT SECTION */}
+            {migrationSubTab === 'export' && (
+              <div className="space-y-6 animate-fade-in">
+                
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  
+                  {/* Export Configuration Controls */}
+                  <div className="lg:col-span-1 space-y-5">
+                    <div className="p-5 rounded-3xl bg-m3-surface border border-m3-outline-variant/15 space-y-4">
+                      <span className="text-[10px] font-black text-m3-primary uppercase tracking-widest block font-sans">
+                        1. Select Data Register
+                      </span>
+                      <div className="space-y-2">
+                        {[
+                          { id: 'products', name: 'Products Catalog', count: products.filter(p => !p.isDeleted).length },
+                          { id: 'suppliers', name: 'Suppliers Directory', count: suppliers.filter(s => !s.isDeleted).length },
+                          { id: 'branches', name: 'Branches Register', count: branches.filter(b => !b.isDeleted).length }
+                        ].map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => setExportDataType(item.id as any)}
+                            className={`w-full p-3 rounded-2xl border text-left flex justify-between items-center transition-all cursor-pointer ${
+                              exportDataType === item.id
+                                ? 'border-m3-primary bg-m3-primary/5 text-m3-primary ring-1 ring-m3-primary'
+                                : 'border-m3-outline-variant/10 bg-m3-surface-low hover:bg-m3-surface-high/30 text-m3-on-surface'
+                            }`}
+                          >
+                            <span className="text-xs font-bold">{item.name}</span>
+                            <span className="text-[10px] bg-m3-surface-high text-m3-on-surface-variant font-black px-2 py-0.5 rounded-full">
+                              {item.count} items
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-            {/* Smart Import Template Guidelines */}
-            <div className="bg-amber-500/5 border border-amber-500/20 p-4 rounded-3xl space-y-2 text-xs font-medium">
-              <h4 className="font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
-                <AlertCircle className="h-4 w-4" />
-                <span>Auto-Mapping &amp; Validation Compliance</span>
-              </h4>
-              <p className="text-m3-on-surface-variant leading-relaxed">
-                Our legacy sync engine maps key fields from other systems. 
-                If any fields such as <code>barcode</code>, <code>size</code> or <code>sku</code> are missing, the importer generates clean defaults dynamically to maintain full database integrity.
-              </p>
-            </div>
+                    <div className="p-5 rounded-3xl bg-m3-surface border border-m3-outline-variant/15 space-y-4">
+                      <span className="text-[10px] font-black text-m3-primary uppercase tracking-widest block font-sans">
+                        2. Select Export Format
+                      </span>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { id: 'json', label: 'JSON Format', desc: 'Secure database backup' },
+                          { id: 'csv', label: 'CSV Format', desc: 'Spreadsheet-friendly' }
+                        ].map((format) => (
+                          <button
+                            key={format.id}
+                            type="button"
+                            onClick={() => setExportFormat(format.id as any)}
+                            className={`p-3 rounded-2xl border text-center transition-all cursor-pointer ${
+                              exportFormat === format.id
+                                ? 'border-emerald-500 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500'
+                                : 'border-m3-outline-variant/10 bg-m3-surface-low hover:bg-m3-surface-high/30 text-m3-on-surface-variant'
+                            }`}
+                          >
+                            <div className="text-xs font-extrabold uppercase">{format.id}</div>
+                            <div className="text-[9px] mt-1 font-medium">{format.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Operational Action buttons */}
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => handleExportData(exportDataType, exportFormat)}
+                        className="w-full py-3.5 bg-m3-primary hover:bg-m3-primary/95 text-white font-black text-xs uppercase tracking-wider rounded-full shadow-lg transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        <span>Download backup file</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleCopyExportText(exportDataType, exportFormat)}
+                        className="w-full py-3 bg-m3-surface-high/30 hover:bg-m3-surface-high/60 text-m3-on-surface font-black text-xs uppercase tracking-wide rounded-full transition-all cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                        <span>Copy to Clipboard</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Active Preview Area */}
+                  <div className="lg:col-span-2 flex flex-col space-y-3">
+                    <div className="flex justify-between items-center px-1">
+                      <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider font-mono">
+                        Real-Time Export Data Snippet Preview ({exportFormat.toUpperCase()})
+                      </label>
+                      <span className="text-[10px] text-m3-on-surface-variant font-bold">
+                        Showing first 3 records as structural template
+                      </span>
+                    </div>
+
+                    <div className="relative flex-grow bg-zinc-950 text-emerald-400 border border-zinc-800 p-4 text-xs font-mono rounded-3xl overflow-auto max-h-[360px] min-h-[250px]">
+                      <pre className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed">
+                        {(() => {
+                          let dataToExport: any[] = [];
+                          if (exportDataType === 'products') {
+                            dataToExport = products.filter(p => !p.isDeleted).slice(0, 3);
+                          } else if (exportDataType === 'suppliers') {
+                            dataToExport = suppliers.filter(s => !s.isDeleted).slice(0, 3);
+                          } else if (exportDataType === 'branches') {
+                            dataToExport = branches.filter(b => !b.isDeleted).slice(0, 3);
+                          }
+
+                          if (dataToExport.length === 0) {
+                            return `// No active records found for "${exportDataType}" in current database.`;
+                          }
+
+                          if (exportFormat === 'json') {
+                            return JSON.stringify(dataToExport, null, 2);
+                          } else {
+                            let headers: string[] = [];
+                            if (exportDataType === 'products') {
+                              headers = ['productName', 'productCode', 'sku', 'barcode', 'category', 'brand', 'costPrice', 'sellingPrice', 'stockQuantity', 'size', 'unit', 'origin'];
+                            } else if (exportDataType === 'suppliers') {
+                              headers = ['id', 'name', 'contactPerson', 'email', 'phone', 'address'];
+                            } else if (exportDataType === 'branches') {
+                              headers = ['id', 'name', 'manager', 'address', 'phone', 'monthlySales', 'staffCount'];
+                            }
+
+                            const csvRows = [];
+                            csvRows.push(headers.join(','));
+
+                            for (const row of dataToExport) {
+                              const values = headers.map(header => {
+                                const val = row[header];
+                                const stringVal = val === undefined || val === null ? '' : String(val);
+                                const escaped = stringVal.replace(/"/g, '""');
+                                return `"${escaped}"`;
+                              });
+                              csvRows.push(values.join(','));
+                            }
+
+                            return csvRows.join('\n');
+                          }
+                        })()}
+                      </pre>
+                    </div>
+
+                    <div className="bg-emerald-500/5 border border-emerald-500/20 p-4 rounded-3xl space-y-1.5 text-xs font-medium">
+                      <h5 className="font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
+                        <ShieldCheck className="h-4 w-4" />
+                        <span>Data Portability Compliance Guard</span>
+                      </h5>
+                      <p className="text-m3-on-surface-variant leading-relaxed">
+                        The downloaded formats strictly adhere to international enterprise database structures. Product CSV headers align with our <strong>Smart Mapper</strong> algorithm so you can easily migrate exported packages between system instances without structural loss.
+                      </p>
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
+            )}
+
           </div>
         </div>
       )}
@@ -4325,7 +4619,7 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
       {/* NEW MODAL: Newly Discovered Outlets / Branches Configure & Register Form Panel */}
       {showBranchConfigs && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-m3-scrim/60 backdrop-blur-sm animate-fade-in text-m3-on-surface">
-          <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[28px] p-6 shadow-2xl space-y-6 w-full max-w-2xl animate-scale-up text-left max-h-[90vh] overflow-y-auto">
+          <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[28px] p-6 shadow-2xl space-y-6 w-full max-w-4xl animate-scale-up text-left max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-4">
               <div>
                 <h3 className="text-base font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-2">

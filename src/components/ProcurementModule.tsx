@@ -26,6 +26,8 @@ import {
   Download,
   Settings2,
   ChevronRight,
+  Calendar,
+  CreditCard,
 } from "lucide-react";
 
 interface ProcurementModuleProps {
@@ -130,6 +132,16 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [showBrandModal, setShowBrandModal] = useState(false);
+
+  // Cargo Receiving states
+  const [receivePaymentMode, setReceivePaymentMode] = useState<"fully_paid" | "terms">("fully_paid");
+  const [receiveTermsLength, setReceiveTermsLength] = useState<number>(30); // 30, 60, 90, 120 or 0 (custom)
+  const [receiveTermStartDate, setReceiveTermStartDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [receiveTermEndDate, setReceiveTermEndDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return d.toISOString().split('T')[0];
+  });
 
   // Brand form states
   const [editingBrandId, setEditingBrandId] = useState<string | null>(null);
@@ -681,6 +693,19 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
     });
 
     setReceiveQuantities(quantities);
+    
+    // Set initial payment states from PO if already set, or sensible defaults
+    setReceivePaymentMode(po.paymentMode || "fully_paid");
+    setReceiveTermsLength(po.termsLength || 30);
+    setReceiveTermStartDate(po.termStartDate || new Date().toISOString().split('T')[0]);
+    if (po.termEndDate) {
+      setReceiveTermEndDate(po.termEndDate);
+    } else {
+      const d = new Date();
+      d.setDate(d.getDate() + 30);
+      setReceiveTermEndDate(d.toISOString().split('T')[0]);
+    }
+    
     setShowReceiveModal(true);
   };
 
@@ -697,9 +722,16 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
       return;
     }
 
-    receivePOItems(activePo.id, receiveQuantities);
+    receivePOItems(
+      activePo.id,
+      receiveQuantities,
+      receivePaymentMode,
+      receivePaymentMode === "terms" ? receiveTermStartDate : undefined,
+      receivePaymentMode === "terms" ? receiveTermEndDate : undefined,
+      receivePaymentMode === "terms" ? receiveTermsLength : undefined
+    );
     setShowReceiveModal(false);
-    showToast("Logistics Logged: Inventory stocks updated automatically.");
+    showToast("Logistics Logged: Inventory stocks and payment terms updated automatically.");
   };
 
   return (
@@ -2545,6 +2577,127 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                     </div>
                   );
                 })}
+            </div>
+
+            {/* Payment Mode & Terms Customization */}
+            <div className="border-t border-m3-outline-variant/20 pt-3.5 space-y-3.5">
+              <h4 className="text-xs font-bold text-m3-primary uppercase font-mono flex items-center gap-1.5">
+                <CreditCard className="h-4 w-4" />
+                <span>Payment Terms & Schedule</span>
+              </h4>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setReceivePaymentMode("fully_paid")}
+                  className={`py-2 px-3 text-xs font-bold rounded-xl transition cursor-pointer border flex flex-col items-center justify-center gap-1 ${
+                    receivePaymentMode === "fully_paid"
+                      ? "bg-emerald-500/10 border-emerald-500 text-emerald-400"
+                      : "bg-m3-surface border-m3-outline-variant/35 text-zinc-400 hover:text-zinc-200"
+                  }`}
+                >
+                  <span className="font-extrabold text-[11px]">Fully Paid</span>
+                  <span className="text-[9px] font-normal opacity-70">Instant Settlement</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReceivePaymentMode("terms")}
+                  className={`py-2 px-3 text-xs font-bold rounded-xl transition cursor-pointer border flex flex-col items-center justify-center gap-1 ${
+                    receivePaymentMode === "terms"
+                      ? "bg-m3-primary/10 border-m3-primary text-m3-primary"
+                      : "bg-m3-surface border-m3-outline-variant/35 text-zinc-400 hover:text-zinc-200"
+                  }`}
+                >
+                  <span className="font-extrabold text-[11px]">Pay In Terms</span>
+                  <span className="text-[9px] font-normal opacity-70">Project to Calendar</span>
+                </button>
+              </div>
+
+              {receivePaymentMode === "terms" && (
+                <div className="bg-m3-surface p-3.5 rounded-2xl border border-m3-outline-variant/30 space-y-3 animate-fade-in text-[11px]">
+                  {/* Preset Terms Selection */}
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-zinc-400 font-bold block">Terms Length</span>
+                    <div className="grid grid-cols-5 gap-1">
+                      {[30, 60, 90, 120].map((days) => (
+                        <button
+                          key={days}
+                          type="button"
+                          onClick={() => {
+                            setReceiveTermsLength(days);
+                            try {
+                              const sDate = new Date(receiveTermStartDate);
+                              sDate.setDate(sDate.getDate() + days);
+                              setReceiveTermEndDate(sDate.toISOString().split('T')[0]);
+                            } catch (e) {}
+                          }}
+                          className={`py-1.5 text-[10px] font-black rounded-lg transition border cursor-pointer text-center ${
+                            receiveTermsLength === days
+                              ? "bg-m3-primary text-m3-on-primary border-transparent"
+                              : "bg-m3-surface-low border-m3-outline-variant/40 text-zinc-300 hover:bg-m3-surface-high"
+                          }`}
+                        >
+                          {days}D
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setReceiveTermsLength(0)}
+                        className={`py-1.5 text-[10px] font-black rounded-lg transition border cursor-pointer text-center ${
+                          receiveTermsLength === 0
+                            ? "bg-amber-500 text-black border-transparent"
+                            : "bg-m3-surface-low border-m3-outline-variant/40 text-zinc-300 hover:bg-m3-surface-high"
+                        }`}
+                      >
+                        Custom
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Start Date & End Date Pickers */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-zinc-400 font-bold flex items-center gap-1">
+                        <Calendar className="h-3.5 w-3.5 text-m3-primary" /> Start Date
+                      </label>
+                      <input
+                        type="date"
+                        value={receiveTermStartDate}
+                        onChange={(e) => {
+                          const newStart = e.target.value;
+                          setReceiveTermStartDate(newStart);
+                          if (receiveTermsLength > 0) {
+                            try {
+                              const sDate = new Date(newStart);
+                              sDate.setDate(sDate.getDate() + receiveTermsLength);
+                              setReceiveTermEndDate(sDate.toISOString().split('T')[0]);
+                            } catch (err) {}
+                          }
+                        }}
+                        className="w-full bg-m3-surface-low border border-m3-outline-variant/35 rounded-xl p-2 font-mono text-[11px] outline-none text-zinc-200 focus:border-m3-primary"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-zinc-400 font-bold flex items-center gap-1">
+                        <Calendar className="h-3.5 w-3.5 text-amber-500" /> End (Due) Date
+                      </label>
+                      <input
+                        type="date"
+                        value={receiveTermEndDate}
+                        onChange={(e) => {
+                          setReceiveTermEndDate(e.target.value);
+                          setReceiveTermsLength(0); // set to custom
+                        }}
+                        className="w-full bg-m3-surface-low border border-m3-outline-variant/35 rounded-xl p-2 font-mono text-[11px] outline-none text-zinc-200 focus:border-m3-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <p className="text-[9.5px] text-zinc-400 italic">
+                    Note: Marking as "In Terms" automatically creates a corresponding liability traceable record in the Supplier Payment Calendar due on {receiveTermEndDate}.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-4 flex-shrink-0">

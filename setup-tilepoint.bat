@@ -22,17 +22,31 @@ echo.
 :: Check for Administrator privileges
 net session >nul 2>&1
 if %errorLevel% neq 0 (
+    if "%1"=="--elevated" (
+        echo.
+        echo [WARNING] Elevation was declined or failed.
+        echo Continuing as a Standard User. Some administrative configurations
+        echo (e.g. firewall port binding, installing CA certificates to system trust store)
+        echo will be skipped.
+        echo.
+        set /p CHOOSE_STAND="Do you want to continue standard installation? [Y/N]: "
+        if /i "%CHOOSE_STAND%" neq "Y" (
+            exit /b
+        )
+        goto StandardUserFlow
+    )
     echo [INFO] This installer requires Administrator privileges to:
     echo   1. Install missing prerequisites (Node.js, Git)
     echo   2. Configure Windows Defender Firewall rules for Port 3000
     echo   3. Setup trusted HTTPS certificates using mkcert
     echo.
     echo Requesting Administrator elevation...
-    powershell -Command "Start-Process '%~dpnx0' -Verb RunAs"
+    powershell -Command "Start-Process '%~dpnx0' -ArgumentList '--elevated' -Verb RunAs"
     exit /b
 )
 
-echo [OK] Running with Administrator privileges.
+:StandardUserFlow
+echo [OK] Continuing with system checks...
 echo Checking system prerequisites...
 echo ---------------------------------------------------------------------
 

@@ -48,14 +48,25 @@
   "tilepoint_company_name_v1": "ETC_DIPOLOG MAIN",
   "tp_active_sessions": [
     {
-      "id": "SESS_3AWLB3T3T",
+      "id": "SESS_5W3OWF2WA",
+      "userId": "U-1782804196981",
+      "username": "test",
+      "fullName": "test",
+      "role": "Staff",
+      "branchId": "B1",
+      "branchName": "ETC_DIPOLOG MAIN",
+      "lastActive": "2026-06-30T09:39:35.274Z",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+    },
+    {
+      "id": "SESS_LU8BGSG9M",
       "userId": "U1",
       "username": "erica_admin",
-      "fullName": "Erica Manaban",
+      "fullName": "erica manaban",
       "role": "Admin",
       "branchId": "B1",
       "branchName": "ETC_DIPOLOG MAIN",
-      "lastActive": "2026-07-01T14:46:44.438Z",
+      "lastActive": "2026-06-30T09:39:47.889Z",
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
     }
   ],

@@ -148,6 +148,10 @@ export interface PurchaseOrder {
   date?: string;
   isDeleted?: boolean;
   deletedAt?: string;
+  paymentMode?: "fully_paid" | "terms";
+  termStartDate?: string;
+  termEndDate?: string;
+  termsLength?: number;
 }
 
 export interface PurchaseOrderItem {

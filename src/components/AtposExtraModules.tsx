@@ -27,6 +27,9 @@ import {
   AlertCircle,
   Sliders,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
+  ListFilter,
 } from "lucide-react";
 import { useDb } from "../context/DbContext";
 import { Member, Expense, ProductReturn, CustomCorporateBill } from "../types/db";
@@ -101,6 +104,37 @@ export default function AtposExtraModules({
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<number | null>(
     null,
   );
+
+  // Dynamic Calendar Navigation & Installment Payment State
+  const [calendarMonth, setCalendarMonth] = useState<number>(5); // 0-indexed: 5 is June
+  const [calendarYear, setCalendarYear] = useState<number>(2026);
+  const [partialPaymentAmount, setPartialPaymentAmount] = useState<string>("");
+  const [partialPaymentNotes, setPartialPaymentNotes] = useState<string>("");
+  const [partialPaymentMethod, setPartialPaymentMethod] = useState<"cash" | "cheque">("cash");
+  const [partialChequeNumber, setPartialChequeNumber] = useState<string>("");
+  const [partialManagerPin, setPartialManagerPin] = useState<string>("");
+  const [installments, setInstallments] = useState<Record<string, { id: string, amount: number, date: string, notes?: string }[]>>(() => {
+    try {
+      const saved = localStorage.getItem("atpos_v2_payable_installments");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const saveInstallments = (updated: Record<string, { id: string, amount: number, date: string, notes?: string }[]>) => {
+    setInstallments(updated);
+    localStorage.setItem("atpos_v2_payable_installments", JSON.stringify(updated));
+  };
+
+  // Left side panel tabs & list options
+  const [leftPanelTab, setLeftPanelTab] = useState<"list" | "create" | "notes">("list");
+  const [calendarNotes, setCalendarNotes] = useState<string>(() => {
+    return localStorage.getItem("atpos_v2_calendar_notes") || "";
+  });
+  const [payableSearchQuery, setPayableSearchQuery] = useState("");
+  const [payableStatusFilter, setPayableStatusFilter] = useState<"all" | "active" | "partial" | "paid">("all");
+  const [payableSortField, setPayableSortField] = useState<"due" | "amount" | "supplier">("due");
 
   // Save utility triggers bound to DbContext state setters
   const saveMembers = (list: Member[]) => {
@@ -1405,87 +1439,103 @@ export default function AtposExtraModules({
               const relatedItems = db.poItems.filter(
                 (item) => item.poId === po.id,
               );
-              const poSum = relatedItems.reduce(
+              const poSum = po.totalAmount || relatedItems.reduce(
                 (s, it) => s + (it.costPrice || 0) * (it.quantityRequested || 0),
                 0,
               );
 
               let dueDay = 15;
-              let dueMonthStr = "June";
-              if (po.date) {
+              let dueMonth = 5; // June is 5
+              let dueYear = 2026;
+              if (po.paymentMode === "terms" && po.termEndDate) {
+                try {
+                  const d = new Date(po.termEndDate);
+                  dueDay = d.getDate();
+                  dueMonth = d.getMonth();
+                  dueYear = d.getFullYear();
+                } catch (e) {}
+              } else if (po.date) {
                 try {
                   const d = new Date(po.date);
                   d.setDate(d.getDate() + 15);
                   dueDay = d.getDate();
-                  const months = [
-                    "January",
-                    "February",
-                    "March",
-                    "April",
-                    "May",
-                    "June",
-                    "July",
-                    "August",
-                    "September",
-                    "October",
-                    "November",
-                    "December",
-                  ];
-                  dueMonthStr = months[d.getMonth()];
+                  dueMonth = d.getMonth();
+                  dueYear = d.getFullYear();
                 } catch (e) {}
               }
-              return { sum: poSum, day: dueDay, month: dueMonthStr };
+              return { sum: poSum, day: dueDay, month: dueMonth, year: dueYear };
             };
 
-            // Centralized June map structure pool
-            const junePayables: Record<
-              number,
-              {
-                supplierName: string;
-                amount: number;
-                poNumber: string;
-                poId: string;
-                status: string;
-              }[]
-            > = {};
+            const months = [
+              "January",
+              "February",
+              "March",
+              "April",
+              "May",
+              "June",
+              "July",
+              "August",
+              "September",
+              "October",
+              "November",
+              "December",
+            ];
 
-            // Seed default supplier distributions
+            interface FlatPayableItem {
+              day: number;
+              month: number;
+              year: number;
+              supplierName: string;
+              amount: number;
+              poNumber: string;
+              poId: string;
+              status: string;
+              type: "Simulated PO" | "Purchase Order" | "Recurring Bill";
+              frequency?: string;
+            }
+
+            const flatPayablesList: FlatPayableItem[] = [];
+
+            // Seed default supplier distributions dynamically for the active month
             db.suppliers
               .filter((s) => !s.isDeleted)
               .forEach((s, idx) => {
                 const simulatedDay = ((idx * 6 + 5) % 28) + 1;
                 const simulatedAmount = ((idx * 16500 + 42000) % 95000) + 15000;
-                junePayables[simulatedDay] = [
-                  {
-                    supplierName: s.name,
-                    amount: simulatedAmount,
-                    poNumber: `PO-202606${simulatedDay}-0${idx + 1}`,
-                    poId: `SIM-${idx + 1}`,
-                    status: "Approved",
-                  },
-                ];
+                const monthStr = String(calendarMonth + 1).padStart(2, "0");
+                const dayStr = String(simulatedDay).padStart(2, "0");
+                
+                flatPayablesList.push({
+                  day: simulatedDay,
+                  month: calendarMonth,
+                  year: calendarYear,
+                  supplierName: s.name,
+                  amount: simulatedAmount,
+                  poNumber: `PO-${calendarYear}${monthStr}${dayStr}-0${idx + 1}`,
+                  poId: `SIM-${idx + 1}-${calendarYear}-${monthStr}`,
+                  status: "Approved",
+                  type: "Simulated PO",
+                });
               });
 
-            // Map standard single-date Purchase Orders
+            // Map standard single-date Purchase Orders matching active month & year
             db.purchaseOrders.forEach((po) => {
               if (po.status === "Cancelled" || po.status === "Completed")
                 return;
               const info = getPoPaymentInfo(po);
               const supplier = db.suppliers.find((s) => s.id === po.supplierId);
               if (supplier && !supplier.isDeleted) {
-                if (info.month === "June") {
-                  if (!junePayables[info.day]) {
-                    junePayables[info.day] = [];
-                  }
-                  junePayables[info.day] = junePayables[info.day].filter(
-                    (p) => !p.poNumber.startsWith("PO-202606"),
-                  );
-                  junePayables[info.day].push({
+                if (info.month === calendarMonth && info.year === calendarYear) {
+                  flatPayablesList.push({
+                    day: info.day,
+                    month: calendarMonth,
+                    year: calendarYear,
                     supplierName: supplier.name,
                     amount: info.sum,
                     poNumber: po.poNumber,
                     poId: po.id,
                     status: po.status,
+                    type: "Purchase Order",
                   });
                 }
               }
@@ -1493,26 +1543,23 @@ export default function AtposExtraModules({
 
             /**
              * AUTOMATED RECURRENCE EVALUATION ENGINE
-             * Evaluates multi-stage payment frequencies (Weekly, Monthly, Semi-Quarterly, Quarterly, Yearly)
-             * and maps recurrences into the active June 2026 calendar viewport frame automatically.
+             * Evaluates multi-stage payment frequencies and maps recurrences into the active calendar viewport dynamically.
              */
+            const daysInActiveMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
             customBills.forEach((bill) => {
               if (bill.isDeleted) return;
               try {
                 const baseDate = new Date(bill.nextDueDate);
 
-                // We loop through the days of June 2026 (Month index 5) to project recurrence cycles dynamically
-                for (let dayCheck = 1; dayCheck <= 30; dayCheck++) {
-                  const currentCheckDate = new Date(2026, 5, dayCheck);
+                for (let dayCheck = 1; dayCheck <= daysInActiveMonth; dayCheck++) {
+                  const currentCheckDate = new Date(calendarYear, calendarMonth, dayCheck);
                   let matchesRecurrence = false;
 
-                  // Compute frequency offsets relative to base date
                   const timeDiff =
                     currentCheckDate.getTime() - baseDate.getTime();
                   const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
 
                   if (daysDiff === 0) {
-                    // Direct match on original target due date
                     matchesRecurrence = true;
                   } else if (daysDiff > 0) {
                     switch (bill.frequency) {
@@ -1526,7 +1573,6 @@ export default function AtposExtraModules({
                         matchesRecurrence = daysDiff % 45 === 0;
                         break;
                       case "QUARTERLY":
-                        // Checks if same day of month matches quarterly offset milestone
                         matchesRecurrence =
                           baseDate.getDate() === dayCheck &&
                           (currentCheckDate.getMonth() - baseDate.getMonth()) %
@@ -1544,15 +1590,17 @@ export default function AtposExtraModules({
                   }
 
                   if (matchesRecurrence) {
-                    if (!junePayables[dayCheck]) {
-                      junePayables[dayCheck] = [];
-                    }
-                    junePayables[dayCheck].push({
+                    flatPayablesList.push({
+                      day: dayCheck,
+                      month: calendarMonth,
+                      year: calendarYear,
                       supplierName: `[Recurring Bill] ${bill.title}`,
-                      amount: bill.totalAmount,
+                      amount: bill.remainingBalance !== undefined ? bill.remainingBalance : bill.totalAmount,
                       poNumber: bill.id,
                       poId: bill.id,
                       status: bill.frequency,
+                      type: "Recurring Bill",
+                      frequency: bill.frequency,
                     });
                   }
                 }
@@ -1561,49 +1609,224 @@ export default function AtposExtraModules({
               }
             });
 
+            // Centralized map structure pool for the active selected month/year
+            const activePayables: Record<
+              number,
+              {
+                supplierName: string;
+                amount: number;
+                poNumber: string;
+                poId: string;
+                status: string;
+              }[]
+            > = {};
+
+            flatPayablesList.forEach((item) => {
+              if (!activePayables[item.day]) {
+                activePayables[item.day] = [];
+              }
+              // If it's a real purchase order, override simulated POs on the same day if they overlap
+              if (item.type === "Purchase Order") {
+                activePayables[item.day] = activePayables[item.day].filter(
+                  (p) => !p.poNumber.startsWith(`PO-${calendarYear}${String(calendarMonth+1).padStart(2, "0")}`)
+                );
+              }
+              activePayables[item.day].push({
+                supplierName: item.supplierName,
+                amount: item.amount,
+                poNumber: item.poNumber,
+                poId: item.poId,
+                status: item.status
+              });
+            });
+
+            // Process list data for search, filtering, sorting and orange-to-red warnings
+            const processedList = flatPayablesList.map((item) => {
+              const payHistory = installments[item.poId] || [];
+              const totalPaid = payHistory.reduce((sum, inst) => sum + inst.amount, 0);
+              const remaining = Math.max(0, item.amount - totalPaid);
+              const isFinished = remaining <= 0;
+              const statusState = isFinished ? "paid" : totalPaid > 0 ? "partial" : "active";
+
+              // Calculate urgency relative to baseline July 2, 2026 (local metadata current time reference)
+              const today = new Date(2026, 6, 2);
+              const itemDate = new Date(item.year, item.month, item.day);
+              const diffTime = itemDate.getTime() - today.getTime();
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+              return {
+                ...item,
+                totalPaid,
+                remaining,
+                isFinished,
+                statusState,
+                diffDays
+              };
+            });
+
+            // Apply Search Query & Filter state
+            const filteredPayablesList = processedList.filter((item) => {
+              const matchesSearch =
+                item.supplierName.toLowerCase().includes(payableSearchQuery.toLowerCase()) ||
+                item.poNumber.toLowerCase().includes(payableSearchQuery.toLowerCase());
+                
+              const matchesStatus =
+                payableStatusFilter === "all" ||
+                item.statusState === payableStatusFilter;
+
+              return matchesSearch && matchesStatus;
+            });
+
+            // Apply Sorting
+            const sortedPayablesList = [...filteredPayablesList].sort((a, b) => {
+              if (payableSortField === "amount") {
+                return b.remaining - a.remaining; // Higher remaining balance first
+              }
+              if (payableSortField === "supplier") {
+                return a.supplierName.localeCompare(b.supplierName);
+              }
+              // Default: Urgency (due soonest first, negative/overdue first, then ascending days)
+              return a.diffDays - b.diffDays;
+            });
+
             const selectedDayEntries = selectedCalendarDay
-              ? junePayables[selectedCalendarDay] || []
+              ? activePayables[selectedCalendarDay] || []
               : [];
 
-            const handleSettleSimulatedPayment = (
-              day: number,
-              poNo: string,
-            ) => {
-              alert(
-                `ERP Credit Settled: Authorized disbursement packet of payables for ${poNo}. Ledger updated.`,
-              );
-              setSelectedCalendarDay(null);
-            };
+            const handleInstallmentPayment = (payVal: any, payAmountNum: number, notesStr: string) => {
+              if (!payAmountNum || payAmountNum <= 0) {
+                alert("Please enter a valid installment payment amount.");
+                return;
+              }
 
-            const handleSettleRealPO = (poId: string, poNo: string) => {
-              db.updatePOStatus(poId, "Completed");
-              alert(
-                `ERP Logistics Settle: Purchase order ${poNo} fully paid and marked Completed. Stock values committed.`,
-              );
-              setSelectedCalendarDay(null);
-            };
+              // PIN Verification
+              if (!partialManagerPin) {
+                alert("Security Error: Manager security authorization PIN is strictly required.");
+                return;
+              }
 
-            const handleSettleCustomBill = (
-              billId: string,
-              billTitle: string,
-            ) => {
-              const target = customBills.find((b) => b.id === billId);
-              const updated = customBills.map((b) =>
-                b.id === billId
-                  ? { ...b, isDeleted: true, deletedAt: new Date().toISOString() }
-                  : b,
+              let isAuthorized = false;
+              let authorizerName = "Supervisor";
+
+              // Scan user records
+              const foundUserByPin = db.users.find(
+                (u: any) =>
+                  (u.role === "ADMIN" || u.role === "MANAGER" || u.role === "Admin" || u.role === "Manager") &&
+                  u.status === "Active" &&
+                  u.managerPin === partialManagerPin
               );
-              saveCustomBills(updated);
+
+              if (foundUserByPin) {
+                isAuthorized = true;
+                authorizerName = foundUserByPin.fullName;
+              } else {
+                // Validate fallback values for seed profiles or general overrides
+                const isEricaPin = partialManagerPin === "4321";
+                const isJuanPin = partialManagerPin === "9988";
+                const isTomasPin = partialManagerPin === "1122";
+                const isDemoPin =
+                  partialManagerPin === "1234" || partialManagerPin === "0000" || partialManagerPin === "8888";
+
+                if (isEricaPin) {
+                  const erica = db.users.find((u: any) => u.username === "erica_admin");
+                  authorizerName = erica ? erica.fullName : "Erica Manaban (Admin)";
+                  isAuthorized = true;
+                } else if (isJuanPin) {
+                  const juan = db.users.find((u: any) => u.username === "juan_mgr");
+                  authorizerName = juan ? juan.fullName : "Juan Gomez (Manager)";
+                  isAuthorized = true;
+                } else if (isTomasPin) {
+                  const tomas = db.users.find((u: any) => u.username === "tomas_mgr");
+                  authorizerName = tomas ? tomas.fullName : "Tomas Santos (Manager)";
+                  isAuthorized = true;
+                } else if (isDemoPin) {
+                  authorizerName = "Global Manager (Demo)";
+                  isAuthorized = true;
+                }
+              }
+
+              if (!isAuthorized) {
+                alert("Authorization Denied: Invalid security authorization PIN.");
+                return;
+              }
+
+              const currentHistory = installments[payVal.poId] || [];
+              const totalPaidSoFar = currentHistory.reduce((sum, inst) => sum + inst.amount, 0);
+              const remaining = payVal.amount - totalPaidSoFar;
+
+              if (payAmountNum > remaining) {
+                alert(`Cannot pay ₱${payAmountNum.toLocaleString()}. Only ₱${remaining.toLocaleString()} is remaining.`);
+                return;
+              }
+
+              // Build a neat trace note detailing the payment method, cheque if applicable, and authorizing manager
+              const methodDetails = partialPaymentMethod === "cheque" 
+                ? `Cheque Payment (Cheque No: ${partialChequeNumber || "N/A"})` 
+                : "Cash Payment";
+              const trackingNotes = `${methodDetails} - Authorized by ${authorizerName}. ${notesStr ? `Notes: ${notesStr}` : ""}`;
+
+              const newInstallment = {
+                id: `INST-${Date.now()}`,
+                amount: payAmountNum,
+                date: new Date().toISOString(),
+                notes: trackingNotes
+              };
+
+              const updatedHistory = [...currentHistory, newInstallment];
+              const newTotalPaid = totalPaidSoFar + payAmountNum;
+              const isFullyPaid = newTotalPaid >= payVal.amount;
+
+              const updatedInstallments = {
+                ...installments,
+                [payVal.poId]: updatedHistory
+              };
+              saveInstallments(updatedInstallments);
+
+              // 1. Audit Log Entry
               db.addAuditLog(
-                "BILL_SETTLE",
-                `Settled recurring liability custom bill "${billTitle}"`,
-                "Settings",
-                billId,
-                JSON.stringify({ billId, billTitle, oldRecord: target, action: "settle_liability" })
+                "PAYABLE_INSTALLMENT",
+                `Paid installment of ₱${payAmountNum.toLocaleString()} via ${partialPaymentMethod.toUpperCase()} for ${payVal.poNumber}. Authorized by ${authorizerName}. Total Paid: ₱${newTotalPaid.toLocaleString()} / ₱${payVal.amount.toLocaleString()}.`,
+                "Procurement",
+                payVal.poId,
+                JSON.stringify({ poId: payVal.poId, poNumber: payVal.poNumber, payment: newInstallment, isFullyPaid, authorizer: authorizerName })
               );
-              alert(
-                `Settle Recurring Liability: Corporate payout for "${billTitle}" was authorized and closed successfully.`,
-              );
+
+              // 2. Adjust core records based on item type
+              if (payVal.poNumber.startsWith("BILL-")) {
+                const updatedBills = customBills.map((b) => {
+                  if (b.id === payVal.poId) {
+                    const currentBal = b.remainingBalance !== undefined ? b.remainingBalance : b.totalAmount;
+                    const newBal = Math.max(0, currentBal - payAmountNum);
+                    return {
+                      ...b,
+                      remainingBalance: newBal,
+                      status: newBal <= 0 ? "Completed" as any : b.status,
+                      isDeleted: newBal <= 0 ? true : b.isDeleted,
+                      deletedAt: newBal <= 0 ? new Date().toISOString() : b.deletedAt
+                    };
+                  }
+                  return b;
+                });
+                saveCustomBills(updatedBills);
+              } else if (payVal.poId.startsWith("SIM-")) {
+                if (isFullyPaid) {
+                  alert(`ERP Credit settled in full! Simulated invoice ${payVal.poNumber} is now fully paid.`);
+                } else {
+                  alert(`Installment Posted! Paid ₱${payAmountNum.toLocaleString()} via ${partialPaymentMethod.toUpperCase()} for simulated invoice ${payVal.poNumber}. Remaining: ₱${(remaining - payAmountNum).toLocaleString()}`);
+                }
+              } else {
+                if (isFullyPaid) {
+                  db.updatePOStatus(payVal.poId, "Completed");
+                  alert(`ERP Logistics Settle: Purchase order ${payVal.poNumber} is now fully paid and marked Completed.`);
+                } else {
+                  alert(`Installment Posted! Paid ₱${payAmountNum.toLocaleString()} via ${partialPaymentMethod.toUpperCase()} for Purchase Order ${payVal.poNumber}. Remaining: ₱${(remaining - payAmountNum).toLocaleString()}`);
+                }
+              }
+
+              setPartialPaymentAmount("");
+              setPartialPaymentNotes("");
+              setPartialChequeNumber("");
+              setPartialManagerPin("");
               setSelectedCalendarDay(null);
             };
 
@@ -1615,97 +1838,398 @@ export default function AtposExtraModules({
                 className="space-y-6"
               >
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-                  {/* Interactive Form Side Panel */}
-                  <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl text-left space-y-4 h-fit">
-                    <div className="flex items-center gap-2 text-m3-primary border-b border-m3-outline-variant/10 pb-2">
-                      <Sliders className="h-4.5 w-4.5" />
-                      <h4 className="font-extrabold text-xs uppercase tracking-wider font-mono">
-                        Create Recurring Cycle
-                      </h4>
-                    </div>
-                    <form
-                      onSubmit={handleAddCustomBill}
-                      className="space-y-3 font-sans text-xs"
-                    >
-                      <div className="space-y-1">
-                        <label className="font-bold text-m3-on-surface-variant">
-                          Liability Account Title *
-                        </label>
-                        <input
-                          required
-                          type="text"
-                          value={billTitle}
-                          onChange={(e) => setBillTitle(e.target.value)}
-                          placeholder="e.g. Warehouse Lightings Meralco"
-                          className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none font-semibold focus:border-m3-primary"
-                        />
+                  {/* Interactive Form & Payables Side Panel */}
+                  <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl text-left space-y-4 h-fit flex flex-col">
+                    
+                    {/* Panel Title & Tab Switcher */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-m3-primary border-b border-m3-outline-variant/10 pb-2">
+                        <div className="flex items-center gap-2">
+                          <Sliders className="h-4.5 w-4.5" />
+                          <h4 className="font-extrabold text-xs uppercase tracking-wider font-mono">
+                            Payables Hub
+                          </h4>
+                        </div>
+                        <span className="text-[10px] font-mono font-bold bg-m3-primary/10 text-m3-primary px-2 py-0.5 rounded-full">
+                          {flatPayablesList.length} Accounts
+                        </span>
                       </div>
-                      <div className="space-y-1">
-                        <label className="font-bold text-m3-on-surface-variant">
-                          Payout Amount (PHP) *
-                        </label>
-                        <input
-                          required
-                          type="number"
-                          value={billAmount}
-                          onChange={(e) => setBillAmount(e.target.value)}
-                          placeholder="12500"
-                          className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none font-mono focus:border-m3-primary"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="font-bold text-m3-on-surface-variant">
-                          Recurrence Interval *
-                        </label>
-                        <select
-                          value={billFrequency}
-                          onChange={(e) =>
-                            setBillFrequency(e.target.value as any)
-                          }
-                          className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary font-bold"
+
+                      {/* Segmented Control Selector Tabs */}
+                      <div className="flex border border-m3-outline-variant/10 p-0.5 bg-m3-surface-high/30 rounded-xl">
+                        <button
+                          type="button"
+                          onClick={() => setLeftPanelTab("list")}
+                          className={`flex-1 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all border-0 cursor-pointer ${
+                            leftPanelTab === "list"
+                              ? "bg-m3-primary text-m3-on-primary shadow-xs font-black"
+                              : "text-zinc-400 hover:text-zinc-200"
+                          }`}
                         >
-                          <option value="WEEKLY">Weekly Cycle</option>
-                          <option value="MONTHLY">Monthly Cycle</option>
-                          <option value="SEMI_QUARTERLY">
-                            Semi-Quarterly (45d)
-                          </option>
-                          <option value="QUARTERLY">
-                            Quarterly Installment
-                          </option>
-                          <option value="YEARLY">Yearly Corporate Bill</option>
-                        </select>
+                          Accounts List
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLeftPanelTab("create")}
+                          className={`flex-1 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all border-0 cursor-pointer ${
+                            leftPanelTab === "create"
+                              ? "bg-m3-primary text-m3-on-primary shadow-xs font-black"
+                              : "text-zinc-400 hover:text-zinc-200"
+                          }`}
+                        >
+                          Setup Bill
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLeftPanelTab("notes")}
+                          className={`flex-1 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all border-0 cursor-pointer ${
+                            leftPanelTab === "notes"
+                              ? "bg-m3-primary text-m3-on-primary shadow-xs font-black"
+                              : "text-zinc-400 hover:text-zinc-200"
+                          }`}
+                        >
+                          Memos
+                        </button>
                       </div>
-                      <div className="space-y-1">
-                        <label className="font-bold text-m3-on-surface-variant">
-                          Target Start Due Date *
-                        </label>
-                        <input
-                          type="date"
-                          value={billDueDate}
-                          onChange={(e) => setBillDueDate(e.target.value)}
-                          className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none cursor-pointer font-bold font-mono"
-                        />
-                      </div>
-                      <button
-                        type="submit"
-                        className="w-full py-2.5 bg-m3-primary text-m3-on-primary font-black uppercase tracking-wider text-[10px] rounded-xl shadow-sm hover:opacity-90 cursor-pointer"
+                    </div>
+
+                    {leftPanelTab === "create" ? (
+                      <form
+                        onSubmit={handleAddCustomBill}
+                        className="space-y-3 font-sans text-xs"
                       >
-                        Schedule Recurring Bill
-                      </button>
-                    </form>
+                        <div className="space-y-1">
+                          <label className="font-bold text-m3-on-surface-variant">
+                            Liability Account Title *
+                          </label>
+                          <input
+                            required
+                            type="text"
+                            value={billTitle}
+                            onChange={(e) => setBillTitle(e.target.value)}
+                            placeholder="e.g. Warehouse Lightings Meralco"
+                            className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded-lg p-2.5 outline-none font-semibold focus:border-m3-primary text-m3-on-surface"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="font-bold text-m3-on-surface-variant">
+                            Payout Amount (PHP) *
+                          </label>
+                          <input
+                            required
+                            type="number"
+                            value={billAmount}
+                            onChange={(e) => setBillAmount(e.target.value)}
+                            placeholder="12500"
+                            className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded-lg p-2.5 outline-none font-mono focus:border-m3-primary text-m3-on-surface"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="font-bold text-m3-on-surface-variant">
+                            Recurrence Interval *
+                          </label>
+                          <select
+                            value={billFrequency}
+                            onChange={(e) =>
+                              setBillFrequency(e.target.value as any)
+                            }
+                            className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary font-bold text-m3-on-surface"
+                          >
+                            <option value="WEEKLY" className="bg-m3-surface-lowest text-m3-on-surface">Weekly Cycle</option>
+                            <option value="MONTHLY" className="bg-m3-surface-lowest text-m3-on-surface">Monthly Cycle</option>
+                            <option value="SEMI_QUARTERLY" className="bg-m3-surface-lowest text-m3-on-surface">
+                              Semi-Quarterly (45d)
+                            </option>
+                            <option value="QUARTERLY" className="bg-m3-surface-lowest text-m3-on-surface">
+                              Quarterly Installment
+                            </option>
+                            <option value="YEARLY" className="bg-m3-surface-lowest text-m3-on-surface">Yearly Corporate Bill</option>
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="font-bold text-m3-on-surface-variant">
+                            Target Start Due Date *
+                          </label>
+                          <input
+                            type="date"
+                            value={billDueDate}
+                            onChange={(e) => setBillDueDate(e.target.value)}
+                            className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded-lg p-2.5 outline-none cursor-pointer font-bold font-mono text-m3-on-surface"
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          className="w-full py-2.5 bg-m3-primary text-m3-on-primary font-black uppercase tracking-wider text-[10px] rounded-xl shadow-sm hover:opacity-90 cursor-pointer border-0"
+                        >
+                          Schedule Recurring Bill
+                        </button>
+                      </form>
+                    ) : leftPanelTab === "notes" ? (
+                      <div className="space-y-3 flex-1 flex flex-col animate-fade-in text-xs h-full">
+                        <div className="flex items-center gap-1.5 text-m3-primary border-b border-m3-outline-variant/10 pb-2">
+                          <FileText className="h-4.5 w-4.5" />
+                          <h4 className="font-extrabold text-xs uppercase tracking-wider font-mono">
+                            Calendar Memos
+                          </h4>
+                        </div>
+                        <p className="text-[10px] text-zinc-400">
+                          Draft reminders or admin details here. All changes are instantly saved to browser storage.
+                        </p>
+                        <textarea
+                          value={calendarNotes}
+                          onChange={(e) => {
+                            setCalendarNotes(e.target.value);
+                            localStorage.setItem("atpos_v2_calendar_notes", e.target.value);
+                          }}
+                          placeholder="Type notes or specific reminders here..."
+                          className="w-full flex-1 min-h-[350px] bg-m3-surface-lowest border border-m3-outline-variant rounded-xl p-3 outline-none text-m3-on-surface text-xs font-mono focus:border-m3-primary resize-none leading-relaxed"
+                        />
+                        <div className="flex justify-between items-center text-[9px] text-zinc-500 font-mono">
+                          <span>Auto-Saved Securely</span>
+                          <span>{calendarNotes.length} chars</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 flex-1 flex flex-col">
+                        {/* Search, Status Filter, and Sort By */}
+                        <div className="space-y-2">
+                          <div className="relative">
+                            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-zinc-500" />
+                            <input
+                              type="text"
+                              value={payableSearchQuery}
+                              onChange={(e) => setPayableSearchQuery(e.target.value)}
+                              placeholder="Search supplier / ID..."
+                              className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded-lg pl-8 pr-3 py-2 text-xs outline-none focus:border-m3-primary text-m3-on-surface font-medium"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-0.5">
+                              <label className="text-[8px] font-black uppercase tracking-wider text-zinc-500">
+                                Filter Status
+                              </label>
+                              <select
+                                value={payableStatusFilter}
+                                onChange={(e) => setPayableStatusFilter(e.target.value as any)}
+                                className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded-md p-1 font-sans text-[10px] outline-none font-bold focus:border-m3-primary text-m3-on-surface"
+                              >
+                                <option value="all" className="bg-m3-surface-lowest text-m3-on-surface">All</option>
+                                <option value="active" className="bg-m3-surface-lowest text-m3-on-surface">Active</option>
+                                <option value="partial" className="bg-m3-surface-lowest text-m3-on-surface">Partial</option>
+                                <option value="paid" className="bg-m3-surface-lowest text-m3-on-surface">Settled</option>
+                              </select>
+                            </div>
+                            <div className="space-y-0.5">
+                              <label className="text-[8px] font-black uppercase tracking-wider text-zinc-500">
+                                Sort By
+                              </label>
+                              <select
+                                value={payableSortField}
+                                onChange={(e) => setPayableSortField(e.target.value as any)}
+                                className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded-md p-1 font-sans text-[10px] outline-none font-bold focus:border-m3-primary text-m3-on-surface"
+                              >
+                                <option value="due" className="bg-m3-surface-lowest text-m3-on-surface">Urgency</option>
+                                <option value="amount" className="bg-m3-surface-lowest text-m3-on-surface">Amount</option>
+                                <option value="supplier" className="bg-m3-surface-lowest text-m3-on-surface">Supplier</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Interactive list of payables scroll area */}
+                        <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1 scrollbar-thin">
+                          {sortedPayablesList.length > 0 ? (
+                            sortedPayablesList.map((item, idx) => {
+                              const isSelected = selectedCalendarDay === item.day;
+                              
+                              // Visual urgency coloring: orange-to-red
+                              let urgencyBadge = "";
+                              let alertIconColor = "";
+                              if (item.isFinished) {
+                                urgencyBadge = "text-emerald-500 bg-emerald-500/10 border-emerald-500/25";
+                                alertIconColor = "text-emerald-500";
+                              } else if (item.diffDays < 0) {
+                                urgencyBadge = "text-rose-500 bg-rose-500/15 border-rose-500/30 animate-pulse font-black";
+                                alertIconColor = "text-rose-500";
+                              } else if (item.diffDays === 0) {
+                                urgencyBadge = "text-red-400 bg-red-950/40 border border-red-500/30 animate-pulse font-black";
+                                alertIconColor = "text-red-400";
+                              } else if (item.diffDays <= 3) {
+                                urgencyBadge = "text-orange-500 bg-orange-950/45 border border-orange-500/25 font-extrabold";
+                                alertIconColor = "text-orange-500";
+                              } else if (item.diffDays <= 7) {
+                                urgencyBadge = "text-amber-500 bg-amber-950/20 border border-amber-500/15";
+                                alertIconColor = "text-amber-500";
+                              } else {
+                                urgencyBadge = "text-zinc-400 bg-zinc-800/20 border border-zinc-700/10";
+                                alertIconColor = "text-zinc-500";
+                              }
+
+                              const itemTypeLabel =
+                                item.type === "Recurring Bill"
+                                  ? `${item.frequency || "Monthly"} Bill`
+                                  : item.type === "Simulated PO"
+                                    ? "Simulated PO"
+                                    : "Purchase Order";
+
+                              return (
+                                <div
+                                  key={`${item.poId}-${idx}`}
+                                  onClick={() => {
+                                    setSelectedCalendarDay(item.day);
+                                  }}
+                                  className={`p-3 rounded-xl border transition-all text-left cursor-pointer hover:bg-m3-surface-high/35 ${
+                                    isSelected
+                                      ? "border-m3-primary bg-m3-primary/5 shadow-xs ring-1 ring-m3-primary"
+                                      : "border-m3-outline-variant/15 bg-m3-surface-high/15"
+                                  }`}
+                                >
+                                  {/* Item Header */}
+                                  <div className="flex justify-between items-center gap-1.5 mb-1.5">
+                                    <span className="text-[9px] font-extrabold text-m3-primary font-mono truncate max-w-[120px]" title={item.poNumber}>
+                                      {item.poNumber}
+                                    </span>
+                                    <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-zinc-800/40 text-zinc-400 font-mono">
+                                      {itemTypeLabel}
+                                    </span>
+                                  </div>
+
+                                  {/* Item Main Title */}
+                                  <h5 className="text-[11px] font-extrabold text-zinc-100 leading-tight truncate">
+                                    {item.supplierName}
+                                  </h5>
+
+                                  {/* Status and Financial Summary */}
+                                  <div className="mt-2 space-y-1">
+                                    <div className="flex justify-between items-center text-[10px] font-mono">
+                                      <span className="text-zinc-400">Balance:</span>
+                                      <span className={`font-black ${item.isFinished ? "text-emerald-500" : "text-amber-500"}`}>
+                                        ₱{item.remaining.toLocaleString()}
+                                      </span>
+                                    </div>
+
+                                    {/* Small visual progress indicator */}
+                                    {item.amount > 0 && (
+                                      <div className="w-full bg-zinc-700/30 h-1 rounded-full overflow-hidden mt-1">
+                                        <div
+                                          className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+                                          style={{ width: `${Math.min(100, (item.totalPaid / item.amount) * 100)}%` }}
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Urgency Alert Badge */}
+                                  <div className="flex justify-between items-center mt-2.5 pt-2 border-t border-dashed border-m3-outline-variant/10">
+                                    <div className={`text-[8.5px] px-1.5 py-0.5 rounded border flex items-center gap-1 uppercase tracking-wider font-extrabold ${urgencyBadge}`}>
+                                      <AlertCircle className={`h-2.5 w-2.5 ${alertIconColor}`} />
+                                      <span>
+                                        {item.isFinished
+                                          ? "Settled"
+                                          : item.diffDays < 0
+                                            ? "Overdue"
+                                            : item.diffDays === 0
+                                              ? "Due Today"
+                                              : `${item.diffDays}d left`}
+                                      </span>
+                                    </div>
+                                    <span className="text-[9px] font-mono font-bold text-zinc-500">
+                                      Day {item.day} of {months[item.month].substring(0, 3)}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="text-center py-10 space-y-2 border border-dashed border-m3-outline-variant/15 rounded-xl">
+                              <Info className="h-5 w-5 text-zinc-500 mx-auto animate-pulse" />
+                              <p className="text-xs text-zinc-500 font-bold">No Payables Found</p>
+                              <p className="text-[9.5px] text-zinc-500 max-w-[150px] mx-auto">
+                                No records match search query or status filter in this period.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Primary Interactive Calendar Component */}
                   <div className="lg:col-span-3 bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl grid grid-cols-1 xl:grid-cols-4 gap-6 text-left">
                     <div className="xl:col-span-3 space-y-4">
-                      <div className="flex justify-between items-center border-b border-m3-outline-variant/10 pb-3">
+                      <div className="flex justify-between items-center border-b border-m3-outline-variant/10 pb-3 gap-2 flex-wrap">
                         <h3 className="font-extrabold text-sm text-m3-primary flex items-center gap-1.5">
                           <CalendarDays className="h-5 w-5" />
                           Supplier Payment Calendar Cycle
                         </h3>
-                        <span className="text-xs px-2.5 py-0.5 rounded-full font-black uppercase bg-m3-primary/10 text-m3-primary font-mono select-none">
-                          June 2026 Payments Term
-                        </span>
+                        
+                        {/* Interactive Month & Year Navigation Widget */}
+                        <div className="flex items-center gap-1 bg-m3-surface-high/30 p-1 rounded-xl border border-m3-outline-variant/10">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (calendarMonth === 0) {
+                                setCalendarMonth(11);
+                                setCalendarYear((y) => y - 1);
+                              } else {
+                                setCalendarMonth((m) => m - 1);
+                              }
+                              setSelectedCalendarDay(null);
+                            }}
+                            className="p-1.5 hover:bg-m3-surface-high rounded-lg text-zinc-400 hover:text-m3-primary transition cursor-pointer border-0"
+                            title="Previous Month"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </button>
+                          
+                          <select
+                            value={calendarMonth}
+                            onChange={(e) => {
+                              setCalendarMonth(Number(e.target.value));
+                              setSelectedCalendarDay(null);
+                            }}
+                            className="bg-transparent border-0 text-xs font-black font-sans text-m3-on-surface focus:ring-0 cursor-pointer pr-8 py-0.5"
+                          >
+                            {months.map((m, idx) => (
+                              <option key={m} value={idx} className="bg-m3-surface-lowest text-m3-on-surface font-sans">
+                                {m}
+                              </option>
+                            ))}
+                          </select>
+
+                          <select
+                            value={calendarYear}
+                            onChange={(e) => {
+                              setCalendarYear(Number(e.target.value));
+                              setSelectedCalendarDay(null);
+                            }}
+                            className="bg-transparent border-0 text-xs font-bold font-mono text-m3-primary focus:ring-0 cursor-pointer pr-8 py-0.5"
+                          >
+                            {[2024, 2025, 2026, 2027, 2028].map((y) => (
+                              <option key={y} value={y} className="bg-m3-surface-lowest text-m3-on-surface font-mono">
+                                {y}
+                              </option>
+                            ))}
+                          </select>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (calendarMonth === 11) {
+                                setCalendarMonth(0);
+                                setCalendarYear((y) => y + 1);
+                              } else {
+                                setCalendarMonth((m) => m + 1);
+                              }
+                              setSelectedCalendarDay(null);
+                            }}
+                            className="p-1.5 hover:bg-m3-surface-high rounded-lg text-zinc-400 hover:text-m3-primary transition cursor-pointer border-0"
+                            title="Next Month"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-7 gap-1.5 font-sans">
@@ -1713,18 +2237,43 @@ export default function AtposExtraModules({
                           (d) => (
                             <div
                               key={d}
-                              className="p-1.5 text-center text-[10px] font-black text-zinc-400 uppercase tracking-widest"
+                              className="p-1.5 text-center text-[10px] font-black text-zinc-400 uppercase tracking-widest font-mono"
                             >
                               {d}
                             </div>
                           ),
                         )}
-                        <div className="p-2 bg-zinc-100/10 rounded-lg" />
-                        {Array.from({ length: 30 }).map((_, i) => {
+                        
+                        {/* Starting empty offset padding days of week */}
+                        {Array.from({ length: new Date(calendarYear, calendarMonth, 1).getDay() }).map((_, idx) => (
+                          <div
+                            key={`empty-${idx}`}
+                            className="p-2 min-h-[85px] rounded-xl border border-transparent bg-transparent opacity-0"
+                          />
+                        ))}
+
+                        {/* Month Days */}
+                        {Array.from({ length: daysInActiveMonth }).map((_, i) => {
                           const day = i + 1;
-                          const dayPayables = junePayables[day] || [];
+                          const dayPayables = activePayables[day] || [];
                           const hasPayment = dayPayables.length > 0;
                           const isSelected = selectedCalendarDay === day;
+
+                          // Compute financial progress metrics for the day
+                          let totalDue = 0;
+                          let totalPaid = 0;
+                          let totalRemaining = 0;
+
+                          dayPayables.forEach((p) => {
+                            totalDue += p.amount;
+                            const hist = installments[p.poId] || [];
+                            const paid = hist.reduce((sum, inst) => sum + inst.amount, 0);
+                            totalPaid += paid;
+                            totalRemaining += Math.max(0, p.amount - paid);
+                          });
+
+                          const isFullyPaid = hasPayment && totalRemaining <= 0;
+                          const isPartiallyPaid = hasPayment && totalPaid > 0 && totalRemaining > 0;
 
                           return (
                             <div
@@ -1733,9 +2282,13 @@ export default function AtposExtraModules({
                               className={`p-2 min-h-[85px] border rounded-xl flex flex-col justify-between transition-all cursor-pointer ${
                                 isSelected
                                   ? "border-m3-primary bg-m3-primary/5 scale-102 ring-1 ring-m3-primary"
-                                  : hasPayment
-                                    ? "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 shadow-3xs"
-                                    : "border-m3-outline-variant/10 bg-m3-surface-high/20 hover:scale-[1.02] hover:border-zinc-350"
+                                  : isFullyPaid
+                                    ? "border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 shadow-3xs"
+                                    : isPartiallyPaid
+                                      ? "border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 shadow-3xs"
+                                      : hasPayment
+                                        ? "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 shadow-3xs"
+                                        : "border-m3-outline-variant/10 bg-m3-surface-high/20 hover:scale-[1.02] hover:border-zinc-350"
                               }`}
                             >
                               <span
@@ -1744,16 +2297,35 @@ export default function AtposExtraModules({
                                 {day}
                               </span>
                               {hasPayment && (
-                                <div className="text-[9px] text-amber-500 font-bold leading-tight mt-1 space-y-1">
-                                  <span className="block font-black uppercase text-[7.5px] bg-amber-500/15 text-amber-600 dark:text-amber-400 px-1 rounded text-center">
-                                    PAYABLES
-                                  </span>
-                                  <span className="block truncate text-[9.5px] text-zinc-300 font-mono text-center">
-                                    ₱
-                                    {dayPayables
-                                      .reduce((s, p) => s + p.amount, 0)
-                                      .toLocaleString()}
-                                  </span>
+                                <div className="text-[9px] font-bold leading-tight mt-1 space-y-1">
+                                  {isFullyPaid ? (
+                                    <>
+                                      <span className="block font-black uppercase text-[7px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-1 rounded text-center">
+                                        SETTLED
+                                      </span>
+                                      <span className="block truncate text-[9.5px] text-emerald-500 font-mono text-center">
+                                        ₱{totalPaid.toLocaleString()}
+                                      </span>
+                                    </>
+                                  ) : isPartiallyPaid ? (
+                                    <>
+                                      <span className="block font-black uppercase text-[7px] bg-blue-500/15 text-blue-600 dark:text-blue-400 px-1 rounded text-center">
+                                        PARTIAL
+                                      </span>
+                                      <span className="block truncate text-[8.5px] text-zinc-300 font-mono text-center">
+                                        ₱{totalRemaining.toLocaleString()}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="block font-black uppercase text-[7px] bg-amber-500/15 text-amber-600 dark:text-amber-400 px-1 rounded text-center">
+                                        PAYABLES
+                                      </span>
+                                      <span className="block truncate text-[9.5px] text-zinc-300 font-mono text-center">
+                                        ₱{totalDue.toLocaleString()}
+                                      </span>
+                                    </>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -1763,15 +2335,14 @@ export default function AtposExtraModules({
                     </div>
 
                     {/* Day Detail Inspector Widget */}
-                    <div className="bg-m3-surface p-4 rounded-2xl border border-m3-outline-variant/35 flex flex-col justify-between min-h-[380px] h-full">
+                    <div className="bg-m3-surface p-4 rounded-2xl border border-m3-outline-variant/35 flex flex-col justify-between min-h-[420px] h-full">
                       <div className="space-y-4">
                         <div className="border-b border-m3-outline-variant/10 pb-3">
                           <h4 className="font-extrabold text-xs text-m3-primary uppercase tracking-widest font-mono">
                             Payable Day Inspector
                           </h4>
                           <p className="text-[10px] text-zinc-400 mt-1">
-                            Select a calendar date to audit pending invoices
-                            &amp; execute credit disbursements.
+                            Review due accounts &amp; schedule payments or installment disbursement.
                           </p>
                         </div>
 
@@ -1779,76 +2350,208 @@ export default function AtposExtraModules({
                           <div className="space-y-3">
                             <div className="flex justify-between items-center bg-m3-primary/10 px-3 py-1.5 rounded-xl">
                               <span className="text-xs font-bold font-mono">
-                                June {selectedCalendarDay}, 2026
+                                {months[calendarMonth]} {selectedCalendarDay}, {calendarYear}
                               </span>
                               <span className="text-[9px] font-black bg-m3-primary text-m3-on-primary px-2 py-0.5 rounded-full">
                                 {selectedDayEntries.length} Invoices
                               </span>
                             </div>
 
-                            <div className="space-y-2.5 max-h-[260px] overflow-y-auto pr-1 scrollbar-thin">
-                              {selectedDayEntries.map((payVal, pIdx) => (
-                                <div
-                                  key={pIdx}
-                                  className="bg-m3-surface-low p-3 rounded-xl border border-m3-outline-variant/15 space-y-2 text-left"
-                                >
-                                  <div className="flex justify-between items-center gap-1">
-                                    <span className="text-[10px] font-extrabold text-m3-primary font-mono truncate">
-                                      {payVal.poNumber}
-                                    </span>
-                                    <span
-                                      className={`text-[8px] font-black px-1.5 uppercase tracking-widest rounded ${
-                                        payVal.poNumber.startsWith("BILL-")
-                                          ? "bg-m3-primary/10 text-m3-primary"
-                                          : "bg-amber-500/10 text-amber-400"
-                                      }`}
-                                    >
-                                      {payVal.status}
-                                    </span>
-                                  </div>
-                                  <h5 className="text-[11px] font-bold text-m3-on-surface leading-tight">
-                                    {payVal.supplierName}
-                                  </h5>
+                            <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 scrollbar-thin">
+                              {selectedDayEntries.map((payVal, pIdx) => {
+                                const payHistory = installments[payVal.poId] || [];
+                                const totalPaid = payHistory.reduce((sum, inst) => sum + inst.amount, 0);
+                                const remaining = Math.max(0, payVal.amount - totalPaid);
+                                const isFinished = remaining <= 0;
 
-                                  <div className="flex justify-between items-center border-t border-dashed border-m3-outline-variant/20 pt-2 mt-1">
-                                    <span className="text-[9px] text-zinc-400">
-                                      Invoice Sum:
-                                    </span>
-                                    <span className="text-xs font-black font-mono text-emerald-500">
-                                      ₱{payVal.amount.toLocaleString()}
-                                    </span>
-                                  </div>
-
-                                  <button
-                                    onClick={() => {
-                                      if (payVal.poNumber.startsWith("BILL-")) {
-                                        handleSettleCustomBill(
-                                          payVal.poId,
-                                          payVal.supplierName.replace(
-                                            "[Recurring Bill] ",
-                                            "",
-                                          ),
-                                        );
-                                      } else if (
-                                        payVal.poId.startsWith("SIM-")
-                                      ) {
-                                        handleSettleSimulatedPayment(
-                                          selectedCalendarDay,
-                                          payVal.poNumber,
-                                        );
-                                      } else {
-                                        handleSettleRealPO(
-                                          payVal.poId,
-                                          payVal.poNumber,
-                                        );
-                                      }
-                                    }}
-                                    className="w-full text-center py-1 mt-1 bg-m3-primary text-m3-on-primary hover:opacity-90 text-[10px] font-bold rounded-lg transition border-0 cursor-pointer"
+                                return (
+                                  <div
+                                    key={pIdx}
+                                    className="bg-m3-surface-low p-3 rounded-xl border border-m3-outline-variant/15 space-y-2 text-left"
                                   >
-                                    Settle Ledger Credit
-                                  </button>
-                                </div>
-                              ))}
+                                    <div className="flex justify-between items-start gap-1">
+                                      <span className="text-[10px] font-extrabold text-m3-primary font-mono truncate max-w-[120px]" title={payVal.poNumber}>
+                                        {payVal.poNumber}
+                                      </span>
+                                      <span
+                                        className={`text-[8px] font-black px-1.5 py-0.5 uppercase tracking-widest rounded ${
+                                          isFinished
+                                            ? "bg-emerald-500/10 text-emerald-400"
+                                            : totalPaid > 0
+                                              ? "bg-blue-500/10 text-blue-400"
+                                              : payVal.poNumber.startsWith("BILL-")
+                                                ? "bg-m3-primary/10 text-m3-primary"
+                                                : "bg-amber-500/10 text-amber-400"
+                                        }`}
+                                      >
+                                        {isFinished ? "COMPLETED" : totalPaid > 0 ? "PARTIAL" : payVal.status}
+                                      </span>
+                                    </div>
+                                    
+                                    <h5 className="text-[11px] font-bold text-m3-on-surface leading-tight">
+                                      {payVal.supplierName}
+                                    </h5>
+
+                                    {/* Financial Breakdown Progress */}
+                                    <div className="bg-zinc-800/15 p-2 rounded-lg border border-m3-outline-variant/10 space-y-1.5 text-[10px]">
+                                      <div className="flex justify-between text-zinc-400 font-mono text-[9px]">
+                                        <span>Total Amount:</span>
+                                        <span className="font-bold text-zinc-200">₱{payVal.amount.toLocaleString()}</span>
+                                      </div>
+                                      {totalPaid > 0 && (
+                                        <div className="flex justify-between text-emerald-400 font-mono text-[9px]">
+                                          <span>Amount Paid:</span>
+                                          <span className="font-bold">₱{totalPaid.toLocaleString()}</span>
+                                        </div>
+                                      )}
+                                      <div className="flex justify-between font-mono text-[10px] border-t border-dashed border-m3-outline-variant/10 pt-1">
+                                        <span className="text-zinc-400 font-bold">Remaining Bal:</span>
+                                        <span className={`font-black ${isFinished ? "text-emerald-500" : "text-amber-500"}`}>
+                                          ₱{remaining.toLocaleString()}
+                                        </span>
+                                      </div>
+
+                                      {/* Visual Progress Bar */}
+                                      {payVal.amount > 0 && (
+                                        <div className="space-y-1 pt-1">
+                                          <div className="w-full bg-zinc-700/50 h-1.5 rounded-full overflow-hidden">
+                                            <div
+                                              className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+                                              style={{ width: `${Math.min(100, (totalPaid / payVal.amount) * 100)}%` }}
+                                            />
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Installment History Nested Drawer */}
+                                    {payHistory.length > 0 && (
+                                      <div className="space-y-1 bg-m3-surface-high/30 p-2 rounded-lg border border-m3-outline-variant/5">
+                                        <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block">
+                                          Installment Payments Log
+                                        </span>
+                                        <div className="max-h-[70px] overflow-y-auto space-y-1 scrollbar-none">
+                                          {payHistory.map((inst, hIdx) => (
+                                            <div key={inst.id || hIdx} className="flex justify-between items-center text-[9px] font-mono text-zinc-400">
+                                              <span>{new Date(inst.date).toLocaleDateString()}</span>
+                                              <span className="text-emerald-400 font-bold">₱{inst.amount.toLocaleString()}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Payment Execution Form */}
+                                    {!isFinished ? (
+                                      <div className="border-t border-m3-outline-variant/10 pt-2.5 mt-2 space-y-2.5 text-left text-[11px]">
+                                        <span className="text-[8px] font-black text-m3-primary uppercase tracking-widest block">
+                                          Disburse Installment / Settle
+                                        </span>
+
+                                        {/* Payment Mode Segmented Selector */}
+                                        <div className="grid grid-cols-2 gap-1 bg-zinc-800/20 p-0.5 rounded-lg border border-m3-outline-variant/5">
+                                          <button
+                                            type="button"
+                                            onClick={() => setPartialPaymentMethod("cash")}
+                                            className={`py-1 text-[9px] font-black uppercase rounded transition cursor-pointer border-0 ${
+                                              partialPaymentMethod === "cash"
+                                                ? "bg-m3-primary/10 text-m3-primary"
+                                                : "text-zinc-500 hover:text-zinc-300 bg-transparent"
+                                            }`}
+                                          >
+                                            Cash
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => setPartialPaymentMethod("cheque")}
+                                            className={`py-1 text-[9px] font-black uppercase rounded transition cursor-pointer border-0 ${
+                                              partialPaymentMethod === "cheque"
+                                                ? "bg-m3-primary/10 text-m3-primary"
+                                                : "text-zinc-500 hover:text-zinc-300 bg-transparent"
+                                            }`}
+                                          >
+                                            Cheque
+                                          </button>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                          <div className="space-y-0.5 col-span-2">
+                                            <label className="text-[8px] text-zinc-400 font-bold">Amount to Pay *</label>
+                                            <input
+                                              type="number"
+                                              value={partialPaymentAmount}
+                                              onChange={(e) => setPartialPaymentAmount(e.target.value)}
+                                              placeholder={remaining.toString()}
+                                              max={remaining}
+                                              className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded p-1.5 font-mono text-[10px] outline-none text-m3-on-surface focus:border-m3-primary"
+                                            />
+                                          </div>
+
+                                          {partialPaymentMethod === "cheque" && (
+                                            <div className="space-y-0.5 col-span-2 animate-fade-in">
+                                              <label className="text-[8px] text-zinc-400 font-bold">Cheque Number *</label>
+                                              <input
+                                                type="text"
+                                                value={partialChequeNumber}
+                                                onChange={(e) => setPartialChequeNumber(e.target.value)}
+                                                placeholder="e.g. CHQ-990812-A"
+                                                className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded p-1.5 text-[10px] outline-none text-m3-on-surface font-mono focus:border-m3-primary"
+                                              />
+                                            </div>
+                                          )}
+
+                                          <div className="space-y-0.5">
+                                            <label className="text-[8px] text-zinc-400 font-bold">Remarks / Notes</label>
+                                            <input
+                                              type="text"
+                                              value={partialPaymentNotes}
+                                              onChange={(e) => setPartialPaymentNotes(e.target.value)}
+                                              placeholder="e.g. Partial remittance"
+                                              className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded p-1.5 text-[10px] outline-none text-m3-on-surface focus:border-m3-primary"
+                                            />
+                                          </div>
+
+                                          <div className="space-y-0.5">
+                                            <label className="text-[8px] text-rose-400 font-bold flex items-center gap-0.5">
+                                              <span>Manager PIN *</span>
+                                            </label>
+                                            <input
+                                              type="password"
+                                              maxLength={6}
+                                              value={partialManagerPin}
+                                              onChange={(e) => setPartialManagerPin(e.target.value)}
+                                              placeholder="••••"
+                                              className="w-full bg-m3-surface-lowest border border-rose-500/35 rounded p-1.5 text-[10px] font-mono outline-none text-m3-on-surface focus:border-rose-500"
+                                            />
+                                          </div>
+                                        </div>
+
+                                        <div className="flex gap-2.5 pt-1">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleInstallmentPayment(payVal, Number(partialPaymentAmount), partialPaymentNotes)}
+                                            className="flex-1 text-center py-1.5 bg-m3-primary/10 text-m3-primary hover:bg-m3-primary/20 text-[9px] font-black uppercase rounded-lg transition border-0 cursor-pointer"
+                                          >
+                                            Pay Installment
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleInstallmentPayment(payVal, remaining, "Full Settlement")}
+                                            className="flex-1 text-center py-1.5 bg-m3-primary text-m3-on-primary hover:opacity-90 text-[9px] font-black uppercase rounded-lg transition border-0 cursor-pointer"
+                                          >
+                                            Pay in Full (₱{remaining.toLocaleString()})
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-500 p-2 rounded-lg text-[10px] font-bold">
+                                        <CheckCircle2 className="h-4 w-4" />
+                                        <span>Invoice completely settled &amp; locked.</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         ) : (
@@ -1858,11 +2561,15 @@ export default function AtposExtraModules({
                               No Date Selected
                             </p>
                             <p className="text-[9.5px] text-zinc-500">
-                              Click any day with an active{" "}
+                              Click any day with active{" "}
                               <span className="font-bold text-amber-500">
                                 PAYABLES
                               </span>{" "}
-                              label to view invoice breakdown records.
+                              or{" "}
+                              <span className="font-bold text-emerald-500">
+                                SETTLED
+                              </span>{" "}
+                              to disburse installments.
                             </p>
                           </div>
                         )}
