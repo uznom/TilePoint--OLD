@@ -88,14 +88,21 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
     useState(false);
 
   // Core Alignment States for Automated Calendar Scheduling
-  const [paymentFrequency, setPaymentFrequency] = useState<
-    "ONE_TIME" | "WEEKLY" | "MONTHLY" | "SEMI_QUARTERLY" | "QUARTERLY" | "YEARLY"
-  >("ONE_TIME");
+  const [paymentTerm, setPaymentTerm] = useState<number | "CUSTOM">(30);
   const [payoutDueDate, setPayoutDueDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 30);
     return d.toISOString().slice(0, 10);
   });
+
+  // Automatically update payoutDueDate when paymentTerm changes
+  React.useEffect(() => {
+    if (paymentTerm !== "CUSTOM") {
+      const d = new Date();
+      d.setDate(d.getDate() + paymentTerm);
+      setPayoutDueDate(d.toISOString().slice(0, 10));
+    }
+  }, [paymentTerm]);
 
   React.useEffect(() => {
     if (currentUser.role !== UserRole.ADMIN && activeSubTab === "suppliers") {
@@ -319,7 +326,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
           id: linkedBillId,
           title: `[Auto PO Liability] ${supRecord ? supRecord.name : "Supplier"} Bulk restock`,
           totalAmount: totalOrderAmount,
-          frequency: paymentFrequency,
+          frequency: "ONE_TIME" as const,
           nextDueDate: new Date(payoutDueDate).toISOString(),
           status: "ACTIVE" as const,
         };
@@ -699,7 +706,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
       id: linkedBillId,
       title: `[PO Liability] ${supRecord.name} Manual Request`,
       totalAmount: totalOrderAmount,
-      frequency: paymentFrequency,
+      frequency: "ONE_TIME" as const,
       nextDueDate: new Date(payoutDueDate).toISOString(),
       status: "ACTIVE" as const,
     };
@@ -709,7 +716,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
 
     addAuditLog(
       "PO_CREDIT_SYNC",
-      `Auto-dispatched accounts payable credit voucher for ${supRecord.name}. Amount: ₱${totalOrderAmount.toLocaleString()} aligned to schedule: ${paymentFrequency}`,
+      `Auto-dispatched accounts payable credit voucher for ${supRecord.name}. Amount: ₱${totalOrderAmount.toLocaleString()} aligned to schedule: ONE_TIME (Paid Once-off)`,
       "PurchaseOrders",
       linkedBillId,
       JSON.stringify(newCreditEntry),
@@ -1757,19 +1764,23 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
               {/* ALIGNMENT ELEMENT DROP BOX INPUT SETTINGS FOR AUTO CONSOLIDATIONS */}
               <div className="space-y-1 text-left w-48">
                 <label className="text-[10px] font-bold text-m3-primary uppercase pl-0.5">
-                  Installment Cycle:
+                  Supplier Payment Terms:
                 </label>
                 <select
-                  value={paymentFrequency}
-                  onChange={(e) => setPaymentFrequency(e.target.value as any)}
+                  value={paymentTerm}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPaymentTerm(val === "CUSTOM" ? "CUSTOM" : Number(val));
+                  }}
                   className="w-full bg-m3-surface border border-m3-outline-variant/60 rounded-xl px-2.5 py-1.5 text-xs font-bold text-m3-primary focus:outline-none focus:border-m3-primary transition-colors cursor-pointer"
                 >
-                  <option value="ONE_TIME">One-Time (30d Term)</option>
-                  <option value="WEEKLY">Weekly Plan</option>
-                  <option value="MONTHLY">Monthly Plan</option>
-                  <option value="SEMI_QUARTERLY">Semi-Quarterly (45d)</option>
-                  <option value="QUARTERLY">Quarterly Installment</option>
-                  <option value="YEARLY">Yearly Retainer</option>
+                  <option value={0}>Cash On Delivery (COD)</option>
+                  <option value={15}>15 Days (Net 15)</option>
+                  <option value={30}>30 Days (Net 30)</option>
+                  <option value={45}>45 Days (Net 45)</option>
+                  <option value={60}>60 Days (Net 60)</option>
+                  <option value={90}>90 Days (Net 90)</option>
+                  <option value="CUSTOM">Custom Date</option>
                 </select>
               </div>
 
@@ -1780,8 +1791,9 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                 <input
                   type="date"
                   value={payoutDueDate}
+                  disabled={paymentTerm !== "CUSTOM"}
                   onChange={(e) => setPayoutDueDate(e.target.value)}
-                  className="w-full bg-m3-surface border border-m3-outline-variant/60 rounded-xl px-2.5 py-1 text-xs font-bold font-mono text-m3-on-surface focus:outline-none cursor-pointer"
+                  className="w-full bg-m3-surface border border-m3-outline-variant/60 rounded-xl px-2.5 py-1 text-xs font-bold font-mono text-m3-on-surface focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 />
               </div>
             </div>
@@ -2214,6 +2226,42 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Supplier Payment Terms & Payout Deadline Selection */}
+            <div className="space-y-1 relative">
+              <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">
+                Supplier Payment Terms
+              </label>
+              <select
+                value={paymentTerm}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPaymentTerm(val === "CUSTOM" ? "CUSTOM" : Number(val));
+                }}
+                className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md cursor-pointer"
+              >
+                <option value={0}>Cash On Delivery (COD)</option>
+                <option value={15}>15 Days (Net 15)</option>
+                <option value={30}>30 Days (Net 30)</option>
+                <option value={45}>45 Days (Net 45)</option>
+                <option value={60}>60 Days (Net 60)</option>
+                <option value={90}>90 Days (Net 90)</option>
+                <option value="CUSTOM">Custom Date</option>
+              </select>
+            </div>
+
+            <div className="space-y-1 relative">
+              <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">
+                Payout Deadline
+              </label>
+              <input
+                type="date"
+                value={payoutDueDate}
+                disabled={paymentTerm !== "CUSTOM"}
+                onChange={(e) => setPayoutDueDate(e.target.value)}
+                className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              />
             </div>
 
             {/* DYNAMIC VENDOR DETAILS PANEL */}
