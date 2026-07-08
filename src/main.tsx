@@ -15,6 +15,7 @@ import '@fontsource/jetbrains-mono/400-italic.css';
 import App from './App.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import './index.css';
+import './diagnoseTheme.ts';
 
 // --- Robust Browser Fallback for Private Browsing / Blocked Storage Mode ---
 try {

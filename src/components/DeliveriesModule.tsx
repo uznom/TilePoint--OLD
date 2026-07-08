@@ -269,19 +269,19 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl border border-m3-outline-variant/30 bg-blue-500/5 flex flex-col justify-between">
-          <span className="text-[9px] font-black uppercase tracking-widest text-blue-500">Scheduled</span>
+        <div className="p-4 rounded-2xl border border-m3-outline-variant/30 bg-m3-primary/5 flex flex-col justify-between">
+          <span className="text-[9px] font-black uppercase tracking-widest text-m3-primary">Scheduled</span>
           <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl font-black text-blue-400 tracking-tight">{stats.scheduled}</span>
-            <span className="text-[10px] text-blue-600 font-bold uppercase font-mono">Ready</span>
+            <span className="text-2xl font-black text-m3-primary tracking-tight">{stats.scheduled}</span>
+            <span className="text-[10px] text-m3-primary font-bold uppercase font-mono">Ready</span>
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl border border-m3-outline-variant/30 bg-indigo-500/5 flex flex-col justify-between">
-          <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500">Active Trucks</span>
+        <div className="p-4 rounded-2xl border border-m3-outline-variant/30 bg-m3-tertiary/5 flex flex-col justify-between">
+          <span className="text-[9px] font-black uppercase tracking-widest text-m3-tertiary">Active Trucks</span>
           <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl font-black text-indigo-400 tracking-tight">{stats.transit}</span>
-            <span className="text-[10px] text-indigo-600 font-bold uppercase font-mono">In Transit</span>
+            <span className="text-2xl font-black text-m3-tertiary tracking-tight">{stats.transit}</span>
+            <span className="text-[10px] text-m3-tertiary font-bold uppercase font-mono">In Transit</span>
           </div>
         </div>
 
@@ -420,9 +420,9 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
                               : d.status === 'Out For Delivery'
                               ? 'bg-purple-550/10 border-purple-500/20 text-purple-400 animate-pulse'
                               : d.status === 'Scheduled'
-                              ? 'bg-blue-550/10 border-blue-500/20 text-blue-400'
+                              ? 'bg-m3-primary/10 border-m3-primary/20 text-m3-primary'
                               : d.status === 'Packed'
-                              ? 'text-cyan-400 bg-cyan-550/10 border-cyan-500/20'
+                              ? 'text-m3-tertiary bg-m3-tertiary/10 border-m3-tertiary/20'
                               : d.status === 'Failed Delivery' || d.status === 'Cancelled'
                               ? 'bg-rose-550/10 border-rose-500/20 text-rose-400'
                               : 'bg-zinc-550/10 border-zinc-500/20 text-zinc-400'
@@ -659,7 +659,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
                     {activeDelivery.status === 'Pending Scheduling' && (
                       <button
                         onClick={() => handlePackCargo(activeDelivery.id)}
-                        className="w-full py-2 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-700 hover:to-cyan-600 text-white text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm transition-all flex items-center justify-center gap-1"
+                        className="w-full py-2 bg-gradient-to-r from-m3-tertiary/90 to-m3-tertiary hover:from-m3-tertiary hover:to-m3-tertiary/90 text-white text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm transition-all flex items-center justify-center gap-1"
                       >
                         <Package className="h-4 w-4" />
                         <span>Allocate & Mark Packed</span>
@@ -677,7 +677,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
                           setAssignDriver(activeDelivery.driver || '');
                           setAssignHelper(activeDelivery.helper || '');
                         }}
-                        className="w-full py-2 bg-gradient-to-r from-blue-650 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm transition-all flex items-center justify-center gap-1.5"
+                        className="w-full py-2 bg-gradient-to-r from-m3-primary/90 to-m3-primary hover:from-m3-primary hover:to-m3-primary/90 text-white text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm transition-all flex items-center justify-center gap-1.5"
                       >
                         <Truck className="h-4 w-4" />
                         <span>{activeDelivery.driver ? 'Update Carrier Pilot' : 'Schedule Truck & Driver'}</span>

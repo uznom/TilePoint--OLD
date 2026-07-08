@@ -11,6 +11,9 @@ title TilePoint Local Server Installer
 color 0B
 cls
 
+:: Ensure the script runs in the directory of the batch file itself, especially when elevated
+cd /d "%~dp0"
+
 echo =====================================================================
 echo          TILEPOINT RETAIL SYSTEMS - WINDOWS DEPLOYMENT UTILITY
 echo =====================================================================
@@ -118,8 +121,8 @@ if %errorlevel% neq 0 (
 )
 echo.
 
-:: Get local IP address using PowerShell
-for /f "usebackq tokens=*" %%a in (`powershell -NoProfile -Command "(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127*' -and $_.IPAddress -notlike '169.254*' -and $_.InterfaceAlias -notlike '*Loopback*' } | Select-Object -First 1).IPAddress"`) do set "LOCAL_IP=%%a"
+:: Get local IP address using PowerShell (excluding WSL, VirtualBox, Docker, and disconnected adapters)
+for /f "usebackq tokens=*" %%a in (`powershell -NoProfile -Command "try { $adapters = Get-NetIPInterface -ConnectionState Connected -AddressFamily IPv4 -ErrorAction SilentlyContinue; if ($adapters) { $indexes = $adapters.InterfaceIndex; (Get-NetIPAddress -AddressFamily IPv4 -InterfaceIndex $indexes | Where-Object { $_.IPAddress -notlike '127*' -and $_.IPAddress -notlike '169.254*' -and $_.InterfaceAlias -notlike '*Loopback*' -and $_.InterfaceAlias -notlike '*WSL*' -and $_.InterfaceAlias -notlike '*VirtualBox*' -and $_.InterfaceAlias -notlike '*vEthernet*' -and $_.InterfaceAlias -notlike '*Docker*' } | Select-Object -First 1).IPAddress } else { (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127*' -and $_.IPAddress -notlike '169.254*' -and $_.InterfaceAlias -notlike '*Loopback*' } | Select-Object -First 1).IPAddress } } catch { (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127*' -and $_.IPAddress -notlike '169.254*' -and $_.InterfaceAlias -notlike '*Loopback*' } | Select-Object -First 1).IPAddress }"`) do set "LOCAL_IP=%%a"
 if "%LOCAL_IP%"=="" set "LOCAL_IP=127.0.0.1"
 
 :: 3. Generate Local IP and Create .env
@@ -190,6 +193,9 @@ echo.
 echo ---------------------------------------------------------------------
 echo STEP 6: Starting Server...
 echo ---------------------------------------------------------------------
+:: Add standard Windows roaming npm path to current session path so global tools are instantly active
+set "PATH=%PATH%;%APPDATA%\npm"
+
 where pm2 >nul 2>nul
 if %errorlevel% neq 0 (
     echo [INFO] PM2 process manager is not installed. Installing PM2 globally...
@@ -249,5 +255,8 @@ exit /b
 :: Query the Registry to load the updated PATH variable instantly
 for /f "tokens=2*" %%A in ('reg query "HKLM\System\CurrentControlSet\Control\Session Manager\Environment" /v Path') do set "SYS_PATH=%%B"
 for /f "tokens=2*" %%A in ('reg query "HKCU\Environment" /v Path') do set "USER_PATH=%%B"
-set "PATH=%SYS_PATH%;%USER_PATH%"
+:: Expand nested variables like %SystemRoot% and %USERPROFILE% safely
+call set "PATH=%SYS_PATH%;%USER_PATH%"
+:: Add common installation directories as fail-safes
+set "PATH=%PATH%;C:\Program Files\nodejs;C:\Program Files\Git\cmd;%APPDATA%\npm"
 exit /b

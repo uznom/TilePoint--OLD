@@ -52,6 +52,8 @@ export function ProfitAnalytics({
     shifts,
     branches,
     expenses,
+    customBills,
+    purchaseOrders,
   } = useDb();
 
   // Period state: '7d' | '15d' | '30d' | 'monthly' | 'all-time'
@@ -190,6 +192,38 @@ export function ProfitAnalytics({
       }
     });
 
+    // Retrieve calendar payments from localStorage automatically and populate opex
+    const parsedInstallments: Record<string, { id: string, amount: number, date: string, notes?: string }[]> = (() => {
+      try {
+        const saved = localStorage.getItem("atpos_v2_payable_installments");
+        return saved ? JSON.parse(saved) : {};
+      } catch {
+        return {};
+      }
+    })();
+
+    Object.entries(parsedInstallments).forEach(([poId, insts]) => {
+      const bill = customBills?.find((b) => b.id === poId);
+      const po = purchaseOrders?.find((p) => p.id === poId);
+      const branchId = po?.branchId || "corporate";
+
+      if (selectedBranchId !== "all" && branchId !== selectedBranchId) return;
+
+      insts.forEach((inst) => {
+        const instDate = new Date(inst.date);
+        let key = "";
+        if (viewFormat === "day") {
+          key = instDate.toDateString();
+        } else {
+          key = `${instDate.getFullYear()}-${instDate.getMonth()}`;
+        }
+
+        if (periodsMap[key]) {
+          periodsMap[key].opex += inst.amount;
+        }
+      });
+    });
+
     // Populate System Losses (Damages & Shortages)
     damageLogs.forEach((log) => {
       if (log.isDeleted) return;
@@ -245,7 +279,7 @@ export function ProfitAnalytics({
           Margin: parseFloat(marginPercent.toFixed(1)),
         };
       });
-  }, [sales, saleItems, products, expensesList, damageLogs, shifts, selectedBranchId, selectedPeriod, branchLandingModifiers]);
+  }, [sales, saleItems, products, expensesList, damageLogs, shifts, selectedBranchId, selectedPeriod, branchLandingModifiers, customBills, purchaseOrders]);
 
   // Aggregate Totals for the current timeframe
   const totals = useMemo(() => {
@@ -283,19 +317,19 @@ export function ProfitAnalytics({
           </div>
           <div>
             <h4 className="text-sm font-black text-m3-on-surface uppercase tracking-wide">P&L Financial Timeline</h4>
-            <p className="text-[11px] text-zinc-400 font-medium">Consolidated trend matrix over dynamic calendar boundaries</p>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">Consolidated trend matrix over dynamic calendar boundaries</p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {/* Timeframe filter buttons */}
-          <div className="flex bg-zinc-950/40 p-1 rounded-xl border border-m3-outline-variant/15 text-xs font-bold gap-1">
+          <div className="flex bg-zinc-200/50 dark:bg-zinc-950/40 p-1 rounded-xl border border-m3-outline-variant/15 text-xs font-bold gap-1">
             <button
               onClick={() => setSelectedPeriod("7d")}
               className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 selectedPeriod === "7d"
                   ? "bg-m3-primary text-m3-on-primary font-black shadow"
-                  : "text-zinc-400 hover:text-zinc-200"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
               }`}
             >
               7 Days
@@ -305,7 +339,7 @@ export function ProfitAnalytics({
               className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 selectedPeriod === "15d"
                   ? "bg-m3-primary text-m3-on-primary font-black shadow"
-                  : "text-zinc-400 hover:text-zinc-200"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
               }`}
             >
               15 Days
@@ -315,7 +349,7 @@ export function ProfitAnalytics({
               className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 selectedPeriod === "30d"
                   ? "bg-m3-primary text-m3-on-primary font-black shadow"
-                  : "text-zinc-400 hover:text-zinc-200"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
               }`}
             >
               30 Days
@@ -325,7 +359,7 @@ export function ProfitAnalytics({
               className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 selectedPeriod === "monthly"
                   ? "bg-m3-primary text-m3-on-primary font-black shadow"
-                  : "text-zinc-400 hover:text-zinc-200"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
               }`}
             >
               6 Months
@@ -335,7 +369,7 @@ export function ProfitAnalytics({
               className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 selectedPeriod === "all-time"
                   ? "bg-m3-primary text-m3-on-primary font-black shadow"
-                  : "text-zinc-400 hover:text-zinc-200"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
               }`}
             >
               All-Time (12M)
@@ -343,11 +377,11 @@ export function ProfitAnalytics({
           </div>
 
           {/* Chart visual type toggle */}
-          <div className="flex bg-zinc-950/40 p-1 rounded-xl border border-m3-outline-variant/15 text-xs font-bold">
+          <div className="flex bg-zinc-200/50 dark:bg-zinc-950/40 p-1 rounded-xl border border-m3-outline-variant/15 text-xs font-bold gap-1">
             <button
               onClick={() => setChartType("area")}
-              className={`px-2.5 py-1.5 rounded-lg cursor-pointer ${
-                chartType === "area" ? "bg-m3-surface-high text-m3-primary font-black shadow-sm" : "text-zinc-400"
+              className={`px-2.5 py-1.5 rounded-lg cursor-pointer transition-all ${
+                chartType === "area" ? "bg-m3-primary text-m3-on-primary font-black shadow-sm" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
               }`}
               title="Area Chart"
             >
@@ -355,8 +389,8 @@ export function ProfitAnalytics({
             </button>
             <button
               onClick={() => setChartType("bar")}
-              className={`px-2.5 py-1.5 rounded-lg cursor-pointer ${
-                chartType === "bar" ? "bg-m3-surface-high text-m3-primary font-black shadow-sm" : "text-zinc-400"
+              className={`px-2.5 py-1.5 rounded-lg cursor-pointer transition-all ${
+                chartType === "bar" ? "bg-m3-primary text-m3-on-primary font-black shadow-sm" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
               }`}
               title="Bar Chart"
             >
@@ -371,11 +405,11 @@ export function ProfitAnalytics({
         {/* Revenue */}
         <div className="p-4 bg-m3-surface-low border border-m3-outline-variant/30 rounded-2xl flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400">Timeframe Revenue</span>
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 dark:text-zinc-300">Timeframe Revenue</span>
             <div className="text-xl font-black text-emerald-500 mt-1 font-mono">
               ₱{totals.revenue.toLocaleString()}
             </div>
-            <span className="text-[9px] text-zinc-500 mt-0.5 block font-medium">Gross funds collected</span>
+            <span className="text-[9px] text-zinc-500 dark:text-zinc-400 mt-0.5 block font-medium">Gross funds collected</span>
           </div>
           <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-xl">
             <DollarSign className="h-5 w-5" />
@@ -385,11 +419,11 @@ export function ProfitAnalytics({
         {/* COGS */}
         <div className="p-4 bg-m3-surface-low border border-m3-outline-variant/30 rounded-2xl flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400">Total COGS Cost</span>
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 dark:text-zinc-300">Total COGS Cost</span>
             <div className="text-xl font-black text-amber-500 mt-1 font-mono">
               ₱{totals.cogs.toLocaleString()}
             </div>
-            <span className="text-[9px] text-zinc-500 mt-0.5 block font-medium">Landing & wholesale cost</span>
+            <span className="text-[9px] text-zinc-500 dark:text-zinc-400 mt-0.5 block font-medium">Landing & wholesale cost</span>
           </div>
           <div className="p-2.5 bg-amber-500/10 text-amber-500 rounded-xl">
             <Layers className="h-5 w-5" />
@@ -399,11 +433,11 @@ export function ProfitAnalytics({
         {/* Expenses */}
         <div className="p-4 bg-m3-surface-low border border-m3-outline-variant/30 rounded-2xl flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400">OpEx & Losses</span>
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 dark:text-zinc-300">OpEx & Losses</span>
             <div className="text-xl font-black text-rose-500 mt-1 font-mono">
               ₱{totals.expenses.toLocaleString()}
             </div>
-            <span className="text-[9px] text-zinc-500 mt-0.5 block font-medium">Expenses, shortages, voids</span>
+            <span className="text-[9px] text-zinc-500 dark:text-zinc-400 mt-0.5 block font-medium">Expenses, shortages, voids</span>
           </div>
           <div className="p-2.5 bg-rose-500/10 text-rose-500 rounded-xl">
             <Building className="h-5 w-5" />
@@ -415,15 +449,15 @@ export function ProfitAnalytics({
           totals.netProfit >= 0 ? "border-emerald-500/30" : "border-rose-500/30"
         }`}>
           <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400">Net Retained Profit</span>
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 dark:text-zinc-300">Net Retained Profit</span>
             <div className={`text-xl font-black mt-1 font-mono ${
               totals.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"
             }`}>
               ₱{totals.netProfit.toLocaleString()}
             </div>
             <div className="flex items-center gap-1 mt-0.5">
-              <Percent className="h-3 w-3 text-zinc-400" />
-              <span className="text-[9px] font-black uppercase text-zinc-400 font-mono">
+              <Percent className="h-3 w-3 text-zinc-400 dark:text-zinc-300" />
+              <span className="text-[9px] font-black uppercase text-zinc-400 dark:text-zinc-300 font-mono">
                 Margin: {totals.margin.toFixed(1)}%
               </span>
             </div>
@@ -437,13 +471,13 @@ export function ProfitAnalytics({
       </div>
 
       {/* Main Interactive Recharts Chart Component */}
-      <div className="p-5.5 bg-zinc-950/20 border border-m3-outline-variant/30 rounded-[28px] overflow-hidden">
+      <div className="p-5.5 bg-white dark:bg-zinc-950 dark:bg-gradient-to-br dark:from-zinc-950/20 dark:to-zinc-900/20 border border-m3-outline-variant/25 dark:border-m3-outline-variant/30 rounded-[28px] overflow-hidden shadow-none dark:shadow-none">
         <div className="flex items-center justify-between mb-4.5">
           <h5 className="text-xs font-black uppercase tracking-wider text-m3-primary flex items-center gap-1.5">
             <Activity className="h-4 w-4 text-m3-primary" />
             Financial Health Trend Matrix ({selectedPeriod === "monthly" ? "6 Months View" : `${selectedPeriod} Boundaries`})
           </h5>
-          <span className="text-[9.5px] font-bold font-mono px-2 py-0.5 rounded-md bg-m3-surface-high border border-m3-outline-variant/20 text-zinc-400">
+          <span className="text-[9.5px] font-bold font-mono px-2 py-0.5 rounded-md bg-m3-surface-low/50 dark:bg-m3-surface-high border border-m3-outline-variant/20 text-zinc-600 dark:text-zinc-400">
             Active Port: {selectedBranchId === "all" ? "Consolidated All Branches" : getBranchName(selectedBranchId)}
           </span>
         </div>
@@ -469,17 +503,17 @@ export function ProfitAnalytics({
                     <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" opacity={0.4} />
+                <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "#27272a" : "#e4e4e7"} opacity={0.5} />
                 <XAxis 
                   dataKey="date" 
-                  stroke="#71717a" 
+                  stroke={darkMode ? "#71717a" : "#52525b"} 
                   fontSize={10.5} 
                   tickLine={false} 
                   dy={10}
                   fontFamily="JetBrains Mono, monospace"
                 />
                 <YAxis 
-                  stroke="#71717a" 
+                  stroke={darkMode ? "#71717a" : "#52525b"} 
                   fontSize={10} 
                   tickLine={false}
                   axisLine={false}
@@ -488,12 +522,21 @@ export function ProfitAnalytics({
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#18181b",
-                    borderColor: "#3f3f46",
+                    backgroundColor: darkMode ? "#18181b" : "#ffffff",
+                    borderColor: darkMode ? "#3f3f46" : "#e4e4e7",
                     borderRadius: "14px",
-                    color: "#f4f4f5",
+                    color: darkMode ? "#f4f4f5" : "#18181b",
                     fontSize: "11px",
-                    fontFamily: "Inter, sans-serif"
+                    fontFamily: "Inter, sans-serif",
+                    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.08)"
+                  }}
+                  labelStyle={{
+                    color: darkMode ? "#f4f4f5" : "#18181b",
+                    fontWeight: "bold",
+                    marginBottom: "4px"
+                  }}
+                  itemStyle={{
+                    color: darkMode ? "#e4e4e7" : "#3f3f46"
                   }}
                   formatter={(value: any) => [`₱${value.toLocaleString()}`, ""]}
                 />
@@ -535,17 +578,17 @@ export function ProfitAnalytics({
                 data={timelineData}
                 margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" opacity={0.4} />
+                <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "#27272a" : "#e4e4e7"} opacity={0.5} />
                 <XAxis 
                   dataKey="date" 
-                  stroke="#71717a" 
+                  stroke={darkMode ? "#71717a" : "#52525b"} 
                   fontSize={10.5} 
                   tickLine={false}
                   dy={10}
                   fontFamily="JetBrains Mono, monospace"
                 />
                 <YAxis 
-                  stroke="#71717a" 
+                  stroke={darkMode ? "#71717a" : "#52525b"} 
                   fontSize={10} 
                   tickLine={false}
                   axisLine={false}
@@ -554,12 +597,21 @@ export function ProfitAnalytics({
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#18181b",
-                    borderColor: "#3f3f46",
+                    backgroundColor: darkMode ? "#18181b" : "#ffffff",
+                    borderColor: darkMode ? "#3f3f46" : "#e4e4e7",
                     borderRadius: "14px",
-                    color: "#f4f4f5",
+                    color: darkMode ? "#f4f4f5" : "#18181b",
                     fontSize: "11px",
-                    fontFamily: "Inter, sans-serif"
+                    fontFamily: "Inter, sans-serif",
+                    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.08)"
+                  }}
+                  labelStyle={{
+                    color: darkMode ? "#f4f4f5" : "#18181b",
+                    fontWeight: "bold",
+                    marginBottom: "4px"
+                  }}
+                  itemStyle={{
+                    color: darkMode ? "#e4e4e7" : "#3f3f46"
                   }}
                   formatter={(value: any) => [`₱${value.toLocaleString()}`, ""]}
                 />
@@ -578,12 +630,12 @@ export function ProfitAnalytics({
           </ResponsiveContainer>
         </div>
 
-        <div className="mt-4 pt-3.5 border-t border-m3-outline-variant/15 flex flex-wrap gap-4 items-center justify-between text-[10.5px] text-zinc-400 font-sans">
-          <div className="flex items-center gap-1.5 font-bold">
+        <div className="mt-4 pt-3.5 border-t border-m3-outline-variant/15 flex flex-wrap gap-4 items-center justify-between text-[10.5px] text-zinc-600 dark:text-zinc-400 font-sans font-medium">
+          <div className="flex items-center gap-1.5 font-bold text-zinc-700 dark:text-zinc-300">
             <Sparkles className="h-4 w-4 text-emerald-500" />
-            <span>Operational Guidance: Retain net margins above <strong>20%</strong> for optimal showroom growth.</span>
+            <span>Operational Guidance: Retain net margins above <strong className="text-emerald-600 dark:text-emerald-400 font-black">20%</strong> for optimal showroom growth.</span>
           </div>
-          <div className="flex items-center gap-1.5 font-mono text-[9px] font-extrabold bg-m3-surface-high px-2 py-1 rounded-lg">
+          <div className="flex items-center gap-1.5 font-mono text-[9px] font-extrabold bg-zinc-100 dark:bg-m3-surface-high/30 px-2 py-1 rounded-lg border border-m3-outline-variant/15 text-zinc-600 dark:text-zinc-400">
             <span>STABLE LEDGER LOCK</span>
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
           </div>

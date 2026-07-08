@@ -1145,6 +1145,13 @@ function AppContent() {
     return b ? b.name : "Unknown Branch";
   };
 
+  const currentCategory = sidebarCategoryTree.find(
+    (cat) =>
+      cat.subItems.some((sub) => sub.id === activeTab) ||
+      cat.id === activeTab,
+  );
+  const isInventoryCategory = currentCategory?.id === "inventory";
+
   return (
     <MotionConfig reducedMotion={(disableAnimations || lowPerformanceMode) ? "always" : "never"}>
       {/* FIXED: STRETCH-PROOING COMPONENT CORE WITH ABSOLUTE VIEWPORT CONSTRAINTS */}
@@ -1731,7 +1738,7 @@ function AppContent() {
               activeTab === "pos" || activeTab === "ledger"
                 ? "p-4 md:p-5 overflow-hidden h-full max-h-full"
                 : "p-4 md:p-6 pb-26 md:pb-6 overflow-y-auto"
-            } ${isCompactColumns ? "compact-fit" : ""}`}
+            } ${isCompactColumns || !isInventoryCategory ? "compact-fit" : ""}`}
           >
             {/* Elegant Collapsible Horizontal Sub-menu Navigation Pill Bar with Dynamic RBAC */}
             {(() => {
@@ -1756,8 +1763,10 @@ function AppContent() {
                 return null;
 
               return (
-                <div className="mb-4 bg-m3-surface-low border border-m3-outline-variant/15 rounded-2xl p-2.5 flex flex-col shrink-0">
-                  <div className="flex items-center justify-between px-1.5 pb-1 block">
+                <div className={`mb-4 bg-m3-surface-low border border-m3-outline-variant/15 flex flex-col shrink-0 ${
+                  isInventoryCategory ? "rounded-2xl p-2.5" : "rounded-xl p-1.5 pb-2"
+                }`}>
+                  <div className={`flex items-center justify-between px-1.5 block ${isInventoryCategory ? "pb-1" : "pb-0.5"}`}>
                     <div className="flex items-center justify-between w-full">
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] font-black tracking-widest text-m3-on-surface-variant uppercase font-mono">
@@ -1766,18 +1775,20 @@ function AppContent() {
                         <span className="h-1.5 w-1.5 rounded-full bg-m3-primary animate-pulse" />
                       </div>
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setIsCompactColumns(!isCompactColumns)}
-                          className="p-1 px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/10 rounded-lg transition-all cursor-pointer border border-m3-outline-variant/15 bg-m3-surface flex items-center gap-1.5 shadow-sm"
-                          title={
-                            isCompactColumns
-                              ? "Switch to Spacious mode for expanded tables and wider panels"
-                              : "Switch to Compact mode for dense screen layouts"
-                          }
-                        >
-                          <Sliders className="h-3.5 w-3.5" />
-                          <span>{isCompactColumns ? "Spacious Layout" : "Compact Layout"}</span>
-                        </button>
+                        {isInventoryCategory && (
+                          <button
+                            onClick={() => setIsCompactColumns(!isCompactColumns)}
+                            className="p-1 px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/10 rounded-lg transition-all cursor-pointer border border-m3-outline-variant/15 bg-m3-surface flex items-center gap-1.5 shadow-sm"
+                            title={
+                              isCompactColumns
+                                ? "Switch to Spacious mode for expanded tables and wider panels"
+                                : "Switch to Compact mode for dense screen layouts"
+                            }
+                          >
+                            <Sliders className="h-3.5 w-3.5" />
+                            <span>{isCompactColumns ? "Spacious Layout" : "Compact Layout"}</span>
+                          </button>
+                        )}
                         <button
                           onClick={() =>
                             setIsSubMenuCollapsed(!isSubMenuCollapsed)
@@ -1808,7 +1819,9 @@ function AppContent() {
                         exit={{ height: 0, opacity: 0, scaleY: 0.95 }}
                         transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
                         style={{ originY: 0 }}
-                        className="overflow-hidden w-full flex flex-nowrap gap-2.5 overflow-x-auto pt-2 pb-1 whitespace-nowrap scrollbar-none scroll-smooth touch-pan-x shrink-0"
+                        className={`overflow-hidden w-full flex flex-nowrap overflow-x-auto pt-2 pb-1 whitespace-nowrap scrollbar-none scroll-smooth touch-pan-x shrink-0 ${
+                          isInventoryCategory ? "gap-2.5" : "gap-1.5"
+                        }`}
                       >
                         {authorizedSubItems.map((sub) => {
                           const isSelected = activeTab === sub.id;
@@ -1816,7 +1829,11 @@ function AppContent() {
                             <button
                               key={sub.id}
                               onClick={() => changeTab(sub.id)}
-                              className={`px-4.5 py-2 text-xs font-bold tracking-wide rounded-2xl transition-all cursor-pointer shrink-0 ${
+                              className={`text-xs font-bold tracking-wide transition-all cursor-pointer shrink-0 ${
+                                isInventoryCategory
+                                  ? "px-4.5 py-2 rounded-2xl"
+                                  : "px-3 py-1.5 rounded-xl"
+                              } ${
                                 isSelected
                                   ? "bg-m3-primary text-m3-on-primary shadow-md shadow-m3-primary/10 font-black scale-[1.01]"
                                   : "bg-m3-surface border border-m3-outline-variant/15 text-m3-on-surface-variant hover:bg-m3-primary/10 hover:text-m3-primary"

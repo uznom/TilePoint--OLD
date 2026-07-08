@@ -144,7 +144,7 @@ export const IdleScreen: React.FC = () => {
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="fixed inset-0 z-[9999] overflow-hidden select-none"
           style={{
-            backgroundColor: 'rgb(var(--m3-surface-container-lowest, 18, 20, 24))',
+            backgroundColor: 'var(--m3-surface-container-lowest, #070B0E)',
           }}
         >
         {/* ANDROID 17 FLUID GLOWING GRAPHIC BLURS */}

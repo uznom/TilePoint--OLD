@@ -533,7 +533,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
                 <span className="font-extrabold text-[9px] uppercase tracking-wider">Warehouse Drop</span>
                 <span className="font-mono font-black">{categorySummaryCount['Warehouse Breakage'] || 0} units</span>
               </div>
-              <div className="flex justify-between items-center bg-blue-500/5 p-1.5 rounded-lg text-blue-500">
+              <div className="flex justify-between items-center bg-m3-primary/5 p-1.5 rounded-lg text-m3-primary">
                 <span className="font-extrabold text-[9px] uppercase tracking-wider">Delivery Transit</span>
                 <span className="font-mono font-black">{categorySummaryCount['Delivery Transit'] || 0} units</span>
               </div>
@@ -580,7 +580,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
                     let catColorAndLabel = 'bg-zinc-500/10 text-zinc-500 border-zinc-500/20';
                     if (log.category === 'BOA') catColorAndLabel = 'bg-rose-500/10 text-rose-500 border-rose-500/20';
                     if (log.category === 'Warehouse Breakage') catColorAndLabel = 'bg-amber-500/10 text-amber-500 border-amber-500/20';
-                    if (log.category === 'Delivery Transit') catColorAndLabel = 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+                    if (log.category === 'Delivery Transit') catColorAndLabel = 'bg-m3-primary/10 text-m3-primary border-m3-primary/20';
                     if (log.category === 'Showroom Casualty') catColorAndLabel = 'bg-purple-500/10 text-purple-600 border-purple-500/20';
 
                     let actionLabelColor = 'text-zinc-650 bg-zinc-200/40';

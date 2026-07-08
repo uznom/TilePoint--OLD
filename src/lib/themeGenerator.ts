@@ -367,6 +367,15 @@ export function applyM3ThemeToDOM(scheme: M3ThemeScheme) {
   const rgbPrimary = hexToRgb(scheme.primary);
   root.style.setProperty('--m3-primary-rgb', `${rgbPrimary.r}, ${rgbPrimary.g}, ${rgbPrimary.b}`);
   
+  // Set surface container RGB helper for dark mode card overrides
+  const rgbSurfaceContainer = hexToRgb(scheme.surfaceContainer);
+  root.style.setProperty('--m3-surface-container-rgb', `${rgbSurfaceContainer.r}, ${rgbSurfaceContainer.g}, ${rgbSurfaceContainer.b}`);
+  
+  // Explicitly calculate and apply active hover overlay to avoid CSS re-evaluation latency
+  const isDark = root.classList.contains('dark');
+  const hoverOpacity = isDark ? 0.16 : 0.08;
+  root.style.setProperty('--m3-hover-overlay', `rgba(${rgbPrimary.r}, ${rgbPrimary.g}, ${rgbPrimary.b}, ${hoverOpacity})`);
+  
   root.style.setProperty('--m3-secondary', scheme.secondary);
   root.style.setProperty('--m3-on-secondary', scheme.onSecondary);
   root.style.setProperty('--m3-secondary-container', scheme.secondaryContainer);
@@ -399,6 +408,7 @@ export function resetM3ThemeOverride() {
     'tertiary', 'on-tertiary', 'tertiary-container', 'on-tertiary-container',
     'surface', 'on-surface', 'on-surface-variant',
     'surface-container-lowest', 'surface-container-low', 'surface-container', 'surface-container-high',
+    'surface-container-rgb', 'hover-overlay',
     'outline', 'outline-variant'
   ];
   vars.forEach(v => {

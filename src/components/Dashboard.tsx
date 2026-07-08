@@ -1010,8 +1010,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                   <div className="bg-m3-surface-lowest p-4.5 rounded-2xl border border-m3-outline-variant/10 space-y-4">
                     {[
                       { label: 'Cleared Cash drawer', val: todaySalesItems.filter(s => s.paymentMethod === 'Cash').reduce((acc, s) => acc + s.grandTotal, 0), color: 'bg-emerald-500', count: todaySalesItems.filter(s => s.paymentMethod === 'Cash').length },
-                      { label: 'Card swipes volume', val: todaySalesItems.filter(s => s.paymentMethod === 'Credit Card').reduce((acc, s) => acc + s.grandTotal, 0), color: 'bg-indigo-500', count: todaySalesItems.filter(s => s.paymentMethod === 'Credit Card').length },
-                      { label: 'GCash / Electronic Wallet', val: todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Maya').reduce((acc, s) => acc + s.grandTotal, 0), color: 'bg-sky-500', count: todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Maya').length },
+                      { label: 'Card swipes volume', val: todaySalesItems.filter(s => s.paymentMethod === 'Credit Card').reduce((acc, s) => acc + s.grandTotal, 0), color: 'bg-m3-primary', count: todaySalesItems.filter(s => s.paymentMethod === 'Credit Card').length },
+                      { label: 'GCash / Electronic Wallet', val: todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Maya').reduce((acc, s) => acc + s.grandTotal, 0), color: 'bg-m3-tertiary', count: todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Maya').length },
                       { label: 'Local Bank Transfers', val: todaySalesItems.filter(s => s.paymentMethod === 'Bank Transfer').reduce((acc, s) => acc + s.grandTotal, 0), color: 'bg-pink-500', count: todaySalesItems.filter(s => s.paymentMethod === 'Bank Transfer').length },
                     ].map((mode, i) => {
                       const totalVol = computedTodaySales || 1;
@@ -1156,8 +1156,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                               <td className="p-3 text-[10px]">
                                 <span className={`px-2 py-0.5 rounded-full font-bold uppercase tracking-wide text-[8.5px] ${
                                   s.paymentMethod === 'Cash' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' :
-                                  s.paymentMethod === 'Credit Card' ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20' :
-                                  s.paymentMethod === 'GCash' ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/30' :
+                                  s.paymentMethod === 'Credit Card' ? 'bg-m3-primary/10 text-m3-primary border border-m3-primary/20' :
+                                  s.paymentMethod === 'GCash' ? 'bg-m3-tertiary/10 text-m3-tertiary border border-m3-tertiary/30' :
                                   'bg-pink-500/10 text-pink-600 dark:text-pink-400 border border-pink-500/20'
                                 }`}>
                                   {s.paymentMethod}
@@ -1340,12 +1340,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
           {/* KPI Card 4: Active Interlinked Branches */}
           <div className="p-5.5 rounded-[24px] border border-m3-outline-variant/35 flex items-center justify-between shadow-md hover:shadow-lg transition-all hover:bg-m3-surface-low/90 duration-300 bg-m3-surface-low text-m3-on-surface relative overflow-hidden group">
-            <div className="absolute top-0 right-0 h-1 z-10 w-full bg-gradient-to-r from-sky-400 to-blue-600" />
+            <div className="absolute top-0 right-0 h-1 z-10 w-full bg-gradient-to-r from-m3-tertiary/60 to-m3-primary" />
             <div className="z-20">
               <span className="text-[10.5px] font-extrabold uppercase tracking-widest text-m3-on-surface-variant/80">
                 {selectedBranchId === 'all' ? 'Active Storefronts' : 'Active Staff Count'}
               </span>
-              <div className="text-2xl font-black mt-2 tracking-tight text-sky-500">
+              <div className="text-2xl font-black mt-2 tracking-tight text-m3-primary">
                 {selectedBranchId === 'all' 
                   ? `${activeBranchesCount} Branches Live` 
                   : `${branches.find(b => b.id === selectedBranchId)?.staffCount || 0} Floor Staff`
@@ -1358,7 +1358,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                 }
               </div>
             </div>
-            <div className="p-3.5 rounded-2xl bg-sky-500/10 text-sky-500 m3-shape-asymmetric shrink-0 group-hover:scale-110 transition-transform duration-300">
+            <div className="p-3.5 rounded-2xl bg-m3-primary/10 text-m3-primary m3-shape-asymmetric shrink-0 group-hover:scale-110 transition-transform duration-300">
               <Building className="h-6.5 w-6.5" />
             </div>
           </div>
@@ -1429,7 +1429,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                     {sortedBranchPerformance.map((b, idx) => {
                       const branchQuota = b.monthlySales || 2000000;
                       const achievement = Math.min(100, (b.totalSales / branchQuota) * 100);
-                      const barColor = b.id === 'B1' ? 'bg-m3-primary' : b.id === 'B2' ? 'bg-emerald-500' : b.id === 'B3' ? 'bg-amber-500' : 'bg-sky-500';
+                      const barColor = b.id === 'B1' ? 'bg-m3-primary' : b.id === 'B2' ? 'bg-emerald-500' : b.id === 'B3' ? 'bg-amber-500' : 'bg-m3-tertiary';
                       const isEditing = editingBranchId === b.id;
 
                       return (
@@ -1554,7 +1554,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                       ? 'bg-rose-500/5 border-rose-500/15 text-rose-300' 
                       : alarm.type === 'warning' 
                       ? 'bg-amber-500/5 border-amber-500/15 text-amber-300' 
-                      : 'bg-indigo-500/5 border-indigo-500/15 text-indigo-300'
+                      : 'bg-m3-primary/5 border-m3-primary/15 text-m3-primary'
                   }`}>
                     <span className="h-2 w-2 rounded-full bg-current mt-1.5 shrink-0 animate-ping" />
                     <div>
@@ -1862,7 +1862,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                             t.status === 'Received' 
                               ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
                               : t.status === 'In Transit' 
-                              ? 'bg-sky-500/10 text-sky-400 border-sky-500/20' 
+                              ? 'bg-m3-tertiary/10 text-m3-tertiary border-m3-tertiary/20' 
                               : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
                           }`}>
                             {t.status}
@@ -2459,7 +2459,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                   </h3>
                   <p className="text-xs text-m3-on-surface-variant font-mono">Slow-moving tiles candidates targeted for reallocation</p>
                 </div>
-                <span className="text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2.5 py-0.5 rounded-full font-bold">
+                <span className="text-[10px] bg-m3-primary/10 text-m3-primary border border-m3-primary/20 px-2.5 py-0.5 rounded-full font-bold">
                   Prevent Dead Stock
                 </span>
               </div>
@@ -2550,7 +2550,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
                 <div className="p-3 rounded-xl bg-m3-surface-low border border-m3-outline-variant/30 text-left font-mono">
                   <span className="text-[9.5px] text-zinc-400 block font-bold">OPEN ORDERS</span>
-                  <div className="text-xl font-black text-sky-500 mt-1">
+                  <div className="text-xl font-black text-m3-tertiary mt-1">
                     {purchaseOrders.filter(po => po.status === 'Ordered').length || 2}
                   </div>
                 </div>
@@ -2593,7 +2593,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                         ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' 
                         : isSuccess 
                         ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                        : 'bg-sky-500/10 text-sky-400 border-sky-500/20'
+                        : 'bg-m3-primary/10 text-m3-primary border-m3-primary/20'
                     }`}>
                       {log.action || log.actionCode || 'SYSTEM'}
                     </span>
@@ -3074,7 +3074,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                 </h3>
                 <p className="text-xs text-m3-on-surface-variant font-mono">Slow-moving tiles candidates targeted for reallocation</p>
               </div>
-              <span className="text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2.5 py-0.5 rounded-full font-bold animate-pulse">
+              <span className="text-[10px] bg-m3-primary/10 text-m3-primary border border-m3-primary/20 px-2.5 py-0.5 rounded-full font-bold animate-pulse">
                 Prevent Dead Stock
               </span>
             </div>
@@ -3164,7 +3164,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
                         ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' 
                         : isSuccess 
                         ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                        : 'bg-sky-500/10 text-sky-400 border-sky-500/20'
+                        : 'bg-m3-primary/10 text-m3-primary border-m3-primary/20'
                     }`}>
                       {log.action || log.actionCode || 'SYSTEM'}
                     </span>

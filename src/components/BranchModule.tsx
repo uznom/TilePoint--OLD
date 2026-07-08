@@ -243,7 +243,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
           return (
             <div
               key={b.id}
-              className="m3-card shadow-sm transition-transform duration-250 hover:scale-[1.01] relative overflow-hidden flex flex-col justify-between"
+              className="m3-card shadow-sm transition-all duration-250 relative overflow-hidden flex flex-col justify-between"
             >
               {/* Top outline band */}
               <div className="flex items-start justify-between border-b border-m3-outline-variant/15 pb-3">
@@ -377,7 +377,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
                                 u.role === UserRole.ADMIN 
                                   ? 'bg-purple-500/10 text-purple-600 border-purple-500/15'
                                   : u.role === UserRole.MANAGER
-                                  ? 'bg-blue-500/10 text-blue-600 border-blue-500/15'
+                                  ? 'bg-m3-primary/10 text-m3-primary border-m3-primary/15'
                                   : u.role === UserRole.CASHIER
                                   ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/15'
                                   : 'bg-zinc-500/10 text-zinc-650 border-zinc-500/15'
@@ -517,7 +517,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
                               item.role === UserRole.ADMIN 
                                 ? 'bg-purple-500/10 text-purple-600 border-purple-500/15'
                                 : item.role === UserRole.MANAGER
-                                ? 'bg-blue-500/10 text-blue-600 border-blue-500/15'
+                                ? 'bg-m3-primary/10 text-m3-primary border-m3-primary/15'
                                 : item.role === UserRole.CASHIER
                                 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/15'
                                 : 'bg-zinc-500/10 text-zinc-650 border-zinc-500/15'

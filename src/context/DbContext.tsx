@@ -6917,6 +6917,13 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const poNum = `PO-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${nextNum.toString().padStart(4, "0")}`;
 
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const calculatedTermEndDate = (() => {
+      const d = new Date();
+      d.setDate(d.getDate() + 30);
+      return d.toISOString().slice(0, 10);
+    })();
+
     const newPO: PurchaseOrder = {
       id: poId,
       poNumber: poNum,
@@ -6924,8 +6931,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       branchId,
       status: (status || "Pending") as POStatus,
       requestedBy: currentUser.fullName,
-      date: new Date().toISOString().slice(0, 10),
+      date: todayStr,
       notes,
+      paymentMode: "terms",
+      termStartDate: todayStr,
+      termsLength: 30,
+      termEndDate: calculatedTermEndDate,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
