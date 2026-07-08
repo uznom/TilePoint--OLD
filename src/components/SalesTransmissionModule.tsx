@@ -1088,7 +1088,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                     type="button"
                     disabled={compiledLocalSalesData.count === 0 || !isAuthorizedToExport}
                     onClick={() => handleExportCSV('compiled', true)}
-                    className="py-2.5 bg-m3-surface-lowest hover:bg-m3-surface border border-m3-outline-variant/20 hover:border-blue-500/30 text-m3-on-surface hover:text-blue-600 dark:hover:text-blue-400 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
+                    className="py-2.5 bg-m3-surface-lowest hover:bg-m3-surface border border-m3-outline-variant/20 hover:border-m3-primary/30 text-m3-on-surface hover:text-m3-primary dark:hover:text-m3-primary rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
                     title="Export Compiled Draft Ledger as Microsoft Excel Formatted CSV Sheet"
                   >
                     <span className="text-[8px] uppercase font-bold text-zinc-500 font-mono block">Excel</span>
@@ -1336,7 +1336,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                     badgeColor = "bg-purple-500/10 text-purple-400 border-purple-500/20";
                   } else if (id.startsWith("NONCE-")) {
                     typeLabel = "Cryptographic Nonce";
-                    badgeColor = "bg-blue-500/10 text-blue-400 border-blue-500/20";
+                    badgeColor = "bg-m3-primary/10 text-m3-primary border-m3-primary/20";
                   } else if (id.startsWith("IMPID-")) {
                     typeLabel = "Ingestion Reference";
                     badgeColor = "bg-amber-500/10 text-amber-400 border-amber-500/20";
@@ -1512,7 +1512,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                             type="button"
                             disabled={!isAuthorizedToExport}
                             onClick={() => handleExportCSV('selected', true)}
-                            className="py-2.5 bg-m3-surface-lowest hover:bg-m3-surface border border-m3-outline-variant/20 hover:border-blue-500/30 text-m3-on-surface hover:text-blue-600 dark:hover:text-blue-400 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
+                            className="py-2.5 bg-m3-surface-lowest hover:bg-m3-surface border border-m3-outline-variant/20 hover:border-m3-primary/30 text-m3-on-surface hover:text-m3-primary dark:hover:text-m3-primary rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
                             title="Export Selected Transmitted Report as Microsoft Excel CSV spreadsheet sheet"
                           >
                             <span className="text-[8px] uppercase font-bold text-zinc-500 font-mono block">Excel</span>
@@ -2058,7 +2058,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                           }
                         }, 500);
                       }}
-                      className="p-4 bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/20 hover:border-blue-500/40 text-blue-400 rounded-2xl text-left transition-all group flex flex-col justify-between h-24 cursor-pointer"
+                      className="p-4 bg-m3-primary/10 hover:bg-m3-primary/20 border border-m3-primary/20 hover:border-m3-primary/40 text-m3-primary rounded-2xl text-left transition-all group flex flex-col justify-between h-24 cursor-pointer"
                     >
                       <div className="flex items-center justify-between w-full">
                         <span className="text-[10px] font-black uppercase tracking-wider font-mono">Messenger</span>
@@ -2207,7 +2207,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                     className="p-8 sm:p-12 bg-white text-zinc-900 rounded-2xl shadow-lg border border-zinc-200 font-sans relative overflow-hidden"
                   >
                     {/* Watermark/Accent */}
-                    <div className="absolute top-0 left-0 right-0 h-2 bg-zinc-955 bg-indigo-900" />
+                    <div className="absolute top-0 left-0 right-0 h-2 bg-zinc-955 bg-m3-primary" />
                     
                     <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b-2 border-zinc-900">
                       <div className="space-y-1">

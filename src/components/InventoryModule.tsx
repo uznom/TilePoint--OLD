@@ -2363,7 +2363,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   let typeBadgeClass = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/25';
                   if (m.type === 'OUT') typeBadgeClass = 'bg-rose-500/10 text-rose-500 border-rose-500/25';
                   if (m.type === 'ADJUST') typeBadgeClass = 'bg-amber-500/10 text-amber-500 border-amber-500/25_ADJUST';
-                  if (m.type === 'TRANSFER') typeBadgeClass = 'bg-cyan-500/10 text-cyan-500 border-cyan-500/25';
+                  if (m.type === 'TRANSFER') typeBadgeClass = 'bg-m3-tertiary/10 text-m3-tertiary border-m3-tertiary/25';
 
                   const matchingBranch = branches.find(b => b.id === m.destinationBranchId);
 
@@ -2493,8 +2493,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
               .filter(t => transferFilterStatus === 'All' || t.status === transferFilterStatus)
               .map((t) => {
                 let statusColor = 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
-                if (t.status === 'Approved') statusColor = 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-                if (t.status === 'In Transit') statusColor = 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20';
+                if (t.status === 'Approved') statusColor = 'bg-m3-primary/10 text-m3-primary border-m3-primary/20';
+                if (t.status === 'In Transit') statusColor = 'bg-m3-tertiary/10 text-m3-tertiary border-m3-tertiary/20';
                 if (t.status === 'Received') statusColor = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
                 if (t.status === 'Declined') statusColor = 'bg-rose-500/10 text-rose-500 border-rose-500/20';
 
@@ -2638,7 +2638,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                             }}
                             className={`flex-1 text-[11px] font-black uppercase tracking-wider py-3 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                               canDispatch
-                                ? 'bg-indigo-500 text-white border-indigo-600 hover:bg-indigo-600 shadow'
+                                ? 'bg-m3-primary text-m3-on-primary border-m3-outline/20 hover:opacity-90 shadow'
                                 : 'bg-zinc-100 text-zinc-400 border-zinc-200 opacity-60 cursor-not-allowed'
                             }`}
                           >
@@ -2708,11 +2708,11 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
               {recommendedTransfers.slice(0, 4).map((rec) => (
                 <div key={rec.id} className="bg-m3-surface p-4 rounded-2xl border border-m3-outline-variant/15 flex flex-col justify-between gap-3 shadow-inner hover:shadow-md transition-all">
                   <div className="flex items-start gap-3">
-                    <div className={`p-2 rounded-xl shrink-0 ${rec.type === 'Deficit' ? 'bg-rose-500/10 text-rose-500' : 'bg-indigo-500/10 text-indigo-500'}`}>
+                    <div className={`p-2 rounded-xl shrink-0 ${rec.type === 'Deficit' ? 'bg-rose-500/10 text-rose-500' : 'bg-m3-primary/10 text-m3-primary'}`}>
                       {rec.type === 'Deficit' ? <AlertTriangle className="h-4 w-4 shrink-0 animate-bounce" /> : <Clock className="h-4 w-4 shrink-0" />}
                     </div>
                     <div>
-                      <span className={`text-[9px] font-black uppercase tracking-wider block ${rec.type === 'Deficit' ? 'text-rose-500' : 'text-indigo-500'}`}>
+                      <span className={`text-[9px] font-black uppercase tracking-wider block ${rec.type === 'Deficit' ? 'text-rose-500' : 'text-m3-primary'}`}>
                         {rec.type === 'Deficit' ? 'STOCK DEFICIT ALERT' : 'IDLE STOCK REDISTRIBUTION CANDIDATE'}
                       </span>
                       <p className="text-xs font-semibold text-m3-on-surface mt-1">"{rec.reason}"</p>
@@ -2897,7 +2897,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                         
                         let eventBadge = 'bg-zinc-500/10 text-zinc-500 border-zinc-500/15';
                         if (l.movementType === 'SALE') eventBadge = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/15';
-                        if (l.movementType === 'TRANSFER') eventBadge = 'bg-indigo-500/10 text-indigo-500 border-indigo-500/15';
+                        if (l.movementType === 'TRANSFER') eventBadge = 'bg-m3-primary/10 text-m3-primary border-m3-primary/15';
                         if (l.movementType === 'ADJUST') eventBadge = 'bg-yellow-500/10 text-yellow-500 border-yellow-500/15';
 
                         return (
@@ -3075,7 +3075,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                       
                       if (ageDays >= 30 && ageDays < 90) {
                         agingLabel = 'Stable';
-                        agingBadge = 'bg-blue-500/10 text-blue-500 border-blue-500/15';
+                        agingBadge = 'bg-m3-primary/10 text-m3-primary border-m3-primary/15';
                         recommendationText = 'Baseline performance. Keep standard order levels linked to monthly ERP OS logs.';
                       } else if (ageDays >= 90 && ageDays < 180) {
                         agingLabel = 'Slow-Moving';
@@ -3174,7 +3174,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                 {/* Instruction units */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
-                    <span className="text-[10px] font-black text-indigo-500 uppercase tracking-wider block">STEP 1: Legacy Extraction</span>
+                    <span className="text-[10px] font-black text-m3-primary uppercase tracking-wider block">STEP 1: Legacy Extraction</span>
                     <p className="text-xs text-m3-on-surface-variant font-medium">
                       Export product database or copy inventory rows from your older checkout apps in <strong>CSV</strong> or <strong>JSON</strong> format.
                     </p>

@@ -277,7 +277,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
             return (
               <div
                 key={u.id}
-                className="m3-card shadow-sm flex flex-col justify-between hover:scale-[1.01] transition-transform duration-200"
+                className="m3-card shadow-sm flex flex-col justify-between transition-all duration-200"
               >
                 <div className="space-y-4">
                   {/* Employee general headers */}

@@ -30,9 +30,10 @@ import {
   ChevronLeft,
   ChevronRight,
   ListFilter,
+  Zap,
 } from "lucide-react";
 import { useDb } from "../context/DbContext";
-import { Member, Expense, ProductReturn, CustomCorporateBill } from "../types/db";
+import { Member, Expense, ProductReturn, CustomCorporateBill, UserRole } from "../types/db";
 
 interface AtposExtraModulesProps {
   activeSubTab: string;
@@ -110,8 +111,8 @@ export default function AtposExtraModules({
   );
 
   // Dynamic Calendar Navigation & Installment Payment State
-  const [calendarMonth, setCalendarMonth] = useState<number>(5); // 0-indexed: 5 is June
-  const [calendarYear, setCalendarYear] = useState<number>(2026);
+  const [calendarMonth, setCalendarMonth] = useState<number>(() => new Date().getMonth()); // 0-indexed: current month
+  const [calendarYear, setCalendarYear] = useState<number>(() => new Date().getFullYear());
   const [partialPaymentAmount, setPartialPaymentAmount] = useState<string>("");
   const [partialPaymentNotes, setPartialPaymentNotes] = useState<string>("");
   const [partialPaymentMethod, setPartialPaymentMethod] = useState<"cash" | "cheque">("cash");
@@ -1469,7 +1470,8 @@ export default function AtposExtraModules({
               } else if (po.date) {
                 try {
                   const d = new Date(po.date);
-                  d.setDate(d.getDate() + 15);
+                  const days = po.termsLength || 30;
+                  d.setDate(d.getDate() + days);
                   dueDay = d.getDate();
                   dueMonth = d.getMonth();
                   dueYear = d.getFullYear();
@@ -1567,13 +1569,18 @@ export default function AtposExtraModules({
                   const currentCheckDate = new Date(calendarYear, calendarMonth, dayCheck);
                   let matchesRecurrence = false;
 
+                  const isSameDay =
+                    currentCheckDate.getFullYear() === baseDate.getFullYear() &&
+                    currentCheckDate.getMonth() === baseDate.getMonth() &&
+                    currentCheckDate.getDate() === baseDate.getDate();
+
                   const timeDiff =
                     currentCheckDate.getTime() - baseDate.getTime();
-                  const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+                  const daysDiff = Math.round(timeDiff / (1000 * 60 * 60 * 24));
 
-                  if (daysDiff === 0) {
+                  if (isSameDay) {
                     matchesRecurrence = true;
-                  } else if (daysDiff > 0) {
+                  } else if (currentCheckDate > baseDate) {
                     switch (bill.frequency) {
                       case "WEEKLY":
                         matchesRecurrence = daysDiff % 7 === 0;
@@ -1711,49 +1718,56 @@ export default function AtposExtraModules({
                 return;
               }
 
-              // PIN Verification
-              if (!partialManagerPin) {
-                alert("Security Error: Manager security authorization PIN is strictly required.");
-                return;
-              }
-
               let isAuthorized = false;
               let authorizerName = "Supervisor";
 
-              // Scan user records
-              const foundUserByPin = db.users.find(
-                (u: any) =>
-                  (u.role === "ADMIN" || u.role === "MANAGER" || u.role === "Admin" || u.role === "Manager") &&
-                  u.status === "Active" &&
-                  u.managerPin === partialManagerPin
-              );
+              const isAdmin = db.currentUser?.role === UserRole.ADMIN;
 
-              if (foundUserByPin) {
+              if (isAdmin) {
                 isAuthorized = true;
-                authorizerName = foundUserByPin.fullName;
+                authorizerName = db.currentUser?.fullName || "Administrator";
               } else {
-                // Validate fallback values for seed profiles or general overrides
-                const isEricaPin = partialManagerPin === "4321";
-                const isJuanPin = partialManagerPin === "9988";
-                const isTomasPin = partialManagerPin === "1122";
-                const isDemoPin =
-                  partialManagerPin === "1234" || partialManagerPin === "0000" || partialManagerPin === "8888";
+                // PIN Verification for non-admins
+                if (!partialManagerPin) {
+                  alert("Security Error: Manager security authorization PIN is strictly required.");
+                  return;
+                }
 
-                if (isEricaPin) {
-                  const erica = db.users.find((u: any) => u.username === "erica_admin");
-                  authorizerName = erica ? erica.fullName : "Erica Manaban (Admin)";
+                // Scan user records
+                const foundUserByPin = db.users.find(
+                  (u: any) =>
+                    (u.role === "ADMIN" || u.role === "MANAGER" || u.role === "Admin" || u.role === "Manager") &&
+                    u.status === "Active" &&
+                    u.managerPin === partialManagerPin
+                );
+
+                if (foundUserByPin) {
                   isAuthorized = true;
-                } else if (isJuanPin) {
-                  const juan = db.users.find((u: any) => u.username === "juan_mgr");
-                  authorizerName = juan ? juan.fullName : "Juan Gomez (Manager)";
-                  isAuthorized = true;
-                } else if (isTomasPin) {
-                  const tomas = db.users.find((u: any) => u.username === "tomas_mgr");
-                  authorizerName = tomas ? tomas.fullName : "Tomas Santos (Manager)";
-                  isAuthorized = true;
-                } else if (isDemoPin) {
-                  authorizerName = "Global Manager (Demo)";
-                  isAuthorized = true;
+                  authorizerName = foundUserByPin.fullName;
+                } else {
+                  // Validate fallback values for seed profiles or general overrides
+                  const isEricaPin = partialManagerPin === "4321";
+                  const isJuanPin = partialManagerPin === "9988";
+                  const isTomasPin = partialManagerPin === "1122";
+                  const isDemoPin =
+                    partialManagerPin === "1234" || partialManagerPin === "0000" || partialManagerPin === "8888";
+
+                  if (isEricaPin) {
+                    const erica = db.users.find((u: any) => u.username === "erica_admin");
+                    authorizerName = erica ? erica.fullName : "Erica Manaban (Admin)";
+                    isAuthorized = true;
+                  } else if (isJuanPin) {
+                    const juan = db.users.find((u: any) => u.username === "juan_mgr");
+                    authorizerName = juan ? juan.fullName : "Juan Gomez (Manager)";
+                    isAuthorized = true;
+                  } else if (isTomasPin) {
+                    const tomas = db.users.find((u: any) => u.username === "tomas_mgr");
+                    authorizerName = tomas ? tomas.fullName : "Tomas Santos (Manager)";
+                    isAuthorized = true;
+                  } else if (isDemoPin) {
+                    authorizerName = "Global Manager (Demo)";
+                    isAuthorized = true;
+                  }
                 }
               }
 
@@ -1840,6 +1854,90 @@ export default function AtposExtraModules({
               setPartialChequeNumber("");
               setPartialManagerPin("");
               setSelectedCalendarDay(null);
+            };
+
+            const handleAutomatePayments = () => {
+              const duePayables = flatPayablesList.filter((item) => {
+                const payHistory = installments[item.poId] || [];
+                const totalPaid = payHistory.reduce((sum, inst) => sum + inst.amount, 0);
+                return totalPaid < item.amount;
+              });
+
+              if (duePayables.length === 0) {
+                alert("All accounts payable for this calendar month are already fully settled!");
+                return;
+              }
+
+              if (
+                !confirm(
+                  `Automate Payout Engine: Would you like to automatically clear and settle all ${duePayables.length} pending supplier payables for ${months[calendarMonth]} ${calendarYear}? This will generate automated cash installments and sync them with the Consolidated Profitability Model.`
+                )
+              ) {
+                return;
+              }
+
+              const updatedInstallments = { ...installments };
+              let automatedCount = 0;
+              let totalSettleAmount = 0;
+              const authorizerName = db.currentUser?.fullName || "Automated System";
+
+              // Clone customBills for updates
+              let updatedBills = [...customBills];
+
+              duePayables.forEach((payVal) => {
+                const currentHistory = updatedInstallments[payVal.poId] || [];
+                const totalPaidSoFar = currentHistory.reduce((sum, inst) => sum + inst.amount, 0);
+                const remaining = payVal.amount - totalPaidSoFar;
+
+                if (remaining <= 0) return;
+
+                const newInstallment = {
+                  id: `INST-AUTO-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+                  amount: remaining,
+                  date: new Date(calendarYear, calendarMonth, payVal.day).toISOString(),
+                  notes: `Automated Payout (Auto-Pay Sweep) - Authorized by ${authorizerName}`
+                };
+
+                updatedInstallments[payVal.poId] = [...currentHistory, newInstallment];
+                automatedCount++;
+                totalSettleAmount += remaining;
+
+                // Create Audit Log
+                db.addAuditLog(
+                  "PAYABLE_INSTALLMENT",
+                  `[AUTOMATED SWEEP] Settled remaining balance of ₱${remaining.toLocaleString()} for ${payVal.poNumber} (${payVal.supplierName}) on due date. Authorized by ${authorizerName}.`,
+                  "Procurement",
+                  payVal.poId,
+                  JSON.stringify({ poId: payVal.poId, poNumber: payVal.poNumber, payment: newInstallment, isFullyPaid: true, authorizer: authorizerName })
+                );
+
+                // Adjust custom bills if it's a recurring bill
+                if (payVal.poNumber.startsWith("BILL-")) {
+                  updatedBills = updatedBills.map((b) => {
+                    if (b.id === payVal.poId) {
+                      return {
+                        ...b,
+                        remainingBalance: 0,
+                        status: "Completed" as any,
+                        isDeleted: true,
+                        deletedAt: new Date().toISOString()
+                      };
+                    }
+                    return b;
+                  });
+                } else if (payVal.poId && !payVal.poId.startsWith("SIM-")) {
+                  // Mark Purchase Order as Completed
+                  db.updatePOStatus(payVal.poId, "Completed");
+                }
+              });
+
+              // Save to database/localstorage
+              saveInstallments(updatedInstallments);
+              setCustomBills(updatedBills);
+
+              alert(
+                `⚡ Automation Complete!\nSucceeded in auto-settling ${automatedCount} supplier transactions.\nTotal amount cleared: ₱${totalSettleAmount.toLocaleString()}.\nAll settlements have been synchronized with the Consolidated Profitability Model!`
+              );
             };
 
             return (
@@ -2170,10 +2268,21 @@ export default function AtposExtraModules({
                   <div className="lg:col-span-3 bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl grid grid-cols-1 xl:grid-cols-4 gap-6 text-left">
                     <div className="xl:col-span-3 space-y-4">
                       <div className="flex justify-between items-center border-b border-m3-outline-variant/10 pb-3 gap-2 flex-wrap">
-                        <h3 className="font-extrabold text-sm text-m3-primary flex items-center gap-1.5">
-                          <CalendarDays className="h-5 w-5" />
-                          Supplier Payment Calendar Cycle
-                        </h3>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-extrabold text-sm text-m3-primary flex items-center gap-1.5">
+                            <CalendarDays className="h-5 w-5" />
+                            Supplier Payment Calendar Cycle
+                          </h3>
+                          <button
+                            type="button"
+                            onClick={handleAutomatePayments}
+                            className="px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/15 text-emerald-500 border border-emerald-500/20 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
+                            title="Automatically settle all pending payables for this month"
+                          >
+                            <Zap className="h-3 w-3" />
+                            <span>Auto-Pay Sweep</span>
+                          </button>
+                        </div>
                         
                         {/* Interactive Month & Year Navigation Widget */}
                         <div className="flex items-center gap-1 bg-m3-surface-high/30 p-1 rounded-xl border border-m3-outline-variant/10">
@@ -2289,6 +2398,25 @@ export default function AtposExtraModules({
                           const dateKey = `${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                           const hasMemo = !!dayMemos[dateKey];
 
+                          const todayObj = new Date();
+                          const isToday = todayObj.getDate() === day &&
+                                          todayObj.getMonth() === calendarMonth &&
+                                          todayObj.getFullYear() === calendarYear;
+
+                          let memoCount = 0;
+                          if (hasMemo) {
+                            try {
+                              const raw = dayMemos[dateKey];
+                              if (raw.startsWith("[") && raw.endsWith("]")) {
+                                memoCount = JSON.parse(raw).length;
+                              } else if (raw.trim() !== "") {
+                                memoCount = 1;
+                              }
+                            } catch (e) {
+                              memoCount = 1;
+                            }
+                          }
+
                           return (
                             <div
                               key={day}
@@ -2296,24 +2424,38 @@ export default function AtposExtraModules({
                               className={`p-2 min-h-[85px] border rounded-xl flex flex-col justify-between transition-all cursor-pointer ${
                                 isSelected
                                   ? "border-m3-primary bg-m3-primary/5 scale-102 ring-1 ring-m3-primary"
-                                  : isFullyPaid
-                                    ? "border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 shadow-3xs"
-                                    : isPartiallyPaid
-                                      ? "border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 shadow-3xs"
-                                      : hasPayment
-                                        ? "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 shadow-3xs"
-                                        : "border-m3-outline-variant/10 bg-m3-surface-high/20 hover:scale-[1.02] hover:border-zinc-350"
+                                  : isToday
+                                    ? "border-amber-500 bg-amber-500/10 ring-2 ring-amber-500/50 shadow-md shadow-amber-500/10"
+                                    : isFullyPaid
+                                      ? "border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 shadow-3xs"
+                                      : isPartiallyPaid
+                                        ? "border-m3-primary/30 bg-m3-primary/5 hover:bg-m3-primary/10 shadow-3xs"
+                                        : hasPayment
+                                          ? "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 shadow-3xs"
+                                          : "border-m3-outline-variant/10 bg-m3-surface-high/20 hover:border-zinc-350"
                               }`}
                             >
                               <div className="flex justify-between items-center w-full">
-                                <span
-                                  className={`text-[10px] font-black leading-none ${isSelected ? "text-m3-primary" : "text-zinc-400"}`}
-                                >
-                                  {day}
-                                </span>
+                                <div className="flex items-center gap-1">
+                                  <span
+                                    className={`text-[10px] font-black leading-none ${isSelected ? "text-m3-primary" : isToday ? "text-amber-500" : "text-zinc-400"}`}
+                                  >
+                                    {day}
+                                  </span>
+                                  {isToday && (
+                                    <span className="text-[7px] bg-amber-500/20 text-amber-500 px-1 py-0.5 rounded font-black uppercase tracking-wide">
+                                      Today
+                                    </span>
+                                  )}
+                                </div>
                                 {hasMemo && (
-                                  <span className="flex items-center gap-0.5" title="Has calendar memo">
+                                  <span className="flex items-center gap-0.5" title={`${memoCount} memo(s)`}>
                                     <FileText className="h-3 w-3 text-amber-500 animate-pulse" />
+                                    {memoCount > 1 && (
+                                      <span className="text-[8px] font-black bg-amber-500 text-black px-1 rounded-full scale-90">
+                                        {memoCount}
+                                      </span>
+                                    )}
                                   </span>
                                 )}
                               </div>
@@ -2330,7 +2472,7 @@ export default function AtposExtraModules({
                                     </>
                                   ) : isPartiallyPaid ? (
                                     <>
-                                      <span className="block font-black uppercase text-[7px] bg-blue-500/15 text-blue-600 dark:text-blue-400 px-1 rounded text-center">
+                                      <span className="block font-black uppercase text-[7px] bg-m3-primary/15 text-m3-primary px-1 rounded text-center">
                                         PARTIAL
                                       </span>
                                       <span className="block truncate text-[8.5px] text-zinc-300 font-mono text-center">
@@ -2399,7 +2541,7 @@ export default function AtposExtraModules({
                                           isFinished
                                             ? "bg-emerald-500/10 text-emerald-400"
                                             : totalPaid > 0
-                                              ? "bg-blue-500/10 text-blue-400"
+                                              ? "bg-m3-primary/10 text-m3-primary"
                                               : payVal.poNumber.startsWith("BILL-")
                                                 ? "bg-m3-primary/10 text-m3-primary"
                                                 : "bg-amber-500/10 text-amber-400"
@@ -2532,19 +2674,28 @@ export default function AtposExtraModules({
                                             />
                                           </div>
 
-                                          <div className="space-y-0.5">
-                                            <label className="text-[8px] text-rose-400 font-bold flex items-center gap-0.5">
-                                              <span>Manager PIN *</span>
-                                            </label>
-                                            <input
-                                              type="password"
-                                              maxLength={6}
-                                              value={partialManagerPin}
-                                              onChange={(e) => setPartialManagerPin(e.target.value)}
-                                              placeholder="••••"
-                                              className="w-full bg-m3-surface-lowest border border-rose-500/35 rounded p-1.5 text-[10px] font-mono outline-none text-m3-on-surface focus:border-rose-500"
-                                            />
-                                          </div>
+                                          {!(db.currentUser?.role === UserRole.ADMIN) ? (
+                                            <div className="space-y-0.5">
+                                              <label className="text-[8px] text-rose-400 font-bold flex items-center gap-0.5">
+                                                <span>Manager PIN *</span>
+                                              </label>
+                                              <input
+                                                type="password"
+                                                maxLength={6}
+                                                value={partialManagerPin}
+                                                onChange={(e) => setPartialManagerPin(e.target.value)}
+                                                placeholder="••••"
+                                                className="w-full bg-m3-surface-lowest border border-rose-500/35 rounded p-1.5 text-[10px] font-mono outline-none text-m3-on-surface focus:border-rose-500"
+                                              />
+                                            </div>
+                                          ) : (
+                                            <div className="space-y-0.5 flex flex-col justify-end">
+                                              <label className="text-[8px] text-emerald-400 font-bold">Admin Status</label>
+                                              <div className="text-[9px] text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-lg font-bold">
+                                                ✓ Authorized ({db.currentUser?.fullName || "Admin"})
+                                              </div>
+                                            </div>
+                                          )}
                                         </div>
 
                                         <div className="flex gap-2.5 pt-1">
@@ -2576,54 +2727,122 @@ export default function AtposExtraModules({
                             </div>
 
                             {/* Daily Memo / Note Editor */}
-                            <div className="border-t border-m3-outline-variant/15 pt-3 mt-4 space-y-2 text-left">
+                            <div className="border-t border-m3-outline-variant/15 pt-3 mt-4 space-y-3 text-left">
                               <div className="flex justify-between items-center">
                                 <span className="text-[10px] font-black text-m3-primary uppercase tracking-widest flex items-center gap-1.5 font-sans">
                                   <FileText className="h-3.5 w-3.5 text-amber-500 animate-pulse" />
-                                  <span>Daily Calendar Memo</span>
+                                  <span>Daily Calendar Memos</span>
                                 </span>
-                                {dayMemos[`${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}-${String(selectedCalendarDay).padStart(2, "0")}`] && (
-                                  <span className="text-[8px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider">
-                                    Saved
-                                  </span>
-                                )}
+                                <span className="text-[8px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                  Multiple Memos Enabled
+                                </span>
                               </div>
-                              <textarea
-                                value={dayMemoInput}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setDayMemoInput(val);
-                                  
-                                  const key = `${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}-${String(selectedCalendarDay).padStart(2, "0")}`;
-                                  const updated = { ...dayMemos };
-                                  if (val.trim() === "") {
-                                    delete updated[key];
-                                  } else {
-                                    updated[key] = val;
+                              
+                              {/* Display Memos List */}
+                              {(() => {
+                                const dateKey = `${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}-${String(selectedCalendarDay).padStart(2, "0")}`;
+                                const rawMemo = dayMemos[dateKey] || "";
+                                let memoList: string[] = [];
+                                try {
+                                  if (rawMemo.startsWith("[") && rawMemo.endsWith("]")) {
+                                    memoList = JSON.parse(rawMemo);
+                                  } else if (rawMemo.trim() !== "") {
+                                    memoList = [rawMemo];
                                   }
-                                  setDayMemos(updated);
-                                }}
-                                placeholder="Type custom reminders, delivery alerts, or supplier appointments for this day..."
-                                className="w-full bg-m3-surface-lowest border border-m3-outline-variant/25 rounded-xl p-2.5 text-xs outline-none focus:border-m3-primary text-m3-on-surface resize-none leading-relaxed min-h-[90px]"
-                              />
-                              <div className="flex justify-between items-center text-[8px] text-zinc-500 font-mono">
-                                <span>Auto-saves securely</span>
-                                {dayMemoInput.length > 0 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setDayMemoInput("");
-                                      const key = `${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}-${String(selectedCalendarDay).padStart(2, "0")}`;
-                                      const updated = { ...dayMemos };
-                                      delete updated[key];
-                                      setDayMemos(updated);
-                                    }}
-                                    className="text-rose-500 hover:text-rose-600 font-bold cursor-pointer border-0 bg-transparent text-[8px] p-0"
-                                  >
-                                    Clear Note
-                                  </button>
-                                )}
-                              </div>
+                                } catch (e) {
+                                  if (rawMemo.trim() !== "") {
+                                    memoList = [rawMemo];
+                                  }
+                                }
+
+                                return (
+                                  <div className="space-y-2">
+                                    <div className="max-h-[140px] overflow-y-auto space-y-1.5 scrollbar-thin pr-1">
+                                      {memoList.map((memo, mIdx) => (
+                                        <div key={mIdx} className="bg-m3-surface-lowest border border-m3-outline-variant/15 p-2 rounded-xl text-[11px] leading-relaxed text-m3-on-surface flex justify-between items-start gap-2 group shadow-3xs">
+                                          <span className="break-words flex-1 font-sans font-semibold text-zinc-300">{memo}</span>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const updatedList = memoList.filter((_, idx) => idx !== mIdx);
+                                              const updated = { ...dayMemos };
+                                              if (updatedList.length === 0) {
+                                                delete updated[dateKey];
+                                              } else {
+                                                updated[dateKey] = JSON.stringify(updatedList);
+                                              }
+                                              setDayMemos(updated);
+                                            }}
+                                            className="text-rose-500 hover:text-rose-600 opacity-60 hover:opacity-100 transition px-1 py-0.5 cursor-pointer border-0 bg-transparent text-[10px]"
+                                            title="Delete Memo"
+                                          >
+                                            ✕
+                                          </button>
+                                        </div>
+                                      ))}
+                                      {memoList.length === 0 && (
+                                        <div className="text-center py-4 border border-dashed border-m3-outline-variant/10 rounded-xl">
+                                          <p className="text-[10px] text-zinc-500 italic">No memos registered for this day.</p>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Add Memo Input */}
+                                    <div className="space-y-1 pt-1">
+                                      <div className="flex gap-1.5">
+                                        <input
+                                          type="text"
+                                          value={dayMemoInput}
+                                          onChange={(e) => setDayMemoInput(e.target.value)}
+                                          onKeyDown={(e) => {
+                                            if (e.key === "Enter" && dayMemoInput.trim()) {
+                                              e.preventDefault();
+                                              const updatedList = [...memoList, dayMemoInput.trim()];
+                                              const updated = { ...dayMemos };
+                                              updated[dateKey] = JSON.stringify(updatedList);
+                                              setDayMemos(updated);
+                                              setDayMemoInput("");
+                                            }
+                                          }}
+                                          placeholder="Type a new memo for today..."
+                                          className="flex-1 bg-m3-surface-lowest border border-m3-outline-variant/25 rounded-xl px-2.5 py-1.5 text-xs outline-none focus:border-m3-primary text-m3-on-surface animate-fade-in"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (dayMemoInput.trim()) {
+                                              const updatedList = [...memoList, dayMemoInput.trim()];
+                                              const updated = { ...dayMemos };
+                                              updated[dateKey] = JSON.stringify(updatedList);
+                                              setDayMemos(updated);
+                                              setDayMemoInput("");
+                                            }
+                                          }}
+                                          className="px-3 bg-m3-primary text-m3-on-primary hover:opacity-90 transition rounded-xl text-xs font-black cursor-pointer border-0"
+                                        >
+                                          Add
+                                        </button>
+                                      </div>
+                                      {memoList.length > 0 && (
+                                        <div className="flex justify-end pt-1">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const updated = { ...dayMemos };
+                                              delete updated[dateKey];
+                                              setDayMemos(updated);
+                                              setDayMemoInput("");
+                                            }}
+                                            className="text-rose-500 hover:text-rose-600 font-bold cursor-pointer border-0 bg-transparent text-[8px] p-0 animate-fade-in"
+                                          >
+                                            Clear All Memos
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
                         ) : (

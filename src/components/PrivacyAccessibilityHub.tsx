@@ -2432,13 +2432,13 @@ startxref
                         </div>
 
                         {/* Immutability & Undeletability Security Safeguards Status */}
-                        <div className="p-4 rounded-xl border border-blue-500/25 bg-blue-500/5 space-y-3">
+                        <div className="p-4 rounded-xl border border-m3-primary/25 bg-m3-primary/5 space-y-3">
                           <div className="flex items-start gap-3">
-                            <span className="p-1.5 bg-blue-500/15 text-blue-400 rounded-lg shrink-0 mt-0.5">
-                              <ShieldCheck className="h-4 w-4 text-blue-400" />
+                            <span className="p-1.5 bg-m3-primary/15 text-m3-primary rounded-lg shrink-0 mt-0.5">
+                              <ShieldCheck className="h-4 w-4 text-m3-primary" />
                             </span>
                             <div className="space-y-1">
-                              <span className="text-[10px] font-black uppercase tracking-widest text-blue-400 font-mono block">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-m3-primary font-mono block">
                                 Cryptographic Immutability & Undeletable File Guards
                               </span>
                               <p className="text-[9px] text-zinc-300 leading-relaxed">

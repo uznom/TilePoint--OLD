@@ -89,9 +89,13 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
 
   // Core Alignment States for Automated Calendar Scheduling
   const [paymentFrequency, setPaymentFrequency] = useState<
-    "WEEKLY" | "MONTHLY" | "SEMI_QUARTERLY" | "QUARTERLY" | "YEARLY"
-  >("MONTHLY");
-  const [payoutDueDate, setPayoutDueDate] = useState("2026-07-15");
+    "ONE_TIME" | "WEEKLY" | "MONTHLY" | "SEMI_QUARTERLY" | "QUARTERLY" | "YEARLY"
+  >("ONE_TIME");
+  const [payoutDueDate, setPayoutDueDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return d.toISOString().slice(0, 10);
+  });
 
   React.useEffect(() => {
     if (currentUser.role !== UserRole.ADMIN && activeSubTab === "suppliers") {
@@ -179,6 +183,38 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
     setPoCart(newCart);
     localStorage.setItem("tp_po_cart", JSON.stringify(newCart));
     window.dispatchEvent(new Event("tp_po_cart_updated"));
+  };
+
+  // Find all unique non-empty brand names in active products
+  const uniqueInventoryBrands = React.useMemo(() => {
+    return Array.from(
+      new Set(
+        products
+          .filter((p) => !p.isDeleted && p.brand && p.brand.trim() !== "")
+          .map((p) => p.brand.trim())
+      )
+    ).sort((a, b) => a.localeCompare(b));
+  }, [products]);
+
+  // Find unique brands that have NO active brand mapping in brands
+  const unmappedBrands = React.useMemo(() => {
+    const activeMappedNames = new Set(
+      brands
+        .filter((b) => !b.isDeleted)
+        .map((b) => b.name.trim().toLowerCase())
+    );
+    return uniqueInventoryBrands.filter(
+      (bName) => !activeMappedNames.has(bName.trim().toLowerCase())
+    );
+  }, [uniqueInventoryBrands, brands]);
+
+  const handleOpenAddBrandForName = (name: string) => {
+    setEditingBrandId(null);
+    setBrandName(name);
+    const firstSupplier = suppliers.filter((s) => !s.isDeleted)[0]?.id || "S1";
+    setBrandSupplierId(firstSupplier);
+    setBrandDescription(`Auto-detected brand from migrated inventory products.`);
+    setShowBrandModal(true);
   };
 
   useEffect(() => {
@@ -1398,6 +1434,40 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
             </div>
           </div>
 
+          {unmappedBrands.length > 0 && (
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 space-y-3.5 animate-fade-in">
+              <div className="flex items-center gap-2 text-amber-500 font-bold text-xs">
+                <AlertTriangle className="h-4 w-4 shrink-0 animate-bounce" />
+                <span>Detected Unmapped Brands in Inventory ({unmappedBrands.length})</span>
+              </div>
+              <p className="text-[11px] text-m3-on-surface-variant leading-relaxed">
+                These brands exist on your imported/migrated inventory products, but have not been assigned to any authorized supplier. Click on any brand below to quickly map it to its distributor:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {unmappedBrands.map((bName) => {
+                  const itemsCount = products.filter(
+                    (p) => !p.isDeleted && p.brand?.trim().toLowerCase() === bName.toLowerCase()
+                  ).length;
+                  return (
+                    <button
+                      key={bName}
+                      type="button"
+                      onClick={() => handleOpenAddBrandForName(bName)}
+                      className="px-3 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 border border-amber-500/30 rounded-xl text-[10px] font-extrabold flex items-center gap-2 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                      title="Click to map this brand to a supplier"
+                    >
+                      <Plus className="h-3 w-3" />
+                      <span>{bName}</span>
+                      <span className="bg-amber-500/20 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded-full text-[9px]">
+                        {itemsCount} {itemsCount === 1 ? "item" : "items"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
               <h2 className="text-base font-black text-m3-on-surface tracking-tight font-sans">
@@ -1694,6 +1764,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                   onChange={(e) => setPaymentFrequency(e.target.value as any)}
                   className="w-full bg-m3-surface border border-m3-outline-variant/60 rounded-xl px-2.5 py-1.5 text-xs font-bold text-m3-primary focus:outline-none focus:border-m3-primary transition-colors cursor-pointer"
                 >
+                  <option value="ONE_TIME">One-Time (30d Term)</option>
                   <option value="WEEKLY">Weekly Plan</option>
                   <option value="MONTHLY">Monthly Plan</option>
                   <option value="SEMI_QUARTERLY">Semi-Quarterly (45d)</option>
@@ -1960,7 +2031,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                 {/* Strategy A (Recommended for standard) */}
                 <div
                   onClick={() => handleConsolidateOrders("Pending")}
-                  className="bg-m3-surface hover:bg-m3-surface-lowest border-2 border-amber-500/20 hover:border-amber-500/50 p-4 rounded-2xl cursor-pointer transition-all hover:scale-101 space-y-3 relative group"
+                  className="bg-m3-surface hover:bg-m3-surface-lowest border-2 border-amber-500/20 hover:border-amber-500/50 p-4 rounded-2xl cursor-pointer transition-all space-y-3 relative group"
                 >
                   <div className="absolute top-3 right-3 bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider font-mono">
                     Highly Recommended
@@ -1988,7 +2059,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                 {/* Strategy B (Direct to Sourcing Deck) */}
                 <div
                   onClick={() => handleConsolidateOrders("Approved")}
-                  className="bg-m3-surface hover:bg-m3-surface-lowest border-2 border-emerald-500/20 hover:border-emerald-500/50 p-4 rounded-2xl cursor-pointer transition-all hover:scale-101 space-y-3 relative group"
+                  className="bg-m3-surface hover:bg-m3-surface-lowest border-2 border-emerald-500/20 hover:border-emerald-500/50 p-4 rounded-2xl cursor-pointer transition-all space-y-3 relative group"
                 >
                   <div className="absolute top-3 right-3 bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider font-mono">
                     Direct Sourcing
@@ -2899,6 +2970,29 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                   placeholder="e.g. Mariwasa, ROYU, Matimco"
                   className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-bold"
                 />
+                {!editingBrandId && unmappedBrands.length > 0 && (
+                  <div className="pt-2">
+                    <span className="text-[9px] text-zinc-400 block mb-1 font-bold">
+                      Or select an unmapped inventory brand:
+                    </span>
+                    <div className="flex flex-wrap gap-1 max-h-[90px] overflow-y-auto pr-1">
+                      {unmappedBrands.map((ub) => (
+                        <button
+                          key={ub}
+                          type="button"
+                          onClick={() => setBrandName(ub)}
+                          className={`px-2 py-1 rounded-lg text-[9px] font-bold border transition-all cursor-pointer ${
+                            brandName.toLowerCase().trim() === ub.toLowerCase().trim()
+                              ? "bg-m3-primary text-m3-on-primary border-m3-primary"
+                              : "bg-m3-surface-lowest hover:bg-m3-surface-variant/20 text-zinc-400 border-m3-outline-variant/25"
+                          }`}
+                        >
+                          {ub}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1">

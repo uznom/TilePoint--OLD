@@ -183,7 +183,7 @@ export const PwaInstallPrompt: React.FC = () => {
             transition={{ type: 'spring', damping: 25, stiffness: 350 }}
             style={{
               boxShadow: '0 20px 40px rgba(var(--m3-primary-rgb, 21, 94, 239), 0.16), 0 4px 16px rgba(0, 0, 0, 0.15)',
-              backgroundColor: 'rgb(var(--m3-surface-container-high, 30, 32, 37))',
+              backgroundColor: 'var(--m3-surface-container-high, #334155)',
               borderColor: 'var(--m3-outline-variant, rgba(255, 255, 255, 0.12))'
             }}
             className="w-full rounded-3xl border p-5 flex flex-col gap-4 backdrop-blur-2xl bg-opacity-95 pointer-events-auto"

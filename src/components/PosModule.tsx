@@ -1154,7 +1154,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                 </>
               ) : (
                 <>
-                  <History className="h-4.5 w-4.5 text-indigo-400" />
+                  <History className="h-4.5 w-4.5 text-m3-primary" />
                   <span>DAILY SALES LEDGER & VOID TERMINAL (ERP OS)</span>
                 </>
               )}
@@ -1280,7 +1280,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                       <div
                         key={idx}
                         onClick={() => handleResume(park.id)}
-                        className="p-3.5 bg-m3-surface border border-m3-outline-variant/35 hover:border-m3-primary rounded-2xl flex flex-col justify-between shadow-sm cursor-pointer hover:scale-[1.01] transition-all group relative overflow-hidden text-left gap-2"
+                        className="p-3.5 bg-m3-surface border border-m3-outline-variant/35 hover:border-m3-primary rounded-2xl flex flex-col justify-between shadow-sm cursor-pointer transition-all group relative overflow-hidden text-left gap-2"
                       >
                         <div className="absolute top-0 bottom-0 left-0 w-1 bg-m3-primary" />
                         <div>
@@ -1351,7 +1351,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                         { key: "F1", desc: "Void Current Sale", action: () => handleCancelSale(), bg: "hover:bg-rose-500/10 hover:border-rose-500/30 text-rose-600 dark:text-rose-400" },
                         { key: "F2", desc: "Focus Search Catalog", action: () => searchInputRef.current?.focus(), bg: "hover:bg-m3-primary/10 hover:border-m3-primary/30" },
                         { key: "F3", desc: "Hold Order Stash", action: () => handleHold(), bg: "hover:bg-amber-500/10 hover:border-amber-500/30 text-amber-600 dark:text-amber-400" },
-                        { key: "F5", desc: "Assign Customer Name", action: () => { setCustomerModalInput(customerName); setShowCustomerModal(true); }, bg: "hover:bg-indigo-500/10 hover:border-indigo-500/30 text-indigo-600 dark:text-indigo-400" },
+                        { key: "F5", desc: "Assign Customer Name", action: () => { setCustomerModalInput(customerName); setShowCustomerModal(true); }, bg: "hover:bg-m3-primary/10 hover:border-m3-primary/30 text-m3-primary" },
                         { key: "F6", desc: "Apply Code/Discount", action: () => { setDiscountInput(""); setShowDiscountModal(true); }, bg: "hover:bg-teal-500/10 hover:border-teal-500/30 text-teal-600 dark:text-teal-400" },
                         { key: "F7", desc: "Go to Pay Tender", action: () => {
                           if (cart.length > 0) {
@@ -1377,7 +1377,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                           } else {
                             setShowShiftModal(true);
                           }
-                        }, bg: "hover:bg-cyan-500/10 hover:border-cyan-500/30 text-cyan-600 dark:text-cyan-400" }
+                        }, bg: "hover:bg-m3-tertiary/10 hover:border-m3-tertiary/30 text-m3-tertiary" }
                       ].map((sh, index) => (
                         <button
                           key={index}

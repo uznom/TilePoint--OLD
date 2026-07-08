@@ -62,6 +62,8 @@ export function AdminProfitModule({
     expenses,
     setExpenses,
     addAuditLog,
+    customBills,
+    purchaseOrders,
   } = useDb();
 
   // Localized tab inside the accounting console
@@ -189,13 +191,50 @@ export function AdminProfitModule({
       });
     });
 
+    // Retrieve calendar payments from localStorage automatically
+    const parsedInstallments: Record<string, { id: string, amount: number, date: string, notes?: string }[]> = (() => {
+      try {
+        const saved = localStorage.getItem("atpos_v2_payable_installments");
+        return saved ? JSON.parse(saved) : {};
+      } catch {
+        return {};
+      }
+    })();
+
+    const automatedPaymentsList: any[] = [];
+    Object.entries(parsedInstallments).forEach(([poId, insts]) => {
+      const bill = customBills?.find((b) => b.id === poId);
+      const po = purchaseOrders?.find((p) => p.id === poId);
+      
+      const branchId = po?.branchId || "corporate";
+      const title = bill?.title || po?.poNumber || `Payment (${poId})`;
+      const category = bill ? "Utilities/Corporate Debt [Calendar]" : "Supplier Payment [Calendar]";
+      
+      if (selectedBranchId !== "all" && branchId !== selectedBranchId) return;
+
+      insts.forEach((inst) => {
+        automatedPaymentsList.push({
+          id: inst.id,
+          dateTime: inst.date,
+          amount: inst.amount,
+          recordedBy: "Automated Calendar Sync",
+          category,
+          notes: inst.notes || `Disbursement against ${title}`,
+          branchId,
+          isAutomated: true
+        });
+      });
+    });
+
     // Operating Expenses (OpEx)
     const activeExpenses = expenses.filter((exp) => {
       if (exp.isDeleted) return false;
       if (selectedBranchId !== "all" && exp.branchId !== selectedBranchId) return false;
       return true;
     });
-    const totalOpex = activeExpenses.reduce((acc, exp) => acc + exp.amount, 0);
+
+    const combinedExpensesList = [...activeExpenses, ...automatedPaymentsList];
+    const totalOpex = combinedExpensesList.reduce((acc, exp) => acc + exp.amount, 0);
 
     // Shrink / System Loss Ledger
     const activeDamageLogs = damageLogs.filter((log) => {
@@ -247,14 +286,25 @@ export function AdminProfitModule({
       grossMarginPercent,
       netMarginPercent,
       activeExpenses,
+      combinedExpenses: combinedExpensesList,
       activeDamageLogs,
       activeShifts,
       voidedSales,
     };
-  }, [sales, saleItems, products, damageLogs, shifts, branchLandingModifiers, selectedBranchId, expenses]);
+  }, [sales, saleItems, products, damageLogs, shifts, branchLandingModifiers, selectedBranchId, expenses, customBills, purchaseOrders]);
 
   // Branch Rank calculation list
   const branchLeaderboard = useMemo(() => {
+    // Retrieve calendar payments from localStorage automatically
+    const parsedInstallments: Record<string, { id: string, amount: number, date: string, notes?: string }[]> = (() => {
+      try {
+        const saved = localStorage.getItem("atpos_v2_payable_installments");
+        return saved ? JSON.parse(saved) : {};
+      } catch {
+        return {};
+      }
+    })();
+
     return branches.filter((b) => !b.isDeleted).map((branch) => {
       const branchSales = sales.filter((s) => s.branchId === branch.id && !s.isDeleted);
       const branchGross = branchSales.reduce((acc, s) => acc + s.grandTotal, 0);
@@ -270,9 +320,22 @@ export function AdminProfitModule({
         });
       });
 
+      // Automated calendar payments for this branch
+      let branchAutomatedCalendarPayments = 0;
+      Object.entries(parsedInstallments).forEach(([poId, insts]) => {
+        const bill = customBills?.find((b) => b.id === poId);
+        const po = purchaseOrders?.find((p) => p.id === poId);
+        const bId = po?.branchId || "corporate";
+        if (bId === branch.id) {
+          insts.forEach((inst) => {
+            branchAutomatedCalendarPayments += inst.amount;
+          });
+        }
+      });
+
       const branchOpex = expenses
         .filter((exp) => !exp.isDeleted && exp.branchId === branch.id)
-        .reduce((acc, exp) => acc + exp.amount, 0);
+        .reduce((acc, exp) => acc + exp.amount, 0) + branchAutomatedCalendarPayments;
 
       const branchDamages = damageLogs
         .filter((log) => !log.isDeleted && log.branchId === branch.id)
@@ -309,7 +372,7 @@ export function AdminProfitModule({
         margin: branchNetMargin,
       };
     }).sort((a, b) => b.net - a.net);
-  }, [branches, sales, saleItems, products, expenses, damageLogs, shifts, branchLandingModifiers]);
+  }, [branches, sales, saleItems, products, expenses, damageLogs, shifts, branchLandingModifiers, customBills, purchaseOrders]);
 
   return (
     <div className="space-y-6" id="isolated-accounting-console">
@@ -320,12 +383,12 @@ export function AdminProfitModule({
         
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 border-b border-m3-outline-variant/15 pb-4">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+            <div className="p-2 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 rounded-xl border border-emerald-500/20">
               <Sparkles className="h-4.5 w-4.5" />
             </div>
             <div>
-              <h3 className="text-sm font-black uppercase tracking-wider text-zinc-100">Consolidated Profitability Model</h3>
-              <p className="text-[11px] text-zinc-400 mt-0.5">Real-time financial flows across all active branches</p>
+              <h3 className="text-sm font-black uppercase tracking-wider text-m3-on-surface dark:text-zinc-100">Consolidated Profitability Model</h3>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">Real-time financial flows across all active branches</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -339,87 +402,87 @@ export function AdminProfitModule({
         <div className="flex flex-col lg:flex-row items-stretch gap-4 lg:gap-3 mb-6 relative">
           
           {/* Gross Revenue Card */}
-          <div className="flex-1 min-w-0 bg-gradient-to-br from-zinc-950/40 to-zinc-900/40 border border-m3-outline-variant/20 rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 hover:border-emerald-500/30 group">
+          <div className="flex-1 min-w-0 bg-white dark:bg-zinc-950 dark:bg-gradient-to-br dark:from-zinc-950/40 dark:to-zinc-900/40 border border-emerald-500/20 dark:border-m3-outline-variant/20 rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 hover:border-emerald-500/35 shadow-none dark:shadow-none group">
             <div className="flex justify-between items-start">
-              <span className="text-[9.5px] font-black uppercase text-zinc-400 tracking-wider">Gross Revenue</span>
-              <span className="text-[9.5px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 px-2 py-0.5 rounded-full font-extrabold uppercase">
+              <span className="text-[9.5px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">Gross Revenue</span>
+              <span className="text-[9.5px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 px-2 py-0.5 rounded-full font-extrabold uppercase">
                 INFLOW (+)
               </span>
             </div>
             <div className="my-3.5">
-              <div className="text-2xl lg:text-3xl font-black text-emerald-400 font-mono tracking-tight group-hover:scale-[1.01] transition-transform origin-left">
+              <div className="text-2xl lg:text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono tracking-tight group-hover:scale-[1.01] transition-transform origin-left">
                 ₱{metrics.grossRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </div>
-              <p className="text-[10.5px] text-zinc-500 mt-1">
-                Net of discounts: <span className="font-mono text-zinc-400 font-bold">₱{metrics.discountsAllowed.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+              <p className="text-[10.5px] text-zinc-500 dark:text-zinc-400 mt-1">
+                Net of discounts: <span className="font-mono text-zinc-700 dark:text-zinc-300 font-bold">₱{metrics.discountsAllowed.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
               </p>
             </div>
-            <div className="text-[10px] text-zinc-400 pt-2.5 border-t border-m3-outline-variant/10 flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            <div className="text-[10px] text-zinc-500 dark:text-zinc-400 pt-2.5 border-t border-m3-outline-variant/10 flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" />
               <span>Consolidated Sales Volume</span>
             </div>
           </div>
 
           {/* Minus Operator Pill */}
           <div className="flex lg:flex-col items-center justify-center shrink-0 py-1 lg:px-1">
-            <div className="h-7 w-7 rounded-full bg-zinc-900 border border-m3-outline-variant/25 flex items-center justify-center text-rose-400 font-bold text-sm shadow-md font-mono select-none">
+            <div className="h-7 w-7 rounded-full bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/40 flex items-center justify-center text-rose-600 dark:text-rose-400 font-black text-sm shadow-sm font-mono select-none">
               −
             </div>
           </div>
 
           {/* Deductions (COGS + OpEx + Loss) */}
-          <div className="flex-[1.5] min-w-0 bg-gradient-to-br from-zinc-950/40 to-zinc-900/40 border border-m3-outline-variant/20 rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 hover:border-rose-500/30">
+          <div className="flex-[1.5] min-w-0 bg-white dark:bg-zinc-950 dark:bg-gradient-to-br dark:from-zinc-950/40 dark:to-zinc-900/40 border border-rose-500/20 dark:border-m3-outline-variant/20 rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 hover:border-rose-500/35 shadow-none dark:shadow-none">
             <div className="flex justify-between items-start mb-3">
-              <span className="text-[9.5px] font-black uppercase text-zinc-400 tracking-wider">Total Deductions</span>
-              <span className="text-[9.5px] font-mono bg-rose-500/10 text-rose-400 border border-rose-500/25 px-2 py-0.5 rounded-full font-extrabold uppercase">
+              <span className="text-[9.5px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">Total Deductions</span>
+              <span className="text-[9.5px] font-mono bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25 px-2 py-0.5 rounded-full font-extrabold uppercase">
                 OUTFLOW (−)
               </span>
             </div>
 
             <div className="grid grid-cols-3 gap-3 my-1">
               {/* COGS */}
-              <div className="p-2.5 rounded-xl bg-zinc-950/20 border border-m3-outline-variant/10 flex flex-col justify-between">
-                <div className="text-[9.5px] font-bold text-zinc-400 block uppercase tracking-wider">COGS</div>
-                <div className="font-mono font-black text-rose-400 text-xs mt-1">
+              <div className="p-2.5 rounded-xl bg-zinc-50/50 dark:bg-zinc-950/20 border border-rose-500/10 dark:border-m3-outline-variant/10 flex flex-col justify-between shadow-none dark:shadow-none">
+                <div className="text-[9.5px] font-bold text-zinc-500 dark:text-zinc-400 block uppercase tracking-wider">COGS</div>
+                <div className="font-mono font-black text-rose-600 dark:text-rose-400 text-xs mt-1">
                   ₱{metrics.cogs.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </div>
-                <span className="text-[9px] text-zinc-500 font-medium mt-0.5 block">
+                <span className="text-[9px] text-zinc-500 dark:text-zinc-400 font-medium mt-0.5 block">
                   {metrics.grossRevenue > 0 ? ((metrics.cogs / metrics.grossRevenue) * 100).toFixed(0) : 0}% of Rev
                 </span>
               </div>
               
               {/* OpEx */}
-              <div className="p-2.5 rounded-xl bg-zinc-950/20 border border-m3-outline-variant/10 flex flex-col justify-between">
-                <div className="text-[9.5px] font-bold text-zinc-400 block uppercase tracking-wider">OpEx</div>
-                <div className="font-mono font-black text-rose-400 text-xs mt-1">
+              <div className="p-2.5 rounded-xl bg-zinc-50/50 dark:bg-zinc-950/20 border border-rose-500/10 dark:border-m3-outline-variant/10 flex flex-col justify-between shadow-none dark:shadow-none">
+                <div className="text-[9.5px] font-bold text-zinc-500 dark:text-zinc-400 block uppercase tracking-wider">OpEx</div>
+                <div className="font-mono font-black text-rose-600 dark:text-rose-400 text-xs mt-1">
                   ₱{metrics.opex.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </div>
-                <span className="text-[9px] text-zinc-500 font-medium mt-0.5 block">
+                <span className="text-[9px] text-zinc-500 dark:text-zinc-400 font-medium mt-0.5 block">
                   {metrics.grossRevenue > 0 ? ((metrics.opex / metrics.grossRevenue) * 100).toFixed(0) : 0}% of Rev
                 </span>
               </div>
 
               {/* Loss / Shrinkage */}
-              <div className="p-2.5 rounded-xl bg-zinc-950/20 border border-m3-outline-variant/10 flex flex-col justify-between">
-                <div className="text-[9.5px] font-bold text-zinc-400 block uppercase tracking-wider">Shrinkage</div>
-                <div className="font-mono font-black text-rose-400 text-xs mt-1">
+              <div className="p-2.5 rounded-xl bg-zinc-50/50 dark:bg-zinc-950/20 border border-rose-500/10 dark:border-m3-outline-variant/10 flex flex-col justify-between shadow-none dark:shadow-none">
+                <div className="text-[9.5px] font-bold text-zinc-500 dark:text-zinc-400 block uppercase tracking-wider">Shrinkage</div>
+                <div className="font-mono font-black text-rose-600 dark:text-rose-400 text-xs mt-1">
                   ₱{metrics.shrinkage.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </div>
-                <span className="text-[9px] text-zinc-500 font-medium mt-0.5 block">
+                <span className="text-[9px] text-zinc-500 dark:text-zinc-400 font-medium mt-0.5 block">
                   {metrics.grossRevenue > 0 ? ((metrics.shrinkage / metrics.grossRevenue) * 100).toFixed(0) : 0}% of Rev
                 </span>
               </div>
             </div>
 
-            <div className="text-right text-[11px] font-mono text-zinc-300 font-extrabold pt-3 mt-3 border-t border-m3-outline-variant/10 flex justify-between items-center">
-              <span className="text-[9.5px] font-sans font-bold text-zinc-500 uppercase tracking-wider">Sum Outflows</span>
+            <div className="text-right text-[11px] font-mono text-m3-on-surface dark:text-zinc-300 font-extrabold pt-3 mt-3 border-t border-m3-outline-variant/10 flex justify-between items-center">
+              <span className="text-[9.5px] font-sans font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Sum Outflows</span>
               <span>₱{(metrics.cogs + metrics.opex + metrics.shrinkage).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
             </div>
           </div>
 
           {/* Equals Operator Pill */}
           <div className="flex lg:flex-col items-center justify-center shrink-0 py-1 lg:px-1">
-            <div className="h-7 w-7 rounded-full bg-zinc-900 border border-m3-outline-variant/25 flex items-center justify-center text-emerald-400 font-bold text-sm shadow-md font-mono select-none">
+            <div className="h-7 w-7 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-black text-sm shadow-sm font-mono select-none">
               =
             </div>
           </div>
@@ -427,15 +490,15 @@ export function AdminProfitModule({
           {/* Net Profit Result */}
           <div className={`flex-1 min-w-0 border rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 group ${
             metrics.netProfit >= 0 
-              ? "bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/30 text-emerald-300 hover:border-emerald-500/50" 
-              : "bg-gradient-to-br from-rose-500/10 to-rose-500/5 border-rose-500/30 text-rose-300 hover:border-rose-500/50"
+              ? "bg-emerald-500/5 dark:bg-gradient-to-br dark:from-emerald-500/10 dark:to-emerald-500/5 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:border-emerald-500/50" 
+              : "bg-rose-500/5 dark:bg-gradient-to-br dark:from-rose-500/10 dark:to-rose-500/5 border-rose-500/30 text-rose-700 dark:text-rose-300 hover:border-rose-500/50"
           }`}>
             <div className="flex justify-between items-start">
-              <span className="text-[9.5px] font-black uppercase text-zinc-400 tracking-wider">Net Earnings</span>
+              <span className="text-[9.5px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">Net Earnings</span>
               <span className={`text-[9.5px] font-mono px-2 py-0.5 rounded-full font-black uppercase border ${
                 metrics.netProfit >= 0 
-                  ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-400" 
-                  : "bg-rose-500/10 border-rose-500/25 text-rose-400"
+                  ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400" 
+                  : "bg-rose-500/10 border-rose-500/25 text-rose-600 dark:text-rose-400"
               }`}>
                 {metrics.netProfit >= 0 ? "SURPLUS" : "DEFICIT"}
               </span>
@@ -447,18 +510,18 @@ export function AdminProfitModule({
               </div>
               <div className="mt-1.5 flex items-center gap-1">
                 {metrics.netProfit >= 0 ? (
-                  <TrendingUp className="h-3.5 w-3.5 text-emerald-400 animate-bounce" />
+                  <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 animate-bounce" />
                 ) : (
-                  <TrendingDown className="h-3.5 w-3.5 text-rose-400 animate-bounce" />
+                  <TrendingDown className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400 animate-bounce" />
                 )}
-                <span className="text-[10.5px] font-mono font-extrabold text-zinc-300">
+                <span className="text-[10.5px] font-mono font-extrabold text-zinc-700 dark:text-zinc-300">
                   Margin: {metrics.netMarginPercent.toFixed(1)}%
                 </span>
               </div>
             </div>
 
-            <div className="text-[10px] text-zinc-400 pt-2.5 border-t border-m3-outline-variant/10 flex items-center gap-1.5">
-              <span className={`h-1.5 w-1.5 rounded-full ${metrics.netProfit >= 0 ? "bg-emerald-400" : "bg-rose-400"}`} />
+            <div className="text-[10px] text-zinc-500 dark:text-zinc-400 pt-2.5 border-t border-m3-outline-variant/10 flex items-center gap-1.5">
+              <span className={`h-1.5 w-1.5 rounded-full ${metrics.netProfit >= 0 ? "bg-emerald-500 dark:bg-emerald-400" : "bg-rose-500 dark:bg-rose-400"}`} />
               <span>Return on Enterprise Capital</span>
             </div>
           </div>
@@ -468,8 +531,8 @@ export function AdminProfitModule({
         {/* Dynamic Allocation Ratios */}
         {metrics.grossRevenue > 0 && (
           <div className="space-y-1.5">
-            <span className="text-[10px] text-zinc-400 font-black uppercase tracking-wider font-mono">Gross Revenue Allocation Ratios:</span>
-            <div className="w-full h-5 rounded-full bg-zinc-800 flex overflow-hidden shadow-inner text-[9px] font-black font-mono text-white text-center">
+            <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-black uppercase tracking-wider font-mono">Gross Revenue Allocation Ratios:</span>
+            <div className="w-full h-5 rounded-full bg-zinc-200 dark:bg-zinc-800 flex overflow-hidden shadow-inner text-[9px] font-black font-mono text-white text-center">
               {/* COGS Segment */}
               <div 
                 style={{ width: `${(metrics.cogs / metrics.grossRevenue) * 100}%` }}
@@ -507,7 +570,7 @@ export function AdminProfitModule({
               </div>
             </div>
             
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-zinc-400 pt-1.5 font-sans justify-center">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-zinc-500 dark:text-zinc-400 pt-1.5 font-sans justify-center">
               <span className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-amber-600/90 block" /> COGS Wholesale Price ({((metrics.cogs / metrics.grossRevenue) * 100).toFixed(1)}%)
               </span>
@@ -547,7 +610,7 @@ export function AdminProfitModule({
                 <h3 className="text-xs font-black text-m3-primary flex items-center gap-2 uppercase tracking-wider">
                   <Building className="h-4.5 w-4.5 text-m3-primary" /> Branch Profitability Comparison
                 </h3>
-                <p className="text-[11px] text-zinc-400">Real-time profitability leaderboard of enterprise nodes</p>
+                <p className="text-[11px] text-zinc-400 dark:text-zinc-300">Real-time profitability leaderboard of enterprise nodes</p>
               </div>
               <span className="text-[9px] font-mono bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-lg border border-emerald-500/20 font-bold">
                 Consolidated Rankings
@@ -586,13 +649,13 @@ export function AdminProfitModule({
                           <span className="truncate">{item.name}</span>
                         </td>
                         <td className="py-3 text-right font-mono">₱{item.gross.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                        <td className="py-3 text-right font-mono text-zinc-400">₱{item.cogs.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                        <td className="py-3 text-right font-mono text-zinc-400">₱{item.opex.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                        <td className="py-3 text-right font-mono text-zinc-400">₱{item.loss.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                        <td className={`py-3 text-right font-mono font-black ${item.net >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        <td className="py-3 text-right font-mono text-zinc-400 dark:text-zinc-300">₱{item.cogs.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                        <td className="py-3 text-right font-mono text-zinc-400 dark:text-zinc-300">₱{item.opex.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                        <td className="py-3 text-right font-mono text-zinc-400 dark:text-zinc-300">₱{item.loss.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                        <td className={`py-3 text-right font-mono font-black ${item.net >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                           ₱{item.net.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         </td>
-                        <td className={`py-3 text-right pr-2 font-mono font-black ${item.margin >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        <td className={`py-3 text-right pr-2 font-mono font-black ${item.margin >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                           {item.margin.toFixed(1)}%
                         </td>
                       </tr>
@@ -608,7 +671,7 @@ export function AdminProfitModule({
             </div>
           </div>
           
-          <div className="text-[10px] text-zinc-500 font-sans italic pt-4 mt-4 border-t border-m3-outline-variant/10 text-center flex items-center justify-center gap-2">
+          <div className="text-[10px] text-zinc-500 dark:text-zinc-400 font-sans italic pt-4 mt-4 border-t border-m3-outline-variant/10 text-center flex items-center justify-center gap-2">
             <Sparkles className="h-3.5 w-3.5 text-m3-primary" />
             <span>Click on any branch row to filter and isolate P&L timelines above.</span>
           </div>
@@ -621,7 +684,7 @@ export function AdminProfitModule({
               <Sliders className="h-4.5 w-4.5 text-m3-primary" />
               <div>
                 <h4 className="text-xs font-black uppercase tracking-wider text-m3-on-surface">Landing Cost Multipliers</h4>
-                <p className="text-[10px] text-zinc-400">Adjust wholesale overhead per showroom branch</p>
+                <p className="text-[10px] text-zinc-500 dark:text-zinc-400">Adjust wholesale overhead per showroom branch</p>
               </div>
             </div>
 
@@ -631,10 +694,10 @@ export function AdminProfitModule({
                 const isEditing = editingBranchId === b.id;
 
                 return (
-                  <div key={b.id} className="p-3 rounded-xl bg-zinc-950/20 border border-m3-outline-variant/10 space-y-2">
+                  <div key={b.id} className="p-3 rounded-xl bg-zinc-100 dark:bg-zinc-950/20 border border-m3-outline-variant/10 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-zinc-300 truncate">{b.name}</span>
-                      <span className="text-[10.5px] font-mono font-black text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md">
+                      <span className="text-xs font-bold text-m3-on-surface dark:text-zinc-300 truncate">{b.name}</span>
+                      <span className="text-[10.5px] font-mono font-black text-amber-600 dark:text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md">
                         {currentModifier}%
                       </span>
                     </div>
@@ -648,7 +711,7 @@ export function AdminProfitModule({
                           max="100"
                           value={editingValue}
                           onChange={(e) => setEditingValue(e.target.value)}
-                          className="w-full bg-zinc-900 border border-m3-outline-variant/30 rounded-lg text-xs p-1.5 font-mono text-center focus:outline-none focus:ring-1 focus:ring-amber-500"
+                          className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 rounded-lg text-xs p-1.5 font-mono text-center text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-amber-500"
                           placeholder="2.5"
                         />
                         <button
@@ -659,14 +722,14 @@ export function AdminProfitModule({
                         </button>
                         <button
                           onClick={() => setEditingBranchId(null)}
-                          className="px-2.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-[10.5px] font-bold uppercase rounded-lg cursor-pointer shrink-0 transition-colors"
+                          className="px-2.5 py-1.5 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 text-[10.5px] font-bold uppercase rounded-lg cursor-pointer shrink-0 transition-colors"
                         >
                           Esc
                         </button>
                       </div>
                     ) : (
                       <div className="flex items-center justify-between pt-1">
-                        <p className="text-[9.5px] text-zinc-500">Includes wholesale freight, logistics and taxes</p>
+                        <p className="text-[9.5px] text-zinc-500 dark:text-zinc-400">Includes wholesale freight, logistics and taxes</p>
                         <button
                           onClick={() => {
                             setEditingBranchId(b.id);
@@ -684,7 +747,7 @@ export function AdminProfitModule({
             </div>
           </div>
 
-          <div className="bg-amber-500/10 p-3 rounded-xl border border-amber-500/20 text-[10px] text-amber-300 mt-4 leading-relaxed font-sans">
+          <div className="bg-amber-500/10 p-3 rounded-xl border border-amber-500/20 text-[10px] text-amber-800 dark:text-amber-300 mt-4 leading-relaxed font-sans">
             <strong>⚠️ Cost Accounting Rule</strong>: COGS is calculated by taking the product base wholesale cost and adding this percentage. Always verify actual shipping receipts before overriding values.
           </div>
         </div>
@@ -701,61 +764,61 @@ export function AdminProfitModule({
               <Plus className="h-4.5 w-4.5 text-m3-primary" />
               <div>
                 <h4 className="text-xs font-black uppercase tracking-wider text-m3-on-surface">Record Branch Expenses</h4>
-                <p className="text-[10px] text-zinc-400">Log utility billing or cargo freight outlays</p>
+                <p className="text-[10px] text-zinc-400 dark:text-zinc-350">Log utility billing or cargo freight outlays</p>
               </div>
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-extrabold uppercase text-zinc-400">Target Showroom Branch</label>
+              <label className="text-[10px] font-extrabold uppercase text-zinc-500 dark:text-zinc-400">Target Showroom Branch</label>
               <select
                 value={expenseBranch}
                 onChange={(e) => setExpenseBranch(e.target.value)}
-                className="w-full bg-zinc-950/40 border border-m3-outline-variant/30 text-xs px-3 py-2 rounded-xl text-zinc-300 focus:outline-none focus:ring-1 focus:ring-m3-primary"
+                className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 text-xs px-3 py-2 rounded-xl text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary"
               >
                 {branches.filter(b => !b.isDeleted).map(b => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
+                  <option key={b.id} value={b.id} className="bg-m3-surface-lowest text-m3-on-surface">{b.name}</option>
                 ))}
               </select>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-[10px] font-extrabold uppercase text-zinc-400">Expense Category</label>
+                <label className="text-[10px] font-extrabold uppercase text-zinc-500 dark:text-zinc-400">Expense Category</label>
                 <select
                   value={expenseCategory}
                   onChange={(e) => setExpenseCategory(e.target.value)}
-                  className="w-full bg-zinc-950/40 border border-m3-outline-variant/30 text-xs px-3 py-2 rounded-xl text-zinc-300 focus:outline-none focus:ring-1 focus:ring-m3-primary"
+                  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 text-xs px-3 py-2 rounded-xl text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary"
                 >
-                  <option value="Utilities">Utilities (Power, Water)</option>
-                  <option value="Logistics">Logistics & Freight</option>
-                  <option value="Packaging">Packaging Boxes</option>
-                  <option value="Marketing">Local Marketing</option>
-                  <option value="Repairs">Repairs & Maintenance</option>
-                  <option value="Miscellaneous">Miscellaneous</option>
+                  <option value="Utilities" className="bg-m3-surface-lowest text-m3-on-surface">Utilities (Power, Water)</option>
+                  <option value="Logistics" className="bg-m3-surface-lowest text-m3-on-surface">Logistics & Freight</option>
+                  <option value="Packaging" className="bg-m3-surface-lowest text-m3-on-surface">Packaging Boxes</option>
+                  <option value="Marketing" className="bg-m3-surface-lowest text-m3-on-surface">Local Marketing</option>
+                  <option value="Repairs" className="bg-m3-surface-lowest text-m3-on-surface">Repairs & Maintenance</option>
+                  <option value="Miscellaneous" className="bg-m3-surface-lowest text-m3-on-surface">Miscellaneous</option>
                 </select>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-extrabold uppercase text-zinc-400">Amount (PHP)</label>
+                <label className="text-[10px] font-extrabold uppercase text-zinc-500 dark:text-zinc-400">Amount (PHP)</label>
                 <input
                   type="number"
                   required
                   placeholder="₱0.00"
                   value={expenseAmount}
                   onChange={(e) => setExpenseAmount(e.target.value)}
-                  className="w-full bg-zinc-950/40 border border-m3-outline-variant/30 text-xs px-3 py-2 rounded-xl text-zinc-300 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-m3-primary font-mono"
+                  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 text-xs px-3 py-2 rounded-xl text-m3-on-surface placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-m3-primary font-mono"
                 />
               </div>
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-extrabold uppercase text-zinc-400">Audit Notes / Itemized Details</label>
+              <label className="text-[10px] font-extrabold uppercase text-zinc-500 dark:text-zinc-400">Audit Notes / Itemized Details</label>
               <textarea
                 placeholder="E.g., June electricity bill, Meralco invoice #..."
                 value={expenseNotes}
                 onChange={(e) => setExpenseNotes(e.target.value)}
                 rows={2}
-                className="w-full bg-zinc-950/40 border border-m3-outline-variant/30 text-xs px-3 py-2 rounded-xl text-zinc-300 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-m3-primary"
+                className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 text-xs px-3 py-2 rounded-xl text-m3-on-surface placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-m3-primary"
               />
             </div>
 
@@ -774,11 +837,11 @@ export function AdminProfitModule({
           <div>
             {/* Tab selection headers */}
             <div className="flex items-center justify-between pb-3 border-b border-m3-outline-variant/15 mb-4">
-              <div className="flex bg-zinc-950/40 p-1 rounded-xl border border-m3-outline-variant/10 text-xs font-bold gap-1">
+              <div className="flex bg-zinc-200/50 dark:bg-zinc-950/40 p-1 rounded-xl border border-m3-outline-variant/10 text-xs font-bold gap-1">
                 <button
                   onClick={() => setActiveLedgerTab("damage")}
                   className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                    activeLedgerTab === "damage" ? "bg-m3-primary text-m3-on-primary font-black shadow" : "text-zinc-400"
+                    activeLedgerTab === "damage" ? "bg-m3-primary text-m3-on-primary font-black shadow" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
                   }`}
                 >
                   Damage Write-offs
@@ -786,7 +849,7 @@ export function AdminProfitModule({
                 <button
                   onClick={() => setActiveLedgerTab("shift-shortages")}
                   className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                    activeLedgerTab === "shift-shortages" ? "bg-m3-primary text-m3-on-primary font-black shadow" : "text-zinc-400"
+                    activeLedgerTab === "shift-shortages" ? "bg-m3-primary text-m3-on-primary font-black shadow" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
                   }`}
                 >
                   Shift Variance
@@ -794,7 +857,7 @@ export function AdminProfitModule({
                 <button
                   onClick={() => setActiveLedgerTab("voids")}
                   className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                    activeLedgerTab === "voids" ? "bg-m3-primary text-m3-on-primary font-black shadow" : "text-zinc-400"
+                    activeLedgerTab === "voids" ? "bg-m3-primary text-m3-on-primary font-black shadow" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
                   }`}
                 >
                   Voids Log
@@ -802,7 +865,7 @@ export function AdminProfitModule({
                 <button
                   onClick={() => setActiveLedgerTab("expenses")}
                   className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                    activeLedgerTab === "expenses" ? "bg-m3-primary text-m3-on-primary font-black shadow" : "text-zinc-400"
+                    activeLedgerTab === "expenses" ? "bg-m3-primary text-m3-on-primary font-black shadow" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
                   }`}
                 >
                   Expenses List
@@ -817,14 +880,14 @@ export function AdminProfitModule({
               {activeLedgerTab === "damage" && (
                 <div className="space-y-2">
                   {metrics.activeDamageLogs.map((log) => (
-                    <div key={log.id} className="p-3 bg-zinc-950/25 border border-m3-outline-variant/10 rounded-xl flex items-center justify-between text-xs">
+                    <div key={log.id} className="p-3 bg-zinc-100 dark:bg-zinc-950/25 border border-m3-outline-variant/10 rounded-xl flex items-center justify-between text-xs">
                       <div>
-                        <div className="font-extrabold text-zinc-300">{log.productName}</div>
-                        <div className="text-[10px] text-zinc-500 mt-1 font-mono">
-                          Quantity: {log.quantity} {log.unitType || "Pieces"} • Reason: <span className="text-red-400 font-bold uppercase">{log.reason || "BROKEN"}</span>
+                        <div className="font-extrabold text-m3-on-surface dark:text-zinc-300">{log.productName}</div>
+                        <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 font-mono">
+                          Quantity: {log.quantity} {log.unitType || "Pieces"} • Reason: <span className="text-red-600 dark:text-red-400 font-bold uppercase">{log.reason || "BROKEN"}</span>
                         </div>
                       </div>
-                      <div className="font-mono text-rose-400 font-bold shrink-0">
+                      <div className="font-mono text-rose-600 dark:text-rose-400 font-bold shrink-0">
                         {/* Cost Per Unit estimation */}
                         ₱{(() => {
                           const prod = products.find((p) => p.id === log.productId);
@@ -836,7 +899,7 @@ export function AdminProfitModule({
                     </div>
                   ))}
                   {metrics.activeDamageLogs.length === 0 && (
-                    <p className="text-center py-6 text-zinc-500 text-xs italic">No damage write-off entries logged under this branch assign viewport.</p>
+                    <p className="text-center py-6 text-zinc-500 dark:text-zinc-400 text-xs italic">No damage write-off entries logged under this branch assign viewport.</p>
                   )}
                 </div>
               )}
@@ -849,14 +912,14 @@ export function AdminProfitModule({
                     const isOverage = sh.variance && sh.variance > 0;
                     
                     return (
-                      <div key={sh.id} className="p-3 bg-zinc-950/25 border border-m3-outline-variant/10 rounded-xl flex items-center justify-between text-xs">
+                      <div key={sh.id} className="p-3 bg-zinc-100 dark:bg-zinc-950/25 border border-m3-outline-variant/10 rounded-xl flex items-center justify-between text-xs">
                         <div>
-                          <div className="font-extrabold text-zinc-300">Cashier: {sh.cashierName}</div>
-                          <div className="text-[10px] text-zinc-500 mt-1 font-mono">
+                          <div className="font-extrabold text-m3-on-surface dark:text-zinc-300">Cashier: {sh.cashierName}</div>
+                          <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 font-mono">
                             Opened: {new Date(sh.openedAt).toLocaleDateString()} • Branch: {getBranchName(sh.branchId)}
                           </div>
                         </div>
-                        <div className={`font-mono font-black ${isShortage ? "text-rose-400" : isOverage ? "text-emerald-400" : "text-zinc-500"}`}>
+                        <div className={`font-mono font-black ${isShortage ? "text-rose-600 dark:text-rose-400" : isOverage ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400"}`}>
                           {sh.variance !== undefined ? (
                             sh.variance < 0 ? `-₱${Math.abs(sh.variance).toLocaleString()}` : `+₱${sh.variance.toLocaleString()}`
                           ) : "₱0"}
@@ -865,7 +928,7 @@ export function AdminProfitModule({
                     );
                   })}
                   {metrics.activeShifts.length === 0 && (
-                    <p className="text-center py-6 text-zinc-500 text-xs italic">No closed shift variance logs available.</p>
+                    <p className="text-center py-6 text-zinc-500 dark:text-zinc-400 text-xs italic">No closed shift variance logs available.</p>
                   )}
                 </div>
               )}
@@ -874,20 +937,20 @@ export function AdminProfitModule({
               {activeLedgerTab === "voids" && (
                 <div className="space-y-2">
                   {metrics.voidedSales.map((sale) => (
-                    <div key={sale.id} className="p-3 bg-zinc-950/25 border border-m3-outline-variant/10 rounded-xl flex items-center justify-between text-xs">
+                    <div key={sale.id} className="p-3 bg-zinc-100 dark:bg-zinc-950/25 border border-m3-outline-variant/10 rounded-xl flex items-center justify-between text-xs">
                       <div>
-                        <div className="font-extrabold text-zinc-300">Invoice: {sale.saleNumber}</div>
-                        <div className="text-[10px] text-zinc-500 mt-1 font-mono">
+                        <div className="font-extrabold text-m3-on-surface dark:text-zinc-300">Invoice: {sale.saleNumber}</div>
+                        <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 font-mono">
                           Voided At: {sale.deletedAt ? new Date(sale.deletedAt).toLocaleDateString() : "Unknown"} • Branch: {getBranchName(sale.branchId)}
                         </div>
                       </div>
-                      <div className="font-mono text-zinc-500 font-black shrink-0">
+                      <div className="font-mono text-zinc-600 dark:text-zinc-400 font-black shrink-0">
                         ₱{sale.grandTotal.toLocaleString()}
                       </div>
                     </div>
                   ))}
                   {metrics.voidedSales.length === 0 && (
-                    <p className="text-center py-6 text-zinc-500 text-xs italic">No supervisor-voided invoices logged.</p>
+                    <p className="text-center py-6 text-zinc-500 dark:text-zinc-400 text-xs italic">No supervisor-voided invoices logged.</p>
                   )}
                 </div>
               )}
@@ -895,29 +958,41 @@ export function AdminProfitModule({
               {/* Tab: Expenses register */}
               {activeLedgerTab === "expenses" && (
                 <div className="space-y-2">
-                  {metrics.activeExpenses.map((exp) => (
-                    <div key={exp.id} className="p-3 bg-zinc-950/25 border border-m3-outline-variant/10 rounded-xl flex items-center justify-between text-xs">
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-extrabold text-zinc-300">{exp.category}</span>
-                          <span className="text-[9px] bg-zinc-800 text-zinc-400 px-1.5 py-0.2 rounded-md font-mono">{getBranchName(exp.branchId)}</span>
+                  {metrics.combinedExpenses
+                    .slice()
+                    .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
+                    .map((exp) => (
+                      <div key={exp.id} className="p-3 bg-zinc-100 dark:bg-zinc-950/25 border border-m3-outline-variant/10 rounded-xl flex items-center justify-between text-xs">
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-extrabold text-m3-on-surface dark:text-zinc-300">{exp.category}</span>
+                            <span className="text-[9px] bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 px-1.5 py-0.2 rounded-md font-mono">{getBranchName(exp.branchId)}</span>
+                            {exp.isAutomated && (
+                              <span className="text-[8px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 px-1.5 py-0.2 rounded-md font-extrabold uppercase tracking-wide">
+                                Automated Sync
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">{exp.notes || "Itemized expense receipt"}</p>
+                          <span className="text-[9.5px] text-zinc-600 dark:text-zinc-500 block font-mono mt-0.5">Recorded: {new Date(exp.dateTime).toLocaleDateString()}</span>
                         </div>
-                        <p className="text-[10px] text-zinc-500 mt-1">{exp.notes || "Itemized expense receipt"}</p>
-                        <span className="text-[9.5px] text-zinc-600 block font-mono mt-0.5">Recorded: {new Date(exp.dateTime).toLocaleDateString()}</span>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">₱{exp.amount.toLocaleString()}</span>
+                          {!exp.isAutomated ? (
+                            <button
+                              onClick={() => handleDeleteExpense(exp.id)}
+                              className="text-zinc-500 hover:text-rose-500 dark:text-zinc-400 dark:hover:text-rose-400 cursor-pointer text-[10px] font-bold"
+                            >
+                              Delete
+                            </button>
+                          ) : (
+                            <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium italic">Calendar Lock</span>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="font-mono text-rose-400 font-bold">₱{exp.amount.toLocaleString()}</span>
-                        <button
-                          onClick={() => handleDeleteExpense(exp.id)}
-                          className="text-zinc-600 hover:text-rose-500 cursor-pointer text-[10px] font-bold"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  {metrics.activeExpenses.length === 0 && (
-                    <p className="text-center py-6 text-zinc-500 text-xs italic">No expenses recorded for this viewport assignment.</p>
+                    ))}
+                  {metrics.combinedExpenses.length === 0 && (
+                    <p className="text-center py-6 text-zinc-500 dark:text-zinc-400 text-xs italic">No expenses recorded for this viewport assignment.</p>
                   )}
                 </div>
               )}
@@ -925,7 +1000,7 @@ export function AdminProfitModule({
             </div>
           </div>
 
-          <div className="pt-3 border-t border-m3-outline-variant/10 flex items-center justify-between text-[10px] text-zinc-500">
+          <div className="pt-3 border-t border-m3-outline-variant/10 flex items-center justify-between text-[10px] text-zinc-500 dark:text-zinc-400">
             <span>🛡️ Authorized Access: RESTRICTED TO ADMIN ONLY</span>
             <div className="flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
