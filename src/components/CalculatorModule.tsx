@@ -49,11 +49,59 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showProductDropdown, setShowProductDropdown] = useState(false);
 
-  // Filter only tile products or display all tile categories
+  // Filter only tile products
   const tileProducts = useMemo(() => {
     return products.filter((p) => {
       if (p.isDeleted) return false;
-      const term = searchQuery.toLowerCase();
+
+      // Classify if it's actually a tile product
+      const cat = (p.category || '').toLowerCase().trim();
+      const name = (p.productName || '').toLowerCase().trim();
+
+      // Explicit exclusions of non-tile categories and items
+      if (
+        cat.includes('trim') ||
+        cat.includes('tool') ||
+        cat.includes('grout') ||
+        cat.includes('adhesive') ||
+        cat.includes('spacer') ||
+        cat.includes('sink') ||
+        cat.includes('electrical') ||
+        cat.includes('gloves') ||
+        cat.includes('watercloset') ||
+        cat.includes('nosing') ||
+        cat.includes('accessories')
+      ) {
+        return false;
+      }
+
+      if (
+        name.includes('trim') ||
+        name.includes('adhesive') ||
+        name.includes('grout') ||
+        name.includes('spacer') ||
+        name.includes('electrical') ||
+        name.includes('gloves') ||
+        name.includes('closet') ||
+        name.includes('stairnosing') ||
+        name.includes('sink')
+      ) {
+        return false;
+      }
+
+      // Must be a tile category or name keyword, or have a physical dimension size
+      const tileCategories = ['tiles', 'granite', 'ceramic', 'terra cotta', 'porcelain tiles', 'porcelain', 'stone', 'marble', 'slate'];
+      const isTileCategory = tileCategories.some(tCat => cat === tCat || cat.includes(tCat));
+      const hasTileName = name.includes('tile') || name.includes('granite') || name.includes('ceramic') || name.includes('porcelain');
+      const hasTileSize = !!p.size && /^\d+\s*x\s*\d+/i.test(p.size);
+
+      const isTile = isTileCategory || hasTileName || hasTileSize;
+      if (!isTile) return false;
+
+      // Apply search term filter if any
+      const term = searchQuery.toLowerCase().trim();
+      if (!term) return true;
+
       const nameMatch = p.productName.toLowerCase().includes(term);
       const codeMatch = p.productCode?.toLowerCase().includes(term) || false;
       const catMatch = p.category?.toLowerCase().includes(term) || false;
