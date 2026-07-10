@@ -223,32 +223,36 @@ echo   * ADMINISTRATIVE CONSOLE (this PC) : https://localhost:3000
 echo   * MOBILE RETAIL DEVISE ACCESS      : https://%LOCAL_IP%:3000
 echo.
 echo =====================================================================
-echo                CHOOSE YOUR PREFERRED WEB BROWSER
+echo                LAUNCHING APPLICATIONS
 echo =====================================================================
-echo [1] Default Web Browser
-echo [2] Google Chrome
-echo [3] Microsoft Edge
-echo [4] Mozilla Firefox
+echo.
+echo Launching TilePoint ERP OS in your default browser...
+start "" "https://%LOCAL_IP%:3000"
+echo.
+echo =====================================================================
+echo                ALTERNATIVE WEB BROWSERS
+echo =====================================================================
+echo [1] Exit Deployment Utility (Default)
+echo [2] Launch in Google Chrome
+echo [3] Launch in Microsoft Edge
+echo [4] Launch in Mozilla Firefox
 echo ---------------------------------------------------------------------
-set /p BROWSER_CHOICE="Select browser to open (1-4): "
+choice /c 1234 /t 10 /d 1 /m "Select an alternative browser or press 1 to exit (Auto-exiting in 10s): "
 
-if "%BROWSER_CHOICE%"=="2" (
+if %errorlevel% equ 2 (
     echo Launching TilePoint ERP OS in Google Chrome...
-    start chrome "https://%LOCAL_IP%:3000"
-) else if "%BROWSER_CHOICE%"=="3" (
+    start "" chrome "https://%LOCAL_IP%:3000"
+) else if %errorlevel% equ 3 (
     echo Launching TilePoint ERP OS in Microsoft Edge...
-    start msedge "https://%LOCAL_IP%:3000"
-) else if "%BROWSER_CHOICE%"=="4" (
+    start "" msedge "https://%LOCAL_IP%:3000"
+) else if %errorlevel% equ 4 (
     echo Launching TilePoint ERP OS in Mozilla Firefox...
-    start firefox "https://%LOCAL_IP%:3000"
-) else (
-    echo Launching TilePoint ERP OS in your default browser...
-    start "https://%LOCAL_IP%:3000"
+    start "" firefox "https://%LOCAL_IP%:3000"
 )
 
 echo.
 echo =====================================================================
-pause
+echo Installation and setup completed successfully!
 exit /b
 
 :RefreshPath

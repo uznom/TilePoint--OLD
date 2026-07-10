@@ -28,6 +28,8 @@ import {
   ShieldAlert,
   Calculator,
   Search,
+  Building2,
+  Loader2,
 } from "lucide-react";
 import { CalculatorModule } from "./CalculatorModule";
 
@@ -37,6 +39,67 @@ interface PosModuleProps {
   viewMode?: "checkout" | "ledger";
   showImmersiveControls?: boolean;
 }
+
+const CartQtyInput: React.FC<{
+  quantity: number;
+  productId: string;
+  maxStock: number;
+  updateCartQty: (productId: string, val: any, maxStock: number) => void;
+  removeFromCart: (productId: string) => void;
+}> = ({ quantity, productId, maxStock, updateCartQty, removeFromCart }) => {
+  const [localVal, setLocalVal] = useState(quantity.toString());
+
+  useEffect(() => {
+    setLocalVal(quantity.toString());
+  }, [quantity]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setLocalVal(val);
+
+    const parsed = parseInt(val, 10);
+    if (!isNaN(parsed) && parsed > 0) {
+      if (parsed <= maxStock) {
+        updateCartQty(productId, parsed, maxStock);
+      } else {
+        updateCartQty(productId, maxStock, maxStock);
+        setLocalVal(maxStock.toString());
+      }
+    }
+  };
+
+  const handleBlur = () => {
+    const parsed = parseInt(localVal, 10);
+    if (isNaN(parsed) || parsed <= 0) {
+      removeFromCart(productId);
+    } else if (parsed > maxStock) {
+      updateCartQty(productId, maxStock, maxStock);
+      setLocalVal(maxStock.toString());
+    } else {
+      updateCartQty(productId, parsed, maxStock);
+      setLocalVal(parsed.toString());
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.currentTarget.blur();
+    }
+  };
+
+  return (
+    <input
+      type="number"
+      value={localVal}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      className="w-12 text-center bg-transparent border-y-0 border-x border-m3-outline-variant/30 text-xs font-mono font-black text-m3-on-surface focus:outline-none focus:bg-m3-surface-low rounded-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+      min="1"
+      max={maxStock}
+    />
+  );
+};
 
 export const PosModule: React.FC<PosModuleProps> = ({
   darkMode,
@@ -221,6 +284,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
   const [amountTendered, setAmountTendered] = useState<string>("");
   const [changeAmount, setChangeAmount] = useState<number>(0);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   // Receipt & Checkout Completion Display
   const [showReceiptModal, setShowReceiptModal] = useState(false);
@@ -659,14 +723,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
       }
     }
 
+    setIsCheckingOut(true);
     try {
-      await triggerSystemProcessing(
-        "Processing Client ERP OS Checkout...",
-        50,
-        "progress",
-        undefined,
-        "Deducting products from branch stock and computing taxes...",
-      );
+      // Smooth ERP ledger settlement simulation delay
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
       // CONCURRENT STOCK CONFLICT RESOLUTION (ANTI-COLLISION LOCKS):
       try {
@@ -721,6 +781,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
       showToast("Payment Completed. Please assign receipt fulfillment.");
     } catch (e: any) {
       showToast("Checkout Error: " + e?.message);
+    } finally {
+      setIsCheckingOut(false);
     }
   }
 
@@ -1139,6 +1201,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
       salesPage * SALES_PER_PAGE,
     );
   }, [filteredSales, salesPage]);
+
+  const receiptBranch = activeReceipt
+    ? (branches?.find((b) => b.id === activeReceipt.branchId) || activeBranch)
+    : activeBranch;
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden pb-1 gap-4">
@@ -1572,8 +1638,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
                           {barcodeSearchTerm.trim().length > 0 && (
                             <div className="absolute left-0 right-0 mt-2 bg-m3-surface-lowest border border-m3-outline-variant/60 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-m3-outline-variant/20 text-xs max-h-[180px] overflow-y-auto">
-                              {products
-                                .filter(
+                              {(() => {
+                                const matched = products.filter(
                                   (p) =>
                                     !p.isDeleted &&
                                     (selectedCategory === "All" ||
@@ -1593,9 +1659,15 @@ export const PosModule: React.FC<PosModuleProps> = ({
                                         .includes(
                                           barcodeSearchTerm.toLowerCase(),
                                         )),
-                                )
-                                .slice(0, 6)
-                                .map((p) => (
+                                );
+                                if (matched.length === 0) {
+                                  return (
+                                    <div className="p-4 text-center text-zinc-500 font-bold text-xs italic">
+                                      No compatible tiles or SKU listings match "{barcodeSearchTerm}"
+                                    </div>
+                                  );
+                                }
+                                return matched.slice(0, 6).map((p) => (
                                   <div
                                     key={p.id}
                                     onClick={() => {
@@ -1633,7 +1705,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
                                       )}
                                     </div>
                                   </div>
-                                ))}
+                                ));
+                              })()}
                             </div>
                           )}
                         </div>
@@ -1714,9 +1787,13 @@ export const PosModule: React.FC<PosModuleProps> = ({
                             >
                               -
                             </button>
-                            <span className="px-2.5 text-xs font-mono font-black text-m3-on-surface">
-                              {item.quantity}
-                            </span>
+                            <CartQtyInput
+                              quantity={item.quantity}
+                              productId={item.product.id}
+                              maxStock={item.product.stockQuantity}
+                              updateCartQty={updateCartQty}
+                              removeFromCart={removeFromCart}
+                            />
                             <button
                               type="button"
                               onClick={() =>
@@ -1944,11 +2021,18 @@ export const PosModule: React.FC<PosModuleProps> = ({
                       </button>
                       <button
                         type="button"
-                        disabled={cart.length === 0}
+                        disabled={cart.length === 0 || isCheckingOut}
                         onClick={clientCheckout}
-                        className="flex-1 py-1.5 bg-m3-primary hover:bg-m3-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-m3-on-primary text-xs font-black uppercase tracking-widest rounded-xl shadow-md transition-all"
+                        className="flex-1 py-1.5 bg-m3-primary hover:bg-m3-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-m3-on-primary text-xs font-black uppercase tracking-widest rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
                       >
-                        Execute Settlement (F7)
+                        {isCheckingOut ? (
+                          <>
+                            <Loader2 className="h-3 w-3 animate-spin text-m3-on-primary" />
+                            <span>Processing...</span>
+                          </>
+                        ) : (
+                          <span>Execute Settlement (F7)</span>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -2655,17 +2739,40 @@ export const PosModule: React.FC<PosModuleProps> = ({
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
                 transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
-                className="p-4 bg-m3-surface-lowest border border-dashed border-m3-outline-variant/40 rounded-2xl text-[11px] leading-relaxed space-y-3 select-none text-m3-on-surface text-left overflow-hidden shadow-inner"
+                className="p-4 bg-m3-surface-lowest border border-dashed border-m3-outline-variant/40 rounded-2xl text-[11px] leading-relaxed space-y-3 select-none text-m3-on-surface text-left overflow-hidden shadow-inner bir-receipt-container"
               >
-                <div className="text-center font-bold tracking-tight border-b border-dashed border-m3-outline-variant/30 pb-2">
+                <div className="text-center font-bold tracking-tight border-b border-dashed border-m3-outline-variant/30 pb-3 flex flex-col items-center justify-center space-y-1">
+                  {receiptBranch?.storeLogo ? (
+                    <div className="mb-1.5 h-10 w-auto flex items-center justify-center">
+                      <img
+                        src={receiptBranch.storeLogo}
+                        alt={`${receiptBranch.name} Logo`}
+                        className="h-full object-contain filter grayscale brightness-95 max-w-[150px]"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-7 w-7 rounded-full bg-m3-primary/10 text-m3-primary flex items-center justify-center mb-0.5 border border-m3-primary/15">
+                      <Building2 className="h-4 w-4" />
+                    </div>
+                  )}
+                  
                   <h4 className="text-xs font-black text-m3-primary tracking-widest font-mono uppercase">
-                    TILEPOINT RETailing co.
+                    {receiptBranch?.name || "TILEPOINT RETAILING CO."}
                   </h4>
-                  <div className="text-[10px] text-m3-on-surface-variant font-bold mt-0.5">
-                    {activeBranch?.name || "Central Outlet Branch"}
+                  
+                  <div className="text-[9px] text-m3-on-surface-variant font-extrabold font-mono uppercase tracking-wider">
+                    Branch ID: {receiptBranch?.id || "HQ_MAIN"}
                   </div>
-                  <div className="text-[9px] text-m3-on-surface-variant mt-0.5 font-normal">
-                    PH-0917-002340 • TIN 000-111-222
+                  
+                  {receiptBranch?.address && (
+                    <div className="text-[9px] text-m3-on-surface-variant font-semibold mt-0.5 leading-tight">
+                      {receiptBranch.address}
+                    </div>
+                  )}
+                  
+                  <div className="text-[8px] text-m3-on-surface-variant/80 mt-0.5 font-mono">
+                    {receiptBranch?.phone ? `Contact: ${receiptBranch.phone}` : "PH-0917-002340"} • TIN 000-111-222
                   </div>
                 </div>
 
@@ -2791,7 +2898,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                 </div>
               </motion.div>
 
-              <div className="flex gap-2 mt-4.5 flex-shrink-0">
+              <div className="flex gap-2 mt-4.5 flex-shrink-0 bir-report-no-print">
                 <button
                   onClick={() => {
                     window.print();

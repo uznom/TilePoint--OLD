@@ -94,6 +94,10 @@ export function AdminProfitModule({
   const [expenseNotes, setExpenseNotes] = useState<string>("");
   const [expenseBranch, setExpenseBranch] = useState<string>("B1");
 
+  // P&L Statement states
+  const [isDetailedOpexExpanded, setIsDetailedOpexExpanded] = useState(true);
+  const [isDetailedLossesExpanded, setIsDetailedLossesExpanded] = useState(true);
+
   const handleAddExpense = (e: React.FormEvent) => {
     e.preventDefault();
     const amt = parseFloat(expenseAmount);
@@ -145,6 +149,55 @@ export function AdminProfitModule({
       JSON.stringify({ expenseId: id, oldRecord: target, action: "soft_delete" }),
     );
     showToastMsg("Expense log deleted successfully.", "info");
+  };
+
+  const handleExportPLCsv = (opexByCategory: Record<string, number>) => {
+    const csvRows = [
+      ["TilePoint ERP - PROFIT & LOSS STATEMENT"],
+      [`Showroom/Branch: ${selectedBranchId === "all" ? "Consolidated (All Branches)" : getBranchName(selectedBranchId)}`],
+      [`Report Period: Active Financial Ledger Boundaries`],
+      [`Generated On: ${new Date().toLocaleString()}`],
+      [],
+      ["Line Item", "Debits / Outflows", "Credits / Inflows", "Balance (PHP)"],
+      ["1. OPERATING REVENUE"],
+      ["   Gross Sales (Subtotal)", "", metrics.grossSubtotal.toFixed(2), metrics.grossSubtotal.toFixed(2)],
+      ["   VAT/Sales Tax Collected", "", metrics.vatCollected.toFixed(2), metrics.vatCollected.toFixed(2)],
+      ["   Less: Discounts Allowed", `-${metrics.discountsAllowed.toFixed(2)}`, "", `-${metrics.discountsAllowed.toFixed(2)}`],
+      ["   NET SALES REVENUE (A)", "", "", metrics.grossRevenue.toFixed(2)],
+      [],
+      ["2. COST OF SALES (COGS)"],
+      ["   Wholesale Inventory Base Cost", `-${metrics.cogs.toFixed(2)}`, "", `-${metrics.cogs.toFixed(2)}`],
+      ["   TOTAL COST OF SALES (B)", "", "", `-${metrics.cogs.toFixed(2)}`],
+      [],
+      ["3. GROSS PROFIT (C = A - B)", "", "", (metrics.grossRevenue - metrics.cogs).toFixed(2)],
+      [],
+      ["4. OPERATING EXPENSES (OPEX)"],
+      ...Object.entries(opexByCategory).map(([cat, val]) => [
+        `   ${cat}`, `-${val.toFixed(2)}`, "", `-${val.toFixed(2)}`
+      ]),
+      ["   TOTAL OPERATING EXPENSES (D)", "", "", `-${metrics.opex.toFixed(2)}`],
+      [],
+      ["5. NON-OPERATING LOSSES / SHRINKAGE"],
+      ["   Inventory Damage & Breakage Write-offs", `-${metrics.damageLoss.toFixed(2)}`, "", `-${metrics.damageLoss.toFixed(2)}`],
+      ["   Shift Drawer Cash Shortages", `-${metrics.shiftShortage.toFixed(2)}`, "", `-${metrics.shiftShortage.toFixed(2)}`],
+      ["   Voided Receipts & Write-offs", `-${metrics.voidedLoss.toFixed(2)}`, "", `-${metrics.voidedLoss.toFixed(2)}`],
+      ["   TOTAL ADJUSTMENTS & LOSSES (E)", "", "", `-${metrics.shrinkage.toFixed(2)}`],
+      [],
+      ["6. NET INCOME / SURPLUS (F = C - D - E)", "", "", metrics.netProfit.toFixed(2)],
+      [`Net Profit Margin: ${metrics.netMarginPercent.toFixed(2)}%`]
+    ];
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + csvRows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(",")).join("\n");
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `TilePoint_PL_Statement_${selectedBranchId}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToastMsg("P&L Statement exported to CSV successfully!", "success");
   };
 
   const handleModifierSave = (branchId: string) => {
@@ -292,6 +345,41 @@ export function AdminProfitModule({
       voidedSales,
     };
   }, [sales, saleItems, products, damageLogs, shifts, branchLandingModifiers, selectedBranchId, expenses, customBills, purchaseOrders]);
+
+  const opexByCategory = useMemo(() => {
+    const categories: Record<string, number> = {
+      "Utilities & Energy": 0,
+      "Logistics, Freight & Delivery": 0,
+      "Packaging Materials": 0,
+      "Local Marketing & Ads": 0,
+      "Repairs & Showroom Maintenance": 0,
+      "Supplier Payments (Calendar)": 0,
+      "Utilities/Corporate Debt (Calendar)": 0,
+      "Miscellaneous Expenses": 0,
+    };
+
+    metrics.combinedExpenses.forEach((exp) => {
+      if (exp.category === "Utilities") {
+        categories["Utilities & Energy"] += exp.amount;
+      } else if (exp.category === "Logistics") {
+        categories["Logistics, Freight & Delivery"] += exp.amount;
+      } else if (exp.category === "Packaging") {
+        categories["Packaging Materials"] += exp.amount;
+      } else if (exp.category === "Marketing") {
+        categories["Local Marketing & Ads"] += exp.amount;
+      } else if (exp.category === "Repairs") {
+        categories["Repairs & Showroom Maintenance"] += exp.amount;
+      } else if (exp.category === "Supplier Payment [Calendar]") {
+        categories["Supplier Payments (Calendar)"] += exp.amount;
+      } else if (exp.category === "Utilities/Corporate Debt [Calendar]") {
+        categories["Utilities/Corporate Debt (Calendar)"] += exp.amount;
+      } else {
+        categories["Miscellaneous Expenses"] += exp.amount;
+      }
+    });
+
+    return categories;
+  }, [metrics.combinedExpenses]);
 
   // Branch Rank calculation list
   const branchLeaderboard = useMemo(() => {
@@ -586,6 +674,265 @@ export function AdminProfitModule({
             </div>
           </div>
         )}
+      </div>
+
+      {/* 1.5 EXPANDED PROFIT AND LOSS (P&L) FINANCIAL STATEMENT */}
+      <div className="android-glass border border-m3-outline-variant/35 rounded-[28px] p-6 bg-m3-surface-low text-m3-on-surface relative overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl">
+        <div className="absolute right-0 top-0 translate-x-16 -translate-y-16 h-48 w-48 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute left-0 bottom-0 -translate-x-16 translate-y-16 h-48 w-48 bg-m3-primary/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 border-b border-m3-outline-variant/15 pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-m3-primary/10 text-m3-primary rounded-xl border border-m3-primary/20 shrink-0">
+              <FileText className="h-4.5 w-4.5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-wider text-m3-on-surface dark:text-zinc-100">Elaborative Profit &amp; Loss (P&amp;L) Statement</h3>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                Detailed general ledger accounting report for {selectedBranchId === "all" ? "Consolidated All Branches" : getBranchName(selectedBranchId)}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => handleExportPLCsv(opexByCategory)}
+              className="flex-1 sm:flex-none px-3 py-1.5 bg-zinc-800 hover:bg-zinc-750 text-white rounded-xl text-[10px] font-black uppercase tracking-wider border border-zinc-700 shadow-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              title="Export P&amp;L Ledger to CSV"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              <span>Export CSV</span>
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="flex-1 sm:flex-none px-3 py-1.5 bg-m3-primary hover:bg-m3-primary/95 text-m3-on-primary rounded-xl text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              title="Print Financial Statement"
+            >
+              <Calendar className="h-3.5 w-3.5" />
+              <span>Print P&amp;L</span>
+            </button>
+          </div>
+        </div>
+
+        {/* P&L Interactive double-entry list ledger table */}
+        <div className="overflow-x-auto rounded-2xl border border-m3-outline-variant/20 bg-white dark:bg-zinc-950/80 p-4 md:p-6 shadow-sm">
+          <div className="min-w-[600px] text-xs space-y-4">
+            
+            {/* 1. Operating Revenue Segment */}
+            <div>
+              <div className="flex justify-between items-center bg-zinc-100/60 dark:bg-zinc-900/60 px-3 py-1.5 rounded-lg border-b border-m3-outline-variant/20 mb-2">
+                <span className="font-extrabold uppercase tracking-widest text-zinc-600 dark:text-zinc-300 text-[10.5px]">1. Operating Revenue</span>
+                <span className="text-[10px] font-mono text-zinc-500">Credits / Inflows</span>
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between px-4 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-900/40 rounded transition-all">
+                  <span className="text-zinc-500 dark:text-zinc-400 pl-4">Gross Trade Sales (Tiles &amp; Materials)</span>
+                  <span className="font-mono text-zinc-700 dark:text-zinc-300 font-bold">₱{metrics.grossSubtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between px-4 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-900/40 rounded transition-all">
+                  <span className="text-zinc-500 dark:text-zinc-400 pl-4">VAT / Sales Tax Collected (12% Standard)</span>
+                  <span className="font-mono text-zinc-700 dark:text-zinc-300 font-bold">₱{metrics.vatCollected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between px-4 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-900/40 rounded transition-all text-rose-600 dark:text-rose-400">
+                  <span className="pl-4 italic">Less: Customer Discounts &amp; Privilege Deductions</span>
+                  <span className="font-mono font-bold">(₱{metrics.discountsAllowed.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>
+                </div>
+                <div className="flex justify-between px-4 py-1.5 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-lg border-t border-dashed border-emerald-500/20 mt-1 font-bold">
+                  <span className="text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">Net Sales Revenue (A)</span>
+                  <span className="font-mono text-emerald-600 dark:text-emerald-400 font-black text-sm">₱{metrics.grossRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Cost of Sales Segment */}
+            <div>
+              <div className="flex justify-between items-center bg-zinc-100/60 dark:bg-zinc-900/60 px-3 py-1.5 rounded-lg border-b border-m3-outline-variant/20 mb-2">
+                <span className="font-extrabold uppercase tracking-widest text-zinc-600 dark:text-zinc-300 text-[10.5px]">2. Cost of Sales (COGS)</span>
+                <span className="text-[10px] font-mono text-zinc-500 font-medium">Debits / Outflows</span>
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between px-4 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-900/40 rounded transition-all text-amber-600 dark:text-amber-400 font-medium">
+                  <span className="text-zinc-500 dark:text-zinc-400 pl-4">Wholesale Base Inventory Cost &amp; Tariffs</span>
+                  <span className="font-mono font-bold">₱{metrics.cogs.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between px-4 py-1.5 bg-rose-500/5 dark:bg-rose-500/10 rounded-lg border-t border-dashed border-rose-500/25 mt-1 font-bold">
+                  <span className="text-amber-700 dark:text-amber-400 uppercase tracking-wide">Total Cost of Goods Sold (B)</span>
+                  <span className="font-mono text-amber-600 dark:text-amber-400 font-black text-sm">₱{metrics.cogs.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Gross Profit Margin Breakout */}
+            <div className="flex justify-between items-center px-3 py-2 bg-zinc-100 dark:bg-zinc-900 rounded-xl border border-m3-outline-variant/30 font-extrabold shadow-sm">
+              <span className="text-m3-on-surface dark:text-zinc-200 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <TrendingUp className="h-4 w-4 text-emerald-500" />
+                Gross profit surplus (C = A - B)
+              </span>
+              <div className="text-right">
+                <span className="font-mono text-emerald-500 text-sm md:text-base font-black">
+                  ₱{(metrics.grossRevenue - metrics.cogs).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                <span className="block text-[9.5px] text-zinc-400 uppercase font-mono tracking-widest font-extrabold">
+                  Gross Margin: {metrics.grossMarginPercent.toFixed(1)}%
+                </span>
+              </div>
+            </div>
+
+            {/* 4. Operating Expenses Segment */}
+            <div>
+              <div className="flex justify-between items-center bg-zinc-100/60 dark:bg-zinc-900/60 px-3 py-1.5 rounded-lg border-b border-m3-outline-variant/20 mb-2">
+                <button
+                  type="button"
+                  onClick={() => setIsDetailedOpexExpanded(!isDetailedOpexExpanded)}
+                  className="font-extrabold uppercase tracking-widest text-zinc-600 dark:text-zinc-300 text-[10.5px] hover:text-m3-primary flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <span>3. Operating Expenses (OpEx)</span>
+                  {isDetailedOpexExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                </button>
+                <span className="text-[10px] font-mono text-zinc-500">Debits / Outflows</span>
+              </div>
+              
+              {isDetailedOpexExpanded && (
+                <div className="space-y-1 pl-4 animate-slide-down">
+                  {Object.entries(opexByCategory).map(([cat, val]) => (
+                    <div key={cat} className="flex justify-between px-4 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-900/40 rounded transition-all">
+                      <span className="text-zinc-500 dark:text-zinc-400 pl-4">{cat}</span>
+                      <div className="flex items-center gap-4">
+                        <span className="font-mono text-[10px] text-zinc-400">
+                          {metrics.grossRevenue > 0 ? ((val / metrics.grossRevenue) * 100).toFixed(1) : 0}% of Rev
+                        </span>
+                        <span className="font-mono text-zinc-700 dark:text-zinc-300 font-bold">₱{val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <div className="flex justify-between px-4 py-1.5 bg-rose-500/5 dark:bg-rose-500/10 rounded-lg border-t border-dashed border-rose-500/25 mt-1 font-bold">
+                <span className="text-rose-700 dark:text-rose-400 uppercase tracking-wide">Total Operating Expenses (D)</span>
+                <span className="font-mono text-rose-600 dark:text-rose-400 font-black text-sm">₱{metrics.opex.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+            </div>
+
+            {/* 5. Non-Operating Losses / System adjustments */}
+            <div>
+              <div className="flex justify-between items-center bg-zinc-100/60 dark:bg-zinc-900/60 px-3 py-1.5 rounded-lg border-b border-m3-outline-variant/20 mb-2">
+                <button
+                  type="button"
+                  onClick={() => setIsDetailedLossesExpanded(!isDetailedLossesExpanded)}
+                  className="font-extrabold uppercase tracking-widest text-zinc-600 dark:text-zinc-300 text-[10.5px] hover:text-m3-primary flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <span>4. Non-Operating Losses &amp; Write-offs</span>
+                  {isDetailedLossesExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                </button>
+                <span className="text-[10px] font-mono text-zinc-500">Debits / Outflows</span>
+              </div>
+              
+              {isDetailedLossesExpanded && (
+                <div className="space-y-1 pl-4 animate-slide-down">
+                  <div className="flex justify-between px-4 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-900/40 rounded transition-all">
+                    <span className="text-zinc-500 dark:text-zinc-400 pl-4">Inventory Materials Breakage &amp; Damage Write-offs</span>
+                    <div className="flex items-center gap-4">
+                      <span className="font-mono text-[10px] text-zinc-400">
+                        {metrics.grossRevenue > 0 ? ((metrics.damageLoss / metrics.grossRevenue) * 100).toFixed(1) : 0}% of Rev
+                      </span>
+                      <span className="font-mono text-zinc-700 dark:text-zinc-300 font-bold">₱{metrics.damageLoss.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between px-4 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-900/40 rounded transition-all">
+                    <span className="text-zinc-500 dark:text-zinc-400 pl-4">Cashier Shift Drawer Cash Discrepancies (Shortages)</span>
+                    <div className="flex items-center gap-4">
+                      <span className="font-mono text-[10px] text-zinc-400">
+                        {metrics.grossRevenue > 0 ? ((metrics.shiftShortage / metrics.grossRevenue) * 100).toFixed(1) : 0}% of Rev
+                      </span>
+                      <span className="font-mono text-zinc-700 dark:text-zinc-300 font-bold">₱{metrics.shiftShortage.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between px-4 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-900/40 rounded transition-all">
+                    <span className="text-zinc-500 dark:text-zinc-400 pl-4">Voided Invoices &amp; Canceled Sales Outflow write-offs</span>
+                    <div className="flex items-center gap-4">
+                      <span className="font-mono text-[10px] text-zinc-400">
+                        {metrics.grossRevenue > 0 ? ((metrics.voidedLoss / metrics.grossRevenue) * 100).toFixed(1) : 0}% of Rev
+                      </span>
+                      <span className="font-mono text-zinc-700 dark:text-zinc-300 font-bold">₱{metrics.voidedLoss.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex justify-between px-4 py-1.5 bg-rose-500/5 dark:bg-rose-500/10 rounded-lg border-t border-dashed border-rose-500/25 mt-1 font-bold">
+                <span className="text-rose-700 dark:text-rose-400 uppercase tracking-wide">Total Adjustments &amp; System Loss (E)</span>
+                <span className="font-mono text-rose-600 dark:text-rose-400 font-black text-sm">₱{metrics.shrinkage.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+            </div>
+
+            {/* 6. Net Retained Earnings Surplus/Deficit */}
+            <div className={`p-5 rounded-2xl border-2 flex flex-col md:flex-row md:items-center justify-between gap-4 mt-6 ${
+              metrics.netProfit >= 0
+                ? "bg-emerald-500/5 dark:bg-emerald-500/10 border-emerald-500/35"
+                : "bg-rose-500/5 dark:bg-rose-500/10 border-rose-500/35"
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className={`p-2.5 rounded-xl border shrink-0 ${
+                  metrics.netProfit >= 0 
+                    ? "bg-emerald-500/15 border-emerald-500/20 text-emerald-500" 
+                    : "bg-rose-500/15 border-rose-500/20 text-rose-500"
+                }`}>
+                  {metrics.netProfit >= 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400 font-mono">
+                    5. Net Income / Enterprise Surplus (F = C - D - E)
+                  </span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase border ${
+                      metrics.netProfit >= 0
+                        ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400"
+                        : "bg-rose-500/10 border-rose-500/25 text-rose-600 dark:text-rose-400"
+                    }`}>
+                      {metrics.netProfit >= 0 ? "SURPLUS" : "OPERATIONAL DEFICIT"}
+                    </span>
+                    <span className="text-[11px] font-mono text-zinc-600 dark:text-zinc-400 font-bold">
+                      Net Margin: <strong className={metrics.netProfit >= 0 ? "text-emerald-500" : "text-rose-500"}>{metrics.netMarginPercent.toFixed(2)}%</strong>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="text-right border-t md:border-t-0 pt-3 md:pt-0 border-m3-outline-variant/10">
+                <div className={`text-xl md:text-2xl font-black font-mono tracking-tight leading-none ${
+                  metrics.netProfit >= 0 ? "text-emerald-500" : "text-rose-500"
+                }`}>
+                  {metrics.netProfit < 0 ? "-" : ""}₱{Math.abs(metrics.netProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+                <span className="text-[9px] text-zinc-500 dark:text-zinc-400 font-mono font-bold uppercase tracking-widest mt-1 block">
+                  Consolidated Retained Profit
+                </span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Dynamic AI accounting advice / corporate narrative */}
+        <div className="mt-5 p-4 rounded-xl bg-zinc-100 dark:bg-zinc-950/40 border border-m3-outline-variant/20 flex gap-3">
+          <div className="p-2 bg-m3-primary/10 text-m3-primary rounded-lg shrink-0 h-9 w-9 flex items-center justify-center">
+            <Sparkles className="h-4 w-4 text-emerald-500" />
+          </div>
+          <div>
+            <h5 className="text-[11px] font-bold uppercase tracking-wider text-m3-on-surface dark:text-zinc-300">Operational Health Commentary</h5>
+            <p className="text-[11px] text-zinc-600 dark:text-zinc-400 mt-1 leading-relaxed">
+              {metrics.netMarginPercent > 25 ? (
+                <span><strong>Outstanding Enterprise Velocity!</strong> Your active showrooms are maintaining healthy pricing leverage with a net margin of <strong className="text-emerald-500">{metrics.netMarginPercent.toFixed(1)}%</strong>. Operating overhead and material landing expenses are excellently regulated. Perfect baseline for stock scaling.</span>
+              ) : metrics.netMarginPercent >= 15 ? (
+                <span><strong>Optimal Operational Balance.</strong> The enterprise is performing within healthy guidelines with a net margin of <strong className="text-emerald-500">{metrics.netMarginPercent.toFixed(1)}%</strong>. Keep auditing local branch outlays and utility bills to preserve this trajectory.</span>
+              ) : metrics.netMarginPercent >= 0 ? (
+                <span><strong>Sub-optimal Operational Efficiencies.</strong> Net margin of <strong className="text-amber-500">{metrics.netMarginPercent.toFixed(1)}%</strong> indicates that utility expenses, supplier billing schedules, or local logistics overhead are absorbing a heavy portion of revenue. Auditing logistics routes and reducing regional discounts is advised.</span>
+              ) : (
+                <span><strong>Critical Warning: Deficit Trajectory.</strong> The active showroom portfolio is operating at a net loss of <strong className="text-rose-500">₱{Math.abs(metrics.netProfit).toLocaleString()} ({metrics.netMarginPercent.toFixed(1)}%)</strong>. Immediate measures should be taken to audit material voids, cashier cash drawer shortages, and inventory shrinkage values to halt margin leakage.</span>
+              )}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* 2. DEDICATED PROFIT TIMELINE & TRENDS (PROFIT ANALYTICS GRAPH) */}

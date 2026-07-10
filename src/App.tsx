@@ -284,7 +284,7 @@ function AppContent() {
       (localStorage.getItem("tilepoint-color-contrast") as
         | "default"
         | "medium"
-        | "high") || "default"
+        | "high") || "medium"
     );
   });
 
@@ -310,7 +310,7 @@ function AppContent() {
         (localStorage.getItem("tilepoint-color-contrast") as
           | "default"
           | "medium"
-          | "high") || "default";
+          | "high") || "medium";
       const maxText =
         localStorage.getItem("tilepoint-maximize-text-contrast") === "true";
       const savedSeed = localStorage.getItem("tilepoint_custom_theme_primary");
@@ -614,7 +614,7 @@ function AppContent() {
           (localStorage.getItem("tilepoint-color-contrast") as
             | "default"
             | "medium"
-            | "high") || "default";
+            | "high") || "medium";
         const scheme = generateThemeFromSeed(savedSeed, darkMode, contrast);
         applyM3ThemeToDOM(scheme);
       } catch (err) {

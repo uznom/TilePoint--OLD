@@ -22,6 +22,7 @@ import {
   AlertTriangle,
   ShieldCheck,
   Eye,
+  Building2,
   Activity,
   FileText,
   Sliders,
@@ -302,6 +303,14 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   const [showModal, setShowModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingId, setEditingId] = useState('');
+
+  // Quick Supplier registration from add product modal
+  const [showQuickSupplierModal, setShowQuickSupplierModal] = useState(false);
+  const [quickSupName, setQuickSupName] = useState('');
+  const [quickSupContact, setQuickSupContact] = useState('');
+  const [quickSupPhone, setQuickSupPhone] = useState('');
+  const [quickSupEmail, setQuickSupEmail] = useState('');
+  const [quickSupAddress, setQuickSupAddress] = useState('');
 
   // Form Fields State (Product Schema matches & additions)
   const [productCode, setProductCode] = useState('');
@@ -731,6 +740,32 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     setIsRegisteringNewSupplier(false);
     setIsEditMode(true);
     setShowModal(true);
+  };
+
+  const handleSaveQuickSupplier = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickSupName.trim()) {
+      showToast('Validation Error: Supplier Company Name is required.');
+      return;
+    }
+    const newSup = createSupplier({
+      name: quickSupName.trim(),
+      contactPerson: quickSupContact.trim() || 'N/A',
+      phone: quickSupPhone.trim() || 'N/A',
+      email: quickSupEmail.trim() || 'N/A',
+      address: quickSupAddress.trim() || 'Registered on-the-fly in catalog'
+    });
+    
+    setSupplierId(newSup.id);
+    showToast(`Supplier "${newSup.name}" registered successfully!`);
+    
+    // reset states
+    setQuickSupName('');
+    setQuickSupContact('');
+    setQuickSupPhone('');
+    setQuickSupEmail('');
+    setQuickSupAddress('');
+    setShowQuickSupplierModal(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -3674,6 +3709,107 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
         </div>
       )}
 
+      {/* QUICK SUPPLIER REGISTRATION MODAL */}
+      {showQuickSupplierModal && (
+        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm shadow-xl" onClick={() => setShowQuickSupplierModal(false)} />
+          <form
+            onSubmit={handleSaveQuickSupplier}
+            className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[32px] border border-m3-outline-variant/30 p-6 z-30 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4"
+          >
+            <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-3">
+              <h3 className="text-sm font-black text-m3-primary uppercase tracking-wider flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                <span>Quick Add New Supplier</span>
+              </h3>
+              <button type="button" onClick={() => setShowQuickSupplierModal(false)} className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full">
+                <X className="h-4.5 w-4.5" />
+              </button>
+            </div>
+
+            <p className="text-[10px] text-m3-on-surface-variant font-medium leading-normal bg-m3-primary/5 p-2 rounded-lg">
+              This will register a new vendor profile in the database on-the-fly and link it directly to this product, without reloading your catalog form.
+            </p>
+
+            <div className="space-y-3 pt-1">
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-m3-on-surface-variant uppercase pl-0.5">Supplier Company Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={quickSupName}
+                  onChange={e => setQuickSupName(e.target.value)}
+                  placeholder="e.g. Asia Pacific Ceramics Inc."
+                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-m3-on-surface-variant uppercase pl-0.5">Primary Contact Agent</label>
+                  <input
+                    type="text"
+                    value={quickSupContact}
+                    onChange={e => setQuickSupContact(e.target.value)}
+                    placeholder="e.g. Matthew Lim"
+                    className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-m3-on-surface-variant uppercase pl-0.5">Contact Phone</label>
+                  <input
+                    type="text"
+                    value={quickSupPhone}
+                    onChange={e => setQuickSupPhone(e.target.value)}
+                    placeholder="e.g. +63 2 8111 2222"
+                    className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-m3-on-surface-variant uppercase pl-0.5">Corporate Email</label>
+                <input
+                  type="email"
+                  value={quickSupEmail}
+                  onChange={e => setQuickSupEmail(e.target.value)}
+                  placeholder="e.g. contact@asiapacific.ph"
+                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-m3-on-surface-variant uppercase pl-0.5">Office Address</label>
+                <input
+                  type="text"
+                  value={quickSupAddress}
+                  onChange={e => setQuickSupAddress(e.target.value)}
+                  placeholder="e.g. 15th Flr, Pacific Star Bldg, Makati City"
+                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-m3-outline-variant/15 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowQuickSupplierModal(false)}
+                className="px-4 py-2 text-xs font-black uppercase tracking-wider rounded-full hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="m3-btn-primary px-5 py-2 text-xs shadow-md border"
+              >
+                Save Supplier
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* MODAL 1: ADD & EDIT PRODUCT DIALOG */}
       {showModal && (
         <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
@@ -3843,16 +3979,24 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
               </div>
 
               {!isRegisteringNewSupplier ? (
-                <div className="grid grid-cols-1 gap-1">
+                <div className="flex gap-2 items-center">
                   <select
                     value={supplierId}
                     onChange={e => setSupplierId(e.target.value)}
-                    className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md cursor-pointer font-bold"
+                    className="flex-1 bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md cursor-pointer font-bold"
                   >
                     {suppliers.filter(s => !s.isDeleted).map((sup) => (
                       <option key={sup.id} value={sup.id}>{sup.name}</option>
                     ))}
                   </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickSupplierModal(true)}
+                    className="px-3 py-2 bg-m3-tertiary/15 hover:bg-m3-tertiary/25 text-m3-tertiary rounded-lg text-xs font-bold transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1 border border-m3-tertiary/20"
+                    title="Quickly register a new supplier on-the-fly"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Quick Add
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-3 pt-1">

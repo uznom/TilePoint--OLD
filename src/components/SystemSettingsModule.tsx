@@ -61,7 +61,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ dark
   });
 
   const [colorContrast, setColorContrast] = useState<'default' | 'medium' | 'high'>(() => {
-    return (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'default';
+    return (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'medium';
   });
 
   const [maximizeTextContrast, setMaximizeTextContrast] = useState<boolean>(() => {
@@ -192,7 +192,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ dark
   useEffect(() => {
     const handleSync = () => {
       setTextSize((localStorage.getItem('tilepoint-text-size') as any) || 'normal');
-      setColorContrast((localStorage.getItem('tilepoint-color-contrast') as any) || 'default');
+      setColorContrast((localStorage.getItem('tilepoint-color-contrast') as any) || 'medium');
       setMaximizeTextContrast(localStorage.getItem('tilepoint-maximize-text-contrast') === 'true');
       setDyslexicFont(localStorage.getItem('tilepoint-dyslexic-font') === 'true');
       setEnhancedOutlines(localStorage.getItem('tilepoint-enhanced-outlines') === 'true');
@@ -231,7 +231,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ dark
 
     // Reset local states
     setTextSize('normal');
-    setColorContrast('default');
+    setColorContrast('medium');
     setMaximizeTextContrast(false);
     setDyslexicFont(false);
     setEnhancedOutlines(false);
