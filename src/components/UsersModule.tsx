@@ -261,117 +261,125 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
       {subTab === 'employees' ? (
         /* Grid of users card logs */
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in">
-          {users.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((u) => {
-            // Status badge coloring
-            const activeClass = u.status === 'Active'
-              ? 'bg-m3-tertiary-container text-m3-on-tertiary-container border-m3-tertiary/20'
-              : 'bg-m3-primary-container text-m3-on-primary-container border-m3-primary/20';
+          {users.length === 0 ? (
+            <div className="text-center py-12 bg-m3-surface-low rounded-[20px] border border-m3-outline-variant/10">
+              <Users className="h-10 w-10 text-m3-on-surface-variant/40 mx-auto mb-2.5" />
+              <p className="text-sm font-semibold text-m3-on-surface-variant">No Registered Employees Found</p>
+              <p className="text-xs text-m3-on-surface-variant/70 mt-1">Create a new corporate employee record to populate this directory.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in">
+            {users.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((u) => {
+              // Status badge coloring
+              const activeClass = u.status === 'Active'
+                ? 'bg-m3-tertiary-container text-m3-on-tertiary-container border-m3-tertiary/20'
+                : 'bg-m3-primary-container text-m3-on-primary-container border-m3-primary/20';
 
-            // Role Badge visual styles
-            let roleClass = 'bg-m3-outline-variant/30 text-m3-on-surface';
-            if (u.role === UserRole.ADMIN) roleClass = 'bg-m3-primary-container text-m3-on-primary-container border-m3-primary/30';
-            if (u.role === UserRole.MANAGER) roleClass = 'bg-m3-tertiary-container text-m3-on-tertiary-container border-m3-tertiary/30';
-            if (u.role === UserRole.CASHIER) roleClass = 'bg-m3-secondary-container text-m3-on-secondary-container';
+              // Role Badge visual styles
+              let roleClass = 'bg-m3-outline-variant/30 text-m3-on-surface';
+              if (u.role === UserRole.ADMIN) roleClass = 'bg-m3-primary-container text-m3-on-primary-container border-m3-primary/30';
+              if (u.role === UserRole.MANAGER) roleClass = 'bg-m3-tertiary-container text-m3-on-tertiary-container border-m3-tertiary/30';
+              if (u.role === UserRole.CASHIER) roleClass = 'bg-m3-secondary-container text-m3-on-secondary-container';
 
-            return (
-              <div
-                key={u.id}
-                className="m3-card shadow-sm flex flex-col justify-between transition-all duration-200"
-              >
-                <div className="space-y-4">
-                  {/* Employee general headers */}
-                  <div className="flex items-center justify-between border-b border-m3-outline-variant/20 pb-3">
-                    <div className="flex items-center gap-3">
-                      {/* Visual initials emblem circular badge */}
-                      <div className="h-11 w-11 rounded-[16px] bg-m3-primary/10 text-m3-primary text-sm font-black flex items-center justify-center tracking-tight shadow-inner border border-m3-outline-variant/15 overflow-hidden">
-                        {u.profilePicture ? (
-                          <img src={u.profilePicture} alt={u.fullName} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
-                        ) : (
-                          u.avatarInitials
-                        )}
+              return (
+                <div
+                  key={u.id}
+                  className="m3-card shadow-sm flex flex-col justify-between transition-all duration-200"
+                >
+                  <div className="space-y-4">
+                    {/* Employee general headers */}
+                    <div className="flex items-center justify-between border-b border-m3-outline-variant/20 pb-3">
+                      <div className="flex items-center gap-3">
+                        {/* Visual initials emblem circular badge */}
+                        <div className="h-11 w-11 rounded-[16px] bg-m3-primary/10 text-m3-primary text-sm font-black flex items-center justify-center tracking-tight shadow-inner border border-m3-outline-variant/15 overflow-hidden">
+                          {u.profilePicture ? (
+                            <img src={u.profilePicture} alt={u.fullName} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                          ) : (
+                            u.avatarInitials
+                          )}
+                        </div>
+
+                        <div>
+                          <h4 className="text-sm font-bold tracking-tight text-m3-on-surface">{u.fullName}</h4>
+                          <p className="text-[10px] text-m3-on-surface-variant font-mono">@{u.username}</p>
+                        </div>
                       </div>
 
-                      <div>
-                        <h4 className="text-sm font-bold tracking-tight text-m3-on-surface">{u.fullName}</h4>
-                        <p className="text-[10px] text-m3-on-surface-variant font-mono">@{u.username}</p>
-                      </div>
-                    </div>
-
-                    <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest uppercase border ${activeClass}`}>
-                      {u.status}
-                    </span>
-                  </div>
-
-                  {/* Body Specs */}
-                  <div className="space-y-2 text-xs">
-                    <div className="flex justify-between items-center">
-                      <span className="text-m3-on-surface-variant/80 font-medium">Assigned Role:</span>
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wide border uppercase ${roleClass}`}>{u.role}</span>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <span className="text-m3-on-surface-variant/80 font-medium">Department Branch:</span>
-                      <span className="flex items-center gap-1 font-semibold text-m3-on-surface">
-                        <MapPin className="h-3 w-3 text-m3-primary" />
-                        <span>{getBranchName(u.branchAssignmentId)}</span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest uppercase border ${activeClass}`}>
+                        {u.status}
                       </span>
                     </div>
 
-                    <div className="flex justify-between items-center text-[10.5px]">
-                      <span className="text-m3-on-surface-variant/80 font-medium font-mono">Corporate Email:</span>
-                      <span className="flex items-center gap-1 font-mono text-m3-on-surface-variant font-medium">
-                        <Mail className="h-3 w-3 text-m3-on-surface-variant/60" />
-                        {u.email}
-                      </span>
-                    </div>
+                    {/* Body Specs */}
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between items-center">
+                        <span className="text-m3-on-surface-variant/80 font-medium">Assigned Role:</span>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wide border uppercase ${roleClass}`}>{u.role}</span>
+                      </div>
 
-                    {(u.role === UserRole.ADMIN || u.role === UserRole.MANAGER) && (
-                      <div className="flex justify-between items-center text-[10.5px]">
-                        <span className="text-m3-on-surface-variant/80 font-medium">Security PIN code:</span>
-                        <span className="font-mono text-amber-500 font-black bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-md">
-                          {u.managerPin || 'Not Set'}
+                      <div className="flex justify-between items-center">
+                        <span className="text-m3-on-surface-variant/80 font-medium">Department Branch:</span>
+                        <span className="flex items-center gap-1 font-semibold text-m3-on-surface">
+                          <MapPin className="h-3 w-3 text-m3-primary" />
+                          <span>{getBranchName(u.branchAssignmentId)}</span>
                         </span>
                       </div>
-                    )}
+
+                      <div className="flex justify-between items-center text-[10.5px]">
+                        <span className="text-m3-on-surface-variant/80 font-medium font-mono">Corporate Email:</span>
+                        <span className="flex items-center gap-1 font-mono text-m3-on-surface-variant font-medium">
+                          <Mail className="h-3 w-3 text-m3-on-surface-variant/60" />
+                          {u.email}
+                        </span>
+                      </div>
+
+                      {(u.role === UserRole.ADMIN || u.role === UserRole.MANAGER) && (
+                        <div className="flex justify-between items-center text-[10.5px]">
+                          <span className="text-m3-on-surface-variant/80 font-medium">Security PIN code:</span>
+                          <span className="font-mono text-amber-500 font-black bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-md">
+                            {u.managerPin || 'Not Set'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Commands for admin operation */}
+                  {isUserAdmin && (
+                    <div className="flex gap-2 border-t border-m3-outline-variant/20 pt-3 mt-4 justify-end">
+                      <button
+                        onClick={() => handleResetPassword(u.id, u.fullName)}
+                        className="p-1.5 px-2.5 hover:bg-m3-primary/5 text-[10.5px] font-bold text-m3-primary rounded-full flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Initialize configuration reset procedures"
+                      >
+                        <Lock className="h-3.5 w-3.5" /> Password reset
+                      </button>
+
+                      <button
+                        onClick={() => handleToggleStatus(u)}
+                        className={`p-1.5 px-3 text-[10.5px] font-bold rounded-full flex items-center gap-1 cursor-pointer transition-colors ${
+                          u.status === 'Active'
+                            ? 'text-m3-primary hover:bg-m3-primary/5'
+                            : 'text-m3-tertiary hover:bg-m3-tertiary/5'
+                        }`}
+                      >
+                        <Power className="h-3.5 w-3.5" />
+                        {u.status === 'Active' ? 'Deactivate' : 'Enable login'}
+                      </button>
+
+                      <button
+                        onClick={() => handleOpenEdit(u)}
+                        className="p-1.5 px-3 hover:bg-m3-outline-variant/15 text-[10.5px] font-bold text-m3-on-surface-variant rounded-full flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" /> Edit details
+                      </button>
+                    </div>
+                  )}
                 </div>
-
-                {/* Commands for admin operation */}
-                {isUserAdmin && (
-                  <div className="flex gap-2 border-t border-m3-outline-variant/20 pt-3 mt-4 justify-end">
-                    <button
-                      onClick={() => handleResetPassword(u.id, u.fullName)}
-                      className="p-1.5 px-2.5 hover:bg-m3-primary/5 text-[10.5px] font-bold text-m3-primary rounded-full flex items-center gap-1 cursor-pointer transition-colors"
-                      title="Initialize configuration reset procedures"
-                    >
-                      <Lock className="h-3.5 w-3.5" /> Password reset
-                    </button>
-
-                    <button
-                      onClick={() => handleToggleStatus(u)}
-                      className={`p-1.5 px-3 text-[10.5px] font-bold rounded-full flex items-center gap-1 cursor-pointer transition-colors ${
-                        u.status === 'Active'
-                          ? 'text-m3-primary hover:bg-m3-primary/5'
-                          : 'text-m3-tertiary hover:bg-m3-tertiary/5'
-                      }`}
-                    >
-                      <Power className="h-3.5 w-3.5" />
-                      {u.status === 'Active' ? 'Deactivate' : 'Enable login'}
-                    </button>
-
-                    <button
-                      onClick={() => handleOpenEdit(u)}
-                      className="p-1.5 px-3 hover:bg-m3-outline-variant/15 text-[10.5px] font-bold text-m3-on-surface-variant rounded-full flex items-center gap-1 cursor-pointer transition-colors"
-                    >
-                      <Edit2 className="h-3.5 w-3.5" /> Edit details
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          </div>
+              );
+            })}
+            </div>
+          )}
 
           <TablePagination
             currentPage={currentPage}

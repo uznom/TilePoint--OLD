@@ -360,7 +360,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
       {showXReport && activeShift && shiftStats && (
         <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setShowXReport(false)} />
-          <div className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl space-y-4 text-xs font-mono select-none bg-m3-surface-low text-m3-on-surface">
+          <div className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl space-y-4 text-xs font-mono select-none bg-m3-surface-low text-m3-on-surface bir-receipt-container">
             <div className="text-center pb-2.5 border-b border-dashed border-m3-outline-variant/30">
               <h4 className="font-extrabold text-sm uppercase tracking-widest text-m3-primary">X Report (Terminal Audit Only)</h4>
               <p className="text-[10px] text-m3-on-surface-variant mt-0.5 font-semibold">Mid-Shift Cash Drawer Snapshot</p>
@@ -409,7 +409,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
               </div>
             </div>
 
-            <div className="flex gap-2 pt-2 border-t border-dashed border-m3-outline-variant/30">
+            <div className="flex gap-2 pt-2 border-t border-dashed border-m3-outline-variant/30 bir-report-no-print">
               <button
                 onClick={() => {
                   window.print();
@@ -435,10 +435,10 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
       {showZReport && activeShift && shiftStats && (
         <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setShowZReport(false)} />
-          <div className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl space-y-4 text-xs font-mono select-none bg-m3-surface-low text-m3-on-surface">
+          <div className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl space-y-4 text-xs font-mono select-none bg-m3-surface-low text-m3-on-surface bir-receipt-container">
             <div className="text-center pb-2.5 border-b border-dashed border-m3-outline-variant/30">
-              <h4 className="font-extrabold text-sm uppercase tracking-widest text-m3-tertiary">Z Report (Terminal Seal)</h4>
-              <p className="text-[10px] text-m3-on-surface-variant mt-0.5 font-bold">Closes Active Drawer & Shifts Records</p>
+               <h4 className="font-extrabold text-sm uppercase tracking-widest text-m3-tertiary">Z Report (Terminal Seal)</h4>
+               <p className="text-[10px] text-m3-on-surface-variant mt-0.5 font-bold">Closes Active Drawer & Shifts Records</p>
             </div>
 
             <div className="space-y-1.5 leading-relaxed text-m3-on-surface-variant">
@@ -476,7 +476,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
               </div>
             </div>
 
-            <div className="flex gap-2 pt-2 border-t border-dashed border-m3-outline-variant/30">
+            <div className="flex gap-2 pt-2 border-t border-dashed border-m3-outline-variant/30 bir-report-no-print">
               <button
                 onClick={() => {
                   window.print();

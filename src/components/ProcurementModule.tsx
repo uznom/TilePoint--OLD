@@ -162,6 +162,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
     d.setDate(d.getDate() + 30);
     return d.toISOString().split('T')[0];
   });
+  const [showTermsOverride, setShowTermsOverride] = useState(false);
 
   // Brand form states
   const [editingBrandId, setEditingBrandId] = useState<string | null>(null);
@@ -309,12 +310,27 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
 
       const notes = `Auto-Consolidated Purchase Order. Grouped brands: ${brandsInGroup || "N/A"}. Compiled via Automated Sourcing Deck.`;
 
+      const poPaymentMode = paymentTerm === 0 ? "fully_paid" : "terms";
+      let poTermsLength = 30;
+      if (paymentTerm === "CUSTOM") {
+        const start = new Date();
+        const end = new Date(payoutDueDate);
+        const diffTime = end.getTime() - start.getTime();
+        poTermsLength = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+      } else {
+        poTermsLength = paymentTerm;
+      }
+
       createPO(
         supId,
         selectedConsolidationBranchId,
         draftItemsInput,
         notes,
         targetStatus as any,
+        poPaymentMode,
+        new Date().toISOString().slice(0, 10),
+        payoutDueDate,
+        poTermsLength,
       );
 
       if (targetStatus === "Approved") {
@@ -422,6 +438,44 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
     any | null
   >(null);
 
+  // Reusable custom styled confirmation dialog
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    confirmText?: string;
+    cancelText?: string;
+    isDanger?: boolean;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => {},
+  });
+
+  const triggerConfirmation = (
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    isDanger: boolean = false,
+    confirmText: string = "Confirm",
+    cancelText: string = "Cancel"
+  ) => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm: () => {
+        onConfirm();
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+      },
+      confirmText,
+      cancelText,
+      isDanger,
+    });
+  };
+
   const companyName =
     localStorage.getItem("tilepoint_company_name_v1") || "Emman Tile Center";
   const companyLogo = localStorage.getItem("tilepoint_store_logo_v1") || "";
@@ -488,17 +542,20 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
 
   const handleDeleteSupplier = (id: string, name: string) => {
     if (isRowClearingBlocked()) {
-      alert(`Action Restricted: Cannot remove supplier records because the register is currently holding: ${getRowClearingBlockedReason()}`);
+      showToast(`Action Restricted: Cannot remove supplier records because the register is currently holding: ${getRowClearingBlockedReason()}`);
       return;
     }
-    if (
-      confirm(
-        `Are you absolutely sure you want to remove supplier "${name}"? Existing purchase orders and catalog records will be kept.`,
-      )
-    ) {
-      deleteSupplier(id);
-      showToast(`Supplier "${name}" was soft-deleted.`);
-    }
+    triggerConfirmation(
+      "Confirm Supplier Deletion",
+      `Are you absolutely sure you want to remove supplier "${name}"? Existing purchase orders and catalog records will be kept.`,
+      () => {
+        deleteSupplier(id);
+        showToast(`Supplier "${name}" was soft-deleted.`);
+      },
+      true,
+      "Soft-Delete Supplier",
+      "Keep Supplier"
+    );
   };
 
   // Brand handlers
@@ -544,19 +601,64 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
 
   const handleDeleteBrand = (id: string, name: string) => {
     if (isRowClearingBlocked()) {
-      alert(`Action Restricted: Cannot remove brand records because the register is currently holding: ${getRowClearingBlockedReason()}`);
+      showToast(`Action Restricted: Cannot remove brand records because the register is currently holding: ${getRowClearingBlockedReason()}`);
       return;
     }
-    if (
-      confirm(`Are you sure you want to remove brand partnership "${name}"?`)
-    ) {
-      deleteBrand(id);
-      showToast(`Brand "${name}" was soft-deleted.`);
-    }
+    triggerConfirmation(
+      "Confirm Brand Deletion",
+      `Are you sure you want to remove brand partnership "${name}"? Existing product references will remain intact.`,
+      () => {
+        deleteBrand(id);
+        showToast(`Brand "${name}" was soft-deleted.`);
+      },
+      true,
+      "Soft-Delete Brand",
+      "Keep Brand"
+    );
   };
 
-  // Render lists
-  const activeProductsForSupplier = products.filter((p) => !p.isDeleted);
+  // Reset product selection when switching suppliers to prevent crossed-SKU errors
+  React.useEffect(() => {
+    setSelectedProdId("");
+  }, [selectedSupplierId]);
+
+  // Render lists filtered by chosen supplier in the PO Creator panel
+  const activeProductsForSupplier = React.useMemo(() => {
+    return products.filter((p) => {
+      if (p.isDeleted) return false;
+
+      // If product has an explicit supplierId matching selectedSupplierId
+      if (p.supplierId && p.supplierId === selectedSupplierId) {
+        return true;
+      }
+
+      // If product has a brand, check if that brand belongs to selectedSupplierId
+      if (p.brand) {
+        const brandMatch = brands.find(
+          (b) =>
+            b.name.toLowerCase().trim() === p.brand?.toLowerCase().trim() &&
+            !b.isDeleted
+        );
+        if (brandMatch && brandMatch.supplierId === selectedSupplierId) {
+          return true;
+        }
+      }
+
+      // Fallback: if product does not have any brand match or supplierId, let's treat S1 (central) as its owner
+      const brandMatch = p.brand ? brands.find(
+        (b) =>
+          b.name.toLowerCase().trim() === p.brand?.toLowerCase().trim() &&
+          !b.isDeleted
+      ) : null;
+
+      const productHasSupplier = !!p.supplierId || !!brandMatch;
+      if (!productHasSupplier && selectedSupplierId === "S1") {
+        return true;
+      }
+
+      return false;
+    });
+  }, [products, selectedSupplierId, brands]);
 
   const getSuplierName = (id: string) => {
     const s = suppliers.find((sup) => sup.id === id);
@@ -699,7 +801,28 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
       0,
     );
 
-    createPO(selectedSupplierId, selectedBranchId, draftItems, poNotes);
+    const poPaymentMode = paymentTerm === 0 ? "fully_paid" : "terms";
+    let poTermsLength = 30;
+    if (paymentTerm === "CUSTOM") {
+      const start = new Date();
+      const end = new Date(payoutDueDate);
+      const diffTime = end.getTime() - start.getTime();
+      poTermsLength = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+    } else {
+      poTermsLength = paymentTerm;
+    }
+
+    createPO(
+      selectedSupplierId,
+      selectedBranchId,
+      draftItems,
+      poNotes,
+      undefined,
+      poPaymentMode,
+      new Date().toISOString().slice(0, 10),
+      payoutDueDate,
+      poTermsLength
+    );
 
     const linkedBillId = "BILL-PO-DIRECT-" + Date.now();
     const newCreditEntry = {
@@ -745,6 +868,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
     });
 
     setReceiveQuantities(quantities);
+    setShowTermsOverride(false);
     
     // Set initial payment states from PO if already set, or sensible defaults
     setReceivePaymentMode(po.paymentMode || "fully_paid");
@@ -1964,14 +2088,17 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      if (
-                        confirm(
-                          "Are you absolutely sure you want to discard the current draft compilation worksheet?",
-                        )
-                      ) {
-                        syncPoCart([]);
-                        showToast("Worksheet discarded.");
-                      }
+                      triggerConfirmation(
+                        "Discard Worksheet Draft",
+                        "Are you absolutely sure you want to discard the current draft compilation worksheet and clear the restock cart?",
+                        () => {
+                          syncPoCart([]);
+                          showToast("Worksheet discarded successfully.");
+                        },
+                        true,
+                        "Discard Worksheet",
+                        "Keep Draft"
+                      );
                     }}
                     className="px-4 py-2 bg-m3-surface border border-m3-outline-variant hover:bg-m3-surface-low text-m3-on-surface text-xs font-bold rounded-full cursor-pointer uppercase tracking-wide"
                   >
@@ -2172,18 +2299,21 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                   type="button"
                   onClick={() => {
                     if (isRowClearingBlocked()) {
-                      alert(`Action Restricted: Cannot clear templates because the register is currently holding: ${getRowClearingBlockedReason()}`);
+                      showToast(`Action Restricted: Cannot clear templates because the register is currently holding: ${getRowClearingBlockedReason()}`);
                       return;
                     }
-                    if (
-                      confirm(
-                        "Are you sure you want to clear the templates? This is permanent.",
-                      )
-                    ) {
-                      localStorage.removeItem("tp_po_templates");
-                      setPoTemplates([]);
-                      showToast("All templates deleted.");
-                    }
+                    triggerConfirmation(
+                      "Clear Saved Templates",
+                      "Are you sure you want to permanently clear all saved purchase order templates? This action cannot be undone.",
+                      () => {
+                        localStorage.removeItem("tp_po_templates");
+                        setPoTemplates([]);
+                        showToast("All templates deleted successfully.");
+                      },
+                      true,
+                      "Clear Permanently",
+                      "Keep Templates"
+                    );
                   }}
                   className="text-[9px] text-red-500 hover:underline font-bold font-mono tracking-wide uppercase disabled:opacity-40"
                   disabled={isRowClearingBlocked()}
@@ -2724,117 +2854,164 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                 <span>Payment Terms & Schedule</span>
               </h4>
 
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setReceivePaymentMode("fully_paid")}
-                  className={`py-2 px-3 text-xs font-bold rounded-xl transition cursor-pointer border flex flex-col items-center justify-center gap-1 ${
-                    receivePaymentMode === "fully_paid"
-                      ? "bg-emerald-500/10 border-emerald-500 text-emerald-400"
-                      : "bg-m3-surface border-m3-outline-variant/35 text-zinc-400 hover:text-zinc-200"
-                  }`}
-                >
-                  <span className="font-extrabold text-[11px]">Fully Paid</span>
-                  <span className="text-[9px] font-normal opacity-70">Instant Settlement</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setReceivePaymentMode("terms")}
-                  className={`py-2 px-3 text-xs font-bold rounded-xl transition cursor-pointer border flex flex-col items-center justify-center gap-1 ${
-                    receivePaymentMode === "terms"
-                      ? "bg-m3-primary/10 border-m3-primary text-m3-primary"
-                      : "bg-m3-surface border-m3-outline-variant/35 text-zinc-400 hover:text-zinc-200"
-                  }`}
-                >
-                  <span className="font-extrabold text-[11px]">Pay In Terms</span>
-                  <span className="text-[9px] font-normal opacity-70">Project to Calendar</span>
-                </button>
-              </div>
-
-              {receivePaymentMode === "terms" && (
-                <div className="bg-m3-surface p-3.5 rounded-2xl border border-m3-outline-variant/30 space-y-3 animate-fade-in text-[11px]">
-                  {/* Preset Terms Selection */}
-                  <div className="space-y-1">
-                    <span className="text-[10px] text-zinc-400 font-bold block">Terms Length</span>
-                    <div className="grid grid-cols-5 gap-1">
-                      {[30, 60, 90, 120].map((days) => (
-                        <button
-                          key={days}
-                          type="button"
-                          onClick={() => {
-                            setReceiveTermsLength(days);
-                            try {
-                              const sDate = new Date(receiveTermStartDate);
-                              sDate.setDate(sDate.getDate() + days);
-                              setReceiveTermEndDate(sDate.toISOString().split('T')[0]);
-                            } catch (e) {}
-                          }}
-                          className={`py-1.5 text-[10px] font-black rounded-lg transition border cursor-pointer text-center ${
-                            receiveTermsLength === days
-                              ? "bg-m3-primary text-m3-on-primary border-transparent"
-                              : "bg-m3-surface-low border-m3-outline-variant/40 text-zinc-300 hover:bg-m3-surface-high"
-                          }`}
-                        >
-                          {days}D
-                        </button>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => setReceiveTermsLength(0)}
-                        className={`py-1.5 text-[10px] font-black rounded-lg transition border cursor-pointer text-center ${
-                          receiveTermsLength === 0
-                            ? "bg-amber-500 text-black border-transparent"
-                            : "bg-m3-surface-low border-m3-outline-variant/40 text-zinc-300 hover:bg-m3-surface-high"
-                        }`}
-                      >
-                        Custom
-                      </button>
-                    </div>
+              {activePo?.paymentMode && (
+                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-3 text-xs text-zinc-300 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-extrabold text-emerald-400 flex items-center gap-1.5">
+                      <span className="text-sm">✓</span> Inherited PO Payment Terms
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowTermsOverride(!showTermsOverride);
+                        if (!showTermsOverride) {
+                          setReceivePaymentMode(activePo.paymentMode || "fully_paid");
+                          setReceiveTermsLength(activePo.termsLength || 30);
+                          setReceiveTermStartDate(activePo.termStartDate || new Date().toISOString().split('T')[0]);
+                          setReceiveTermEndDate(activePo.termEndDate || new Date().toISOString().split('T')[0]);
+                        }
+                      }}
+                      className="text-[10px] bg-m3-surface-high hover:bg-m3-surface-highest text-m3-primary font-bold px-2 py-1 rounded-lg transition cursor-pointer"
+                    >
+                      {showTermsOverride ? "Use Inherited" : "Change / Customize"}
+                    </button>
                   </div>
-
-                  {/* Start Date & End Date Pickers */}
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <div className="space-y-1">
-                      <label className="text-[10px] text-zinc-400 font-bold flex items-center gap-1">
-                        <Calendar className="h-3.5 w-3.5 text-m3-primary" /> Start Date
-                      </label>
-                      <input
-                        type="date"
-                        value={receiveTermStartDate}
-                        onChange={(e) => {
-                          const newStart = e.target.value;
-                          setReceiveTermStartDate(newStart);
-                          if (receiveTermsLength > 0) {
-                            try {
-                              const sDate = new Date(newStart);
-                              sDate.setDate(sDate.getDate() + receiveTermsLength);
-                              setReceiveTermEndDate(sDate.toISOString().split('T')[0]);
-                            } catch (err) {}
-                          }
-                        }}
-                        className="w-full bg-m3-surface-low border border-m3-outline-variant/35 rounded-xl p-2 font-mono text-[11px] outline-none text-zinc-200 focus:border-m3-primary"
-                      />
+                  {!showTermsOverride && (
+                    <div className="text-[11px] font-mono text-zinc-400 space-y-1">
+                      <div>
+                        <span className="font-bold text-zinc-300">Method:</span>{" "}
+                        {activePo.paymentMode === "fully_paid" ? "Cash On Delivery (COD) / Fully Paid" : `Pay in Terms (${activePo.termsLength} Days)`}
+                      </div>
+                      {activePo.paymentMode === "terms" && (
+                        <>
+                          <div>
+                            <span className="font-bold text-zinc-300">Start Date:</span> {activePo.termStartDate}
+                          </div>
+                          <div>
+                            <span className="font-bold text-zinc-300">Due Date:</span> {activePo.termEndDate}
+                          </div>
+                        </>
+                      )}
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] text-zinc-400 font-bold flex items-center gap-1">
-                        <Calendar className="h-3.5 w-3.5 text-amber-500" /> End (Due) Date
-                      </label>
-                      <input
-                        type="date"
-                        value={receiveTermEndDate}
-                        onChange={(e) => {
-                          setReceiveTermEndDate(e.target.value);
-                          setReceiveTermsLength(0); // set to custom
-                        }}
-                        className="w-full bg-m3-surface-low border border-m3-outline-variant/35 rounded-xl p-2 font-mono text-[11px] outline-none text-zinc-200 focus:border-m3-primary"
-                      />
-                    </div>
-                  </div>
-
-                  <p className="text-[9.5px] text-zinc-400 italic">
-                    Note: Marking as "In Terms" automatically creates a corresponding liability traceable record in the Supplier Payment Calendar due on {receiveTermEndDate}.
-                  </p>
+                  )}
                 </div>
+              )}
+
+              {(!activePo?.paymentMode || showTermsOverride) && (
+                <>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setReceivePaymentMode("fully_paid")}
+                      className={`py-2 px-3 text-xs font-bold rounded-xl transition cursor-pointer border flex flex-col items-center justify-center gap-1 ${
+                        receivePaymentMode === "fully_paid"
+                          ? "bg-emerald-500/10 border-emerald-500 text-emerald-400"
+                          : "bg-m3-surface border-m3-outline-variant/35 text-zinc-400 hover:text-zinc-200"
+                      }`}
+                    >
+                      <span className="font-extrabold text-[11px]">Fully Paid</span>
+                      <span className="text-[9px] font-normal opacity-70">Instant Settlement</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReceivePaymentMode("terms")}
+                      className={`py-2 px-3 text-xs font-bold rounded-xl transition cursor-pointer border flex flex-col items-center justify-center gap-1 ${
+                        receivePaymentMode === "terms"
+                          ? "bg-m3-primary/10 border-m3-primary text-m3-primary"
+                          : "bg-m3-surface border-m3-outline-variant/35 text-zinc-400 hover:text-zinc-200"
+                      }`}
+                    >
+                      <span className="font-extrabold text-[11px]">Pay In Terms</span>
+                      <span className="text-[9px] font-normal opacity-70">Project to Calendar</span>
+                    </button>
+                  </div>
+
+                  {receivePaymentMode === "terms" && (
+                    <div className="bg-m3-surface p-3.5 rounded-2xl border border-m3-outline-variant/30 space-y-3 animate-fade-in text-[11px]">
+                      {/* Preset Terms Selection */}
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-zinc-400 font-bold block">Terms Length</span>
+                        <div className="grid grid-cols-5 gap-1">
+                          {[30, 60, 90, 120].map((days) => (
+                            <button
+                              key={days}
+                              type="button"
+                              onClick={() => {
+                                setReceiveTermsLength(days);
+                                try {
+                                  const sDate = new Date(receiveTermStartDate);
+                                  sDate.setDate(sDate.getDate() + days);
+                                  setReceiveTermEndDate(sDate.toISOString().split('T')[0]);
+                                } catch (e) {}
+                              }}
+                              className={`py-1.5 text-[10px] font-black rounded-lg transition border cursor-pointer text-center ${
+                                receiveTermsLength === days
+                                  ? "bg-m3-primary text-m3-on-primary border-transparent"
+                                  : "bg-m3-surface-low border-m3-outline-variant/40 text-zinc-300 hover:bg-m3-surface-high"
+                              }`}
+                            >
+                              {days}D
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => setReceiveTermsLength(0)}
+                            className={`py-1.5 text-[10px] font-black rounded-lg transition border cursor-pointer text-center ${
+                              receiveTermsLength === 0
+                                ? "bg-amber-500 text-black border-transparent"
+                                : "bg-m3-surface-low border-m3-outline-variant/40 text-zinc-300 hover:bg-m3-surface-high"
+                            }`}
+                          >
+                            Custom
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Start Date & End Date Pickers */}
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-zinc-400 font-bold flex items-center gap-1">
+                            <Calendar className="h-3.5 w-3.5 text-m3-primary" /> Start Date
+                          </label>
+                          <input
+                            type="date"
+                            value={receiveTermStartDate}
+                            onChange={(e) => {
+                              const newStart = e.target.value;
+                              setReceiveTermStartDate(newStart);
+                              if (receiveTermsLength > 0) {
+                                try {
+                                  const sDate = new Date(newStart);
+                                  sDate.setDate(sDate.getDate() + receiveTermsLength);
+                                  setReceiveTermEndDate(sDate.toISOString().split('T')[0]);
+                                } catch (err) {}
+                              }
+                            }}
+                            className="w-full bg-m3-surface-low border border-m3-outline-variant/35 rounded-xl p-2 font-mono text-[11px] outline-none text-zinc-200 focus:border-m3-primary"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-zinc-400 font-bold flex items-center gap-1">
+                            <Calendar className="h-3.5 w-3.5 text-amber-500" /> End (Due) Date
+                          </label>
+                          <input
+                            type="date"
+                            value={receiveTermEndDate}
+                            onChange={(e) => {
+                              setReceiveTermEndDate(e.target.value);
+                              setReceiveTermsLength(0); // set to custom
+                            }}
+                            className="w-full bg-m3-surface-low border border-m3-outline-variant/35 rounded-xl p-2 font-mono text-[11px] outline-none text-zinc-200 focus:border-m3-primary"
+                          />
+                        </div>
+                      </div>
+
+                      <p className="text-[9.5px] text-zinc-400 italic">
+                        Note: Marking as "In Terms" automatically creates a corresponding liability traceable record in the Supplier Payment Calendar due on {receiveTermEndDate}.
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -2968,6 +3145,47 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                 className="m3-btn-primary px-5 py-2 text-xs shadow-sm cursor-pointer"
               >
                 Commit Supplier Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CUSTOM CONFIRMATION DIALOG */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-[100] p-4 animate-fade-in">
+          <div
+            className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm"
+            onClick={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+          />
+          <div className="relative w-full max-w-sm rounded-[32px] border border-m3-outline-variant/30 p-6 z-[110] shadow-2xl bg-m3-surface-low text-m3-on-surface text-center space-y-4">
+            <div className="text-left space-y-2">
+              <h3 className="text-base font-black text-m3-primary uppercase tracking-wide flex items-center gap-2">
+                <AlertTriangle className={`${confirmModal.isDanger ? 'text-rose-500' : 'text-amber-500'} h-5 w-5`} />
+                <span>{confirmModal.title}</span>
+              </h3>
+              <p className="text-xs text-m3-on-surface-variant/85 leading-relaxed">
+                {confirmModal.message}
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-m3-outline-variant/15 pt-4">
+              <button
+                type="button"
+                onClick={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+                className="px-4 py-2 text-xs font-black uppercase tracking-wider rounded-full hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors animate-scale-up"
+              >
+                {confirmModal.cancelText || "Cancel"}
+              </button>
+              <button
+                type="button"
+                onClick={confirmModal.onConfirm}
+                className={`px-5 py-2 text-xs font-black uppercase tracking-wider rounded-full text-white shadow-sm transition-all border animate-scale-up ${
+                  confirmModal.isDanger
+                    ? "bg-rose-600 hover:bg-rose-500 border-rose-700/30"
+                    : "bg-m3-primary hover:bg-m3-primary/30"
+                }`}
+              >
+                {confirmModal.confirmText || "Confirm"}
               </button>
             </div>
           </div>

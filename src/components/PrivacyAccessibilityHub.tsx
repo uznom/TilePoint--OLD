@@ -99,7 +99,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
   });
   
   const [colorContrast, setColorContrast] = useState<'default' | 'medium' | 'high'>(() => {
-    return (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'default';
+    return (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'medium';
   });
 
   const [maximizeTextContrast, setMaximizeTextContrast] = useState<boolean>(() => {
@@ -128,7 +128,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
   useEffect(() => {
     const handleSync = () => {
       isSyncingRef.current = true;
-      const persistedContrast = (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'default';
+      const persistedContrast = (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'medium';
       const persistedMaxText = localStorage.getItem('tilepoint-maximize-text-contrast') === 'true';
       const persistedDisableAnimations = localStorage.getItem('tilepoint-disable-animations') === 'true';
       const persistedDisableBlurs = localStorage.getItem('tilepoint-disable-blurs') === 'true';
@@ -368,6 +368,50 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
   const [isShowingHandbook, setIsShowingHandbook] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [faqSearch, setFaqSearch] = useState('');
+
+  const matchManualQuery = (text: string, keywords: string[]) => {
+    if (!faqSearch) return true;
+    const cleanSearch = faqSearch.toLowerCase().trim();
+    if (!cleanSearch) return true;
+    const searchTerms = cleanSearch.split(/\s+/).filter(Boolean);
+    const combinedText = (text + ' ' + keywords.join(' ')).toLowerCase();
+    return searchTerms.every(term => combinedText.includes(term));
+  };
+
+  const ch1Visible = matchManualQuery(
+    "The ERP OS Checkout Desk & Area Estimators The ERP OS Checkout Desk accepts real-time barcode scans, manual item code lookups, and direct SKU lookups. Use the Interactive Tile Coverage Estimator to dynamically translate physical floor dimensions length and width in meters into exact retail tile box counts. Adapts standard wastage overrides +5% standard grid bonds, +10% diagonal cuts to prevent shortfalls over tile clipping boundaries. Tendering handles precise decimal change calculations, printing receipt vouchers, and instantly subtracting sold quantities from active branch inventories.",
+    ["pos", "checkout", "desk", "area", "estimators", "calculators", "erp", "os", "tile", "box", "count", "grid", "diagonal", "tendering", "discount", "change", "receipt", "voucher", "inventory", "stock", "sales"]
+  );
+  const ch2Visible = matchManualQuery(
+    "Regional Warehouse Stock & Unified Pools View Administrators possess master privileges to analyze global stocking pipelines on-screen. The Unified Global Pools Ledger sub-tab lists comparative stock levels side-by-side across all active branches. Branch filters filter main catalog lists. A consolidated dropdown is available to verify stock indices across multiple depots simultaneously. Automated visual flags indicate stock health: In Stock, Low Stock, or Critical Warning.",
+    ["warehouse", "logistics", "index", "stock", "pools", "branch", "custom", "alert", "overrides", "inventory", "global", "pipelines", "levels", "health"]
+  );
+  const ch3Visible = matchManualQuery(
+    "Custom Alert Threshold Overrides Since different locations experience unique sales velocities, low-stock trigger boundaries can be custom-defined at a local level. Each tile preserves a master baseline minimum threshold designated at registration. From the product detail editor, branch managers can submit localized Alert Overrides that apply uniquely to their specific branch codes. Overrides trigger amber alert status rows inside the central lists for local reorder warning awareness.",
+    ["custom", "alert", "threshold", "overrides", "branch", "local", "levels", "velocity", "reorder", "warning", "minimum", "trigger"]
+  );
+  const ch4Visible = matchManualQuery(
+    "Inter-Branch Stock Transfers & Verification Chain Stock dispatches are regulated by a multi-stage, double-entry reconciliation pipeline. Dispatches create a formal Transfer Invoice that deducts quantities from the origin branch's active inventory immediately and sets it to Transit state. The destination branch's inventory will NOT increment until a destination operator physically inspects and approves the shipment. Clicking Acknowledge Receipt & Add Stock merges the items into target pools, committing the double-entry transaction.",
+    ["inter", "branch", "transfers", "double", "entry", "transit", "cargo", "dispatch", "invoice", "reconciliation", "delivery", "inspect"]
+  );
+  const ch5Visible = matchManualQuery(
+    "Shift Control, Daily Drawer Balancing & Audits Secure cash drawer compliance and operations control are driven by local shift events. Cashiers open shifts by logging a physical Starting Cash Float inside the active register interface. All offline sales journals are aggregated against cash and digital credit payments inside the shift module. Closing shifts requires logging a final drawers count to isolate cash discrepancies, which are committed as audited records.",
+    ["daily", "sales", "closing", "shift", "cashier", "drawer", "cash", "float", "balancing", "audits", "compliance", "register", "journal", "discrepancy"]
+  );
+  const ch6Visible = matchManualQuery(
+    "Multi-Format Sales Reporting, CSVs & Print PDFs To maintain rigorous retail compliance, TilePoint supports high-fidelity output exports for managers. Daily summary sheets can be compiled into standard Raw CSV files or formatted Excel Templates featuring formatted columns. The Sales Print Modal builds formal visual papers including structured pricing pools, item invoice listings, and operator signature spots. Click Trigger System Print inside the modal to output to paper or select Save as PDF to write digital PDF files.",
+    ["csv", "excel", "formatted", "sheets", "printing", "digital", "pdf", "sales", "transmissions", "report", "export", "manager", "template", "modal", "print", "signature"]
+  );
+  const ch7Visible = matchManualQuery(
+    "Damage Registers, Wastage Logs & Loss Write-Offs Handles damaged stock reconciliation for cracked, shattered, or flawed inventory. Broken tiles must be logged inside the Damage Register Module by entering specific product codes, quantities, and detailed causes. Submitting a damage voucher instantly writeoff the target branch's stocks and adds historical entries down the general ledger. Ensures precise inventory costs valuation by separating shrinkage wastage losses from regular sales records.",
+    ["damage", "register", "broken", "fragile", "ceramic", "tiles", "wastage", "writeoffs", "reconciliation", "cracked", "shattered", "flawed", "loss", "shrinkage", "ledger"]
+  );
+  const ch8Visible = matchManualQuery(
+    "Access Control Security & Lockout Rules Rigorous role-based security prevents unauthorized edits and maintains system integrity. Core actions are gated by explicit credentials. Standard sales desks prevent workers from altering records or viewing other branch balances. Under professional standards, login panels enforce an automated Security Intrusion Lockout. If a user enters an incorrect passcode five consecutive times, the console blocks access to prevent database breaches.",
+    ["user", "security", "access", "control", "active", "lockout", "brute", "force", "block", "profiles", "role", "admin", "manager", "cashier", "unauthorized", "intrusion", "failure"]
+  );
+
+  const anyChapterVisible = ch1Visible || ch2Visible || ch3Visible || ch4Visible || ch5Visible || ch6Visible || ch7Visible || ch8Visible;
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const triggerToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     setToastMessage(message);
@@ -503,9 +547,9 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
     setCookiePreferences({ necessary: true, functional: false, analytical: false });
     // Safe reset accessibility states to defaults if consent declined completely
     setTextSize('normal');
-    setColorContrast('default');
+    setColorContrast('medium');
     setMaximizeTextContrast(false);
-    localStorage.setItem('tilepoint-color-contrast', 'default');
+    localStorage.setItem('tilepoint-color-contrast', 'medium');
     localStorage.setItem('tilepoint-maximize-text-contrast', 'false');
     setDyslexicFont(false);
     setEnhancedOutlines(false);
@@ -591,7 +635,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-m3-on-surface/50 backdrop-blur-md animate-fade-in" onClick={() => setIsOpen(false)} />
           
-          <div className="relative w-full max-w-4xl h-[90vh] md:h-[740px] md:max-h-[85vh] flex flex-col m3-card rounded-[32px] p-0 overflow-hidden bg-m3-surface-low border border-m3-outline-variant/40 shadow-2xl animate-scale-up text-m3-on-surface">
+          <div className="relative w-full max-w-[95vw] md:max-w-7xl h-[90vh] md:h-[740px] md:max-h-[85vh] flex flex-col m3-card rounded-[32px] p-0 overflow-hidden bg-m3-surface-low border border-m3-outline-variant/40 shadow-2xl animate-scale-up text-m3-on-surface">
             {/* Header banner */}
             <div className="p-5 border-b border-m3-outline-variant/20 flex justify-between items-center bg-m3-surface shrink-0">
               <div className="flex items-center gap-3">
@@ -1637,7 +1681,7 @@ T*
 () Tj
 T*
 (CHAPTER 4: TWO-STAGE STOCK TRANSFERS) Tj
-*
+T*
 (- Stock remains in transit state until recipient triggers safe delivery intake.) Tj
 T*
 () Tj
@@ -1721,6 +1765,7 @@ startxref
                         <button
                           type="button"
                           onClick={() => {
+                            setIsOpen(false);
                             setIsShowingHandbook(true);
                           }}
                           className="px-4 py-2.5 bg-m3-surface-high hover:bg-m3-surface-highest text-m3-on-surface text-[10px] font-black uppercase tracking-wider rounded-xl border border-m3-outline-variant/20 transition-all active:scale-[0.98] cursor-pointer flex items-center gap-1.5"
@@ -2513,8 +2558,8 @@ startxref
       )}
 
       {isShowingHandbook && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-55 p-4 animate-fade-in font-sans">
-          <div className="absolute inset-0 bg-gray-950/80 backdrop-blur-md animate-fade-in" onClick={() => setIsShowingHandbook(false)} />
+        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-[200] p-4 animate-fade-in font-sans">
+          <div className="absolute inset-0 bg-gray-950/80 backdrop-blur-md animate-fade-in" onClick={() => { setIsShowingHandbook(false); setIsOpen(true); }} />
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -2538,7 +2583,10 @@ startxref
               </div>
               <button
                 type="button"
-                onClick={() => setIsShowingHandbook(false)}
+                onClick={() => {
+                  setIsShowingHandbook(false);
+                  setIsOpen(true);
+                }}
                 className="p-1.5 rounded-full hover:bg-m3-outline-variant/15 text-m3-on-surface-variant cursor-pointer transition-colors"
                 aria-label="Close Handbook"
               >
@@ -2582,7 +2630,7 @@ startxref
 
                 <div className="grid grid-cols-1 gap-4">
                   {/* Chapter 1 */}
-                  {(!faqSearch || 'pos checkout desk area estimators calculators erp os'.includes(faqSearch.toLowerCase())) && (
+                  {ch1Visible && (
                     <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
                       <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
                         <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 1</span>
@@ -2600,7 +2648,7 @@ startxref
                   )}
 
                   {/* Chapter 2 */}
-                  {(!faqSearch || 'regional warehouse logistics index stock pools branch custom alert overrides'.includes(faqSearch.toLowerCase())) && (
+                  {ch2Visible && (
                     <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
                       <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
                         <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 2</span>
@@ -2618,7 +2666,7 @@ startxref
                   )}
 
                   {/* Chapter 3 */}
-                  {(!faqSearch || 'custom alert threshold overrides branch local levels'.includes(faqSearch.toLowerCase())) && (
+                  {ch3Visible && (
                     <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
                       <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
                         <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 3</span>
@@ -2636,7 +2684,7 @@ startxref
                   )}
 
                   {/* Chapter 4 */}
-                  {(!faqSearch || 'inter branch transfers double entry transit cargo'.includes(faqSearch.toLowerCase())) && (
+                  {ch4Visible && (
                     <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
                       <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
                         <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 4</span>
@@ -2654,7 +2702,7 @@ startxref
                   )}
 
                   {/* Chapter 5 */}
-                  {(!faqSearch || 'daily sales closing shift cashier drawer cash float'.includes(faqSearch.toLowerCase())) && (
+                  {ch5Visible && (
                     <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
                       <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
                         <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 5</span>
@@ -2672,7 +2720,7 @@ startxref
                   )}
 
                   {/* Chapter 6 */}
-                  {(!faqSearch || 'csv excel formatted sheets printing digital pdf sales transmissions report'.includes(faqSearch.toLowerCase())) && (
+                  {ch6Visible && (
                     <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
                       <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
                         <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 6</span>
@@ -2690,7 +2738,7 @@ startxref
                   )}
 
                   {/* Chapter 7 */}
-                  {(!faqSearch || 'damage register broken fragile ceramic tiles wastage writeoffs'.includes(faqSearch.toLowerCase())) && (
+                  {ch7Visible && (
                     <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
                       <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
                         <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 7</span>
@@ -2708,7 +2756,7 @@ startxref
                   )}
 
                   {/* Chapter 8 */}
-                  {(!faqSearch || 'user security access control active lockout brute force block profiles role'.includes(faqSearch.toLowerCase())) && (
+                  {ch8Visible && (
                     <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
                       <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
                         <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 8</span>
@@ -2739,88 +2787,88 @@ startxref
                 </div>
 
                 <div className="space-y-2.5">
-                  {[
-                    {
-                      q: "How can the Administrator check the inventory of specific branches?",
-                      a: "There are two official methods to check branch stocks: (1) Use the primary Branch Filter Dropdown at the top of the main stock table to isolate listing balances for Cebu Main, Bacolod, Iloilo, or Dumaguete. (2) For a comprehensive comparative view, go to the 'Ledger & Heatmap' tab. The 'Unified Global Pools Matrix' and 'Multi-Branch Heatmap' show quantities side-by-side for all live depots simultaneously."
-                    },
-                    {
-                      q: "How can the Admin verify if physical stocks match digital inventory records?",
-                      a: "Admins perform an inventory count on-site (a physical stocktake). If a discrepancy is identified (e.g. theft, physical recounts, or clerical slip-ups), use the Ledger sub-tab then click 'Manual Stock Correction'. Insert a matching balancing record with movement type 'ADJUST' indicating the discrepancy value (positive/negative delta). This modifies the digital ledger to perfectly synchronize with physical floor counts while creating an immutable double-entry audit log."
-                    },
-                    {
-                      q: "What user roles are authorized to export sales reports?",
-                      a: "For security and tax integrity, only users assigned the Admin (Administrator) or Manager (Branch Manager) role are permitted to export raw sales reports. Standard cashiers or register clerks do not have access and see warning indicators."
-                    },
-                    {
-                      q: "What options are available for exporting sales reports?",
-                      a: "TilePoint supports four core formats: (1) Standard CSV: Raw analytical values. (2) Excel Spreadsheet: Formatted matrix suited for spreadsheets. (3) System Print: High-fidelity voucher layouts for printing. (4) Save PDF: Digital document printing destination option."
-                    },
-                    {
-                      q: "How do I print a sales report or export/save it as a PDF?",
-                      a: "To output reports: (1) Choose the report inside the active Draft Daily sheet or Transmitted archives. (2) Click the 'Print PDF' button. (3) Inside the preview modal, click 'Trigger System Print'. (4) In the native dialog that opens, pick a local office printer. Alternatively, select 'Save as PDF' or 'Microsoft Print to PDF' to save a digital copy."
-                    },
-                    {
-                      q: "How does the Inter-Branch Transfer double-entry pipeline prevent inventory leaks?",
-                      a: "Transfers are completely decoupled. When a transfer starts, items are deducted from the sender's stock immediately and placed in a transit bucket. The target branch's inventory is NOT incremented until an authorized destination manager receives the delivery and clicks 'Acknowledge Receipt & Add Stock'. This prevents losses during transport."
-                    },
-                    {
-                      q: "What happens if a user enters incorrect passwords multiple times?",
-                      a: "If a user enters an incorrect security PIN or password 5 consecutive times, the system triggers the automatic login lockout mechanism, locking the user out to protect database profiles from unauthorized brute-force attempts."
-                    },
-                    {
-                      q: "Are sales registers preserved if the network connection drops?",
-                      a: "Yes. Cashier sales are collected offline into safe local browser storage journals. When connection is recovered, drafts can be transmitted safely to the unified database clusters."
-                    }
-                  ].map((faq, index) => {
-                    const matchesSearch = !faqSearch || 
-                      faq.q.toLowerCase().includes(faqSearch.toLowerCase()) || 
-                      faq.a.toLowerCase().includes(faqSearch.toLowerCase());
-                    
-                    if (!matchesSearch) return null;
+                  {(() => {
+                    const faqs = [
+                      {
+                        q: "How can the Administrator check the inventory of specific branches?",
+                        a: "There are two official methods to check branch stocks: (1) Use the primary Branch Filter Dropdown at the top of the main stock table to isolate listing balances for Cebu Main, Bacolod, Iloilo, or Dumaguete. (2) For a comprehensive comparative view, go to the 'Ledger & Heatmap' tab. The 'Unified Global Pools Matrix' and 'Multi-Branch Heatmap' show quantities side-by-side for all live depots simultaneously."
+                      },
+                      {
+                        q: "How can the Admin verify if physical stocks match digital inventory records?",
+                        a: "Admins perform an inventory count on-site (a physical stocktake). If a discrepancy is identified (e.g. theft, physical recounts, or clerical slip-ups), use the Ledger sub-tab then click 'Manual Stock Correction'. Insert a matching balancing record with movement type 'ADJUST' indicating the discrepancy value (positive/negative delta). This modifies the digital ledger to perfectly synchronize with physical floor counts while creating an immutable double-entry audit log."
+                      },
+                      {
+                        q: "What user roles are authorized to export sales reports?",
+                        a: "For security and tax integrity, only users assigned the Admin (Administrator) or Manager (Branch Manager) role are permitted to export raw sales reports. Standard cashiers or register clerks do not have access and see warning indicators."
+                      },
+                      {
+                        q: "What options are available for exporting sales reports?",
+                        a: "TilePoint supports four core formats: (1) Standard CSV: Raw analytical values. (2) Excel Spreadsheet: Formatted matrix suited for spreadsheets. (3) System Print: High-fidelity voucher layouts for printing. (4) Save PDF: Digital document printing destination option."
+                      },
+                      {
+                        q: "How do I print a sales report or export/save it as a PDF?",
+                        a: "To output reports: (1) Choose the report inside the active Draft Daily sheet or Transmitted archives. (2) Click the 'Print PDF' button. (3) Inside the preview modal, click 'Trigger System Print'. (4) In the native dialog that opens, pick a local office printer. Alternatively, select 'Save as PDF' or 'Microsoft Print to PDF' to save a digital copy."
+                      },
+                      {
+                        q: "How does the Inter-Branch Transfer double-entry pipeline prevent inventory leaks?",
+                        a: "Transfers are completely decoupled. When a transfer starts, items are deducted from the sender's stock immediately and placed in a transit bucket. The target branch's inventory is NOT incremented until an authorized destination manager receives the delivery and clicks 'Acknowledge Receipt & Add Stock'. This prevents losses during transport."
+                      },
+                      {
+                        q: "What happens if a user enters incorrect passwords multiple times?",
+                        a: "If a user enters an incorrect security PIN or password 5 consecutive times, the system triggers the automatic login lockout mechanism, locking the user out to protect database profiles from unauthorized brute-force attempts."
+                      },
+                      {
+                        q: "Are sales registers preserved if the network connection drops?",
+                        a: "Yes. Cashier sales are collected offline into safe local browser storage journals. When connection is recovered, drafts can be transmitted safely to the unified database clusters."
+                      }
+                    ];
 
-                    const isOpen = activeFaq === index;
+                    const matchedFaqs = faqs.filter(faq => {
+                      if (!faqSearch) return true;
+                      const cleanSearch = faqSearch.toLowerCase().trim();
+                      const searchTerms = cleanSearch.split(/\s+/).filter(Boolean);
+                      const combinedText = `${faq.q} ${faq.a}`.toLowerCase();
+                      return searchTerms.every(term => combinedText.includes(term));
+                    });
 
                     return (
-                      <div
-                        key={index}
-                        className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 hover:border-m3-outline-variant/25 transition-all text-left"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => setActiveFaq(isOpen ? null : index)}
-                          className="w-full flex items-center justify-between text-left text-xs font-black text-m3-on-surface hover:text-m3-primary font-mono select-none"
-                        >
-                          <span className="pr-4">{faq.q}</span>
-                          {isOpen ? (
-                            <ChevronUp className="h-4 w-4 shrink-0 text-m3-primary animate-pulse" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4 shrink-0 text-zinc-500 hover:text-m3-primary" />
-                          )}
-                        </button>
-                        {isOpen && (
-                          <div className="mt-2.5 pt-2.5 border-t border-m3-outline-variant/5 text-[11px] text-zinc-300 leading-relaxed font-sans">
-                            {faq.a}
+                      <>
+                        {matchedFaqs.map((faq, index) => {
+                          const isOpen = activeFaq === index;
+                          return (
+                            <div
+                              key={index}
+                              className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 hover:border-m3-outline-variant/25 transition-all text-left"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => setActiveFaq(isOpen ? null : index)}
+                                className="w-full flex items-center justify-between text-left text-xs font-black text-m3-on-surface hover:text-m3-primary font-mono select-none"
+                              >
+                                <span className="pr-4">{faq.q}</span>
+                                {isOpen ? (
+                                  <ChevronUp className="h-4 w-4 shrink-0 text-m3-primary animate-pulse" />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4 shrink-0 text-zinc-500 hover:text-m3-primary" />
+                                )}
+                              </button>
+                              {isOpen && (
+                                <div className="mt-2.5 pt-2.5 border-t border-m3-outline-variant/5 text-[11px] text-zinc-300 leading-relaxed font-sans">
+                                  {faq.a}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                        {!anyChapterVisible && matchedFaqs.length === 0 && (
+                          <div className="text-center py-6 text-zinc-500 italic text-xs">
+                            No matching manual chapters or FAQ questions found for your query. Try a different search term like "inventory" or "print".
                           </div>
                         )}
-                      </div>
+                      </>
                     );
-                  })}
-
-                  {faqSearch && ![
-                    "How can the Administrator check the inventory of specific branches?",
-                    "How can the Admin verify if physical stocks match digital inventory records?",
-                    "What user roles are authorized to export sales reports?",
-                    "What options are available for exporting sales reports?",
-                    "How do I print a sales report or export/save it as a PDF?",
-                    "How does the Inter-Branch Transfer double-entry pipeline prevent inventory leaks?",
-                    "What happens if a user enters incorrect passwords multiple times?",
-                    "Are sales registers preserved if the network connection drops?"
-                  ].some(q => q.toLowerCase().includes(faqSearch.toLowerCase())) && (
-                    <div className="text-center py-6 text-zinc-500 italic text-xs">
-                      No matching manual chapters or FAQ questions found for your query. Try a different search term like "inventory" or "print".
-                    </div>
-                  )}
+                  })()}
                 </div>
               </div>
             </div>
@@ -2833,7 +2881,10 @@ startxref
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsShowingHandbook(false)}
+                  onClick={() => {
+                    setIsShowingHandbook(false);
+                    setIsOpen(true);
+                  }}
                   className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-white rounded-full transition-all cursor-pointer font-mono"
                 >
                   Dismiss

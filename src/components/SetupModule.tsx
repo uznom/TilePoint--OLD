@@ -51,6 +51,7 @@ export const SetupModule: React.FC = () => {
   const [managerPin, setManagerPin] = useState(() => sessionStorage.getItem("tp_setup_managerPin") || "");
 
   // Step 2: Branch Data
+  const [branchId, setBranchId] = useState(() => sessionStorage.getItem("tp_setup_branchId") || "B1");
   const [branchName, setBranchName] = useState(() => sessionStorage.getItem("tp_setup_branchName") || "");
   const [branchAddress, setBranchAddress] = useState(() => sessionStorage.getItem("tp_setup_branchAddress") || "");
   const [branchPhone, setBranchPhone] = useState(() => sessionStorage.getItem("tp_setup_branchPhone") || "");
@@ -96,6 +97,7 @@ export const SetupModule: React.FC = () => {
     sessionStorage.setItem("tp_setup_email", email);
     sessionStorage.setItem("tp_setup_password", password);
     sessionStorage.setItem("tp_setup_managerPin", managerPin);
+    sessionStorage.setItem("tp_setup_branchId", branchId);
     sessionStorage.setItem("tp_setup_branchName", branchName);
     sessionStorage.setItem("tp_setup_branchAddress", branchAddress);
     sessionStorage.setItem("tp_setup_branchPhone", branchPhone);
@@ -112,6 +114,7 @@ export const SetupModule: React.FC = () => {
     email,
     password,
     managerPin,
+    branchId,
     branchName,
     branchAddress,
     branchPhone,
@@ -132,6 +135,7 @@ export const SetupModule: React.FC = () => {
       "tp_setup_email",
       "tp_setup_password",
       "tp_setup_managerPin",
+      "tp_setup_branchId",
       "tp_setup_branchName",
       "tp_setup_branchAddress",
       "tp_setup_branchPhone",
@@ -244,6 +248,7 @@ export const SetupModule: React.FC = () => {
     setInstallProgress(85);
 
     try {
+      const bId = branchId.trim() || "B1";
       // Create initial configuration records payload
       const initialDbState = {
         tp_is_configured: "true",
@@ -261,7 +266,7 @@ export const SetupModule: React.FC = () => {
             username: username.trim().toLowerCase(),
             email: email.trim(),
             role: "Admin",
-            branchAssignmentId: "B1",
+            branchAssignmentId: bId,
             status: "Active",
             managerPin: managerPin.trim(),
             passwordHash: token,
@@ -271,7 +276,7 @@ export const SetupModule: React.FC = () => {
         ],
         tp_branches: [
           {
-            id: "B1",
+            id: bId,
             name: branchName.trim(),
             manager: fullName.trim(),
             address: branchAddress.trim(),
@@ -354,6 +359,7 @@ export const SetupModule: React.FC = () => {
           managerPin: managerPin.trim(),
         },
         {
+          id: branchId.trim() || "B1",
           name: branchName.trim(),
           address: branchAddress.trim(),
           phone: branchPhone.trim(),
@@ -538,6 +544,22 @@ export const SetupModule: React.FC = () => {
                     </div>
 
                     <div className="space-y-3.5 pt-2">
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-400 pl-0.5">
+                          Established Branch ID (System Code)
+                        </label>
+                        <input
+                          type="text"
+                          value={branchId}
+                          onChange={(e) => setBranchId(e.target.value)}
+                          placeholder="e.g. B1, ETC_DIPOLOG, ETC_MAIN"
+                          className="w-full bg-[#181a24] border border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/80 transition-colors font-mono"
+                        />
+                        <p className="text-[9px] text-zinc-500 pl-0.5">
+                          Unique system key (alphanumeric/underscore). Defaults to <b>B1</b> if left unchanged.
+                        </p>
+                      </div>
+
                       <div className="space-y-1">
                         <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-400 pl-0.5">
                           Established Branch Name

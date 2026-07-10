@@ -23,7 +23,7 @@ export const SystemLoadingOverlay: React.FC = () => {
 
     const interval = setInterval(() => {
       setSimulatedStep((prev) => (prev + 1) % 4);
-    }, 450);
+    }, 100);
 
     return () => clearInterval(interval);
   }, [isSystemProcessing]);

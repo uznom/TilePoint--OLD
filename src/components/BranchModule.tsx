@@ -25,7 +25,9 @@ import {
   ChevronDown,
   ChevronUp,
   Mail,
-  User
+  User,
+  Upload,
+  Image
 } from 'lucide-react';
 
 interface BranchModuleProps {
@@ -42,12 +44,16 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
     users
   } = useDb();
 
+  const primaryBranchId = localStorage.getItem("tilepoint_primary_branch_id") || "B1";
+
   // Create Modal settings
   const [showModal, setShowModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingId, setEditingId] = useState('');
 
   // Form Fields State
+  const [customBranchId, setCustomBranchId] = useState('');
+  const [storeLogo, setStoreLogo] = useState('');
   const [name, setName] = useState('');
   const [manager, setManager] = useState('');
   const [address, setAddress] = useState('');
@@ -110,6 +116,8 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
   };
 
   const handleOpenAdd = () => {
+    setCustomBranchId('');
+    setStoreLogo('');
     setName('');
     setManager('');
     setAddress('');
@@ -128,6 +136,8 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
 
   const handleOpenEdit = (b: Branch) => {
     setEditingId(b.id);
+    setCustomBranchId(b.id);
+    setStoreLogo(b.storeLogo || '');
     setName(b.name);
     setManager(b.manager);
     setAddress(b.address);
@@ -167,6 +177,15 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
       return;
     }
 
+    const trimmedCustomId = customBranchId.trim();
+    if (!isEditMode && trimmedCustomId) {
+      const exists = branches.some(b => b.id.toLowerCase() === trimmedCustomId.toLowerCase());
+      if (exists) {
+        showToast(`Validation Error: A branch with ID "${trimmedCustomId}" already exists.`);
+        return;
+      }
+    }
+
     const payload = {
       name,
       manager,
@@ -178,7 +197,9 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
       isDistributionBranch,
       branchCode: trimmedCode,
       localIp: trimmedIp,
-      gatewayRules: gatewayRules.trim()
+      gatewayRules: gatewayRules.trim(),
+      storeLogo,
+      ...(trimmedCustomId ? { id: trimmedCustomId } : {})
     };
 
     if (isEditMode) {
@@ -196,7 +217,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
       showToast('Permission Denied: Branch deletion is restricted to Admins.');
       return;
     }
-    if (id === 'B1') {
+    if (id === primaryBranchId) {
       showToast('Violation Blocked: Deleting the primary Main Branch (HQ) is restricted to maintain transactional ledger continuity.');
       return;
     }
@@ -249,22 +270,31 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
               <div className="flex items-start justify-between border-b border-m3-outline-variant/15 pb-3">
                 <div className="space-y-1.5 border-b border-m3-outline-variant/5 pb-1">
                   <div className="flex items-center gap-2">
-                    <div className="p-2 rounded-xl bg-m3-primary/10 text-m3-primary border border-m3-outline-variant/15">
-                      <Building2 className="h-4.5 w-4.5" />
+                    <div className="h-9 w-9 rounded-xl border border-m3-outline-variant/15 overflow-hidden bg-m3-surface-low flex items-center justify-center flex-shrink-0">
+                      {b.storeLogo ? (
+                        <img src={b.storeLogo} alt="Logo" className="h-full w-full object-contain" referrerPolicy="no-referrer" />
+                      ) : (
+                        <div className="p-2 bg-m3-primary/10 text-m3-primary h-full w-full flex items-center justify-center">
+                          <Building2 className="h-4.5 w-4.5" />
+                        </div>
+                      )}
                     </div>
-                    <h4 className="text-sm font-extrabold tracking-tight text-m3-on-surface">{b.name}</h4>
+                    <div>
+                      <h4 className="text-sm font-extrabold tracking-tight text-m3-on-surface leading-tight">{b.name}</h4>
+                      <p className="text-[9px] font-mono text-m3-on-surface-variant/80 font-bold mt-0.5">ID: {b.id}</p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-m3-on-surface-variant/90 pl-1">
                     <UserCheck className="h-3.5 w-3.5 text-m3-tertiary font-bold" />
                     <span>Manager: <strong className="font-bold text-m3-on-surface">{b.manager}</strong></span>
                   </div>
                   <div className="flex flex-wrap gap-1.5 pt-1 pl-1">
-                    {b.id === 'B1' && (
+                    {b.id === primaryBranchId && (
                       <span className="text-[9px] font-black uppercase font-mono tracking-widest bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded border border-amber-500/20">
                         Main HQ
                       </span>
                     )}
-                    {(b.id === 'B1' || b.isDistributionBranch) && (
+                    {(b.id === primaryBranchId || b.isDistributionBranch) && (
                       <span className="text-[9px] font-black uppercase font-mono tracking-widest bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded border border-emerald-500/20">
                         Distribution Hub
                       </span>
@@ -590,6 +620,86 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
               </button>
             </div>
 
+            {/* Custom Branch ID and Brand Logo fields */}
+            <div className="space-y-1 relative">
+              <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">
+                Branch ID (System Code) {isEditMode ? "(Read-only)" : ""}
+              </label>
+              <input
+                type="text"
+                value={isEditMode ? editingId : customBranchId}
+                onChange={e => !isEditMode && setCustomBranchId(e.target.value)}
+                disabled={isEditMode}
+                placeholder="e.g. ETC_DIPOLOG MAIN, CHT_SINDANGAN"
+                className={`w-full border-b-2 px-3 py-2 text-xs focus:outline-none transition-colors rounded-t-md ${
+                  isEditMode
+                    ? "bg-m3-surface-lowest/50 text-m3-on-surface-variant border-transparent font-mono"
+                    : "bg-m3-surface-lowest border-m3-outline-variant/60 focus:border-m3-primary text-m3-on-surface"
+                }`}
+              />
+              {!isEditMode && (
+                <p className="text-[9px] text-m3-on-surface-variant italic pl-1">
+                  Leave empty to auto-generate or customize (e.g., <b>ETC_DIPOLOG MAIN</b>)
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-1 relative">
+              <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">
+                Branch Logo (for Receipts)
+              </label>
+              <div className="flex items-center gap-3 bg-m3-surface-lowest p-2.5 rounded-xl border border-m3-outline-variant/30">
+                <div className="h-12 w-12 rounded-lg border border-m3-outline-variant/50 bg-m3-surface-low flex items-center justify-center overflow-hidden flex-shrink-0 relative">
+                  {storeLogo ? (
+                    <img
+                      src={storeLogo}
+                      alt="Branch Logo"
+                      className="h-full w-full object-contain"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <Image className="h-6 w-6 text-m3-on-surface-variant/40" />
+                  )}
+                </div>
+                <div className="flex-1 space-y-1">
+                  <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors border border-m3-primary/15">
+                    <Upload className="h-3.5 w-3.5" />
+                    <span>Upload Logo</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 250 * 1024) {
+                            showToast("Size Warning: Please upload a logo smaller than 250KB for optimal storage.");
+                          }
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            if (event.target?.result) {
+                              setStoreLogo(event.target.result as string);
+                              showToast("Logo loaded successfully!");
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                  {storeLogo && (
+                    <button
+                      type="button"
+                      onClick={() => setStoreLogo("")}
+                      className="text-[9px] text-red-500 hover:underline block font-mono font-bold"
+                    >
+                      Remove Logo
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-1 relative">
               <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">Branch Name</label>
               <input
@@ -707,15 +817,15 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
                 <input
                   type="checkbox"
                   id="isDistributionBranchCheckbox"
-                  checked={isEditMode && editingId === 'B1' ? true : isDistributionBranch}
-                  disabled={isEditMode && editingId === 'B1'}
+                  checked={isEditMode && editingId === primaryBranchId ? true : isDistributionBranch}
+                  disabled={isEditMode && editingId === primaryBranchId}
                   onChange={e => setIsDistributionBranch(e.target.checked)}
                   className="h-4.5 w-4.5 text-m3-primary border-m3-outline focus:ring-m3-primary rounded cursor-pointer accent-m3-primary"
                 />
                 <label htmlFor="isDistributionBranchCheckbox" className="text-xs font-black text-m3-on-surface cursor-pointer leading-tight">
-                  {isEditMode && editingId === 'B1' ? 'Main Branch / HQ' : 'Distribution Hub Designation'}
+                  {isEditMode && editingId === primaryBranchId ? 'Main Branch / HQ' : 'Distribution Hub Designation'}
                   <span className="block text-[9.5px] text-m3-on-surface-variant font-medium mt-1 leading-normal">
-                    {isEditMode && editingId === 'B1' 
+                    {isEditMode && editingId === primaryBranchId 
                       ? 'This main HQ location has implicit global distribution privileges.' 
                       : 'Grant this branch authority to compile Inter-Branch Digital Transmittals.'}
                   </span>

@@ -119,7 +119,7 @@ export function getContrastRatio(hex1: string, hex2: string) {
 export function generateThemeFromSeed(
   seedColor: string, 
   isDark: boolean,
-  contrast: 'default' | 'medium' | 'high' = 'default'
+  contrast: 'default' | 'medium' | 'high' = 'medium'
 ): M3ThemeScheme {
   const rgb = hexToRgb(seedColor);
   const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);

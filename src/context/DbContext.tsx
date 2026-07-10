@@ -445,6 +445,7 @@ interface DbContextType {
       managerPin: string;
     },
     branchData: {
+      id?: string;
       name: string;
       address: string;
       phone: string;
@@ -492,7 +493,7 @@ interface DbContextType {
 
   // Actions - Branches
   createBranch: (
-    branch: Omit<Branch, "id" | "createdAt" | "updatedAt" | "isDeleted">,
+    branch: Omit<Branch, "id" | "createdAt" | "updatedAt" | "isDeleted"> & { id?: string },
   ) => void;
   updateBranch: (id: string, updates: Partial<Branch>) => void;
   deleteBranch: (id: string) => void;
@@ -592,6 +593,10 @@ interface DbContextType {
     }[],
     notes?: string,
     status?: POStatus,
+    paymentMode?: "fully_paid" | "terms",
+    termStartDate?: string,
+    termEndDate?: string,
+    termsLength?: number,
   ) => void;
   updatePOStatus: (id: string, status: POStatus) => void;
   receivePOItems: (
@@ -2325,7 +2330,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
               lowerKey.includes("sidebar") ||
               lowerKey.includes("animation") ||
               lowerKey.includes("blur") ||
-              (lowerKey.startsWith("tilepoint_") && k !== "tilepoint_onboarded_setup" && k !== "tilepoint_company_name_v1") ||
+              (lowerKey.startsWith("tilepoint_") &&
+                k !== "tilepoint_onboarded_setup" &&
+                k !== "tilepoint_company_name_v1" &&
+                k !== "tilepoint_primary_branch_id" &&
+                k !== "tilepoint_store_logo_v1") ||
               lowerKey.includes("tp_active_cart"); // protect active checkout session cart from remote override
 
             if (isBlockedKey) {
@@ -3849,6 +3858,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       managerPin: string;
     },
     branchData: {
+      id?: string;
       name: string;
       address: string;
       phone: string;
@@ -3858,9 +3868,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     // Prevent sync overrides while setup is in progress
     localStorage.setItem("tp_setting_up", "true");
 
+    const branchId = branchData.id?.trim() || "B1";
+
     // 1. Create first branches list
     const firstBranch: Branch = {
-      id: "B1",
+      id: branchId,
       name: branchData.name,
       manager: adminData.fullName,
       address: branchData.address,
@@ -3887,7 +3899,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       username: adminData.username,
       email: adminData.email,
       role: UserRole.ADMIN,
-      branchAssignmentId: "B1",
+      branchAssignmentId: branchId,
       status: "Active",
       managerPin: adminData.managerPin,
       passwordHash: adminData.passwordHash,
@@ -3909,6 +3921,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       localStorage.setItem("tilepoint_store_logo_v1", branchData.storeLogo);
     }
     localStorage.setItem("tilepoint_company_name_v1", branchData.name);
+    localStorage.setItem("tilepoint_primary_branch_id", branchId);
 
     // Mark as configured
     setIsConfigured(true);
@@ -3946,6 +3959,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       tp_is_configured: "true",
       tilepoint_onboarded_setup: "false",
       tilepoint_company_name_v1: branchData.name,
+      tilepoint_primary_branch_id: branchId,
     };
 
     fetch("/api/db/bulk", {
@@ -5921,15 +5935,16 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // BRANCHES
   const createBranch = (
-    branchFields: Omit<Branch, "id" | "createdAt" | "updatedAt" | "isDeleted">,
+    branchFields: Omit<Branch, "id" | "createdAt" | "updatedAt" | "isDeleted"> & { id?: string },
   ) => {
+    const customId = branchFields.id?.trim();
     const newBranch: Branch = {
       ...branchFields,
       name: sanitizeInputText(branchFields.name),
       address: sanitizeInputText(branchFields.address),
       manager: sanitizeInputText(branchFields.manager),
       phone: sanitizeInputText(branchFields.phone),
-      id: `B-${Date.now()}`,
+      id: customId || `B-${Date.now()}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       isDeleted: false,
@@ -6901,6 +6916,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     }[],
     notes?: string,
     status?: POStatus,
+    paymentMode?: "fully_paid" | "terms",
+    termStartDate?: string,
+    termEndDate?: string,
+    termsLength?: number,
   ) => {
     const poId = `PO-${Date.now()}`;
 
@@ -6920,7 +6939,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     const todayStr = new Date().toISOString().slice(0, 10);
     const calculatedTermEndDate = (() => {
       const d = new Date();
-      d.setDate(d.getDate() + 30);
+      d.setDate(d.getDate() + (termsLength !== undefined ? termsLength : 30));
       return d.toISOString().slice(0, 10);
     })();
 
@@ -6933,10 +6952,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       requestedBy: currentUser.fullName,
       date: todayStr,
       notes,
-      paymentMode: "terms",
-      termStartDate: todayStr,
-      termsLength: 30,
-      termEndDate: calculatedTermEndDate,
+      paymentMode: paymentMode || "terms",
+      termStartDate: termStartDate || todayStr,
+      termsLength: termsLength !== undefined ? termsLength : 30,
+      termEndDate: termEndDate || calculatedTermEndDate,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

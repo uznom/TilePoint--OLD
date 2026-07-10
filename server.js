@@ -477,7 +477,7 @@ app.post('/api/db', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Key is required' });
   }
 
-  if (isDatabaseConfigured()) {
+  if (isDatabaseConfigured() && key !== 'tp_bootstrap_init') {
     const user = verifyAndExtractToken(req);
     if (!user) {
       return res.status(401).json({ success: false, error: 'Unauthorized: Valid session token or identity header required.' });
@@ -506,7 +506,17 @@ app.post('/api/db', async (req, res) => {
   try {
     const result = await runInTransaction(async () => {
       const db = readDatabase();
-      db[key] = value;
+      if (key === 'tp_bootstrap_init') {
+        if (value && typeof value === 'object') {
+          Object.keys(value).forEach((k) => {
+            db[k] = value[k];
+          });
+        }
+        db['tp_is_configured'] = 'true';
+        db['tilepoint_onboarded_setup'] = 'false';
+      } else {
+        db[key] = value;
+      }
       // Isolate active sessions heartbeat from triggering full DB updates
       const eventType = key === 'tp_active_sessions' ? 'session_update' : 'db_update';
       if (writeDatabase(db, req.headers['x-client-id'], eventType)) {
@@ -528,7 +538,8 @@ app.post('/api/db/bulk', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Payload object data is required' });
   }
 
-  if (isDatabaseConfigured()) {
+  const isSetupPayload = data && (data.tilepoint_onboarded_setup === "false" || data.tilepoint_onboarded_setup === false);
+  if (isDatabaseConfigured() && !isSetupPayload) {
     const user = verifyAndExtractToken(req);
     if (!user) {
       return res.status(401).json({ success: false, error: 'Unauthorized: Valid session token or identity header required.' });
