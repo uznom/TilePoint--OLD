@@ -35,6 +35,52 @@ try {
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
+// --- SECURITY & ANTI-CRAWLER SHIELD MIDDLEWARE ---
+app.use((req, res, next) => {
+  // 1. Inject strict robots headers into all responses to prevent indexing of files, assets, and APIs
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  
+  const userAgent = (req.headers['user-agent'] || '').toLowerCase();
+  const clientIp = req.ip || req.connection.remoteAddress || '';
+  const isLocalhost = clientIp.includes('127.0.0.1') || clientIp.includes('::1') || clientIp.includes('localhost');
+
+  // List of blocked AI/LLM crawlers and search engine indexing bots
+  const crawlerBots = [
+    'gptbot', 'chatgpt-user', 'chatgpt', 'ccbot', 'anthropic-ai', 'claude-web', 'cohere-ai',
+    'google-extended', 'googlebot-image', 'googlebot-news', 'mediapartners-google', 'adsbot-google',
+    'bingbot', 'msnbot', 'yandexbot', 'yandex', 'baiduspider', 'sogou', 'exabot', 'facebot',
+    'facebookexternalhit', 'twitterbot', 'slackbot', 'telegrambot', 'applebot', 'embedly',
+    'quora', 'pinterest', 'linkedinbot', 'perplexibot', 'youbot', 'rogersbot', 'showyoubot'
+  ];
+
+  // List of automated headless scraping engines and programming libraries
+  const scraperTools = [
+    'python-requests', 'beautifulsoup', 'scrapy', 'selenium', 'puppeteer', 'playwright',
+    'headlesschrome', 'got-lite', 'got', 'node-fetch', 'okhttp', 'libwww', 'wget', 'httrack',
+    'ucl_crawler', 'webcopier', 'webstripper', 'teleport', 'harvest', 'grabber', 'scraper',
+    'crawler', 'spider', 'robot'
+  ];
+
+  // Check if user agent matches any known indexing bots
+  const isBot = crawlerBots.some(bot => userAgent.includes(bot));
+  
+  // Check if user agent is a developer scraper/automation script (only block if not localhost/debugging)
+  const isScraper = scraperTools.some(tool => userAgent.includes(tool)) && !isLocalhost;
+
+  if (isBot || isScraper) {
+    console.warn(`[Anti-Crawler Shield] Blocked suspicious request from IP: ${clientIp} - UA: "${req.headers['user-agent']}"`);
+    return res.status(403).json({
+      error: 'Access Denied',
+      message: 'This secure system is shielded from automated crawlers, scrapers, search indexing engines, and bot activity to safeguard proprietary transactional records.'
+    });
+  }
+
+  next();
+});
+// -------------------------------------------------
+
 // Path to store the offline server database
 const DB_FILE_PATH = path.join(__dirname, 'server-db.json');
 
