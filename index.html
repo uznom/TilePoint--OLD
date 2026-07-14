@@ -26,6 +26,7 @@
       // Check if we are in a development/preview environment where caching is undesirable or fails due to redirects
       const isDevPreview = window.location.hostname.includes('run.app') || 
                            window.location.hostname.includes('aistudio') ||
+                           window.location.hostname.includes('vercel.app') ||
                            window.location.hostname.includes('localhost') || 
                            window.location.hostname.includes('127.0.0.1');
 
@@ -33,11 +34,35 @@
         if (isDevPreview) {
           // Explicitly unregister any active service worker in development/preview to prevent stale caching issues
           navigator.serviceWorker.getRegistrations().then((registrations) => {
+            let unregisteredAny = false;
+            const promises = [];
+            
             for (let registration of registrations) {
-              registration.unregister().then((success) => {
-                if (success) console.log('[PWA] Unregistered active service worker for dev/preview environment.');
-              });
+              promises.push(
+                registration.unregister().then((success) => {
+                  if (success) {
+                    console.log('[PWA] Unregistered active service worker for dev/preview environment.');
+                    unregisteredAny = true;
+                  }
+                })
+              );
             }
+            
+            Promise.all(promises).then(() => {
+              if (unregisteredAny) {
+                // Purge any stale caches to prevent white screen of death
+                if ('caches' in window) {
+                  caches.keys().then((names) => {
+                    return Promise.all(names.map(name => caches.delete(name)));
+                  }).then(() => {
+                    console.log('[PWA] Stale caches purged. Reloading fresh...');
+                    window.location.reload();
+                  });
+                } else {
+                  window.location.reload();
+                }
+              }
+            });
           });
         } else {
           window.addEventListener('load', () => {
