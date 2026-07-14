@@ -290,6 +290,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [activeReceipt, setActiveReceipt] = useState<Sale | null>(null);
 
+  const receiptItems = React.useMemo(() => {
+    if (!activeReceipt) return [];
+    return saleItems.filter((item) => item.saleId === activeReceipt.id && !item.isDeleted);
+  }, [activeReceipt, saleItems]);
+
   // Fulfillment & Store Delivery system states
   const [showFulfillmentModal, setShowFulfillmentModal] = useState(false);
   const [pendingSaleForFulfillment, setPendingSaleForFulfillment] =
@@ -2719,6 +2724,51 @@ export const PosModule: React.FC<PosModuleProps> = ({
       <AnimatePresence>
         {showReceiptModal && activeReceipt && (
           <div className="fixed inset-0 overflow-y-auto flex items-start justify-center z-50 p-4 md:items-center">
+            {/* Inject dynamic 80mm roll print configuration to override Chrome letter defaults */}
+            <style dangerouslySetInnerHTML={{ __html: `
+              @media print {
+                @page {
+                  size: 80mm auto !important;
+                  margin: 0 !important;
+                }
+                body * {
+                  visibility: hidden !important;
+                }
+                .bir-receipt-container,
+                .bir-receipt-container * {
+                  visibility: visible !important;
+                }
+                body, html, #root, div {
+                  max-height: none !important;
+                  height: auto !important;
+                  overflow: visible !important;
+                  box-shadow: none !important;
+                  border: none !important;
+                }
+                .bir-receipt-container {
+                  visibility: visible !important;
+                  position: absolute !important;
+                  left: 0 !important;
+                  right: 0 !important;
+                  top: 0 !important;
+                  margin: 0 auto !important;
+                  width: 80mm !important;
+                  max-width: 80mm !important;
+                  padding: 4mm 6mm !important;
+                  box-sizing: border-box !important;
+                  background: #ffffff !important;
+                  color: #000000 !important;
+                  height: auto !important;
+                  max-height: none !important;
+                  overflow: visible !important;
+                  display: block !important;
+                }
+                .bir-report-no-print, button {
+                  display: none !important;
+                  visibility: hidden !important;
+                }
+              }
+            `}} />
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -2769,21 +2819,19 @@ export const PosModule: React.FC<PosModuleProps> = ({
                   )}
                   
                   <h4 className="text-xs font-black text-m3-primary tracking-widest font-mono uppercase">
-                    {receiptBranch?.name || "TILEPOINT RETAILING CO."}
+                    {receiptBranch?.name || "EMMAN TILE CENTER"}
                   </h4>
                   
                   <div className="text-[9px] text-m3-on-surface-variant font-extrabold font-mono uppercase tracking-wider">
-                    Branch ID: {receiptBranch?.id || "HQ_MAIN"}
+                    Branch ID: {receiptBranch?.id || "ETC_DIPOLOG MAIN"}
                   </div>
                   
-                  {receiptBranch?.address && (
-                    <div className="text-[9px] text-m3-on-surface-variant font-semibold mt-0.5 leading-tight">
-                      {receiptBranch.address}
-                    </div>
-                  )}
+                  <div className="text-[9px] text-m3-on-surface-variant font-semibold mt-0.5 leading-tight">
+                    {receiptBranch?.address || "Sta.Filomena,DipologCity"}
+                  </div>
                   
                   <div className="text-[8px] text-m3-on-surface-variant/80 mt-0.5 font-mono">
-                    {receiptBranch?.phone ? `Contact: ${receiptBranch.phone}` : "PH-0917-002340"} • TIN 000-111-222
+                    Contact: {receiptBranch?.phone || "0000"} • TIN 000-111-222
                   </div>
                 </div>
 
@@ -2818,22 +2866,17 @@ export const PosModule: React.FC<PosModuleProps> = ({
                     <span>Amount</span>
                   </div>
 
-                  {cart.length > 0 ? (
-                    cart.map((it, idx) => (
+                  {receiptItems.length > 0 ? (
+                    receiptItems.map((it, idx) => (
                       <div
                         key={idx}
                         className="flex justify-between text-m3-on-surface"
                       >
                         <span className="truncate max-w-[200px]">
-                          {it.product.productName} (x{it.quantity})
+                          {it.productName} (x{it.quantity})
                         </span>
                         <span className="font-bold">
-                          ₱
-                          {(
-                            (it.overridePrice !== undefined
-                              ? it.overridePrice
-                              : getBranchPrice(it.product)) * it.quantity
-                          ).toFixed(2)}
+                          ₱{it.total.toFixed(2)}
                         </span>
                       </div>
                     ))

@@ -1298,6 +1298,7 @@ html.accessibility-no-animation table tbody tr:hover td {
 
   /* Dedicated 80mm format centering layout for thermal receipt rolls */
   .bir-receipt-container {
+    page: receipt-page !important;
     display: block !important;
     position: relative !important;
     width: 80mm !important;
@@ -1321,15 +1322,23 @@ html.accessibility-no-animation table tbody tr:hover td {
   body:has(.bir-receipt-container) .bir-receipt-container * {
     visibility: visible !important;
   }
+  body:has(.bir-receipt-container) div {
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
   body:has(.bir-receipt-container) .bir-receipt-container {
+    page: receipt-page !important;
     visibility: visible !important;
     position: absolute !important;
     left: 0 !important;
+    right: 0 !important;
     top: 0 !important;
     width: 80mm !important;
     max-width: 80mm !important;
-    margin: 0 !important;
-    padding: 10px !important;
+    margin: 0 auto !important;
+    padding: 15px !important;
+    box-sizing: border-box !important;
     border: none !important;
     box-shadow: none !important;
     background: #ffffff !important;
@@ -1414,6 +1423,31 @@ html.accessibility-no-animation table tbody tr:hover td {
     overflow: visible !important;
   }
 
+  /* Robust isolation: if tilepoint-printable-po exists on screen, hide all other DOM elements completely */
+  body:has(#tilepoint-printable-po) * {
+    visibility: hidden !important;
+  }
+  body:has(#tilepoint-printable-po) #tilepoint-printable-po,
+  body:has(#tilepoint-printable-po) #tilepoint-printable-po * {
+    visibility: visible !important;
+  }
+  body:has(#tilepoint-printable-po) #tilepoint-printable-po {
+    visibility: visible !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 30px !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
   table {
     width: 100% !important;
     border-collapse: collapse !important;
@@ -1433,8 +1467,13 @@ html.accessibility-no-animation table tbody tr:hover td {
   }
 
   @page {
-    margin: 1.5cm;
-    size: portrait;
+    size: auto;
+    margin: 0;
+  }
+
+  @page receipt-page {
+    size: 80mm auto;
+    margin: 0;
   }
 }
 

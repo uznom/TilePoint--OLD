@@ -3321,7 +3321,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
             onClick={() => setShowExportModal(false)}
           />
 
-          <div className="bg-[#1c1e26] dark:bg-[#1c1e26] border border-zinc-850 rounded-3xl max-w-3xl w-full p-6 shadow-2xl relative flex flex-col max-h-[92vh] z-10 print:bg-white print:border-0 print:shadow-none print:p-0 print:max-h-none print:w-full">
+          <div id="tilepoint-printable-po" className="bg-[#1c1e26] dark:bg-[#1c1e26] border border-zinc-850 rounded-3xl max-w-3xl w-full p-6 shadow-2xl relative flex flex-col max-h-[92vh] z-10 print:bg-white print:border-0 print:shadow-none print:p-0 print:max-h-none print:w-full">
             <div className="flex items-center justify-between border-b border-zinc-800/60 pb-4 mb-4 shrink-0 print:hidden text-white">
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-amber-500" />
