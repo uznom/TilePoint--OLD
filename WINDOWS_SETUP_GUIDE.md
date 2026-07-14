@@ -349,6 +349,46 @@ If you generated the certificate using `192.168.1.38` but your Wi-Fi router assi
 
 ---
 
+### 🖥️ Why am I seeing "The server was unable to commit configuration records" during Step 3 (Verification)?
+
+This error occurs when the front-end application in your web browser tries to contact the backend database server (`server.js` running on Port 3000) to save your admin credentials and branch records, but the request fails or is blocked. 
+
+Follow these steps to diagnose and fix this instantly:
+
+#### 1. Is `server.js` actually running?
+If the background process failed to start or crashed, the browser cannot save your records.
+* **How to Check**: Open Command Prompt (CMD) or PowerShell and run:
+  ```cmd
+  pm2 status
+  ```
+* **If PM2 shows `tilepoint-hq-server` as `stopped`, `errored`, or isn't listed**:
+  * Run the server manually in a visible window to see any error messages:
+    ```cmd
+    node server.js
+    ```
+  * Keep this terminal window open! If it shows `Server running on port 3000`, go back to your browser and click "Start Bootstrap Installation" again.
+
+#### 2. Is Port 3000 already in use by another application?
+If you have another program (or a previously crashed instance of Node or VS Code) using Port 3000, `server.js` will crash immediately with `EADDRINUSE`.
+* **How to Check & Kill the blocker**:
+  1. Open Command Prompt (CMD) and run:
+     ```cmd
+     netstat -ano | findstr :3000
+     ```
+  2. If any lines show up, copy the number at the very end of the line (this is the Process ID / PID, e.g. `12450`).
+  3. Force kill that process:
+     ```cmd
+     taskkill /F /PID 12450
+     ```
+     *(Replace `12450` with your actual PID number).*
+  4. Now, re-run `setup-tilepoint.bat` or start `node server.js` manually.
+
+#### 3. Have you accepted the self-signed HTTPS certificate warning?
+If you are accessing the app over HTTPS (e.g. `https://localhost:3000`), the browser will initially block outgoing backend requests until you explicitly permit connection to the self-signed CA.
+* **Solution**: Ensure you click **"Advanced"** -> **"Proceed to localhost (unsafe)"** or **"Proceed to IP Address (unsafe)"** on the initial warning screen. Alternatively, follow **Step 6 Option B** to fully trust the CA using `mkcert` so warnings are never shown.
+
+---
+
 ## 📶 Step 7: Fixing IP Changes & Configuring Static IP (DHCP Setup)
 
 ### ⚠️ The Problem: DHCP IP Address Rotation
