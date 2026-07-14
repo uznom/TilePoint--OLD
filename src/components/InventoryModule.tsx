@@ -1796,10 +1796,11 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                 </span>
                 <input
                   type="text"
-                  placeholder="Filter by Name, SKU, design name, code..."
+                  placeholder={products.some(p => !p.isDeleted) ? "Filter by Name, SKU, design name, code..." : "No items available to filter (Inventory empty)"}
+                  disabled={!products.some(p => !p.isDeleted)}
                   value={term}
                   onChange={e => setTerm(e.target.value)}
-                  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/25 focus:border-m3-primary px-3.5 py-2.5 pl-10 pr-8 text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary/10 transition-all rounded-xl font-medium"
+                  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/25 focus:border-m3-primary px-3.5 py-2.5 pl-10 pr-8 text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary/10 transition-all rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 {term && (
                   <button
@@ -2286,13 +2287,19 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   );
                 })}
 
-                {filteredProducts.length === 0 && (
+                {products.filter(p => !p.isDeleted).length === 0 ? (
+                  <tr>
+                    <td colSpan={isCompactColumns ? 7 : 13} className="py-12 text-center text-amber-500 font-extrabold text-sm">
+                      ⚠️ No products registered in the inventory catalog. Use "Create Product" or import from the backup panel below to add items.
+                    </td>
+                  </tr>
+                ) : filteredProducts.length === 0 ? (
                   <tr>
                     <td colSpan={isCompactColumns ? 7 : 13} className="py-12 text-center text-m3-on-surface-variant font-bold text-sm">
                       No hardware listings or tiles match your filtered search.
                     </td>
                   </tr>
-                )}
+                ) : null}
               </tbody>
             </table>
           </div>
