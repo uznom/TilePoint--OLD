@@ -317,6 +317,15 @@ function AppContent() {
       const noAnim =
         localStorage.getItem("tilepoint-disable-animations") === "true";
       const noBlur = localStorage.getItem("tilepoint-disable-blurs") === "true";
+      const textSize =
+        (localStorage.getItem("tilepoint-text-size") as
+          | "normal"
+          | "large"
+          | "xlarge") || "normal";
+      const dyslexic =
+        localStorage.getItem("tilepoint-dyslexic-font") === "true";
+      const outlines =
+        localStorage.getItem("tilepoint-enhanced-outlines") === "true";
 
       setColorContrast(contrast);
       setMaximizeTextContrast(maxText);
@@ -324,18 +333,45 @@ function AppContent() {
       setDisableBlurs(noBlur);
 
       // Apply the theme with latest contrast settings
-      if (savedSeed) {
+      // If there is a saved custom seed, or if contrast is medium/high (even on the default sapphire theme), generate and apply the dynamic theme.
+      if (savedSeed || contrast !== "default") {
         try {
-          const scheme = generateThemeFromSeed(savedSeed, darkMode, contrast);
+          const activeSeed = savedSeed || "#155EEF";
+          const scheme = generateThemeFromSeed(activeSeed, darkMode, contrast);
           applyM3ThemeToDOM(scheme);
         } catch (err) {
           console.error(
-            "[M3 Dynamic Theme] Failed to auto-apply saved color theme:",
+            "[M3 Dynamic Theme] Failed to apply color theme:",
             err,
           );
         }
       } else {
         resetM3ThemeOverride();
+      }
+
+      // Sync Font Size classes
+      document.documentElement.classList.remove(
+        "accessibility-large-text",
+        "accessibility-xlarge-text"
+      );
+      if (textSize === "large") {
+        document.documentElement.classList.add("accessibility-large-text");
+      } else if (textSize === "xlarge") {
+        document.documentElement.classList.add("accessibility-xlarge-text");
+      }
+
+      // Sync Dyslexic Font class
+      if (dyslexic) {
+        document.documentElement.classList.add("accessibility-dyslexic-font");
+      } else {
+        document.documentElement.classList.remove("accessibility-dyslexic-font");
+      }
+
+      // Sync Enhanced Outlines class
+      if (outlines) {
+        document.documentElement.classList.add("accessibility-enhanced-outlines");
+      } else {
+        document.documentElement.classList.remove("accessibility-enhanced-outlines");
       }
 
       // Sync CSS accessibility high contrast and maximize text contrast flag classes

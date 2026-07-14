@@ -128,7 +128,7 @@ export function generateThemeFromSeed(
   const l = hsl.l;
 
   // Stable theme accents independently of contrast setting following user intent
-  const accentContrast: any = 'default';
+  const accentContrast: any = contrast;
 
   if (!isDark) {
     // ---- LIGHT MODE ----
