@@ -289,6 +289,7 @@ export const SetupModule: React.FC = () => {
             updatedAt: new Date().toISOString(),
             isDeleted: false,
             isDistributionBranch: true,
+            branchCode: bId,
           },
         ],
       };

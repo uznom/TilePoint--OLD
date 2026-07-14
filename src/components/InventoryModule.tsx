@@ -525,6 +525,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   ];
 
   const allowedToModify = currentUser.role === UserRole.MANAGER || currentUser.role === UserRole.ADMIN;
+  const allowedToImport = currentUser.role === UserRole.ADMIN;
 
   // Auto-coverage calculator effect based on tile dimensions & box contents
   useEffect(() => {
@@ -1297,6 +1298,10 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   };
 
   const executeBulkImport = async () => {
+    if (!allowedToImport) {
+      showToast('RBAC Protection: Only System Administrators (Admins) are authorized to import files.');
+      return;
+    }
     const trimmedInput = rawImportText.trim();
     if (!trimmedInput) {
       showToast('Error: Please input valid JSON or CSV older ERP OS product data.');
@@ -1491,13 +1496,22 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
           parsed.map(item => item.origin || item.location).map(v => String(v || '').trim()).filter(Boolean)
         )) as string[];
 
-        const existingBranchNames = branches.filter(b => !b.isDeleted).map(b => b.name.toLowerCase().trim());
-        const newLocations = uniqueLocations.filter(loc => !existingBranchNames.includes(loc.toLowerCase().trim()));
+        const activeBranches = branches.filter(b => !b.isDeleted);
+        const existingBranchIdentifiers = new Set([
+          ...activeBranches.map(b => b.name.toLowerCase().trim()),
+          ...activeBranches.map(b => b.id.toLowerCase().trim()),
+          ...activeBranches.map(b => (b.branchCode || '').toLowerCase().trim()).filter(Boolean)
+        ]);
+        const newLocations = uniqueLocations.filter(loc => !existingBranchIdentifiers.has(loc.toLowerCase().trim()));
 
         if (newLocations.length > 0) {
           setPendingProducts(parsed);
-          setPendingBranches(newLocations.map(name => ({
-            name,
+          setPendingBranches(newLocations.map(loc => ({
+            detectedLocation: loc,
+            mode: 'existing', // Default to existing branch mapping so they can choose to map it immediately
+            selectedExistingBranchId: activeBranches[0]?.id || 'B1',
+            id: loc, // prefilled branch ID from CSV
+            name: 'Emman Tile Center', // Default name as requested
             manager: 'Operational Branch Manager',
             address: 'Region Branch Site, Dipolog City',
             phone: '+63 920 123 4567',
@@ -1507,7 +1521,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
           setShowBranchConfigs(true);
           setShowImportModal(false);
           setShowPortabilityHubModal(false);
-          showToast(`Detected ${newLocations.length} new branch location(s)! Please fill in their details to finalize migration.`);
+          showToast(`Detected ${newLocations.length} brand new branch location(s) in CSV! Please map or configure them to finalize.`);
         } else {
           await triggerSystemProcessing(
             `Executing Legacy ERP OS Data Importer (${formatType})...`,
@@ -1535,39 +1549,64 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   };
 
   const handleFinalizeImportWithBranches = async () => {
-    const invalid = pendingBranches.some(b => !b.manager.trim() || !b.address.trim() || !b.phone.trim());
+    if (!allowedToImport) {
+      showToast('RBAC Protection: Only System Administrators (Admins) are authorized to import files.');
+      return;
+    }
+    const invalid = pendingBranches.some(b => b.mode === 'new' && (!b.name.trim() || !b.id.trim() || !b.manager.trim() || !b.address.trim() || !b.phone.trim()));
     if (invalid) {
-      showToast('Error: Please complete Manager, Address, and Phone for all new branches.');
+      showToast('Error: Please complete Name, ID, Manager, Address, and Phone for all brand new branches.');
       return;
     }
 
     try {
       await triggerSystemProcessing(
-        `Registering ${pendingBranches.length} Branches & Migrating Catalog...`,
+        `Registering Branches & Migrating Catalog...`,
         1800,
         'db',
         undefined,
         `Instantiating regional stores, mapping inventories, and synching product lines...`
       );
 
-      // Create new branches
+      // Create new branches only
+      let newCount = 0;
       pendingBranches.forEach(b => {
-        createBranch({
-          name: b.name,
-          manager: b.manager,
-          address: b.address,
-          phone: b.phone,
-          monthlySales: 0,
-          staffCount: b.staffCount,
-          activeCashiers: 1,
-          isDistributionBranch: b.isDistributionBranch
-        });
+        if (b.mode === 'new') {
+          newCount++;
+          createBranch({
+            id: b.id.trim(), // Unique ID/code detected from CSV
+            branchCode: b.id.trim(),
+            name: b.name.trim(),
+            manager: b.manager,
+            address: b.address,
+            phone: b.phone,
+            monthlySales: 0,
+            staffCount: b.staffCount,
+            activeCashiers: 1,
+            isDistributionBranch: b.isDistributionBranch
+          });
+        }
       });
 
-      // Import products
-      const result = importProducts(pendingProducts);
+      // Build branch mapping dictionary: [detectedLocation.toLowerCase()] -> targetBranchId
+      const branchMapping: Record<string, string> = {};
+      pendingBranches.forEach(b => {
+        const key = b.detectedLocation.toLowerCase().trim();
+        if (b.mode === 'existing') {
+          branchMapping[key] = b.selectedExistingBranchId;
+        } else {
+          branchMapping[key] = b.id.trim();
+        }
+      });
+
+      // Import products passing our override mapping dictionary
+      const result = importProducts(pendingProducts, branchMapping);
       if (result.success) {
-        showToast(`Successfully set up ${pendingBranches.length} new branches and migrated ${result.count} tile products!`);
+        if (newCount > 0) {
+          showToast(`Successfully registered ${newCount} new branches and migrated ${result.count} tile products!`);
+        } else {
+          showToast(`Successfully mapped inventories and migrated ${result.count} tile products to existing branches!`);
+        }
         setPendingBranches([]);
         setPendingProducts([]);
         setShowBranchConfigs(false);
@@ -3205,119 +3244,137 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
             {/* MIGRATION: IMPORT SECTION */}
             {migrationSubTab === 'import' && (
-              <div className="space-y-6 animate-fade-in">
-                {/* Instruction units */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
-                    <span className="text-[10px] font-black text-m3-primary uppercase tracking-wider block">STEP 1: Legacy Extraction</span>
-                    <p className="text-xs text-m3-on-surface-variant font-medium">
-                      Export product database or copy inventory rows from your older checkout apps in <strong>CSV</strong> or <strong>JSON</strong> format.
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
-                    <span className="text-[10px] font-black text-emerald-500 uppercase tracking-wider block">STEP 2: Smart Mapper</span>
-                    <p className="text-xs text-m3-on-surface-variant font-medium">
-                      Paste the raw CSV rows or JSON array. The smart importer automatically maps keys like codes, quantities, and prices!
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
-                    <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider block">STEP 3: Verify &amp; Commit</span>
-                    <p className="text-xs text-m3-on-surface-variant font-medium">
-                      The engine parses columns, generates robust secure keys/IDs, and upserts product records into the system catalog.
-                    </p>
+              !allowedToImport ? (
+                <div className="p-8 rounded-[24px] bg-rose-500/5 border border-rose-500/15 text-center space-y-4 max-w-2xl mx-auto my-6 font-sans">
+                  <span className="text-5xl block animate-bounce">🛡️</span>
+                  <h4 className="text-sm font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest">Administrative Import Restrained</h4>
+                  <p className="text-xs text-m3-on-surface-variant leading-relaxed max-w-md mx-auto">
+                    Your account is assigned the <strong>{currentUser.role}</strong> credentials profile. To maintain absolute safety across physical branch networks and regional stocks, only <strong>System Administrators (Admins)</strong> are allowed to run older legacy ERP CSV or JSON data rosters.
+                  </p>
+                  <div className="flex justify-center gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setMigrationSubTab('export')}
+                      className="px-6 py-2.5 bg-m3-primary text-white font-black text-xs uppercase tracking-wider rounded-full shadow-md hover:bg-m3-primary/95 transition-all"
+                    >
+                      Go to Backup & Export Center
+                    </button>
                   </div>
                 </div>
-
-                {/* Paste Space */}
-                <div className="space-y-3">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                    <label className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">Paste raw older ERP OS CSV rows or JSON data here</label>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const sample = [
-                            {
-                              "productName": "Heritage White Glazed Porcelain",
-                              "productCode": "HW-GL-80",
-                              "skuCode": "SKU-HW-80",
-                              "barcode": "4801122334455",
-                              "category": "Porcelain Tiles",
-                              "brand": "Heritage Slabs",
-                              "costPrice": 420,
-                              "sellingPrice": 650,
-                              "size": "80x80 cm",
-                              "stockQuantity": 150
-                            },
-                            {
-                              "productName": "EcoSlate Anti-Slip Terracotta",
-                              "productCode": "ES-AS-30",
-                              "skuCode": "SKU-ES-30",
-                              "barcode": "4805566778899",
-                              "category": "Ceramic Tiles",
-                              "brand": "EcoStone",
-                              "costPrice": 180,
-                              "sellingPrice": 280,
-                              "size": "30x30 cm",
-                              "stockQuantity": 320
-                            }
-                          ];
-                          setRawImportText(JSON.stringify(sample, null, 2));
-                          showToast("Loaded high-fidelity Sample older ERP OS JSON Dataset!");
-                        }}
-                        className="text-[10px] font-black uppercase text-m3-primary hover:text-m3-primary/80 bg-m3-primary/10 px-3.5 py-1.5 rounded-full transition-all cursor-pointer font-sans"
-                      >
-                        ⚡ Load JSON Sample
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const sampleCsv = `Product Name,Product Code,SKU,Barcode,Category,Brand,Cost Price,Selling Price,Size,Quantity\n"Heritage White Glazed Porcelain",HW-GL-80,SKU-HW-80,4801122334455,Porcelain Tiles,Heritage Slabs,420,650,80x80 cm,150\n"EcoSlate Anti-Slip Terracotta",ES-AS-30,SKU-ES-30,4805566778899,Ceramic Tiles,EcoStone,180,280,30x30 cm,320`;
-                          setRawImportText(sampleCsv);
-                          showToast("Loaded high-fidelity Sample older ERP OS CSV Dataset!");
-                        }}
-                        className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 hover:opacity-85 bg-emerald-500/10 px-3.5 py-1.5 rounded-full transition-all cursor-pointer font-sans"
-                      >
-                        📊 Load CSV Sample
-                      </button>
+              ) : (
+                <div className="space-y-6 animate-fade-in">
+                  {/* Instruction units */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
+                      <span className="text-[10px] font-black text-m3-primary uppercase tracking-wider block">STEP 1: Legacy Extraction</span>
+                      <p className="text-xs text-m3-on-surface-variant font-medium">
+                        Export product database or copy inventory rows from your older checkout apps in <strong>CSV</strong> or <strong>JSON</strong> format.
+                      </p>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
+                      <span className="text-[10px] font-black text-emerald-500 uppercase tracking-wider block">STEP 2: Smart Mapper</span>
+                      <p className="text-xs text-m3-on-surface-variant font-medium">
+                        Paste the raw CSV rows or JSON array. The smart importer automatically maps keys like codes, quantities, and prices!
+                      </p>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
+                      <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider block">STEP 3: Verify &amp; Commit</span>
+                      <p className="text-xs text-m3-on-surface-variant font-medium">
+                        The engine parses columns, generates robust secure keys/IDs, and upserts product records into the system catalog.
+                      </p>
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <div 
-                      onDragOver={handleImportDragOver}
-                      onDragLeave={handleImportDragLeave}
-                      onDrop={handleImportDrop}
-                      onClick={() => fileInputRef.current?.click()}
-                      className={`p-10 border-2 border-dashed rounded-[24px] text-center space-y-3 transition-all cursor-pointer ${
-                        isDragging 
-                          ? 'border-m3-primary bg-m3-primary/10 shadow-lg' 
-                          : 'border-m3-outline-variant/45 hover:border-m3-primary/60 bg-m3-surface-low'
-                      }`}
-                    >
-                      <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        onChange={handleFileSelect} 
-                        className="hidden" 
-                        accept=".csv,.json,.txt"
-                      />
-                      <Upload className="h-8 w-8 text-m3-primary mx-auto animate-bounce" />
-                      <div>
-                        <h4 className="text-sm font-black uppercase text-m3-on-surface">Drag &amp; Drop Older ERP OS File Here</h4>
-                        <p className="text-[11px] text-m3-on-surface-variant mt-1.5 max-w-md mx-auto select-none font-medium">
-                          Supports spreadsheet .csv exports, backup raw .json database copies, text tables. Or click inside to request manual file browser dialog.
-                        </p>
+                  {/* Paste Space */}
+                  <div className="space-y-3">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                      <label className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">Paste raw older ERP OS CSV rows or JSON data here</label>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const sample = [
+                              {
+                                "productName": "Heritage White Glazed Porcelain",
+                                "productCode": "HW-GL-80",
+                                "skuCode": "SKU-HW-80",
+                                "barcode": "4801122334455",
+                                "category": "Porcelain Tiles",
+                                "brand": "Heritage Slabs",
+                                "costPrice": 420,
+                                "sellingPrice": 650,
+                                "size": "80x80 cm",
+                                "stockQuantity": 150
+                              },
+                              {
+                                "productName": "EcoSlate Anti-Slip Terracotta",
+                                "productCode": "ES-AS-30",
+                                "skuCode": "SKU-ES-30",
+                                "barcode": "4805566778899",
+                                "category": "Ceramic Tiles",
+                                "brand": "EcoStone",
+                                "costPrice": 180,
+                                "sellingPrice": 280,
+                                "size": "30x30 cm",
+                                "stockQuantity": 320
+                              }
+                            ];
+                            setRawImportText(JSON.stringify(sample, null, 2));
+                            showToast("Loaded high-fidelity Sample older ERP OS JSON Dataset!");
+                          }}
+                          className="text-[10px] font-black uppercase text-m3-primary hover:text-m3-primary/80 bg-m3-primary/10 px-3.5 py-1.5 rounded-full transition-all cursor-pointer font-sans"
+                        >
+                          ⚡ Load JSON Sample
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const sampleCsv = `Product Name,Product Code,SKU,Barcode,Category,Brand,Cost Price,Selling Price,Size,Quantity\n"Heritage White Glazed Porcelain",HW-GL-80,SKU-HW-80,4801122334455,Porcelain Tiles,Heritage Slabs,420,650,80x80 cm,150\n"EcoSlate Anti-Slip Terracotta",ES-AS-30,SKU-ES-30,4805566778899,Ceramic Tiles,EcoStone,180,280,30x30 cm,320`;
+                            setRawImportText(sampleCsv);
+                            showToast("Loaded high-fidelity Sample older ERP OS CSV Dataset!");
+                          }}
+                          className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 hover:opacity-85 bg-emerald-500/10 px-3.5 py-1.5 rounded-full transition-all cursor-pointer font-sans"
+                        >
+                          📊 Load CSV Sample
+                        </button>
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1 block font-mono">Or paste clipboard rows / raw database snippet text below:</label>
-                      <textarea
-                        value={rawImportText}
-                        onChange={(e) => setRawImportText(e.target.value)}
-                        rows={8}
-                        placeholder={`--- CSV FORMAT EXAMPLE ---
+                    <div className="space-y-4">
+                      <div 
+                        onDragOver={handleImportDragOver}
+                        onDragLeave={handleImportDragLeave}
+                        onDrop={handleImportDrop}
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`p-10 border-2 border-dashed rounded-[24px] text-center space-y-3 transition-all cursor-pointer ${
+                          isDragging 
+                            ? 'border-m3-primary bg-m3-primary/10 shadow-lg' 
+                            : 'border-m3-outline-variant/45 hover:border-m3-primary/60 bg-m3-surface-low'
+                        }`}
+                      >
+                        <input 
+                          type="file" 
+                          ref={fileInputRef} 
+                          onChange={handleFileSelect} 
+                          className="hidden" 
+                          accept=".csv,.json,.txt"
+                        />
+                        <Upload className="h-8 w-8 text-m3-primary mx-auto animate-bounce" />
+                        <div>
+                          <h4 className="text-sm font-black uppercase text-m3-on-surface">Drag &amp; Drop Older ERP OS File Here</h4>
+                          <p className="text-[11px] text-m3-on-surface-variant mt-1.5 max-w-md mx-auto select-none font-medium">
+                            Supports spreadsheet .csv exports, backup raw .json database copies, text tables. Or click inside to request manual file browser dialog.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1 block font-mono">Or paste clipboard rows / raw database snippet text below:</label>
+                        <textarea
+                          value={rawImportText}
+                          onChange={(e) => setRawImportText(e.target.value)}
+                          rows={8}
+                          placeholder={`--- CSV FORMAT EXAMPLE ---
 Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
 "Old ERP OS Tile X",OPT-001,120.00,190.00,80,Porcelain,"ETC_DIPOLOG MAIN"
 
@@ -3332,42 +3389,43 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
     "origin": "ETC_DIPOLOG MAIN"
   }
 ]`}
-                        className="w-full bg-m3-surface-lowest border border-m3-outline-variant/40 focus:border-m3-primary p-4 text-xs font-mono text-m3-on-surface rounded-3xl focus:outline-none transition-colors"
-                      />
+                          className="w-full bg-m3-surface-lowest border border-m3-outline-variant/40 focus:border-m3-primary p-4 text-xs font-mono text-m3-on-surface rounded-3xl focus:outline-none transition-colors"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={executeBulkImport}
-                    className="px-6 py-3 bg-m3-primary hover:bg-m3-primary/95 text-white font-black text-xs uppercase tracking-wider rounded-full shadow-lg transition-all active:scale-95 cursor-pointer flex items-center gap-2"
-                  >
-                    <Check className="h-4 w-4" />
-                    <span>Run Importer &amp; Commit Data</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRawImportText('')}
-                    className="px-5 py-3 bg-m3-surface-high/30 hover:bg-m3-surface-high/60 text-m3-on-surface font-black text-xs uppercase tracking-wide rounded-full transition-all cursor-pointer"
-                  >
-                    Clear zone
-                  </button>
-                </div>
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={executeBulkImport}
+                      className="px-6 py-3 bg-m3-primary hover:bg-m3-primary/95 text-white font-black text-xs uppercase tracking-wider rounded-full shadow-lg transition-all active:scale-95 cursor-pointer flex items-center gap-2"
+                    >
+                      <Check className="h-4 w-4" />
+                      <span>Run Importer &amp; Commit Data</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRawImportText('')}
+                      className="px-5 py-3 bg-m3-surface-high/30 hover:bg-m3-surface-high/60 text-m3-on-surface font-black text-xs uppercase tracking-wide rounded-full transition-all cursor-pointer"
+                    >
+                      Clear zone
+                    </button>
+                  </div>
 
-                {/* Smart Import Template Guidelines */}
-                <div className="bg-amber-500/5 border border-amber-500/20 p-4 rounded-3xl space-y-2 text-xs font-medium">
-                  <h4 className="font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
-                    <AlertCircle className="h-4 w-4" />
-                    <span>Auto-Mapping &amp; Validation Compliance</span>
-                  </h4>
-                  <p className="text-m3-on-surface-variant leading-relaxed">
-                    Our legacy sync engine maps key fields from other systems. 
-                    If any fields such as <code>barcode</code>, <code>size</code> or <code>sku</code> are missing, the importer generates clean defaults dynamically to maintain full database integrity.
-                  </p>
+                  {/* Smart Import Template Guidelines */}
+                  <div className="bg-amber-500/5 border border-amber-500/20 p-4 rounded-3xl space-y-2 text-xs font-medium">
+                    <h4 className="font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>Auto-Mapping &amp; Validation Compliance</span>
+                    </h4>
+                    <p className="text-m3-on-surface-variant leading-relaxed">
+                      Our legacy sync engine maps key fields from other systems. 
+                      If any fields such as <code>barcode</code>, <code>size</code> or <code>sku</code> are missing, the importer generates clean defaults dynamically to maintain full database integrity.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )
             )}
 
             {/* MIGRATION: EXPORT SECTION */}
@@ -4673,57 +4731,80 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
                   </button>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
-                  <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider block">Dry-Run Test Roster</span>
-                  <p className="text-xs text-m3-on-surface-variant font-medium">
-                    Populate the migration pasting zone with demo offline tile records to test structural syntax.
-                  </p>
-                  <button
-                    onClick={() => {
-                      const sample = [
-                        {
-                          "productName": "Heritage White Glazed Porcelain",
-                          "productCode": "HW-GL-80",
-                          "skuCode": "SKU-HW-80",
-                          "barcode": "4801122334455",
-                          "category": "Porcelain Tiles",
-                          "brand": "Heritage Slabs",
-                          "costPrice": 420,
-                          "sellingPrice": 650,
-                          "size": "80x80 cm",
-                          "stockQuantity": 150
-                        },
-                        {
-                          "productName": "EcoSlate Anti-Slip Terracotta",
-                          "productCode": "ES-AS-30",
-                          "skuCode": "SKU-ES-30",
-                          "barcode": "4805566778899",
-                          "category": "Ceramic Tiles",
-                          "brand": "EcoStone",
-                          "costPrice": 180,
-                          "sellingPrice": 280,
-                          "size": "30x30 cm",
-                          "stockQuantity": 320
-                        }
-                      ];
-                      setRawImportText(JSON.stringify(sample, null, 2));
-                      showToast("Loaded trial ERP OS dataset to workspace!");
-                    }}
-                    className="w-full py-2 bg-m3-surface-low hover:bg-m3-outline-variant/15 text-m3-primary font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 border border-m3-outline-variant/10"
-                  >
-                    ⚡ Load TRIAL ERP OS Roster
-                  </button>
-                </div>
+                {allowedToImport ? (
+                  <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
+                    <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider block">Dry-Run Test Roster</span>
+                    <p className="text-xs text-m3-on-surface-variant font-medium">
+                      Populate the migration pasting zone with demo offline tile records to test structural syntax.
+                    </p>
+                    <button
+                      onClick={() => {
+                        const sample = [
+                          {
+                            "productName": "Heritage White Glazed Porcelain",
+                            "productCode": "HW-GL-80",
+                            "skuCode": "SKU-HW-80",
+                            "barcode": "4801122334455",
+                            "category": "Porcelain Tiles",
+                            "brand": "Heritage Slabs",
+                            "costPrice": 420,
+                            "sellingPrice": 650,
+                            "size": "80x80 cm",
+                            "stockQuantity": 150
+                          },
+                          {
+                            "productName": "EcoSlate Anti-Slip Terracotta",
+                            "productCode": "ES-AS-30",
+                            "skuCode": "SKU-ES-30",
+                            "barcode": "4805566778899",
+                            "category": "Ceramic Tiles",
+                            "brand": "EcoStone",
+                            "costPrice": 180,
+                            "sellingPrice": 280,
+                            "size": "30x30 cm",
+                            "stockQuantity": 320
+                          }
+                        ];
+                        setRawImportText(JSON.stringify(sample, null, 2));
+                        showToast("Loaded trial ERP OS dataset to workspace!");
+                      }}
+                      className="w-full py-2 bg-m3-surface-low hover:bg-m3-outline-variant/15 text-m3-primary font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 border border-m3-outline-variant/10"
+                    >
+                      ⚡ Load TRIAL ERP OS Roster
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/20 space-y-2 flex flex-col justify-between">
+                    <div>
+                      <span className="text-[10px] font-black text-rose-500 uppercase tracking-wider block">🔒 RBAC Restricted</span>
+                      <p className="text-[11px] text-m3-on-surface-variant font-medium mt-1">
+                        CSV/JSON inventory importing is strictly restricted to System Administrators to ensure regional database synchronization integrity.
+                      </p>
+                    </div>
+                    <div className="w-full py-2 bg-rose-500/10 text-rose-500 font-bold text-[10px] uppercase tracking-wider rounded-xl text-center">
+                      Write Access Restricted
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Paste Space */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider block">Paste JSON import array data block</label>
-                <textarea
-                  value={rawImportText}
-                  onChange={(e) => setRawImportText(e.target.value)}
-                  rows={8}
-                  placeholder={`[
+              {!allowedToImport ? (
+                <div className="p-6 rounded-2xl bg-rose-500/5 border border-rose-500/15 text-center space-y-2 font-sans">
+                  <span className="text-2xl block">🛡️</span>
+                  <h4 className="text-xs font-black text-rose-600 dark:text-rose-400 uppercase tracking-wider">Administrator Clearance Required</h4>
+                  <p className="text-[11px] text-m3-on-surface-variant max-w-md mx-auto leading-relaxed">
+                    You are logged in as a <strong>{currentUser.role}</strong>. Your current role permits full viewing and local exporting of active assets, but importing or changing the global tilepoint database is disabled.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider block">Paste JSON import array data block</label>
+                  <textarea
+                    value={rawImportText}
+                    onChange={(e) => setRawImportText(e.target.value)}
+                    rows={8}
+                    placeholder={`[
   {
     "productName": "Old ERP OS Ceramic Tile x5",
     "productCode": "OP-CER-01",
@@ -4732,9 +4813,10 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
     "stockQuantity": 80
   }
 ]`}
-                  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 focus:border-m3-primary p-3.5 text-xs font-mono text-m3-on-surface rounded-2xl focus:outline-none transition-colors"
-                />
-              </div>
+                    className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 focus:border-m3-primary p-3.5 text-xs font-mono text-m3-on-surface rounded-2xl focus:outline-none transition-colors"
+                  />
+                </div>
+              )}
 
               {/* Action buttons */}
               <div className="flex justify-end gap-2 border-t border-m3-outline-variant/15 pt-4">
@@ -4743,18 +4825,20 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
                   onClick={() => setShowPortabilityHubModal(false)}
                   className="px-4 py-2.5 text-xs font-black uppercase tracking-wider rounded-full hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
                 >
-                  Cancel
+                  {allowedToImport ? 'Cancel' : 'Close Hub'}
                 </button>
-                <button
-                  onClick={() => {
-                    executeBulkImport();
-                    setShowPortabilityHubModal(false);
-                  }}
-                  className="px-6 py-2.5 bg-m3-primary hover:bg-m3-primary/95 text-white font-black text-xs uppercase tracking-wider rounded-full shadow transition-all active:scale-95 cursor-pointer flex items-center gap-2"
-                >
-                  <Check className="h-4 w-4" />
-                  <span>Verify & Commit Import</span>
-                </button>
+                {allowedToImport && (
+                  <button
+                    onClick={() => {
+                      executeBulkImport();
+                      setShowPortabilityHubModal(false);
+                    }}
+                    className="px-6 py-2.5 bg-m3-primary hover:bg-m3-primary/95 text-white font-black text-xs uppercase tracking-wider rounded-full shadow transition-all active:scale-95 cursor-pointer flex items-center gap-2"
+                  >
+                    <Check className="h-4 w-4" />
+                    <span>Verify & Commit Import</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -4769,10 +4853,10 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
               <div>
                 <h3 className="text-base font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-2">
                   <span className="p-1.5 rounded-xl bg-amber-500/10">📍</span>
-                  <span>Brand New Outlet Locations Detected!</span>
+                  <span>Branch Outposts Detected in CSV</span>
                 </h3>
                 <p className="text-xs text-m3-on-surface-variant font-medium mt-1 font-sans">
-                  The imported dataset references location(s) not currently registered in TilePoint. Please complete their professional workplace profiles to finish:
+                  The imported dataset references location(s) not currently registered in TilePoint. Please map each to an existing branch or create a new branch profile:
                 </p>
               </div>
               <button
@@ -4785,98 +4869,200 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
 
             <div className="space-y-5">
               {pendingBranches.map((pb, idx) => (
-                <div key={idx} className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-3 font-sans">
-                  <div className="pb-2 border-b border-m3-outline-variant/10 flex justify-between items-center">
-                    <span className="text-xs font-black uppercase tracking-wider text-amber-500">
-                      🏢 Detected Branch Outpost: {pb.name}
-                    </span>
-                    <span className="text-[9px] bg-m3-secondary-container text-m3-on-secondary-container px-2.5 py-0.5 rounded font-mono font-bold uppercase">Pending Profile</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1">Manager name *</label>
-                      <input
-                        type="text"
-                        value={pb.manager}
-                        onChange={(e) => {
-                          const updated = [...pendingBranches];
-                          updated[idx].manager = e.target.value;
-                          setPendingBranches(updated);
-                        }}
-                        className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/55 focus:border-m3-primary p-2 focus:outline-none text-m3-on-surface transition-colors rounded-t font-sans"
-                        placeholder="e.g. Maria Clara"
-                        required
-                      />
+                <div key={idx} className="p-5 rounded-[24px] bg-m3-surface border border-m3-outline-variant/20 space-y-4 font-sans shadow-sm">
+                  <div className="pb-3 border-b border-m3-outline-variant/10 flex flex-wrap justify-between items-center gap-2">
+                    <div>
+                      <span className="text-xs font-black uppercase tracking-wider text-amber-500 block">
+                        🏢 CSV Detected Location: "{pb.detectedLocation}"
+                      </span>
+                      <span className="text-[10px] text-m3-on-surface-variant font-medium mt-0.5 block">
+                        Specify if this maps to an existing branch or should be created as a new outlet.
+                      </span>
                     </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1 font-mono">Contact Phone *</label>
-                      <input
-                        type="text"
-                        value={pb.phone}
-                        onChange={(e) => {
+                    <div className="flex items-center gap-2 bg-m3-surface-low p-1 rounded-xl border border-m3-outline-variant/10">
+                      <button
+                        type="button"
+                        onClick={() => {
                           const updated = [...pendingBranches];
-                          updated[idx].phone = e.target.value;
+                          updated[idx].mode = 'existing';
                           setPendingBranches(updated);
                         }}
-                        className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/55 focus:border-m3-primary p-2 focus:outline-none text-m3-on-surface transition-colors rounded-t font-sans"
-                        placeholder="e.g. +63 920 123 4567"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-1 sm:col-span-2">
-                      <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1">Full Workplace Dispatch Address *</label>
-                      <input
-                        type="text"
-                        value={pb.address}
-                        onChange={(e) => {
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                          pb.mode === 'existing'
+                            ? 'bg-m3-primary text-white shadow-sm'
+                            : 'text-m3-on-surface-variant hover:bg-m3-outline-variant/10'
+                        }`}
+                      >
+                        Map to Existing
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
                           const updated = [...pendingBranches];
-                          updated[idx].address = e.target.value;
+                          updated[idx].mode = 'new';
                           setPendingBranches(updated);
                         }}
-                        className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/55 focus:border-m3-primary p-2 focus:outline-none text-m3-on-surface transition-colors rounded-t font-sans"
-                        placeholder="e.g. Rizal Highway, Dipolog City, Zamboanga del Norte"
-                        required
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-2 pt-1 font-sans">
-                      <input
-                        type="checkbox"
-                        id={`modal-dist-hub-${idx}`}
-                        checked={pb.isDistributionBranch}
-                        onChange={(e) => {
-                          const updated = [...pendingBranches];
-                          updated[idx].isDistributionBranch = e.target.checked;
-                          setPendingBranches(updated);
-                        }}
-                        className="rounded border-m3-outline-variant text-m3-primary focus:ring-m3-primary/50"
-                      />
-                      <label htmlFor={`modal-dist-hub-${idx}`} className="text-[10px] font-black uppercase text-m3-on-surface-variant cursor-pointer select-none">
-                        Is Distribution Hub
-                      </label>
-                    </div>
-
-                    <div className="flex items-center gap-2 pt-1 font-sans">
-                      <label className="text-[10px] font-black uppercase text-m3-on-surface-variant block select-none">
-                        Assigned Force:
-                      </label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={50}
-                        value={pb.staffCount}
-                        onChange={(e) => {
-                          const updated = [...pendingBranches];
-                          updated[idx].staffCount = parseInt(e.target.value) || 3;
-                          setPendingBranches(updated);
-                        }}
-                        className="w-16 bg-m3-surface-lowest border-b-2 border-m3-outline-variant/55 focus:border-m3-primary p-1 focus:outline-none text-m3-on-surface text-center font-mono text-xs"
-                      />
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                          pb.mode === 'new'
+                            ? 'bg-amber-600 text-white shadow-sm'
+                            : 'text-m3-on-surface-variant hover:bg-m3-outline-variant/10'
+                        }`}
+                      >
+                        Create as New
+                      </button>
                     </div>
                   </div>
+
+                  {pb.mode === 'existing' ? (
+                    <div className="p-4 bg-m3-surface-low border border-m3-outline-variant/15 rounded-2xl space-y-2">
+                      <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider font-mono block pl-1">
+                        Select Existing Destination Branch *
+                      </label>
+                      <select
+                        value={pb.selectedExistingBranchId}
+                        onChange={(e) => {
+                          const updated = [...pendingBranches];
+                          updated[idx].selectedExistingBranchId = e.target.value;
+                          setPendingBranches(updated);
+                        }}
+                        className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:border-m3-primary text-m3-on-surface font-sans text-xs shadow-inner"
+                      >
+                        {branches.filter(b => !b.isDeleted).map(b => (
+                          <option key={b.id} value={b.id}>
+                            {b.name} ({b.id}) - {b.address || 'No address'}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="flex items-center gap-1.5 text-[10px] text-m3-on-surface-variant pl-1">
+                        <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                        <span>All imported items matching "{pb.detectedLocation}" will automatically be imported into this branch's stock.</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4 p-4 bg-m3-surface-low border border-m3-outline-variant/15 rounded-2xl">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1 font-mono">
+                            Detected Branch ID (from CSV)
+                          </label>
+                          <input
+                            type="text"
+                            value={pb.id}
+                            disabled
+                            className="w-full bg-m3-surface-lowest opacity-75 border-b-2 border-m3-outline-variant/20 p-2.5 focus:outline-none text-m3-on-surface-variant font-mono font-bold rounded-t cursor-not-allowed"
+                            title="Detected uniquely from the CSV records"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1">
+                            Branch Outpost Name *
+                          </label>
+                          <input
+                            type="text"
+                            value={pb.name}
+                            onChange={(e) => {
+                              const updated = [...pendingBranches];
+                              updated[idx].name = e.target.value;
+                              setPendingBranches(updated);
+                            }}
+                            className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/55 focus:border-m3-primary p-2.5 focus:outline-none text-m3-on-surface transition-colors rounded-t font-sans font-bold"
+                            placeholder="e.g. Emman Tile Center"
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1">
+                            Manager Name *
+                          </label>
+                          <input
+                            type="text"
+                            value={pb.manager}
+                            onChange={(e) => {
+                              const updated = [...pendingBranches];
+                              updated[idx].manager = e.target.value;
+                              setPendingBranches(updated);
+                            }}
+                            className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/55 focus:border-m3-primary p-2.5 focus:outline-none text-m3-on-surface transition-colors rounded-t font-sans"
+                            placeholder="e.g. Maria Clara"
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1 font-mono">
+                            Contact Phone *
+                          </label>
+                          <input
+                            type="text"
+                            value={pb.phone}
+                            onChange={(e) => {
+                              const updated = [...pendingBranches];
+                              updated[idx].phone = e.target.value;
+                              setPendingBranches(updated);
+                            }}
+                            className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/55 focus:border-m3-primary p-2.5 focus:outline-none text-m3-on-surface transition-colors rounded-t font-sans"
+                            placeholder="e.g. +63 920 123 4567"
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-1 sm:col-span-2">
+                          <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1">
+                            Full Workplace Dispatch Address *
+                          </label>
+                          <input
+                            type="text"
+                            value={pb.address}
+                            onChange={(e) => {
+                              const updated = [...pendingBranches];
+                              updated[idx].address = e.target.value;
+                              setPendingBranches(updated);
+                            }}
+                            className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/55 focus:border-m3-primary p-2.5 focus:outline-none text-m3-on-surface transition-colors rounded-t font-sans"
+                            placeholder="e.g. Rizal Highway, Dipolog City, Zamboanga del Norte"
+                            required
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-1 font-sans">
+                          <input
+                            type="checkbox"
+                            id={`modal-dist-hub-${idx}`}
+                            checked={pb.isDistributionBranch}
+                            onChange={(e) => {
+                              const updated = [...pendingBranches];
+                              updated[idx].isDistributionBranch = e.target.checked;
+                              setPendingBranches(updated);
+                            }}
+                            className="rounded border-m3-outline-variant text-m3-primary focus:ring-m3-primary/50 h-4 w-4 cursor-pointer"
+                          />
+                          <label htmlFor={`modal-dist-hub-${idx}`} className="text-[10px] font-black uppercase text-m3-on-surface-variant cursor-pointer select-none">
+                            Is Distribution Hub
+                          </label>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-1 font-sans">
+                          <label className="text-[10px] font-black uppercase text-m3-on-surface-variant block select-none">
+                            Assigned Force:
+                          </label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={50}
+                            value={pb.staffCount}
+                            onChange={(e) => {
+                              const updated = [...pendingBranches];
+                              updated[idx].staffCount = parseInt(e.target.value) || 3;
+                              setPendingBranches(updated);
+                            }}
+                            className="w-16 bg-m3-surface-lowest border-b-2 border-m3-outline-variant/55 focus:border-m3-primary p-1 focus:outline-none text-m3-on-surface text-center font-mono text-xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
