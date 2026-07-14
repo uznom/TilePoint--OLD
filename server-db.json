@@ -35,7 +35,7 @@
       "manager": "erica manaban",
       "address": "ddsdsd",
       "phone": "sdsds",
-      "monthlySales": 0,
+      "monthlySales": 87.36,
       "staffCount": 1,
       "activeCashiers": 0,
       "createdAt": "2026-06-26T12:52:35.681Z",
@@ -44,30 +44,19 @@
     }
   ],
   "tp_is_configured": "true",
-  "tilepoint_onboarded_setup": "true",
+  "tilepoint_onboarded_setup": "false",
   "tilepoint_company_name_v1": "ETC_DIPOLOG MAIN",
   "tp_active_sessions": [
     {
-      "id": "SESS_5W3OWF2WA",
-      "userId": "U-1782804196981",
-      "username": "test",
-      "fullName": "test",
-      "role": "Staff",
-      "branchId": "B1",
-      "branchName": "ETC_DIPOLOG MAIN",
-      "lastActive": "2026-06-30T09:39:35.274Z",
-      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
-    },
-    {
-      "id": "SESS_LU8BGSG9M",
+      "id": "SESS_16DMUTDRF",
       "userId": "U1",
       "username": "erica_admin",
       "fullName": "erica manaban",
       "role": "Admin",
       "branchId": "B1",
       "branchName": "ETC_DIPOLOG MAIN",
-      "lastActive": "2026-06-30T09:39:47.889Z",
-      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+      "lastActive": "2026-07-14T02:37:59.022Z",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
     }
   ],
   "tp_products": [
@@ -80,7 +69,7 @@
       "costPrice": 53,
       "MU%": "47%",
       "sellingPrice": 78,
-      "stockQuantity": 132,
+      "stockQuantity": 130,
       "unit": "PCS",
       "minimumStock": 0,
       "Tax Type": "VAT",
@@ -94,7 +83,7 @@
       "supplierId": "central",
       "boxQuantity": 4,
       "createdAt": "2026-06-30T07:23:50.931Z",
-      "updatedAt": "2026-06-30T07:23:50.931Z",
+      "updatedAt": "2026-07-14T02:36:33.963Z",
       "isDeleted": false
     },
     {
@@ -3101,7 +3090,7 @@
       "id": "B1_P-IMPORT-1782804230931-56",
       "branchId": "B1",
       "productId": "P-IMPORT-1782804230931-56",
-      "quantity": 132
+      "quantity": 131
     },
     {
       "id": "B1_P-IMPORT-tv1hbqb",
@@ -6434,16 +6423,110 @@
       "variance": 0,
       "openedAt": "2026-06-30T07:28:37.536Z",
       "closedAt": null,
-      "shiftSalesCount": 0,
-      "shiftSalesTotal": 0,
-      "shiftVatTotal": 0,
+      "shiftSalesCount": 1,
+      "shiftSalesTotal": 78,
+      "shiftVatTotal": 9.36,
       "shiftDiscountTotal": 0
     }
   ],
-  "tp_sales": [],
-  "tp_sale_items": [],
-  "tp_movements": [],
+  "tp_sales": [
+    {
+      "id": "SL-1783996590994",
+      "saleNumber": "SL-20260714-6951",
+      "shiftId": "SH-1782804517536",
+      "branchId": "B1",
+      "cashierId": "U1",
+      "cashierName": "erica manaban",
+      "customerName": "Walk-in Customer",
+      "subtotal": 78,
+      "vat": 9.36,
+      "discount": 0,
+      "grandTotal": 87.36,
+      "paymentMethod": "Cash",
+      "amountTendered": 87.36,
+      "changeAmount": 0,
+      "notes": "",
+      "createdAt": "2026-07-14T02:36:30.995Z",
+      "isDeleted": false
+    }
+  ],
+  "tp_sale_items": [
+    {
+      "id": "SLI-SL-1783996590994-0",
+      "saleId": "SL-1783996590994",
+      "productId": "P-IMPORT-1782804230931-56",
+      "productName": "30X60 # HY3647",
+      "unitPrice": 78,
+      "quantity": 1,
+      "total": 78,
+      "isDeleted": false
+    }
+  ],
+  "tp_movements": [
+    {
+      "id": "M-SALE-SL-1783996590994-0",
+      "productId": "P-IMPORT-1782804230931-56",
+      "type": "OUT",
+      "quantity": -1,
+      "sourceBranchId": "B1",
+      "referenceId": "SL-1783996590994",
+      "notes": "Sold to Walk-in Customer in Invoice SL-20260714-6951",
+      "timestamp": "2026-07-14T02:36:30.995Z",
+      "userId": "U1",
+      "username": "erica_admin"
+    }
+  ],
   "tp_audit_logs": [
+    {
+      "id": "AL-1783996590995-687",
+      "timestamp": "2026-07-14T02:36:30.995Z",
+      "userId": "U1",
+      "username": "erica_admin",
+      "action": "POS_CHECKOUT",
+      "description": "Completed sale invoice SL-20260714-6951. Amount: ₱87.36",
+      "tableAffected": "Sales",
+      "recordId": "SL-1783996590994"
+    },
+    {
+      "id": "AL-AUTO-BACKUP-1783994408726",
+      "timestamp": "2026-07-14T02:00:08.733Z",
+      "userId": "SYSTEM",
+      "username": "auto_scheduler",
+      "action": "DB_BACKUP_CREATE",
+      "description": "Automatically created background backup snapshot: Automated Backup - 1hr Interval",
+      "tableAffected": "ALL",
+      "recordId": "SNAP-AUTO-1783994408726"
+    },
+    {
+      "id": "AL-AUTO-BACKUP-1783990748724",
+      "timestamp": "2026-07-14T00:59:08.728Z",
+      "userId": "SYSTEM",
+      "username": "auto_scheduler",
+      "action": "DB_BACKUP_CREATE",
+      "description": "Automatically created background backup snapshot: Automated Backup - 1hr Interval",
+      "tableAffected": "ALL",
+      "recordId": "SNAP-AUTO-1783990748724"
+    },
+    {
+      "id": "AL-1783996212565-686",
+      "timestamp": "2026-07-14T02:30:12.565Z",
+      "userId": "SYSTEM",
+      "username": "system",
+      "action": "USER_LOGIN",
+      "description": "E2EE Secure Client Session cipher verified successfully. Active: erica manaban (Session: SESS_16DMUTDRF, E2EE payload: L8sPxSjLxCeOeGe7WgZqokiXc21e1peI...)",
+      "tableAffected": "Users",
+      "recordId": "U1"
+    },
+    {
+      "id": "AL-AUTO-BACKUP-1783987113737",
+      "timestamp": "2026-07-13T23:58:33.738Z",
+      "userId": "SYSTEM",
+      "username": "auto_scheduler",
+      "action": "DB_BACKUP_CREATE",
+      "description": "Automatically created background backup snapshot: Automated Backup - 1hr Interval",
+      "tableAffected": "ALL",
+      "recordId": "SNAP-AUTO-1783987113737"
+    },
     {
       "id": "AL-1782812387890-675",
       "timestamp": "2026-06-30T09:39:47.890Z",
@@ -6595,18 +6678,6 @@
   "atpos_v2_returns": [],
   "tp_db_snapshots": [],
   "tp_processed_delta_ids": [
-    "delta-add-tp_branch_stock-B1_P-IMPORT-k8ph9nv-1782803304943-642",
-    "delta-add-tp_branch_stock-B1_P-IMPORT-6nj8knq-1782804304746-761",
-    "delta-add-tp_branch_stock-B1_P-IMPORT-wflbdil-1782804304746-3",
-    "delta-add-tp_branch_stock-B1_P-IMPORT-yliaiqp-1782803304943-702",
-    "delta-add-tp_branch_stock-B1_P-IMPORT-wcp7bq0-1782804304746-673",
-    "delta-add-tp_branch_stock-B1_P-IMPORT-54iufbo-1782804304746-41",
-    "delta-add-tp_branch_stock-B1_P-IMPORT-gsdkay0-1782803304943-638",
-    "delta-add-tp_branch_stock-B1_P-IMPORT-m25aq2d-1782804304746-278",
-    "delta-add-tp_branch_stock-B1_P-IMPORT-1w0cwge-1782804304765-220",
-    "delta-add-tp_branch_stock-B1_P-IMPORT-h656jqj-1782804304765-194",
-    "delta-add-tp_branch_stock-B1_P-IMPORT-ko9gt8d-1782803304943-614",
-    "delta-add-tp_branch_stock-B1_P-IMPORT-at71zf6-1782804304765-988",
     "delta-add-tp_branch_stock-B1_P-IMPORT-pmylo34-1782804304765-651",
     "delta-add-tp_branch_stock-B1_P-IMPORT-2dp61f7-1782803304943-22",
     "delta-add-tp_branch_stock-B1_P-IMPORT-61vf60y-1782804304765-941",
@@ -11594,6 +11665,18 @@
     "delta-add-tp_branch_stock-B1_P-IMPORT-hjwophy-1782803373721-52",
     "delta-add-tp_branch_stock-B1_P-IMPORT-w0z5o2f-1782803373721-174",
     "delta-add-tp_branch_stock-B1_P-IMPORT-jul2i77-1782803373721-375",
-    "delta-add-tp_branch_stock-B1_P-IMPORT-nakkcv5-1782803373721-500"
+    "delta-add-tp_branch_stock-B1_P-IMPORT-nakkcv5-1782803373721-500",
+    "delta-add-tp_audit_logs-AL-AUTO-BACKUP-1783987113737-1783987113743-701",
+    "delta-add-tp_audit_logs-AL-1783996212565-686-1783996212617-234",
+    "delta-add-tp_audit_logs-AL-AUTO-BACKUP-1783990748724-1783990748743-571",
+    "delta-add-tp_audit_logs-AL-AUTO-BACKUP-1783994408726-1783994408755-521",
+    "delta-add-tp_audit_logs-AL-AUTO-BACKUP-1783990748724-1783994408756-779",
+    "delta-dec-tp_products-P-IMPORT-1782804230931-56-1783996591016-873",
+    "delta-upd-tp_products-P-IMPORT-1782804230931-56-1783996591016-786",
+    "delta-add-tp_sales-SL-1783996590994-1783996591016-412",
+    "delta-add-tp_sale_items-SLI-SL-1783996590994-0-1783996591016-609",
+    "delta-add-tp_movements-M-SALE-SL-1783996590994-0-1783996591016-64",
+    "delta-add-tp_audit_logs-AL-1783996590995-687-1783996591017-189",
+    "delta-dec-tp_branch_stock-B1_P-IMPORT-1782804230931-56-1783996591017-569"
   ]
 }

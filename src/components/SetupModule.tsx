@@ -324,8 +324,13 @@ export const SetupModule: React.FC = () => {
         `CRITICAL DEPLOYMENT FAULT: ${err.message || "Network write lock encounter."}`,
         "warn",
       );
+      
+      const errorDetail = err.message || "Network connection failed";
       setErrorMsg(
-        "The server was unable to commit configuration records. Ensure server.js is running.",
+        `The server was unable to commit configuration records (Error: "${errorDetail}"). ` +
+        "Ensure the local Node.js server (server.js) is currently running and hasn't crashed. " +
+        "If running locally on Windows, check if port 3000 is already in use by another app, " +
+        "and verify that your browser has accepted the local HTTPS certificate warning."
       );
       setIsDeploying(false);
     }
@@ -739,8 +744,13 @@ export const SetupModule: React.FC = () => {
                 )}
 
                 {errorMsg && (
-                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-[10px] font-bold tracking-wide">
-                    Error Verification Check: {errorMsg}
+                  <div className="p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl text-left space-y-1">
+                    <span className="text-[10px] font-black uppercase text-red-400 tracking-wider block">
+                      ⚠️ Error Verification Check
+                    </span>
+                    <p className="text-[10px] font-medium leading-relaxed text-zinc-300">
+                      {errorMsg}
+                    </p>
                   </div>
                 )}
 
