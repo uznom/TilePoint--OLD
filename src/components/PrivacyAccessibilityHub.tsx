@@ -471,11 +471,6 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
 
   // Sync state changes with the DOM layout of document.documentElement
   useEffect(() => {
-    if (isSyncingRef.current) {
-      isSyncingRef.current = false;
-      return;
-    }
-
     const root = document.documentElement;
 
     // 1. Sizing
@@ -535,8 +530,12 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
     }
     localStorage.setItem('tilepoint-disable-blurs', String(disableBlurs));
 
-    // Dispatch global event for responsive real-time theme rebuilding
-    window.dispatchEvent(new Event('tilepoint-theme-updated'));
+    // Dispatch global event for responsive real-time theme rebuilding only if not syncing from outside
+    if (isSyncingRef.current) {
+      isSyncingRef.current = false;
+    } else {
+      window.dispatchEvent(new Event('tilepoint-theme-updated'));
+    }
 
   }, [textSize, colorContrast, maximizeTextContrast, dyslexicFont, enhancedOutlines, disableAnimations, disableBlurs]);
 
