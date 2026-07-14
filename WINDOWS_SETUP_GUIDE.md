@@ -347,3 +347,76 @@ If you generated the certificate using `192.168.1.38` but your Wi-Fi router assi
   ```
   Rename them to `cert.pem` and `key.pem`, copy them to your folder, and restart PM2 (`pm2 restart tilepoint-hq-server`).
 
+---
+
+## 📶 Step 7: Fixing IP Changes & Configuring Static IP (DHCP Setup)
+
+### ⚠️ The Problem: DHCP IP Address Rotation
+By default, your home/store Wi-Fi router uses **DHCP (Dynamic Host Configuration Protocol)**. This means it dynamically rents IP addresses to your server laptop and staff mobile devices. 
+* If your laptop restarts, or if the router reboots, the router may assign your laptop a **different IP address** (e.g., changing from `192.168.1.38` to `192.168.1.45`).
+* If this happens, **all cashier tablets will instantly lose connection**, because they are still looking for the old IP address.
+
+To prevent this, you **MUST** ensure your server laptop always keeps the same local IP address. You can do this using one of two methods:
+
+---
+
+### 🌟 Method A: DHCP Reservation on Your Router (RECOMMENDED)
+This is the most stable and professional method. It tells your local Wi-Fi router to always reserve and assign the exact same IP address to your server laptop whenever it connects.
+
+#### Step-by-Step Router Setup:
+1. Find your server laptop's **MAC Address** (physical hardware identifier) and current IP.
+   * Open **Command Prompt** (CMD) and run:
+     ```cmd
+     getmac /v /fo list
+     ```
+   * Look for the active network adapter (usually `"Wi-Fi"` or `"Ethernet"`) and copy the **Physical Address** (e.g., `9C-B6-D0-11-22-33`).
+2. Log into your Wi-Fi Router's Admin Panel.
+   * Open your browser and go to your router's gateway address (usually `http://192.168.1.1`, `http://192.168.0.1`, or check the sticker underneath your router).
+   * Enter the router's admin username and password.
+3. Locate the **DHCP Server / LAN / Static IP Lease** settings.
+   * Look for tabs named **"DHCP Server"**, **"Address Reservation"**, **"Static DHCP"**, or **"IP & MAC Binding"**.
+4. Add a new reservation:
+   * **MAC Address**: Enter your server laptop's Physical Address (e.g., `9C:B6:D0:11:22:33`).
+   * **Reserved IP Address**: Enter the local IP you want to pin (e.g., `192.168.1.150` — *choose a high number outside the normal pool to avoid conflicts*).
+5. Click **Save / Apply** and restart the router. 
+*Now, your router will lock that IP address to your server forever. It will never change!*
+
+---
+
+### 💻 Method B: Setting a Static IP inside Windows (Alternative)
+If you do not have administrative access to your Wi-Fi router, you can configure Windows to request the exact same IP address directly from the computer settings.
+
+#### Option 1: The Fast PowerShell Command (Administrator)
+Open **PowerShell as Administrator** and run this single script to pin your current network settings as permanent static credentials:
+```powershell
+# 1. Capture active interface details
+$adapter = Get-NetAdapter | Where-Object { $_.Status -eq "Up" } | Select-Object -First 1
+$ipConfig = Get-NetIPAddress -InterfaceIndex $adapter.InterfaceIndex -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike "169.*" } | Select-Object -First 1
+$gateway = (Get-NetRoute -DestinationPrefix "0.0.0.0/0" -InterfaceIndex $adapter.InterfaceIndex).NextHop | Select-Object -First 1
+
+# 2. Assign static IP, default subnet, gateway, and primary DNS (Google DNS)
+New-NetIPAddress -InterfaceIndex $adapter.InterfaceIndex -IPAddress $ipConfig.IPAddress -PrefixLength 24 -DefaultGateway $gateway -Confirm:$false
+Set-DnsClientServerAddress -InterfaceIndex $adapter.InterfaceIndex -ServerAddresses ("8.8.8.8", "8.8.4.4")
+
+Write-Host "Static IP configured successfully for: $($ipConfig.IPAddress)" -ForegroundColor Green
+```
+
+#### Option 2: The Manual Windows Control Panel Method
+1. Press `Win + R`, type **`ncpa.cpl`** and press Enter (this opens Network Connections).
+2. Right-click your active connection (**Wi-Fi** or **Ethernet**) and select **Properties**.
+3. Double-click **Internet Protocol Version 4 (TCP/IPv4)** in the list.
+4. Select **"Use the following IP address"**:
+   * **IP Address**: Enter your desired IP (e.g., `192.168.1.150`).
+   * **Subnet Mask**: Usually fills in automatically as `255.255.255.0`.
+   * **Default Gateway**: Enter your router's IP (usually `192.168.1.1`).
+5. Select **"Use the following DNS server addresses"**:
+   * **Preferred DNS server**: `8.8.8.8` (Google Public DNS)
+   * **Alternate DNS server**: `8.8.4.4`
+6. Check **"Validate settings upon exit"** and click **OK**.
+
+---
+
+### 🔄 After Locking Your IP Address:
+1. Re-run `setup-tilepoint.bat`. The installer will automatically detect your locked IP address, rewrite your `.env` config with the static IP, and generate matching SSL files.
+2. Share the new static URL (e.g. `https://192.168.1.150:3000`) with your cashiers and staffs. They will never lose access again!
+

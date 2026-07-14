@@ -18,7 +18,10 @@ import {
   Cpu, 
   Eye, 
   EyeOff,
-  Database
+  Database,
+  Shield,
+  FileText,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { UserRole } from '../types/db';
@@ -32,6 +35,8 @@ export const LoginModule: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSQLiBlocked, setIsSQLiBlocked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   // List of simulation accounts for quick selection
   const simulatedAccounts: any[] = simulationModeActive ? [
@@ -50,6 +55,10 @@ export const LoginModule: React.FC = () => {
 
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!acceptedTerms) {
+      setErrorMsg('Please read and accept the Terms & Conditions before signing in.');
+      return;
+    }
     if (!username.trim() || !password) {
       setErrorMsg('Please enter both employee handle and password.');
       return;
@@ -237,11 +246,34 @@ export const LoginModule: React.FC = () => {
                 </div>
               </div>
 
+              {/* Terms of Service Consent */}
+              <div className="flex items-start gap-2.5 my-2 text-left">
+                <input
+                  id="login-terms-checkbox"
+                  type="checkbox"
+                  disabled={isRateLimited || isSubmitting}
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-m3-outline-variant/60 text-m3-primary focus:ring-m3-primary/50 cursor-pointer bg-m3-surface transition-all shrink-0"
+                />
+                <label htmlFor="login-terms-checkbox" className="text-[11px] font-medium leading-tight text-m3-on-surface-variant select-none">
+                  I accept the{' '}
+                  <button
+                    type="button"
+                    onClick={() => setShowTermsModal(true)}
+                    className="text-m3-primary hover:underline font-extrabold cursor-pointer inline bg-transparent p-0 border-0 outline-none"
+                  >
+                    Terms & Conditions of Use
+                  </button>{' '}
+                  protecting proprietary system code & developer legal safety.
+                </label>
+              </div>
+
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isRateLimited || isSubmitting || !username || !password}
-                className="w-full py-3.5 mt-2 rounded-xl bg-m3-primary text-m3-on-primary font-extrabold text-xs tracking-wider uppercase cursor-pointer hover:bg-m3-primary/95 shadow-md flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm disabled:opacity-50 disabled:translate-y-0 transition-all font-sans"
+                disabled={isRateLimited || isSubmitting || !username || !password || !acceptedTerms}
+                className="w-full py-3.5 mt-1 rounded-xl bg-m3-primary text-m3-on-primary font-extrabold text-xs tracking-wider uppercase cursor-pointer hover:bg-m3-primary/95 shadow-md flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm disabled:opacity-50 disabled:translate-y-0 transition-all font-sans"
               >
                 {isSubmitting ? 'Verifying Credentials...' : 'Sign In'}
                 <ArrowRight className="h-4 w-4" />
@@ -251,6 +283,137 @@ export const LoginModule: React.FC = () => {
         </div>
 
       </div>
+
+      {/* TERMS & CONDITIONS PROPRIETARY MODAL */}
+      <AnimatePresence>
+        {showTermsModal && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowTermsModal(false)}
+              className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
+            />
+
+            {/* Modal Box */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="relative w-full max-w-2xl bg-m3-surface-low border border-m3-outline-variant/40 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]"
+            >
+              {/* Header */}
+              <div className="p-5 border-b border-m3-outline-variant/15 flex items-center justify-between bg-m3-surface-lowest/60">
+                <div className="flex items-center gap-2.5 text-left">
+                  <div className="h-9 w-9 rounded-xl bg-m3-primary/10 text-m3-primary flex items-center justify-center">
+                    <Shield className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-wider text-m3-on-surface">Terms &amp; Conditions of Use</h3>
+                    <span className="text-[10px] text-m3-on-surface-variant font-bold uppercase tracking-widest">Confidential Proprietary Software Agreement</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowTermsModal(false)}
+                  className="p-1.5 rounded-full text-m3-on-surface-variant hover:bg-m3-outline-variant/15 hover:text-m3-on-surface transition-all cursor-pointer"
+                  title="Close terms modal"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Scrollable Body */}
+              <div className="p-6 overflow-y-auto text-xs text-m3-on-surface-variant text-left font-medium space-y-4 leading-relaxed scrollbar-thin">
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-500 text-[11px] font-bold flex items-start gap-2.5">
+                  <ShieldAlert className="h-4.5 w-4.5 shrink-0 mt-0.5" />
+                  <span>
+                    LEGAL NOTICE: THIS SOFTWARE IS FULLY PROPRIETARY AND PROTECTED BY NATIONAL AND INTERNATIONAL LAWS. UNAUTHORIZED CLONING, COPYING, SHARE, OR RESALE CARRIES SEVERE CRIMINAL AND CIVIL PENALTIES.
+                  </span>
+                </div>
+
+                <div>
+                  <h4 className="text-[11px] font-black uppercase tracking-wider text-m3-on-surface mb-1 flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-m3-primary" /> 1. Intellectual Property & Statutory Ownership
+                  </h4>
+                  <p>
+                    The <strong>TilePoint HQ ERP OS</strong> (including all TypeScript/React source code, backend assets, specialized schemas, database structures such as <code>server-db.json</code>, custom setup routines, and visual layouts) is the sole and exclusive copyrighted intellectual property of <strong>Erica Manaban and Mark Jefferson Monares / TilePoint Enterprise</strong> (the "Developers").
+                  </p>
+                  <p className="mt-2 pl-3 border-l-2 border-m3-primary/30 text-m3-on-surface font-semibold italic">
+                     Protected under <strong>Republic Act No. 8293</strong> (The Intellectual Property Code of the Philippines, Class A Computer Programs), the <strong>Berne Convention</strong>, and the <strong>WIPO Copyright Treaty (WCT)</strong>. Copying or white-labeling is strictly prohibited.
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="text-[11px] font-black uppercase tracking-wider text-m3-on-surface mb-1 flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-m3-primary" /> 2. Cybercrime Safeguards & System Integrity
+                  </h4>
+                  <p>
+                    Unauthorized system access, code tampering, database structure exfiltration, credential manipulation, or active-host replication violates Section 4 of <strong>Republic Act No. 10175</strong> (The Cybercrime Prevention Act of 2012). Violations constitute criminal offenses carrying high-penalty custodial sentences and extensive court fines.
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="text-[11px] font-black uppercase tracking-wider text-m3-on-surface mb-1 flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-m3-primary" /> 3. PHP 500,000 Liquidated Damages Clause
+                  </h4>
+                  <p>
+                    Any verified breach of this Agreement—including but not limited to sharing source code, distributing active preview/hosting links to unauthorized third parties, replication of database design, or unauthorized white-labeling—commits the violating party to liquidated damages of no less than <strong>Five Hundred Thousand Philippine Pesos (PHP 500,000.00)</strong> per occurrence, or the total revenue generated from unauthorized utilization, whichever is higher, plus legal and litigation expenses.
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="text-[11px] font-black uppercase tracking-wider text-m3-on-surface mb-1 flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-m3-primary" /> 4. "As-Is" Warranty Waiver & Liability Limitation
+                  </h4>
+                  <p>
+                    This Software is supplied <strong>"AS-IS"</strong> and <strong>"AS-AVAILABLE"</strong>. The Developers provide no guarantees regarding local tax audit compliance, Bureau of Internal Revenue (BIR) ledger declarations, ledger math compatibility, or database backup durability. The Operator bears 100% of the risk for transaction accuracy and regulatory compliance.
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="text-[11px] font-black uppercase tracking-wider text-m3-on-surface mb-1 flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-m3-primary" /> 5. Full Developer Indemnification
+                  </h4>
+                  <p>
+                    By accepting these terms, you agree to indemnify, defend, and hold harmless the Developers from any third-party claims, operational losses, business downtime, or regulatory tax penalties resulting from your utilization or deployment of this system.
+                  </p>
+                </div>
+
+                <div className="pt-3 border-t border-m3-outline-variant/15 text-[10px] text-m3-on-surface-variant/70 italic text-center">
+                  Copyright &copy; 2026 Erica Manaban and Mark Jefferson Monares / TilePoint Enterprise. All Rights Reserved.
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 border-t border-m3-outline-variant/15 bg-m3-surface-lowest/60 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowTermsModal(false);
+                  }}
+                  className="px-4 py-2 border border-m3-outline-variant/60 rounded-xl text-xs font-bold text-m3-on-surface hover:bg-m3-outline-variant/10 transition-all cursor-pointer"
+                >
+                  Close &amp; Dismiss
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAcceptedTerms(true);
+                    setShowTermsModal(false);
+                  }}
+                  className="px-5 py-2 rounded-xl bg-m3-primary text-m3-on-primary font-black text-xs uppercase tracking-wider hover:bg-m3-primary/95 shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <ShieldCheck className="h-4 w-4" /> Accept Terms &amp; Conditions
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
+

@@ -49,13 +49,8 @@ Get TilePoint running on your machine in just a few steps:
    npm install
    ```
 
-2. **Configure Environment Variables**
-   Create a `.env.local` file in the root directory (or edit `.env`) and add your secret credentials:
-   ```env
-   GEMINI_API_KEY=your_gemini_api_key_here
-   ```
 
-3. **Start the Development Server**
+2. **Start the Development Server**
    ```bash
    npm run dev
    ```

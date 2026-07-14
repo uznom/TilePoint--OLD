@@ -71,7 +71,12 @@ interface PrivacyAccessibilityHubProps {
 export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }: PrivacyAccessibilityHubProps) {
   // Hub open state
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'appearance' | 'features' | 'about' | 'accessibility' | 'backups'>('appearance');
+  const [activeTab, setActiveTab] = useState<'appearance' | 'features' | 'about' | 'accessibility' | 'backups' | 'legitimacy'>('appearance');
+
+  // Local company name for legitimacy certificate
+  const [companyName, setCompanyName] = useState(() => {
+    return localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center';
+  });
 
   // Listen to open events from other modules/dropdowns
   useEffect(() => {
@@ -135,6 +140,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
       const persistedTextSize = (localStorage.getItem('tilepoint-text-size') as 'normal' | 'large' | 'xlarge') || 'normal';
       const persistedDyslexic = localStorage.getItem('tilepoint-dyslexic-font') === 'true';
       const persistedOutlines = localStorage.getItem('tilepoint-enhanced-outlines') === 'true';
+      const persistedCompanyName = localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center';
       
       setColorContrast(persistedContrast);
       setMaximizeTextContrast(persistedMaxText);
@@ -143,6 +149,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
       setTextSize(persistedTextSize);
       setDyslexicFont(persistedDyslexic);
       setEnhancedOutlines(persistedOutlines);
+      setCompanyName(persistedCompanyName);
     };
     window.addEventListener('tilepoint-theme-updated', handleSync);
     return () => {
@@ -695,6 +702,17 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
                 >
                   <Info className="h-4 w-4" />
                   <span>About</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('legitimacy')}
+                  className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
+                    activeTab === 'legitimacy'
+                      ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
+                      : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
+                  }`}
+                >
+                  <ShieldCheck className="h-4 w-4 text-amber-400" />
+                  <span>Legitimacy Certificate</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('accessibility')}
@@ -1779,6 +1797,227 @@ startxref
                     <div className="flex items-center justify-between pt-1 border-t border-m3-outline-variant/10 text-[10px] text-m3-on-surface-variant/70">
                       <span>Version 2.4.1</span>
                       <span className="text-emerald-500 font-bold">Status: Online</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB: SYSTEM LEGITIMACY CERTIFICATE */}
+                {activeTab === 'legitimacy' && (
+                  <div className="space-y-5 animate-fade-in font-sans">
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
+                          Legitimacy Certificate & License verification
+                        </h4>
+                        <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
+                          Verify the authenticity of this TilePoint ERP Operating System installation and view official copyright compliance certificates.
+                        </p>
+                      </div>
+
+                      {/* Print Certificate trigger button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          window.print();
+                          triggerToast('Opening native print dialog for the Legitimacy Certificate.', 'info');
+                        }}
+                        className="px-4 py-2 bg-amber-500 text-black hover:bg-amber-600 font-black text-[10.5px] uppercase tracking-wide rounded-xl shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 shrink-0 self-start sm:self-center"
+                      >
+                        <Printer className="h-4 w-4 text-black" />
+                        <span>Print Physical Certificate</span>
+                      </button>
+                    </div>
+
+                    <div className="h-px bg-m3-outline-variant/15" />
+
+                    {/* DYNAMIC MEDIA PRINT STYLES */}
+                    <style dangerouslySetInnerHTML={{ __html: `
+                      @media print {
+                        /* Hide everything in the document */
+                        body * {
+                          visibility: hidden !important;
+                        }
+                        /* Except the printable certificate container */
+                        #tilepoint-printable-certificate, #tilepoint-printable-certificate * {
+                          visibility: visible !important;
+                        }
+                        #tilepoint-printable-certificate {
+                          position: fixed !important;
+                          left: 0 !important;
+                          top: 0 !important;
+                          width: 100% !important;
+                          height: 100% !important;
+                          margin: 0 !important;
+                          padding: 40px !important;
+                          background: white !important;
+                          color: black !important;
+                          border: 8px double #d97706 !important;
+                          display: flex !important;
+                          flex-direction: column !important;
+                          justify-content: space-between !important;
+                          box-sizing: border-box !important;
+                        }
+                        /* Force light colors on print */
+                        .print-dark-text {
+                          color: #111827 !important;
+                        }
+                        .print-amber-text {
+                          color: #d97706 !important;
+                        }
+                        .print-sub-text {
+                          color: #4b5563 !important;
+                        }
+                        .print-gray-bg {
+                          background-color: #f3f4f6 !important;
+                          border-color: #e5e7eb !important;
+                        }
+                        .print-no-shadow {
+                          box-shadow: none !important;
+                        }
+                        /* Hide the print/floating elements on paper */
+                        .print-hidden {
+                          display: none !important;
+                        }
+                      }
+                    `}} />
+
+                    {/* THE VISUAL CERTIFICATE CARD */}
+                    <div 
+                      id="tilepoint-printable-certificate"
+                      className="relative m3-card border-2 border-amber-500/30 bg-gradient-to-b from-[#0e1322] to-[#070911] p-6 sm:p-8 rounded-[24px] shadow-xl overflow-hidden text-center text-m3-on-surface border-double"
+                      style={{ borderStyle: 'double', borderWidth: '6px' }}
+                    >
+                      {/* Decorative corner framing */}
+                      <div className="absolute top-3 left-3 w-6 h-6 border-t-2 border-l-2 border-amber-500/40 rounded-tl-md print-hidden" />
+                      <div className="absolute top-3 right-3 w-6 h-6 border-t-2 border-r-2 border-amber-500/40 rounded-tr-md print-hidden" />
+                      <div className="absolute bottom-3 left-3 w-6 h-6 border-b-2 border-l-2 border-amber-500/40 rounded-bl-md print-hidden" />
+                      <div className="absolute bottom-3 right-3 w-6 h-6 border-b-2 border-r-2 border-amber-500/40 rounded-br-md print-hidden" />
+
+                      {/* Concentric radial watermark decoration */}
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(217,119,6,0.02)_0%,transparent_70%)] pointer-events-none" />
+
+                      {/* Header Logo & Title */}
+                      <div className="space-y-2 relative z-10">
+                        <div className="flex justify-center items-center gap-2">
+                          <ShieldCheck className="h-9 w-9 text-amber-400 print-amber-text animate-pulse shrink-0" />
+                          <span className="font-mono text-xs font-black tracking-[0.25em] text-amber-500/90 print-amber-text uppercase">
+                            TilePoint Enterprise POS/ERP
+                          </span>
+                        </div>
+                        <h2 className="text-xl sm:text-2xl font-black tracking-widest text-white print-dark-text uppercase mt-2 font-sans">
+                          Certificate of System Legitimacy
+                        </h2>
+                        <div className="h-0.5 w-32 bg-amber-500/40 print-amber-text mx-auto mt-2" />
+                      </div>
+
+                      {/* Middle: Granting statement */}
+                      <div className="my-6 sm:my-8 space-y-4 relative z-10 max-w-2xl mx-auto">
+                        <p className="text-[11px] sm:text-xs tracking-wider uppercase text-zinc-400 print-sub-text font-mono font-bold">
+                          This document certifies and verifies that the business establishment
+                        </p>
+
+                        {/* Company Name Box */}
+                        <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 print-gray-bg my-3 sm:my-4">
+                          <h3 className="text-lg sm:text-xl font-black text-amber-400 print-amber-text tracking-wide uppercase font-sans">
+                            {companyName}
+                          </h3>
+                          <span className="text-[9px] font-mono text-amber-500/70 print-amber-text font-bold block mt-1 tracking-wider">
+                            REGISTERED ON-PREMISE LICENSEE
+                          </span>
+                        </div>
+
+                        <p className="text-[11px] sm:text-xs leading-relaxed text-zinc-300 print-dark-text font-sans">
+                          is a fully authorized, verified, and legally compliant deployment of the <strong className="text-white print-dark-text font-extrabold">TilePoint ERP Operating System (v2.4)</strong>. All modules are officially activated and verified under proprietary license terms.
+                        </p>
+                      </div>
+
+                      {/* Legislation Citations & Foolproofing */}
+                      <div className="p-4 rounded-xl bg-[#090d16] border border-m3-outline-variant/10 print-gray-bg text-left max-w-2xl mx-auto space-y-3 relative z-10 text-[9.5px] sm:text-[10px] leading-relaxed text-zinc-400 print-sub-text">
+                        <span className="text-[8.5px] font-black tracking-wider uppercase text-amber-500/90 print-amber-text font-mono block border-b border-m3-outline-variant/10 pb-1 flex items-center gap-1.5">
+                          <Lock className="h-3.5 w-3.5" /> Legal Framework &amp; IP Protection Decrees
+                        </span>
+
+                        <div className="space-y-2">
+                          <p>
+                            <strong className="text-zinc-200 print-dark-text font-bold font-sans">1. Intellectual Property Code of the Philippines (Republic Act No. 8293):</strong> This software system, including its underlying source code compiles, CSS-theme configurations, structural components, and databases, is copyrighted material owned solely by the developers. No part of this software may be copied, redistributed, modified, or white-labeled without explicit written consent.
+                          </p>
+                          <p>
+                            <strong className="text-zinc-200 print-dark-text font-bold font-sans">2. Cybercrime Prevention Act of 2012 (Republic Act No. 10175):</strong> Any unauthorized reproduction, commercial distribution, structural mirroring, or reverse engineering of this operational terminal constitutes a criminal offense under Philippine cyber law and is subject to severe penal terms, civil liquidated damages, and prosecution.
+                          </p>
+                          <p>
+                            <strong className="text-zinc-200 print-dark-text font-bold font-sans">3. International Copyright Conventions:</strong> Protected globally under the terms of the <strong className="text-zinc-300 print-dark-text font-bold">Berne Convention for the Protection of Literary and Artistic Works</strong> and the <strong className="text-zinc-300 print-dark-text font-bold">WIPO Copyright Treaty (WCT)</strong>.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Bottom Signatures & Seal */}
+                      <div className="mt-8 pt-6 border-t border-m3-outline-variant/10 grid grid-cols-1 md:grid-cols-3 gap-6 items-center max-w-3xl mx-auto relative z-10">
+                        {/* Signature A */}
+                        <div className="space-y-1 text-center">
+                          <div className="h-9 flex items-end justify-center">
+                            {/* Visual Script Signature representation */}
+                            <span className="font-mono text-base italic text-amber-300/85 print-amber-text tracking-widest select-none font-bold" style={{ fontFamily: 'Georgia, serif' }}>
+                              E. Manaban
+                            </span>
+                          </div>
+                          <div className="h-px bg-zinc-600 print-dark-text w-32 mx-auto" />
+                          <h5 className="text-[9px] font-black text-white print-dark-text uppercase tracking-wider font-mono">
+                            Erica Manaban
+                          </h5>
+                          <span className="text-[8px] text-zinc-500 print-sub-text font-semibold block uppercase">
+                            Co-Owner & Managing Director
+                          </span>
+                        </div>
+
+                        {/* Seal Block */}
+                        <div className="flex justify-center py-2 md:py-0 print-no-shadow">
+                          <div className="relative h-18 w-18 rounded-full bg-gradient-to-tr from-amber-600 to-yellow-400 p-0.5 shadow-lg select-none flex items-center justify-center animate-spin-slow">
+                            <div className="h-full w-full rounded-full bg-[#070911] print-gray-bg flex flex-col items-center justify-center text-center p-1 border border-amber-500/30">
+                              <span className="text-[6.5px] font-mono font-black text-amber-500 print-amber-text tracking-tighter leading-none block">
+                                TILEPOINT
+                              </span>
+                              <ShieldCheck className="h-4.5 w-4.5 text-amber-400 print-amber-text my-0.5" />
+                              <span className="text-[6px] font-mono text-amber-400/80 print-amber-text tracking-tighter leading-none block uppercase">
+                                ORIGINAL
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Signature B */}
+                        <div className="space-y-1 text-center">
+                          <div className="h-9 flex items-end justify-center">
+                            {/* Visual Script Signature representation */}
+                            <span className="font-mono text-base italic text-amber-300/85 print-amber-text tracking-widest select-none font-bold" style={{ fontFamily: 'Georgia, serif' }}>
+                              M.J. Monares
+                            </span>
+                          </div>
+                          <div className="h-px bg-zinc-600 print-dark-text w-32 mx-auto" />
+                          <h5 className="text-[9px] font-black text-white print-dark-text uppercase tracking-wider font-mono">
+                            Mark Jefferson Monares
+                          </h5>
+                          <span className="text-[8px] text-zinc-500 print-sub-text font-semibold block uppercase">
+                            Co-Owner & Chief Systems Architect
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Cryptographic verification telemetry */}
+                      <div className="mt-6 pt-3 border-t border-m3-outline-variant/10 flex flex-col sm:flex-row items-center justify-between gap-2 text-[8px] font-mono text-zinc-500 print-sub-text">
+                        <span>
+                          VERIFICATION KEY: <strong className="text-zinc-400 print-dark-text uppercase font-bold">TP-8293-10175-{companyName.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8)}-{new Date().getFullYear()}</strong>
+                        </span>
+                        <span>
+                          LICENSING JURISDICTION: DIPOLOG CITY, PH &bull; GLOBAL DIGITAL ARCHIVES
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Protection notice */}
+                    <div className="p-4 rounded-xl border border-amber-500/10 bg-amber-500/5 text-left text-[10px] text-zinc-300 leading-normal font-sans">
+                      <strong className="text-amber-400 uppercase tracking-wider block mb-0.5">📜 Hanging Certificate Recommendation</strong>
+                      You may print this Legitimacy Certificate and display it prominently on-site at your retail establishment (e.g., showroom wall). Click <strong className="text-amber-500">Print Physical Certificate</strong> above to export this page directly to a local printer or write a high-fidelity PDF copy.
                     </div>
                   </div>
                 )}
