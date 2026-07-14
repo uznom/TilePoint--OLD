@@ -1604,121 +1604,132 @@ export const PosModule: React.FC<PosModuleProps> = ({
                   </div>
 
                   {/* Barcode scan input search bar */}
-                  <form
-                    onSubmit={handleBarcodeSubmit}
-                    className="bg-m3-surface-low border border-m3-primary/15 hover:border-m3-primary/35 p-2.5 rounded-2xl transition-all relative"
-                  >
-                    <div className="flex flex-col md:flex-row gap-2 items-center">
-                      <div className="flex-1 w-full text-left">
-                        <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block mb-1.5">
-                          Rapid Barcode Laser Scanner / Item SKU Input
-                        </label>
-                        <div className="relative font-sans">
-                          <input
-                            type="text"
-                            value={barcodeSearchTerm}
-                            onChange={(e) =>
-                              setBarcodeSearchTerm(e.target.value)
-                            }
-                            placeholder="Type product name, SKU, or custom design... (e.g. BLD01, SLVR-40, hit Enter)"
-                            className="w-full bg-m3-surface-lowest text-xs text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary/50 border border-m3-outline-variant/30 px-3.5 py-1.5 pr-12 rounded-xl placeholder-zinc-500 font-bold"
-                          />
-                          {barcodeSearchTerm && (
-                            <button
-                              type="button"
-                              onClick={() => setBarcodeSearchTerm("")}
-                              className="absolute right-16 top-1.5 text-zinc-400 hover:text-rose-500 text-xs font-black px-1"
-                            >
-                              ✗
-                            </button>
-                          )}
-                          <span className="absolute right-3 top-2 text-zinc-500 text-[9px] uppercase font-mono font-bold select-none pointer-events-none">
-                            [ ENTER ]
-                          </span>
+                  {!products.some((p) => !p.isDeleted) ? (
+                    <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl text-left font-sans shadow-inner">
+                      <div className="flex items-center gap-2 text-amber-500 font-extrabold text-xs uppercase tracking-wider mb-1">
+                        <span className="text-sm">⚠️</span> Scanner Locked / Catalog Empty
+                      </div>
+                      <p className="text-[10.5px] text-zinc-300 font-medium leading-relaxed">
+                        The Rapid Barcode Laser Scanner is inactive because there are no products in the inventory catalog. Please navigate to the <strong className="text-m3-primary font-bold">Inventory Module</strong> to add or import tile products first.
+                      </p>
+                    </div>
+                  ) : (
+                    <form
+                      onSubmit={handleBarcodeSubmit}
+                      className="bg-m3-surface-low border border-m3-primary/15 hover:border-m3-primary/35 p-2.5 rounded-2xl transition-all relative"
+                    >
+                      <div className="flex flex-col md:flex-row gap-2 items-center">
+                        <div className="flex-1 w-full text-left">
+                          <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block mb-1.5">
+                            Rapid Barcode Laser Scanner / Item SKU Input
+                          </label>
+                          <div className="relative font-sans">
+                            <input
+                              type="text"
+                              value={barcodeSearchTerm}
+                              onChange={(e) =>
+                                setBarcodeSearchTerm(e.target.value)
+                              }
+                              placeholder="Type product name, SKU, or custom design... (e.g. BLD01, SLVR-40, hit Enter)"
+                              className="w-full bg-m3-surface-lowest text-xs text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary/50 border border-m3-outline-variant/30 px-3.5 py-1.5 pr-12 rounded-xl placeholder-zinc-500 font-bold"
+                            />
+                            {barcodeSearchTerm && (
+                              <button
+                                type="button"
+                                onClick={() => setBarcodeSearchTerm("")}
+                                className="absolute right-16 top-1.5 text-zinc-400 hover:text-rose-500 text-xs font-black px-1"
+                              >
+                                ✗
+                              </button>
+                            )}
+                            <span className="absolute right-3 top-2 text-zinc-500 text-[9px] uppercase font-mono font-bold select-none pointer-events-none">
+                              [ ENTER ]
+                            </span>
 
-                          {barcodeSearchTerm.trim().length > 0 && (
-                            <div className="absolute left-0 right-0 mt-2 bg-m3-surface-lowest border border-m3-outline-variant/60 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-m3-outline-variant/20 text-xs max-h-[180px] overflow-y-auto">
-                              {(() => {
-                                const matched = products.filter(
-                                  (p) =>
-                                    !p.isDeleted &&
-                                    (selectedCategory === "All" ||
-                                      p.category === selectedCategory) &&
-                                    (p.productName
-                                      .toLowerCase()
-                                      .includes(
-                                        barcodeSearchTerm.toLowerCase(),
-                                      ) ||
-                                      p.sku
+                            {barcodeSearchTerm.trim().length > 0 && (
+                              <div className="absolute left-0 right-0 mt-2 bg-m3-surface-lowest border border-m3-outline-variant/60 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-m3-outline-variant/20 text-xs max-h-[180px] overflow-y-auto">
+                                {(() => {
+                                  const matched = products.filter(
+                                    (p) =>
+                                      !p.isDeleted &&
+                                      (selectedCategory === "All" ||
+                                        p.category === selectedCategory) &&
+                                      (p.productName
                                         .toLowerCase()
                                         .includes(
                                           barcodeSearchTerm.toLowerCase(),
                                         ) ||
-                                      p.barcode
-                                        .toLowerCase()
-                                        .includes(
-                                          barcodeSearchTerm.toLowerCase(),
-                                        )),
-                                );
-                                if (matched.length === 0) {
-                                  return (
-                                    <div className="p-4 text-center text-zinc-500 font-bold text-xs italic">
-                                      No compatible tiles or SKU listings match "{barcodeSearchTerm}"
-                                    </div>
+                                        p.sku
+                                          .toLowerCase()
+                                          .includes(
+                                            barcodeSearchTerm.toLowerCase(),
+                                          ) ||
+                                        p.barcode
+                                          .toLowerCase()
+                                          .includes(
+                                            barcodeSearchTerm.toLowerCase(),
+                                          )),
                                   );
-                                }
-                                return matched.slice(0, 6).map((p) => (
-                                  <div
-                                    key={p.id}
-                                    onClick={() => {
-                                      if (p.stockQuantity <= 0) {
-                                        showToast(
-                                          `Out of stock: Cannot add ${p.productName}`,
+                                  if (matched.length === 0) {
+                                    return (
+                                      <div className="p-4 text-center text-zinc-500 font-bold text-xs italic">
+                                        No compatible tiles or SKU listings match "{barcodeSearchTerm}"
+                                      </div>
+                                    );
+                                  }
+                                  return matched.slice(0, 6).map((p) => (
+                                    <div
+                                      key={p.id}
+                                      onClick={() => {
+                                        if (p.stockQuantity <= 0) {
+                                          showToast(
+                                            `Out of stock: Cannot add ${p.productName}`,
+                                          );
+                                          return;
+                                        }
+                                        addToCart(p);
+                                        setBarcodeAddFeedback(
+                                          `Added: ${p.productName}`,
                                         );
-                                        return;
-                                      }
-                                      addToCart(p);
-                                      setBarcodeAddFeedback(
-                                        `Added: ${p.productName}`,
-                                      );
-                                      setBarcodeSearchTerm("");
-                                      setTimeout(
-                                        () => setBarcodeAddFeedback(null),
-                                        3000,
-                                      );
-                                    }}
-                                    className="p-2.5 hover:bg-m3-primary/10 cursor-pointer flex justify-between items-center transition-colors text-left"
-                                  >
-                                    <div className="space-y-0.5">
-                                      <div className="font-extrabold text-m3-on-surface text-xs">
-                                        {p.productName}
+                                        setBarcodeSearchTerm("");
+                                        setTimeout(
+                                          () => setBarcodeAddFeedback(null),
+                                          3000,
+                                        );
+                                      }}
+                                      className="p-2.5 hover:bg-m3-primary/10 cursor-pointer flex justify-between items-center transition-colors text-left"
+                                    >
+                                      <div className="space-y-0.5">
+                                        <div className="font-extrabold text-m3-on-surface text-xs">
+                                          {p.productName}
+                                        </div>
+                                        <div className="text-[10px] text-zinc-400 font-mono font-bold">
+                                          SKU: {p.sku} • Stock: {p.stockQuantity}
+                                        </div>
                                       </div>
-                                      <div className="text-[10px] text-zinc-400 font-mono font-bold">
-                                        SKU: {p.sku} • Stock: {p.stockQuantity}
+                                      <div className="text-right font-black text-emerald-600 dark:text-emerald-400 text-xs">
+                                        ₱
+                                        {getBranchPrice(p).toLocaleString(
+                                          undefined,
+                                          { minimumFractionDigits: 2 },
+                                        )}
                                       </div>
                                     </div>
-                                    <div className="text-right font-black text-emerald-600 dark:text-emerald-400 text-xs">
-                                      ₱
-                                      {getBranchPrice(p).toLocaleString(
-                                        undefined,
-                                        { minimumFractionDigits: 2 },
-                                      )}
-                                    </div>
-                                  </div>
-                                ));
-                              })()}
-                            </div>
-                          )}
+                                  ));
+                                })()}
+                              </div>
+                            )}
+                          </div>
                         </div>
+                        <button
+                          type="submit"
+                          className="w-full md:w-auto px-4 py-1.5 bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer self-end shrink-0 transition-all flex items-center gap-1.5 h-[32px] shadow-sm justify-center"
+                        >
+                          SKU Scan
+                        </button>
                       </div>
-                      <button
-                        type="submit"
-                        className="w-full md:w-auto px-4 py-1.5 bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer self-end shrink-0 transition-all flex items-center gap-1.5 h-[32px] shadow-sm justify-center"
-                      >
-                        SKU Scan
-                      </button>
-                    </div>
-                  </form>
+                    </form>
+                  )}
                 </div>
 
                 {/* DYNAMIC INDEPENDENT OVERFLOW SCROLL TRACK */}

@@ -403,7 +403,17 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
       <div className="flex-1 p-3 space-y-4">
         
         {/* LARGE BARCODE / SKU LOOKUP BOX WITH CAMERA TOGGLE */}
-        <div className="bg-m3-surface-low border border-m3-outline-variant/25 rounded-3xl p-4 shadow-sm space-y-3.5 text-left">
+        {!products.some(p => !p.isDeleted) ? (
+          <div className="bg-amber-500/10 border border-amber-500/20 p-5 rounded-3xl text-left font-sans space-y-2 shadow-inner">
+            <div className="flex items-center gap-2 text-amber-500 font-black text-xs uppercase tracking-wider">
+              <span className="text-sm">⚠️</span> Scanner Offline / Catalog Empty
+            </div>
+            <p className="text-xs text-zinc-300 font-medium leading-relaxed">
+              No inventory or tile catalog records exist. The barcode scanner and manual item SKU inputs are locked until catalog products are added or imported via the administrator's Inventory system.
+            </p>
+          </div>
+        ) : (
+          <div className="bg-m3-surface-low border border-m3-outline-variant/25 rounded-3xl p-4 shadow-sm space-y-3.5 text-left">
           <label className="text-[10px] font-black tracking-wider uppercase text-m3-primary block">
             Scan Input (Type SKU / Brand or Tap Camera)
           </label>
@@ -477,6 +487,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
             </div>
           )}
         </div>
+      )}
 
         {/* 3A. PHYSICAL WEBCAM VIEWFINDER / CAMERA STREAM BOX */}
         {isCameraActive && (
