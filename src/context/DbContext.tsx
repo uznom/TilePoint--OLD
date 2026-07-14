@@ -530,7 +530,7 @@ interface DbContextType {
   ) => void;
   deleteProduct: (id: string) => void;
   deleteDamageLog: (id: string) => void;
-  importProducts: (imported: Product[]) => {
+  importProducts: (imported: Product[], branchMapping?: Record<string, string>) => {
     success: boolean;
     count: number;
     error?: string;
@@ -6337,7 +6337,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     );
   };
 
-  const importProducts = (imported: Product[]) => {
+  const importProducts = (imported: Product[], branchMapping?: Record<string, string>) => {
     try {
       const sanitized = imported.map((p, i) => {
         const barcode =
@@ -6372,9 +6372,20 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
           sanitizeInputText(p.sku) ||
           (barcode ? `SKU-${barcode}` : `SKU-IMP-${Date.now()}-${i}`);
 
+        // Check if there is an existing product in products state to match IDs and avoid duplicates
+        const existingProduct = products.find(
+          (prod) =>
+            !prod.isDeleted &&
+            (prod.productCode.toLowerCase().trim() === productCode.toLowerCase().trim() ||
+              (prod.barcode && barcode && prod.barcode.toLowerCase().trim() === barcode.toLowerCase().trim()) ||
+              prod.productName.toLowerCase().trim() === pName.toLowerCase().trim())
+        );
+
+        const finalId = p.id || existingProduct?.id || `P-IMPORT-${Date.now()}-${i}`;
+
         return {
           ...p,
-          id: p.id || `P-IMPORT-${Date.now()}-${i}`,
+          id: finalId,
           productCode,
           productName: pName,
           sku,
@@ -6431,7 +6442,24 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         const updated = [...prevStock];
         sanitized.forEach((item) => {
           if (item.stockQuantity > 0) {
-            const targetBranchId = currentUser.branchAssignmentId || "B1";
+            let targetBranchId = currentUser.branchAssignmentId || "B1";
+            if (item.origin) {
+              const cleanedOrigin = item.origin.toLowerCase().trim();
+              if (branchMapping && branchMapping[cleanedOrigin]) {
+                targetBranchId = branchMapping[cleanedOrigin];
+              } else {
+                const matchedB = branches.find(
+                  (b) =>
+                    !b.isDeleted &&
+                    (b.id.toLowerCase().trim() === cleanedOrigin ||
+                      (b.branchCode && b.branchCode.toLowerCase().trim() === cleanedOrigin) ||
+                      b.name.toLowerCase().trim() === cleanedOrigin)
+                );
+                if (matchedB) {
+                  targetBranchId = matchedB.id;
+                }
+              }
+            }
             const existingIdx = updated.findIndex(
               (bs) =>
                 bs.productId === item.id && bs.branchId === targetBranchId,
