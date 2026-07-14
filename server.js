@@ -132,7 +132,15 @@ const writeDatabase = (data, senderClientId, eventType = 'db_update') => {
   try {
     const tempPath = `${DB_FILE_PATH}.tmp`;
     fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf-8');
-    fs.renameSync(tempPath, DB_FILE_PATH);
+    try {
+      fs.renameSync(tempPath, DB_FILE_PATH);
+    } catch (renameError) {
+      console.warn('[Shared DB Server] Atomic rename failed, falling back to direct write (typically for Windows file lock/permission conditions):', renameError.message);
+      fs.writeFileSync(DB_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+      try {
+        fs.unlinkSync(tempPath);
+      } catch (unlinkError) {}
+    }
     // Broadcast real-time change to all active cashier/staff devices, skipping the sender
     notifyClients(eventType, {}, senderClientId);
     return true;

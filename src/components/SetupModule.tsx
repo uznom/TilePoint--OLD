@@ -298,25 +298,46 @@ export const SetupModule: React.FC = () => {
         "info",
       );
 
-      // Force network write synchronization immediately to commit configuration records to server-db.json
-      const saveResponse = await fetch("/api/db", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          key: "tp_bootstrap_init",
-          value: initialDbState,
-        }),
-      });
+      let savedToServer = false;
+      try {
+        // Force network write synchronization immediately to commit configuration records to server-db.json
+        const saveResponse = await fetch("/api/db", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            key: "tp_bootstrap_init",
+            value: initialDbState,
+          }),
+        });
 
-      if (!saveResponse.ok) {
-        throw new Error("Server storage disk rejected onboarding record arrays.");
+        // Ensure the response is actual JSON and not static fallback HTML (e.g. from Vercel rewrite rules)
+        const contentType = saveResponse.headers.get("content-type") || "";
+        if (saveResponse.ok && !contentType.includes("text/html")) {
+          savedToServer = true;
+        } else {
+          console.warn("[Onboarding] Server response not OK or returned HTML fallback (e.g. Vercel). Proceeding with client-side offline storage.");
+        }
+      } catch (networkError: any) {
+        console.warn("[Onboarding] Shared backend server unreachable, establishing secure offline-first fallback workspace:", networkError.message);
       }
 
+      // Populate local database tables in local storage to secure the initial state locally
+      localStorage.setItem("tp_is_configured", "true");
+      localStorage.setItem("tp_users", JSON.stringify(initialDbState.tp_users));
+      localStorage.setItem("tp_branches", JSON.stringify(initialDbState.tp_branches));
+
       setInstallProgress(95);
-      addLog(
-        "SUCCESS: Installation complete. Local workspace successfully established.",
-        "success",
-      );
+      if (savedToServer) {
+        addLog(
+          "SUCCESS: Installation complete. Persistent back-end storage successfully established.",
+          "success",
+        );
+      } else {
+        addLog(
+          "✔ Offline-First Mode: System workspace successfully established on local secure storage.",
+          "success",
+        );
+      }
       setInstallProgress(100);
       setInstallSuccess(true);
     } catch (err: any) {
