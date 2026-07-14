@@ -1297,55 +1297,96 @@ html.accessibility-no-animation table tbody tr:hover td {
   }
 
   /* Dedicated 80mm format centering layout for thermal receipt rolls */
-  .bir-receipt-container {
-    page: receipt-page !important;
-    display: block !important;
-    position: relative !important;
-    width: 80mm !important;
-    max-width: 80mm !important;
-    margin: 0 auto !important;
-    padding: 10px !important;
-    border: none !important;
-    box-shadow: none !important;
-    background: #ffffff !important;
-    color: #000000 !important;
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
+  @page {
+    size: 80mm auto !important;
+    margin: 0 !important;
   }
 
-  /* Robust isolation: if bir-receipt-container exists on screen, hide all other DOM elements completely */
-  body:has(.bir-receipt-container) * {
-    visibility: hidden !important;
-  }
-  body:has(.bir-receipt-container) .bir-receipt-container,
-  body:has(.bir-receipt-container) .bir-receipt-container * {
-    visibility: visible !important;
-  }
-  body:has(.bir-receipt-container) div {
-    max-height: none !important;
-    height: auto !important;
-    overflow: visible !important;
-  }
-  body:has(.bir-receipt-container) .bir-receipt-container {
-    page: receipt-page !important;
-    visibility: visible !important;
-    position: absolute !important;
-    left: 0 !important;
-    right: 0 !important;
-    top: 0 !important;
+  /* Reset layout for thermal receipt context to support continuous dynamic roll height */
+  body:has(.bir-receipt-container) {
     width: 80mm !important;
-    max-width: 80mm !important;
-    margin: 0 auto !important;
-    padding: 15px !important;
-    box-sizing: border-box !important;
-    border: none !important;
-    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
+    display: block !important;
+  }
+
+  body:has(.bir-receipt-container) html,
+  body:has(.bir-receipt-container) #root {
+    display: block !important;
+    position: static !important;
+    width: 80mm !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Make sure every ancestor parent element of the receipt container in the DOM flow is unconstrained */
+  body:has(.bir-receipt-container) div:has(.bir-receipt-container) {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Hide ALL other elements completely to prevent them from taking layout space or printing blank pages */
+  body:has(.bir-receipt-container) header,
+  body:has(.bir-receipt-container) footer,
+  body:has(.bir-receipt-container) nav,
+  body:has(.bir-receipt-container) aside,
+  body:has(.bir-receipt-container) button,
+  body:has(.bir-receipt-container) .bir-report-no-print,
+  body:has(.bir-receipt-container) .no-print,
+  body:has(.bir-receipt-container) .m3-btn,
+  body:has(.bir-receipt-container) [role="dialog"]:not(:has(.bir-receipt-container)) {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Completely hide all non-ancestor div siblings */
+  body:has(.bir-receipt-container) div:not(:has(.bir-receipt-container)):not(.bir-receipt-container):not(.bir-receipt-container *) {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Style the receipt container to fit perfectly inside the 72mm printable area of 80mm roll */
+  .bir-receipt-container {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important; /* Must be static/relative to allow proper height calculation and prevent vertical cuts */
+    margin: 0 auto !important; /* Centers the content perfectly on the paper */
+    width: 72mm !important; /* Standard printable width for 80mm paper to prevent clipping */
+    max-width: 72mm !important;
+    padding: 4mm 2mm 8mm 2mm !important; /* Spacing designed for 72mm boundaries with bottom safe zone */
+    box-sizing: border-box !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: 'JetBrains Mono', 'Courier New', Courier, monospace !important;
+    font-size: 10px !important;
+    line-height: 1.4 !important;
     height: auto !important;
     max-height: none !important;
     overflow: visible !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Ensure all text inside the receipt prints as pure high-contrast black on white */
+  .bir-receipt-container * {
+    visibility: visible !important;
+    color: #000000 !important;
+    background: transparent !important;
   }
 
   /* Robust isolation: if bir-report-container exists on screen, hide all other DOM elements completely */

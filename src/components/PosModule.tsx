@@ -2724,51 +2724,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
       <AnimatePresence>
         {showReceiptModal && activeReceipt && (
           <div className="fixed inset-0 overflow-y-auto flex items-start justify-center z-50 p-4 md:items-center">
-            {/* Inject dynamic 80mm roll print configuration to override Chrome letter defaults */}
-            <style dangerouslySetInnerHTML={{ __html: `
-              @media print {
-                @page {
-                  size: 80mm auto !important;
-                  margin: 0 !important;
-                }
-                body * {
-                  visibility: hidden !important;
-                }
-                .bir-receipt-container,
-                .bir-receipt-container * {
-                  visibility: visible !important;
-                }
-                body, html, #root, div {
-                  max-height: none !important;
-                  height: auto !important;
-                  overflow: visible !important;
-                  box-shadow: none !important;
-                  border: none !important;
-                }
-                .bir-receipt-container {
-                  visibility: visible !important;
-                  position: absolute !important;
-                  left: 0 !important;
-                  right: 0 !important;
-                  top: 0 !important;
-                  margin: 0 auto !important;
-                  width: 80mm !important;
-                  max-width: 80mm !important;
-                  padding: 4mm 6mm !important;
-                  box-sizing: border-box !important;
-                  background: #ffffff !important;
-                  color: #000000 !important;
-                  height: auto !important;
-                  max-height: none !important;
-                  overflow: visible !important;
-                  display: block !important;
-                }
-                .bir-report-no-print, button {
-                  display: none !important;
-                  visibility: hidden !important;
-                }
-              }
-            `}} />
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
