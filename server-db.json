@@ -32620,726 +32620,6 @@
   ],
   "tp_branch_stock": [
     {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-362",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-362",
-      "quantity": 7
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-361",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-361",
-      "quantity": 1
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-360",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-360",
-      "quantity": 48
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-359",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-359",
-      "quantity": 37
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-358",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-358",
-      "quantity": 2
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-357",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-357",
-      "quantity": 48
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-356",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-356",
-      "quantity": 47
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-355",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-355",
-      "quantity": 1
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-354",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-354",
-      "quantity": 1
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-353",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-353",
-      "quantity": 8
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-352",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-352",
-      "quantity": 10
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-351",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-351",
-      "quantity": 50
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-349",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-349",
-      "quantity": 6
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-348",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-348",
-      "quantity": 47
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-347",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-347",
-      "quantity": 86
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-346",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-346",
-      "quantity": 35
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-345",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-345",
-      "quantity": 1
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-344",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-344",
-      "quantity": 2
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-343",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-343",
-      "quantity": 6
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-342",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-342",
-      "quantity": 1
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-341",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-341",
-      "quantity": 2
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-335",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-335",
-      "quantity": 4
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-329",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-329",
-      "quantity": 17
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-328",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-328",
-      "quantity": 39
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-327",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-327",
-      "quantity": 55
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-326",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-326",
-      "quantity": 64
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-325",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-325",
-      "quantity": 9
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-324",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-324",
-      "quantity": 4
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-323",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-323",
-      "quantity": 8
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-322",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-322",
-      "quantity": 10
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-321",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-321",
-      "quantity": 10
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-320",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-320",
-      "quantity": 8
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-319",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-319",
-      "quantity": 10
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-318",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-318",
-      "quantity": 9
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-317",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-317",
-      "quantity": 3
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-316",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-316",
-      "quantity": 8
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-315",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-315",
-      "quantity": 10
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-314",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-314",
-      "quantity": 2
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-313",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-313",
-      "quantity": 4
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-312",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-312",
-      "quantity": 1
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-311",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-311",
-      "quantity": 14
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-309",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-309",
-      "quantity": 1
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-307",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-307",
-      "quantity": 2
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-306",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-306",
-      "quantity": 2
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-305",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-305",
-      "quantity": 3
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-304",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-304",
-      "quantity": 3
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-303",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-303",
-      "quantity": 3
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-302",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-302",
-      "quantity": 2
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-300",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-300",
-      "quantity": 25
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-299",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-299",
-      "quantity": 3
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-298",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-298",
-      "quantity": 5
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-297",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-297",
-      "quantity": 13
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-296",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-296",
-      "quantity": 14
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-295",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-295",
-      "quantity": 17
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-294",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-294",
-      "quantity": 8
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-293",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-293",
-      "quantity": 6
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-292",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-292",
-      "quantity": 3
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-291",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-291",
-      "quantity": 13
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-290",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-290",
-      "quantity": 17
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-287",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-287",
-      "quantity": 4
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-284",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-284",
-      "quantity": 1
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-283",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-283",
-      "quantity": 1
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-282",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-282",
-      "quantity": 1
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-279",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-279",
-      "quantity": 48
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-274",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-274",
-      "quantity": 2
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-272",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-272",
-      "quantity": 6611
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-271",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-271",
-      "quantity": 251
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-270",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-270",
-      "quantity": 19
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-261",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-261",
-      "quantity": 37
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-260",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-260",
-      "quantity": 2
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-259",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-259",
-      "quantity": 27
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-256",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-256",
-      "quantity": 2
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-253",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-253",
-      "quantity": 527
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-252",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-252",
-      "quantity": 2
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-251",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-251",
-      "quantity": 51
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-250",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-250",
-      "quantity": 142
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-248",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-248",
-      "quantity": 16
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-244",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-244",
-      "quantity": 186
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-240",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-240",
-      "quantity": 15
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-237",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-237",
-      "quantity": 7
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-234",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-234",
-      "quantity": 6
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-233",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-233",
-      "quantity": 73
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-230",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-230",
-      "quantity": 2
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-228",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-228",
-      "quantity": 127
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-226",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-226",
-      "quantity": 500
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-225",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-225",
-      "quantity": 14
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-224",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-224",
-      "quantity": 351
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-215",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-215",
-      "quantity": 98
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-214",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-214",
-      "quantity": 3
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-212",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-212",
-      "quantity": 20
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-211",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-211",
-      "quantity": 12
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-208",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-208",
-      "quantity": 26
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-205",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-205",
-      "quantity": 13
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-191",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-191",
-      "quantity": 211
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-186",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-186",
-      "quantity": 466
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-185",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-185",
-      "quantity": 36
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-184",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-184",
-      "quantity": 156
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-183",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-183",
-      "quantity": 340
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-176",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-176",
-      "quantity": 249
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-173",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-173",
-      "quantity": 15
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-172",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-172",
-      "quantity": 21
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-171",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-171",
-      "quantity": 41
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-162",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-162",
-      "quantity": 5
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-161",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-161",
-      "quantity": 41
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-160",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-160",
-      "quantity": 53
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-159",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-159",
-      "quantity": 21
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-158",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-158",
-      "quantity": 23
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-153",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399021-153",
-      "quantity": 2
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-151",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399020-151",
-      "quantity": 1
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-148",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399020-148",
-      "quantity": 87
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-147",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399020-147",
-      "quantity": 46
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-144",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399020-144",
-      "quantity": 342
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-141",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399020-141",
-      "quantity": 26
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-136",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399020-136",
-      "quantity": 161
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-135",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399020-135",
-      "quantity": 82
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-134",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399020-134",
-      "quantity": 187
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-133",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399020-133",
-      "quantity": 54
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-132",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399020-132",
-      "quantity": 75
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-130",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399020-130",
-      "quantity": 6
-    },
-    {
-      "id": "ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-128",
-      "branchId": "ETC_DIPOLOG MAIN",
-      "productId": "P-IMPORT-1784025399020-128",
-      "quantity": 19
-    },
-    {
       "id": "B1_P-IMPORT-06o23wx",
       "branchId": "B1",
       "productId": "P-IMPORT-06o23wx",
@@ -43313,6 +42593,126 @@
   "atpos_v2_returns": [],
   "tp_db_snapshots": [],
   "tp_processed_delta_ids": [
+    "delta-add-tp_branch_stock-B1_P-IMPORT-g8hh3pf-1782803304943-162",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-qireqog-1782803304943-503",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-5c2yvyi-1782803304943-276",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-17y3txu-1782803304943-140",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-t0b7xk9-1782803304943-27",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-q4i86hr-1782803304943-510",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-z2q9de1-1782803304943-797",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-wnzo0by-1782803304943-484",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-le7894f-1782803304943-825",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-jqtle7m-1782803304943-159",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-xvdrsxs-1782803304943-470",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-emkr3x9-1782803304943-594",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-98g9wpw-1782803304943-843",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-iycn2k6-1782803304943-471",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-gvpiv4l-1782803304943-124",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-f3rf4go-1782803304943-3",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-v4uuqzf-1782803304943-277",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-b0jw6i2-1782803304943-992",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-hf1pyne-1782803304943-383",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-212sw8q-1782803304943-43",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-xgz3wab-1782803304943-344",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-7t0qffj-1782803304943-172",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-iuhox11-1782803304943-499",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-20hcail-1782803304943-80",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-9nobh73-1782803304943-305",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-1lbpmfb-1782803304943-960",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-ochedk9-1782803304943-451",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-ayr8gn2-1782803304943-300",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-kzn1y7e-1782803304943-304",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-yhz40ls-1782803304943-384",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-p08v73b-1782803304943-869",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-r6upojy-1782803304943-937",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-upupsgn-1782803304943-860",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-nx3k12k-1782803304943-184",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-mt68ohu-1782803304943-406",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-h3gjt74-1782803304943-584",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-79fmhth-1782803304943-932",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-1po4kiq-1782803304943-361",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-qrdt3d2-1782803304943-214",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-lo998qm-1782803304943-445",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-fad5kkh-1782803304943-503",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-o7k9tzj-1782803304943-721",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-u84aywp-1782803304943-383",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-u8nzulw-1782803304943-818",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-s6l1dln-1782803304943-248",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-wg5tj3s-1782803304943-650",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-qu38orx-1782803304943-815",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-io497wb-1782803304943-16",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-x3k4i24-1782803304943-50",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-tq27irb-1782803304943-848",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-cfx0gyc-1782803304943-338",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-3o2imdg-1782803304943-761",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-lcyjjv4-1782803304943-841",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-hmc0tod-1782803304943-409",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-y2rzlqd-1782803304943-413",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-bu8gobm-1782803304943-117",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-vh6l3v1-1782803304943-66",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-dd4ov6z-1782803304943-983",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-8cgc18v-1782803304943-199",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-dd9izb1-1782803304943-754",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-oo7f216-1782803304943-124",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-fa6lzwv-1782803304943-787",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-1zm66v4-1782803304943-398",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-bxjmyq6-1782803304943-441",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-bjrljnl-1782803304943-967",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-me9jim6-1782803304943-364",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-acn9pds-1782803304943-787",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-uhxugtm-1782803304943-586",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-dztnta2-1782803304943-7",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-g7cxhc9-1782803304943-82",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-oe2sm9q-1782803304943-621",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-rzcm5ow-1782803304943-132",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-15zu3ir-1782803304943-504",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-vz2h85p-1782803304943-904",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-gr8w33l-1782803304943-757",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-mytj2q1-1782803304943-622",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-a5wf7w7-1782803304943-829",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-7z4g7v2-1782803304943-237",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-b1dqw26-1782803304943-662",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-ultpiq3-1782803304943-17",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-elmd56k-1782803304943-51",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-9bg41zh-1782803304943-557",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-ot2hrlu-1782803304943-798",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-o2gqa7r-1782803304943-22",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-eddmg84-1782803304943-355",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-ald8ysh-1782803304943-120",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-ri6p97o-1782803304943-487",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-aega27x-1782803304943-895",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-comfetz-1782803304943-484",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-bi5vn8b-1782803304943-47",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-m6cmpst-1782803304943-320",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-uvi200s-1782803304943-203",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-b8o63sv-1782803304943-978",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-2ua0vmd-1782803304943-445",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-xx9pcj0-1782803304943-158",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-rtzzbg4-1782803304943-454",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-16t20us-1782803304943-235",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-ct8mrxc-1782803304943-991",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-8cfzmyd-1782803304943-407",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-59w7tc0-1782803304943-335",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-v03v72k-1782803304943-384",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-77bfjh2-1782803304943-773",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-axxv8qd-1782803304943-647",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-qsnjzga-1782803304943-532",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-j09ie1j-1782803304943-198",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-i5lxfxf-1782803304943-331",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-jrfhllx-1782803304943-903",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-xsiy9b8-1782803304943-402",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-hjwophy-1782803304943-129",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-w0z5o2f-1782803304943-611",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-jul2i77-1782803304943-582",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-nakkcv5-1782803304943-619",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-11b6jq0-1782803304943-466",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-s6uqz0y-1782803304943-739",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-kh5zo6q-1782803304943-418",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-rth123x-1782803304943-150",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-xig7cyy-1782803304943-102",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-n20mo8t-1782803304943-62",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-m8mc94d-1782803304943-766",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-673xc73-1782803304943-945",
     "delta-add-tp_branch_stock-B1_P-IMPORT-cpovog2-1782803304943-777",
     "delta-add-tp_branch_stock-B1_P-IMPORT-74c2itn-1782803304943-819",
     "delta-add-tp_branch_stock-B1_P-IMPORT-ncvj1ye-1782803304943-431",
@@ -48192,126 +47592,6 @@
     "delta-add-tp_sale_items-SLI-SL-1784021113130-0-1784021113164-454",
     "delta-add-tp_movements-M-SALE-SL-1784021113130-0-1784021113164-14",
     "delta-add-tp_audit_logs-AL-1784021113130-653-1784021113164-649",
-    "delta-dec-tp_branch_stock-B1_P-IMPORT-fpdu5fj-1784021113165-653",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-128-1784028293191-522",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-130-1784028293191-474",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-132-1784028293191-862",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-133-1784028293191-870",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-134-1784028293191-320",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-135-1784028293191-670",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-136-1784028293191-61",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-141-1784028293191-346",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-144-1784028293191-253",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-147-1784028293191-481",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-148-1784028293191-770",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399020-151-1784028293191-515",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-153-1784028293191-924",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-158-1784028293191-924",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-159-1784028293191-728",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-160-1784028293191-281",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-161-1784028293191-392",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-162-1784028293191-290",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-171-1784028293191-71",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-172-1784028293191-504",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-173-1784028293191-898",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-176-1784028293191-443",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-183-1784028293191-421",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-184-1784028293191-352",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-185-1784028293191-241",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-186-1784028293191-46",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-191-1784028293191-541",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-205-1784028293191-652",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-208-1784028293191-958",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-211-1784028293191-668",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-212-1784028293191-254",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-214-1784028293191-540",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-215-1784028293191-529",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-224-1784028293191-602",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-225-1784028293191-323",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-226-1784028293191-150",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-228-1784028293191-678",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-230-1784028293191-218",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-233-1784028293191-21",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-234-1784028293191-298",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-237-1784028293191-264",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-240-1784028293191-384",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-244-1784028293191-738",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-248-1784028293191-322",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-250-1784028293191-922",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-251-1784028293191-442",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-252-1784028293191-849",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-253-1784028293191-587",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-256-1784028293191-510",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-259-1784028293191-0",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-260-1784028293191-756",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-261-1784028293191-877",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-270-1784028293191-991",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-271-1784028293191-915",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-272-1784028293191-338",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-274-1784028293191-622",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-279-1784028293191-73",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-282-1784028293191-874",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-283-1784028293191-819",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-284-1784028293191-911",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-287-1784028293191-761",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-290-1784028293191-267",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-291-1784028293191-791",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-292-1784028293191-11",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-293-1784028293191-626",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-294-1784028293191-749",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-295-1784028293191-791",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-296-1784028293191-362",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-297-1784028293191-839",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-298-1784028293191-935",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-299-1784028293191-409",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-300-1784028293191-812",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-302-1784028293191-446",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-303-1784028293191-165",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-304-1784028293191-323",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-305-1784028293191-50",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-306-1784028293191-61",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-307-1784028293191-976",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-309-1784028293191-526",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-311-1784028293191-827",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-312-1784028293191-716",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-313-1784028293191-302",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-314-1784028293191-433",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-315-1784028293191-780",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-316-1784028293191-953",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-317-1784028293191-327",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-318-1784028293191-315",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-319-1784028293191-330",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-320-1784028293191-962",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-321-1784028293191-987",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-322-1784028293191-78",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-323-1784028293191-326",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-324-1784028293191-776",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-325-1784028293191-646",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-326-1784028293191-491",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-327-1784028293191-669",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-328-1784028293191-817",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-329-1784028293191-260",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-335-1784028293191-633",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-341-1784028293191-529",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-342-1784028293191-541",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-343-1784028293191-523",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-344-1784028293191-880",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-345-1784028293191-779",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-346-1784028293191-350",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-347-1784028293191-624",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-348-1784028293191-394",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-349-1784028293191-643",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-351-1784028293191-902",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-352-1784028293191-811",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-353-1784028293191-660",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-354-1784028293191-764",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-355-1784028293191-405",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-356-1784028293191-646",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-357-1784028293191-64",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-358-1784028293191-362",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-359-1784028293191-247",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-360-1784028293191-0",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-361-1784028293191-140",
-    "delta-add-tp_branch_stock-ETC_DIPOLOG MAIN_P-IMPORT-1784025399021-362-1784028293191-60"
+    "delta-dec-tp_branch_stock-B1_P-IMPORT-fpdu5fj-1784021113165-653"
   ]
 }

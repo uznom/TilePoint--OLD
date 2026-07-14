@@ -2816,8 +2816,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
                 </div>
 
                 <div className="space-y-1.5 font-mono text-[9px] border-b border-dashed border-m3-outline-variant/30 pb-2">
-                  <div className="flex justify-between font-extrabold text-m3-on-surface-variant">
-                    <span>Description / Qty</span>
+                  <div className="flex justify-between font-extrabold text-m3-on-surface-variant border-b border-dashed border-m3-outline-variant/20 pb-1">
+                    <span>Item Details</span>
                     <span>Amount</span>
                   </div>
 
@@ -2825,14 +2825,19 @@ export const PosModule: React.FC<PosModuleProps> = ({
                     receiptItems.map((it, idx) => (
                       <div
                         key={idx}
-                        className="flex justify-between text-m3-on-surface"
+                        className="text-m3-on-surface space-y-0.5 pt-1.5 pb-1.5 border-b border-dotted border-m3-outline-variant/10 last:border-0"
                       >
-                        <span className="truncate max-w-[200px]">
-                          {it.productName} (x{it.quantity})
-                        </span>
-                        <span className="font-bold">
-                          ₱{it.total.toFixed(2)}
-                        </span>
+                        <div className="font-bold text-[9.5px] break-words">
+                          {it.productName}
+                        </div>
+                        <div className="flex justify-between text-[8.5px] text-m3-on-surface-variant">
+                          <span>
+                            ₱{it.unitPrice.toFixed(2)} x {it.quantity}
+                          </span>
+                          <span className="font-bold text-m3-on-surface">
+                            ₱{it.total.toFixed(2)}
+                          </span>
+                        </div>
                       </div>
                     ))
                   ) : (

@@ -1296,15 +1296,15 @@ html.accessibility-no-animation table tbody tr:hover td {
     color: #000000 !important;
   }
 
-  /* Dedicated 80mm format centering layout for thermal receipt rolls */
+  /* Dedicated 76mm format centering layout for thermal receipt rolls (75mm-76mm width) */
   @page {
-    size: 80mm auto !important;
+    size: 76mm auto !important;
     margin: 0 !important;
   }
 
   /* Reset layout for thermal receipt context to support continuous dynamic roll height */
   body:has(.bir-receipt-container) {
-    width: 80mm !important;
+    width: 76mm !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
@@ -1316,7 +1316,7 @@ html.accessibility-no-animation table tbody tr:hover td {
   body:has(.bir-receipt-container) #root {
     display: block !important;
     position: static !important;
-    width: 80mm !important;
+    width: 76mm !important;
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;
@@ -1360,15 +1360,15 @@ html.accessibility-no-animation table tbody tr:hover td {
     visibility: hidden !important;
   }
 
-  /* Style the receipt container to fit perfectly inside the 72mm printable area of 80mm roll */
+  /* Style the receipt container to fit perfectly inside the printable area of 75mm-76mm roll */
   .bir-receipt-container {
     display: block !important;
     visibility: visible !important;
     position: static !important; /* Must be static/relative to allow proper height calculation and prevent vertical cuts */
-    margin: 0 auto !important; /* Centers the content perfectly on the paper */
-    width: 72mm !important; /* Standard printable width for 80mm paper to prevent clipping */
-    max-width: 72mm !important;
-    padding: 4mm 2mm 8mm 2mm !important; /* Spacing designed for 72mm boundaries with bottom safe zone */
+    margin: 0 !important; /* Forces document boundary alignment to prevent horizontal offset issues */
+    width: 100% !important; /* Fill the page width natively */
+    max-width: 100% !important;
+    padding: 4mm 6mm 14mm 6mm !important; /* Generous symmetrical 6mm side padding guarantees centering and prevents clipped text */
     box-sizing: border-box !important;
     background: #ffffff !important;
     color: #000000 !important;
@@ -1387,6 +1387,50 @@ html.accessibility-no-animation table tbody tr:hover td {
     visibility: visible !important;
     color: #000000 !important;
     background: transparent !important;
+  }
+
+  /* High contrast border rendering for monochrome receipt printers (gray borders disappear) */
+  .bir-receipt-container .border-dashed,
+  .bir-receipt-container [class*="border-dashed"] {
+    border-color: #000000 !important;
+    border-style: dashed !important;
+    border-width: 0 0 1px 0 !important;
+    opacity: 1 !important;
+  }
+  .bir-receipt-container .border-dotted,
+  .bir-receipt-container [class*="border-dotted"] {
+    border-color: #000000 !important;
+    border-style: dotted !important;
+    border-width: 1px 0 0 0 !important;
+    opacity: 1 !important;
+  }
+  .bir-receipt-container .border-t,
+  .bir-receipt-container [class*="border-t"] {
+    border-color: #000000 !important;
+    border-style: solid !important;
+    border-width: 1px 0 0 0 !important;
+    opacity: 1 !important;
+  }
+  .bir-receipt-container .border-b,
+  .bir-receipt-container [class*="border-b"] {
+    border-color: #000000 !important;
+    border-style: solid !important;
+    border-width: 0 0 1px 0 !important;
+    opacity: 1 !important;
+  }
+  .bir-receipt-container .border-r,
+  .bir-receipt-container [class*="border-r"] {
+    border-color: #000000 !important;
+    border-style: solid !important;
+    border-width: 0 1px 0 0 !important;
+    opacity: 1 !important;
+  }
+  .bir-receipt-container .border-l,
+  .bir-receipt-container [class*="border-l"] {
+    border-color: #000000 !important;
+    border-style: solid !important;
+    border-width: 0 0 0 1px !important;
+    opacity: 1 !important;
   }
 
   /* Robust isolation: if bir-report-container exists on screen, hide all other DOM elements completely */
@@ -1513,7 +1557,7 @@ html.accessibility-no-animation table tbody tr:hover td {
   }
 
   @page receipt-page {
-    size: 80mm auto;
+    size: 76mm auto;
     margin: 0;
   }
 }
