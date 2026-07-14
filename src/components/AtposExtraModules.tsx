@@ -503,6 +503,51 @@ export default function AtposExtraModules({
 
       {printReceiptData && (
         <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center bg-black/60 backdrop-blur-sm p-4 md:items-center">
+          {/* Inject dynamic 80mm roll print configuration to override Chrome letter defaults */}
+          <style dangerouslySetInnerHTML={{ __html: `
+            @media print {
+              @page {
+                size: 80mm auto !important;
+                margin: 0 !important;
+              }
+              body * {
+                visibility: hidden !important;
+              }
+              .bir-receipt-container,
+              .bir-receipt-container * {
+                visibility: visible !important;
+              }
+              body, html, #root, div {
+                max-height: none !important;
+                height: auto !important;
+                overflow: visible !important;
+                box-shadow: none !important;
+                border: none !important;
+              }
+              .bir-receipt-container {
+                visibility: visible !important;
+                position: absolute !important;
+                left: 0 !important;
+                right: 0 !important;
+                top: 0 !important;
+                margin: 0 auto !important;
+                width: 80mm !important;
+                max-width: 80mm !important;
+                padding: 4mm 6mm !important;
+                box-sizing: border-box !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                height: auto !important;
+                max-height: none !important;
+                overflow: visible !important;
+                display: block !important;
+              }
+              .bir-report-no-print, button {
+                display: none !important;
+                visibility: hidden !important;
+              }
+            }
+          `}} />
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -510,11 +555,14 @@ export default function AtposExtraModules({
           >
             <div className="text-center pb-3 border-b-2 border-dashed border-zinc-300">
               <h3 className="font-extrabold text-sm tracking-wide">
-                TILEPOINT CLOUD
+                EMMAN TILE CENTER
               </h3>
-              <p className="text-[10px]">EMMAN TILE POINT CENTER</p>
+              <p className="text-[10px]">BRANCH ID: ETC_DIPOLOG MAIN</p>
               <p className="text-[9px] text-zinc-500">
-                101 Quezon Ave, Metro Manila
+                Sta.Filomena,DipologCity
+              </p>
+              <p className="text-[9px] text-zinc-500 font-mono">
+                Contact: 0000 • TIN 000-111-222
               </p>
               <p className="text-[10.5px] font-bold mt-2 uppercase">
                 {printReceiptData.title}

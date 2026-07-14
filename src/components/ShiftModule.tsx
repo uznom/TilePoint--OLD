@@ -359,6 +359,51 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
       {/* X Report dialog OVERLAY */}
       {showXReport && activeShift && shiftStats && (
         <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
+          {/* Inject dynamic 80mm roll print configuration to override Chrome letter defaults */}
+          <style dangerouslySetInnerHTML={{ __html: `
+            @media print {
+              @page {
+                size: 80mm auto !important;
+                margin: 0 !important;
+              }
+              body * {
+                visibility: hidden !important;
+              }
+              .bir-receipt-container,
+              .bir-receipt-container * {
+                visibility: visible !important;
+              }
+              body, html, #root, div {
+                max-height: none !important;
+                height: auto !important;
+                overflow: visible !important;
+                box-shadow: none !important;
+                border: none !important;
+              }
+              .bir-receipt-container {
+                visibility: visible !important;
+                position: absolute !important;
+                left: 0 !important;
+                right: 0 !important;
+                top: 0 !important;
+                margin: 0 auto !important;
+                width: 80mm !important;
+                max-width: 80mm !important;
+                padding: 4mm 6mm !important;
+                box-sizing: border-box !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                height: auto !important;
+                max-height: none !important;
+                overflow: visible !important;
+                display: block !important;
+              }
+              .bir-report-no-print, button {
+                display: none !important;
+                visibility: hidden !important;
+              }
+            }
+          `}} />
           <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setShowXReport(false)} />
           <div className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl space-y-4 text-xs font-mono select-none bg-m3-surface-low text-m3-on-surface bir-receipt-container">
             <div className="text-center pb-2.5 border-b border-dashed border-m3-outline-variant/30">
@@ -434,6 +479,51 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
       {/* Z Report dialog OVERLAY */}
       {showZReport && activeShift && shiftStats && (
         <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
+          {/* Inject dynamic 80mm roll print configuration to override Chrome letter defaults */}
+          <style dangerouslySetInnerHTML={{ __html: `
+            @media print {
+              @page {
+                size: 80mm auto !important;
+                margin: 0 !important;
+              }
+              body * {
+                visibility: hidden !important;
+              }
+              .bir-receipt-container,
+              .bir-receipt-container * {
+                visibility: visible !important;
+              }
+              body, html, #root, div {
+                max-height: none !important;
+                height: auto !important;
+                overflow: visible !important;
+                box-shadow: none !important;
+                border: none !important;
+              }
+              .bir-receipt-container {
+                visibility: visible !important;
+                position: absolute !important;
+                left: 0 !important;
+                right: 0 !important;
+                top: 0 !important;
+                margin: 0 auto !important;
+                width: 80mm !important;
+                max-width: 80mm !important;
+                padding: 4mm 6mm !important;
+                box-sizing: border-box !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                height: auto !important;
+                max-height: none !important;
+                overflow: visible !important;
+                display: block !important;
+              }
+              .bir-report-no-print, button {
+                display: none !important;
+                visibility: hidden !important;
+              }
+            }
+          `}} />
           <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setShowZReport(false)} />
           <div className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl space-y-4 text-xs font-mono select-none bg-m3-surface-low text-m3-on-surface bir-receipt-container">
             <div className="text-center pb-2.5 border-b border-dashed border-m3-outline-variant/30">
