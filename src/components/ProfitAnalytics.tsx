@@ -56,8 +56,64 @@ export function ProfitAnalytics({
     purchaseOrders,
   } = useDb();
 
-  // Period state: '7d' | '15d' | '30d' | 'monthly' | 'all-time'
-  const [selectedPeriod, setSelectedPeriod] = useState<"7d" | "15d" | "30d" | "monthly" | "all-time">("30d");
+  // Determine default period dynamically based on database history age span
+  const defaultPeriod = useMemo<"7d" | "15d" | "30d" | "monthly" | "all-time">(() => {
+    const dates: number[] = [];
+    sales?.forEach(s => {
+      if (s.createdAt) {
+        const t = new Date(s.createdAt).getTime();
+        if (!isNaN(t)) dates.push(t);
+      }
+    });
+    expenses?.forEach(e => {
+      if (e.dateTime) {
+        const t = new Date(e.dateTime).getTime();
+        if (!isNaN(t)) dates.push(t);
+      }
+    });
+    shifts?.forEach(s => {
+      if (s.openedAt) {
+        const t = new Date(s.openedAt).getTime();
+        if (!isNaN(t)) dates.push(t);
+      }
+    });
+
+    if (dates.length === 0) {
+      return "7d";
+    }
+
+    const minDate = Math.min(...dates);
+    const diffMs = Date.now() - minDate;
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+    if (diffDays <= 7) {
+      return "7d";
+    } else if (diffDays <= 15) {
+      return "15d";
+    } else if (diffDays <= 30) {
+      return "30d";
+    } else if (diffDays <= 180) {
+      return "monthly";
+    } else {
+      return "all-time";
+    }
+  }, [sales, expenses, shifts]);
+
+  const [selectedPeriod, setSelectedPeriod] = useState<"7d" | "15d" | "30d" | "monthly" | "all-time">("7d");
+  const [hasUserSelected, setHasUserSelected] = useState(false);
+
+  // Sync to dynamic default if the user hasn't made a manual click yet
+  React.useEffect(() => {
+    if (!hasUserSelected) {
+      setSelectedPeriod(defaultPeriod);
+    }
+  }, [defaultPeriod, hasUserSelected]);
+
+  const handlePeriodChange = (period: "7d" | "15d" | "30d" | "monthly" | "all-time") => {
+    setSelectedPeriod(period);
+    setHasUserSelected(true);
+  };
+
   const [chartType, setChartType] = useState<"area" | "bar">("area");
 
   // Expenses state
@@ -325,7 +381,7 @@ export function ProfitAnalytics({
           {/* Timeframe filter buttons */}
           <div className="flex bg-zinc-200/50 dark:bg-zinc-950/40 p-1 rounded-xl border border-m3-outline-variant/15 text-xs font-bold gap-1">
             <button
-              onClick={() => setSelectedPeriod("7d")}
+              onClick={() => handlePeriodChange("7d")}
               className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 selectedPeriod === "7d"
                   ? "bg-m3-primary text-m3-on-primary font-black shadow"
@@ -335,7 +391,7 @@ export function ProfitAnalytics({
               7 Days
             </button>
             <button
-              onClick={() => setSelectedPeriod("15d")}
+              onClick={() => handlePeriodChange("15d")}
               className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 selectedPeriod === "15d"
                   ? "bg-m3-primary text-m3-on-primary font-black shadow"
@@ -345,7 +401,7 @@ export function ProfitAnalytics({
               15 Days
             </button>
             <button
-              onClick={() => setSelectedPeriod("30d")}
+              onClick={() => handlePeriodChange("30d")}
               className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 selectedPeriod === "30d"
                   ? "bg-m3-primary text-m3-on-primary font-black shadow"
@@ -355,7 +411,7 @@ export function ProfitAnalytics({
               30 Days
             </button>
             <button
-              onClick={() => setSelectedPeriod("monthly")}
+              onClick={() => handlePeriodChange("monthly")}
               className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 selectedPeriod === "monthly"
                   ? "bg-m3-primary text-m3-on-primary font-black shadow"
@@ -365,7 +421,7 @@ export function ProfitAnalytics({
               6 Months
             </button>
             <button
-              onClick={() => setSelectedPeriod("all-time")}
+              onClick={() => handlePeriodChange("all-time")}
               className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 selectedPeriod === "all-time"
                   ? "bg-m3-primary text-m3-on-primary font-black shadow"
