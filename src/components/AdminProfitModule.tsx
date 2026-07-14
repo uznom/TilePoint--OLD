@@ -677,7 +677,7 @@ export function AdminProfitModule({
       </div>
 
       {/* 1.5 EXPANDED PROFIT AND LOSS (P&L) FINANCIAL STATEMENT */}
-      <div className="android-glass border border-m3-outline-variant/35 rounded-[28px] p-6 bg-m3-surface-low text-m3-on-surface relative overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl">
+      <div id="tilepoint-printable-pl" className="android-glass border border-m3-outline-variant/35 rounded-[28px] p-6 bg-m3-surface-low text-m3-on-surface relative overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl">
         <div className="absolute right-0 top-0 translate-x-16 -translate-y-16 h-48 w-48 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
         <div className="absolute left-0 bottom-0 -translate-x-16 translate-y-16 h-48 w-48 bg-m3-primary/5 rounded-full blur-3xl pointer-events-none" />
 

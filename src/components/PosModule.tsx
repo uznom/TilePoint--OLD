@@ -2718,7 +2718,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
       {/* MODAL: Paper Receipt slip */}
       <AnimatePresence>
         {showReceiptModal && activeReceipt && (
-          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 overflow-y-auto flex items-start justify-center z-50 p-4 md:items-center">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -2750,7 +2750,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
                 transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
-                className="p-4 bg-m3-surface-lowest border border-dashed border-m3-outline-variant/40 rounded-2xl text-[11px] leading-relaxed space-y-3 select-none text-m3-on-surface text-left overflow-hidden shadow-inner bir-receipt-container"
+                className="p-4 bg-m3-surface-lowest border border-dashed border-m3-outline-variant/40 rounded-2xl text-[11px] leading-relaxed space-y-3 select-none text-m3-on-surface text-left max-h-[48vh] overflow-y-auto shadow-inner bir-receipt-container scrollbar-thin"
               >
                 <div className="text-center font-bold tracking-tight border-b border-dashed border-m3-outline-variant/30 pb-3 flex flex-col items-center justify-center space-y-1">
                   {receiptBranch?.storeLogo ? (

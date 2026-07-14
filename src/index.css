@@ -1308,6 +1308,9 @@ html.accessibility-no-animation table tbody tr:hover td {
     box-shadow: none !important;
     background: #ffffff !important;
     color: #000000 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
   /* Robust isolation: if bir-receipt-container exists on screen, hide all other DOM elements completely */
@@ -1331,6 +1334,84 @@ html.accessibility-no-animation table tbody tr:hover td {
     box-shadow: none !important;
     background: #ffffff !important;
     color: #000000 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  /* Robust isolation: if bir-report-container exists on screen, hide all other DOM elements completely */
+  body:has(.bir-report-container) * {
+    visibility: hidden !important;
+  }
+  body:has(.bir-report-container) .bir-report-container,
+  body:has(.bir-report-container) .bir-report-container * {
+    visibility: visible !important;
+  }
+  body:has(.bir-report-container) .bir-report-container {
+    visibility: visible !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Robust isolation: if tilepoint-printable-pl exists on screen, hide all other DOM elements completely */
+  body:has(#tilepoint-printable-pl) * {
+    visibility: hidden !important;
+  }
+  body:has(#tilepoint-printable-pl) #tilepoint-printable-pl,
+  body:has(#tilepoint-printable-pl) #tilepoint-printable-pl * {
+    visibility: visible !important;
+  }
+  body:has(#tilepoint-printable-pl) #tilepoint-printable-pl {
+    visibility: visible !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 30px !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Robust isolation: if tilepoint-printable-handbook exists on screen, hide all other DOM elements completely */
+  body:has(#tilepoint-printable-handbook) * {
+    visibility: hidden !important;
+  }
+  body:has(#tilepoint-printable-handbook) #tilepoint-printable-handbook,
+  body:has(#tilepoint-printable-handbook) #tilepoint-printable-handbook * {
+    visibility: visible !important;
+  }
+  body:has(#tilepoint-printable-handbook) #tilepoint-printable-handbook {
+    visibility: visible !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 30px !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
   table {

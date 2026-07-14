@@ -502,11 +502,11 @@ export default function AtposExtraModules({
       </div>
 
       {printReceiptData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center bg-black/60 backdrop-blur-sm p-4 md:items-center">
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="w-full max-w-sm bg-white text-zinc-900 rounded-2xl shadow-2xl p-5 font-mono text-xs border border-zinc-200 relative bir-receipt-container"
+            className="w-full max-w-sm bg-white text-zinc-900 rounded-2xl shadow-2xl p-5 font-mono text-xs border border-zinc-200 relative max-h-[85vh] overflow-y-auto bir-receipt-container scrollbar-thin"
           >
             <div className="text-center pb-3 border-b-2 border-dashed border-zinc-300">
               <h3 className="font-extrabold text-sm tracking-wide">

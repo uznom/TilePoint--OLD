@@ -2802,6 +2802,7 @@ startxref
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
+            id="tilepoint-printable-handbook"
             className="relative w-full max-w-4xl rounded-[32px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-5 max-h-[90vh] overflow-hidden flex flex-col"
           >
             {/* Header Block */}
