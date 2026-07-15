@@ -228,14 +228,6 @@ export const IdleScreen: React.FC = () => {
             className="flex items-center justify-between w-full"
           >
             <div className="flex items-center gap-3">
-              <div className="h-2.5 w-2.5 rounded-full bg-m3-primary animate-pulse" />
-              <div className="text-[10px] font-black uppercase tracking-widest text-[var(--m3-on-surface-variant)] font-mono">
-                {currentUser?.fullName ? `${currentUser.fullName} @ Terminal Session` : 'Terminal Operating Mode'}
-              </div>
-            </div>
-            
-            <div className="text-[9.5px] font-bold text-[var(--m3-on-surface-variant)] font-mono border border-m3-outline-variant/20 px-2.5 py-1 rounded-full bg-m3-surface/10 backdrop-blur-md">
-              Tap any key or move mouse to wake
             </div>
           </motion.div>
 
@@ -257,7 +249,7 @@ export const IdleScreen: React.FC = () => {
                 id="idle-screen-adaptive-clock"
                 className="animate-roboto-flex text-[11vw] font-black leading-none text-[var(--m3-on-surface)] select-none tracking-tighter whitespace-nowrap flex items-baseline justify-center gap-4"
                 style={{
-                  fontFamily: "'Roboto Flex', var(--font-sans)",
+                  fontFamily: "'Roboto Flex Variable', 'Roboto Flex', var(--font-sans)",
                 }}
               >
                 <span>{formatTimeParts(time).timeStr}</span>
@@ -271,28 +263,12 @@ export const IdleScreen: React.FC = () => {
                 <p className="text-sm md:text-md font-extrabold uppercase tracking-widest text-[var(--m3-primary)]">
                   {formatDate(time)}
                 </p>
-                <p className="text-[10.5px] font-mono text-[var(--m3-on-surface-variant)] uppercase tracking-wider">
-                  Cooperative Ledger Registers • Branch ASSIGNMENT: {currentUser?.branchAssignmentId || 'HQ'}
+                <p className="text-[11px] font-mono text-[var(--m3-on-surface-variant)] lowercase tracking-wider mt-1">
+                  {currentUser?.username || 'user'} @ terminal session
                 </p>
               </div>
             </motion.div>
           </div>
-
-          {/* Bottom Diagnostics / Corporate Signboard */}
-          <motion.div
-            initial={{ opacity: 0, y: 25 }}
-            animate={{ opacity: isDismissing ? 0 : 0.6, y: isDismissing ? 20 : 0 }}
-            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.35 }}
-            className="flex flex-col md:flex-row justify-between items-center text-center md:text-left gap-4 text-[9.5px] font-mono text-[var(--m3-on-surface-variant)]"
-          >
-            <div>
-              <p>Security Level: Shield-Enforced • Local server ledger synchronized</p>
-            </div>
-            <div className="text-center md:text-right">
-              <p>Active System Mode: {currentUser?.role} Account Access</p>
-              <p>Hardware Local Storage Cache: Secured</p>
-            </div>
-          </motion.div>
         </div>
       </motion.div>
       )}

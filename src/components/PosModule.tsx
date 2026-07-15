@@ -1326,15 +1326,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
                       Yard Staff Transactions HOLD Queue ({parkedSales.length})
                     </span>
                   </div>
-                  {syncStatus?.[currentUser?.branchAssignmentId || "B1"] === "Syncing" ? (
+                  {syncStatus?.[currentUser?.branchAssignmentId || "B1"] === "Syncing" && (
                     <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-400 border border-amber-500/25 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full animate-pulse">
                       <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping"></span>
                       Syncing
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
-                      Live
                     </span>
                   )}
                 </h3>
@@ -1405,7 +1400,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                   </span>
                   <div className="flex items-center gap-2">
                     <span className="text-[9px] bg-m3-primary/10 text-m3-primary px-2 py-0.5 rounded-full font-black uppercase tracking-wider font-mono">
-                      Hotkeys Active
+                      Active Hotkeys
                     </span>
                     {shortcutsCollapsed ? (
                       <ChevronDown className="h-4 w-4 text-m3-primary transition-transform duration-200" />
@@ -1487,15 +1482,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
                       <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest flex items-center gap-2">
                         <ShoppingCart className="h-4 w-4" />
                         <span>Active Order list of materials</span>
-                        {syncStatus?.[currentUser?.branchAssignmentId || "B1"] === "Syncing" ? (
+                        {syncStatus?.[currentUser?.branchAssignmentId || "B1"] === "Syncing" && (
                           <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-400 border border-amber-500/25 text-[9px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded-full animate-pulse ml-1.5">
                             <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping"></span>
                             Syncing
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-[9px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded-full ml-1.5">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
-                            Live
                           </span>
                         )}
                       </h3>
@@ -2755,7 +2745,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
                 transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
-                className="p-4 bg-m3-surface-lowest border border-dashed border-m3-outline-variant/40 rounded-2xl text-[11px] leading-relaxed space-y-3 select-none text-m3-on-surface text-left max-h-[48vh] overflow-y-auto shadow-inner bir-receipt-container scrollbar-thin"
+                className="px-0 py-4 bg-m3-surface-lowest border border-dashed border-m3-outline-variant/40 rounded-2xl text-[11px] leading-relaxed space-y-3 select-none text-m3-on-surface text-left max-h-[48vh] overflow-y-auto shadow-inner bir-receipt-container scrollbar-thin"
               >
                 <div className="text-center font-bold tracking-tight border-b border-dashed border-m3-outline-variant/30 pb-3 flex flex-col items-center justify-center space-y-1">
                   {receiptBranch?.storeLogo ? (
@@ -2768,14 +2758,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
                       />
                     </div>
                   ) : (
-                    <div className="h-7 w-7 rounded-full bg-m3-primary/10 text-m3-primary flex items-center justify-center mb-0.5 border border-m3-primary/15">
-                      <Building2 className="h-4 w-4" />
-                    </div>
+                    <h4 className="text-xs font-black text-m3-primary tracking-widest font-mono uppercase mb-0.5">
+                      {receiptBranch?.name || "EMMAN TILE CENTER"}
+                    </h4>
                   )}
-                  
-                  <h4 className="text-xs font-black text-m3-primary tracking-widest font-mono uppercase">
-                    {receiptBranch?.name || "EMMAN TILE CENTER"}
-                  </h4>
                   
                   <div className="text-[9px] text-m3-on-surface-variant font-extrabold font-mono uppercase tracking-wider">
                     Branch ID: {receiptBranch?.id || "ETC_DIPOLOG MAIN"}
@@ -2786,7 +2772,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                   </div>
                   
                   <div className="text-[8px] text-m3-on-surface-variant/80 mt-0.5 font-mono">
-                    Contact: {receiptBranch?.phone || "0000"} • TIN 000-111-222
+                    Contact: {receiptBranch?.phone || "0000"} • TIN {receiptBranch?.tin || "000-111-222"}
                   </div>
                 </div>
 
@@ -2909,6 +2895,50 @@ export const PosModule: React.FC<PosModuleProps> = ({
                       </div>
                     </>
                   )}
+                </div>
+
+                {/* Receipt Custom Marketing, Promotion, and QR Engagement Section */}
+                {(receiptBranch?.receiptFacebook || receiptBranch?.receiptPromoText || receiptBranch?.receiptQrBase64) && (
+                  <div className="border-t border-dashed border-m3-outline-variant/40 pt-3 mt-3 space-y-3.5">
+                    {receiptBranch.receiptFacebook && (
+                      <div className="text-center font-mono text-[8px] text-m3-on-surface-variant flex flex-col items-center justify-center space-y-0.5">
+                        <span className="font-extrabold uppercase text-m3-primary text-[8.5px] tracking-wide">Follow us on Facebook</span>
+                        <span className="font-bold text-m3-on-surface select-all">{receiptBranch.receiptFacebook}</span>
+                      </div>
+                    )}
+
+                    {receiptBranch.receiptPromoText && (
+                      <div className="text-center font-mono text-[8.5px] text-m3-on-surface-variant flex flex-col items-center justify-center space-y-0.5 px-2 bg-m3-surface-low/30 py-1 rounded">
+                        <span className="font-extrabold uppercase text-amber-500 text-[8.5px] tracking-wide">Special Offer / Promo</span>
+                        <p className="leading-snug text-center font-black text-m3-on-surface">{receiptBranch.receiptPromoText}</p>
+                      </div>
+                    )}
+
+                    {receiptBranch.receiptQrBase64 && (
+                      <div className="flex flex-col items-center justify-center space-y-1.5 pt-1">
+                        <span className="text-[7.5px] uppercase font-mono font-extrabold text-m3-on-surface-variant tracking-wider">Scan to Answer Survey & Feedback</span>
+                        <div className="h-24 w-24 border-2 border-black p-1 bg-white rounded flex items-center justify-center">
+                          <img
+                            src={receiptBranch.receiptQrBase64}
+                            alt="Survey QR Code"
+                            className="h-full w-full object-contain filter grayscale"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="text-center font-mono text-[7px] text-m3-on-surface-variant/70 uppercase tracking-widest pt-3 border-t border-dotted border-m3-outline-variant/30 mt-3.5">
+                  {receiptBranch?.receiptThankYou ? (
+                    <span className="font-black text-m3-on-surface text-[8px] tracking-tight block mb-1 normal-case font-mono">
+                      {receiptBranch.receiptThankYou}
+                    </span>
+                  ) : (
+                    `Thank you for shopping at ${receiptBranch?.name || "Emman Tile Center"}!`
+                  )}
+                  <div className="mt-1 lowercase font-sans text-[7.5px] italic text-zinc-400">This serves as an official customer transaction acknowledgment.</div>
                 </div>
               </motion.div>
 

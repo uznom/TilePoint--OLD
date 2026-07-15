@@ -12,8 +12,10 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource-variable/roboto-flex": "^5.2.8",
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@fontsource/plus-jakarta-sans": "^5.2.8",
+    "@fontsource/roboto-flex": "^5.2.8",
     "@google/genai": "^2.4.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",

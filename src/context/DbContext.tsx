@@ -6339,7 +6339,70 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const importProducts = (imported: Product[], branchMapping?: Record<string, string>) => {
     try {
-      const sanitized = imported.map((p, i) => {
+      const activeProducts = products.filter((prod) => !prod.isDeleted);
+      const uniqueImported: Product[] = [];
+      const blockedDuplicates: string[] = [];
+      const seenKeysInImport = new Set<string>();
+
+      imported.forEach((p, i) => {
+        const barcode =
+          sanitizeInputText(p.barcode) || `BAR-${Date.now()}-${i}`;
+        const productCode =
+          sanitizeInputText(p.productCode) ||
+          barcode ||
+          `TL-IMP-${Date.now()}-${i}`;
+        const pName =
+          sanitizeInputText(p.productName) || "Unnamed Imported Product";
+
+        const normCode = productCode.toLowerCase().trim();
+        const normName = pName.toLowerCase().trim();
+        const normBarcode = barcode ? barcode.toLowerCase().trim() : "";
+
+        // 1. Check if it already exists in the active database to prevent overwriting/duplicating
+        const isDuplicateInDb = activeProducts.some(
+          (prod) =>
+            prod.productCode.toLowerCase().trim() === normCode ||
+            (prod.barcode && normBarcode && prod.barcode.toLowerCase().trim() === normBarcode) ||
+            prod.productName.toLowerCase().trim() === normName
+        );
+
+        if (isDuplicateInDb) {
+          blockedDuplicates.push(pName);
+          return; // Strictly block/skip to protect existing product stock levels
+        }
+
+        // 2. Check if it already duplicates within this imported dataset
+        let isDuplicateInImport = false;
+        for (const seenKey of seenKeysInImport) {
+          const [sCode, sName, sBarcode] = seenKey.split("||");
+          if (
+            sCode === normCode ||
+            (normBarcode && sBarcode && sBarcode === normBarcode) ||
+            sName === normName
+          ) {
+            isDuplicateInImport = true;
+            break;
+          }
+        }
+
+        if (isDuplicateInImport) {
+          blockedDuplicates.push(`${pName} (duplicate in file)`);
+          return; // Strictly block/skip subsequent duplicated rows
+        }
+
+        seenKeysInImport.add(`${normCode}||${normName}||${normBarcode}`);
+        uniqueImported.push(p);
+      });
+
+      if (uniqueImported.length === 0) {
+        return {
+          success: false,
+          count: 0,
+          error: `All ${imported.length} product entries were blocked because they already exist in your active inventory catalog. Duplicate overrides are prevented to secure your current stock counts.`
+        };
+      }
+
+      const sanitized = uniqueImported.map((p, i) => {
         const barcode =
           sanitizeInputText(p.barcode) || `BAR-${Date.now()}-${i}`;
         const productCode =
@@ -6372,16 +6435,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
           sanitizeInputText(p.sku) ||
           (barcode ? `SKU-${barcode}` : `SKU-IMP-${Date.now()}-${i}`);
 
-        // Check if there is an existing product in products state to match IDs and avoid duplicates
-        const existingProduct = products.find(
-          (prod) =>
-            !prod.isDeleted &&
-            (prod.productCode.toLowerCase().trim() === productCode.toLowerCase().trim() ||
-              (prod.barcode && barcode && prod.barcode.toLowerCase().trim() === barcode.toLowerCase().trim()) ||
-              prod.productName.toLowerCase().trim() === pName.toLowerCase().trim())
-        );
-
-        const finalId = p.id || existingProduct?.id || `P-IMPORT-${Date.now()}-${i}`;
+        const finalId = p.id || `P-IMPORT-${Date.now()}-${i}`;
 
         return {
           ...p,
@@ -6482,9 +6536,13 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         return updated;
       });
 
+      const blockedMsg = blockedDuplicates.length > 0 
+        ? ` (${blockedDuplicates.length} duplicate entries blocked)`
+        : "";
+
       addAuditLog(
         "PRODUCT_BULK_IMPORT",
-        `Bulk-imported ${sanitized.length} products successfully`,
+        `Bulk-imported ${sanitized.length} products successfully${blockedMsg}`,
         "Products",
         "BULK",
       );

@@ -214,24 +214,24 @@ export const SetupModule: React.FC = () => {
       setTerminalLogs([...logHistory]);
     };
 
-    addLog("Initializing local ledger for TilePoint ERP OS...", "info");
+    addLog("Initializing database for TilePoint...", "info");
     setInstallProgress(15);
     await new Promise((r) => setTimeout(r, 200));
 
-    addLog("✔ Local transaction journal bound successfully.", "success");
-    addLog("Allocating application records...", "info");
+    addLog("✔ Database established successfully.", "success");
+    addLog("Configuring database records...", "info");
     setInstallProgress(30);
     await new Promise((r) => setTimeout(r, 200));
 
     addLog(
-      "Designing record structures for Products, Sales, Suppliers and Orders...",
+      "Creating tables for Products, Sales, Suppliers and Orders...",
       "info",
     );
     setInstallProgress(45);
     await new Promise((r) => setTimeout(r, 200));
 
     addLog(
-      "✔ Application records structures instantiated in local storage.",
+      "✔ Database tables created.",
       "success",
     );
     addLog(`Creating administrator profile [${username}]...`, "info");
@@ -240,11 +240,11 @@ export const SetupModule: React.FC = () => {
     const salt = username.trim() + "_salt_tok";
     const hashed = await createSaltedHash(password, salt, 2500);
     const token = formatHashToken(salt, hashed, 2500);
-    addLog(`✔ Administrator login token generated successfully.`, "success");
+    addLog(`✔ Administrator credentials configured successfully.`, "success");
     setInstallProgress(75);
     await new Promise((r) => setTimeout(r, 200));
 
-    addLog(`Instantiating main headquarters: [${branchName}]`, "info");
+    addLog(`Configuring headquarters: [${branchName}]`, "info");
     setInstallProgress(85);
 
     try {
@@ -295,7 +295,7 @@ export const SetupModule: React.FC = () => {
       };
 
       addLog(
-        "Writing system config fields directly to persistent back-end storage...",
+        "Saving system configurations...",
         "info",
       );
 
@@ -328,17 +328,10 @@ export const SetupModule: React.FC = () => {
       localStorage.setItem("tp_branches", JSON.stringify(initialDbState.tp_branches));
 
       setInstallProgress(95);
-      if (savedToServer) {
-        addLog(
-          "SUCCESS: Installation complete. Persistent back-end storage successfully established.",
-          "success",
-        );
-      } else {
-        addLog(
-          "✔ Offline-First Mode: System workspace successfully established on local secure storage.",
-          "success",
-        );
-      }
+      addLog(
+        "✔ Setup completed successfully.",
+        "success",
+      );
       setInstallProgress(100);
       setInstallSuccess(true);
     } catch (err: any) {
@@ -397,46 +390,46 @@ export const SetupModule: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0e12] text-zinc-100 flex flex-col justify-center items-center py-10 px-4 font-sans select-none relative overflow-hidden">
+    <div className="min-h-screen bg-zinc-50 dark:bg-[#0d0e12] text-zinc-800 dark:text-zinc-100 flex flex-col justify-center items-center py-10 px-4 font-sans select-none relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(245,158,11,0.08),rgba(255,255,255,0))]" />
       <div className="absolute inset-0 opacity-5 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
 
-      <div className="w-full max-w-xl bg-[#14161f] border border-zinc-800/80 rounded-[24px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden relative z-10">
-        <div className="bg-gradient-to-r from-zinc-900 via-[#181a24] to-zinc-900 px-6 py-5 border-b border-zinc-800/60 flex items-center justify-between">
+      <div className="w-full max-w-xl bg-white dark:bg-[#14161f] border border-zinc-200 dark:border-zinc-800/80 rounded-[24px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.1)] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden relative z-10">
+        <div className="bg-gradient-to-r from-zinc-100 via-zinc-50 to-zinc-100 dark:from-zinc-900 dark:via-[#181a24] dark:to-zinc-900 px-6 py-5 border-b border-zinc-200 dark:border-zinc-800/60 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-amber-500/10 rounded-xl border border-amber-500/20 text-amber-500">
               <Cpu className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-sm font-black uppercase tracking-wider text-white">
-                TilePoint Enterprise
+              <h1 className="text-sm font-black uppercase tracking-wider text-zinc-900 dark:text-white">
+                TilePoint Setup
               </h1>
-              <p className="text-[10px] text-zinc-400 font-mono tracking-wide">
-                SECURE BOOTSTRAP UTILITY • V2.2.0
+              <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono tracking-wide">
+                SYSTEM SETUP UTILITY
               </p>
             </div>
           </div>
-          <div className="px-3 py-1 bg-zinc-800/60 rounded-full border border-zinc-700/50">
+          <div className="px-3 py-1 bg-zinc-200/65 dark:bg-zinc-800/60 rounded-full border border-zinc-300 dark:border-zinc-700/50">
             <span className="text-[10px] font-mono text-amber-500 font-extrabold uppercase">
-              Installer State
+              Setup Progress
             </span>
           </div>
         </div>
 
         {!isDeploying && (
-          <div className="grid grid-cols-3 text-center border-b border-zinc-800/30 bg-[#11131c]">
+          <div className="grid grid-cols-3 text-center border-b border-zinc-200 dark:border-zinc-800/30 bg-zinc-50/50 dark:bg-[#11131c]">
             <div
-              className={`py-3 text-[10px] uppercase font-black tracking-wider transition-colors duration-300 border-b-2 ${step === 1 ? "border-amber-500 text-amber-500 bg-amber-500/[0.02]" : "border-transparent text-zinc-500"}`}
+              className={`py-3 text-[10px] uppercase font-black tracking-wider transition-colors duration-300 border-b-2 ${step === 1 ? "border-amber-500 text-amber-500 bg-amber-500/[0.02]" : "border-transparent text-zinc-400 dark:text-zinc-500"}`}
             >
               1. Administrator
             </div>
             <div
-              className={`py-3 text-[10px] uppercase font-black tracking-wider transition-colors duration-300 border-b-2 ${step === 2 ? "border-amber-500 text-amber-500 bg-amber-500/[0.02]" : "border-transparent text-zinc-500"}`}
+              className={`py-3 text-[10px] uppercase font-black tracking-wider transition-colors duration-300 border-b-2 ${step === 2 ? "border-amber-500 text-amber-500 bg-amber-500/[0.02]" : "border-transparent text-zinc-400 dark:text-zinc-500"}`}
             >
               2. HQ Branch
             </div>
             <div
-              className={`py-3 text-[10px] uppercase font-black tracking-wider transition-colors duration-300 border-b-2 ${step === 3 ? "border-amber-500 text-amber-500 bg-amber-500/[0.02]" : "border-transparent text-zinc-500"}`}
+              className={`py-3 text-[10px] uppercase font-black tracking-wider transition-colors duration-300 border-b-2 ${step === 3 ? "border-amber-500 text-amber-500 bg-amber-500/[0.02]" : "border-transparent text-zinc-400 dark:text-zinc-500"}`}
             >
               3. Verification
             </div>
@@ -457,11 +450,11 @@ export const SetupModule: React.FC = () => {
                 {step === 1 && (
                   <div className="space-y-4">
                     <div className="space-y-1">
-                      <h2 className="text-sm font-extrabold text-white flex items-center gap-2">
+                      <h2 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                         <User className="h-4 w-4 text-amber-500" />
                         Create Primary System Administrator
                       </h2>
-                      <p className="text-[11px] text-zinc-400">
+                      <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
                         Create the first account with unrestricted
                         administrative access to branch nodes, databases, and
                         general parameters.
@@ -470,7 +463,7 @@ export const SetupModule: React.FC = () => {
 
                     <div className="space-y-3.5 pt-2">
                       <div className="space-y-1">
-                        <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-400 pl-0.5">
+                        <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 pl-0.5">
                           Admin Full Name
                         </label>
                         <input
@@ -478,13 +471,13 @@ export const SetupModule: React.FC = () => {
                           value={fullName}
                           onChange={(e) => setFullName(e.target.value)}
                           placeholder="e.g. Erica Manaban"
-                          className="w-full bg-[#181a24] border border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/80 transition-colors font-sans"
+                          className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-sans"
                         />
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-400 pl-0.5">
+                          <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 pl-0.5">
                             System Handle / ID
                           </label>
                           <input
@@ -492,11 +485,11 @@ export const SetupModule: React.FC = () => {
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             placeholder="e.g. erica_admin"
-                            className="w-full bg-[#181a24] border border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/80 transition-colors font-mono"
+                            className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-mono"
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-400 pl-0.5">
+                          <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 pl-0.5">
                             Primary Email
                           </label>
                           <input
@@ -504,14 +497,14 @@ export const SetupModule: React.FC = () => {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="e.g. mail@example.com"
-                            className="w-full bg-[#181a24] border border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/80 transition-colors font-sans"
+                            className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-sans"
                           />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-5 gap-4">
                         <div className="col-span-3 space-y-1 relative">
-                          <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-400 pl-0.5">
+                          <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 pl-0.5">
                             System Access Key
                           </label>
                           <div className="relative">
@@ -520,12 +513,12 @@ export const SetupModule: React.FC = () => {
                               value={password}
                               onChange={(e) => setPassword(e.target.value)}
                               placeholder="Min 6 alphanumeric characters"
-                              className="w-full bg-[#181a24] border border-zinc-800/80 rounded-xl pl-3 pr-10 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/80 transition-colors font-sans"
+                              className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl pl-3 pr-10 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-sans"
                             />
                             <button
                               type="button"
                               onClick={() => setShowPassword(!showPassword)}
-                              className="absolute right-3 top-2.5 text-zinc-400 hover:text-white transition-colors"
+                              className="absolute right-3 top-2.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
                             >
                               {showPassword ? (
                                 <EyeOff className="h-4 w-4" />
@@ -537,7 +530,7 @@ export const SetupModule: React.FC = () => {
                         </div>
 
                         <div className="col-span-2 space-y-1">
-                          <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-400 pl-0.5">
+                          <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 pl-0.5">
                             Manager Secret PIN
                           </label>
                           <input
@@ -548,7 +541,7 @@ export const SetupModule: React.FC = () => {
                               setManagerPin(e.target.value.replace(/\D/g, ""))
                             }
                             placeholder="4-Digits"
-                            className="w-full bg-[#181a24] border border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/80 transition-colors text-center font-mono tracking-widest"
+                            className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors text-center font-mono tracking-widest"
                           />
                         </div>
                       </div>
@@ -559,11 +552,11 @@ export const SetupModule: React.FC = () => {
                 {step === 2 && (
                   <div className="space-y-4">
                     <div className="space-y-1">
-                      <h2 className="text-sm font-extrabold text-white flex items-center gap-2">
+                      <h2 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-amber-500" />
                         Configure Enterprise Hub / HQ Branch
                       </h2>
-                      <p className="text-[11px] text-zinc-400">
+                      <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
                         Designate your central warehouse assignment or corporate
                         headquarters branch directory point. This serves as the
                         root branch for inventory catalogs.
@@ -572,7 +565,7 @@ export const SetupModule: React.FC = () => {
 
                     <div className="space-y-3.5 pt-2">
                       <div className="space-y-1">
-                        <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-400 pl-0.5">
+                        <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 pl-0.5">
                           Established Branch ID (System Code)
                         </label>
                         <input
@@ -580,15 +573,15 @@ export const SetupModule: React.FC = () => {
                           value={branchId}
                           onChange={(e) => setBranchId(e.target.value)}
                           placeholder="e.g. B1, ETC_DIPOLOG, ETC_MAIN"
-                          className="w-full bg-[#181a24] border border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/80 transition-colors font-mono"
+                          className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-mono"
                         />
-                        <p className="text-[9px] text-zinc-500 pl-0.5">
+                        <p className="text-[9px] text-zinc-500 dark:text-zinc-400 pl-0.5">
                           Unique system key (alphanumeric/underscore). Defaults to <b>B1</b> if left unchanged.
                         </p>
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-400 pl-0.5">
+                        <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 pl-0.5">
                           Established Branch Name
                         </label>
                         <input
@@ -596,12 +589,12 @@ export const SetupModule: React.FC = () => {
                           value={branchName}
                           onChange={(e) => setBranchName(e.target.value)}
                           placeholder="e.g. Emman Tile Center Main HQ"
-                          className="w-full bg-[#181a24] border border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/80 transition-colors"
+                          className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors"
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-400 pl-0.5">
+                        <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 pl-0.5">
                           Location Structural Address
                         </label>
                         <input
@@ -609,12 +602,12 @@ export const SetupModule: React.FC = () => {
                           value={branchAddress}
                           onChange={(e) => setBranchAddress(e.target.value)}
                           placeholder="Street, City, Province, Postal Code"
-                          className="w-full bg-[#181a24] border border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/80 transition-colors"
+                          className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors"
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-400 pl-0.5">
+                        <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 pl-0.5">
                           Central Directory Hotline
                         </label>
                         <input
@@ -622,16 +615,16 @@ export const SetupModule: React.FC = () => {
                           value={branchPhone}
                           onChange={(e) => setBranchPhone(e.target.value)}
                           placeholder="Mobile or Landline coordinate"
-                          className="w-full bg-[#181a24] border border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/80 transition-colors font-mono"
+                          className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-mono"
                         />
                       </div>
 
                       <div className="space-y-1 pt-1">
-                        <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-400 pl-0.5">
+                        <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 pl-0.5">
                           Store Brand Logo
                         </label>
-                        <div className="flex items-center gap-4 bg-[#181a24] border border-zinc-800/80 rounded-xl p-3">
-                          <div className="relative w-14 h-14 rounded-lg border border-dashed border-zinc-800 bg-[#11131c] flex items-center justify-center overflow-hidden shrink-0">
+                        <div className="flex items-center gap-4 bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl p-3">
+                          <div className="relative w-14 h-14 rounded-lg border border-dashed border-zinc-300 dark:border-zinc-800 bg-zinc-100 dark:bg-[#11131c] flex items-center justify-center overflow-hidden shrink-0">
                             {storeLogo ? (
                               <img
                                 src={storeLogo}
@@ -639,7 +632,7 @@ export const SetupModule: React.FC = () => {
                                 className="w-full h-full object-contain"
                               />
                             ) : (
-                              <Image className="h-5 w-5 text-zinc-600" />
+                              <Image className="h-5 w-5 text-zinc-400 dark:text-zinc-600" />
                             )}
                           </div>
                           <div className="flex-1 text-left space-y-1">
@@ -652,11 +645,11 @@ export const SetupModule: React.FC = () => {
                             />
                             <label
                               htmlFor="logo-upload"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-850 hover:bg-zinc-800 text-[9px] font-extrabold uppercase tracking-widest text-white border border-zinc-800 rounded-lg cursor-pointer transition-all hover:scale-102"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-[9px] font-extrabold uppercase tracking-widest text-zinc-800 dark:text-white border border-zinc-300 dark:border-zinc-850 rounded-lg cursor-pointer transition-all hover:scale-102"
                             >
                               <Upload className="h-3 w-3" /> Select Image
                             </label>
-                            <p className="text-[8px] text-zinc-500 font-sans">
+                            <p className="text-[8px] text-zinc-500 dark:text-zinc-400 font-sans">
                               Supports PNG, JPG, WEBP. Max 1.5MB.
                             </p>
                             {storeLogo && (
@@ -678,27 +671,26 @@ export const SetupModule: React.FC = () => {
                 {step === 3 && (
                   <div className="space-y-4">
                     <div className="space-y-1">
-                      <h2 className="text-sm font-extrabold text-white flex items-center gap-2">
+                      <h2 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                         <Shield className="h-4 w-4 text-amber-500" />
-                        Verify Cryptographic Security Parameters
+                        Verify Setup Details
                       </h2>
-                      <p className="text-[11px] text-zinc-400">
-                        Validate all system properties before bootstrapping the
-                        local secure metadata sandbox and writing files.
+                      <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                        Please review the configuration details below before initiating the setup.
                       </p>
                     </div>
 
-                    <div className="bg-[#11131c] rounded-xl border border-zinc-800/50 overflow-hidden text-xs font-mono">
-                      <div className="bg-zinc-900/60 px-4 py-2 border-b border-zinc-800/50 text-[10px] text-zinc-400 font-extrabold uppercase tracking-widest flex justify-between">
-                        <span>Parameter Directory</span>
-                        <span className="text-emerald-400">Values Sealed</span>
+                    <div className="bg-zinc-50 dark:bg-[#11131c] rounded-xl border border-zinc-200 dark:border-zinc-800/50 overflow-hidden text-xs font-mono">
+                      <div className="bg-zinc-150 dark:bg-zinc-900/60 px-4 py-2 border-b border-zinc-200 dark:border-zinc-800/50 text-[10px] text-zinc-500 dark:text-zinc-400 font-extrabold uppercase tracking-widest flex justify-between">
+                        <span>Setup Summary</span>
+                        <span className="text-emerald-600 dark:text-emerald-400">Confirmed</span>
                       </div>
                       <div className="p-4 space-y-2.5">
                         <div className="flex justify-between items-center text-[11px]">
                           <span className="text-zinc-500 font-sans">
-                            Corporate Admin:
+                            Admin Account:
                           </span>
-                          <span className="text-zinc-200">
+                          <span className="text-zinc-800 dark:text-zinc-200">
                             {fullName} ({username})
                           </span>
                         </div>
@@ -706,22 +698,22 @@ export const SetupModule: React.FC = () => {
                           <span className="text-zinc-500 font-sans">
                             Contact Email:
                           </span>
-                          <span className="text-zinc-200">{email}</span>
+                          <span className="text-zinc-800 dark:text-zinc-200">{email}</span>
                         </div>
                         <div className="flex justify-between items-center text-[11px]">
                           <span className="text-zinc-500 font-sans">
-                            First Assigned Hub:
+                            Assigned Branch:
                           </span>
-                          <span className="text-zinc-200 text-right truncate max-w-[200px]">
+                          <span className="text-zinc-800 dark:text-zinc-200 text-right truncate max-w-[200px]">
                             {branchName}
                           </span>
                         </div>
                         {storeLogo && (
                           <div className="flex justify-between items-center text-[11px]">
                             <span className="text-zinc-500 font-sans">
-                              Corporate Logo:
+                              Branch Logo:
                             </span>
-                            <div className="w-8 h-8 rounded border border-zinc-800 overflow-hidden bg-white/5 flex items-center justify-center p-0.5">
+                            <div className="w-8 h-8 rounded border border-zinc-300 dark:border-zinc-800 overflow-hidden bg-zinc-100 dark:bg-white/5 flex items-center justify-center p-0.5">
                               <img
                                 src={storeLogo}
                                 alt="Logo preview"
@@ -732,33 +724,31 @@ export const SetupModule: React.FC = () => {
                         )}
                         <div className="flex justify-between items-center text-[11px]">
                           <span className="text-zinc-500 font-sans">
-                            System Access Key:
+                            Access Password:
                           </span>
-                          <span className="text-zinc-400">
-                            •••••••• (Secured encryption)
+                          <span className="text-zinc-500 dark:text-zinc-400">
+                            •••••••• (Hashed secure token)
                           </span>
                         </div>
                         <div className="flex justify-between items-center text-[11px]">
                           <span className="text-zinc-500 font-sans">
                             Manager PIN:
                           </span>
-                          <span className="text-zinc-300 font-mono tracking-widest">
+                          <span className="text-zinc-850 dark:text-zinc-300 font-mono tracking-widest">
                             {managerPin}
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="p-3.5 bg-amber-500/5 rounded-xl border border-amber-500/10 flex items-start gap-2.5">
+                    <div className="p-3.5 bg-amber-500/5 rounded-xl border border-amber-500/15 flex items-start gap-2.5">
                       <ShieldCheck className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-[10px] font-black text-amber-500 uppercase tracking-wider mb-0.5">
-                          Secure Password Encryption Enabled
+                        <p className="text-[10px] font-black text-amber-600 dark:text-amber-500 uppercase tracking-wider mb-0.5">
+                          Password Security Active
                         </p>
-                        <p className="text-[9.5px] text-zinc-400 leading-relaxed font-sans">
-                          The system never stores plaintext credentials. All
-                          passwords are converted to secure hashed tokens before
-                          saving to local storage.
+                        <p className="text-[9.5px] text-zinc-600 dark:text-zinc-400 leading-relaxed font-sans">
+                          All passwords are saved as secure hashed tokens before being written to storage for security.
                         </p>
                       </div>
                     </div>
@@ -767,21 +757,21 @@ export const SetupModule: React.FC = () => {
 
                 {errorMsg && (
                   <div className="p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl text-left space-y-1">
-                    <span className="text-[10px] font-black uppercase text-red-400 tracking-wider block">
+                    <span className="text-[10px] font-black uppercase text-red-500 dark:text-red-400 tracking-wider block">
                       ⚠️ Error Verification Check
                     </span>
-                    <p className="text-[10px] font-medium leading-relaxed text-zinc-300">
+                    <p className="text-[10px] font-medium leading-relaxed text-zinc-750 dark:text-zinc-300">
                       {errorMsg}
                     </p>
                   </div>
                 )}
 
-                <div className="flex justify-between gap-4 pt-4 border-t border-zinc-800/40">
+                <div className="flex justify-between gap-4 pt-4 border-t border-zinc-200 dark:border-zinc-800/40">
                   {step > 1 ? (
                     <button
                       type="button"
                       onClick={handleBack}
-                      className="px-4 py-2 border border-zinc-800 hover:border-zinc-700 bg-zinc-900/30 rounded-xl text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-2 transition-all cursor-pointer"
+                      className="px-4 py-2 border border-zinc-300 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-700 bg-zinc-100 dark:bg-zinc-900/30 rounded-xl text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 flex items-center gap-2 transition-all cursor-pointer"
                     >
                       <ArrowLeft className="h-3.5 w-3.5" />
                       Back
@@ -828,11 +818,11 @@ export const SetupModule: React.FC = () => {
                         ? "Installation Completed"
                         : "Setting up your Workspace"}
                     </span>
-                    <span className="font-mono font-bold text-zinc-300">
+                    <span className="font-mono font-bold text-zinc-500 dark:text-zinc-300">
                       {installProgress}%
                     </span>
                   </div>
-                  <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
+                  <div className="w-full h-2 bg-zinc-200 dark:bg-zinc-900 rounded-full overflow-hidden border border-zinc-300 dark:border-zinc-800">
                     <motion.div
                       className="h-full bg-gradient-to-r from-amber-500 to-amber-400"
                       initial={{ width: "0%" }}
@@ -840,7 +830,7 @@ export const SetupModule: React.FC = () => {
                       transition={{ duration: 0.15 }}
                     />
                   </div>
-                  <p className="text-[10.5px] text-zinc-400 leading-normal">
+                  <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400 leading-normal font-sans">
                     {installSuccess
                       ? "Local branch records and ERP ledger environment have been successfully created and secured."
                       : "Configuring records, accounts register, ledger indices, and creating administrative security profiles..."}
@@ -854,7 +844,7 @@ export const SetupModule: React.FC = () => {
                       <span
                         className={
                           log.type === "success"
-                            ? "text-emerald-400 font-extrabold"
+                             ? "text-emerald-400 font-extrabold"
                             : log.type === "warn"
                               ? "text-amber-500"
                               : "text-zinc-300"
@@ -865,9 +855,9 @@ export const SetupModule: React.FC = () => {
                     </div>
                   ))}
                   {!installSuccess && (
-                    <div className="flex items-center gap-2 text-zinc-500 animate-pulse pt-1">
+                    <div className="flex items-center gap-2 text-zinc-500 animate-pulse pt-1 font-mono">
                       <RefreshCw className="h-3.5 w-3.5 animate-spin text-amber-500" />
-                      <span>CONFIGURING SYSTEM REGISTERS...</span>
+                      <span>CONFIGURING SYSTEM...</span>
                     </div>
                   )}
                 </div>
@@ -878,14 +868,13 @@ export const SetupModule: React.FC = () => {
                     animate={{ scale: 1, opacity: 1 }}
                     className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-3 font-sans"
                   >
-                    <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+                    <CheckCircle2 className="h-5 w-5 text-emerald-550 dark:text-emerald-400 shrink-0" />
                     <div>
-                      <p className="text-xs font-black text-emerald-400 uppercase tracking-widest">
-                        Active Installation Completed
+                      <p className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
+                        Setup Completed Successfully
                       </p>
-                      <p className="text-[10px] text-zinc-300 leading-normal">
-                        Branch ledger was created successfully with a secure
-                        supervisor profile.
+                      <p className="text-[10px] text-zinc-700 dark:text-zinc-300 leading-normal">
+                        Your branch and admin profile have been successfully initialized.
                       </p>
                     </div>
                   </motion.div>
@@ -907,10 +896,10 @@ export const SetupModule: React.FC = () => {
         </div>
       </div>
 
-      <div className="mt-8 text-center space-y-1 text-[10px] font-mono text-zinc-500 relative z-10">
-        <p>TILEPOINT ERP OS SYSTEM • ACCOUNT REGISTER SECURE</p>
+      <div className="mt-8 text-center space-y-1 text-[10px] font-mono text-zinc-400 dark:text-zinc-500 relative z-10">
+        <p>TILEPOINT ERP SYSTEM</p>
         <p className="opacity-60">
-          System running on local transaction ledger and offline secure records.
+          System running on clean transaction records.
         </p>
       </div>
     </div>
