@@ -62,6 +62,7 @@ export interface Branch {
   receiptQrBase64?: string;
   receiptThankYou?: string;
   tin?: string;
+  logoSize?: number; // Height of receipt logo in pixels (e.g. 40)
 }
 
 export interface Supplier {

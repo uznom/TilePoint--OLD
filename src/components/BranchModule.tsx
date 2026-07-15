@@ -80,6 +80,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
   const [inlineQrBase64, setInlineQrBase64] = useState('');
   const [inlineTin, setInlineTin] = useState('');
   const [inlineStoreLogo, setInlineStoreLogo] = useState('');
+  const [inlineLogoSize, setInlineLogoSize] = useState(40);
 
   const activeBranchesForReceipt = branches.filter(b => !b.isDeleted);
   const selectedBranchForPreview = branches.find(b => b.id === inlineBranchId);
@@ -99,6 +100,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
       setInlineQrBase64(selectedBranch.receiptQrBase64 || '');
       setInlineTin(selectedBranch.tin || '');
       setInlineStoreLogo(selectedBranch.storeLogo || '');
+      setInlineLogoSize(selectedBranch.logoSize || Number(localStorage.getItem('tilepoint_receipt_logo_size_v1') || '40'));
     }
   }, [inlineBranchId, branches]);
 
@@ -111,7 +113,8 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
       receiptThankYou: inlineThankYou,
       receiptQrBase64: inlineQrBase64,
       tin: inlineTin,
-      storeLogo: inlineStoreLogo
+      storeLogo: inlineStoreLogo,
+      logoSize: inlineLogoSize
     });
     showToast("Receipt settings saved successfully for this branch!");
   };
@@ -238,11 +241,19 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
     }
 
     const trimmedCustomId = customBranchId.trim();
-    if (!isEditMode && trimmedCustomId) {
-      const exists = branches.some(b => b.id.toLowerCase() === trimmedCustomId.toLowerCase());
-      if (exists) {
-        showToast(`Validation Error: A branch with ID "${trimmedCustomId}" already exists.`);
-        return;
+    if (trimmedCustomId) {
+      if (!isEditMode) {
+        const exists = branches.some(b => b.id.toLowerCase() === trimmedCustomId.toLowerCase());
+        if (exists) {
+          showToast(`Validation Error: A branch with ID "${trimmedCustomId}" already exists.`);
+          return;
+        }
+      } else if (trimmedCustomId.toLowerCase() !== editingId.toLowerCase()) {
+        const exists = branches.some(b => b.id.toLowerCase() === trimmedCustomId.toLowerCase());
+        if (exists) {
+          showToast(`Validation Error: A branch with ID "${trimmedCustomId}" already exists.`);
+          return;
+        }
       }
     }
 
@@ -642,18 +653,22 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
                     )}
                   </div>
                   <div className="flex-1 space-y-2">
-                    <p className="text-[10px] text-zinc-400 font-medium">Upload a custom logo to print at the very top of thermal branch receipts.</p>
+                    <p className="text-[10px] text-zinc-400 font-medium">Upload a custom PNG logo to print at the very top of thermal branch receipts. Format must be PNG.</p>
                     <div className="flex gap-2">
                       <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors border border-m3-primary/15 select-none">
                         <Upload className="h-3.5 w-3.5" />
-                        <span>Upload Logo</span>
+                        <span>Upload PNG</span>
                         <input
                           type="file"
-                          accept="image/*"
+                          accept="image/png"
                           className="hidden"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
+                              if (file.type !== "image/png" && !file.name.toLowerCase().endsWith(".png")) {
+                                showToast("Error: Only PNG images (.png) are supported for receipt printing.");
+                                return;
+                              }
                               if (file.size > 250 * 1024) {
                                 showToast("Size Warning: Please upload an image smaller than 250KB.");
                               }
@@ -661,7 +676,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
                               reader.onload = (event) => {
                                 if (event.target?.result) {
                                   setInlineStoreLogo(event.target.result as string);
-                                  showToast("Branch logo loaded successfully!");
+                                  showToast("Branch PNG logo loaded successfully!");
                                 }
                               };
                               reader.readAsDataURL(file);
@@ -682,6 +697,30 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
                         </button>
                       )}
                     </div>
+
+                    {inlineStoreLogo && (
+                      <div className="pt-2.5 border-t border-m3-outline-variant/20 mt-1 space-y-1.5">
+                        <div className="flex justify-between items-center text-[9.5px]">
+                          <span className="font-bold text-zinc-400 uppercase tracking-wider">Logo Height on Receipt</span>
+                          <span className="font-mono font-bold text-m3-primary bg-m3-primary/10 px-1.5 py-0.5 rounded">{inlineLogoSize}px</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[8.5px] text-zinc-500">20px</span>
+                          <input
+                            type="range"
+                            min="20"
+                            max="120"
+                            value={inlineLogoSize}
+                            onChange={(e) => setInlineLogoSize(Number(e.target.value))}
+                            className="flex-1 accent-m3-primary h-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                          />
+                          <span className="text-[8.5px] text-zinc-500">120px</span>
+                        </div>
+                        <p className="text-[8.5px] text-zinc-500 leading-tight">
+                          Height in pixels. Width scales proportionally to fit receipt rolls perfectly.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -775,11 +814,14 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
               <div className="absolute top-0 left-0 right-0 h-1 bg-zinc-200 flex overflow-hidden opacity-40" style={{ backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 2px, #d4d4d8 2px, #d4d4d8 4px)" }}></div>
 
               <div className="pt-2 text-center flex flex-col items-center justify-center space-y-1">
-                {selectedBranchForPreview?.storeLogo ? (
-                  <div className="mb-1 h-8 w-auto flex items-center justify-center">
+                {inlineStoreLogo ? (
+                  <div 
+                    className="mb-1 w-auto flex items-center justify-center"
+                    style={{ height: `${inlineLogoSize}px` }}
+                  >
                     <img
-                      src={selectedBranchForPreview.storeLogo}
-                      alt={`${selectedBranchForPreview.name} Logo`}
+                      src={inlineStoreLogo}
+                      alt="Branch Logo"
                       className="h-full object-contain filter grayscale brightness-90 max-w-[120px]"
                       referrerPolicy="no-referrer"
                     />
@@ -1100,25 +1142,22 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
             {/* Custom Branch ID and Brand Logo fields */}
             <div className="space-y-1 relative">
               <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">
-                Branch ID (System Code) {isEditMode ? "(Read-only)" : ""}
+                Branch ID (System Code)
               </label>
               <input
                 type="text"
-                value={isEditMode ? editingId : customBranchId}
-                onChange={e => !isEditMode && setCustomBranchId(e.target.value)}
-                disabled={isEditMode}
+                required
+                value={customBranchId}
+                onChange={e => setCustomBranchId(e.target.value)}
                 placeholder="e.g. ETC_DIPOLOG MAIN, CHT_SINDANGAN"
-                className={`w-full border-b-2 px-3 py-2 text-xs focus:outline-none transition-colors rounded-t-md ${
-                  isEditMode
-                    ? "bg-m3-surface-lowest/50 text-m3-on-surface-variant border-transparent font-mono"
-                    : "bg-m3-surface-lowest border-m3-outline-variant/60 focus:border-m3-primary text-m3-on-surface"
-                }`}
+                className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono"
               />
-              {!isEditMode && (
-                <p className="text-[9px] text-m3-on-surface-variant italic pl-1">
-                  Leave empty to auto-generate or customize (e.g., <b>ETC_DIPOLOG MAIN</b>)
-                </p>
-              )}
+              <p className="text-[9px] text-m3-on-surface-variant italic pl-1">
+                {isEditMode 
+                  ? "Changing this ID will cascade update all linked employees, stock levels, shifts, sales, and transaction records."
+                  : "Leave empty to auto-generate or customize (e.g., ETC_DIPOLOG MAIN)"
+                }
+              </p>
             </div>
 
             <div className="space-y-1 relative">

@@ -53,6 +53,9 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
   const [taxRate, setTaxRate] = useState<number>(() => {
     return Number(localStorage.getItem('tilepoint_tax_rate_v1') || '12');
   });
+  const [logoSize, setLogoSize] = useState<number>(() => {
+    return Number(localStorage.getItem('tilepoint_receipt_logo_size_v1') || '40');
+  });
   const [managerPin, setManagerPin] = useState<string>('');
   const [resetConfirmation, setResetConfirmation] = useState<string>('');
 
@@ -207,6 +210,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
       setDisableBlurs(localStorage.getItem('tilepoint-disable-blurs') === 'true');
       setDisableInstallPrompt(localStorage.getItem('tilepoint-disable-install-prompt') === 'true');
       setDisableIdleClock(localStorage.getItem('tilepoint-disable-idle-clock') === 'true');
+      setLogoSize(Number(localStorage.getItem('tilepoint_receipt_logo_size_v1') || '40'));
     };
 
     window.addEventListener('tilepoint-theme-updated', handleSync);
@@ -291,7 +295,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
       </div>
 
       {/* SCROLLABLE SETTINGS CONTAINER */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-m3-surface-low/80 border-x border-b border-m3-outline-variant/15 rounded-b-[20px] shadow-sm">
         
         {/* UNAUTHORIZED ROLE BLOCK */}
         {!isAuthorized && (
@@ -730,6 +734,39 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
                     }}
                     className="bg-m3-surface-container border border-m3-outline-variant/35 rounded-xl text-xs font-bold p-2.5 w-full text-center font-mono tracking-widest text-m3-on-surface outline-none focus:border-m3-primary disabled:opacity-65"
                   />
+                </div>
+
+                {/* Receipt Logo Height */}
+                <div className="flex flex-col gap-1.5 bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-left">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono">
+                      Global Receipt Logo Height
+                    </label>
+                    <span className="text-[11px] font-mono font-black text-m3-primary bg-m3-primary/10 px-1.5 py-0.5 rounded">{logoSize}px</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-[9px] text-zinc-500 font-mono">20px</span>
+                    <input
+                      type="range"
+                      min="20"
+                      max="120"
+                      value={logoSize}
+                      disabled={!isAuthorized}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setLogoSize(val);
+                        localStorage.setItem('tilepoint_receipt_logo_size_v1', String(val));
+                        window.dispatchEvent(new Event('tilepoint-theme-updated'));
+                        setSaveSuccess(true);
+                        setTimeout(() => setSaveSuccess(false), 2000);
+                      }}
+                      className="flex-1 accent-m3-primary h-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer disabled:opacity-50"
+                    />
+                    <span className="text-[9px] text-zinc-500 font-mono">120px</span>
+                  </div>
+                  <p className="text-[8.5px] text-m3-on-surface-variant/70 leading-normal font-sans">
+                    System-wide default height in pixels for logos displayed on printed receipt acknowledgement slips.
+                  </p>
                 </div>
               </div>
 

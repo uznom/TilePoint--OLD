@@ -1238,7 +1238,17 @@ function AppContent() {
   const isInventoryCategory = currentCategory?.id === "inventory";
 
   return (
-    <MotionConfig reducedMotion={(disableAnimations || lowPerformanceMode) ? "always" : "never"}>
+    <MotionConfig 
+      reducedMotion={(disableAnimations || lowPerformanceMode) ? "always" : "never"}
+      transition={{
+        type: "spring",
+        stiffness: 300,
+        damping: 30,
+        mass: 0.6,
+        restDelta: 0.001,
+        restSpeed: 0.001
+      }}
+    >
       {/* FIXED: STRETCH-PROOING COMPONENT CORE WITH ABSOLUTE VIEWPORT CONSTRAINTS */}
       <div
         className={`h-screen max-h-screen w-screen overflow-hidden flex flex-col font-sans transition-all duration-300 relative ${

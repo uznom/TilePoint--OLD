@@ -1358,30 +1358,26 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
       ) : activeSubTab === "suppliers" ? (
         /* Manage Suppliers Directory view */
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-2xl flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-m3-primary/10 text-m3-primary">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div className="bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/10 shadow-sm flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-m3-primary/10 text-m3-primary shrink-0">
                 <Building2 className="h-5 w-5" />
               </div>
               <div>
-                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block font-sans">
-                  Active Vendors
-                </span>
-                <span className="text-lg font-black font-mono leading-none">
+                <span className="block text-[8px] font-extrabold text-m3-on-surface-variant/80 uppercase tracking-widest">Active Vendors</span>
+                <div className="text-xl font-black mt-1 text-m3-primary tracking-tight">
                   {suppliers.filter((s) => !s.isDeleted).length} Registered
-                </span>
+                </div>
               </div>
             </div>
 
-            <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-2xl flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-m3-tertiary/10 text-m3-tertiary">
+            <div className="bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/10 shadow-sm flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-m3-tertiary/10 text-m3-tertiary shrink-0">
                 <FileText className="h-5 w-5" />
               </div>
               <div>
-                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block font-sans">
-                  Pending Cargo Orders
-                </span>
-                <span className="text-lg font-black font-mono leading-none">
+                <span className="block text-[8px] font-extrabold text-m3-on-surface-variant/80 uppercase tracking-widest">Pending Cargo Orders</span>
+                <div className="text-xl font-black mt-1 text-m3-tertiary tracking-tight">
                   {
                     purchaseOrders.filter(
                       (po) =>
@@ -1389,19 +1385,17 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                     ).length
                   }{" "}
                   Active POs
-                </span>
+                </div>
               </div>
             </div>
 
-            <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-2xl flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-500">
+            <div className="bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/10 shadow-sm flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-500 shrink-0">
                 <Package className="h-5 w-5" />
               </div>
               <div>
-                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block font-sans">
-                  Manufacturer Brands
-                </span>
-                <span className="text-lg font-black font-mono leading-none">
+                <span className="block text-[8px] font-extrabold text-m3-on-surface-variant/80 uppercase tracking-widest">Manufacturer Brands</span>
+                <div className="text-xl font-black mt-1 text-emerald-600 dark:text-emerald-400 tracking-tight">
                   {
                     new Set(
                       products
@@ -1410,16 +1404,16 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                         .filter(Boolean),
                     ).size
                   }{" "}
-                  Brands cataloged
-                </span>
+                  Brands
+                </div>
               </div>
             </div>
           </div>
 
           <div className="m3-card shadow-sm overflow-x-auto p-0">
-            <table className="w-full text-xs text-left border-collapse table-auto min-w-[900px]">
+            <table className="w-full text-xs text-left border-collapse table-auto min-w-[900px] font-sans">
               <thead>
-                <tr className="border-b border-m3-outline-variant/20 bg-m3-surface/30 text-[10px] uppercase font-bold text-m3-on-surface-variant tracking-wider">
+                <tr className="border-b border-m3-outline-variant/20 bg-m3-surface/30 text-[9px] uppercase font-black text-zinc-400 tracking-wider">
                   <th className="py-3 px-4">Supplier Code</th>
                   <th className="py-3 px-4">Company Name</th>
                   <th className="py-3 px-4">Contact Person</th>
@@ -1429,7 +1423,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                   <th className="py-3 px-4 text-center">Operations</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
+              <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface-variant/90">
                 {suppliers
                   .filter((s) => !s.isDeleted)
                   .map((sup) => (
@@ -1514,30 +1508,26 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
       ) : activeSubTab === "brands" ? (
         /* Manage Brands Directory view */
         <div className="space-y-6 animate-fade-in">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-2xl flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-m3-primary/10 text-m3-primary">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div className="bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/10 shadow-sm flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-m3-primary/10 text-m3-primary shrink-0">
                 <Tag className="h-5 w-5" />
               </div>
               <div>
-                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block font-sans">
-                  Active Brands
-                </span>
-                <span className="text-lg font-black font-mono leading-none">
+                <span className="block text-[8px] font-extrabold text-m3-on-surface-variant/80 uppercase tracking-widest">Active Brands</span>
+                <div className="text-xl font-black mt-1 text-m3-primary tracking-tight">
                   {brands.filter((b) => !b.isDeleted).length} Cataloged
-                </span>
+                </div>
               </div>
             </div>
 
-            <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-2xl flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-m3-tertiary/10 text-m3-tertiary">
+            <div className="bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/10 shadow-sm flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-m3-tertiary/10 text-m3-tertiary shrink-0">
                 <Building2 className="h-5 w-5" />
               </div>
               <div>
-                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block font-sans">
-                  Sourced Vendors
-                </span>
-                <span className="text-lg font-black font-mono leading-none">
+                <span className="block text-[8px] font-extrabold text-m3-on-surface-variant/80 uppercase tracking-widest">Sourced Vendors</span>
+                <div className="text-xl font-black mt-1 text-m3-tertiary tracking-tight">
                   {
                     new Set(
                       brands
@@ -1545,22 +1535,20 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                         .map((b) => b.supplierId),
                     ).size
                   }{" "}
-                  Active Suppliers
-                </span>
+                  Suppliers
+                </div>
               </div>
             </div>
 
-            <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-2xl flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-amber-500/10 text-amber-500">
+            <div className="bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/10 shadow-sm flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-amber-500/10 text-amber-500 shrink-0">
                 <FileText className="h-5 w-5" />
               </div>
               <div>
-                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block font-sans">
-                  Restock Queue Load
-                </span>
-                <span className="text-lg font-black font-mono leading-none">
-                  {poCart.length} Items pending
-                </span>
+                <span className="block text-[8px] font-extrabold text-m3-on-surface-variant/80 uppercase tracking-widest">Restock Queue Load</span>
+                <div className="text-xl font-black mt-1 text-amber-600 dark:text-amber-400 tracking-tight">
+                  {poCart.length} Pending SKUs
+                </div>
               </div>
             </div>
           </div>
@@ -1620,9 +1608,9 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
           </div>
 
           <div className="m3-card shadow-sm overflow-x-auto p-0">
-            <table className="w-full text-xs text-left border-collapse table-auto min-w-[800px]">
+            <table className="w-full text-xs text-left border-collapse table-auto min-w-[800px] font-sans">
               <thead>
-                <tr className="border-b border-m3-outline-variant/20 bg-m3-surface/30 text-[10px] uppercase font-bold text-m3-on-surface-variant tracking-wider">
+                <tr className="border-b border-m3-outline-variant/20 bg-m3-surface/30 text-[9px] uppercase font-black text-zinc-400 tracking-wider">
                   <th className="py-3 px-4">Brand Identifier</th>
                   <th className="py-3 px-4">Brand Logo / Name</th>
                   <th className="py-3 px-4">
@@ -1633,7 +1621,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
                   <th className="py-3 px-4 text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
+              <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface-variant/90">
                 {brands
                   .filter((b) => !b.isDeleted)
                   .map((b) => {
@@ -1713,421 +1701,404 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
       ) : (
         /* Automated PO Consolidation Desk & Restock Queue */
         <div className="space-y-6">
-          <div className="m3-card border border-m3-outline/20 bg-m3-surface-low/80 rounded-2xl p-6 space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-m3-outline-variant/25 pb-4">
-              <div>
-                <h3 className="text-base font-black text-m3-on-surface flex items-center gap-1.5">
-                  <Settings2 className="h-5 w-5 text-m3-primary" />
-                  <span>
-                    Automated PO Consolidation Desk &amp; Restock Queue
-                  </span>
-                </h3>
-                <p className="text-xs text-m3-on-surface-variant">
-                  Products requiring restocking are consolidated here. Items
-                  under different brands but supplied by the same company will
-                  be merged in a single PO!
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <label className="text-[11px] font-bold text-m3-on-surface-variant uppercase">
-                  Receiving Branch:
-                </label>
-                <select
-                  value={selectedConsolidationBranchId}
-                  onChange={(e) =>
-                    setSelectedConsolidationBranchId(e.target.value)
-                  }
-                  className="bg-m3-surface border border-m3-outline-variant/50 rounded-lg px-3 py-1.5 text-xs font-bold text-m3-on-surface"
-                >
-                  {branches
-                    .filter((b) => !b.isDeleted)
-                    .map((branch) => (
-                      <option key={branch.id} value={branch.id}>
-                        {branch.name} ({branch.address})
-                      </option>
-                    ))}
-                </select>
-              </div>
+          {/* Top Info Header & Quick Controls Header */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-m3-surface-low/50 p-4.5 rounded-xl border border-m3-outline-variant/15 text-left">
+            <div>
+              <h3 className="text-sm font-black text-m3-primary uppercase font-mono tracking-widest flex items-center gap-1.5">
+                <Settings2 className="h-4.5 w-4.5 text-m3-primary" />
+                <span>Automated PO Consolidation Desk</span>
+              </h3>
+              <p className="text-[11px] text-m3-on-surface-variant/95 leading-relaxed mt-1">
+                Products requiring restocking are consolidated here. Items under different brands but supplied by the same company will be automatically merged into a single Purchase Order.
+              </p>
             </div>
 
-            {/* Quick manual item adder to Restock Queue */}
-            <div className="bg-m3-surface/30 p-3.5 rounded-xl border border-m3-outline-variant/10 flex flex-wrap gap-3 items-end text-left">
-              <div className="space-y-1 relative w-80">
-                <label className="text-[10px] font-bold text-m3-primary uppercase pl-0.5">
-                  Quick-Add catalog item to consolidation:
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    id="quick-add-product-select-search"
-                    placeholder="🔍 Search product or brand name..."
-                    value={procurementProductSearch}
-                    onFocus={() => setShowProcurementProductDropdown(true)}
-                    onChange={(e) => {
-                      setProcurementProductSearch(e.target.value);
-                      setShowProcurementProductDropdown(true);
-                    }}
-                    className="w-full bg-m3-surface border border-m3-outline-variant/60 rounded-xl px-3.5 py-2 text-xs font-bold text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary transition-all placeholder-zinc-500"
-                  />
-                  {procurementProductSearch && (
-                    <button
-                      type="button"
-                      onClick={() => setProcurementProductSearch("")}
-                      className="absolute right-3 top-2 text-zinc-400 hover:text-rose-500 text-xs font-black cursor-pointer"
-                    >
-                      ✗
-                    </button>
-                  )}
-                </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-wider">
+                Receiving Branch:
+              </label>
+              <select
+                value={selectedConsolidationBranchId}
+                onChange={(e) =>
+                  setSelectedConsolidationBranchId(e.target.value)
+                }
+                className="bg-m3-surface-lowest border border-m3-outline-variant/35 rounded-xl px-3 py-2 text-xs font-bold text-m3-on-surface focus:outline-none [color-scheme:dark]"
+              >
+                {branches
+                  .filter((b) => !b.isDeleted)
+                  .map((branch) => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
 
-                {showProcurementProductDropdown && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setShowProcurementProductDropdown(false)}
-                    />
-                    <div className="absolute left-0 right-0 mt-1.5 bg-m3-surface-low border border-m3-outline-variant/50 rounded-xl shadow-2xl z-50 max-h-56 overflow-y-auto divide-y divide-m3-outline-variant/15 text-xs text-left">
-                      {(() => {
-                        let firstSupplierId: string | null = null;
-                        if (poCart.length > 0) {
-                          const firstItem = poCart[0];
-                          const firstProd = products.find(
-                            (p) => p.id === firstItem.productId,
-                          );
-                          if (firstProd) {
-                            const brandMatch = brands.find(
-                              (b) =>
-                                b.name.toLowerCase().trim() ===
-                                  firstProd.brand?.toLowerCase().trim() &&
-                                !b.isDeleted,
-                            );
-                            firstSupplierId = brandMatch
-                              ? brandMatch.supplierId
-                              : "S1";
-                          }
-                        }
-
-                        const pool = products
-                          .filter((p) => !p.isDeleted)
-                          .filter((p) => {
-                            if (!firstSupplierId) return true;
-                            const brandMatch = brands.find(
-                              (b) =>
-                                b.name.toLowerCase().trim() ===
-                                  p.brand?.toLowerCase().trim() && !b.isDeleted,
-                            );
-                            const prodSupplierId = brandMatch
-                              ? brandMatch.supplierId
-                              : "S1";
-                            return prodSupplierId === firstSupplierId;
-                          })
-                          .filter((p) => {
-                            if (!procurementProductSearch.trim()) return true;
-                            const term = procurementProductSearch.toLowerCase();
-                            return (
-                              p.productName.toLowerCase().includes(term) ||
-                              (p.brand &&
-                                p.brand.toLowerCase().includes(term)) ||
-                              (p.sku && p.sku.toLowerCase().includes(term))
-                            );
-                          });
-
-                        if (pool.length === 0) {
-                          return (
-                            <div className="p-3 text-zinc-500 italic text-center">
-                              No compatible products found
-                            </div>
-                          );
-                        }
-
-                        return pool.map((p) => (
-                          <div
-                            key={p.id}
-                            onClick={() => {
-                              const exists = poCart.some(
-                                (item) => item.productId === p.id,
-                              );
-                              if (exists) {
-                                showToast("Item already queued.");
-                              } else {
-                                const updated = [
-                                  ...poCart,
-                                  { productId: p.id, quantity: 50 },
-                                ];
-                                syncPoCart(updated);
-                                showToast(
-                                  `Added ${p.productName} to restock queue.`,
-                                );
-                              }
-                              setProcurementProductSearch("");
-                              setShowProcurementProductDropdown(false);
-                            }}
-                            className="p-2.5 hover:bg-m3-primary/10 cursor-pointer flex justify-between items-center transition-colors text-left font-bold"
-                          >
-                            <div className="space-y-0.5">
-                              <div className="text-m3-on-surface text-xs font-extrabold">
-                                {p.productName}
-                              </div>
-                              <div className="text-[10px] text-zinc-400 font-mono font-medium">
-                                Brand: {p.brand || "No Brand"} • Stock:{" "}
-                                {p.stockQuantity}
-                              </div>
-                            </div>
-                            <span className="text-[10px] bg-m3-primary/15 text-m3-primary px-2 py-0.5 rounded-full font-mono">
-                              ₱{p.costPrice.toFixed(2)}
-                            </span>
-                          </div>
-                        ));
-                      })()}
-                    </div>
-                  </>
+          {/* Quick manual item adder to Restock Queue Controls Panel */}
+          <div className="bg-m3-surface-low/50 p-4 rounded-xl border border-m3-outline-variant/15 flex flex-wrap gap-4 items-end text-left">
+            <div className="space-y-1 relative w-80">
+              <label className="text-[9px] font-black text-m3-primary uppercase pl-0.5 tracking-wider">
+                Quick-Add Catalog Item:
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  id="quick-add-product-select-search"
+                  placeholder="🔍 Search product or brand name..."
+                  value={procurementProductSearch}
+                  onFocus={() => setShowProcurementProductDropdown(true)}
+                  onChange={(e) => {
+                    setProcurementProductSearch(e.target.value);
+                    setShowProcurementProductDropdown(true);
+                  }}
+                  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/35 rounded-xl px-3.5 py-2 text-xs font-bold text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary transition-all placeholder-zinc-500"
+                />
+                {procurementProductSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setProcurementProductSearch("")}
+                    className="absolute right-3 top-2.5 text-zinc-400 hover:text-rose-500 text-xs font-black cursor-pointer"
+                  >
+                    ✗
+                  </button>
                 )}
               </div>
 
-              {/* ALIGNMENT ELEMENT DROP BOX INPUT SETTINGS FOR AUTO CONSOLIDATIONS */}
-              <div className="space-y-1 text-left w-48">
-                <label className="text-[10px] font-bold text-m3-primary uppercase pl-0.5">
-                  Supplier Payment Terms:
-                </label>
-                <select
-                  value={paymentTerm}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setPaymentTerm(val === "CUSTOM" ? "CUSTOM" : Number(val));
-                  }}
-                  className="w-full bg-m3-surface border border-m3-outline-variant/60 rounded-xl px-2.5 py-1.5 text-xs font-bold text-m3-primary focus:outline-none focus:border-m3-primary transition-colors cursor-pointer"
-                >
-                  <option value={0}>Cash On Delivery (COD)</option>
-                  <option value={15}>15 Days (Net 15)</option>
-                  <option value={30}>30 Days (Net 30)</option>
-                  <option value={45}>45 Days (Net 45)</option>
-                  <option value={60}>60 Days (Net 60)</option>
-                  <option value={90}>90 Days (Net 90)</option>
-                  <option value="CUSTOM">Custom Date</option>
-                </select>
-              </div>
-
-              <div className="space-y-1 text-left w-48">
-                <label className="text-[10px] font-bold text-m3-primary uppercase pl-0.5">
-                  Payout Deadline:
-                </label>
-                <input
-                  type="date"
-                  value={payoutDueDate}
-                  disabled={paymentTerm !== "CUSTOM"}
-                  onChange={(e) => setPayoutDueDate(e.target.value)}
-                  className="w-full bg-m3-surface border border-m3-outline-variant/60 rounded-xl px-2.5 py-1 text-xs font-bold font-mono text-m3-on-surface focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                />
-              </div>
-            </div>
-
-            {poCart.length > 0 ? (
-              <div className="space-y-5 animate-fade-in">
-                {/* Cart compiling list */}
-                <div className="overflow-x-auto border border-m3-outline-variant/15 rounded-xl">
-                  <table className="w-full text-xs text-left border-collapse">
-                    <thead>
-                      <tr className="bg-m3-surface-lowest text-[10px] text-zinc-400 font-bold uppercase border-b border-m3-outline-variant/20">
-                        <th className="py-2.5 px-3">Product Name</th>
-                        <th className="py-2.5 px-3">Brand</th>
-                        <th className="py-2.5 px-3">Brand Supplier Partner</th>
-                        <th className="py-2.5 px-3 text-center">
-                          Remaining Stock
-                        </th>
-                        <th
-                          className="py-2.5 px-3 text-center"
-                          style={{ width: "130px" }}
-                        >
-                          Desired Units
-                        </th>
-                        <th className="py-2.5 px-3 text-center">Remove</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-m3-outline-variant/10">
-                      {poCart.map((cartItem, cIdx) => {
-                        const prod = products.find(
-                          (p) => p.id === cartItem.productId,
-                        );
-                        if (!prod) return null;
-
-                        const brandMatch = brands.find(
-                          (b) =>
-                            b.name.toLowerCase().trim() ===
-                              prod.brand?.toLowerCase().trim() && !b.isDeleted,
-                        );
-                        const supplierName = brandMatch
-                          ? getSuplierName(brandMatch.supplierId)
-                          : "No Mapped Brand (S1 fallback)";
-
-                        return (
-                          <tr
-                            key={cartItem.productId || cIdx}
-                            className="hover:bg-m3-surface/20"
-                          >
-                            <td className="py-2 px-3 font-bold text-m3-on-surface">
-                              {prod.productName}
-                            </td>
-                            <td className="py-2 px-3 font-mono text-[11px] font-bold text-amber-600">
-                              {prod.brand || "Generic"}
-                            </td>
-                            <td className="py-2 px-3 font-bold text-teal-600">
-                              {supplierName}
-                            </td>
-                            <td className="py-2 px-3 font-mono font-bold text-center">
-                              {prod.stockQuantity} boxes
-                            </td>
-                            <td className="py-2 px-3 text-center">
-                              <input
-                                type="number"
-                                min={1}
-                                value={cartItem.quantity}
-                                onChange={(e) => {
-                                  const val = Math.max(
-                                    1,
-                                    Number(e.target.value) || 1,
-                                  );
-                                  const updated = poCart.map((item, idx) =>
-                                    idx === cIdx
-                                      ? { ...item, quantity: val }
-                                      : item,
-                                  );
-                                  syncPoCart(updated);
-                                }}
-                                className="w-20 bg-m3-surface border border-m3-outline-variant/60 rounded px-2 py-1 text-center font-bold text-xs"
-                              />
-                            </td>
-                            <td className="py-2 px-3 text-center">
-                              <button
-                                onClick={() => {
-                                  const updated = poCart.filter(
-                                    (_, idx) => idx !== cIdx,
-                                  );
-                                  syncPoCart(updated);
-                                  showToast("Removed item from restock list.");
-                                }}
-                                className="p-1 text-red-500 hover:bg-red-500/15 rounded-full"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Pre-consolidation visual groupings layout */}
-                <div className="bg-m3-surface-lowest/50 p-4 rounded-xl border border-m3-outline-variant/10 space-y-3">
-                  <span className="text-[10px] uppercase font-black text-m3-primary tracking-widest block">
-                    PO Consolidation Sourcing Preview:
-                  </span>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              {showProcurementProductDropdown && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowProcurementProductDropdown(false)}
+                  />
+                  <div className="absolute left-0 right-0 mt-1.5 bg-m3-surface-low border border-m3-outline-variant/50 rounded-xl shadow-2xl z-50 max-h-56 overflow-y-auto divide-y divide-m3-outline-variant/15 text-xs text-left">
                     {(() => {
-                      const groups: Record<string, any[]> = {};
-                      poCart.forEach((item) => {
-                        const prod = products.find(
-                          (p) => p.id === item.productId,
+                      let firstSupplierId: string | null = null;
+                      if (poCart.length > 0) {
+                        const firstItem = poCart[0];
+                        const firstProd = products.find(
+                          (p) => p.id === firstItem.productId,
                         );
-                        if (!prod) return;
-                        const brandMatch = brands.find(
-                          (b) =>
-                            b.name.toLowerCase().trim() ===
-                              prod.brand?.toLowerCase().trim() && !b.isDeleted,
-                        );
-                        const supplierId = brandMatch
-                          ? brandMatch.supplierId
-                          : "S1";
-                        if (!groups[supplierId]) groups[supplierId] = [];
-                        groups[supplierId].push({ item, prod });
-                      });
+                        if (firstProd) {
+                          const brandMatch = brands.find(
+                            (b) =>
+                              b.name.toLowerCase().trim() ===
+                                firstProd.brand?.toLowerCase().trim() &&
+                              !b.isDeleted,
+                          );
+                          firstSupplierId = brandMatch
+                            ? brandMatch.supplierId
+                            : "S1";
+                        }
+                      }
 
-                      return Object.entries(groups).map(([supId, entries]) => {
-                        const supNameVal = getSuplierName(supId);
+                      const pool = products
+                        .filter((p) => !p.isDeleted)
+                        .filter((p) => {
+                          if (!firstSupplierId) return true;
+                          const brandMatch = brands.find(
+                            (b) =>
+                              b.name.toLowerCase().trim() ===
+                                p.brand?.toLowerCase().trim() && !b.isDeleted,
+                          );
+                          const prodSupplierId = brandMatch
+                            ? brandMatch.supplierId
+                            : "S1";
+                          return prodSupplierId === firstSupplierId;
+                        })
+                        .filter((p) => {
+                          if (!procurementProductSearch.trim()) return true;
+                          const term = procurementProductSearch.toLowerCase();
+                          return (
+                            p.productName.toLowerCase().includes(term) ||
+                            (p.brand &&
+                              p.brand.toLowerCase().includes(term)) ||
+                            (p.sku && p.sku.toLowerCase().includes(term))
+                          );
+                        });
+
+                      if (pool.length === 0) {
                         return (
-                          <div
-                            key={supId}
-                            className="bg-m3-surface border border-m3-outline-variant/15 p-3 rounded-xl flex flex-col justify-between gap-2 text-xs"
-                          >
-                            <div>
-                              <div className="flex items-center justify-between border-b border-m3-outline-variant/10 pb-1.5 mb-2">
-                                <span className="font-extrabold text-m3-primary">
-                                  {supNameVal}
-                                </span>
-                                <span className="text-[10px] px-2 py-0.5 bg-teal-500/10 text-teal-500 font-bold rounded-lg uppercase">
-                                  {entries.length} items grouped
-                                </span>
-                              </div>
-                              <ul className="space-y-1 text-[11px] text-m3-on-surface-variant/90 pl-1 list-disc list-inside">
-                                {entries.map((entry, idx) => (
-                                  <li key={idx}>
-                                    <span className="font-semibold text-m3-on-surface">
-                                      {entry.prod.productName}
-                                    </span>{" "}
-                                    ({entry.item.quantity} boxes) -{" "}
-                                    <span className="italic text-zinc-400">
-                                      [{entry.prod.brand}]
-                                    </span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                            <span className="text-[10px] text-zinc-400 block pt-1.5 mt-2 border-t border-m3-outline-variant/5 text-[10.5px]">
-                              Auto-consolidating all products into one bulk
-                              Supplier PO.
-                            </span>
+                          <div className="p-3 text-zinc-500 italic text-center">
+                            No compatible products found
                           </div>
                         );
-                      });
+                      }
+
+                      return pool.map((p) => (
+                        <div
+                          key={p.id}
+                          onClick={() => {
+                            const exists = poCart.some(
+                              (item) => item.productId === p.id,
+                            );
+                            if (exists) {
+                              showToast("Item already queued.");
+                            } else {
+                              const updated = [
+                                ...poCart,
+                                { productId: p.id, quantity: 50 },
+                              ];
+                              syncPoCart(updated);
+                              showToast(
+                                `Added ${p.productName} to restock queue.`,
+                              );
+                            }
+                            setProcurementProductSearch("");
+                            setShowProcurementProductDropdown(false);
+                          }}
+                          className="p-2.5 hover:bg-m3-primary/10 cursor-pointer flex justify-between items-center transition-colors text-left font-bold"
+                        >
+                          <div className="space-y-0.5">
+                            <div className="text-m3-on-surface text-xs font-extrabold">
+                              {p.productName}
+                            </div>
+                            <div className="text-[10px] text-zinc-400 font-mono font-medium">
+                              Brand: {p.brand || "No Brand"} • Stock:{" "}
+                              {p.stockQuantity}
+                            </div>
+                          </div>
+                          <span className="text-[10px] bg-m3-primary/15 text-m3-primary px-2 py-0.5 rounded-full font-mono">
+                            ₱{p.costPrice.toFixed(2)}
+                          </span>
+                        </div>
+                      ));
                     })()}
                   </div>
-                </div>
+                </>
+              )}
+            </div>
 
-                <div className="flex justify-end gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerConfirmation(
-                        "Discard Worksheet Draft",
-                        "Are you absolutely sure you want to discard the current draft compilation worksheet and clear the restock cart?",
-                        () => {
-                          syncPoCart([]);
-                          showToast("Worksheet discarded successfully.");
-                        },
-                        true,
-                        "Discard Worksheet",
-                        "Keep Draft"
+            {/* ALIGNMENT ELEMENT DROP BOX INPUT SETTINGS FOR AUTO CONSOLIDATIONS */}
+            <div className="space-y-1 text-left w-48">
+              <label className="text-[9px] font-black text-m3-primary uppercase pl-0.5 tracking-wider">
+                Supplier Payment Terms:
+              </label>
+              <select
+                value={paymentTerm}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPaymentTerm(val === "CUSTOM" ? "CUSTOM" : Number(val));
+                }}
+                className="w-full bg-m3-surface-lowest border border-m3-outline-variant/35 rounded-xl px-2.5 py-2 text-xs font-bold text-m3-on-surface focus:outline-none cursor-pointer [color-scheme:dark]"
+              >
+                <option value={0}>Cash On Delivery (COD)</option>
+                <option value={15}>15 Days (Net 15)</option>
+                <option value={30}>30 Days (Net 30)</option>
+                <option value={45}>45 Days (Net 45)</option>
+                <option value={60}>60 Days (Net 60)</option>
+                <option value={90}>90 Days (Net 90)</option>
+                <option value="CUSTOM">Custom Date</option>
+              </select>
+            </div>
+
+            <div className="space-y-1 text-left w-48">
+              <label className="text-[9px] font-black text-m3-primary uppercase pl-0.5 tracking-wider">
+                Payout Deadline:
+              </label>
+              <input
+                type="date"
+                value={payoutDueDate}
+                disabled={paymentTerm !== "CUSTOM"}
+                onChange={(e) => setPayoutDueDate(e.target.value)}
+                className="w-full bg-m3-surface-lowest border border-m3-outline-variant/35 rounded-xl px-2.5 py-1.5 text-xs font-bold font-mono text-m3-on-surface focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer [color-scheme:dark]"
+              />
+            </div>
+          </div>
+
+          {poCart.length > 0 ? (
+            <div className="space-y-5 animate-fade-in text-left">
+              {/* Cart compiling list */}
+              <div className="m3-card shadow-sm overflow-x-auto p-0">
+                <table className="w-full text-xs text-left border-collapse table-auto font-sans">
+                  <thead>
+                    <tr className="border-b border-m3-outline-variant/20 bg-m3-surface/30 text-[9px] uppercase font-black text-zinc-400 tracking-wider">
+                      <th className="py-3 px-4">Product Name</th>
+                      <th className="py-3 px-4">Brand</th>
+                      <th className="py-3 px-4">Brand Supplier Partner</th>
+                      <th className="py-3 px-4 text-center">Remaining Stock</th>
+                      <th className="py-3 px-4 text-center w-36">Desired Units</th>
+                      <th className="py-3 px-4 text-center w-20">Remove</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface-variant/90">
+                    {poCart.map((cartItem, cIdx) => {
+                      const prod = products.find(
+                        (p) => p.id === cartItem.productId,
                       );
-                    }}
-                    className="px-4 py-2 bg-m3-surface border border-m3-outline-variant hover:bg-m3-surface-low text-m3-on-surface text-xs font-bold rounded-full cursor-pointer uppercase tracking-wide"
-                  >
-                    Clear Restock Cart
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsConfirmingConsolidation(true)}
-                    className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-black rounded-full cursor-pointer uppercase shadow-sm tracking-wide flex items-center gap-1.5"
-                  >
-                    <Plus className="h-4 w-4" /> Group &amp; Compile
-                    Consolidated POs
-                  </button>
+                      if (!prod) return null;
+
+                      const brandMatch = brands.find(
+                        (b) =>
+                          b.name.toLowerCase().trim() ===
+                            prod.brand?.toLowerCase().trim() && !b.isDeleted,
+                      );
+                      const supplierName = brandMatch
+                        ? getSuplierName(brandMatch.supplierId)
+                        : "No Mapped Brand (S1 fallback)";
+
+                      return (
+                        <tr
+                          key={cartItem.productId || cIdx}
+                          className="hover:bg-m3-surface-low/90 transition-colors"
+                        >
+                          <td className="py-3.5 px-4 font-bold text-m3-on-surface">
+                            {prod.productName}
+                          </td>
+                          <td className="py-3.5 px-4 font-mono text-[11px] font-bold text-amber-600">
+                            {prod.brand || "Generic"}
+                          </td>
+                          <td className="py-3.5 px-4 font-bold text-teal-600">
+                            {supplierName}
+                          </td>
+                          <td className="py-3.5 px-4 font-mono font-bold text-center">
+                            {prod.stockQuantity} boxes
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <input
+                              type="number"
+                              min={1}
+                              value={cartItem.quantity}
+                              onChange={(e) => {
+                                const val = Math.max(
+                                  1,
+                                  Number(e.target.value) || 1,
+                                );
+                                const updated = poCart.map((item, idx) =>
+                                  idx === cIdx
+                                    ? { ...item, quantity: val }
+                                    : item,
+                                );
+                                syncPoCart(updated);
+                              }}
+                              className="w-20 bg-m3-surface border border-m3-outline-variant/60 rounded px-2 py-1 text-center font-bold text-xs"
+                            />
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <button
+                              onClick={() => {
+                                const updated = poCart.filter(
+                                  (_, idx) => idx !== cIdx,
+                                );
+                                syncPoCart(updated);
+                                showToast("Removed item from restock list.");
+                              }}
+                              className="p-1 text-red-500 hover:bg-red-500/15 rounded-full"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pre-consolidation visual groupings layout */}
+              <div className="bg-m3-surface-low/50 p-4 rounded-xl border border-m3-outline-variant/15 space-y-3">
+                <span className="text-[10px] uppercase font-black text-m3-primary tracking-widest block">
+                  PO Consolidation Sourcing Preview:
+                </span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  {(() => {
+                    const groups: Record<string, any[]> = {};
+                    poCart.forEach((item) => {
+                      const prod = products.find(
+                        (p) => p.id === item.productId,
+                      );
+                      if (!prod) return;
+                      const brandMatch = brands.find(
+                        (b) =>
+                          b.name.toLowerCase().trim() ===
+                            prod.brand?.toLowerCase().trim() && !b.isDeleted,
+                      );
+                      const supplierId = brandMatch
+                        ? brandMatch.supplierId
+                        : "S1";
+                      if (!groups[supplierId]) groups[supplierId] = [];
+                      groups[supplierId].push({ item, prod });
+                    });
+
+                    return Object.entries(groups).map(([supId, entries]) => {
+                      const supNameVal = getSuplierName(supId);
+                      return (
+                        <div
+                          key={supId}
+                          className="bg-m3-surface border border-m3-outline-variant/15 p-3 rounded-xl flex flex-col justify-between gap-2 text-xs shadow-sm"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between border-b border-m3-outline-variant/10 pb-1.5 mb-2">
+                              <span className="font-extrabold text-m3-primary">
+                                {supNameVal}
+                              </span>
+                              <span className="text-[10px] px-2 py-0.5 bg-teal-500/10 text-teal-500 font-bold rounded-lg uppercase">
+                                {entries.length} items grouped
+                              </span>
+                            </div>
+                            <ul className="space-y-1 text-[11px] text-m3-on-surface-variant/90 pl-1 list-disc list-inside">
+                              {entries.map((entry, idx) => (
+                                <li key={idx}>
+                                  <span className="font-semibold text-m3-on-surface">
+                                    {entry.prod.productName}
+                                  </span>{" "}
+                                  ({entry.item.quantity} boxes) -{" "}
+                                  <span className="italic text-zinc-400">
+                                    [{entry.prod.brand}]
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <span className="text-[10px] text-zinc-400 block pt-1.5 mt-2 border-t border-m3-outline-variant/5 text-[10.5px]">
+                            Auto-consolidating all products into one bulk Supplier PO.
+                          </span>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
-            ) : (
-              <div className="py-8 text-center space-y-2">
-                <p className="text-sm font-semibold text-m3-on-surface-variant">
-                  The restock worksheet is currently empty.
-                </p>
-                <p className="text-[11px] text-m3-on-surface-variant/75 max-w-lg mx-auto">
-                  Queued items scheduled by Branch Managers or Admins inside the
-                  Dashboard - Active Inventory Health list will automatically
-                  populate this compiler workspace. You can also manually add
-                  items using the "Quick-Add" dropdown selector above!
-                </p>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerConfirmation(
+                      "Discard Worksheet Draft",
+                      "Are you absolutely sure you want to discard the current draft compilation worksheet and clear the restock cart?",
+                      () => {
+                        syncPoCart([]);
+                        showToast("Worksheet discarded successfully.");
+                      },
+                      true,
+                      "Discard Worksheet",
+                      "Keep Draft"
+                    );
+                  }}
+                  className="px-4 py-2 bg-m3-surface border border-m3-outline-variant hover:bg-m3-surface-low text-m3-on-surface text-xs font-bold rounded-full cursor-pointer uppercase tracking-wide"
+                >
+                  Clear Restock Cart
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmingConsolidation(true)}
+                  className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-black rounded-full cursor-pointer uppercase shadow-sm tracking-wide flex items-center gap-1.5"
+                >
+                  <Plus className="h-4 w-4" /> Group &amp; Compile Consolidated POs
+                </button>
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="py-8 text-center space-y-2 text-left bg-m3-surface-low/35 rounded-xl border border-m3-outline-variant/10 p-6">
+              <p className="text-sm font-semibold text-m3-on-surface-variant">
+                The restock worksheet is currently empty.
+              </p>
+              <p className="text-[11.5px] text-m3-on-surface-variant/75 max-w-lg mx-auto leading-relaxed">
+                Queued items scheduled by Branch Managers or Admins inside the Dashboard - Active Inventory Health list will automatically populate this compiler workspace. You can also manually add items using the "Quick-Add" dropdown selector above!
+              </p>
+            </div>
+          )}
         </div>
       )}
 

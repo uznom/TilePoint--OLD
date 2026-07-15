@@ -1258,6 +1258,162 @@ html.accessibility-no-animation table tbody tr:hover td {
   background-color: transparent !important;
 }
 
+/* 4.5. High-fidelity Screen Receipt Preview Simulator */
+@media screen {
+  .bir-receipt-container {
+    background-color: #fcfcf9 !important; /* Soft ivory/white authentic thermal receipt paper */
+    color: #111111 !important; /* Rich carbon black printed text style */
+    border: 1px solid rgba(0, 0, 0, 0.15) !important;
+    border-top: 4px solid #111111 !important; /* Simulated roll-starter top border */
+    border-bottom: 8px dashed #cccccc !important; /* Simulated jagged tear-off bottom edge */
+    box-shadow: 
+      0 10px 25px -5px rgba(0, 0, 0, 0.3), 
+      0 8px 10px -6px rgba(0, 0, 0, 0.3),
+      inset 0 -10px 20px -10px rgba(0, 0, 0, 0.05) !important;
+    font-family: 'JetBrains Mono', 'Courier New', Courier, monospace !important;
+  }
+
+  /* Force monochrome high-contrast carbon black colors for all inner typography */
+  .bir-receipt-container *,
+  .bir-receipt-container span,
+  .bir-receipt-container p,
+  .bir-receipt-container div,
+  .bir-receipt-container h3,
+  .bir-receipt-container h4 {
+    color: #111111 !important;
+    font-family: 'JetBrains Mono', 'Courier New', Courier, monospace !important;
+    text-shadow: none !important;
+  }
+
+  /* Override specific Tailwind brand colors/accents to keep the layout realistic monochrome black on ivory */
+  .bir-receipt-container [class*="text-m3-"],
+  .bir-receipt-container [class*="text-zinc-"],
+  .bir-receipt-container [class*="text-gray-"],
+  .bir-receipt-container [class*="text-neutral-"],
+  .bir-receipt-container [class*="text-amber-"],
+  .bir-receipt-container [class*="text-emerald-"],
+  .bir-receipt-container [class*="text-red-"],
+  .bir-receipt-container [class*="text-primary"],
+  .bir-receipt-container .font-black {
+    color: #111111 !important;
+  }
+
+  /* High contrast divider borders inside the screen receipt resembling real carbon ribbon ink */
+  .bir-receipt-container .border-dashed,
+  .bir-receipt-container [class*="border-dashed"] {
+    border-color: #222222 !important;
+    border-style: dashed !important;
+    border-width: 0 0 1px 0 !important;
+    opacity: 0.75 !important;
+  }
+
+  .bir-receipt-container .border-dotted,
+  .bir-receipt-container [class*="border-dotted"] {
+    border-color: #222222 !important;
+    border-style: dotted !important;
+    border-width: 1px 0 0 0 !important;
+    opacity: 0.75 !important;
+  }
+
+  .bir-receipt-container .border-t,
+  .bir-receipt-container [class*="border-t"] {
+    border-color: #222222 !important;
+    border-style: solid !important;
+    border-width: 1px 0 0 0 !important;
+    opacity: 0.75 !important;
+  }
+
+  .bir-receipt-container .border-b,
+  .bir-receipt-container [class*="border-b"] {
+    border-color: #222222 !important;
+    border-style: solid !important;
+    border-width: 0 0 1px 0 !important;
+    opacity: 0.75 !important;
+  }
+
+  /* Preserve full visibility and usability of printing/dismiss action bars inside report dialogs */
+  .bir-receipt-container .bir-report-no-print {
+    background: transparent !important;
+    border-top: 1px dashed rgba(17, 17, 17, 0.25) !important;
+    padding-top: 12px !important;
+    margin-top: 12px !important;
+  }
+
+  .bir-receipt-container .bir-report-no-print * {
+    font-family: var(--font-sans) !important;
+  }
+
+  /* High-contrast accessible buttons that fit the receipt theme beautifully on screen */
+  .bir-receipt-container .bir-report-no-print button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    padding: 8px 16px !important;
+    border-radius: 9999px !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    cursor: pointer !important;
+  }
+
+  /* Primary/Filled Action button inside thermal ticket (e.g., Dismiss) */
+  .bir-receipt-container .bir-report-no-print button.bg-m3-primary,
+  .bir-receipt-container .bir-report-no-print button.bg-m3-tertiary,
+  .bir-receipt-container .bir-report-no-print button:not(.border) {
+    background-color: #111111 !important;
+    color: #ffffff !important;
+    border: none !important;
+  }
+
+  .bir-receipt-container .bir-report-no-print button.bg-m3-primary:hover,
+  .bir-receipt-container .bir-report-no-print button:not(.border):hover {
+    background-color: #2a2a2a !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  }
+
+  /* Outlined Action button inside thermal ticket (e.g., Print Ticket) */
+  .bir-receipt-container .bir-report-no-print button.border {
+    background-color: transparent !important;
+    color: #111111 !important;
+    border: 1px solid rgba(17, 17, 17, 0.4) !important;
+  }
+
+  .bir-receipt-container .bir-report-no-print button.border:hover {
+    background-color: rgba(17, 17, 17, 0.08) !important;
+    border-color: #111111 !important;
+    transform: translateY(-1px) !important;
+  }
+
+  /* Clean grey styling for custom QR survey images in screen preview */
+  .bir-receipt-container img {
+    filter: grayscale(100%) contrast(125%) brightness(95%) !important;
+  }
+
+  /* Customize scrollbar specifically for the preview container scroll flow */
+  .bir-receipt-container::-webkit-scrollbar {
+    width: 5px !important;
+    height: 5px !important;
+  }
+  
+  .bir-receipt-container::-webkit-scrollbar-track {
+    background: #f4f4ee !important;
+    border-radius: 9999px !important;
+  }
+  
+  .bir-receipt-container::-webkit-scrollbar-thumb {
+    background: #d1d1c4 !important;
+    border-radius: 9999px !important;
+  }
+
+  .bir-receipt-container::-webkit-scrollbar-thumb:hover {
+    background: #b1b1a4 !important;
+  }
+}
+
 /* 5. Clean, Professional @media print System for BIR ledger compliance sheets & slips */
 @media print {
   /* Hide standard non-printed blocks specifically */
@@ -1672,6 +1828,59 @@ select:focus {
 .animate-blob-3 {
   animation: blob-pivot-three 20s ease-in-out infinite;
 }
+
+/* 
+   6. 240Hz High-Refresh-Rate Display Optimization System
+   Ensures sub-4ms frame times are utilized perfectly without visual stutter, 
+   judder, or micro-stutters by forcing hardware GPU acceleration, preventing 
+   layout repaints, and using highly responsive panel curves.
+*/
+@media (prefers-reduced-motion: no-preference) {
+  /* Force GPU layer compositing on highly interactive or animating surfaces */
+  .m3-card,
+  button,
+  a,
+  input,
+  select,
+  .modal-overlay,
+  .modal-content,
+  .sidebar-container,
+  .tab-pane,
+  [role="dialog"],
+  .theme-transition,
+  .theme-transition * {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: translate3d(0, 0, 0);
+    will-change: transform, opacity;
+  }
+
+  /* Ultra-fluid premium cubic-bezier easing tailored for 240Hz high-refresh responsiveness */
+  .transition-all {
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  /* Slightly swifter duration adjustments for high-frequency render loops to prevent ghosting */
+  .duration-150 {
+    transition-duration: 100ms !important;
+  }
+
+  .duration-200 {
+    transition-duration: 140ms !important;
+  }
+
+  .duration-300 {
+    transition-duration: 200ms !important;
+  }
+
+  /* Optimize scroll containers for frictionless scrolling */
+  * {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 
 
 
