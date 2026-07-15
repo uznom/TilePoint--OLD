@@ -3296,55 +3296,6 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   <div className="space-y-3">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                       <label className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">Paste raw older ERP OS CSV rows or JSON data here</label>
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const sample = [
-                              {
-                                "productName": "Heritage White Glazed Porcelain",
-                                "productCode": "HW-GL-80",
-                                "skuCode": "SKU-HW-80",
-                                "barcode": "4801122334455",
-                                "category": "Porcelain Tiles",
-                                "brand": "Heritage Slabs",
-                                "costPrice": 420,
-                                "sellingPrice": 650,
-                                "size": "80x80 cm",
-                                "stockQuantity": 150
-                              },
-                              {
-                                "productName": "EcoSlate Anti-Slip Terracotta",
-                                "productCode": "ES-AS-30",
-                                "skuCode": "SKU-ES-30",
-                                "barcode": "4805566778899",
-                                "category": "Ceramic Tiles",
-                                "brand": "EcoStone",
-                                "costPrice": 180,
-                                "sellingPrice": 280,
-                                "size": "30x30 cm",
-                                "stockQuantity": 320
-                              }
-                            ];
-                            setRawImportText(JSON.stringify(sample, null, 2));
-                            showToast("Loaded high-fidelity Sample older ERP OS JSON Dataset!");
-                          }}
-                          className="text-[10px] font-black uppercase text-m3-primary hover:text-m3-primary/80 bg-m3-primary/10 px-3.5 py-1.5 rounded-full transition-all cursor-pointer font-sans"
-                        >
-                          ⚡ Load JSON Sample
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const sampleCsv = `Product Name,Product Code,SKU,Barcode,Category,Brand,Cost Price,Selling Price,Size,Quantity\n"Heritage White Glazed Porcelain",HW-GL-80,SKU-HW-80,4801122334455,Porcelain Tiles,Heritage Slabs,420,650,80x80 cm,150\n"EcoSlate Anti-Slip Terracotta",ES-AS-30,SKU-ES-30,4805566778899,Ceramic Tiles,EcoStone,180,280,30x30 cm,320`;
-                            setRawImportText(sampleCsv);
-                            showToast("Loaded high-fidelity Sample older ERP OS CSV Dataset!");
-                          }}
-                          className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 hover:opacity-85 bg-emerald-500/10 px-3.5 py-1.5 rounded-full transition-all cursor-pointer font-sans"
-                        >
-                          📊 Load CSV Sample
-                        </button>
-                      </div>
                     </div>
 
                     <div className="space-y-4">
@@ -4721,7 +4672,7 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
 
             <div className="space-y-4">
               {/* Informative Step banner */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
                   <span className="text-[10px] font-black text-emerald-500 uppercase tracking-wider block">Standardized Export</span>
                   <p className="text-xs text-m3-on-surface-variant font-medium">
@@ -4737,62 +4688,6 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
                     <Download className="h-4 w-4" /> Download catalog.json
                   </button>
                 </div>
-
-                {allowedToImport ? (
-                  <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
-                    <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider block">Dry-Run Test Roster</span>
-                    <p className="text-xs text-m3-on-surface-variant font-medium">
-                      Populate the migration pasting zone with demo offline tile records to test structural syntax.
-                    </p>
-                    <button
-                      onClick={() => {
-                        const sample = [
-                          {
-                            "productName": "Heritage White Glazed Porcelain",
-                            "productCode": "HW-GL-80",
-                            "skuCode": "SKU-HW-80",
-                            "barcode": "4801122334455",
-                            "category": "Porcelain Tiles",
-                            "brand": "Heritage Slabs",
-                            "costPrice": 420,
-                            "sellingPrice": 650,
-                            "size": "80x80 cm",
-                            "stockQuantity": 150
-                          },
-                          {
-                            "productName": "EcoSlate Anti-Slip Terracotta",
-                            "productCode": "ES-AS-30",
-                            "skuCode": "SKU-ES-30",
-                            "barcode": "4805566778899",
-                            "category": "Ceramic Tiles",
-                            "brand": "EcoStone",
-                            "costPrice": 180,
-                            "sellingPrice": 280,
-                            "size": "30x30 cm",
-                            "stockQuantity": 320
-                          }
-                        ];
-                        setRawImportText(JSON.stringify(sample, null, 2));
-                        showToast("Loaded trial ERP OS dataset to workspace!");
-                      }}
-                      className="w-full py-2 bg-m3-surface-low hover:bg-m3-outline-variant/15 text-m3-primary font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 border border-m3-outline-variant/10"
-                    >
-                      ⚡ Load TRIAL ERP OS Roster
-                    </button>
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/20 space-y-2 flex flex-col justify-between">
-                    <div>
-                      <span className="text-[10px] font-black text-rose-500 uppercase tracking-wider block">🔒 RBAC Restricted</span>
-                      <p className="text-[11px] text-m3-on-surface-variant font-medium mt-1">
-                        CSV/JSON inventory importing is strictly restricted to System Administrators to ensure regional database synchronization integrity.
-                      </p>
-                    </div>
-                    <div className="w-full py-2 bg-rose-500/10 text-rose-500 font-bold text-[10px] uppercase tracking-wider rounded-xl text-center">
-                      Write Access Restricted
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Paste Space */}

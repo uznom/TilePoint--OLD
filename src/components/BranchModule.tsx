@@ -27,7 +27,8 @@ import {
   Mail,
   User,
   Upload,
-  Image
+  Image,
+  Receipt
 } from 'lucide-react';
 
 interface BranchModuleProps {
@@ -54,6 +55,11 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
   // Form Fields State
   const [customBranchId, setCustomBranchId] = useState('');
   const [storeLogo, setStoreLogo] = useState('');
+  const [receiptFacebook, setReceiptFacebook] = useState('');
+  const [receiptPromoText, setReceiptPromoText] = useState('');
+  const [receiptQrBase64, setReceiptQrBase64] = useState('');
+  const [receiptThankYou, setReceiptThankYou] = useState('');
+  const [tin, setTin] = useState('');
   const [name, setName] = useState('');
   const [manager, setManager] = useState('');
   const [address, setAddress] = useState('');
@@ -65,6 +71,50 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
   const [branchCode, setBranchCode] = useState('');
   const [localIp, setLocalIp] = useState('192.168.1.1');
   const [gatewayRules, setGatewayRules] = useState('ALLOW-LOCAL-ONLY');
+
+  // Inline Receipt Editor States
+  const [inlineBranchId, setInlineBranchId] = useState('');
+  const [inlineFacebook, setInlineFacebook] = useState('');
+  const [inlinePromoText, setInlinePromoText] = useState('');
+  const [inlineThankYou, setInlineThankYou] = useState('');
+  const [inlineQrBase64, setInlineQrBase64] = useState('');
+  const [inlineTin, setInlineTin] = useState('');
+  const [inlineStoreLogo, setInlineStoreLogo] = useState('');
+
+  const activeBranchesForReceipt = branches.filter(b => !b.isDeleted);
+  const selectedBranchForPreview = branches.find(b => b.id === inlineBranchId);
+  useEffect(() => {
+    if (activeBranchesForReceipt.length > 0 && !inlineBranchId) {
+      const initialBranch = activeBranchesForReceipt.find(b => b.id === primaryBranchId) || activeBranchesForReceipt[0];
+      setInlineBranchId(initialBranch.id);
+    }
+  }, [branches]);
+
+  useEffect(() => {
+    const selectedBranch = branches.find(b => b.id === inlineBranchId);
+    if (selectedBranch) {
+      setInlineFacebook(selectedBranch.receiptFacebook || '');
+      setInlinePromoText(selectedBranch.receiptPromoText || '');
+      setInlineThankYou(selectedBranch.receiptThankYou || '');
+      setInlineQrBase64(selectedBranch.receiptQrBase64 || '');
+      setInlineTin(selectedBranch.tin || '');
+      setInlineStoreLogo(selectedBranch.storeLogo || '');
+    }
+  }, [inlineBranchId, branches]);
+
+  const handleSaveInlineReceiptSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inlineBranchId) return;
+    updateBranch(inlineBranchId, {
+      receiptFacebook: inlineFacebook,
+      receiptPromoText: inlinePromoText,
+      receiptThankYou: inlineThankYou,
+      receiptQrBase64: inlineQrBase64,
+      tin: inlineTin,
+      storeLogo: inlineStoreLogo
+    });
+    showToast("Receipt settings saved successfully for this branch!");
+  };
 
   // Custom states for employees visibility
   const [expandedBranchUsers, setExpandedBranchUsers] = useState<Record<string, boolean>>({});
@@ -118,6 +168,11 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
   const handleOpenAdd = () => {
     setCustomBranchId('');
     setStoreLogo('');
+    setReceiptFacebook('');
+    setReceiptPromoText('');
+    setReceiptQrBase64('');
+    setReceiptThankYou('');
+    setTin('');
     setName('');
     setManager('');
     setAddress('');
@@ -138,6 +193,11 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
     setEditingId(b.id);
     setCustomBranchId(b.id);
     setStoreLogo(b.storeLogo || '');
+    setReceiptFacebook(b.receiptFacebook || '');
+    setReceiptPromoText(b.receiptPromoText || '');
+    setReceiptQrBase64(b.receiptQrBase64 || '');
+    setReceiptThankYou(b.receiptThankYou || '');
+    setTin(b.tin || '');
     setName(b.name);
     setManager(b.manager);
     setAddress(b.address);
@@ -199,6 +259,11 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
       localIp: trimmedIp,
       gatewayRules: gatewayRules.trim(),
       storeLogo,
+      receiptFacebook,
+      receiptPromoText,
+      receiptQrBase64,
+      receiptThankYou,
+      tin,
       ...(trimmedCustomId ? { id: trimmedCustomId } : {})
     };
 
@@ -335,6 +400,11 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
                   <span>Phone Ref: <strong className="font-mono">{b.phone || 'None declared.'}</strong></span>
                 </div>
 
+                <div className="flex items-center gap-2 text-m3-on-surface-variant/90 leading-normal">
+                  <CreditCard className="h-4 w-4 shrink-0 text-m3-primary" />
+                  <span>TIN: <strong className="font-mono">{b.tin || 'None declared.'}</strong></span>
+                </div>
+
                 {/* Secure network variables */}
                 <div className="bg-m3-surface-low/50 p-2.5 rounded-xl border border-m3-outline-variant/10 space-y-1.5 font-mono text-[10.5px] mt-2 text-left">
                   <div className="flex justify-between">
@@ -462,6 +532,413 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
           onPageChange={setBranchPage}
           itemName="branches"
         />
+      </div>
+
+      {/* BRAND-WIDE RECEIPT CUSTOMIZER (INLINE & ACCESSIBLE) */}
+      <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] p-6 shadow-sm space-y-6">
+        <div>
+          <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest flex items-center gap-2 font-mono">
+            <Receipt className="h-4.5 w-4.5 text-m3-primary" />
+            Receipt & Promotional Customizer
+          </h3>
+          <p className="text-[10px] text-zinc-400 font-medium mt-0.5">
+            Configure social handles, promotional text, tax identifiers, and QR surveys printed at the bottom of customer receipts.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left Column: Form */}
+          <form onSubmit={handleSaveInlineReceiptSettings} className="lg:col-span-7 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">
+                  Select Branch to Configure
+                </label>
+                <select
+                  value={inlineBranchId}
+                  onChange={e => setInlineBranchId(e.target.value)}
+                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold"
+                >
+                  {activeBranchesForReceipt.map(b => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} (ID: {b.id})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">
+                  TIN (Taxpayer Identification Number)
+                </label>
+                <input
+                  type="text"
+                  value={inlineTin}
+                  onChange={e => setInlineTin(e.target.value)}
+                  placeholder="e.g. 123-456-789-000"
+                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">
+                  Facebook Page / Handle
+                </label>
+                <input
+                  type="text"
+                  value={inlineFacebook}
+                  onChange={e => setInlineFacebook(e.target.value)}
+                  placeholder="e.g. facebook.com/emmantilecenter"
+                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">
+                  Custom Thank You Message
+                </label>
+                <input
+                  type="text"
+                  value={inlineThankYou}
+                  onChange={e => setInlineThankYou(e.target.value)}
+                  placeholder="e.g. Thank you, come again!"
+                  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">
+                Promotional Message (Appears at Bottom of Receipt)
+              </label>
+              <textarea
+                value={inlinePromoText}
+                onChange={e => setInlinePromoText(e.target.value)}
+                placeholder="e.g. Bring this receipt on your next visit to get 5% off select porcelain tile orders!"
+                rows={2}
+                className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans resize-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* BRANCH LOGO UPLOAD */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">
+                  Branch Logo (for Receipts)
+                </label>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/30">
+                  <div className="h-16 w-16 rounded-xl border border-m3-outline-variant/50 bg-m3-surface-low flex items-center justify-center overflow-hidden flex-shrink-0 relative shadow-inner">
+                    {inlineStoreLogo ? (
+                      <img
+                        src={inlineStoreLogo}
+                        alt="Inline Branch Logo"
+                        className="h-full w-full object-contain"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <Image className="h-5 w-5 text-zinc-400" />
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <p className="text-[10px] text-zinc-400 font-medium">Upload a custom logo to print at the very top of thermal branch receipts.</p>
+                    <div className="flex gap-2">
+                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors border border-m3-primary/15 select-none">
+                        <Upload className="h-3.5 w-3.5" />
+                        <span>Upload Logo</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              if (file.size > 250 * 1024) {
+                                showToast("Size Warning: Please upload an image smaller than 250KB.");
+                              }
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                if (event.target?.result) {
+                                  setInlineStoreLogo(event.target.result as string);
+                                  showToast("Branch logo loaded successfully!");
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
+                      {inlineStoreLogo && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setInlineStoreLogo("");
+                            showToast("Branch logo removed from template.");
+                          }}
+                          className="px-3 py-1.5 border border-red-200/40 text-red-500 hover:bg-red-500/10 rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors select-none"
+                        >
+                          Clear Logo
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* SURVEY / PROMO QR CODE */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">
+                  Survey / Promo QR Code
+                </label>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/30">
+                  <div className="h-16 w-16 rounded-xl border border-m3-outline-variant/50 bg-m3-surface-low flex items-center justify-center overflow-hidden flex-shrink-0 relative shadow-inner">
+                    {inlineQrBase64 ? (
+                      <img
+                        src={inlineQrBase64}
+                        alt="Inline Survey QR"
+                        className="h-full w-full object-contain"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <Image className="h-5 w-5 text-zinc-400" />
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <p className="text-[10px] text-zinc-400 font-medium">Upload a QR code linking to your store evaluation page, customer survey, or loyalty discounts.</p>
+                    <div className="flex gap-2">
+                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors border border-m3-primary/15 select-none">
+                        <Upload className="h-3.5 w-3.5" />
+                        <span>Upload QR Image</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              if (file.size > 250 * 1024) {
+                                showToast("Size Warning: Please upload a QR code image smaller than 250KB.");
+                              }
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                if (event.target?.result) {
+                                  setInlineQrBase64(event.target.result as string);
+                                  showToast("QR Code loaded successfully!");
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
+                      {inlineQrBase64 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setInlineQrBase64("");
+                            showToast("QR Code template removed.");
+                          }}
+                          className="px-3 py-1.5 border border-red-200/40 text-red-500 hover:bg-red-500/10 rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors select-none"
+                        >
+                          Clear QR
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="submit"
+                disabled={!inlineBranchId}
+                className="m3-btn-primary flex items-center gap-1.5 shadow-sm text-xs px-5 py-2 cursor-pointer disabled:opacity-50"
+              >
+                Save Receipt Template
+              </button>
+            </div>
+          </form>
+
+          {/* Right Column: Real-Time Receipt Preview */}
+          <div className="lg:col-span-5 space-y-3">
+            <div className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 font-mono flex items-center gap-1.5">
+              <Receipt className="h-3.5 w-3.5" />
+              <span>Real-Time Receipt Preview</span>
+              <span className="text-[8px] bg-m3-primary/15 text-m3-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Live View</span>
+            </div>
+
+            {/* Thermal Receipt Virtual Box */}
+            <div className="relative mx-auto max-w-[280px] bg-white text-zinc-900 py-5 px-0 border border-zinc-200 rounded-2xl shadow-lg font-mono select-none overflow-hidden text-[9px] leading-relaxed">
+              {/* Symmetrical paper top tears decoration */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-zinc-200 flex overflow-hidden opacity-40" style={{ backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 2px, #d4d4d8 2px, #d4d4d8 4px)" }}></div>
+
+              <div className="pt-2 text-center flex flex-col items-center justify-center space-y-1">
+                {selectedBranchForPreview?.storeLogo ? (
+                  <div className="mb-1 h-8 w-auto flex items-center justify-center">
+                    <img
+                      src={selectedBranchForPreview.storeLogo}
+                      alt={`${selectedBranchForPreview.name} Logo`}
+                      className="h-full object-contain filter grayscale brightness-90 max-w-[120px]"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                ) : (
+                  <h4 className="text-[10.5px] font-black text-black tracking-widest uppercase mb-0.5">
+                    {selectedBranchForPreview?.name || "EMMAN TILE CENTER"}
+                  </h4>
+                )}
+
+                <div className="text-[7.5px] text-zinc-600 font-extrabold uppercase tracking-wider">
+                  Branch ID: {selectedBranchForPreview?.id || inlineBranchId || "ETC_DIPOLOG"}
+                </div>
+
+                <div className="text-[7.5px] text-zinc-600 font-semibold mt-0.5 leading-tight">
+                  {selectedBranchForPreview?.address || "Sta. Filomena, Dipolog City"}
+                </div>
+
+                <div className="text-[7px] text-zinc-500 mt-0.5">
+                  Contact: {selectedBranchForPreview?.phone || "0000"} • TIN {inlineTin || "000-111-222"}
+                </div>
+              </div>
+
+              {/* Symmetrical dotted divider */}
+              <div className="border-b border-dashed border-zinc-300 my-2.5"></div>
+
+              {/* Transaction Metadata */}
+              <div className="space-y-0.5 text-[7.5px] text-zinc-700">
+                <div className="flex justify-between">
+                  <span>DATE & TIME:</span>
+                  <span>2026-07-14 05:48 UTC</span>
+                </div>
+                <div className="flex justify-between font-bold text-black">
+                  <span>INVOICE REF:</span>
+                  <span>PREVIEW-9999</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>CASHIER:</span>
+                  <span>Admin (Live Preview)</span>
+                </div>
+              </div>
+
+              {/* Symmetrical dotted divider */}
+              <div className="border-b border-dashed border-zinc-300 my-2.5"></div>
+
+              {/* Items Table Header */}
+              <div className="grid grid-cols-12 gap-1 text-[7px] font-bold text-zinc-800 uppercase pb-1 border-b border-dotted border-zinc-200">
+                <span className="col-span-7">Item Description</span>
+                <span className="col-span-2 text-right">Qty</span>
+                <span className="col-span-3 text-right">Amount</span>
+              </div>
+
+              {/* Items List */}
+              <div className="space-y-2 pt-1.5 text-[7.5px] text-zinc-800">
+                <div>
+                  <div className="font-bold">Carrara White Polished (60x60)</div>
+                  <div className="grid grid-cols-12 gap-1">
+                    <span className="col-span-7 text-zinc-500">₱380.00 / pc</span>
+                    <span className="col-span-2 text-right">1</span>
+                    <span className="col-span-3 text-right">₱380.00</span>
+                  </div>
+                </div>
+                <div>
+                  <div className="font-bold">Spanish Clay Terracotta (30x30)</div>
+                  <div className="grid grid-cols-12 gap-1">
+                    <span className="col-span-7 text-zinc-500">₱120.00 / pc</span>
+                    <span className="col-span-2 text-right">2</span>
+                    <span className="col-span-3 text-right">₱240.00</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Symmetrical dotted divider */}
+              <div className="border-b border-dashed border-zinc-300 my-2.5"></div>
+
+              {/* Financial Summary */}
+              <div className="space-y-1 text-[7.5px] text-zinc-800 font-mono">
+                <div className="flex justify-between">
+                  <span>SUBTOTAL:</span>
+                  <span>₱620.00</span>
+                </div>
+                <div className="flex justify-between text-zinc-500 text-[7px]">
+                  <span>VATABLE SALES:</span>
+                  <span>₱553.57</span>
+                </div>
+                <div className="flex justify-between text-zinc-500 text-[7px]">
+                  <span>12% VAT:</span>
+                  <span>₱66.43</span>
+                </div>
+                <div className="flex justify-between font-bold text-[8.5px] border-t border-dotted border-zinc-200 pt-1 mt-0.5 text-black">
+                  <span>TOTAL AMOUNT DUE:</span>
+                  <span>₱620.00</span>
+                </div>
+              </div>
+
+              {/* Symmetrical dotted divider */}
+              <div className="border-b border-dashed border-zinc-300 my-2.5"></div>
+
+              {/* Promotional QR, Promo, and Facebook */}
+              <div className="space-y-3">
+                {/* Custom Thank You Message */}
+                <div className="text-center text-[8px] text-zinc-800 leading-normal">
+                  {inlineThankYou ? (
+                    <span className="font-bold tracking-tight block">
+                      {inlineThankYou}
+                    </span>
+                  ) : (
+                    <span className="italic">
+                      Thank you for shopping at {selectedBranchForPreview?.name || "Emman Tile Center"}!
+                    </span>
+                  )}
+                </div>
+
+                {(inlineFacebook || inlinePromoText || inlineQrBase64) && (
+                  <div className="space-y-3 border-t border-dashed border-zinc-200 pt-2.5">
+                    {inlineFacebook && (
+                      <div className="text-center text-[7.5px] text-zinc-700 flex flex-col items-center justify-center">
+                        <span className="font-extrabold uppercase text-m3-primary text-[7px] tracking-wider mb-0.5">Follow us on Facebook</span>
+                        <span className="font-bold text-black">{inlineFacebook}</span>
+                      </div>
+                    )}
+
+                    {inlinePromoText && (
+                      <div className="text-center text-[7.5px] text-zinc-700 flex flex-col items-center justify-center px-2 py-1.5 bg-amber-50 rounded border border-dashed border-amber-200">
+                        <span className="font-extrabold uppercase text-amber-600 text-[7px] tracking-wider mb-0.5">Special Promo</span>
+                        <p className="leading-snug text-center font-bold text-black">{inlinePromoText}</p>
+                      </div>
+                    )}
+
+                    {inlineQrBase64 && (
+                      <div className="flex flex-col items-center justify-center space-y-1">
+                        <span className="text-[6.5px] uppercase font-extrabold text-zinc-500 tracking-wider">Scan for Evaluation Survey</span>
+                        <div className="h-16 w-16 border border-zinc-300 p-1 bg-white rounded flex items-center justify-center shadow-sm">
+                          <img
+                            src={inlineQrBase64}
+                            alt="Live Survey QR"
+                            className="h-full w-full object-contain filter grayscale"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Symmetrical dotted divider */}
+              <div className="border-b border-dashed border-zinc-300 my-2.5"></div>
+
+              {/* Official Customer Transaction Acknowledgment statement */}
+              <div className="text-center text-[6px] text-zinc-400 font-sans tracking-wide leading-normal">
+                This serves as an official customer transaction acknowledgment.
+              </div>
+
+              {/* Symmetrical paper bottom tears decoration */}
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-200 flex overflow-hidden opacity-40" style={{ backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 2px, #d4d4d8 2px, #d4d4d8 4px)" }}></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* SECTION E: GLOBAL CORPORATE DIRECTORY & STAFF ROSTER */}
@@ -645,62 +1122,6 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
             </div>
 
             <div className="space-y-1 relative">
-              <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">
-                Branch Logo (for Receipts)
-              </label>
-              <div className="flex items-center gap-3 bg-m3-surface-lowest p-2.5 rounded-xl border border-m3-outline-variant/30">
-                <div className="h-12 w-12 rounded-lg border border-m3-outline-variant/50 bg-m3-surface-low flex items-center justify-center overflow-hidden flex-shrink-0 relative">
-                  {storeLogo ? (
-                    <img
-                      src={storeLogo}
-                      alt="Branch Logo"
-                      className="h-full w-full object-contain"
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <Image className="h-6 w-6 text-m3-on-surface-variant/40" />
-                  )}
-                </div>
-                <div className="flex-1 space-y-1">
-                  <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors border border-m3-primary/15">
-                    <Upload className="h-3.5 w-3.5" />
-                    <span>Upload Logo</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          if (file.size > 250 * 1024) {
-                            showToast("Size Warning: Please upload a logo smaller than 250KB for optimal storage.");
-                          }
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            if (event.target?.result) {
-                              setStoreLogo(event.target.result as string);
-                              showToast("Logo loaded successfully!");
-                            }
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                    />
-                  </label>
-                  {storeLogo && (
-                    <button
-                      type="button"
-                      onClick={() => setStoreLogo("")}
-                      className="text-[9px] text-red-500 hover:underline block font-mono font-bold"
-                    >
-                      Remove Logo
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-1 relative">
               <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">Branch Name</label>
               <input
                 type="text"
@@ -744,6 +1165,17 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
                 placeholder="0917-123-4567"
+                className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
+              />
+            </div>
+
+            <div className="space-y-1 relative">
+              <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">TIN (Taxpayer Identification Number)</label>
+              <input
+                type="text"
+                value={tin}
+                onChange={e => setTin(e.target.value)}
+                placeholder="e.g. 123-456-789-000"
                 className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
               />
             </div>

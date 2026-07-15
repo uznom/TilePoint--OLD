@@ -95,83 +95,40 @@ export const LoginModule: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-m3-surface text-m3-on-surface flex flex-col md:flex-row justify-center items-center p-4 md:p-8 relative overflow-hidden transition-all duration-300">
+    <div className="min-h-screen bg-m3-surface text-m3-on-surface flex flex-col justify-center items-center p-4 md:p-8 relative overflow-hidden transition-all duration-300">
       
       {/* Background design accents */}
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-m3-primary/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-m3-primary/5 rounded-full blur-[120px] pointer-events-none" />
 
       {/* Main card box Container */}
-      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-10 my-auto">
+      <div className="w-full max-w-xl flex flex-col gap-6 items-center relative z-10 my-auto text-center">
         
-        {/* LEFT COLUMN: BRAND PROMOTION & SIMULATED EMPLOYEE CARDS */}
-        <div className="lg:col-span-7 flex flex-col gap-6 text-left">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-black bg-m3-primary/10 text-m3-primary border border-m3-primary/25 mb-4">
-              <ShieldCheck className="h-4 w-4" /> SECURE TERMINAL GATEWAY
-            </div>
-            <h2 className="text-3xl md:text-5xl font-black tracking-tight text-m3-on-surface leading-none uppercase">
-              TilePoint <span className="text-m3-primary">HQ ERP OS</span>
-            </h2>
-            <p className="text-sm md:text-base text-m3-on-surface-variant max-w-lg mt-2.5 font-medium">
-              Enterprise-grade Resource Planning and Stock Management Terminal. Protected with real-time access control policies and secure localized database integrity.
-            </p>
-          </div>
-
-          {/* Simulate role block inside login card */}
-          {simulatedAccounts.length > 0 && (
-            <div className="m3-card !rounded-2xl border-m3-outline-variant/30 mt-1">
-              <h3 className="text-xs font-black uppercase tracking-widest text-m3-primary flex items-center gap-2 mb-3">
-                <Cpu className="h-4 w-4" /> Simulation & Role Pre-selectors
-              </h3>
-              <p className="text-xs text-m3-on-surface-variant font-medium mb-4">
-                Instantly switch accounts to preview the specific role layouts, clearance tiers, and permissions across the ERP OS, Inventory, and Admin panels:
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                {simulatedAccounts.map((acc) => (
-                  <button
-                    key={acc.username}
-                    onClick={() => handleSelectAccount(acc)}
-                    className={`flex items-start text-left gap-3 p-3.5 rounded-xl border border-m3-outline-variant/35 bg-m3-surface hover:bg-m3-primary-container/30 hover:border-m3-primary/40 transition-all cursor-pointer group ${
-                      username === acc.username ? 'ring-2 ring-m3-primary/80 bg-m3-primary-container/20 border-m3-primary/50' : ''
-                    }`}
-                  >
-                    <div className="h-9 w-9 rounded-xl bg-m3-primary text-m3-on-primary font-extrabold text-sm justify-center items-center flex m3-shape-asymmetric shadow-sm shrink-0">
-                      {acc.avatar}
-                    </div>
-                    <div>
-                      <span className="text-xs font-black text-m3-on-surface block leading-tight">{acc.name}</span>
-                      <span className="text-[10px] uppercase font-bold text-m3-primary tracking-wide block mb-0.5">{acc.role}</span>
-                      <span className="text-[10px] text-m3-on-surface-variant leading-tight block">{acc.desc}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center gap-3 text-xs font-medium text-m3-on-surface-variant pl-2">
-            <Wifi className="h-4 w-4 text-emerald-500" />
-            <span>Connected • Ready</span>
-          </div>
+        {/* BRAND PROMOTION: Center aligned */}
+        <div className="flex flex-col items-center">
+          <h2 className="text-3xl md:text-5xl font-black tracking-tight text-m3-on-surface leading-none uppercase">
+            TilePoint
+          </h2>
+          <p className="text-xs md:text-sm text-m3-on-surface-variant max-w-md mt-3 font-semibold tracking-wide">
+            Enterprise Resource Planning and Stock Management Terminal.
+          </p>
         </div>
 
-        {/* RIGHT COLUMN: RECTANGULAR SECURE FORM */}
-        <div className="lg:col-span-5 flex flex-col gap-6">
+        {/* SECURE FORM: Max width matching a clean desktop login width */}
+        <div className="w-full max-w-md flex flex-col gap-6">
           <div className="m3-card !rounded-3xl border-m3-outline-variant/40 bg-m3-surface-low shadow-xl flex flex-col p-6 md:p-8">
-            <div className="flex flex-col mb-6">
+            <div className="flex flex-col mb-6 text-left">
               <h3 className="text-xl font-extrabold text-m3-on-surface flex items-center gap-2">
                 <Lock className="h-5 w-5 text-m3-primary" /> Key Verification
               </h3>
-              <p className="text-xs text-m3-on-surface-variant mt-1 font-medium">Please enter your company assigned login identity.</p>
+              <p className="text-xs text-m3-on-surface-variant mt-1 font-medium font-sans">Please enter your company assigned login identity.</p>
             </div>
 
             {errorMsg && (
               <motion.div 
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`mb-5 p-3.5 rounded-xl text-xs flex items-start gap-2.5 font-bold ${
+                className={`mb-5 p-3.5 rounded-xl text-xs flex items-start gap-2.5 font-bold text-left ${
                   isSQLiBlocked 
                     ? 'bg-rose-500/10 text-rose-500 border border-rose-500/35' 
                     : 'bg-amber-500/10 text-amber-500 border border-amber-500/35'
@@ -247,7 +204,7 @@ export const LoginModule: React.FC = () => {
               </div>
 
               {/* Terms of Service Consent */}
-              <div className="flex items-start gap-2.5 my-2 text-left">
+              <div className="flex items-start gap-2.5 my-2 text-left font-sans">
                 <input
                   id="login-terms-checkbox"
                   type="checkbox"
@@ -263,9 +220,9 @@ export const LoginModule: React.FC = () => {
                     onClick={() => setShowTermsModal(true)}
                     className="text-m3-primary hover:underline font-extrabold cursor-pointer inline bg-transparent p-0 border-0 outline-none"
                   >
-                    Terms & Conditions of Use
+                    Terms &amp; Conditions of Use
                   </button>{' '}
-                  protecting proprietary system code & developer legal safety.
+                  protecting proprietary system code &amp; developer legal safety.
                 </label>
               </div>
 
@@ -281,6 +238,39 @@ export const LoginModule: React.FC = () => {
             </form>
           </div>
         </div>
+
+        {/* Simulate role block - centered underneath */}
+        {simulatedAccounts.length > 0 && (
+          <div className="w-full max-w-xl m3-card !rounded-2xl border-m3-outline-variant/30 text-left bg-m3-surface-low/80 p-5 mt-2">
+            <h3 className="text-xs font-black uppercase tracking-widest text-m3-primary flex items-center gap-2 mb-3">
+              <Cpu className="h-4 w-4" /> Simulation &amp; Role Pre-selectors
+            </h3>
+            <p className="text-[11px] text-m3-on-surface-variant font-medium mb-4 leading-normal font-sans">
+              Instantly switch accounts to preview the specific role layouts, clearance tiers, and permissions across the ERP OS, Inventory, and Admin panels:
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {simulatedAccounts.map((acc) => (
+                <button
+                  key={acc.username}
+                  onClick={() => handleSelectAccount(acc)}
+                  className={`flex items-start text-left gap-3 p-3 rounded-xl border border-m3-outline-variant/35 bg-m3-surface hover:bg-m3-primary-container/30 hover:border-m3-primary/40 transition-all cursor-pointer group ${
+                    username === acc.username ? 'ring-2 ring-m3-primary/80 bg-m3-primary-container/20 border-m3-primary/50' : ''
+                  }`}
+                >
+                  <div className="h-9 w-9 rounded-xl bg-m3-primary text-m3-on-primary font-extrabold text-sm justify-center items-center flex m3-shape-asymmetric shadow-sm shrink-0">
+                    {acc.avatar}
+                  </div>
+                  <div>
+                    <span className="text-xs font-black text-m3-on-surface block leading-tight">{acc.name}</span>
+                    <span className="text-[10px] uppercase font-bold text-m3-primary tracking-wide block mb-0.5">{acc.role}</span>
+                    <span className="text-[10px] text-m3-on-surface-variant leading-tight block font-sans">{acc.desc}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
       </div>
 

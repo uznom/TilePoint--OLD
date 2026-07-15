@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Roboto+Flex:opsz,wdth,wght@8..144,25..151,100..1000&display=swap');
 @import "tailwindcss";
 
 @variant dark (&:where(.dark, .dark *));
@@ -1368,7 +1367,7 @@ html.accessibility-no-animation table tbody tr:hover td {
     margin: 0 !important; /* Forces document boundary alignment to prevent horizontal offset issues */
     width: 100% !important; /* Fill the page width natively */
     max-width: 100% !important;
-    padding: 4mm 6mm 14mm 6mm !important; /* Generous symmetrical 6mm side padding guarantees centering and prevents clipped text */
+    padding: 4mm 0mm 14mm 0mm !important; /* Forces 0mm horizontal padding for 1:1 alignment directly to print edges */
     box-sizing: border-box !important;
     background: #ffffff !important;
     color: #000000 !important;
@@ -1380,6 +1379,22 @@ html.accessibility-no-animation table tbody tr:hover td {
     overflow: visible !important;
     border: none !important;
     box-shadow: none !important;
+  }
+
+  /* Enforce 0 margins/padding before left-aligned elements to achieve 1:1 margin-less alignment */
+  .bir-receipt-container .flex.justify-between > *:first-child,
+  .bir-receipt-container [class*="justify-between"] > *:first-child,
+  .bir-receipt-container .grid > *:first-child {
+    padding-left: 0mm !important;
+    margin-left: 0mm !important;
+  }
+
+  /* Add margin/padding to right-aligned elements (amounts) during printing to prevent edge clipping */
+  .bir-receipt-container .flex.justify-between > *:last-child,
+  .bir-receipt-container [class*="justify-between"] > *:last-child,
+  .bir-receipt-container .grid > *:last-child {
+    padding-right: 3mm !important;
+    margin-right: 1mm !important;
   }
 
   /* Ensure all text inside the receipt prints as pure high-contrast black on white */
@@ -1610,7 +1625,7 @@ select:focus {
 }
 
 .animate-roboto-flex {
-  font-family: 'Roboto Flex', sans-serif !important;
+  font-family: 'Roboto Flex Variable', 'Roboto Flex', sans-serif !important;
   animation: roboto-flex-morph 12s cubic-bezier(0.42, 0, 0.58, 1) infinite;
   transition: transform 1s cubic-bezier(0.16, 1, 0.3, 1);
 }

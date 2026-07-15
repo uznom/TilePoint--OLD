@@ -217,10 +217,59 @@ function AppContent() {
     );
   }, [isSidebarMinimized]);
 
+  const [followSystemTheme, setFollowSystemTheme] = useState(() => {
+    const saved = localStorage.getItem("tilepoint_follow_system_theme");
+    return saved !== null ? saved === "true" : true;
+  });
+
   const [darkMode, setDarkMode] = useState(() => {
+    const savedFollow = localStorage.getItem("tilepoint_follow_system_theme");
+    const isFollow = savedFollow !== null ? savedFollow === "true" : true;
+    if (isFollow) {
+      return typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
     const saved = localStorage.getItem("tilepoint_dark_theme");
     return saved !== null ? saved === "true" : true;
   });
+
+  // Handle manual dark mode toggling, disabling "follow system"
+  const handleToggleDarkMode = (targetVal?: boolean) => {
+    setFollowSystemTheme(false);
+    if (targetVal !== undefined) {
+      setDarkMode(targetVal);
+    } else {
+      setDarkMode((prev) => !prev);
+    }
+  };
+
+  useEffect(() => {
+    localStorage.setItem("tilepoint_follow_system_theme", String(followSystemTheme));
+  }, [followSystemTheme]);
+
+  useEffect(() => {
+    if (!followSystemTheme) return;
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = (e: MediaQueryListEvent) => {
+      setDarkMode(e.matches);
+    };
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", handleChange);
+    } else {
+      mediaQuery.addListener(handleChange);
+    }
+
+    setDarkMode(mediaQuery.matches);
+
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener("change", handleChange);
+      } else {
+        mediaQuery.removeListener(handleChange);
+      }
+    };
+  }, [followSystemTheme]);
 
   // Smoothly transition all elements when changing dark/light theme
   const isFirstThemeRender = React.useRef(true);
@@ -1245,27 +1294,6 @@ function AppContent() {
             <span className="hidden sm:inline-block px-3 py-1 rounded-xl text-[10px] font-extrabold uppercase bg-m3-secondary-container text-m3-on-secondary-container border border-m3-outline-variant/40">
               {getBranchName(currentUser.branchAssignmentId)}
             </span>
-
-            {/* Shared DB status indicator */}
-            <span
-              className={`px-2.5 py-1 rounded-xl text-[9px] font-bold uppercase border flex items-center gap-1.5 ${
-                serverConnected
-                  ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                  : "bg-amber-500/10 text-amber-500 border-amber-500/20"
-              }`}
-              title={
-                serverConnected
-                  ? "Connected to central offline network database on host PC"
-                  : "Offline. Storing data in browser storage only."
-              }
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${serverConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`}
-              />
-              <span>
-                {serverConnected ? "Shared Server Live" : "Local Fallback"}
-              </span>
-            </span>
           </div>
 
           {/* Right side controls with Dropdown Menu following strict user intent */}
@@ -1355,7 +1383,7 @@ function AppContent() {
                       <button
                         type="button"
                         onClick={() => {
-                          setDarkMode(!darkMode);
+                          handleToggleDarkMode();
                           setIsAccountDropdownOpen(false);
                         }}
                         className="w-full flex items-center justify-between text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
@@ -1474,16 +1502,6 @@ function AppContent() {
                     </h1>
                     <span className="text-[8px] text-m3-on-surface-variant font-bold block uppercase mt-1 tracking-widest leading-none">
                       HQ ERP OS
-                    </span>
-                    <span
-                      className={`text-[7.5px] font-extrabold uppercase tracking-wider block mt-1.5 ${
-                        serverConnected ? "text-emerald-500" : "text-amber-500"
-                      }`}
-                    >
-                      ●{" "}
-                      {serverConnected
-                        ? "Shared Server Live"
-                        : "Local Fallback"}
                     </span>
                   </div>
                 )}
@@ -1690,7 +1708,7 @@ function AppContent() {
                       <button
                         type="button"
                         onClick={() => {
-                          setDarkMode(!darkMode);
+                          handleToggleDarkMode();
                           setIsSidebarProfileDropdownOpen(false);
                         }}
                         className="w-full flex items-center justify-between text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
@@ -1960,7 +1978,12 @@ function AppContent() {
                       <BranchModule darkMode={darkMode} />
                     )}
                     {activeTab === "system-settings" && (
-                      <SystemSettingsModule darkMode={darkMode} />
+                      <SystemSettingsModule
+                        darkMode={darkMode}
+                        setDarkMode={handleToggleDarkMode}
+                        followSystemTheme={followSystemTheme}
+                        setFollowSystemTheme={setFollowSystemTheme}
+                      />
                     )}
                     {activeTab === "users" && (
                       <UsersModule darkMode={darkMode} />

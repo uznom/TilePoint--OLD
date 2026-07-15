@@ -15,7 +15,6 @@ import {
   Check,
   RotateCcw,
   Settings,
-  HelpCircle,
   ShieldAlert,
   Download,
   Clock,
@@ -30,9 +29,17 @@ import { HoldToConfirmButton } from './HoldToConfirmButton';
 
 interface SystemSettingsModuleProps {
   darkMode: boolean;
+  setDarkMode?: (dark: boolean) => void;
+  followSystemTheme?: boolean;
+  setFollowSystemTheme?: (follow: boolean) => void;
 }
 
-export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ darkMode }) => {
+export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
+  darkMode,
+  setDarkMode,
+  followSystemTheme = false,
+  setFollowSystemTheme
+}) => {
   const { currentUser, updateCurrentUser, truncateDatabase, isRowClearingBlocked, getRowClearingBlockedReason } = useDb();
   const isAuthorized = currentUser && (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER);
 
@@ -318,6 +325,70 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ dark
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* FOLLOW SYSTEM THEME TOGGLE */}
+            {setFollowSystemTheme && (
+              <button
+                type="button"
+                onClick={() => {
+                  const newVal = !followSystemTheme;
+                  setFollowSystemTheme(newVal);
+                  if (newVal) {
+                    const isDark = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    if (setDarkMode) setDarkMode(isDark);
+                  }
+                  window.dispatchEvent(new Event('tilepoint-theme-updated'));
+                }}
+                className={`p-4 rounded-2xl border flex items-start gap-4 transition-all text-left cursor-pointer group ${
+                  followSystemTheme
+                    ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface shadow-sm'
+                    : 'bg-m3-surface-low border-m3-outline-variant/15 hover:bg-m3-primary/5 hover:border-m3-outline-variant/30'
+                }`}
+              >
+                <div className={`p-2.5 rounded-xl shrink-0 transition-transform group-hover:scale-105 ${followSystemTheme ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
+                  <Sliders className="h-5 w-5" />
+                </div>
+                <div className="space-y-1">
+                  <div className="text-[12px] font-black flex items-center gap-1.5 font-sans">
+                    <span>Follow System Theme State</span>
+                    {followSystemTheme && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
+                  </div>
+                  <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+                    Automatically matches the ERP interface theme with your operating system's light or dark mode preference.
+                  </p>
+                </div>
+              </button>
+            )}
+
+            {/* MANUAL DARK MODE SELECTION */}
+            {setDarkMode && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (setFollowSystemTheme) setFollowSystemTheme(false);
+                  setDarkMode(!darkMode);
+                  window.dispatchEvent(new Event('tilepoint-theme-updated'));
+                }}
+                className={`p-4 rounded-2xl border flex items-start gap-4 transition-all text-left cursor-pointer group ${
+                  darkMode && !followSystemTheme
+                    ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface shadow-sm'
+                    : 'bg-m3-surface-low border-m3-outline-variant/15 hover:bg-m3-primary/5 hover:border-m3-outline-variant/30'
+                }`}
+              >
+                <div className={`p-2.5 rounded-xl shrink-0 transition-transform group-hover:scale-105 ${darkMode && !followSystemTheme ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
+                  <Settings className="h-5 w-5" />
+                </div>
+                <div className="space-y-1">
+                  <div className="text-[12px] font-black flex items-center gap-1.5 font-sans">
+                    <span>Manual Workspace Dark Theme</span>
+                    {darkMode && !followSystemTheme && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
+                  </div>
+                  <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+                    Override automatic theme matching and force high-contrast dark mode display across all corporate modules.
+                  </p>
+                </div>
+              </button>
+            )}
+
             {/* TURN OFF BLURS TOGGLE */}
             <button
               type="button"
@@ -708,7 +779,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ dark
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-rose-500/10">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-rose-500/10">
                     {/* Clear Transactions */}
                     <div className="flex flex-col justify-between bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-left space-y-3">
                       <div>
@@ -752,6 +823,30 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ dark
                         Hold to Truncate All
                       </HoldToConfirmButton>
                     </div>
+
+                    {/* Setup from 0 Wipe */}
+                    <div className="flex flex-col justify-between bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-left space-y-3">
+                      <div>
+                        <span className="text-[10px] font-extrabold text-purple-500 font-mono uppercase block">Option C</span>
+                        <h5 className="font-black text-xs text-m3-on-surface mt-1">Factory Reset (Setup 0)</h5>
+                        <p className="text-[10px] text-zinc-400 mt-1 leading-normal font-sans">
+                          Completely erases all application data, configurations, credentials, and settings. Automatically reboots to the initial setup wizard.
+                        </p>
+                      </div>
+                      <HoldToConfirmButton
+                        disabled={resetConfirmation !== 'RESET'}
+                        onConfirm={() => {
+                          localStorage.clear();
+                          sessionStorage.clear();
+                          setResetConfirmation('');
+                          alert('System data cleared completely. Rebooting to setup wizard from 0...');
+                          window.location.reload();
+                        }}
+                        variant="rose"
+                      >
+                        Hold to Setup From 0
+                      </HoldToConfirmButton>
+                    </div>
                   </div>
                 </div>        </div>
               </div>
@@ -759,18 +854,6 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({ dark
           </>
         )}
 
-      </div>
-
-      {/* FOOTER METRICS AREA */}
-      <div className="p-4 bg-m3-surface-low border-t border-m3-outline-variant/15 text-center shrink-0 flex justify-between items-center px-6">
-        <div className="flex items-center gap-1 text-[9px] text-m3-on-surface-variant font-mono uppercase font-black">
-          <HelpCircle className="h-3 w-3" />
-          <span>Real-time layout sync enabled</span>
-        </div>
-        <div className="flex items-center gap-1 text-[9px] text-m3-on-surface-variant font-mono uppercase font-black">
-          <ShieldAlert className="h-3 w-3 text-amber-500" />
-          <span>No personal telemetry transmitted</span>
-        </div>
       </div>
     </div>
   );

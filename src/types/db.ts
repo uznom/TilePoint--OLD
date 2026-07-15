@@ -57,6 +57,11 @@ export interface Branch {
   branchCode?: string;
   localIp?: string;
   gatewayRules?: string;
+  receiptFacebook?: string;
+  receiptPromoText?: string;
+  receiptQrBase64?: string;
+  receiptThankYou?: string;
+  tin?: string;
 }
 
 export interface Supplier {
