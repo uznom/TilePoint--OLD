@@ -61,6 +61,10 @@ export const SetupModule: React.FC = () => {
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.type !== "image/png" && !file.name.toLowerCase().endsWith(".png")) {
+        setErrorMsg("Strict Requirement: Please upload a PNG image only (.png).");
+        return;
+      }
       if (file.size > 1.5 * 1024 * 1024) {
         setErrorMsg("Store Logo size must be less than 1.5MB.");
         return;
@@ -68,6 +72,7 @@ export const SetupModule: React.FC = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setStoreLogo(reader.result as string);
+        setErrorMsg(null);
       };
       reader.readAsDataURL(file);
     }
@@ -638,7 +643,7 @@ export const SetupModule: React.FC = () => {
                           <div className="flex-1 text-left space-y-1">
                             <input
                               type="file"
-                              accept="image/*"
+                              accept="image/png"
                               onChange={handleLogoChange}
                               className="hidden"
                               id="logo-upload"
@@ -650,7 +655,7 @@ export const SetupModule: React.FC = () => {
                               <Upload className="h-3 w-3" /> Select Image
                             </label>
                             <p className="text-[8px] text-zinc-500 dark:text-zinc-400 font-sans">
-                              Supports PNG, JPG, WEBP. Max 1.5MB.
+                              Supports PNG format only (.png). Max 1.5MB.
                             </p>
                             {storeLogo && (
                               <button
@@ -837,31 +842,6 @@ export const SetupModule: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="bg-[#090a0f] border border-zinc-800/80 rounded-xl p-4 h-60 overflow-y-auto font-mono text-[10.5px] leading-relaxed select-text space-y-1 scrollbar-thin scrollbar-thumb-zinc-800">
-                  {terminalLogs.map((log, listIdx) => (
-                    <div key={listIdx} className="flex gap-2">
-                      <span className="text-zinc-600 shrink-0">{log.time}</span>
-                      <span
-                        className={
-                          log.type === "success"
-                             ? "text-emerald-400 font-extrabold"
-                            : log.type === "warn"
-                              ? "text-amber-500"
-                              : "text-zinc-300"
-                        }
-                      >
-                        {log.text}
-                      </span>
-                    </div>
-                  ))}
-                  {!installSuccess && (
-                    <div className="flex items-center gap-2 text-zinc-500 animate-pulse pt-1 font-mono">
-                      <RefreshCw className="h-3.5 w-3.5 animate-spin text-amber-500" />
-                      <span>CONFIGURING SYSTEM...</span>
-                    </div>
-                  )}
-                </div>
-
                 {installSuccess && (
                   <motion.div
                     initial={{ scale: 0.95, opacity: 0 }}
@@ -898,9 +878,6 @@ export const SetupModule: React.FC = () => {
 
       <div className="mt-8 text-center space-y-1 text-[10px] font-mono text-zinc-400 dark:text-zinc-500 relative z-10">
         <p>TILEPOINT ERP SYSTEM</p>
-        <p className="opacity-60">
-          System running on clean transaction records.
-        </p>
       </div>
     </div>
   );

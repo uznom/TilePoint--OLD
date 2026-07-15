@@ -2749,7 +2749,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
               >
                 <div className="text-center font-bold tracking-tight border-b border-dashed border-m3-outline-variant/30 pb-3 flex flex-col items-center justify-center space-y-1">
                   {receiptBranch?.storeLogo ? (
-                    <div className="mb-1.5 h-10 w-auto flex items-center justify-center">
+                    <div 
+                      className="mb-1.5 w-auto flex items-center justify-center"
+                      style={{ height: `${receiptBranch.logoSize || Number(localStorage.getItem('tilepoint_receipt_logo_size_v1') || '40')}px` }}
+                    >
                       <img
                         src={receiptBranch.storeLogo}
                         alt={`${receiptBranch.name} Logo`}

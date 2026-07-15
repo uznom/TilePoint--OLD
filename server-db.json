@@ -42333,26 +42333,6 @@
   ],
   "tp_audit_logs": [
     {
-      "id": "AL-AUTO-BACKUP-1784107261654",
-      "timestamp": "2026-07-15T09:21:01.663Z",
-      "userId": "SYSTEM",
-      "username": "auto_scheduler",
-      "action": "DB_BACKUP_CREATE",
-      "description": "Automatically created background backup snapshot: Automated Backup - 1hr Interval",
-      "tableAffected": "ALL",
-      "recordId": "SNAP-AUTO-1784107261654"
-    },
-    {
-      "id": "AL-1784107231641-173",
-      "timestamp": "2026-07-15T09:20:31.641Z",
-      "userId": "U-1784095229228",
-      "username": "test",
-      "action": "SHIFT_OPEN",
-      "description": "Opened drawer shift with starting cash of ₱5000.00",
-      "tableAffected": "Shifts",
-      "recordId": "SH-1784107231641"
-    },
-    {
       "id": "AL-1784021113130-653",
       "timestamp": "2026-07-14T09:25:13.130Z",
       "userId": "U1",
@@ -42613,6 +42593,8 @@
   "atpos_v2_returns": [],
   "tp_db_snapshots": [],
   "tp_processed_delta_ids": [
+    "delta-add-tp_branch_stock-B1_P-IMPORT-g8hh3pf-1782803304943-162",
+    "delta-add-tp_branch_stock-B1_P-IMPORT-qireqog-1782803304943-503",
     "delta-add-tp_branch_stock-B1_P-IMPORT-5c2yvyi-1782803304943-276",
     "delta-add-tp_branch_stock-B1_P-IMPORT-17y3txu-1782803304943-140",
     "delta-add-tp_branch_stock-B1_P-IMPORT-t0b7xk9-1782803304943-27",
@@ -47610,8 +47592,6 @@
     "delta-add-tp_sale_items-SLI-SL-1784021113130-0-1784021113164-454",
     "delta-add-tp_movements-M-SALE-SL-1784021113130-0-1784021113164-14",
     "delta-add-tp_audit_logs-AL-1784021113130-653-1784021113164-649",
-    "delta-dec-tp_branch_stock-B1_P-IMPORT-fpdu5fj-1784021113165-653",
-    "delta-add-tp_audit_logs-AL-1784107231641-173-1784107231650-299",
-    "delta-add-tp_audit_logs-AL-AUTO-BACKUP-1784107261654-1784107261678-356"
+    "delta-dec-tp_branch_stock-B1_P-IMPORT-fpdu5fj-1784021113165-653"
   ]
 }

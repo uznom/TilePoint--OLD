@@ -5959,6 +5959,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const updateBranch = (id: string, updates: Partial<Branch>) => {
+    const newId = updates.id;
+    const hasIdChanged = newId !== undefined && newId !== id;
+
     setBranches((prev) =>
       prev.map((b) =>
         b.id === id
@@ -5966,7 +5969,118 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
           : b,
       ),
     );
-    addAuditLog("BRANCH_UPDATE", `Updated branch ID ${id}`, "Branches", id);
+
+    if (hasIdChanged && newId) {
+      // 1. Update localStorage if the primary branch was updated
+      const primaryBranchId = localStorage.getItem("tilepoint_primary_branch_id") || "B1";
+      if (primaryBranchId === id) {
+        localStorage.setItem("tilepoint_primary_branch_id", newId);
+      }
+
+      // 2. Cascade update state collections
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.branchAssignmentId === id
+            ? { ...u, branchAssignmentId: newId, updatedAt: new Date().toISOString() }
+            : u
+        )
+      );
+
+      setCurrentUser((prev) => {
+        if (prev && prev.branchAssignmentId === id) {
+          return { ...prev, branchAssignmentId: newId, updatedAt: new Date().toISOString() };
+        }
+        return prev;
+      });
+
+      setBranchStock((prev) =>
+        prev.map((bs) =>
+          bs.branchId === id ? { ...bs, branchId: newId } : bs
+        )
+      );
+
+      setShifts((prev) =>
+        prev.map((s) =>
+          s.branchId === id ? { ...s, branchId: newId } : s
+        )
+      );
+
+      setSales((prev) =>
+        prev.map((s) =>
+          s.branchId === id ? { ...s, branchId: newId } : s
+        )
+      );
+
+      setDeliveries((prev) =>
+        prev.map((d) =>
+          d.branchId === id ? { ...d, branchId: newId } : d
+        )
+      );
+
+      setStockTransfers((prev) =>
+        prev.map((st) => {
+          const updated = { ...st };
+          if (st.fromBranchId === id) updated.fromBranchId = newId;
+          if (st.toBranchId === id) updated.toBranchId = newId;
+          return updated;
+        })
+      );
+
+      setDamageLogs((prev) =>
+        prev.map((dl) =>
+          dl.branchId === id ? { ...dl, branchId: newId } : dl
+        )
+      );
+
+      setExpenses((prev) =>
+        prev.map((e) =>
+          e.branchId === id ? { ...e, branchId: newId } : e
+        )
+      );
+
+      setPurchaseOrders((prev) =>
+        prev.map((po) =>
+          po.branchId === id ? { ...po, branchId: newId } : po
+        )
+      );
+
+      setTransmittals((prev) =>
+        prev.map((t) => {
+          const updated = { ...t };
+          if (t.fromBranchId === id) updated.fromBranchId = newId;
+          if (t.toBranchId === id) updated.toBranchId = newId;
+          return updated;
+        })
+      );
+
+      setMovements((prev) =>
+        prev.map((m) => {
+          const updated = { ...m };
+          if (m.sourceBranchId === id) updated.sourceBranchId = newId;
+          if (m.destinationBranchId === id) updated.destinationBranchId = newId;
+          return updated;
+        })
+      );
+
+      setActiveSessions((prev) =>
+        prev.map((as) =>
+          as.branchId === id ? { ...as, branchId: newId } : as
+        )
+      );
+
+      setBranchSalesReports((prev) =>
+        prev.map((bsr) =>
+          bsr.branchId === id ? { ...bsr, branchId: newId } : bsr
+        )
+      );
+    }
+
+    addAuditLog(
+      "BRANCH_UPDATE",
+      `Updated branch ID ${id}` + (hasIdChanged ? ` to ${newId}` : ""),
+      "Branches",
+      hasIdChanged && newId ? newId : id,
+    );
   };
 
   const deleteBranch = (id: string) => {
