@@ -218,9 +218,11 @@ export function validateAndMapInboundReport(parsed: any): { errors: string[]; ma
 
 interface SalesTransmissionModuleProps {
  darkMode: boolean;
+ hideManualImport?: boolean;
+ showOnlyImport?: boolean;
 }
 
-export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = ({ darkMode }) => {
+export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = ({ darkMode, hideManualImport = false, showOnlyImport = false }) => {
  const { currentUser, branches, sales, saleItems, branchSalesReports, rollbackSnapshots, performRollbackToSnapshot, transmitSalesReport, importManualSalesReport, auditSalesReport, addAuditLog, shifts, expenses, deliveries, purchaseOrders, products, auditLogs } = useDb();
 
  // Selected date for compiling current branch report
@@ -926,6 +928,311 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
     );
   }
 
+  if (showOnlyImport) {
+    return (
+      <div className="w-full text-m3-on-surface space-y-6 animate-fade-in font-sans pb-12 text-left">
+        {/* Dynamic Toast feedback */}
+        <AnimatePresence>
+          {toast && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className={`fixed top-4 right-4 z-50 flex items-center gap-2.5 px-4.5 py-3 rounded-2xl shadow-xl border text-xs font-bold ${
+                toast.type === 'success'
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  : toast.type === 'error'
+                  ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                  : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+              }`}
+            >
+              <Check className="h-4 w-4" />
+              <span>{toast.message}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Header Panel */}
+        <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[28px] p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 card-glow shadow-md">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="p-2 bg-m3-primary/10 rounded-xl text-m3-primary border border-m3-primary/20">
+                <Upload className="h-5 w-5" />
+              </span>
+              <div>
+                <h2 className="text-base font-black uppercase tracking-wider text-m3-primary font-sans leading-none">
+                  HQ Manual JSON Import Center
+                </h2>
+                <p className="text-[10px] text-zinc-400 font-bold font-mono uppercase tracking-widest mt-1">
+                  Offline Ledger Processing & Integrity Audits
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-m3-on-surface-variant max-w-xl leading-relaxed pl-1 pt-1">
+              Upload branch-compiled signed JSON files or copy-paste transmission envelopes manually. Reconcile transaction lines, verify digital signatures, and write authenticated sales packets to the Central HQ database securely.
+            </p>
+          </div>
+        </div>
+
+        {/* Form and Database Buffers side-by-side */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+          {/* Main Drag-and-Drop and Input Area */}
+          <div className="xl:col-span-7 bg-m3-surface-low border border-m3-outline-variant/30 rounded-[28px] p-6 space-y-5">
+            <h3 className="text-xs font-black uppercase tracking-widest text-m3-primary font-mono flex items-center gap-1.5 border-b border-m3-outline-variant/20 pb-3">
+              <FileJson className="h-4.5 w-4.5 text-amber-500" />
+              <span>Import Ledger Package</span>
+            </h3>
+
+            <div className="space-y-4">
+              <p className="text-xs text-m3-on-surface-variant leading-relaxed">
+                Import a manually saved branch sales report JSON file. Drag-and-drop the exported file below, select it directly from storage, or paste the raw structured JSON data inside the text area.
+              </p>
+
+              {/* Drag and Drop Zone and File Picker combined */}
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black uppercase tracking-widest text-m3-on-surface-variant font-mono">
+                  Select or Drag & Drop JSON Report file:
+                </label>
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragging(true);
+                  }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const text = event.target?.result as string;
+                        setPastedJson(text);
+                        triggerToast('File dropped and loaded successfully.', 'info');
+                      };
+                      reader.onerror = () => triggerToast('Failed to read dropped file.', 'error');
+                      reader.readAsText(file);
+                    }
+                  }}
+                  className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all flex flex-col items-center justify-center gap-2 cursor-pointer ${
+                    isDragging
+                      ? 'border-m3-primary bg-m3-primary/10'
+                      : 'border-m3-outline-variant/40 hover:border-m3-primary/50 bg-m3-surface-lowest'
+                  }`}
+                  onClick={() => document.getElementById('report-file-picker-dedicated')?.click()}
+                >
+                  <Upload className={`h-8 w-8 transition-transform ${isDragging ? 'scale-110 text-m3-primary' : 'text-zinc-500'}`} />
+                  <div className="text-xs font-bold text-m3-on-surface">
+                    {isDragging ? 'Drop the file here' : 'Drag & Drop .json file here, or click to browse'}
+                  </div>
+                  <span className="text-[10px] text-m3-on-surface-variant font-mono">
+                    Accepts only signed offline report JSONs
+                  </span>
+                  <input
+                    type="file"
+                    id="report-file-picker-dedicated"
+                    accept=".json"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                </div>
+              </div>
+
+              {/* PASTE DIALOG */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-m3-on-surface-variant pl-0.5 font-mono">Raw JSON content string:</label>
+                  <div className="flex items-center gap-3">
+                    {pastedJson && (
+                      <button
+                        onClick={() => setPastedJson('')}
+                        className="text-[10px] text-rose-500 hover:underline font-bold cursor-pointer"
+                        type="button"
+                      >
+                        Clear
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        const sampleJson = {
+                          "branchId": "B2",
+                          "branchName": "Emman Tile Center Branch",
+                          "reportingDate": "2026-07-18",
+                          "sales": [
+                            {
+                              "id": "SALE-B2-001",
+                              "saleNumber": "TP-B2-SALE-2001",
+                              "shiftId": "SHIFT-B2-01",
+                              "branchId": "B2",
+                              "cashierId": "USER-02",
+                              "cashierName": "Juan dela Cruz",
+                              "subtotal": 12000,
+                              "vat": 1440,
+                              "discount": 500,
+                              "grandTotal": 12940,
+                              "amountTendered": 13000,
+                              "changeAmount": 60
+                            }
+                          ],
+                          "saleItems": [
+                            {
+                              "id": "SALEITEM-B2-001",
+                              "saleId": "SALE-B2-001",
+                              "productId": "PROD-001",
+                              "productName": "Ceramic Floor Tile 60x60",
+                              "quantity": 20,
+                              "unitPrice": 600,
+                              "total": 12000
+                            }
+                          ]
+                        };
+                        setPastedJson(JSON.stringify(sampleJson, null, 2));
+                        triggerToast('Loaded sample import JSON structure!', 'success');
+                      }}
+                      className="text-[10px] text-m3-primary hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                      type="button"
+                    >
+                      <span>Load Sample JSON</span>
+                    </button>
+                  </div>
+                </div>
+                <textarea
+                  value={pastedJson}
+                  onChange={(e) => setPastedJson(e.target.value)}
+                  placeholder='Paste raw downloaded corporate JSON file contents here, e.g. { "branchId": "B2", "branchName": "Branch Name", ... }'
+                  rows={6}
+                  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/40 rounded-xl p-3 text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400 focus:outline-none focus:border-m3-primary whitespace-pre scrollbar-thin"
+                />
+              </div>
+
+              {/* LIVE VERIFICATION SUMMARY */}
+              {liveValidation && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] text-m3-on-surface-variant font-medium px-1">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${liveValidation.isParsed && liveValidation.hasRequiredFields && !liveValidation.isDuplicate ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                      <span>
+                        {liveValidation.isParsed && liveValidation.hasRequiredFields && !liveValidation.isDuplicate ? (
+                          <>
+                            <span className="font-bold text-m3-on-surface">{liveValidation.branchName || 'Valid Report'}</span>
+                            <span className="opacity-70"> ({liveValidation.reportingDate}) • Total: ₱{liveValidation.recalculatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          </>
+                        ) : (
+                          <span className="text-rose-500 font-bold">Unsigned or malformed JSON payload</span>
+                        )}
+                      </span>
+                    </div>
+                    {liveValidation.isDuplicate && (
+                      <span className="text-[10px] text-rose-500 font-mono font-bold">Already Transmitted</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ERROR PANEL */}
+              {importError && (
+                <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-[10px] font-bold leading-normal flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <div>
+                    <span>Schema Verification Error:</span>
+                    <p className="font-medium text-m3-on-surface mt-1 whitespace-pre-line">{importError}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* SUCCESS PANEL */}
+              {importSuccess && (
+                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl text-[10.5px] font-bold flex items-center gap-2.5">
+                  <CheckCircle2 className="h-4.5 w-4.5 animate-bounce text-emerald-400" />
+                  <span>Report verified, parsed, and logged inside the audit lists successfully.</span>
+                </div>
+              )}
+
+              <div className="pt-2 border-t border-m3-outline-variant/15 flex justify-end gap-3.5">
+                <button
+                  disabled={!pastedJson.trim()}
+                  onClick={() => {
+                    const res = importManualSalesReport(pastedJson);
+                    if (res.success) {
+                      setPastedJson('');
+                      setImportError(null);
+                      setImportSuccess(true);
+                      triggerToast('Manual JSON sales report imported. Assigned for audit processing.', 'success');
+                      setTimeout(() => setImportSuccess(false), 5000);
+                    } else {
+                      setImportError(res.error || 'Import failed');
+                      setImportSuccess(false);
+                      triggerToast('Import failed. Check validation errors.', 'error');
+                    }
+                  }}
+                  className="px-6 py-2.5 bg-m3-primary hover:bg-opacity-90 disabled:opacity-40 text-m3-on-primary rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition shadow-md cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <Check className="h-4 w-4" />
+                  <span>Import & Reconcile Ledger</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Side: Active Rolling State Buffers for Safety rollback */}
+          <div className="xl:col-span-5 space-y-6">
+            <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[28px] p-6 space-y-5">
+              <div className="space-y-0.5 border-b border-m3-outline-variant/20 pb-3">
+                <h3 className="text-xs font-black uppercase tracking-widest text-m3-primary font-mono flex items-center gap-1.5">
+                  <RefreshCw className="h-4 w-4 text-emerald-500" />
+                  <span>Security Rollback Logs</span>
+                </h3>
+                <p className="text-[10px] text-zinc-400">
+                  Active rolling buffers of the 5 most recent ledger states. Restore database instantly to revert accidental manual imports.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {rollbackSnapshots.length === 0 ? (
+                  <div className="p-8 text-center text-[11px] text-zinc-500 italic border border-dashed border-m3-outline-variant/15 rounded-2xl bg-m3-surface-lowest">
+                    No active rollback points available. Submit or modify data to spawn local recovery snapshots.
+                  </div>
+                ) : (
+                  rollbackSnapshots.map((snap, i) => (
+                    <div
+                      key={snap.id}
+                      className="p-3.5 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-lowest flex items-center justify-between gap-3 text-left hover:border-m3-primary/30 transition"
+                    >
+                      <div className="space-y-1">
+                        <div className="text-[11px] font-bold text-m3-on-surface flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>Snapshot #{rollbackSnapshots.length - i}</span>
+                          <span className="text-[9px] font-mono text-zinc-400 font-normal">({snap.id.substring(0, 8)})</span>
+                        </div>
+                        <div className="text-[10px] text-m3-on-surface-variant font-mono">
+                          {new Date(snap.timestamp).toLocaleTimeString()} • {snap.branchName || "Manual Save"}
+                        </div>
+                        <div className="text-[9px] text-zinc-500 leading-tight">
+                          Includes {snap.branchSalesReports?.length || 0} reports, {snap.products?.length || 0} products, {snap.movements?.length || 0} movements.
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Are you sure you want to revert the system database to state #${rollbackSnapshots.length - i}? Current pending imports will be rolled back.`)) {
+                            performRollbackToSnapshot(snap.id);
+                            triggerToast("Database successfully rolled back to selected snapshot state.", "success");
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-[10px] font-bold uppercase tracking-wider transition border border-rose-500/20 active:scale-95 cursor-pointer"
+                      >
+                        Restore
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full text-m3-on-surface space-y-6 animate-fade-in font-sans pb-12">
  {/* Dynamic Toast feedback */}
@@ -971,7 +1278,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  </div>
 
  {/* Action center keys */}
- {currentUser.role === UserRole.ADMIN && (
+ {currentUser.role === UserRole.ADMIN && !hideManualImport && (
  <div className="flex items-center gap-2 sm:self-center shrink-0">
  <button
  onClick={() => {

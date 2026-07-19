@@ -445,10 +445,10 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                 <select
                   value={selectedBranchId}
                   onChange={(e) => setSelectedBranchId(e.target.value)}
-                  className="w-full sm:w-44 px-3.5 py-2.5 bg-m3-surface-lowest border border-m3-outline-variant/20 rounded-xl text-xs font-bold uppercase tracking-wider text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary appearance-none cursor-pointer pr-8"
+                  className="w-full sm:w-44 px-3.5 py-2.5 bg-m3-surface-lowest border border-m3-outline-variant/20 rounded-xl text-xs font-bold uppercase tracking-wider text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary appearance-none cursor-pointer pr-8 bg-white dark:bg-[#131A22] text-[#101828] dark:text-[#F8FAFC]"
                 >
                   {branches.map((b) => (
-                    <option key={b.id} value={b.id}>
+                    <option key={b.id} value={b.id} className="bg-white dark:bg-[#131A22] text-[#101828] dark:text-[#F8FAFC] font-sans font-medium">
                       {b.name}
                     </option>
                   ))}
@@ -699,7 +699,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                 />
                 <div>
                   <span className="text-xs font-bold text-m3-on-surface block">Gross sales reconciled</span>
-                  <span className="text-[10px] text-zinc-400 leading-relaxed mt-0.5 block">
+                  <span className="text-[10px] text-m3-on-surface-variant leading-relaxed mt-0.5 block">
                     Verify that local {stats.count} invoices match daily cashier X-Report readings.
                   </span>
                 </div>
@@ -715,7 +715,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                 />
                 <div>
                   <span className="text-xs font-bold text-m3-on-surface block">Expenses audited</span>
-                  <span className="text-[10px] text-zinc-400 leading-relaxed mt-0.5 block">
+                  <span className="text-[10px] text-m3-on-surface-variant leading-relaxed mt-0.5 block">
                     Confirm all local operational expense logs of ₱{stats.totalExpenses.toLocaleString()} are backed by physical receipts.
                   </span>
                 </div>
@@ -731,7 +731,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                 />
                 <div>
                   <span className="text-xs font-bold text-m3-on-surface block">Inventory COGS verified</span>
-                  <span className="text-[10px] text-zinc-400 leading-relaxed mt-0.5 block">
+                  <span className="text-[10px] text-m3-on-surface-variant leading-relaxed mt-0.5 block">
                     Confirm the calculated COGS of ₱{stats.cogs.toLocaleString()} aligns with stock dispatches.
                   </span>
                 </div>
@@ -782,7 +782,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                 >
                   <div className="flex items-center justify-between w-full">
                     <span className="text-[9px] font-black uppercase tracking-wider font-mono text-m3-on-surface-variant">Clipboard</span>
-                    <Copy className="h-4 w-4 text-zinc-400 group-hover:scale-110 transition-transform" />
+                    <Copy className="h-4 w-4 text-m3-on-surface-variant group-hover:scale-110 transition-transform" />
                   </div>
                   <div>
                     <div className="text-[11px] font-bold text-m3-on-surface leading-tight">Copy JSON Packet</div>
@@ -920,7 +920,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                               <td className="p-3 text-center">
                                 <button
                                   onClick={() => setExpandedSaleId(isExpanded ? null : s.id)}
-                                  className="p-1 bg-zinc-950 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-lg transition"
+                                  className="p-1 bg-m3-surface-lowest hover:bg-m3-outline-variant/15 text-m3-on-surface-variant hover:text-m3-on-surface border border-m3-outline-variant/20 rounded-lg transition"
                                 >
                                   {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                 </button>
@@ -936,7 +936,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                                     <div className="overflow-hidden border border-m3-outline-variant/15 rounded-lg">
                                       <table className="w-full text-left text-[11px] font-mono">
                                         <thead>
-                                          <tr className="bg-zinc-950 text-m3-on-surface-variant border-b border-zinc-800/30 font-bold uppercase text-[9px] tracking-wider">
+                                          <tr className="bg-m3-surface-lowest text-m3-on-surface border-b border-m3-outline-variant/20 font-bold uppercase text-[9px] tracking-wider">
                                             <th className="p-2">Item / SKU</th>
                                             <th className="p-2 text-center">Qty</th>
                                             <th className="p-2 text-right">Price (₱)</th>
@@ -1023,7 +1023,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                       </tr>
                     ) : (
                       stats.expenses.map((e) => (
-                        <tr key={e.id} className="border-b border-zinc-800/20 hover:bg-zinc-950/20 transition font-mono text-m3-on-surface-variant">
+                        <tr key={e.id} className="border-b border-m3-outline-variant/10 hover:bg-m3-surface-lowest/40 transition font-mono text-m3-on-surface-variant">
                           <td className="p-3 text-rose-400 font-extrabold uppercase text-[10px] tracking-wider">{e.category}</td>
                           <td className="p-3 text-m3-on-surface-variant font-sans text-[11px] leading-relaxed max-w-xs truncate" title={e.notes}>
                             {e.notes || "No details provided"}

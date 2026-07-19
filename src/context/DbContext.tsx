@@ -6769,6 +6769,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  createdAt: p.createdAt || new Date().toISOString(),
  updatedAt: new Date().toISOString(),
  isDeleted: !!p.isDeleted,
+ hasExpiration: p.hasExpiration !== undefined ? !!p.hasExpiration : (p.expirationDate ? true : false),
+ expirationDate: p.expirationDate ? p.expirationDate : undefined,
  };
  });
 

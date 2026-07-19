@@ -36,6 +36,7 @@ import {
  Check,
  Printer,
  ChevronRight,
+ ChevronLeft,
  ChevronDown,
  ChevronUp,
  Clock,
@@ -518,6 +519,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  // Form Fields State (Product Schema matches & additions)
  const [productCode, setProductCode] = useState('');
  const [hasExpiration, setHasExpiration] = useState(false);
+ const [expirationDate, setExpirationDate] = useState('');
  const [sku, setSku] = useState('');
  const [barcode, setBarcode] = useState('');
  const [designName, setDesignName] = useState('');
@@ -978,6 +980,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  setMinimumStock(20);
  setOrigin('');
  setHasExpiration(false);
+ setExpirationDate('');
 
  // Reset new supplier registration sub-fields
  setIsRegisteringNewSupplier(false);
@@ -1026,6 +1029,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  setMinimumStock(p.minimumStock);
  setOrigin(p.origin || '');
  setHasExpiration(!!p.hasExpiration);
+ setExpirationDate(p.expirationDate || '');
 
  // Reset new supplier fields for edit mode
  setIsRegisteringNewSupplier(false);
@@ -1114,6 +1118,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  markupPercent: Number(markupPercent),
  taxType,
  hasExpiration,
+ expirationDate: hasExpiration ? expirationDate : undefined,
  };
 
  if (isEditMode) {
@@ -1990,7 +1995,47 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  try {
  if (trimmedInput.startsWith('[') || trimmedInput.startsWith('{')) {
  const jsonParsed = JSON.parse(trimmedInput);
+ if (jsonParsed && typeof jsonParsed === 'object' && 'inventoryCounts' in jsonParsed && Array.isArray(jsonParsed.inventoryCounts)) {
+ formatType = 'StockTally JSON';
+ const origin = jsonParsed.exportMeta?.originBranchId || '';
+ parsed = jsonParsed.inventoryCounts.map((item, i) => {
+ const flatProduct: any = {
+ id: item.id || `P-IMPORT-${Date.now()}-${i}`,
+ barcode: item.barcode,
+ category: item.category,
+ productName: item.productName,
+ brand: item.brand,
+ size: item.size,
+ unit: item.uom || item.unit || 'PCS',
+ origin: origin || item.origin,
+ };
+ if (item.pricing) {
+ flatProduct.costPrice = item.pricing.costPrice;
+ flatProduct.sellingPrice = item.pricing.sellingPrice;
+ flatProduct.taxType = item.pricing.taxType;
+ if (item.pricing.markup) {
+ const numMarkup = parseInt(item.pricing.markup.replace('%', ''), 10);
+ flatProduct.markupPercent = isNaN(numMarkup) ? undefined : numMarkup;
+ }
+ }
+ if (item.stock) {
+ flatProduct.minimumStock = item.stock.minimumStock;
+ flatProduct.boxQuantity = item.stock.piecesPerBox;
+ flatProduct.stockQuantity = item.stock.stockQuantity;
+ if (item.stock.expiryDate) {
+ flatProduct.expirationDate = item.stock.expiryDate;
+ flatProduct.hasExpiration = true;
+ }
+ }
+ if (item.logistics) {
+ flatProduct.supplierId = item.logistics.supplierId;
+ flatProduct.isDeleted = item.logistics.isDeleted;
+ }
+ return flatProduct;
+ });
+ } else {
  parsed = Array.isArray(jsonParsed) ? jsonParsed : [jsonParsed];
+ }
  } else {
  formatType = 'CSV';
  const csvRows = parseCSV(trimmedInput);
@@ -2060,8 +2105,14 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  'box qty': 'boxQuantity',
  'box quantity': 'boxQuantity',
  'box_quantity': 'boxQuantity',
+ 'piecesperbox': 'boxQuantity',
+ 'pieces_per_box': 'boxQuantity',
  'location': 'origin',
- 'origin': 'origin'
+ 'origin': 'origin',
+ 'originbranchid': 'origin',
+ 'origin_branch_id': 'origin',
+ 'expirydate': 'expirationDate',
+ 'expiry_date': 'expirationDate'
  };
 
  parsed = csvRows.map(row => {
@@ -2721,11 +2772,39 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  Source: {p.origin}
  </span>
  )}
- {p.hasExpiration && (
- <span className="text-[10px] text-amber-500 font-extrabold bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 font-sans flex items-center gap-1" title="This product has an expiration date requirement.">
+ {p.hasExpiration && (() => {
+ if (p.expirationDate) {
+ const today = new Date("2026-07-18");
+ const exp = new Date(p.expirationDate);
+ const diffTime = exp.getTime() - today.getTime();
+ const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+ if (diffDays < 0) {
+ return (
+ <span className="text-[10px] text-rose-500 font-extrabold bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20 font-sans flex items-center gap-1" title={`Expired on ${p.expirationDate}. Quarantine immediately!`}>
+ <Clock className="h-3 w-3 shrink-0 text-rose-500 animate-pulse" /> Expired ({p.expirationDate})
+ </span>
+ );
+ } else if (diffDays <= 30) {
+ return (
+ <span className="text-[10px] text-amber-500 font-extrabold bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 font-sans flex items-center gap-1" title={`Expiring soon on ${p.expirationDate}. Sell or move first!`}>
+ <Clock className="h-3 w-3 shrink-0 text-amber-500 animate-pulse" /> Expiring Soon ({p.expirationDate})
+ </span>
+ );
+ } else {
+ return (
+ <span className="text-[10px] text-emerald-500 font-extrabold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-sans flex items-center gap-1" title={`Valid until ${p.expirationDate}`}>
+ <Clock className="h-3 w-3 shrink-0 text-emerald-500" /> Expiry Tracked ({p.expirationDate})
+ </span>
+ );
+ }
+ } else {
+ return (
+ <span className="text-[10px] text-amber-500 font-extrabold bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 font-sans flex items-center gap-1" title="This product has an expiration date requirement. Check calendar batches.">
  <Clock className="h-3 w-3 shrink-0 text-amber-500 animate-pulse" /> Expiry Tracked
  </span>
- )}
+ );
+ }
+ })()}
  </div>
  </td>
 
@@ -4515,7 +4594,7 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  }}
  className="p-1.5 hover:bg-m3-surface-low rounded-lg border border-m3-outline-variant/15 text-m3-on-surface hover:text-m3-primary transition-all cursor-pointer"
  >
- <ChevronDown className="h-4 w-4 rotate-90" />
+ <ChevronLeft className="h-4 w-4" />
  </button>
  <span className="text-xs font-black uppercase tracking-wider text-m3-on-surface-variant select-none min-w-[100px] text-center">
  {new Date(calendarYear, calendarMonth).toLocaleString("en-US", { month: "long", year: "numeric" })}
@@ -4553,64 +4632,80 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  <div key={`blank-${idx}`} className="bg-m3-surface-lowest/15 rounded-xl min-h-[48px] border border-transparent" />
  ))}
 
- {/* Calendar Days */}
- {Array.from({ length: new Date(calendarYear, calendarMonth + 1, 0).getDate() }).map((_, idx) => {
- const day = idx + 1;
- const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
- 
- // Filter batches expiring on this day
- const dayBatches = batches.filter(b => b.expiryDate === dateStr);
- 
- const isToday = calendarYear === 2026 && calendarMonth === 6 && day === 16; // July 16, 2026 is today
+  {/* Calendar Days */}
+  {Array.from({ length: new Date(calendarYear, calendarMonth + 1, 0).getDate() }).map((_, idx) => {
+    const day = idx + 1;
+    const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    
+    // Filter batches expiring on this day
+    const dayBatches = batches.filter(b => b.expiryDate === dateStr);
 
- return (
- <div
- key={`day-${day}`}
- onClick={() => {
- setBatchFormExpDate(dateStr);
- if (products.length > 0) {
- setBatchFormProductId(products[0].id);
- }
- setShowAddBatchModal(true);
- }}
- className={`group min-h-[48px] p-1 bg-m3-surface-lowest border rounded-xl flex flex-col justify-between items-start transition-all cursor-pointer hover:border-m3-primary/50 hover:shadow-xs relative ${
- isToday 
- ? "border-m3-primary ring-1 ring-m3-primary/30" 
- : dayBatches.length > 0 
- ? "border-rose-500/40 bg-rose-500/[0.02]" 
- : "border-m3-outline-variant/15"
- }`}
- title="Click to register batch expiring on this day"
- >
- <span className={`text-[10px] font-black leading-none px-1 py-0.5 rounded ${
- isToday ? "bg-m3-primary text-white" : "text-m3-on-surface-variant"
- }`}>
- {day}
- </span>
+    // Filter catalog products expiring on this day
+    const dayProducts = products.filter(p => !p.isDeleted && p.hasExpiration && p.expirationDate === dateStr);
+    
+    const today = new Date();
+    const isToday = calendarYear === today.getFullYear() && calendarMonth === today.getMonth() && day === today.getDate();
 
- {/* Expiring Batches list inside day block */}
- {dayBatches.length > 0 && (
- <div className="w-full space-y-0.5 mt-1 overflow-hidden">
- {dayBatches.map(b => (
- <div
- key={b.id}
- className={`text-[8px] font-bold px-1 py-0.2 rounded truncate text-left w-full ${
- b.status === "Expired"
- ? "bg-rose-500/15 text-rose-500 border border-rose-500/10"
- : "bg-amber-500/15 text-amber-500 border border-amber-500/10"
- }`}
- title={`${b.productCode} Batch #${b.batchNumber} (${b.quantity} bags) Expiries`}
- >
- #{b.batchNumber} ({b.quantity})
- </div>
- ))}
- </div>
- )}
- </div>
- );
- })}
- </div>
- </div>
+    const hasExpirations = dayBatches.length > 0 || dayProducts.length > 0;
+
+    return (
+      <div
+        key={`day-${day}`}
+        onClick={() => {
+          setBatchFormExpDate(dateStr);
+          if (products.length > 0) {
+            setBatchFormProductId(products[0].id);
+          }
+          setShowAddBatchModal(true);
+        }}
+        className={`group min-h-[54px] p-1.5 bg-m3-surface-lowest border rounded-xl flex flex-col justify-between items-start transition-all cursor-pointer hover:border-m3-primary/50 hover:shadow-xs relative ${
+          isToday 
+            ? "border-m3-primary ring-2 ring-m3-primary/20 bg-m3-primary/5" 
+            : hasExpirations 
+              ? "border-rose-500/40 bg-rose-500/[0.02]" 
+              : "border-m3-outline-variant/15"
+        }`}
+        title="Click to register batch expiring on this day"
+      >
+        <span className={`text-[10px] font-black leading-none px-1.5 py-0.5 rounded ${
+          isToday ? "bg-m3-primary text-white" : "text-m3-on-surface-variant bg-m3-surface-low/50"
+        }`}>
+          {day}
+        </span>
+
+        {/* Expiring Batches & Products list inside day block */}
+        {hasExpirations && (
+          <div className="w-full space-y-0.5 mt-1 overflow-hidden">
+            {dayBatches.map(b => (
+              <div
+                key={b.id}
+                className={`text-[8px] font-bold px-1 py-0.5 rounded truncate text-left w-full leading-none ${
+                  b.status === "Expired"
+                    ? "bg-rose-500/15 text-rose-500 border border-rose-500/10"
+                    : "bg-amber-500/15 text-amber-500 border border-amber-500/10"
+                }`}
+                title={`${b.productCode} Batch #${b.batchNumber} (${b.quantity} bags) Expiry`}
+              >
+                #${b.batchNumber} (${b.quantity})
+              </div>
+            ))}
+            {dayProducts.map(p => (
+              <div
+                key={`p-exp-${p.id}`}
+                className="text-[8px] font-extrabold px-1 py-0.5 rounded truncate text-left w-full leading-none bg-indigo-500/15 text-indigo-500 border border-indigo-500/10 dark:text-indigo-400"
+                title={`Catalog Product Expiry: ${p.productName} (${p.productCode})`}
+              >
+                📦 ${p.productCode}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  })}
+  </div>
+  </div>
+
 
  {/* Column 3: Shelf-Life Analytics & Real-Time Alerts */}
  <div className="bg-m3-surface border border-m3-outline-variant/15 p-5 rounded-2xl space-y-4 text-left">
@@ -4902,11 +4997,11 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
 
  {/* QUICK SUPPLIER REGISTRATION MODAL */}
  {showQuickSupplierModal && (
- <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
+ <div className="fixed inset-0 bg-transparent flex items-center justify-center z-[60] p-4 animate-fade-in">
  <div className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm shadow-xl" onClick={() => setShowQuickSupplierModal(false)} />
  <form
  onSubmit={handleSaveQuickSupplier}
- className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[32px] border border-m3-outline-variant/30 p-6 z-30 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4"
+ className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[32px] border border-m3-outline-variant/30 p-6 z-50 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4"
  >
  <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-3">
  <h3 className="text-sm font-black text-m3-primary uppercase tracking-wider flex items-center gap-2">
@@ -5007,10 +5102,10 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  <div className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm shadow-xl" onClick={handleCloseProductModal} />
  <form
  onSubmit={handleSubmit}
- className="relative w-full max-w-2xl rounded-[32px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface grid grid-cols-1 md:grid-cols-2 gap-4 text-left overflow-y-auto max-h-[90vh]"
+ className="relative w-full max-w-4xl rounded-[32px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface flex flex-col gap-5 text-left overflow-y-auto max-h-[90vh]"
  >
  {/* Modal Title Header */}
- <div className="md:col-span-2 flex items-center justify-between border-b border-m3-outline-variant/15 pb-4">
+ <div className="flex items-center justify-between border-b border-m3-outline-variant/15 pb-4">
  <h3 className="text-base font-black text-m3-primary uppercase tracking-wider flex items-center gap-2">
  <Layers className="h-5 w-5" />
  <span>{isEditMode ? 'Modify Product Specifications' : 'Register New Hardware Inventory Unit'}</span>
@@ -5020,8 +5115,9 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  </button>
  </div>
 
+ <div className="space-y-6">
  {/* PRODUCT INTERACTIVE FILE UPLOAD BOX */}
- <div className="md:col-span-2 space-y-2">
+ <div className="space-y-2">
  <span className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Product Image Asset Upload</span>
  <div
  onDragOver={handleDragOver}
@@ -5064,9 +5160,16 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  </div>
  </div>
 
- {/* Core Code settings */}
+ {/* SECTION 1: GENERAL SPECIFICATIONS */}
+ <div className="p-4 rounded-2xl bg-m3-surface-lowest/40 border border-m3-outline-variant/20 space-y-4">
+ <div className="flex items-center gap-2 border-b border-m3-outline-variant/10 pb-2 mb-1">
+ <Package className="h-4 w-4 text-m3-primary" />
+ <span className="text-xs font-black uppercase tracking-wider text-m3-primary">1. General Product Identification</span>
+ </div>
+ 
+ <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
  <div className="space-y-1 relative">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Product Core Code</label>
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Product Core Code</label>
  <input
  type="text"
  required
@@ -5076,9 +5179,8 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  />
  </div>
 
- {/* SKU key */}
  <div className="space-y-1 relative">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Warehouse SKU ID</label>
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Warehouse SKU ID</label>
  <input
  type="text"
  required
@@ -5088,9 +5190,8 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  />
  </div>
 
- {/* Barcode code */}
  <div className="space-y-1 relative">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Barcode Sequence ID</label>
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Barcode Sequence ID</label>
  <input
  type="text"
  required
@@ -5100,9 +5201,8 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  />
  </div>
 
- {/* Categories picker */}
  <div className="space-y-1 relative">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Category Classification</label>
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Category Classification</label>
  <select
  value={category}
  onChange={e => setCategory(e.target.value)}
@@ -5114,9 +5214,31 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  </select>
  </div>
 
- {/* Product Name */}
- <div className="space-y-1 md:col-span-2 relative">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Product Full Descriptive Name</label>
+ <div className="space-y-1 relative">
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Corporate Brand / Label</label>
+ <input
+ type="text"
+ required
+ value={brand}
+ onChange={e => setBrand(e.target.value)}
+ placeholder="e.g. Mariwasa Siam"
+ className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold"
+ />
+ </div>
+
+ <div className="space-y-1 relative">
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Tile Design Name (Optional)</label>
+ <input
+ type="text"
+ value={designName}
+ onChange={e => setDesignName(e.target.value)}
+ placeholder="e.g. Travertine Matte"
+ className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold"
+ />
+ </div>
+
+ <div className="space-y-1 md:col-span-3 relative">
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Product Full Descriptive Name</label>
  <input
  type="text"
  required
@@ -5126,36 +5248,81 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans font-black text-sm"
  />
  </div>
-
- {/* Design Name Spec */}
- <div className="space-y-1 relative">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Tile Design Name (Optional)</label>
- <input
- type="text"
- value={designName}
- onChange={e => setDesignName(e.target.value)}
- placeholder="e.g. Travertine Matte, Carrara Glossy"
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold"
- />
+ </div>
  </div>
 
- {/* Corporate Brand */}
+ {/* SECTION 2: PHYSICAL SPECS & PACKAGING */}
+ <div className="p-4 rounded-2xl bg-m3-surface-lowest/40 border border-m3-outline-variant/20 space-y-4">
+ <div className="flex items-center gap-2 border-b border-m3-outline-variant/10 pb-2 mb-1">
+ <Layers className="h-4 w-4 text-m3-primary" />
+ <span className="text-xs font-black uppercase tracking-wider text-m3-primary">2. Physical Attributes & Packaging</span>
+ </div>
+
+ <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
  <div className="space-y-1 relative">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Corporate Brand / Label</label>
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Trading Unit</label>
  <input
  type="text"
  required
- value={brand}
- onChange={e => setBrand(e.target.value)}
- placeholder="e.g. Mariwasa Siam, Sino Ceramics"
+ value={unit}
+ onChange={e => setUnit(e.target.value)}
+ placeholder="Box / Piece / Bag"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold"
  />
  </div>
 
- {/* Supplier select or Add New Supplier */}
- <div className="space-y-2 md:col-span-2 relative p-4 bg-m3-surface-low rounded-2xl border border-m3-outline-variant/30 mt-2">
+ <div className="space-y-1 relative">
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Dimensions</label>
+ <input
+ type="text"
+ required
+ value={size}
+ onChange={e => setSize(e.target.value)}
+ placeholder="e.g. 60x60 cm"
+ className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold font-mono"
+ />
+ </div>
+
+ <div className="space-y-1 relative">
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Tiles Per Box</label>
+ <input
+ type="number"
+ required
+ value={boxQuantity}
+ onChange={e => setBoxQuantity(Number(e.target.value))}
+ className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
+ />
+ </div>
+
+ <div className="space-y-1 relative">
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none flex items-center justify-between gap-1">
+ <span>Coverage (m²)</span>
+ {category.toLowerCase().includes('tile') && (
+ <span className="text-[8px] text-emerald-500 font-extrabold normal-case bg-emerald-500/5 border border-emerald-500/10 px-1 rounded tracking-normal">Calculated</span>
+ )}
+ </label>
+ <input
+ type="number"
+ step="0.001"
+ required
+ value={coveragePerBox}
+ onChange={e => setCoveragePerBox(Number(e.target.value))}
+ className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
+ />
+ </div>
+ </div>
+ </div>
+
+ {/* SECTION 3: SOURCING & SUPPLIER */}
+ <div className="p-4 rounded-2xl bg-m3-surface-lowest/40 border border-m3-outline-variant/20 space-y-4">
+ <div className="flex items-center gap-2 border-b border-m3-outline-variant/10 pb-2 mb-1">
+ <Building2 className="h-4 w-4 text-m3-primary" />
+ <span className="text-xs font-black uppercase tracking-wider text-m3-primary">3. Wholesaler Supplier & Sourcing</span>
+ </div>
+
+ <div className="space-y-3 relative">
  <div className="flex items-center justify-between">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest select-none">Wholesaler Supplier Source</label>
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest select-none">Supplier Source Link</label>
  {!isEditMode && (
  <label className="flex items-center gap-1.5 cursor-pointer text-[10.5px] font-bold text-m3-tertiary select-none">
  <input
@@ -5257,83 +5424,18 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  </div>
  )}
  </div>
-
- {/* Dimensions and unit */}
- <div className="grid grid-cols-2 gap-2">
- <div className="space-y-1 pl-0 relative">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Trading Unit</label>
- <input
- type="text"
- required
- value={unit}
- onChange={e => setUnit(e.target.value)}
- placeholder="Box / Piece / Bag"
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold"
- />
  </div>
 
- <div className="space-y-1 pl-0 relative">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Dimensions</label>
- <input
- type="text"
- required
- value={size}
- onChange={e => setSize(e.target.value)}
- placeholder="e.g. 60x60 cm"
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold font-mono"
- />
- </div>
+ {/* SECTION 4: FINANCIAL DETAILS */}
+ <div className="p-4 rounded-2xl bg-m3-surface-lowest/40 border border-m3-outline-variant/20 space-y-4">
+ <div className="flex items-center gap-2 border-b border-m3-outline-variant/10 pb-2 mb-1">
+ <DollarSign className="h-4 w-4 text-m3-primary" />
+ <span className="text-xs font-black uppercase tracking-wider text-m3-primary">4. Pricing, Markups & Tax</span>
  </div>
 
- {/* Box Quantity and Auto coverage */}
- <div className="space-y-1 relative">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Box Quantity (tiles per box)</label>
- <input
- type="number"
- required
- value={boxQuantity}
- onChange={e => setBoxQuantity(Number(e.target.value))}
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
- />
- </div>
-
- {/* Auto calculations of tile coverage in SQM */}
- <div className="space-y-1 relative">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none flex items-center justify-between">
- <span>Coverage Per Box (m²)</span>
- {category.toLowerCase().includes('tile') && (
- <span className="text-[9px] text-emerald-500 font-extrabold normal-case bg-emerald-500/5 border border-emerald-500/10 px-1 py-0.5 rounded tracking-normal">Calculated on size</span>
- )}
- </label>
- <input
- type="number"
- step="0.001"
- required
- value={coveragePerBox}
- onChange={e => setCoveragePerBox(Number(e.target.value))}
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
- />
- </div>
-
- {/* Financials & Tax Settings */}
- <div className="border-t border-m3-outline-variant/15 pt-3.5 mt-2 space-y-3">
+ <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
  <div className="space-y-1 relative pl-0">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">VAT Taxation Type</label>
- <select
- value={taxType}
- onChange={e => setTaxType(e.target.value)}
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold cursor-pointer"
- >
- <option value="12% VAT">Standard 12% VAT (Value-Added Tax)</option>
- <option value="VAT Exempt">VAT Exempt (Exempted from tax)</option>
- <option value="Zero Rated">Zero Rated VAT (0% VAT)</option>
- </select>
- </div>
-
- {/* Cost, Markup %, and selling prices */}
- <div className="grid grid-cols-3 gap-2">
- <div className="space-y-1 relative pl-0">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Cost unit Price (₱)</label>
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Cost Price (₱)</label>
  <input
  type="number"
  step="0.1"
@@ -5345,7 +5447,7 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  </div>
 
  <div className="space-y-1 relative pl-0">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Markup (%)</label>
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Markup (%)</label>
  <input
  type="number"
  step="0.1"
@@ -5357,23 +5459,42 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  </div>
 
  <div className="space-y-1 relative pl-0">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Retail Sale (₱)</label>
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Selling Price (Retail ₱)</label>
  <input
  type="number"
  step="0.1"
  required
  value={sellingPrice}
  onChange={e => handleSellingPriceChange(Number(e.target.value))}
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-black"
+ className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-black text-m3-primary"
  />
+ </div>
+
+ <div className="space-y-1 relative pl-0">
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">VAT Taxation Type</label>
+ <select
+ value={taxType}
+ onChange={e => setTaxType(e.target.value)}
+ className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold cursor-pointer"
+ >
+ <option value="12% VAT">Standard 12% VAT</option>
+ <option value="VAT Exempt">VAT Exempt</option>
+ <option value="Zero Rated">Zero Rated (0% VAT)</option>
+ </select>
  </div>
  </div>
  </div>
 
- {/* Starting stock and threshold */}
- <div className="grid grid-cols-2 gap-2">
+ {/* SECTION 5: STOCK LEVELS & EXPIRATION */}
+ <div className="p-4 rounded-2xl bg-m3-surface-lowest/40 border border-m3-outline-variant/20 space-y-4">
+ <div className="flex items-center gap-2 border-b border-m3-outline-variant/10 pb-2 mb-1">
+ <Sliders className="h-4 w-4 text-m3-primary" />
+ <span className="text-xs font-black uppercase tracking-wider text-m3-primary">5. Stock Control & Limits</span>
+ </div>
+
+ <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
  <div className="space-y-1 relative pl-0">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Warehouse stock Level</label>
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Initial Warehouse Stock</label>
  <input
  type="number"
  required
@@ -5384,7 +5505,7 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  </div>
 
  <div className="space-y-1 relative pl-0">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Alert Stock Limit</label>
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Alert Stock Limit</label>
  <input
  type="number"
  required
@@ -5393,31 +5514,17 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
  />
  </div>
- </div>
 
- {/* Custom Origin / Source of Stock */}
- <div className="space-y-1 relative col-span-2 md:col-span-1">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Acquired From / Stock Source (Where did it come from)</label>
- <input
- type="text"
- value={origin}
- onChange={e => setOrigin(e.target.value)}
- placeholder="e.g. Main Cebu Yard, China Lot B-12, Local Consignment Importer"
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans font-bold"
- />
- </div>
-
- {/* Product Expiration Option */}
- <div className="space-y-1 relative col-span-2 md:col-span-1 bg-m3-surface-lowest p-3 rounded-2xl border border-m3-outline-variant/30 flex flex-col justify-between">
+ <div className="space-y-1 relative pl-0 bg-m3-surface-lowest p-3 rounded-2xl border border-m3-outline-variant/30 flex flex-col justify-between">
  <div>
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none block">Shelf-Life Expiration</label>
- <span className="text-[10px] text-m3-on-surface-variant font-medium pl-1 select-none block mt-0.5 leading-snug">Does this product carry an expiration or best-before date?</span>
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none block">Shelf-Life Expiration</label>
+ <span className="text-[9px] text-m3-on-surface-variant font-medium pl-1 select-none block mt-0.5 leading-snug">Requires expiration date?</span>
  </div>
- <div className="flex items-center gap-4 mt-2">
+ <div className="flex items-center gap-2 mt-2">
  <button
  type="button"
  onClick={() => setHasExpiration(true)}
- className={`flex-1 py-1.5 px-3 rounded-xl border text-xs font-bold transition-all text-center cursor-pointer ${
+ className={`flex-1 py-1.5 px-3 rounded-xl border text-[11px] font-bold transition-all text-center cursor-pointer ${
  hasExpiration 
  ? 'bg-amber-500/10 border-amber-500 text-amber-500 font-extrabold shadow-xs' 
  : 'bg-m3-surface-low border-m3-outline-variant/30 text-m3-on-surface-variant'
@@ -5428,7 +5535,7 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  <button
  type="button"
  onClick={() => setHasExpiration(false)}
- className={`flex-1 py-1.5 px-3 rounded-xl border text-xs font-bold transition-all text-center cursor-pointer ${
+ className={`flex-1 py-1.5 px-3 rounded-xl border text-[11px] font-bold transition-all text-center cursor-pointer ${
  !hasExpiration 
  ? 'bg-m3-primary/10 border-m3-primary text-m3-primary font-extrabold shadow-xs' 
  : 'bg-m3-surface-low border-m3-outline-variant/30 text-m3-on-surface-variant'
@@ -5439,8 +5546,50 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  </div>
  </div>
 
+ {hasExpiration && (
+ <div className="space-y-1 relative pl-0 md:col-span-3 bg-amber-500/5 p-4 rounded-2xl border border-amber-500/20 animate-fade-in mt-2 flex flex-col gap-2">
+ <div className="flex items-center gap-1.5 text-amber-500">
+ <Clock className="h-4 w-4 text-amber-500 animate-pulse" />
+ <span className="text-xs font-black uppercase tracking-wider">Specify Product Expiration Date</span>
+ </div>
+ <p className="text-[10px] text-m3-on-surface-variant leading-relaxed">
+ Set the standard expiration date of this product catalog listing. The system will flag this item in the catalog table if it is expiring or expired.
+ </p>
+ <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+ <div className="space-y-1">
+ <label className="text-[9px] font-extrabold text-m3-on-surface-variant uppercase pl-0.5">Catalog Expiry Date *</label>
+ <input
+ type="date"
+ required={hasExpiration}
+ value={expirationDate}
+ onChange={e => setExpirationDate(e.target.value)}
+ className="w-full bg-white dark:bg-[#131A22] border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold cursor-pointer"
+ />
+ </div>
+ <div className="bg-m3-surface-low/50 p-2.5 rounded-xl border border-m3-outline-variant/10 text-[10px] text-m3-on-surface-variant flex flex-col justify-center">
+ <div className="font-bold text-amber-600 dark:text-amber-400">⚠️ Active Expiry Flagging</div>
+ <div>Items with active expirations are automatically tracked and marked on sales invoices, and listed on the central Expiry Calendar.</div>
+ </div>
+ </div>
+ </div>
+ )}
+
+ <div className="space-y-1 relative md:col-span-3">
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Acquired From / Stock Source</label>
+ <input
+ type="text"
+ value={origin}
+ onChange={e => setOrigin(e.target.value)}
+ placeholder="e.g. Main Cebu Yard, China Lot B-12, Local Consignment Importer"
+ className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans font-bold"
+ />
+ </div>
+ </div>
+ </div>
+ </div>
+
  {/* Command Save Button Footer */}
- <div className="md:col-span-2 flex justify-end gap-2 border-t border-m3-outline-variant/15 pt-4">
+ <div className="flex justify-end gap-2 border-t border-m3-outline-variant/15 pt-4">
  <button
  type="button"
  onClick={handleCloseProductModal}
