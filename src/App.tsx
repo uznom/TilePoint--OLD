@@ -34,6 +34,7 @@ import AtposExtraModules from "./components/AtposExtraModules";
 import { DeliveriesModule } from "./components/DeliveriesModule";
 import { SalesTransmissionModule } from "./components/SalesTransmissionModule";
 import { DailyReconciliationModule } from "./components/DailyReconciliationModule";
+import { ReconciliationTransmissionModule } from "./components/ReconciliationTransmissionModule";
 import { TutorialOnboarding } from "./components/TutorialOnboarding";
 import { PrivacyAccessibilityHub } from "./components/PrivacyAccessibilityHub";
 import { OnboardingSetupWizard } from "./components/OnboardingSetupWizard";
@@ -1225,14 +1226,8 @@ function AppContent() {
  roles: [UserRole.ADMIN, UserRole.MANAGER],
  },
  {
- id: "reports-transmission",
- name: "Sales reports Transmission",
- icon: Send,
- roles: [UserRole.ADMIN],
- },
- {
- id: "daily-reconciliation",
- name: "Daily Sales Reconciliation",
+ id: "reconciliation-transmission",
+ name: "Reconciliation & Transmission",
  icon: RefreshCw,
  roles: [UserRole.ADMIN, UserRole.MANAGER],
  },
@@ -1279,8 +1274,7 @@ function AppContent() {
  name: "BIR & Sales Transmission",
  icon: FileText,
  subItems: [
- { id: "reports-transmission", name: "Sales reports Transmission" },
- { id: "daily-reconciliation", name: "Daily Sales Reconciliation" },
+ { id: "reconciliation-transmission", name: "Reconciliation & Transmission" },
  { id: "bir-xz", name: "Search X&Z Reading" },
  { id: "bir-summary", name: "BIR Summary Report" },
  ],
@@ -2288,11 +2282,8 @@ function AppContent() {
  {activeTab === "users" && (
  <UsersModule darkMode={darkMode} />
  )}
- {activeTab === "reports-transmission" && (
- <SalesTransmissionModule darkMode={darkMode} />
- )}
- {activeTab === "daily-reconciliation" && (
- <DailyReconciliationModule darkMode={darkMode} />
+ {activeTab === "reconciliation-transmission" && (
+ <ReconciliationTransmissionModule darkMode={darkMode} />
  )}
  {activeTab === "deliveries-panel" && (
  <DeliveriesModule darkMode={darkMode} />

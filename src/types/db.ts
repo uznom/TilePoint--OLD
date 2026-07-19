@@ -122,6 +122,7 @@ export interface Product {
  markupPercent?: number;
  taxType?: string;
  hasExpiration?: boolean;
+ expirationDate?: string;
 }
 
 export interface BranchStock {
