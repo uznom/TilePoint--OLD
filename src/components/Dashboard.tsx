@@ -416,7 +416,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
   });
 
   // Slow moving Tile Aging data dynamically modeled based on active catalog products & assigned branches
-  const getDynamicSlowMovingCandidates = () => {
+  const slowMovingCandidates = React.useMemo(() => {
     const list: Array<{
       productId: string;
       productName: string;
@@ -477,9 +477,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
     });
 
     return list;
-  };
-
-  const slowMovingCandidates = getDynamicSlowMovingCandidates();
+  }, [products, branches, branchStock, saleItems, sales]);
 
   // Initiate stock redistribution transfers dynamically
   const handleExecuteRedistribution = (candidate: typeof slowMovingCandidates[0]) => {
