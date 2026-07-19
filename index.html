@@ -79,7 +79,7 @@
           window.addEventListener('load', () => {
             navigator.serviceWorker.register('./sw.js')
               .then((registration) => {
-                console.log('⚡ TilePoint PWA Service Worker loaded successfully:', registration.scope);
+                console.log('[PWA] TilePoint PWA Service Worker loaded successfully:', registration.scope);
                 
                 // Handle update checking on intervals to make sure updates are processed proactively
                 setInterval(() => {
@@ -103,7 +103,7 @@
                 });
               })
               .catch((error) => {
-                console.warn('❌ TilePoint PWA Service Worker registration failed:', error);
+                console.warn('[PWA] TilePoint PWA Service Worker registration failed:', error);
               });
           });
 
