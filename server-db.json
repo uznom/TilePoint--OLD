@@ -19,13 +19,14 @@
       "fullName": "test",
       "username": "test",
       "email": "teset@test",
-      "role": "Staff",
+      "role": "Manager",
       "branchAssignmentId": "B1",
       "status": "Active",
       "id": "U-1782804196981",
       "createdAt": "2026-06-30T07:23:16.981Z",
-      "updatedAt": "2026-06-30T07:23:16.981Z",
-      "passwordHash": "$argon2-pbkdf2$i=2500$s=test_salt_tok$h=ZmI2NWQxNGE0NmI0MWQ1NjBiZTdlNDAzMzgxZjEyNDdjNmVhMGM0YWNhMWMyZDlh"
+      "updatedAt": "2026-07-18T05:13:49.076Z",
+      "passwordHash": "$argon2-pbkdf2$i=2500$s=test_salt_tok$h=ZmI2NWQxNGE0NmI0MWQ1NjBiZTdlNDAzMzgxZjEyNDdjNmVhMGM0YWNhMWMyZDlh",
+      "managerPin": "1111"
     }
   ],
   "tp_branches": [
@@ -48,14 +49,14 @@
   "tilepoint_company_name_v1": "ETC_DIPOLOG MAIN",
   "tp_active_sessions": [
     {
-      "id": "SESS_16DMUTDRF",
+      "id": "SESS_MYUESMGG0",
       "userId": "U1",
       "username": "erica_admin",
       "fullName": "erica manaban",
       "role": "Admin",
       "branchId": "B1",
       "branchName": "ETC_DIPOLOG MAIN",
-      "lastActive": "2026-07-14T07:51:41.088Z",
+      "lastActive": "2026-07-18T05:27:02.959Z",
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
     }
   ],
@@ -42333,6 +42334,76 @@
   ],
   "tp_audit_logs": [
     {
+      "id": "AL-1784352230759-226",
+      "timestamp": "2026-07-18T05:23:50.759Z",
+      "userId": "SYSTEM",
+      "username": "system",
+      "action": "USER_LOGIN",
+      "description": "E2EE Secure Client Session cipher verified successfully. Active: erica manaban (Session: SESS_MYUESMGG0, E2EE payload: TFl5IHWv3/ilVG49apAKtL/uufFP+RLx...)",
+      "tableAffected": "Users",
+      "recordId": "U1"
+    },
+    {
+      "id": "AL-1784352197952-325",
+      "timestamp": "2026-07-18T05:23:17.952Z",
+      "userId": "U-1782804196981",
+      "username": "test",
+      "action": "USER_LOGOUT",
+      "description": "Cassette Terminal logged out: test",
+      "tableAffected": "Users",
+      "recordId": "U-1782804196981"
+    },
+    {
+      "id": "AL-1784351707972-785",
+      "timestamp": "2026-07-18T05:15:07.972Z",
+      "userId": "SYSTEM",
+      "username": "system",
+      "action": "USER_LOGIN",
+      "description": "E2EE Secure Client Session cipher verified successfully. Active: test (Session: SESS_OSVI680VV, E2EE payload: zbrTS8JWlQIbyN9sRm/RRfoviroe198U...)",
+      "tableAffected": "Users",
+      "recordId": "U-1782804196981"
+    },
+    {
+      "id": "AL-1784351671631-71",
+      "timestamp": "2026-07-18T05:14:31.631Z",
+      "userId": "SYSTEM",
+      "username": "system",
+      "action": "USER_LOGIN",
+      "description": "E2EE Secure Client Session cipher verified successfully. Active: erica manaban (Session: SESS_C83CCVE2X, E2EE payload: vcKeeXHuQD4A1csqFBcX3tEwfiUss+Sx...)",
+      "tableAffected": "Users",
+      "recordId": "U1"
+    },
+    {
+      "id": "AL-1784351633101-20",
+      "timestamp": "2026-07-18T05:13:53.101Z",
+      "userId": "U1",
+      "username": "erica_admin",
+      "action": "USER_LOGOUT",
+      "description": "Cassette Terminal logged out: erica manaban",
+      "tableAffected": "Users",
+      "recordId": "U1"
+    },
+    {
+      "id": "AL-1784351629076-254",
+      "timestamp": "2026-07-18T05:13:49.076Z",
+      "userId": "U1",
+      "username": "erica_admin",
+      "action": "USER_UPDATE",
+      "description": "Updated user account details for user ID U-1782804196981",
+      "tableAffected": "Users",
+      "recordId": "U-1782804196981"
+    },
+    {
+      "id": "AL-AUTO-BACKUP-1784348879395",
+      "timestamp": "2026-07-18T04:27:59.414Z",
+      "userId": "SYSTEM",
+      "username": "auto_scheduler",
+      "action": "DB_BACKUP_CREATE",
+      "description": "Automatically created background backup snapshot: Automated Backup - 1hr Interval",
+      "tableAffected": "ALL",
+      "recordId": "SNAP-AUTO-1784348879395"
+    },
+    {
       "id": "AL-1784021113130-653",
       "timestamp": "2026-07-14T09:25:13.130Z",
       "userId": "U1",
@@ -42593,13 +42664,6 @@
   "atpos_v2_returns": [],
   "tp_db_snapshots": [],
   "tp_processed_delta_ids": [
-    "delta-add-tp_branch_stock-B1_P-IMPORT-g8hh3pf-1782803304943-162",
-    "delta-add-tp_branch_stock-B1_P-IMPORT-qireqog-1782803304943-503",
-    "delta-add-tp_branch_stock-B1_P-IMPORT-5c2yvyi-1782803304943-276",
-    "delta-add-tp_branch_stock-B1_P-IMPORT-17y3txu-1782803304943-140",
-    "delta-add-tp_branch_stock-B1_P-IMPORT-t0b7xk9-1782803304943-27",
-    "delta-add-tp_branch_stock-B1_P-IMPORT-q4i86hr-1782803304943-510",
-    "delta-add-tp_branch_stock-B1_P-IMPORT-z2q9de1-1782803304943-797",
     "delta-add-tp_branch_stock-B1_P-IMPORT-wnzo0by-1782803304943-484",
     "delta-add-tp_branch_stock-B1_P-IMPORT-le7894f-1782803304943-825",
     "delta-add-tp_branch_stock-B1_P-IMPORT-jqtle7m-1782803304943-159",
@@ -47592,6 +47656,13 @@
     "delta-add-tp_sale_items-SLI-SL-1784021113130-0-1784021113164-454",
     "delta-add-tp_movements-M-SALE-SL-1784021113130-0-1784021113164-14",
     "delta-add-tp_audit_logs-AL-1784021113130-653-1784021113164-649",
-    "delta-dec-tp_branch_stock-B1_P-IMPORT-fpdu5fj-1784021113165-653"
+    "delta-dec-tp_branch_stock-B1_P-IMPORT-fpdu5fj-1784021113165-653",
+    "delta-add-tp_audit_logs-AL-AUTO-BACKUP-1784348879395-1784348879462-635",
+    "delta-add-tp_audit_logs-AL-1784351629076-254-1784351629087-558",
+    "delta-add-tp_audit_logs-AL-1784351633101-20-1784351633105-754",
+    "delta-add-tp_audit_logs-AL-1784351671631-71-1784351671818-70",
+    "delta-add-tp_audit_logs-AL-1784351707972-785-1784351708131-53",
+    "delta-add-tp_audit_logs-AL-1784352197952-325-1784352197960-97",
+    "delta-add-tp_audit_logs-AL-1784352230759-226-1784352230948-662"
   ]
 }

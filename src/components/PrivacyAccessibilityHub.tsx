@@ -9,1646 +9,1646 @@ import { useDb, DbSnapshot } from '../context/DbContext';
 import { UserRole } from '../types/db';
 import { ActionButton } from './ActionButton';
 import {
-  Cookie,
-  Shield,
-  Eye,
-  X,
-  Check,
-  Info,
-  Sliders,
-  Type,
-  CaseSensitive,
-  Keyboard,
-  ShieldAlert,
-  Flame,
-  Accessibility,
-  MapPin,
-  Code,
-  Layers,
-  Terminal,
-  Cpu,
-  Github,
-  Database,
-  Upload,
-  Download,
-  Trash2,
-  Lock,
-  RefreshCw,
-  Search,
-  HelpCircle,
-  ChevronDown,
-  ChevronUp,
-  Printer,
-  BookOpen,
-  Palette,
-  Sparkles,
-  RotateCcw,
-  CheckCircle,
-  Play,
-  HardDrive,
-  ShieldCheck
+ Cookie,
+ Shield,
+ Eye,
+ X,
+ Check,
+ Info,
+ Sliders,
+ Type,
+ CaseSensitive,
+ Keyboard,
+ ShieldAlert,
+ Flame,
+ Accessibility,
+ MapPin,
+ Code,
+ Layers,
+ Terminal,
+ Cpu,
+ Github,
+ Database,
+ Upload,
+ Download,
+ Trash2,
+ Lock,
+ RefreshCw,
+ Search,
+ HelpCircle,
+ ChevronDown,
+ ChevronUp,
+ Printer,
+ BookOpen,
+ Palette,
+ Sparkles,
+ RotateCcw,
+ CheckCircle,
+ Play,
+ HardDrive,
+ ShieldCheck
 } from 'lucide-react';
 import { 
-  generateThemeFromSeed, 
-  applyM3ThemeToDOM, 
-  resetM3ThemeOverride, 
-  getContrastRatio 
+ generateThemeFromSeed, 
+ applyM3ThemeToDOM, 
+ resetM3ThemeOverride, 
+ getContrastRatio 
 } from '../lib/themeGenerator';
 import { 
-  saveFileToBackup,
-  getSavedDirectoryHandle,
-  saveDirectoryHandle,
-  clearDirectoryHandle,
-  verifyAndUnwrapBackup,
-  restoreMissingBackups
+ saveFileToBackup,
+ getSavedDirectoryHandle,
+ saveDirectoryHandle,
+ clearDirectoryHandle,
+ verifyAndUnwrapBackup,
+ restoreMissingBackups
 } from '../lib/fileBackupHelper';
 
 interface PrivacyAccessibilityHubProps {
-  darkMode: boolean;
-  hideFloatingButton?: boolean;
+ darkMode: boolean;
+ hideFloatingButton?: boolean;
 }
 
 export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }: PrivacyAccessibilityHubProps) {
-  // Hub open state
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'appearance' | 'features' | 'about' | 'accessibility' | 'backups' | 'legitimacy'>('appearance');
-
-  // Local company name for legitimacy certificate
-  const [companyName, setCompanyName] = useState(() => {
-    return localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center';
-  });
-
-  // Listen to open events from other modules/dropdowns
-  useEffect(() => {
-    const handleOpenEvent = () => {
-      setIsOpen(true);
-    };
-    window.addEventListener('open-privacy-hub', handleOpenEvent);
-    return () => {
-      window.removeEventListener('open-privacy-hub', handleOpenEvent);
-    };
-  }, []);
-
-  // Cookie prompt bar state
-  const [showBanner, setShowBanner] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const consent = localStorage.getItem('tilepoint_cookie_consent_status');
-      return !consent; // Show banner if no consent state is saved
-    }
-    return false;
-  });
-
-  // Settings states initialized from localStorage for persistence
-  const [textSize, setTextSize] = useState<'normal' | 'large' | 'xlarge'>(() => {
-    return (localStorage.getItem('tilepoint-text-size') as 'normal' | 'large' | 'xlarge') || 'normal';
-  });
-  
-  const [colorContrast, setColorContrast] = useState<'default' | 'medium' | 'high'>(() => {
-    return (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'medium';
-  });
-
-  const [maximizeTextContrast, setMaximizeTextContrast] = useState<boolean>(() => {
-    return localStorage.getItem('tilepoint-maximize-text-contrast') === 'true';
-  });
-
-  const [dyslexicFont, setDyslexicFont] = useState(() => {
-    return localStorage.getItem('tilepoint-dyslexic-font') === 'true';
-  });
-
-  const [enhancedOutlines, setEnhancedOutlines] = useState(() => {
-    return localStorage.getItem('tilepoint-enhanced-outlines') === 'true';
-  });
-
-  const [disableAnimations, setDisableAnimations] = useState(() => {
-    return localStorage.getItem('tilepoint-disable-animations') === 'true';
-  });
-
-  const [disableBlurs, setDisableBlurs] = useState(() => {
-    return localStorage.getItem('tilepoint-disable-blurs') === 'true';
-  });
-
-  const isSyncingRef = React.useRef(false);
-
-  // Listen to external theme sync events
-  useEffect(() => {
-    const handleSync = () => {
-      isSyncingRef.current = true;
-      const persistedContrast = (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'medium';
-      const persistedMaxText = localStorage.getItem('tilepoint-maximize-text-contrast') === 'true';
-      const persistedDisableAnimations = localStorage.getItem('tilepoint-disable-animations') === 'true';
-      const persistedDisableBlurs = localStorage.getItem('tilepoint-disable-blurs') === 'true';
-      const persistedTextSize = (localStorage.getItem('tilepoint-text-size') as 'normal' | 'large' | 'xlarge') || 'normal';
-      const persistedDyslexic = localStorage.getItem('tilepoint-dyslexic-font') === 'true';
-      const persistedOutlines = localStorage.getItem('tilepoint-enhanced-outlines') === 'true';
-      const persistedCompanyName = localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center';
-      
-      setColorContrast(persistedContrast);
-      setMaximizeTextContrast(persistedMaxText);
-      setDisableAnimations(persistedDisableAnimations);
-      setDisableBlurs(persistedDisableBlurs);
-      setTextSize(persistedTextSize);
-      setDyslexicFont(persistedDyslexic);
-      setEnhancedOutlines(persistedOutlines);
-      setCompanyName(persistedCompanyName);
-    };
-    window.addEventListener('tilepoint-theme-updated', handleSync);
-    return () => {
-      window.removeEventListener('tilepoint-theme-updated', handleSync);
-    };
-  }, []);
-
-  // Dynamic Material 3 android-style Custom Theme States
-  const [customColorSeed, setCustomColorSeed] = useState(() => {
-    return localStorage.getItem('tilepoint_custom_theme_primary') || '#155EEF';
-  });
-  
-  const [isCustomThemeActive, setIsCustomThemeActive] = useState(() => {
-    return !!localStorage.getItem('tilepoint_custom_theme_primary');
-  });
-
-  const [hexInput, setHexInput] = useState(customColorSeed);
-  const [themeSuccess, setThemeSuccess] = useState<string | null>(null);
-  const [themeError, setThemeError] = useState<string | null>(null);
-
-  // Color Wheel Dragging State and Coordinate Encoders
-  const colorWheelRef = React.useRef<HTMLDivElement>(null);
-  const [isPointerDown, setIsPointerDown] = useState(false);
-
-  const hslToHex = (h: number, s: number, l: number) => {
-    h /= 360;
-    let r, g, b;
-    if (s === 0) {
-      r = g = b = l;
-    } else {
-      const hue2rgb = (p: number, q: number, t: number) => {
-        if (t < 0) t += 1;
-        if (t > 1) t -= 1;
-        if (t < 1/6) return p + (q - p) * 6 * t;
-        if (t < 1/2) return q;
-        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-        return p;
-      };
-      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-      const p = 2 * l - q;
-      r = hue2rgb(p, q, h + 1/3);
-      g = hue2rgb(p, q, h);
-      b = hue2rgb(p, q, h - 1/3);
-    }
-    const toHex = (x: number) => {
-      const hex = Math.round(x * 255).toString(16);
-      return hex.length === 1 ? '0' + hex : hex;
-    };
-    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-  };
-
-  const wheelPin = React.useMemo(() => {
-    try {
-      const rawSeed = customColorSeed;
-      const rawHex = rawSeed.startsWith('#') ? rawSeed.slice(1) : rawSeed;
-      let formattedHex = rawHex;
-      if (rawHex.length === 3) {
-        formattedHex = rawHex.split('').map(char => char + char).join('');
-      }
-      const r = (parseInt(formattedHex.slice(0, 2), 16) || 0) / 255;
-      const g = (parseInt(formattedHex.slice(2, 4), 16) || 0) / 255;
-      const b = (parseInt(formattedHex.slice(4, 6), 16) || 0) / 255;
-      
-      const max = Math.max(r, g, b), min = Math.min(r, g, b);
-      let h = 0, s = 0;
-      const l = (max + min) / 2;
-
-      if (max !== min) {
-        const d = max - min;
-        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-        switch (max) {
-          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-          case g: h = (b - r) / d + 2; break;
-          case b: h = (r - g) / d + 4; break;
-        }
-        h /= 6;
-      }
-      
-      const deg = h * 360;
-      const angleRad = (deg - 90) * Math.PI / 180;
-      const distPercent = s * 50;
-      
-      return {
-        x: 50 + distPercent * Math.cos(angleRad),
-        y: 50 + distPercent * Math.sin(angleRad)
-      };
-    } catch (e) {
-      return { x: 50, y: 50 };
-    }
-  }, [customColorSeed]);
-
-  const handlePointerDrag = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!colorWheelRef.current) return;
-    const rect = colorWheelRef.current.getBoundingClientRect();
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    const dx = e.clientX - rect.left - centerX;
-    const dy = e.clientY - rect.top - centerY;
-    
-    const maxRadius = rect.width / 2;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    
-    const s = Math.min(1.0, dist / maxRadius);
-    
-    let theta = Math.atan2(dy, dx);
-    let deg = theta * (180 / Math.PI) + 90;
-    if (deg < 0) {
-      deg += 360;
-    }
-    
-    const computedHex = hslToHex(deg, s, 0.5);
-    handleApplyTheme(computedHex);
-  };
-
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsPointerDown(true);
-    colorWheelRef.current?.setPointerCapture(e.pointerId);
-    handlePointerDrag(e);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isPointerDown) return;
-    handlePointerDrag(e);
-  };
-
-  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    setIsPointerDown(false);
-    colorWheelRef.current?.releasePointerCapture(e.pointerId);
-  };
-
-  // Compute preview scheme in real-time
-  const previewScheme = React.useMemo(() => {
-    try {
-      return generateThemeFromSeed(customColorSeed, darkMode, colorContrast);
-    } catch (err) {
-      return generateThemeFromSeed('#155EEF', darkMode, colorContrast);
-    }
-  }, [customColorSeed, darkMode, colorContrast]);
-
-  const handleApplyTheme = (seed: string) => {
-    try {
-      let formattedSeed = seed.trim();
-      if (!formattedSeed.startsWith('#')) {
-        formattedSeed = '#' + formattedSeed;
-      }
-      // Validate seed is a hex string
-      if (!/^#[0-9A-Fa-f]{6}$/.test(formattedSeed) && !/^#[0-9A-Fa-f]{3}$/.test(formattedSeed)) {
-        throw new Error('Please enter a valid HEX color code (e.g. #155EEF)');
-      }
-      setCustomColorSeed(formattedSeed);
-      setHexInput(formattedSeed);
-      localStorage.setItem('tilepoint_custom_theme_primary', formattedSeed);
-      setIsCustomThemeActive(true);
-      
-      const scheme = generateThemeFromSeed(formattedSeed, darkMode, colorContrast);
-      applyM3ThemeToDOM(scheme);
-      setThemeError(null);
-      setThemeSuccess('Custom theme color applied successfully!');
-      setTimeout(() => setThemeSuccess(null), 3000);
-      window.dispatchEvent(new Event('tilepoint-theme-updated'));
-    } catch (err: any) {
-      setThemeError(err.message || 'Failed to generate theme.');
-      setThemeSuccess(null);
-    }
-  };
-
-  const handleResetTheme = () => {
-    resetM3ThemeOverride();
-    localStorage.removeItem('tilepoint_custom_theme_primary');
-    setCustomColorSeed('#155EEF');
-    setHexInput('#155EEF');
-    setIsCustomThemeActive(false);
-    setThemeError(null);
-    setThemeSuccess('System theme reset to default Sapphire Blue.');
-    setTimeout(() => setThemeSuccess(null), 3000);
-    window.dispatchEvent(new Event('tilepoint-theme-updated'));
-  };
-
-  // Re-apply theme dynamically if settings switch while hub is open
-  useEffect(() => {
-    if (isCustomThemeActive) {
-      try {
-        const scheme = generateThemeFromSeed(customColorSeed, darkMode, colorContrast);
-        applyM3ThemeToDOM(scheme);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-  }, [darkMode, customColorSeed, isCustomThemeActive, colorContrast]);
-
-  // Individual cookie preference categories for the fine-grained Cookie Consent tabs
-  const [cookiePreferences, setCookiePreferences] = useState({
-    necessary: true, // Permanent essential
-    functional: true, // App State + theme saves
-    analytical: false // Local audit logger traces
-  });
-
-  const db = useDb();
-
-  // Enforce Admin and Manager role constraint for backups tab (restricted to administrators and managers)
-  useEffect(() => {
-    if (
-      activeTab === 'backups' &&
-      db.currentUser?.role !== UserRole.ADMIN &&
-      db.currentUser?.role !== UserRole.MANAGER
-    ) {
-      setActiveTab('appearance');
-    }
-  }, [activeTab, db.currentUser?.role]);
-
-  // DB Tuning custom state variables
-  const [dbSubTab, setDbSubTab] = useState<'performance' | 'rules' | 'backup'>('performance');
-  const [snapshotName, setSnapshotName] = useState('');
-  const [selectedRuleset, setSelectedRuleset] = useState<'firestore' | 'storage'>('firestore');
-  const [ruleEnforcementProfile, setRuleEnforcementProfile] = useState<'strict' | 'audit' | 'open'>('strict');
-  const [importText, setImportText] = useState('');
-  const [backupActionStatus, setBackupActionStatus] = useState<string | null>(null);
-  const [isExportingFullDb, setIsExportingFullDb] = useState(false);
-  const [isSeedingMasterLogs, setIsSeedingMasterLogs] = useState(false);
-  const [isExportingForensic, setIsExportingForensic] = useState(false);
-  const [rulesAlert, setRulesAlert] = useState<string | null>(null);
-  const [isShowingHandbook, setIsShowingHandbook] = useState(false);
-  const [activeFaq, setActiveFaq] = useState<number | null>(null);
-  const [faqSearch, setFaqSearch] = useState('');
-
-  const matchManualQuery = (text: string, keywords: string[]) => {
-    if (!faqSearch) return true;
-    const cleanSearch = faqSearch.toLowerCase().trim();
-    if (!cleanSearch) return true;
-    const searchTerms = cleanSearch.split(/\s+/).filter(Boolean);
-    const combinedText = (text + ' ' + keywords.join(' ')).toLowerCase();
-    return searchTerms.every(term => combinedText.includes(term));
-  };
-
-  const ch1Visible = matchManualQuery(
-    "The ERP OS Checkout Desk & Area Estimators The ERP OS Checkout Desk accepts real-time barcode scans, manual item code lookups, and direct SKU lookups. Use the Interactive Tile Coverage Estimator to dynamically translate physical floor dimensions length and width in meters into exact retail tile box counts. Adapts standard wastage overrides +5% standard grid bonds, +10% diagonal cuts to prevent shortfalls over tile clipping boundaries. Tendering handles precise decimal change calculations, printing receipt vouchers, and instantly subtracting sold quantities from active branch inventories.",
-    ["pos", "checkout", "desk", "area", "estimators", "calculators", "erp", "os", "tile", "box", "count", "grid", "diagonal", "tendering", "discount", "change", "receipt", "voucher", "inventory", "stock", "sales"]
-  );
-  const ch2Visible = matchManualQuery(
-    "Regional Warehouse Stock & Unified Pools View Administrators possess master privileges to analyze global stocking pipelines on-screen. The Unified Global Pools Ledger sub-tab lists comparative stock levels side-by-side across all active branches. Branch filters filter main catalog lists. A consolidated dropdown is available to verify stock indices across multiple depots simultaneously. Automated visual flags indicate stock health: In Stock, Low Stock, or Critical Warning.",
-    ["warehouse", "logistics", "index", "stock", "pools", "branch", "custom", "alert", "overrides", "inventory", "global", "pipelines", "levels", "health"]
-  );
-  const ch3Visible = matchManualQuery(
-    "Custom Alert Threshold Overrides Since different locations experience unique sales velocities, low-stock trigger boundaries can be custom-defined at a local level. Each tile preserves a master baseline minimum threshold designated at registration. From the product detail editor, branch managers can submit localized Alert Overrides that apply uniquely to their specific branch codes. Overrides trigger amber alert status rows inside the central lists for local reorder warning awareness.",
-    ["custom", "alert", "threshold", "overrides", "branch", "local", "levels", "velocity", "reorder", "warning", "minimum", "trigger"]
-  );
-  const ch4Visible = matchManualQuery(
-    "Inter-Branch Stock Transfers & Verification Chain Stock dispatches are regulated by a multi-stage, double-entry reconciliation pipeline. Dispatches create a formal Transfer Invoice that deducts quantities from the origin branch's active inventory immediately and sets it to Transit state. The destination branch's inventory will NOT increment until a destination operator physically inspects and approves the shipment. Clicking Acknowledge Receipt & Add Stock merges the items into target pools, committing the double-entry transaction.",
-    ["inter", "branch", "transfers", "double", "entry", "transit", "cargo", "dispatch", "invoice", "reconciliation", "delivery", "inspect"]
-  );
-  const ch5Visible = matchManualQuery(
-    "Shift Control, Daily Drawer Balancing & Audits Secure cash drawer compliance and operations control are driven by local shift events. Cashiers open shifts by logging a physical Starting Cash Float inside the active register interface. All offline sales journals are aggregated against cash and digital credit payments inside the shift module. Closing shifts requires logging a final drawers count to isolate cash discrepancies, which are committed as audited records.",
-    ["daily", "sales", "closing", "shift", "cashier", "drawer", "cash", "float", "balancing", "audits", "compliance", "register", "journal", "discrepancy"]
-  );
-  const ch6Visible = matchManualQuery(
-    "Multi-Format Sales Reporting, CSVs & Print PDFs To maintain rigorous retail compliance, TilePoint supports high-fidelity output exports for managers. Daily summary sheets can be compiled into standard Raw CSV files or formatted Excel Templates featuring formatted columns. The Sales Print Modal builds formal visual papers including structured pricing pools, item invoice listings, and operator signature spots. Click Trigger System Print inside the modal to output to paper or select Save as PDF to write digital PDF files.",
-    ["csv", "excel", "formatted", "sheets", "printing", "digital", "pdf", "sales", "transmissions", "report", "export", "manager", "template", "modal", "print", "signature"]
-  );
-  const ch7Visible = matchManualQuery(
-    "Damage Registers, Wastage Logs & Loss Write-Offs Handles damaged stock reconciliation for cracked, shattered, or flawed inventory. Broken tiles must be logged inside the Damage Register Module by entering specific product codes, quantities, and detailed causes. Submitting a damage voucher instantly writeoff the target branch's stocks and adds historical entries down the general ledger. Ensures precise inventory costs valuation by separating shrinkage wastage losses from regular sales records.",
-    ["damage", "register", "broken", "fragile", "ceramic", "tiles", "wastage", "writeoffs", "reconciliation", "cracked", "shattered", "flawed", "loss", "shrinkage", "ledger"]
-  );
-  const ch8Visible = matchManualQuery(
-    "Access Control Security & Lockout Rules Rigorous role-based security prevents unauthorized edits and maintains system integrity. Core actions are gated by explicit credentials. Standard sales desks prevent workers from altering records or viewing other branch balances. Under professional standards, login panels enforce an automated Security Intrusion Lockout. If a user enters an incorrect passcode five consecutive times, the console blocks access to prevent database breaches.",
-    ["user", "security", "access", "control", "active", "lockout", "brute", "force", "block", "profiles", "role", "admin", "manager", "cashier", "unauthorized", "intrusion", "failure"]
-  );
-
-  const anyChapterVisible = ch1Visible || ch2Visible || ch3Visible || ch4Visible || ch5Visible || ch6Visible || ch7Visible || ch8Visible;
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const triggerToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
-
-  // User Defined Device Storage variables
-  const [deviceBackupPath, setDeviceBackupPath] = useState<string>(() => {
-    return localStorage.getItem("tp_device_backup_path") || "C:/TilePoint_Backups/";
-  });
-  const [filenamePattern, setFilenamePattern] = useState<string>(() => {
-    return localStorage.getItem("tp_device_backup_pattern") || "tilepoint_full_backup";
-  });
-  const [enforcePermanentRetention, setEnforcePermanentRetention] = useState<boolean>(() => {
-    const val = localStorage.getItem("tp_enforce_permanent_retention");
-    return val === null ? true : val === "true";
-  });
-  const [isExportingDevicePath, setIsExportingDevicePath] = useState(false);
-  const [activeFolderHandle, setActiveFolderHandle] = useState<FileSystemDirectoryHandle | null>(null);
-  const [isFsaSupported, setIsFsaSupported] = useState<boolean>(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ [snapId: string]: number }>({});
-
-  useEffect(() => {
-    setIsFsaSupported(typeof window !== 'undefined' && 'showDirectoryPicker' in window);
-    getSavedDirectoryHandle().then((handle) => {
-      setActiveFolderHandle(handle);
-      if (handle) {
-        // Run automatic recovery of deleted files (Undeletable Safeguard)
-        restoreMissingBackups().then((restored) => {
-          if (restored.length > 0) {
-            setBackupActionStatus(`[UNDELETABILITY GUARANTEE] Automatically reconstructed & restored ${restored.length} missing/deleted backup files inside your synced folder!`);
-            setTimeout(() => setBackupActionStatus(null), 6000);
-          }
-        });
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("tp_device_backup_path", deviceBackupPath);
-  }, [deviceBackupPath]);
-
-  useEffect(() => {
-    localStorage.setItem("tp_device_backup_pattern", filenamePattern);
-  }, [filenamePattern]);
-
-  useEffect(() => {
-    localStorage.setItem("tp_enforce_permanent_retention", String(enforcePermanentRetention));
-  }, [enforcePermanentRetention]);
-
-  // Sync state changes with the DOM layout of document.documentElement
-  useEffect(() => {
-    const root = document.documentElement;
-
-    // 1. Sizing
-    root.classList.remove('accessibility-large-text', 'accessibility-xlarge-text');
-    if (textSize === 'large') {
-      root.classList.add('accessibility-large-text');
-    } else if (textSize === 'xlarge') {
-      root.classList.add('accessibility-xlarge-text');
-    }
-    localStorage.setItem('tilepoint-text-size', textSize);
-
-    // 2. Color Contrast
-    localStorage.setItem('tilepoint-color-contrast', colorContrast);
-    if (colorContrast === 'high') {
-      root.classList.add('accessibility-high-contrast');
-    } else {
-      root.classList.remove('accessibility-high-contrast');
-    }
-
-    // 3. Maximize Text Contrast
-    localStorage.setItem('tilepoint-maximize-text-contrast', String(maximizeTextContrast));
-    if (maximizeTextContrast) {
-      root.classList.add('accessibility-maximize-text-contrast');
-    } else {
-      root.classList.remove('accessibility-maximize-text-contrast');
-    }
-
-    // 4. Dyslexic-Friendly fonts
-    if (dyslexicFont) {
-      root.classList.add('accessibility-dyslexic-font');
-    } else {
-      root.classList.remove('accessibility-dyslexic-font');
-    }
-    localStorage.setItem('tilepoint-dyslexic-font', String(dyslexicFont));
-
-    // 5. Enhanced Focus Ring
-    if (enhancedOutlines) {
-      root.classList.add('accessibility-enhanced-outlines');
-    } else {
-      root.classList.remove('accessibility-enhanced-outlines');
-    }
-    localStorage.setItem('tilepoint-enhanced-outlines', String(enhancedOutlines));
-
-    // 6. Disable Animations
-    if (disableAnimations) {
-      root.classList.add('accessibility-no-animation');
-    } else {
-      root.classList.remove('accessibility-no-animation');
-    }
-    localStorage.setItem('tilepoint-disable-animations', String(disableAnimations));
-
-    // 7. Disable Blurs
-    if (disableBlurs) {
-      root.classList.add('accessibility-no-blur');
-    } else {
-      root.classList.remove('accessibility-no-blur');
-    }
-    localStorage.setItem('tilepoint-disable-blurs', String(disableBlurs));
-
-    // Dispatch global event for responsive real-time theme rebuilding only if not syncing from outside
-    if (isSyncingRef.current) {
-      isSyncingRef.current = false;
-    } else {
-      window.dispatchEvent(new Event('tilepoint-theme-updated'));
-    }
-
-  }, [textSize, colorContrast, maximizeTextContrast, dyslexicFont, enhancedOutlines, disableAnimations, disableBlurs]);
-
-  // Bulk Accept Cookies helper
-  const handleAcceptAll = () => {
-    localStorage.setItem('tilepoint_cookie_consent_status', 'accepted_all');
-    localStorage.setItem('tilepoint_cookie_prefs', JSON.stringify({ necessary: true, functional: true, analytical: true }));
-    setShowBanner(false);
-  };
-
-  // Bulk Decline Non-Essential Cookies helper
-  const handleDeclineAll = () => {
-    localStorage.setItem('tilepoint_cookie_consent_status', 'declined_non_essential');
-    localStorage.setItem('tilepoint_cookie_prefs', JSON.stringify({ necessary: true, functional: false, analytical: false }));
-    setCookiePreferences({ necessary: true, functional: false, analytical: false });
-    // Safe reset accessibility states to defaults if consent declined completely
-    setTextSize('normal');
-    setColorContrast('medium');
-    setMaximizeTextContrast(false);
-    localStorage.setItem('tilepoint-color-contrast', 'medium');
-    localStorage.setItem('tilepoint-maximize-text-contrast', 'false');
-    setDyslexicFont(false);
-    setEnhancedOutlines(false);
-    setShowBanner(false);
-    window.dispatchEvent(new Event('tilepoint-theme-updated'));
-  };
-
-  // Saved customize selections
-  const handleSavePreferences = () => {
-    localStorage.setItem('tilepoint_cookie_consent_status', 'customized');
-    localStorage.setItem('tilepoint_cookie_prefs', JSON.stringify(cookiePreferences));
-    setIsOpen(false);
-    setShowBanner(false);
-  };
-
-  return (
-    <>
-      {/* COOKIE CONSENT DRAWER/BANNER OVERLAY */}
-      {showBanner && (
-        <div className="fixed bottom-0 left-0 right-0 z-[100] p-4 animate-slide-up sm:px-6">
-          <div className="max-w-4xl mx-auto m3-card border-amber-500/10 bg-m3-surface-low/95 backdrop-blur-xl shadow-[0_-12px_44px_rgba(0,0,0,0.25)] flex flex-col md:flex-row items-start md:items-center justify-between gap-5 p-5 sm:p-6 rounded-3xl">
-            <div className="flex gap-4 items-start max-w-2xl">
-              <div className="p-3 bg-amber-500/10 text-amber-500 rounded-2xl shrink-0 mt-0.5 border border-amber-500/20">
-                <Cookie className="h-6 w-6 animate-pulse" />
-              </div>
-              <div className="space-y-1">
-                <h4 className="text-sm font-black uppercase font-mono tracking-wider text-m3-primary flex items-center gap-2">
-                  Privacy Shield & Consent Center
-                </h4>
-                <p className="text-xs text-m3-on-surface-variant leading-relaxed">
-                  TilePoint requires local key-value indexes (essential cookies) to persist active checkout cash registers, safe cryptographic authentication, localized inventory ledgers, and customized accessibility profiles. No marketing telemetry is ever transmitted.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto shrink-0 font-sans">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsOpen(true);
-                  setActiveTab('features');
-                }}
-                className="flex-1 sm:flex-none px-4 py-2 text-xs font-extrabold rounded-xl border border-m3-outline-variant/50 hover:bg-m3-primary/10 text-m3-on-surface hover:text-m3-primary transition-all cursor-pointer whitespace-nowrap uppercase tracking-wider text-[10px]"
-              >
-                Settings
-              </button>
-              <button
-                type="button"
-                onClick={handleDeclineAll}
-                className="flex-1 sm:flex-none px-4 py-2 text-xs font-extrabold rounded-xl border border-red-500/20 text-red-400 bg-red-500/5 hover:bg-red-500/10 transition-all cursor-pointer whitespace-nowrap uppercase tracking-wider text-[10px]"
-              >
-                Essential Only
-              </button>
-              <button
-                type="button"
-                onClick={handleAcceptAll}
-                className="flex-1 sm:flex-none px-5 py-2 text-xs font-black rounded-xl bg-m3-primary text-m3-on-primary hover:bg-m3-primary/90 shadow-md transition-all cursor-pointer whitespace-nowrap uppercase tracking-wider text-[10px]"
-              >
-                Accept All
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ACCESSIBILITY & SHIELD FLOATING HUB BUTTON */}
-      {!hideFloatingButton && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-[90] h-12 w-12 bg-m3-primary hover:bg-m3-primary/90 active:scale-95 text-m3-on-primary rounded-full shadow-2xl justify-center items-center flex cursor-pointer transition-all border border-m3-primary-container group"
-          title="Privacy Policies and Accessibility Assistant Hub"
-          aria-label="Open Accessibility Options and Privacy center"
-        >
-          <Accessibility className="h-5.5 w-5.5 group-hover:rotate-12 transition-transform duration-300" />
-          <span className="absolute bottom-13 right-0 scale-0 group-hover:scale-100 transition-all duration-200 origin-bottom bg-m3-on-surface text-m3-surface text-[9px] font-black tracking-widest uppercase px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-m3-outline-variant/20">
-            Accessibility & Policy
-          </span>
-        </button>
-      )}
-
-      {/* INTERACTIVE HUB MODAL */}
-      {isOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-m3-on-surface/50 backdrop-blur-md animate-fade-in" onClick={() => setIsOpen(false)} />
-          
-          <div className="relative w-full max-w-[95vw] md:max-w-7xl h-[90vh] md:h-[740px] md:max-h-[85vh] flex flex-col m3-card rounded-[32px] p-0 overflow-hidden bg-m3-surface-low border border-m3-outline-variant/40 shadow-2xl animate-scale-up text-m3-on-surface">
-            {/* Header banner */}
-            <div className="p-5 border-b border-m3-outline-variant/20 flex justify-between items-center bg-m3-surface shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-2xl bg-m3-primary/10 text-m3-primary flex items-center justify-center border border-m3-primary/20 shrink-0">
-                  <Sliders className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black uppercase font-mono tracking-wider text-m3-primary">
-                    System Settings & Configuration
-                  </h3>
-                  <p className="text-[10px] text-m3-on-surface-variant font-medium mt-0.5 font-mono">
-                    MANAGE SYSTEM INTERACTIVE CONTROLS, APPEARANCE, & BACKUPS
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-2 text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/10 rounded-xl transition-all cursor-pointer shrink-0"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Sidebar navigation tabs inside Dialog */}
-            <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-m3-surface-low/30">
-              {/* Tab options side-rack */}
-              <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-m3-outline-variant/15 p-4 flex md:flex-col gap-2 shrink-0 select-none overflow-x-auto md:overflow-x-visible">
-                <button
-                  onClick={() => setActiveTab('appearance')}
-                  className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
-                    activeTab === 'appearance'
-                      ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
-                      : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
-                  }`}
-                >
-                  <Palette className="h-4 w-4" />
-                  <span>Appearance</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('features')}
-                  className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
-                    activeTab === 'features'
-                      ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
-                      : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
-                  }`}
-                >
-                  <Shield className="h-4 w-4" />
-                  <span>Permissions & Access</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('about')}
-                  className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
-                    activeTab === 'about'
-                      ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
-                      : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
-                  }`}
-                >
-                  <Info className="h-4 w-4" />
-                  <span>About</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('legitimacy')}
-                  className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
-                    activeTab === 'legitimacy'
-                      ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
-                      : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
-                  }`}
-                >
-                  <ShieldCheck className="h-4 w-4 text-amber-400" />
-                  <span>Legitimacy Certificate</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('accessibility')}
-                  className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
-                    activeTab === 'accessibility'
-                      ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
-                      : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
-                  }`}
-                >
-                  <Sliders className="h-4 w-4" />
-                  <span>Accessibility</span>
-                </button>
-                {(db.currentUser?.role === UserRole.ADMIN || db.currentUser?.role === UserRole.MANAGER) && (
-                  <button
-                    onClick={() => setActiveTab('backups')}
-                    className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
-                      activeTab === 'backups'
-                        ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
-                        : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
-                    }`}
-                    id="database_and_backups_tab_btn"
-                  >
-                    <Database className="h-4 w-4" />
-                    <span>Database & Backups</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Dynamic scrollable core form content */}
-              <div className="flex-1 p-5 md:p-6 overflow-y-auto">
-                {/* TAB A: ACCESSIBILITY OPTIONS */}
-                {activeTab === 'accessibility' && (
-                  <div className="space-y-5 animate-fade-in font-sans">
-                    <div>
-                      <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
-                        Visual & Nav Assist Settings
-                      </h4>
-                      <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
-                        Customize keyboard layout outlines, typography styles, and high-performance high contrast layers to ensure readability for all.
-                      </p>
-                    </div>
-
-                    <div className="h-px bg-m3-outline-variant/15" />
-
-                    {/* FONT SCALING REGION */}
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">
-                        Font Size Multiplier scale
-                      </label>
-                      <div className="grid grid-cols-3 gap-2.5">
-                        {[
-                          { id: 'normal', name: 'Normal (1.0x)', class: 'font-normal' },
-                          { id: 'large', name: 'Large (1.12x)', class: 'font-medium' },
-                          { id: 'xlarge', name: 'Extra Large (1.24x)', class: 'font-semibold' }
-                        ].map((sz) => (
-                          <button
-                            key={sz.id}
-                            type="button"
-                            onClick={() => setTextSize(sz.id as any)}
-                            className={`p-3 rounded-xl border flex flex-col justify-center items-center gap-1.5 transition-all cursor-pointer ${
-                              textSize === sz.id
-                                ? 'bg-m3-primary/10 border-m3-primary text-m3-primary'
-                                : 'bg-m3-surface border-m3-outline-variant/20 hover:bg-m3-primary/5 text-m3-on-surface-variant'
-                            }`}
-                          >
-                            <Type className="h-4 w-4" />
-                            <span className="text-[10.5px] font-bold text-center font-sans">{sz.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="h-px bg-m3-outline-variant/15" />
-
-                    {/* TOGGLES GRID */}
-                    <div className="space-y-3.5">
-                      {/* DYSLEXIC FRIENDLY toggle */}
-                      <button
-                        type="button"
-                        onClick={() => setDyslexicFont(!dyslexicFont)}
-                        className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
-                          dyslexicFont
-                            ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface'
-                            : 'bg-m3-surface border-m3-outline-variant/15 hover:bg-m3-primary/5'
-                        }`}
-                      >
-                        <div className={`p-2 rounded-lg shrink-0 ${dyslexicFont ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
-                          <CaseSensitive className="h-4.5 w-4.5" />
-                        </div>
-                        <div className="space-y-0.5">
-                          <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
-                            <span>Dyslexic-Friendly Typography</span>
-                            {dyslexicFont && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
-                          </div>
-                          <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
-                            Applies Comic Neue & slab spacing alignments globally, optimizing font tracking, line height, and stroke curves for dyslexic readability.
-                          </p>
-                        </div>
-                      </button>
-
-                      {/* COLOR CONTRAST LEVEL CARD */}
-                      <div className="w-full p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface space-y-3.5">
-                        <div className="flex items-start gap-3.5">
-                          <div className="p-2 rounded-lg shrink-0 bg-m3-surface-container text-m3-on-surface-variant">
-                            <Sliders className="h-4.5 w-4.5" />
-                          </div>
-                          <div className="space-y-0.5">
-                            <div className="text-[11.5px] font-extrabold font-sans text-m3-on-surface">
-                              Color Contrast Levels
-                            </div>
-                            <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
-                              Choose a contrast configuration for system backgrounds, primary accents, outlines, and text surfaces.
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* M3 Segmented chips */}
-                        <div className="grid grid-cols-3 gap-1.5 p-1 rounded-lg bg-m3-surface-container">
-                          {(['default', 'medium', 'high'] as const).map((level) => (
-                            <button
-                              key={level}
-                              type="button"
-                              onClick={() => setColorContrast(level)}
-                              className={`py-1.5 px-2 rounded-md text-[10.5px] font-bold capitalize transition-all cursor-pointer ${
-                                colorContrast === level
-                                  ? 'bg-m3-primary text-m3-on-primary shadow-sm'
-                                  : 'text-m3-on-surface-variant hover:bg-m3-on-surface/5'
-                              }`}
-                            >
-                              {level}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* MAXIMIZE TEXT CONTRAST Toggle */}
-                      <button
-                        type="button"
-                        onClick={() => setMaximizeTextContrast(!maximizeTextContrast)}
-                        className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
-                          maximizeTextContrast
-                            ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface'
-                            : 'bg-m3-surface border-m3-outline-variant/15 hover:bg-m3-primary/5'
-                        }`}
-                      >
-                        <div className={`p-2 rounded-lg shrink-0 ${maximizeTextContrast ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
-                          <Layers className="h-4.5 w-4.5" />
-                        </div>
-                        <div className="space-y-0.5">
-                          <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
-                            <span>Maximize Text Contrast</span>
-                            {maximizeTextContrast && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
-                          </div>
-                          <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
-                            Adds a high-visibility background frame around body texts and description strings to ensure outstanding readability against gradients and custom hues.
-                          </p>
-                        </div>
-                      </button>
-
-                      {/* KEYBOARD OUTLINES toggle */}
-                      <button
-                        type="button"
-                        onClick={() => setEnhancedOutlines(!enhancedOutlines)}
-                        className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
-                          enhancedOutlines
-                            ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface'
-                            : 'bg-m3-surface border-m3-outline-variant/15 hover:bg-m3-primary/5'
-                        }`}
-                      >
-                        <div className={`p-2 rounded-lg shrink-0 ${enhancedOutlines ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
-                          <Keyboard className="h-4.5 w-4.5" />
-                        </div>
-                        <div className="space-y-0.5">
-                          <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
-                            <span>A11y Highlight Keyboard Outlines</span>
-                            {enhancedOutlines && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
-                          </div>
-                          <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
-                            Forces thick orange safety outlines around focused checkout inputs and catalog layout buttons when navigating via the TAB key.
-                          </p>
-                        </div>
-                      </button>
-
-                      {/* DISABLE BLURS toggle */}
-                      <button
-                        type="button"
-                        onClick={() => setDisableBlurs(!disableBlurs)}
-                        className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
-                          disableBlurs
-                            ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface'
-                            : 'bg-m3-surface border-m3-outline-variant/15 hover:bg-m3-primary/5'
-                        }`}
-                      >
-                        <div className={`p-2 rounded-lg shrink-0 ${disableBlurs ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
-                          <Eye className="h-4.5 w-4.5" />
-                        </div>
-                        <div className="space-y-0.5">
-                          <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
-                            <span>Turn Off Backdrop & UI Blurs</span>
-                            {disableBlurs && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
-                          </div>
-                          <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
-                            Removes frosted glass translucent backdrops and heavy gradient blur filters to improve visual clarity and rendering performance.
-                          </p>
-                        </div>
-                      </button>
-
-                      {/* DISABLE ANIMATIONS toggle */}
-                      <button
-                        type="button"
-                        onClick={() => setDisableAnimations(!disableAnimations)}
-                        className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
-                          disableAnimations
-                            ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface'
-                            : 'bg-m3-surface border-m3-outline-variant/15 hover:bg-m3-primary/5'
-                        }`}
-                      >
-                        <div className={`p-2 rounded-lg shrink-0 ${disableAnimations ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
-                          <Sparkles className="h-4.5 w-4.5" />
-                        </div>
-                        <div className="space-y-0.5">
-                          <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
-                            <span>Remove Animations & Effects</span>
-                            {disableAnimations && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
-                          </div>
-                          <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
-                            Bypasses interface slide-in motion, tab page fade effects, and interactive scaling physics for instant navigation.
-                          </p>
-                        </div>
-                      </button>
-
-                      {/* LOW PERFORMANCE MODE / THERMAL MITIGATION toggle */}
-                      <button
-                        type="button"
-                        onClick={() => db.setLowPerformanceMode(!db.lowPerformanceMode)}
-                        className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
-                          db.lowPerformanceMode
-                            ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface'
-                            : 'bg-m3-surface border-m3-outline-variant/15 hover:bg-m3-primary/5'
-                        }`}
-                      >
-                        <div className={`p-2 rounded-lg shrink-0 ${db.lowPerformanceMode ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
-                          <Cpu className="h-4.5 w-4.5" />
-                        </div>
-                        <div className="space-y-0.5">
-                          <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
-                            <span>Mobile Battery & Thermal Saver</span>
-                            {db.lowPerformanceMode && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
-                          </div>
-                          <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
-                            Mitigates thermal throttling and battery drainage on mobile client hardware. Programmatically scales presentation effects, strips blurs, and speeds up layouts.
-                          </p>
-                        </div>
-                      </button>
-                    </div>
-
-                  </div>
-                )}
-
-                {/* TAB: APPEARANCE DYNAMIC COLOR THEMES */}
-                {activeTab === 'appearance' && (
-                  <div className="space-y-4 font-sans text-left animate-fade-in">
-                      <div>
-                        <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono flex items-center gap-2">
-                          <Palette className="h-4.5 w-4.5 text-m3-primary" />
-                          <span>Material Dynamic Color Themes</span>
-                        </h4>
-                        <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
-                          Drag your cursor across the color wheel or select a preset below to change the system color. The system generates a complete tonal scheme matching Material Design 3 guidelines.
-                        </p>
-                      </div>
-
-                      {/* Side-by-side Layout for Color Wheel & Panel */}
-                      <div className="flex flex-col md:flex-row gap-6 items-center p-4 bg-m3-surface-low/50 border border-m3-outline-variant/15 rounded-2xl">
-                        {/* Interactive Color Wheel */}
-                        <div className="flex flex-col items-center gap-2.5 shrink-0 select-none">
-                          <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">
-                            Interactive Color Wheel
-                          </label>
-                          <div 
-                            ref={colorWheelRef}
-                            onPointerDown={handlePointerDown}
-                            onPointerMove={handlePointerMove}
-                            onPointerUp={handlePointerUp}
-                            onPointerLeave={handlePointerUp}
-                            className="relative w-40 h-40 rounded-full border-4 border-m3-outline-variant/30 overflow-hidden shadow-inner cursor-crosshair select-none active:scale-[1.01] transition-transform duration-150 touch-none"
-                            style={{
-                              background: 'conic-gradient(from 0deg, #ff0000 0deg, #ffff00 60deg, #00ff00 120deg, #00ffff 180deg, #0000ff 240deg, #ff00ff 300deg, #ff0000 360deg)',
-                            }}
-                          >
-                            {/* Saturation gloss overlay */}
-                            <div className="absolute inset-0 pointer-events-none" style={{
-                              background: 'radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,255,255,0.7) 15%, rgba(255,255,255,0) 100%)'
-                            }} />
-                            
-                            {/* Dark mode filter overlay */}
-                            {darkMode && (
-                              <div className="absolute inset-0 pointer-events-none bg-black/15 mix-blend-multiply" />
-                            )}
-
-                            {/* Center Pin Indicator */}
-                            <div 
-                              className="absolute h-4 w-4 rounded-full border-2 border-white shadow-[0_0_8px_rgba(0,0,0,0.5)] -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-all duration-75"
-                              style={{
-                                left: `${wheelPin.x}%`,
-                                top: `${wheelPin.y}%`,
-                                backgroundColor: customColorSeed
-                              }}
-                            />
-                          </div>
-
-                          {/* Native Picker Trigger */}
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[9px] font-bold text-m3-on-surface-variant/80 uppercase font-mono">Fine adjustment:</span>
-                            <div className="relative h-6 w-10 rounded-lg overflow-hidden border border-m3-outline-variant/30 flex items-center justify-center bg-m3-surface hover:border-m3-primary/60 transition-colors shadow-sm">
-                              <input 
-                                type="color" 
-                                value={customColorSeed}
-                                onChange={(e) => handleApplyTheme(e.target.value)}
-                                className="absolute inset-0 w-full h-full p-0 border-0 cursor-pointer opacity-0"
-                              />
-                              <div className="h-4 w-8 rounded-md border border-black/10" style={{ backgroundColor: customColorSeed }} />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Presets and Custom Inputs Grid */}
-                        <div className="flex-1 space-y-4 w-full">
-                          {/* Presets Grid */}
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">
-                              Or pick a popular preset color
-                            </label>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                              {[
-                                { name: 'Sapphire', value: '#155EEF', colorClass: 'bg-[#155EEF]' },
-                                { name: 'Teal', value: '#0E9384', colorClass: 'bg-[#0E9384]' },
-                                { name: 'Forest', value: '#16A34A', colorClass: 'bg-[#16A34A]' },
-                                { name: 'Velvet', value: '#D92D20', colorClass: 'bg-[#D92D20]' },
-                                { name: 'Grape', value: '#7A5AF8', colorClass: 'bg-[#7A5AF8]' },
-                                { name: 'Amber', value: '#D97706', colorClass: 'bg-[#D97706]' },
-                                { name: 'Orchid', value: '#EE46BC', colorClass: 'bg-[#EE46BC]' },
-                                { name: 'Charcoal', value: '#475467', colorClass: 'bg-[#475467]' }
-                              ].map((preset) => {
-                                const isSelected = customColorSeed.toLowerCase() === preset.value.toLowerCase();
-                                return (
-                                  <button
-                                    key={preset.name}
-                                    type="button"
-                                    onClick={() => handleApplyTheme(preset.value)}
-                                    className={`group relative h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
-                                      isSelected 
-                                        ? 'border-m3-primary bg-m3-primary/10 ring-1 ring-m3-primary/30 scale-102' 
-                                        : 'border-m3-outline-variant/15 hover:scale-102 hover:border-m3-primary/45 bg-m3-surface-low'
-                                    }`}
-                                    title={`M3 Tonal Preset: ${preset.name}`}
-                                  >
-                                    <span className={`h-4 w-4 rounded ${preset.colorClass} shadow-sm border border-black/10 flex items-center justify-center transition-transform group-hover:scale-105`}>
-                                      {isSelected && <Check className="h-1.5 w-1.5 text-white drop-shadow-sm" />}
-                                    </span>
-                                    <span className="text-[10px] font-extrabold text-m3-on-surface pl-1.5">{preset.name}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          {/* Custom Hex Input and Button */}
-                          <div className="space-y-1.5 font-sans">
-                            <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">
-                              Or input custom hex color code
-                            </label>
-                            <div className="flex gap-2.5">
-                              <div className="relative flex-1">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black font-mono text-m3-on-surface-variant/70">#</span>
-                                <input
-                                  type="text"
-                                  value={hexInput.startsWith('#') ? hexInput.slice(1) : hexInput}
-                                  onChange={(e) => {
-                                    const val = e.target.value.toUpperCase();
-                                    setHexInput(val.startsWith('#') ? val : '#' + val);
-                                  }}
-                                  placeholder="155EEF"
-                                  maxLength={7}
-                                  className="w-full pl-6 pr-3 py-1.5 text-xs font-mono font-black tracking-wider bg-m3-surface border border-m3-outline-variant/25 rounded-xl focus:border-m3-primary focus:ring-1 focus:ring-m3-primary/20 text-m3-on-surface placeholder:text-m3-on-surface-variant/35"
-                                />
-                              </div>
-                              <div className="flex gap-1 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => handleApplyTheme(hexInput)}
-                                  className="py-1.5 px-3 bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 text-[10px] font-black uppercase tracking-wider rounded-lg shadow-sm hover:shadow transition-all flex items-center gap-1 cursor-pointer"
-                                >
-                                  <Sparkles className="h-3 w-3" />
-                                  <span>Apply</span>
-                                </button>
-                                
-                                {isCustomThemeActive && (
-                                  <button
-                                    type="button"
-                                    onClick={handleResetTheme}
-                                    className="py-2.5 px-2.5 bg-m3-surface hover:bg-m3-surface-container text-m3-on-surface-variant text-[10px] font-black uppercase tracking-wider rounded-lg transition-all border border-m3-outline-variant/30 flex items-center justify-center cursor-pointer"
-                                    title="Reset to default theme color"
-                                  >
-                                    <RotateCcw className="h-3.5 w-3.5" />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Error & Success Messages */}
-                      {themeError && (
-                        <p className="text-[10px] font-bold text-red-500 font-sans pl-1 animate-pulse">
-                          ⚠️ {themeError}
-                        </p>
-                      )}
-                      {themeSuccess && (
-                        <p className="text-[10px] font-bold text-emerald-500 font-sans pl-1 animate-fade-in flex items-center gap-1">
-                          <CheckCircle className="h-3.5 w-3.5" />
-                          <span>{themeSuccess}</span>
-                        </p>
-                      )}
-
-                      {/* Dynamic Preview & Advanced Contrast validation checks */}
-                      <div className="mt-4 p-4 rounded-2xl border border-m3-outline-variant/15 bg-m3-surface-low space-y-3.5 text-left">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-m3-on-surface-variant font-mono block border-b border-m3-outline-variant/10 pb-1.5">
-                          🎨 Dynamic Theme Scheme Tester, Tonal Swatches & WCAG Contrast Metrics
-                        </span>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-                          {/* Live UI Components preview */}
-                          <div className="space-y-2 p-3 rounded-xl border border-m3-outline-variant/10 bg-m3-surface/50">
-                            <span className="text-[8.5px] font-mono font-black text-m3-on-surface-variant/80 tracking-wider block uppercase">
-                              Component Sandbox
-                            </span>
-                            
-                            <div className="space-y-1.5">
-                              {/* Primary Button */}
-                              <div 
-                                style={{ backgroundColor: previewScheme.primary, color: previewScheme.onPrimary }}
-                                className="px-3 py-2 rounded-lg text-[10.5px] font-extrabold text-center select-none shadow-sm transition-all"
-                              >
-                                Elevated Primary Button
-                              </div>
-                              
-                              {/* Container and details card */}
-                              <div 
-                                style={{ backgroundColor: previewScheme.primaryContainer, color: previewScheme.onPrimaryContainer, borderColor: previewScheme.primary + '20' }}
-                                className="p-3 rounded-lg border text-left"
-                              >
-                                <span className="text-[8px] font-black font-mono tracking-widest block uppercase opacity-75 animate-pulse">
-                                  Primary Container Alert
-                                </span>
-                                <p className="text-[10px] font-bold mt-1 leading-snug">
-                                  This preview mimics current register layout states dynamically.
-                                </p>
-                              </div>
-
-                              {/* Secondary component preview */}
-                              <div 
-                                style={{ backgroundColor: previewScheme.secondaryContainer, color: previewScheme.onSecondaryContainer }}
-                                className="px-2.5 py-1.5 rounded-lg text-[9px] font-mono font-black flex items-center justify-between"
-                              >
-                                <span>SECONDARY STATUS PILL</span>
-                                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: previewScheme.secondary }} />
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Dynamic Tonal Swatches family */}
-                          <div className="space-y-2 p-3 rounded-xl border border-m3-outline-variant/10 bg-m3-surface/50">
-                            <span className="text-[8.5px] font-mono font-black text-m3-on-surface-variant/80 tracking-wider block uppercase">
-                              Material 3 Tonal Family
-                            </span>
-                            <div className="grid grid-cols-2 gap-1.5 text-[9px]">
-                              {[
-                                { label: 'Primary', bg: previewScheme.primary, text: previewScheme.onPrimary },
-                                { label: 'On-Primary', bg: previewScheme.onPrimary, text: previewScheme.primary },
-                                { label: 'Primary Container', bg: previewScheme.primaryContainer, text: previewScheme.onPrimaryContainer },
-                                { label: 'On-Primary Container', bg: previewScheme.onPrimaryContainer, text: previewScheme.primaryContainer },
-                                { label: 'Secondary', bg: previewScheme.secondary, text: previewScheme.onSecondary },
-                                { label: 'On-Secondary', bg: previewScheme.onSecondary, text: previewScheme.secondary },
-                                { label: 'Secondary Container', bg: previewScheme.secondaryContainer, text: previewScheme.onSecondaryContainer },
-                                { label: 'On-Sec Container', bg: previewScheme.onSecondaryContainer, text: previewScheme.secondaryContainer },
-                                { label: 'Surface Base', bg: previewScheme.surface, text: previewScheme.onSurface },
-                                { label: 'On-Surface Text', bg: previewScheme.onSurface, text: previewScheme.surface },
-                              ].map((swatch, idx) => (
-                                <div 
-                                  key={idx} 
-                                  style={{ backgroundColor: swatch.bg, color: swatch.text }}
-                                  className="p-1.5 rounded-lg border border-m3-outline-variant/10 font-bold flex flex-col justify-between h-10 select-none shadow-xs transition-transform duration-100 active:scale-98"
-                                  title={`${swatch.label}: ${swatch.bg}`}
-                                >
-                                  <span className="text-[7.5px] font-mono font-bold uppercase truncate tracking-tight">{swatch.label}</span>
-                                  <span className="text-[8px] font-mono opacity-80 select-all font-black leading-none">{swatch.bg}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* WCAG Contrast Ratio Checker Values */}
-                          <div className="space-y-2.5 p-3 rounded-xl border border-m3-outline-variant/10 bg-m3-surface/50 text-left">
-                            <span className="text-[8.5px] font-mono font-black text-m3-on-surface-variant/80 tracking-wider block uppercase">
-                              WCAG 2.1 Contrast Audits
-                            </span>
-
-                            <div className="space-y-1.5 text-[9.5px]">
-                              {/* Primary Contrast */}
-                              {[
-                                { 
-                                  label: 'Text on Solid Primary', 
-                                  numerator: previewScheme.onPrimary, 
-                                  denominator: previewScheme.primary 
-                                },
-                                { 
-                                  label: 'Text on Container Base', 
-                                  numerator: previewScheme.onPrimaryContainer, 
-                                  denominator: previewScheme.primaryContainer 
-                                },
-                                { 
-                                  label: 'Body Text on Surface BG', 
-                                  numerator: previewScheme.onSurface, 
-                                  denominator: previewScheme.surface 
-                                },
-                                { 
-                                  label: 'Secondary Text on Pill', 
-                                  numerator: previewScheme.onSecondaryContainer, 
-                                  denominator: previewScheme.secondaryContainer 
-                                }
-                              ].map((check, idx) => {
-                                const ratio = getContrastRatio(check.numerator, check.denominator);
-                                let passText = 'FAIL';
-                                let passClass = 'text-red-500 bg-red-500/10 border-red-500/20';
-
-                                if (ratio >= 7.0) {
-                                  passText = 'AAA Pass';
-                                  passClass = 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
-                                } else if (ratio >= 4.5) {
-                                  passText = 'AA Pass';
-                                  passClass = 'text-emerald-500/90 bg-emerald-500/5 border-emerald-500/10';
-                                } else if (ratio >= 3.0) {
-                                  passText = 'AA Large Only';
-                                  passClass = 'text-amber-500 bg-amber-500/10 border-amber-500/20';
-                                }
-
-                                return (
-                                  <div key={idx} className="flex items-center justify-between border-b border-m3-outline-variant/10 pb-1 last:border-0 last:pb-0">
-                                    <div className="space-y-0.5">
-                                      <span className="font-extrabold text-m3-on-surface-variant block leading-none">{check.label}</span>
-                                      <span className="text-[8px] font-mono text-zinc-450 font-bold uppercase">{check.numerator} on {check.denominator}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 shrink-0 font-mono">
-                                      <span className="font-black text-m3-on-surface">{ratio.toFixed(1)}:1</span>
-                                      <span className={`text-[7.5px] font-black uppercase px-1 py-0.5 rounded border ${passClass}`}>{passText}</span>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                {/* TAB: FEATURES AND PRIVACY PREFERENCES */}
-                {activeTab === 'features' && (
-                  <div className="space-y-4 animate-fade-in font-sans">
-                    <div>
-                      <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
-                        Cookie & Browser Data Consent
-                      </h4>
-                      <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
-                        Customize what data categories are indexed locally. Our cookies are entirely stored under sandbox boundaries inside local indexes to optimize system load speeds.
-                      </p>
-                    </div>
-
-                    <div className="h-px bg-m3-outline-variant/15" />
-
-                    <div className="space-y-3.5">
-                      {/* NECESSARY COOKIE */}
-                      <div className="p-4 rounded-xl border border-m3-outline-variant/20 bg-m3-surface-low/50 flex gap-3.5 items-start">
-                        <Check className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-extrabold font-sans text-m3-on-surface">Necessary System Cookies</span>
-                            <span className="text-[8.5px] font-mono bg-emerald-500/10 text-emerald-500 rounded px-1.5 font-bold uppercase tracking-wider">Permanent</span>
-                          </div>
-                          <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
-                            Stores session authentication tokens, active shift tracking, and local workspace configurations. Cannot be disabled as they are required to maintain secure user sessions.
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* FUNCTIONAL COOKIE */}
-                      <div
-                        onClick={() => setCookiePreferences(p => ({ ...p, functional: !p.functional }))}
-                        className={`p-4 rounded-xl border flex gap-3.5 items-start transition-all cursor-pointer ${
-                          cookiePreferences.functional ? 'border-m3-primary bg-m3-primary/5' : 'border-m3-outline-variant/20 bg-transparent'
-                        }`}
-                      >
-                        <div className="pt-0.5">
-                          <input
-                            type="checkbox"
-                            checked={cookiePreferences.functional}
-                            readOnly
-                            className="h-4 w-4 bg-m3-surface border-m3-outline-variant rounded-md accent-m3-primary cursor-pointer shrink-0"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 font-sans">
-                            <span className="text-xs font-extrabold text-m3-on-surface">Functional App Preferences</span>
-                            <span className="text-[8.5px] font-mono bg-m3-primary/10 text-m3-primary rounded px-1.5 font-bold uppercase tracking-wider">Active</span>
-                          </div>
-                          <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
-                            Saves light/dark mode states, active ERP OS shopping baskets, custom branch profiles, and accessibility profiles to prevent re-configuring options on every system log-in.
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* AUDIT LOGGER / ANALYTIC COOKIE */}
-                      <div
-                        onClick={() => setCookiePreferences(p => ({ ...p, analytical: !p.analytical }))}
-                        className={`p-4 rounded-xl border flex gap-3.5 items-start transition-all cursor-pointer ${
-                          cookiePreferences.analytical ? 'border-m3-primary bg-m3-primary/5' : 'border-m3-outline-variant/20 bg-transparent'
-                        }`}
-                      >
-                        <div className="pt-0.5">
-                          <input
-                            type="checkbox"
-                            checked={cookiePreferences.analytical}
-                            readOnly
-                            className="h-4 w-4 bg-m3-surface border-m3-outline-variant rounded-md accent-m3-primary cursor-pointer shrink-0"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 font-sans">
-                            <span className="text-xs font-extrabold text-m3-on-surface">On-Prem Trace Audit Logger</span>
-                            <span className="text-[8.5px] font-mono bg-zinc-450 text-zinc-400 rounded px-1.5 font-bold uppercase tracking-wider">Opt-In</span>
-                          </div>
-                          <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
-                            Retains local system operations telemetry, audit logs, error diagnostics logs, and SQL-blocker responses in your local console to aid debugging. Generates zero tracking cookies.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="pt-2">
-                      <button
-                        type="button"
-                        onClick={handleSavePreferences}
-                        className="w-full py-3.5 px-4 font-black rounded-xl bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 text-xs uppercase tracking-wider shadow-sm transition-all cursor-pointer"
-                      >
-                        Save Preferences
-                      </button>
-                    </div>
-
-                    <div className="h-px bg-m3-outline-variant/15 my-6" />
-
-                    {/* INTERACTIVE ONBOARDING SETUP ASSISTANT */}
-                    <div className="p-4 rounded-xl border border-m3-primary/25 bg-m3-primary/5 space-y-2.5">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono flex items-center gap-1.5">
-                        <Sparkles className="h-3.5 w-3.5 animate-pulse" />
-                        Interactive Setup Wizard
-                      </span>
-                      <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed font-sans">
-                        Need to re-configure starting catalogs, seed initial products, or bulk migrate raw spreadsheet rows? Relaunch the interactive Onboarding Setup Assistant instantly.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsOpen(false);
-                          window.dispatchEvent(new Event('open-setup-wizard'));
-                        }}
-                        className="w-full bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary text-[10px] font-extrabold uppercase tracking-wider py-2.5 rounded-lg cursor-pointer transition-all text-center flex items-center justify-center gap-1.5 border border-m3-outline-variant/30 shadow-md font-sans"
-                      >
-                        <Play className="h-3 w-3" />
-                        Relaunch Setup Wizard
-                      </button>
-                    </div>
-
-                    <div className="h-px bg-m3-outline-variant/15 my-6" />
-
-                    {/* INTEGRATED PRIVACY POLICY SECTION */}
-                    <div className="space-y-4 text-xs leading-relaxed text-m3-on-surface">
-                      <div className="border-b border-m3-outline-variant/15 pb-4">
-                        <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
-                          Privacy & Security Policy
-                        </h4>
-                        <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed font-sans">
-                          Last Refreshed: June 8, 2026. This policy details how data privacy, local offline storage, and system security are handled.
-                        </p>
-                      </div>
-
-                    <div className="space-y-4 font-sans select-text max-h-[340px] overflow-y-auto pr-2">
-                      <div className="space-y-1">
-                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">1. No Third-Party Tracking</h5>
-                        <p className="text-[11px] text-m3-on-surface-variant">
-                          We guarantee that your company data, customer rosters, inventory records, and sales transactions are never transmitted or shared with third parties. All operational data is stored securely.
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">2. Local Data Storage</h5>
-                        <p className="text-[11px] text-m3-on-surface-variant">
-                          All operational logs, employee assignments, and branch records are stored locally in the database. Administrators can clear local data through the Backups settings if needed to delete history.
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">3. Offline Saving</h5>
-                        <p className="text-[11px] text-m3-on-surface-variant">
-                          When working offline, sales transactions and stock changes are saved securely in your browser and automatically synchronized with the main server as soon as connection is restored.
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">4. Data Preservation and Browser Cache</h5>
-                        <p className="text-[11px] text-m3-on-surface-variant">
-                          The system stores pending offline data locally to prevent interruptions during network dropouts. Clearing your browser cache or using private/incognito windows before offline data is synced may result in data loss.
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">5. Encrypted Network Transmissions</h5>
-                        <p className="text-[11px] text-m3-on-surface-variant">
-                          All data transmitted between cashiers and the central database is fully encrypted. Business transactions, manager approvals, and active checkout carts are protected over local networks.
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">6. Automatic Logouts</h5>
-                        <p className="text-[11px] text-m3-on-surface-variant">
-                          To protect system security, user sessions are automatically logged out after 8 hours of inactivity or when the browser session ends.
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">7. Access Controls & Permissions</h5>
-                        <p className="text-[11px] text-m3-on-surface-variant">
-                          Every data update is recorded for security tracking. Administrators can review database settings and manage security profiles under the Backups tab.
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">8. Tax Compliance</h5>
-                        <p className="text-[11px] text-m3-on-surface-variant">
-                          TilePoint complies with tax register guidelines. Daily sales reports, tax transmittals, and historical tax logs are protected and marked read-only to comply with audit requirements.
-                        </p>
-                      </div>
-
-                      <div className="space-y-2 pt-2 border-t border-m3-outline-variant/15 text-[10.5px]">
-                        <p className="text-zinc-400 font-bold">
-                          If you have security inquiries regarding TilePoint, please contact system administration.
-                        </p>
-                        <span className="inline-flex items-center gap-1.5 text-[9px] uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-full font-bold">
-                          <Check className="h-3 w-3" /> System Status: Certified & Secured
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-                {/* TAB D: ABOUT SYSTEM & DEVELOPER PROFILE */}
-                {activeTab === 'about' && (
-                  <div className="space-y-5 animate-fade-in font-sans">
-                    <div>
-                      <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
-                        System Configuration & Developer Profile
-                      </h4>
-                      <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
-                        TilePoint point-of-sale node telemetry data, compiled engineering details, and systems developer metadata.
-                      </p>
-                    </div>
-
-                    <div className="h-px bg-m3-outline-variant/15" />
-
-                    {/* Developer Profile Card */}
-                    <div className="m3-card bg-m3-surface-low border border-m3-outline-variant/15 p-5 sm:p-6 rounded-2xl shadow-sm relative overflow-hidden flex flex-col md:flex-row items-start md:items-center gap-5 sm:gap-6">
-                      
-                      {/* Left side: Pure CSS aesthetic terminal/ring representation inspired by the mockup */}
-                      <div className="relative h-24 w-24 shrink-0 flex items-center justify-center bg-m3-surface/30 rounded-2xl border border-m3-outline-variant/10 overflow-hidden shadow-inner self-center sm:self-start md:self-center">
-                        {/* Decorative concentric translucent rings */}
-                        <div className="absolute -top-6 -left-6 h-20 w-20 rounded-full border border-m3-primary/15 bg-m3-primary/5" />
-                        <div className="absolute -bottom-4 -right-4 h-16 w-16 rounded-full border border-m3-primary/10 bg-m3-primary/5" />
-                        <div className="absolute h-14 w-14 rounded-full border border-m3-primary/20 bg-m3-primary/5 animate-pulse" />
-                        
-                        {/* Interactive-looking terminal display box */}
-                        <div className="relative z-10 h-11 w-11 rounded-xl bg-[#0b0f19] border border-m3-primary/40 shadow-[0_0_12px_rgba(28,100,242,0.15)] flex items-center justify-center font-mono text-xs text-m3-primary font-black">
-                          <span>&gt;_</span>
-                        </div>
-                      </div>
-
-                      {/* Right side: Clean stack hierarchy */}
-                      <div className="flex-1 space-y-3 font-sans w-full">
-                        <div>
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-[9px] sm:text-[10px] font-mono font-black uppercase text-zinc-400 tracking-widest block leading-3">
-                              Senior Systems Architect &amp; Creator
-                            </span>
-                            <span className="text-[8.5px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 uppercase font-black tracking-wider shadow-sm select-none">
-                              Verified Architect
-                            </span>
-                          </div>
-                          
-                          <h4 className="text-base sm:text-lg font-black text-white uppercase tracking-wider font-sans mt-1.5 leading-tight">
-                            Mark Jefferson Monares
-                          </h4>
-                          
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-m3-on-surface-variant text-[10.5px] mt-2">
-                            <div className="flex items-center gap-1.5">
-                              <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0" />
-                              <span className="font-semibold text-zinc-300">Dipolog City, Philippines</span>
-                            </div>
-                            <a
-                              href="https://github.com/uznom"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1.5 text-m3-primary hover:text-m3-primary/80 transition-colors font-bold group"
-                            >
-                              <Github className="h-3.5 w-3.5 shrink-0" />
-                              <span className="font-mono group-hover:underline">@uznom</span>
-                            </a>
-                          </div>
-                        </div>
-
-                        <div className="h-px bg-m3-outline-variant/10 !my-2" />
-
-                        <div className="text-[11px] sm:text-xs text-m3-on-surface-variant leading-relaxed">
-                          <p className="text-zinc-200 border-l-2 border-m3-primary/60 pl-2.5 font-medium italic">
-                            Mark Jefferson builds streamlined systems that are both technically disciplined and exceptionally practical.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* System specs info card */}
-                    <div className="space-y-4">
-                      {/* Tech stack card */}
-                      <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/40 space-y-2 animate-fade-in text-left">
-                        <div className="flex items-center gap-2">
-                          <Code className="h-4.5 w-4.5 text-m3-primary" />
-                          <h5 className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono">
-                            Enterprise Tech Stack
-                          </h5>
-                        </div>
-                        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] leading-normal font-mono text-zinc-300">
-                          <li className="flex items-center gap-1.5">
-                            <span className="h-1 w-1 rounded-full bg-m3-primary shrink-0" />
-                            <span>React 18 & TypeScript (Safe Typings)</span>
-                          </li>
-                          <li className="flex items-center gap-1.5">
-                            <span className="h-1 w-1 rounded-full bg-m3-primary shrink-0" />
-                            <span>Vite Build System (optimized bundles)</span>
-                          </li>
-                          <li className="flex items-center gap-1.5">
-                            <span className="h-1 w-1 rounded-full bg-m3-primary shrink-0" />
-                            <span>Tailwind CSS v4 (Material design context)</span>
-                          </li>
-                          <li className="flex items-center gap-1.5">
-                            <span className="h-1 w-1 rounded-full bg-m3-primary shrink-0" />
-                            <span>Framer Motion & Lucide Icons</span>
-                          </li>
-                          <li className="flex items-center gap-1.5">
-                            <span className="h-1 w-1 rounded-full bg-m3-primary shrink-0" />
-                            <span>D3.js / Recharts (Data Visualizations)</span>
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-
-                    {/* Operating Manual Section with download and print options */}
-                    <div className="m3-card bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl shadow-sm animate-fade-in space-y-4 text-left">
-                      <div className="flex items-center gap-2.5">
-                        <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center border border-red-500/20 text-red-500">
-                          <Download className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <h5 className="text-xs font-black uppercase text-m3-on-surface tracking-wider">
-                            TilePoint Operating Manual &amp; Operators Handbook
-                          </h5>
-                          <span className="text-[10px] text-zinc-400 font-medium block">
-                            Natively formulated, portable PDF guidance document referencing inventory auditing and ERP OS protocols.
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="p-4 rounded-xl bg-m3-surface border border-m3-outline-variant/5 text-xs text-m3-on-surface-variant leading-relaxed space-y-2.5">
-                        <p className="text-[11px] font-bold text-zinc-300">
-                          This portable operations guidelines document covers:
-                        </p>
-                        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-mono pl-1">
-                          <li className="flex items-center gap-1.5">
-                            <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
-                            <span>Ch 1: ERP OS Sales &amp; Coverage Calculators</span>
-                          </li>
-                          <li className="flex items-center gap-1.5">
-                            <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
-                            <span>Ch 2: Branch Inventories &amp; Unified Pools</span>
-                          </li>
-                          <li className="flex items-center gap-1.5">
-                            <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
-                            <span>Ch 3: Custom Alert Threshold Overrides</span>
-                          </li>
-                          <li className="flex items-center gap-1.5">
-                            <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
-                            <span>Ch 4: Double-Entry Inter-Branch Transfers</span>
-                          </li>
-                          <li className="flex items-center gap-1.5">
-                            <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
-                            <span>Ch 5: Shifts, Cash Float &amp; Registers Audits</span>
-                          </li>
-                          <li className="flex items-center gap-1.5">
-                            <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
-                            <span>Ch 6: Sales Reporting Exports (CSV, Excel)</span>
-                          </li>
-                          <li className="flex items-center gap-1.5">
-                            <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
-                            <span>Ch 7: Scraps, Damage Register &amp; Loss Logs</span>
-                          </li>
-                          <li className="flex items-center gap-1.5">
-                            <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
-                            <span>Ch 8: Locks, Security &amp; Intrusion Protection</span>
-                          </li>
-                        </ul>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2.5 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            // Let's call our PDF Generator and Trigger direct portable document save
-                            const pdfContent = `%PDF-1.4
+ // Hub open state
+ const [isOpen, setIsOpen] = useState(false);
+ const [activeTab, setActiveTab] = useState<'appearance' | 'features' | 'about' | 'accessibility' | 'backups' | 'legitimacy'>('appearance');
+
+ // Local company name for legitimacy certificate
+ const [companyName, setCompanyName] = useState(() => {
+ return localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center';
+ });
+
+ // Listen to open events from other modules/dropdowns
+ useEffect(() => {
+ const handleOpenEvent = () => {
+ setIsOpen(true);
+ };
+ window.addEventListener('open-privacy-hub', handleOpenEvent);
+ return () => {
+ window.removeEventListener('open-privacy-hub', handleOpenEvent);
+ };
+ }, []);
+
+ // Cookie prompt bar state
+ const [showBanner, setShowBanner] = useState(() => {
+ if (typeof window !== 'undefined') {
+ const consent = localStorage.getItem('tilepoint_cookie_consent_status');
+ return !consent; // Show banner if no consent state is saved
+ }
+ return false;
+ });
+
+ // Settings states initialized from localStorage for persistence
+ const [textSize, setTextSize] = useState<'normal' | 'large' | 'xlarge'>(() => {
+ return (localStorage.getItem('tilepoint-text-size') as 'normal' | 'large' | 'xlarge') || 'normal';
+ });
+ 
+ const [colorContrast, setColorContrast] = useState<'default' | 'medium' | 'high'>(() => {
+ return (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'medium';
+ });
+
+ const [maximizeTextContrast, setMaximizeTextContrast] = useState<boolean>(() => {
+ return localStorage.getItem('tilepoint-maximize-text-contrast') === 'true';
+ });
+
+ const [dyslexicFont, setDyslexicFont] = useState(() => {
+ return localStorage.getItem('tilepoint-dyslexic-font') === 'true';
+ });
+
+ const [enhancedOutlines, setEnhancedOutlines] = useState(() => {
+ return localStorage.getItem('tilepoint-enhanced-outlines') === 'true';
+ });
+
+ const [disableAnimations, setDisableAnimations] = useState(() => {
+ return localStorage.getItem('tilepoint-disable-animations') === 'true';
+ });
+
+ const [disableBlurs, setDisableBlurs] = useState(() => {
+ return localStorage.getItem('tilepoint-disable-blurs') === 'true';
+ });
+
+ const isSyncingRef = React.useRef(false);
+
+ // Listen to external theme sync events
+ useEffect(() => {
+ const handleSync = () => {
+ isSyncingRef.current = true;
+ const persistedContrast = (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'medium';
+ const persistedMaxText = localStorage.getItem('tilepoint-maximize-text-contrast') === 'true';
+ const persistedDisableAnimations = localStorage.getItem('tilepoint-disable-animations') === 'true';
+ const persistedDisableBlurs = localStorage.getItem('tilepoint-disable-blurs') === 'true';
+ const persistedTextSize = (localStorage.getItem('tilepoint-text-size') as 'normal' | 'large' | 'xlarge') || 'normal';
+ const persistedDyslexic = localStorage.getItem('tilepoint-dyslexic-font') === 'true';
+ const persistedOutlines = localStorage.getItem('tilepoint-enhanced-outlines') === 'true';
+ const persistedCompanyName = localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center';
+ 
+ setColorContrast(persistedContrast);
+ setMaximizeTextContrast(persistedMaxText);
+ setDisableAnimations(persistedDisableAnimations);
+ setDisableBlurs(persistedDisableBlurs);
+ setTextSize(persistedTextSize);
+ setDyslexicFont(persistedDyslexic);
+ setEnhancedOutlines(persistedOutlines);
+ setCompanyName(persistedCompanyName);
+ };
+ window.addEventListener('tilepoint-theme-updated', handleSync);
+ return () => {
+ window.removeEventListener('tilepoint-theme-updated', handleSync);
+ };
+ }, []);
+
+ // Dynamic Material 3 android-style Custom Theme States
+ const [customColorSeed, setCustomColorSeed] = useState(() => {
+ return localStorage.getItem('tilepoint_custom_theme_primary') || '#155EEF';
+ });
+ 
+ const [isCustomThemeActive, setIsCustomThemeActive] = useState(() => {
+ return !!localStorage.getItem('tilepoint_custom_theme_primary');
+ });
+
+ const [hexInput, setHexInput] = useState(customColorSeed);
+ const [themeSuccess, setThemeSuccess] = useState<string | null>(null);
+ const [themeError, setThemeError] = useState<string | null>(null);
+
+ // Color Wheel Dragging State and Coordinate Encoders
+ const colorWheelRef = React.useRef<HTMLDivElement>(null);
+ const [isPointerDown, setIsPointerDown] = useState(false);
+
+ const hslToHex = (h: number, s: number, l: number) => {
+ h /= 360;
+ let r, g, b;
+ if (s === 0) {
+ r = g = b = l;
+ } else {
+ const hue2rgb = (p: number, q: number, t: number) => {
+ if (t < 0) t += 1;
+ if (t > 1) t -= 1;
+ if (t < 1/6) return p + (q - p) * 6 * t;
+ if (t < 1/2) return q;
+ if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+ return p;
+ };
+ const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+ const p = 2 * l - q;
+ r = hue2rgb(p, q, h + 1/3);
+ g = hue2rgb(p, q, h);
+ b = hue2rgb(p, q, h - 1/3);
+ }
+ const toHex = (x: number) => {
+ const hex = Math.round(x * 255).toString(16);
+ return hex.length === 1 ? '0' + hex : hex;
+ };
+ return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+ };
+
+ const wheelPin = React.useMemo(() => {
+ try {
+ const rawSeed = customColorSeed;
+ const rawHex = rawSeed.startsWith('#') ? rawSeed.slice(1) : rawSeed;
+ let formattedHex = rawHex;
+ if (rawHex.length === 3) {
+ formattedHex = rawHex.split('').map(char => char + char).join('');
+ }
+ const r = (parseInt(formattedHex.slice(0, 2), 16) || 0) / 255;
+ const g = (parseInt(formattedHex.slice(2, 4), 16) || 0) / 255;
+ const b = (parseInt(formattedHex.slice(4, 6), 16) || 0) / 255;
+ 
+ const max = Math.max(r, g, b), min = Math.min(r, g, b);
+ let h = 0, s = 0;
+ const l = (max + min) / 2;
+
+ if (max !== min) {
+ const d = max - min;
+ s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+ switch (max) {
+ case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+ case g: h = (b - r) / d + 2; break;
+ case b: h = (r - g) / d + 4; break;
+ }
+ h /= 6;
+ }
+ 
+ const deg = h * 360;
+ const angleRad = (deg - 90) * Math.PI / 180;
+ const distPercent = s * 50;
+ 
+ return {
+ x: 50 + distPercent * Math.cos(angleRad),
+ y: 50 + distPercent * Math.sin(angleRad)
+ };
+ } catch (e) {
+ return { x: 50, y: 50 };
+ }
+ }, [customColorSeed]);
+
+ const handlePointerDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+ if (!colorWheelRef.current) return;
+ const rect = colorWheelRef.current.getBoundingClientRect();
+ const centerX = rect.width / 2;
+ const centerY = rect.height / 2;
+ const dx = e.clientX - rect.left - centerX;
+ const dy = e.clientY - rect.top - centerY;
+ 
+ const maxRadius = rect.width / 2;
+ const dist = Math.sqrt(dx * dx + dy * dy);
+ 
+ const s = Math.min(1.0, dist / maxRadius);
+ 
+ let theta = Math.atan2(dy, dx);
+ let deg = theta * (180 / Math.PI) + 90;
+ if (deg < 0) {
+ deg += 360;
+ }
+ 
+ const computedHex = hslToHex(deg, s, 0.5);
+ handleApplyTheme(computedHex);
+ };
+
+ const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+ e.preventDefault();
+ setIsPointerDown(true);
+ colorWheelRef.current?.setPointerCapture(e.pointerId);
+ handlePointerDrag(e);
+ };
+
+ const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+ if (!isPointerDown) return;
+ handlePointerDrag(e);
+ };
+
+ const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+ setIsPointerDown(false);
+ colorWheelRef.current?.releasePointerCapture(e.pointerId);
+ };
+
+ // Compute preview scheme in real-time
+ const previewScheme = React.useMemo(() => {
+ try {
+ return generateThemeFromSeed(customColorSeed, darkMode, colorContrast);
+ } catch (err) {
+ return generateThemeFromSeed('#155EEF', darkMode, colorContrast);
+ }
+ }, [customColorSeed, darkMode, colorContrast]);
+
+ const handleApplyTheme = (seed: string) => {
+ try {
+ let formattedSeed = seed.trim();
+ if (!formattedSeed.startsWith('#')) {
+ formattedSeed = '#' + formattedSeed;
+ }
+ // Validate seed is a hex string
+ if (!/^#[0-9A-Fa-f]{6}$/.test(formattedSeed) && !/^#[0-9A-Fa-f]{3}$/.test(formattedSeed)) {
+ throw new Error('Please enter a valid HEX color code (e.g. #155EEF)');
+ }
+ setCustomColorSeed(formattedSeed);
+ setHexInput(formattedSeed);
+ localStorage.setItem('tilepoint_custom_theme_primary', formattedSeed);
+ setIsCustomThemeActive(true);
+ 
+ const scheme = generateThemeFromSeed(formattedSeed, darkMode, colorContrast);
+ applyM3ThemeToDOM(scheme);
+ setThemeError(null);
+ setThemeSuccess('Custom theme color applied successfully!');
+ setTimeout(() => setThemeSuccess(null), 3000);
+ window.dispatchEvent(new Event('tilepoint-theme-updated'));
+ } catch (err: any) {
+ setThemeError(err.message || 'Failed to generate theme.');
+ setThemeSuccess(null);
+ }
+ };
+
+ const handleResetTheme = () => {
+ resetM3ThemeOverride();
+ localStorage.removeItem('tilepoint_custom_theme_primary');
+ setCustomColorSeed('#155EEF');
+ setHexInput('#155EEF');
+ setIsCustomThemeActive(false);
+ setThemeError(null);
+ setThemeSuccess('System theme reset to default Sapphire Blue.');
+ setTimeout(() => setThemeSuccess(null), 3000);
+ window.dispatchEvent(new Event('tilepoint-theme-updated'));
+ };
+
+ // Re-apply theme dynamically if settings switch while hub is open
+ useEffect(() => {
+ if (isCustomThemeActive) {
+ try {
+ const scheme = generateThemeFromSeed(customColorSeed, darkMode, colorContrast);
+ applyM3ThemeToDOM(scheme);
+ } catch (e) {
+ console.error(e);
+ }
+ }
+ }, [darkMode, customColorSeed, isCustomThemeActive, colorContrast]);
+
+ // Individual cookie preference categories for the fine-grained Cookie Consent tabs
+ const [cookiePreferences, setCookiePreferences] = useState({
+ necessary: true, // Permanent essential
+ functional: true, // App State + theme saves
+ analytical: false // Local audit logger traces
+ });
+
+ const db = useDb();
+
+ // Enforce Admin and Manager role constraint for backups tab (restricted to administrators and managers)
+ useEffect(() => {
+ if (
+ activeTab === 'backups' &&
+ db.currentUser?.role !== UserRole.ADMIN &&
+ db.currentUser?.role !== UserRole.MANAGER
+ ) {
+ setActiveTab('appearance');
+ }
+ }, [activeTab, db.currentUser?.role]);
+
+ // DB Tuning custom state variables
+ const [dbSubTab, setDbSubTab] = useState<'performance' | 'rules' | 'backup'>('performance');
+ const [snapshotName, setSnapshotName] = useState('');
+ const [selectedRuleset, setSelectedRuleset] = useState<'firestore' | 'storage'>('firestore');
+ const [ruleEnforcementProfile, setRuleEnforcementProfile] = useState<'strict' | 'audit' | 'open'>('strict');
+ const [importText, setImportText] = useState('');
+ const [backupActionStatus, setBackupActionStatus] = useState<string | null>(null);
+ const [isExportingFullDb, setIsExportingFullDb] = useState(false);
+ const [isSeedingMasterLogs, setIsSeedingMasterLogs] = useState(false);
+ const [isExportingForensic, setIsExportingForensic] = useState(false);
+ const [rulesAlert, setRulesAlert] = useState<string | null>(null);
+ const [isShowingHandbook, setIsShowingHandbook] = useState(false);
+ const [activeFaq, setActiveFaq] = useState<number | null>(null);
+ const [faqSearch, setFaqSearch] = useState('');
+
+ const matchManualQuery = (text: string, keywords: string[]) => {
+ if (!faqSearch) return true;
+ const cleanSearch = faqSearch.toLowerCase().trim();
+ if (!cleanSearch) return true;
+ const searchTerms = cleanSearch.split(/\s+/).filter(Boolean);
+ const combinedText = (text + ' ' + keywords.join(' ')).toLowerCase();
+ return searchTerms.every(term => combinedText.includes(term));
+ };
+
+ const ch1Visible = matchManualQuery(
+ "The ERP OS Checkout Desk & Area Estimators The ERP OS Checkout Desk accepts real-time barcode scans, manual item code lookups, and direct SKU lookups. Use the Interactive Tile Coverage Estimator to dynamically translate physical floor dimensions length and width in meters into exact retail tile box counts. Adapts standard wastage overrides +5% standard grid bonds, +10% diagonal cuts to prevent shortfalls over tile clipping boundaries. Tendering handles precise decimal change calculations, printing receipt vouchers, and instantly subtracting sold quantities from active branch inventories.",
+ ["pos", "checkout", "desk", "area", "estimators", "calculators", "erp", "os", "tile", "box", "count", "grid", "diagonal", "tendering", "discount", "change", "receipt", "voucher", "inventory", "stock", "sales"]
+ );
+ const ch2Visible = matchManualQuery(
+ "Regional Warehouse Stock & Unified Pools View Administrators possess master privileges to analyze global stocking pipelines on-screen. The Unified Global Pools Ledger sub-tab lists comparative stock levels side-by-side across all active branches. Branch filters filter main catalog lists. A consolidated dropdown is available to verify stock indices across multiple depots simultaneously. Automated visual flags indicate stock health: In Stock, Low Stock, or Critical Warning.",
+ ["warehouse", "logistics", "index", "stock", "pools", "branch", "custom", "alert", "overrides", "inventory", "global", "pipelines", "levels", "health"]
+ );
+ const ch3Visible = matchManualQuery(
+ "Custom Alert Threshold Overrides Since different locations experience unique sales velocities, low-stock trigger boundaries can be custom-defined at a local level. Each tile preserves a master baseline minimum threshold designated at registration. From the product detail editor, branch managers can submit localized Alert Overrides that apply uniquely to their specific branch codes. Overrides trigger amber alert status rows inside the central lists for local reorder warning awareness.",
+ ["custom", "alert", "threshold", "overrides", "branch", "local", "levels", "velocity", "reorder", "warning", "minimum", "trigger"]
+ );
+ const ch4Visible = matchManualQuery(
+ "Inter-Branch Stock Transfers & Verification Chain Stock dispatches are regulated by a multi-stage, double-entry reconciliation pipeline. Dispatches create a formal Transfer Invoice that deducts quantities from the origin branch's active inventory immediately and sets it to Transit state. The destination branch's inventory will NOT increment until a destination operator physically inspects and approves the shipment. Clicking Acknowledge Receipt & Add Stock merges the items into target pools, committing the double-entry transaction.",
+ ["inter", "branch", "transfers", "double", "entry", "transit", "cargo", "dispatch", "invoice", "reconciliation", "delivery", "inspect"]
+ );
+ const ch5Visible = matchManualQuery(
+ "Shift Control, Daily Drawer Balancing & Audits Secure cash drawer compliance and operations control are driven by local shift events. Cashiers open shifts by logging a physical Starting Cash Float inside the active register interface. All offline sales journals are aggregated against cash and digital credit payments inside the shift module. Closing shifts requires logging a final drawers count to isolate cash discrepancies, which are committed as audited records.",
+ ["daily", "sales", "closing", "shift", "cashier", "drawer", "cash", "float", "balancing", "audits", "compliance", "register", "journal", "discrepancy"]
+ );
+ const ch6Visible = matchManualQuery(
+ "Multi-Format Sales Reporting, CSVs & Print PDFs To maintain rigorous retail compliance, TilePoint supports high-fidelity output exports for managers. Daily summary sheets can be compiled into standard Raw CSV files or formatted Excel Templates featuring formatted columns. The Sales Print Modal builds formal visual papers including structured pricing pools, item invoice listings, and operator signature spots. Click Trigger System Print inside the modal to output to paper or select Save as PDF to write digital PDF files.",
+ ["csv", "excel", "formatted", "sheets", "printing", "digital", "pdf", "sales", "transmissions", "report", "export", "manager", "template", "modal", "print", "signature"]
+ );
+ const ch7Visible = matchManualQuery(
+ "Damage Registers, Wastage Logs & Loss Write-Offs Handles damaged stock reconciliation for cracked, shattered, or flawed inventory. Broken tiles must be logged inside the Damage Register Module by entering specific product codes, quantities, and detailed causes. Submitting a damage voucher instantly writeoff the target branch's stocks and adds historical entries down the general ledger. Ensures precise inventory costs valuation by separating shrinkage wastage losses from regular sales records.",
+ ["damage", "register", "broken", "fragile", "ceramic", "tiles", "wastage", "writeoffs", "reconciliation", "cracked", "shattered", "flawed", "loss", "shrinkage", "ledger"]
+ );
+ const ch8Visible = matchManualQuery(
+ "Access Control Security & Lockout Rules Rigorous role-based security prevents unauthorized edits and maintains system integrity. Core actions are gated by explicit credentials. Standard sales desks prevent workers from altering records or viewing other branch balances. Under professional standards, login panels enforce an automated Security Intrusion Lockout. If a user enters an incorrect passcode five consecutive times, the console blocks access to prevent database breaches.",
+ ["user", "security", "access", "control", "active", "lockout", "brute", "force", "block", "profiles", "role", "admin", "manager", "cashier", "unauthorized", "intrusion", "failure"]
+ );
+
+ const anyChapterVisible = ch1Visible || ch2Visible || ch3Visible || ch4Visible || ch5Visible || ch6Visible || ch7Visible || ch8Visible;
+ const [toastMessage, setToastMessage] = useState<string | null>(null);
+ const triggerToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
+ setToastMessage(message);
+ setTimeout(() => setToastMessage(null), 3000);
+ };
+
+ // User Defined Device Storage variables
+ const [deviceBackupPath, setDeviceBackupPath] = useState<string>(() => {
+ return localStorage.getItem("tp_device_backup_path") || "C:/TilePoint_Backups/";
+ });
+ const [filenamePattern, setFilenamePattern] = useState<string>(() => {
+ return localStorage.getItem("tp_device_backup_pattern") || "tilepoint_full_backup";
+ });
+ const [enforcePermanentRetention, setEnforcePermanentRetention] = useState<boolean>(() => {
+ const val = localStorage.getItem("tp_enforce_permanent_retention");
+ return val === null ? true : val === "true";
+ });
+ const [isExportingDevicePath, setIsExportingDevicePath] = useState(false);
+ const [activeFolderHandle, setActiveFolderHandle] = useState<FileSystemDirectoryHandle | null>(null);
+ const [isFsaSupported, setIsFsaSupported] = useState<boolean>(false);
+ const [deleteConfirm, setDeleteConfirm] = useState<{ [snapId: string]: number }>({});
+
+ useEffect(() => {
+ setIsFsaSupported(typeof window !== 'undefined' && 'showDirectoryPicker' in window);
+ getSavedDirectoryHandle().then((handle) => {
+ setActiveFolderHandle(handle);
+ if (handle) {
+ // Run automatic recovery of deleted files (Undeletable Safeguard)
+ restoreMissingBackups().then((restored) => {
+ if (restored.length > 0) {
+ setBackupActionStatus(`[UNDELETABILITY GUARANTEE] Automatically reconstructed & restored ${restored.length} missing/deleted backup files inside your synced folder!`);
+ setTimeout(() => setBackupActionStatus(null), 6000);
+ }
+ });
+ }
+ });
+ }, []);
+
+ useEffect(() => {
+ localStorage.setItem("tp_device_backup_path", deviceBackupPath);
+ }, [deviceBackupPath]);
+
+ useEffect(() => {
+ localStorage.setItem("tp_device_backup_pattern", filenamePattern);
+ }, [filenamePattern]);
+
+ useEffect(() => {
+ localStorage.setItem("tp_enforce_permanent_retention", String(enforcePermanentRetention));
+ }, [enforcePermanentRetention]);
+
+ // Sync state changes with the DOM layout of document.documentElement
+ useEffect(() => {
+ const root = document.documentElement;
+
+ // 1. Sizing
+ root.classList.remove('accessibility-large-text', 'accessibility-xlarge-text');
+ if (textSize === 'large') {
+ root.classList.add('accessibility-large-text');
+ } else if (textSize === 'xlarge') {
+ root.classList.add('accessibility-xlarge-text');
+ }
+ localStorage.setItem('tilepoint-text-size', textSize);
+
+ // 2. Color Contrast
+ localStorage.setItem('tilepoint-color-contrast', colorContrast);
+ if (colorContrast === 'high') {
+ root.classList.add('accessibility-high-contrast');
+ } else {
+ root.classList.remove('accessibility-high-contrast');
+ }
+
+ // 3. Maximize Text Contrast
+ localStorage.setItem('tilepoint-maximize-text-contrast', String(maximizeTextContrast));
+ if (maximizeTextContrast) {
+ root.classList.add('accessibility-maximize-text-contrast');
+ } else {
+ root.classList.remove('accessibility-maximize-text-contrast');
+ }
+
+ // 4. Dyslexic-Friendly fonts
+ if (dyslexicFont) {
+ root.classList.add('accessibility-dyslexic-font');
+ } else {
+ root.classList.remove('accessibility-dyslexic-font');
+ }
+ localStorage.setItem('tilepoint-dyslexic-font', String(dyslexicFont));
+
+ // 5. Enhanced Focus Ring
+ if (enhancedOutlines) {
+ root.classList.add('accessibility-enhanced-outlines');
+ } else {
+ root.classList.remove('accessibility-enhanced-outlines');
+ }
+ localStorage.setItem('tilepoint-enhanced-outlines', String(enhancedOutlines));
+
+ // 6. Disable Animations
+ if (disableAnimations) {
+ root.classList.add('accessibility-no-animation');
+ } else {
+ root.classList.remove('accessibility-no-animation');
+ }
+ localStorage.setItem('tilepoint-disable-animations', String(disableAnimations));
+
+ // 7. Disable Blurs
+ if (disableBlurs) {
+ root.classList.add('accessibility-no-blur');
+ } else {
+ root.classList.remove('accessibility-no-blur');
+ }
+ localStorage.setItem('tilepoint-disable-blurs', String(disableBlurs));
+
+ // Dispatch global event for responsive real-time theme rebuilding only if not syncing from outside
+ if (isSyncingRef.current) {
+ isSyncingRef.current = false;
+ } else {
+ window.dispatchEvent(new Event('tilepoint-theme-updated'));
+ }
+
+ }, [textSize, colorContrast, maximizeTextContrast, dyslexicFont, enhancedOutlines, disableAnimations, disableBlurs]);
+
+ // Bulk Accept Cookies helper
+ const handleAcceptAll = () => {
+ localStorage.setItem('tilepoint_cookie_consent_status', 'accepted_all');
+ localStorage.setItem('tilepoint_cookie_prefs', JSON.stringify({ necessary: true, functional: true, analytical: true }));
+ setShowBanner(false);
+ };
+
+ // Bulk Decline Non-Essential Cookies helper
+ const handleDeclineAll = () => {
+ localStorage.setItem('tilepoint_cookie_consent_status', 'declined_non_essential');
+ localStorage.setItem('tilepoint_cookie_prefs', JSON.stringify({ necessary: true, functional: false, analytical: false }));
+ setCookiePreferences({ necessary: true, functional: false, analytical: false });
+ // Safe reset accessibility states to defaults if consent declined completely
+ setTextSize('normal');
+ setColorContrast('medium');
+ setMaximizeTextContrast(false);
+ localStorage.setItem('tilepoint-color-contrast', 'medium');
+ localStorage.setItem('tilepoint-maximize-text-contrast', 'false');
+ setDyslexicFont(false);
+ setEnhancedOutlines(false);
+ setShowBanner(false);
+ window.dispatchEvent(new Event('tilepoint-theme-updated'));
+ };
+
+ // Saved customize selections
+ const handleSavePreferences = () => {
+ localStorage.setItem('tilepoint_cookie_consent_status', 'customized');
+ localStorage.setItem('tilepoint_cookie_prefs', JSON.stringify(cookiePreferences));
+ setIsOpen(false);
+ setShowBanner(false);
+ };
+
+ return (
+ <>
+ {/* COOKIE CONSENT DRAWER/BANNER OVERLAY */}
+ {showBanner && (
+ <div className="fixed bottom-0 left-0 right-0 z-[100] p-4 animate-slide-up sm:px-6">
+ <div className="max-w-4xl mx-auto m3-card border-amber-500/10 bg-m3-surface-low/95 backdrop-blur-xl shadow-[0_-12px_44px_rgba(0,0,0,0.25)] flex flex-col md:flex-row items-start md:items-center justify-between gap-5 p-5 sm:p-6 rounded-3xl">
+ <div className="flex gap-4 items-start max-w-2xl">
+ <div className="p-3 bg-amber-500/10 text-amber-500 rounded-2xl shrink-0 mt-0.5 border border-amber-500/20">
+ <Cookie className="h-6 w-6 animate-pulse" />
+ </div>
+ <div className="space-y-1">
+ <h4 className="text-sm font-black uppercase font-mono tracking-wider text-m3-primary flex items-center gap-2">
+ Privacy Shield & Consent Center
+ </h4>
+ <p className="text-xs text-m3-on-surface-variant leading-relaxed">
+ TilePoint requires local key-value indexes (essential cookies) to persist active checkout cash registers, safe cryptographic authentication, localized inventory ledgers, and customized accessibility profiles. No marketing telemetry is ever transmitted.
+ </p>
+ </div>
+ </div>
+
+ <div className="flex flex-wrap items-center gap-2 w-full md:w-auto shrink-0 font-sans">
+ <button
+ type="button"
+ onClick={() => {
+ setIsOpen(true);
+ setActiveTab('features');
+ }}
+ className="flex-1 sm:flex-none px-4 py-2 text-xs font-extrabold rounded-xl border border-m3-outline-variant/50 hover:bg-m3-primary/10 text-m3-on-surface hover:text-m3-primary transition-all cursor-pointer whitespace-nowrap uppercase tracking-wider text-[10px]"
+ >
+ Settings
+ </button>
+ <button
+ type="button"
+ onClick={handleDeclineAll}
+ className="flex-1 sm:flex-none px-4 py-2 text-xs font-extrabold rounded-xl border border-red-500/20 text-red-400 bg-red-500/5 hover:bg-red-500/10 transition-all cursor-pointer whitespace-nowrap uppercase tracking-wider text-[10px]"
+ >
+ Essential Only
+ </button>
+ <button
+ type="button"
+ onClick={handleAcceptAll}
+ className="flex-1 sm:flex-none px-5 py-2 text-xs font-black rounded-xl bg-m3-primary text-m3-on-primary hover:bg-m3-primary/90 shadow-md transition-all cursor-pointer whitespace-nowrap uppercase tracking-wider text-[10px]"
+ >
+ Accept All
+ </button>
+ </div>
+ </div>
+ </div>
+ )}
+
+ {/* ACCESSIBILITY & SHIELD FLOATING HUB BUTTON */}
+ {!hideFloatingButton && (
+ <button
+ onClick={() => setIsOpen(true)}
+ className="fixed bottom-6 right-6 z-[90] h-12 w-12 bg-m3-primary hover:bg-m3-primary/90 active:scale-95 text-m3-on-primary rounded-full shadow-2xl justify-center items-center flex cursor-pointer transition-all border border-m3-primary-container group"
+ title="Privacy Policies and Accessibility Assistant Hub"
+ aria-label="Open Accessibility Options and Privacy center"
+ >
+ <Accessibility className="h-5.5 w-5.5 group-hover:rotate-12 transition-transform duration-300" />
+ <span className="absolute bottom-13 right-0 scale-0 group-hover:scale-100 transition-all duration-200 origin-bottom bg-m3-on-surface text-m3-surface text-[9px] font-black tracking-widest uppercase px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-m3-outline-variant/20">
+ Accessibility & Policy
+ </span>
+ </button>
+ )}
+
+ {/* INTERACTIVE HUB MODAL */}
+ {isOpen && (
+ <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+ <div className="absolute inset-0 bg-m3-on-surface/50 backdrop-blur-md animate-fade-in" onClick={() => setIsOpen(false)} />
+ 
+ <div className="relative w-full max-w-[95vw] md:max-w-7xl h-[90vh] md:h-[740px] md:max-h-[85vh] flex flex-col m3-card rounded-[32px] p-0 overflow-hidden bg-m3-surface-low border border-m3-outline-variant/40 shadow-2xl animate-scale-up text-m3-on-surface">
+ {/* Header banner */}
+ <div className="p-5 border-b border-m3-outline-variant/20 flex justify-between items-center bg-m3-surface shrink-0">
+ <div className="flex items-center gap-3">
+ <div className="h-10 w-10 rounded-2xl bg-m3-primary/10 text-m3-primary flex items-center justify-center border border-m3-primary/20 shrink-0">
+ <Sliders className="h-5 w-5" />
+ </div>
+ <div>
+ <h3 className="text-sm font-black uppercase font-mono tracking-wider text-m3-primary">
+ System Settings & Configuration
+ </h3>
+ <p className="text-[10px] text-m3-on-surface-variant font-medium mt-0.5 font-mono">
+ MANAGE SYSTEM INTERACTIVE CONTROLS, APPEARANCE, & BACKUPS
+ </p>
+ </div>
+ </div>
+ <button
+ onClick={() => setIsOpen(false)}
+ className="p-2 text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/10 rounded-xl transition-all cursor-pointer shrink-0"
+ >
+ <X className="h-5 w-5" />
+ </button>
+ </div>
+
+ {/* Sidebar navigation tabs inside Dialog */}
+ <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-m3-surface-low/30">
+ {/* Tab options side-rack */}
+ <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-m3-outline-variant/15 p-4 flex md:flex-col gap-2 shrink-0 select-none overflow-x-auto md:overflow-x-visible">
+ <button
+ onClick={() => setActiveTab('appearance')}
+ className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
+ activeTab === 'appearance'
+ ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
+ : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
+ }`}
+ >
+ <Palette className="h-4 w-4" />
+ <span>Appearance</span>
+ </button>
+ <button
+ onClick={() => setActiveTab('features')}
+ className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
+ activeTab === 'features'
+ ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
+ : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
+ }`}
+ >
+ <Shield className="h-4 w-4" />
+ <span>Permissions & Access</span>
+ </button>
+ <button
+ onClick={() => setActiveTab('about')}
+ className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
+ activeTab === 'about'
+ ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
+ : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
+ }`}
+ >
+ <Info className="h-4 w-4" />
+ <span>About</span>
+ </button>
+ <button
+ onClick={() => setActiveTab('legitimacy')}
+ className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
+ activeTab === 'legitimacy'
+ ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
+ : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
+ }`}
+ >
+ <ShieldCheck className="h-4 w-4 text-amber-400" />
+ <span>Legitimacy Certificate</span>
+ </button>
+ <button
+ onClick={() => setActiveTab('accessibility')}
+ className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
+ activeTab === 'accessibility'
+ ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
+ : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
+ }`}
+ >
+ <Sliders className="h-4 w-4" />
+ <span>Accessibility</span>
+ </button>
+ {(db.currentUser?.role === UserRole.ADMIN || db.currentUser?.role === UserRole.MANAGER) && (
+ <button
+ onClick={() => setActiveTab('backups')}
+ className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
+ activeTab === 'backups'
+ ? 'bg-m3-primary text-m3-on-primary font-black shadow-md'
+ : 'hover:bg-m3-primary/10 text-m3-on-surface-variant'
+ }`}
+ id="database_and_backups_tab_btn"
+ >
+ <Database className="h-4 w-4" />
+ <span>Database & Backups</span>
+ </button>
+ )}
+ </div>
+
+ {/* Dynamic scrollable core form content */}
+ <div className="flex-1 p-5 md:p-6 overflow-y-auto">
+ {/* TAB A: ACCESSIBILITY OPTIONS */}
+ {activeTab === 'accessibility' && (
+ <div className="space-y-5 animate-fade-in font-sans">
+ <div>
+ <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
+ Visual & Nav Assist Settings
+ </h4>
+ <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
+ Customize keyboard layout outlines, typography styles, and high-performance high contrast layers to ensure readability for all.
+ </p>
+ </div>
+
+ <div className="h-px bg-m3-outline-variant/15" />
+
+ {/* FONT SCALING REGION */}
+ <div className="space-y-2">
+ <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">
+ Font Size Multiplier scale
+ </label>
+ <div className="grid grid-cols-3 gap-2.5">
+ {[
+ { id: 'normal', name: 'Normal (1.0x)', class: 'font-normal' },
+ { id: 'large', name: 'Large (1.12x)', class: 'font-medium' },
+ { id: 'xlarge', name: 'Extra Large (1.24x)', class: 'font-semibold' }
+ ].map((sz) => (
+ <button
+ key={sz.id}
+ type="button"
+ onClick={() => setTextSize(sz.id as any)}
+ className={`p-3 rounded-xl border flex flex-col justify-center items-center gap-1.5 transition-all cursor-pointer ${
+ textSize === sz.id
+ ? 'bg-m3-primary/10 border-m3-primary text-m3-primary'
+ : 'bg-m3-surface border-m3-outline-variant/20 hover:bg-m3-primary/5 text-m3-on-surface-variant'
+ }`}
+ >
+ <Type className="h-4 w-4" />
+ <span className="text-[10.5px] font-bold text-center font-sans">{sz.name}</span>
+ </button>
+ ))}
+ </div>
+ </div>
+
+ <div className="h-px bg-m3-outline-variant/15" />
+
+ {/* TOGGLES GRID */}
+ <div className="space-y-3.5">
+ {/* DYSLEXIC FRIENDLY toggle */}
+ <button
+ type="button"
+ onClick={() => setDyslexicFont(!dyslexicFont)}
+ className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
+ dyslexicFont
+ ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface'
+ : 'bg-m3-surface border-m3-outline-variant/15 hover:bg-m3-primary/5'
+ }`}
+ >
+ <div className={`p-2 rounded-lg shrink-0 ${dyslexicFont ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
+ <CaseSensitive className="h-4.5 w-4.5" />
+ </div>
+ <div className="space-y-0.5">
+ <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
+ <span>Dyslexic-Friendly Typography</span>
+ {dyslexicFont && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
+ </div>
+ <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ Applies Comic Neue & slab spacing alignments globally, optimizing font tracking, line height, and stroke curves for dyslexic readability.
+ </p>
+ </div>
+ </button>
+
+ {/* COLOR CONTRAST LEVEL CARD */}
+ <div className="w-full p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface space-y-3.5">
+ <div className="flex items-start gap-3.5">
+ <div className="p-2 rounded-lg shrink-0 bg-m3-surface-container text-m3-on-surface-variant">
+ <Sliders className="h-4.5 w-4.5" />
+ </div>
+ <div className="space-y-0.5">
+ <div className="text-[11.5px] font-extrabold font-sans text-m3-on-surface">
+ Color Contrast Levels
+ </div>
+ <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ Choose a contrast configuration for system backgrounds, primary accents, outlines, and text surfaces.
+ </p>
+ </div>
+ </div>
+
+ {/* M3 Segmented chips */}
+ <div className="grid grid-cols-3 gap-1.5 p-1 rounded-lg bg-m3-surface-container">
+ {(['default', 'medium', 'high'] as const).map((level) => (
+ <button
+ key={level}
+ type="button"
+ onClick={() => setColorContrast(level)}
+ className={`py-1.5 px-2 rounded-md text-[10.5px] font-bold capitalize transition-all cursor-pointer ${
+ colorContrast === level
+ ? 'bg-m3-primary text-m3-on-primary shadow-sm'
+ : 'text-m3-on-surface-variant hover:bg-m3-on-surface/5'
+ }`}
+ >
+ {level}
+ </button>
+ ))}
+ </div>
+ </div>
+
+ {/* MAXIMIZE TEXT CONTRAST Toggle */}
+ <button
+ type="button"
+ onClick={() => setMaximizeTextContrast(!maximizeTextContrast)}
+ className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
+ maximizeTextContrast
+ ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface'
+ : 'bg-m3-surface border-m3-outline-variant/15 hover:bg-m3-primary/5'
+ }`}
+ >
+ <div className={`p-2 rounded-lg shrink-0 ${maximizeTextContrast ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
+ <Layers className="h-4.5 w-4.5" />
+ </div>
+ <div className="space-y-0.5">
+ <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
+ <span>Maximize Text Contrast</span>
+ {maximizeTextContrast && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
+ </div>
+ <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ Adds a high-visibility background frame around body texts and description strings to ensure outstanding readability against gradients and custom hues.
+ </p>
+ </div>
+ </button>
+
+ {/* KEYBOARD OUTLINES toggle */}
+ <button
+ type="button"
+ onClick={() => setEnhancedOutlines(!enhancedOutlines)}
+ className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
+ enhancedOutlines
+ ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface'
+ : 'bg-m3-surface border-m3-outline-variant/15 hover:bg-m3-primary/5'
+ }`}
+ >
+ <div className={`p-2 rounded-lg shrink-0 ${enhancedOutlines ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
+ <Keyboard className="h-4.5 w-4.5" />
+ </div>
+ <div className="space-y-0.5">
+ <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
+ <span>A11y Highlight Keyboard Outlines</span>
+ {enhancedOutlines && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
+ </div>
+ <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ Forces thick orange safety outlines around focused checkout inputs and catalog layout buttons when navigating via the TAB key.
+ </p>
+ </div>
+ </button>
+
+ {/* DISABLE BLURS toggle */}
+ <button
+ type="button"
+ onClick={() => setDisableBlurs(!disableBlurs)}
+ className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
+ disableBlurs
+ ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface'
+ : 'bg-m3-surface border-m3-outline-variant/15 hover:bg-m3-primary/5'
+ }`}
+ >
+ <div className={`p-2 rounded-lg shrink-0 ${disableBlurs ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
+ <Eye className="h-4.5 w-4.5" />
+ </div>
+ <div className="space-y-0.5">
+ <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
+ <span>Turn Off Backdrop & UI Blurs</span>
+ {disableBlurs && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
+ </div>
+ <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ Removes frosted glass translucent backdrops and heavy gradient blur filters to improve visual clarity and rendering performance.
+ </p>
+ </div>
+ </button>
+
+ {/* DISABLE ANIMATIONS toggle */}
+ <button
+ type="button"
+ onClick={() => setDisableAnimations(!disableAnimations)}
+ className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
+ disableAnimations
+ ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface'
+ : 'bg-m3-surface border-m3-outline-variant/15 hover:bg-m3-primary/5'
+ }`}
+ >
+ <div className={`p-2 rounded-lg shrink-0 ${disableAnimations ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
+ <Sparkles className="h-4.5 w-4.5" />
+ </div>
+ <div className="space-y-0.5">
+ <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
+ <span>Remove Animations & Effects</span>
+ {disableAnimations && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
+ </div>
+ <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ Bypasses interface slide-in motion, tab page fade effects, and interactive scaling physics for instant navigation.
+ </p>
+ </div>
+ </button>
+
+ {/* LOW PERFORMANCE MODE / THERMAL MITIGATION toggle */}
+ <button
+ type="button"
+ onClick={() => db.setLowPerformanceMode(!db.lowPerformanceMode)}
+ className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
+ db.lowPerformanceMode
+ ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface'
+ : 'bg-m3-surface border-m3-outline-variant/15 hover:bg-m3-primary/5'
+ }`}
+ >
+ <div className={`p-2 rounded-lg shrink-0 ${db.lowPerformanceMode ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
+ <Cpu className="h-4.5 w-4.5" />
+ </div>
+ <div className="space-y-0.5">
+ <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
+ <span>Mobile Battery & Thermal Saver</span>
+ {db.lowPerformanceMode && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
+ </div>
+ <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ Mitigates thermal throttling and battery drainage on mobile client hardware. Programmatically scales presentation effects, strips blurs, and speeds up layouts.
+ </p>
+ </div>
+ </button>
+ </div>
+
+ </div>
+ )}
+
+ {/* TAB: APPEARANCE DYNAMIC COLOR THEMES */}
+ {activeTab === 'appearance' && (
+ <div className="space-y-4 font-sans text-left animate-fade-in">
+ <div>
+ <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono flex items-center gap-2">
+ <Palette className="h-4.5 w-4.5 text-m3-primary" />
+ <span>Material Dynamic Color Themes</span>
+ </h4>
+ <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
+ Drag your cursor across the color wheel or select a preset below to change the system color. The system generates a complete tonal scheme matching Material Design 3 guidelines.
+ </p>
+ </div>
+
+ {/* Side-by-side Layout for Color Wheel & Panel */}
+ <div className="flex flex-col md:flex-row gap-6 items-center p-4 bg-m3-surface-low/50 border border-m3-outline-variant/15 rounded-2xl">
+ {/* Interactive Color Wheel */}
+ <div className="flex flex-col items-center gap-2.5 shrink-0 select-none">
+ <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">
+ Interactive Color Wheel
+ </label>
+ <div 
+ ref={colorWheelRef}
+ onPointerDown={handlePointerDown}
+ onPointerMove={handlePointerMove}
+ onPointerUp={handlePointerUp}
+ onPointerLeave={handlePointerUp}
+ className="relative w-40 h-40 rounded-full border-4 border-m3-outline-variant/30 overflow-hidden shadow-inner cursor-crosshair select-none active:scale-[1.01] transition-transform duration-150 touch-none"
+ style={{
+ background: 'conic-gradient(from 0deg, #ff0000 0deg, #ffff00 60deg, #00ff00 120deg, #00ffff 180deg, #0000ff 240deg, #ff00ff 300deg, #ff0000 360deg)',
+ }}
+ >
+ {/* Saturation gloss overlay */}
+ <div className="absolute inset-0 pointer-events-none" style={{
+ background: 'radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,255,255,0.7) 15%, rgba(255,255,255,0) 100%)'
+ }} />
+ 
+ {/* Dark mode filter overlay */}
+ {darkMode && (
+ <div className="absolute inset-0 pointer-events-none bg-black/15 mix-blend-multiply" />
+ )}
+
+ {/* Center Pin Indicator */}
+ <div 
+ className="absolute h-4 w-4 rounded-full border-2 border-white shadow-[0_0_8px_rgba(0,0,0,0.5)] -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-all duration-75"
+ style={{
+ left: `${wheelPin.x}%`,
+ top: `${wheelPin.y}%`,
+ backgroundColor: customColorSeed
+ }}
+ />
+ </div>
+
+ {/* Native Picker Trigger */}
+ <div className="flex items-center gap-2 mt-1">
+ <span className="text-[9px] font-bold text-m3-on-surface-variant/80 uppercase font-mono">Fine adjustment:</span>
+ <div className="relative h-6 w-10 rounded-lg overflow-hidden border border-m3-outline-variant/30 flex items-center justify-center bg-m3-surface hover:border-m3-primary/60 transition-colors shadow-sm">
+ <input 
+ type="color" 
+ value={customColorSeed}
+ onChange={(e) => handleApplyTheme(e.target.value)}
+ className="absolute inset-0 w-full h-full p-0 border-0 cursor-pointer opacity-0"
+ />
+ <div className="h-4 w-8 rounded-md border border-black/10" style={{ backgroundColor: customColorSeed }} />
+ </div>
+ </div>
+ </div>
+
+ {/* Presets and Custom Inputs Grid */}
+ <div className="flex-1 space-y-4 w-full">
+ {/* Presets Grid */}
+ <div className="space-y-2">
+ <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">
+ Or pick a popular preset color
+ </label>
+ <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+ {[
+ { name: 'Sapphire', value: '#155EEF', colorClass: 'bg-[#155EEF]' },
+ { name: 'Teal', value: '#0E9384', colorClass: 'bg-[#0E9384]' },
+ { name: 'Forest', value: '#16A34A', colorClass: 'bg-[#16A34A]' },
+ { name: 'Velvet', value: '#D92D20', colorClass: 'bg-[#D92D20]' },
+ { name: 'Grape', value: '#7A5AF8', colorClass: 'bg-[#7A5AF8]' },
+ { name: 'Amber', value: '#D97706', colorClass: 'bg-[#D97706]' },
+ { name: 'Orchid', value: '#EE46BC', colorClass: 'bg-[#EE46BC]' },
+ { name: 'Charcoal', value: '#475467', colorClass: 'bg-[#475467]' }
+ ].map((preset) => {
+ const isSelected = customColorSeed.toLowerCase() === preset.value.toLowerCase();
+ return (
+ <button
+ key={preset.name}
+ type="button"
+ onClick={() => handleApplyTheme(preset.value)}
+ className={`group relative h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
+ isSelected 
+ ? 'border-m3-primary bg-m3-primary/10 ring-1 ring-m3-primary/30 scale-102' 
+ : 'border-m3-outline-variant/15 hover:scale-102 hover:border-m3-primary/45 bg-m3-surface-low'
+ }`}
+ title={`M3 Tonal Preset: ${preset.name}`}
+ >
+ <span className={`h-4 w-4 rounded ${preset.colorClass} shadow-sm border border-black/10 flex items-center justify-center transition-transform group-hover:scale-105`}>
+ {isSelected && <Check className="h-1.5 w-1.5 text-white drop-shadow-sm" />}
+ </span>
+ <span className="text-[10px] font-extrabold text-m3-on-surface pl-1.5">{preset.name}</span>
+ </button>
+ );
+ })}
+ </div>
+ </div>
+
+ {/* Custom Hex Input and Button */}
+ <div className="space-y-1.5 font-sans">
+ <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">
+ Or input custom hex color code
+ </label>
+ <div className="flex gap-2.5">
+ <div className="relative flex-1">
+ <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black font-mono text-m3-on-surface-variant/70">#</span>
+ <input
+ type="text"
+ value={hexInput.startsWith('#') ? hexInput.slice(1) : hexInput}
+ onChange={(e) => {
+ const val = e.target.value.toUpperCase();
+ setHexInput(val.startsWith('#') ? val : '#' + val);
+ }}
+ placeholder="155EEF"
+ maxLength={7}
+ className="w-full pl-6 pr-3 py-1.5 text-xs font-mono font-black tracking-wider bg-m3-surface border border-m3-outline-variant/25 rounded-xl focus:border-m3-primary focus:ring-1 focus:ring-m3-primary/20 text-m3-on-surface placeholder:text-m3-on-surface-variant/35"
+ />
+ </div>
+ <div className="flex gap-1 shrink-0">
+ <button
+ type="button"
+ onClick={() => handleApplyTheme(hexInput)}
+ className="py-1.5 px-3 bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 text-[10px] font-black uppercase tracking-wider rounded-lg shadow-sm hover:shadow transition-all flex items-center gap-1 cursor-pointer"
+ >
+ <Sparkles className="h-3 w-3" />
+ <span>Apply</span>
+ </button>
+ 
+ {isCustomThemeActive && (
+ <button
+ type="button"
+ onClick={handleResetTheme}
+ className="py-2.5 px-2.5 bg-m3-surface hover:bg-m3-surface-container text-m3-on-surface-variant text-[10px] font-black uppercase tracking-wider rounded-lg transition-all border border-m3-outline-variant/30 flex items-center justify-center cursor-pointer"
+ title="Reset to default theme color"
+ >
+ <RotateCcw className="h-3.5 w-3.5" />
+ </button>
+ )}
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ {/* Error & Success Messages */}
+ {themeError && (
+ <p className="text-[10px] font-bold text-red-500 font-sans pl-1 animate-pulse">
+ ️ {themeError}
+ </p>
+ )}
+ {themeSuccess && (
+ <p className="text-[10px] font-bold text-emerald-500 font-sans pl-1 animate-fade-in flex items-center gap-1">
+ <CheckCircle className="h-3.5 w-3.5" />
+ <span>{themeSuccess}</span>
+ </p>
+ )}
+
+ {/* Dynamic Preview & Advanced Contrast validation checks */}
+ <div className="mt-4 p-4 rounded-2xl border border-m3-outline-variant/15 bg-m3-surface-low space-y-3.5 text-left">
+ <span className="text-[9px] font-black uppercase tracking-widest text-m3-on-surface-variant font-mono block border-b border-m3-outline-variant/10 pb-1.5">
+ Dynamic Theme Scheme Tester, Tonal Swatches & WCAG Contrast Metrics
+ </span>
+ 
+ <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+ {/* Live UI Components preview */}
+ <div className="space-y-2 p-3 rounded-xl border border-m3-outline-variant/10 bg-m3-surface/50">
+ <span className="text-[8.5px] font-mono font-black text-m3-on-surface-variant/80 tracking-wider block uppercase">
+ Component Sandbox
+ </span>
+ 
+ <div className="space-y-1.5">
+ {/* Primary Button */}
+ <div 
+ style={{ backgroundColor: previewScheme.primary, color: previewScheme.onPrimary }}
+ className="px-3 py-2 rounded-lg text-[10.5px] font-extrabold text-center select-none shadow-sm transition-all"
+ >
+ Elevated Primary Button
+ </div>
+ 
+ {/* Container and details card */}
+ <div 
+ style={{ backgroundColor: previewScheme.primaryContainer, color: previewScheme.onPrimaryContainer, borderColor: previewScheme.primary + '20' }}
+ className="p-3 rounded-lg border text-left"
+ >
+ <span className="text-[8px] font-black font-mono tracking-widest block uppercase opacity-75 animate-pulse">
+ Primary Container Alert
+ </span>
+ <p className="text-[10px] font-bold mt-1 leading-snug">
+ This preview mimics current register layout states dynamically.
+ </p>
+ </div>
+
+ {/* Secondary component preview */}
+ <div 
+ style={{ backgroundColor: previewScheme.secondaryContainer, color: previewScheme.onSecondaryContainer }}
+ className="px-2.5 py-1.5 rounded-lg text-[9px] font-mono font-black flex items-center justify-between"
+ >
+ <span>SECONDARY STATUS PILL</span>
+ <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: previewScheme.secondary }} />
+ </div>
+ </div>
+ </div>
+
+ {/* Dynamic Tonal Swatches family */}
+ <div className="space-y-2 p-3 rounded-xl border border-m3-outline-variant/10 bg-m3-surface/50">
+ <span className="text-[8.5px] font-mono font-black text-m3-on-surface-variant/80 tracking-wider block uppercase">
+ Material 3 Tonal Family
+ </span>
+ <div className="grid grid-cols-2 gap-1.5 text-[9px]">
+ {[
+ { label: 'Primary', bg: previewScheme.primary, text: previewScheme.onPrimary },
+ { label: 'On-Primary', bg: previewScheme.onPrimary, text: previewScheme.primary },
+ { label: 'Primary Container', bg: previewScheme.primaryContainer, text: previewScheme.onPrimaryContainer },
+ { label: 'On-Primary Container', bg: previewScheme.onPrimaryContainer, text: previewScheme.primaryContainer },
+ { label: 'Secondary', bg: previewScheme.secondary, text: previewScheme.onSecondary },
+ { label: 'On-Secondary', bg: previewScheme.onSecondary, text: previewScheme.secondary },
+ { label: 'Secondary Container', bg: previewScheme.secondaryContainer, text: previewScheme.onSecondaryContainer },
+ { label: 'On-Sec Container', bg: previewScheme.onSecondaryContainer, text: previewScheme.secondaryContainer },
+ { label: 'Surface Base', bg: previewScheme.surface, text: previewScheme.onSurface },
+ { label: 'On-Surface Text', bg: previewScheme.onSurface, text: previewScheme.surface },
+ ].map((swatch, idx) => (
+ <div 
+ key={idx} 
+ style={{ backgroundColor: swatch.bg, color: swatch.text }}
+ className="p-1.5 rounded-lg border border-m3-outline-variant/10 font-bold flex flex-col justify-between h-10 select-none shadow-xs transition-transform duration-100 active:scale-98"
+ title={`${swatch.label}: ${swatch.bg}`}
+ >
+ <span className="text-[7.5px] font-mono font-bold uppercase truncate tracking-tight">{swatch.label}</span>
+ <span className="text-[8px] font-mono opacity-80 select-all font-black leading-none">{swatch.bg}</span>
+ </div>
+ ))}
+ </div>
+ </div>
+
+ {/* WCAG Contrast Ratio Checker Values */}
+ <div className="space-y-2.5 p-3 rounded-xl border border-m3-outline-variant/10 bg-m3-surface/50 text-left">
+ <span className="text-[8.5px] font-mono font-black text-m3-on-surface-variant/80 tracking-wider block uppercase">
+ WCAG 2.1 Contrast Audits
+ </span>
+
+ <div className="space-y-1.5 text-[9.5px]">
+ {/* Primary Contrast */}
+ {[
+ { 
+ label: 'Text on Solid Primary', 
+ numerator: previewScheme.onPrimary, 
+ denominator: previewScheme.primary 
+ },
+ { 
+ label: 'Text on Container Base', 
+ numerator: previewScheme.onPrimaryContainer, 
+ denominator: previewScheme.primaryContainer 
+ },
+ { 
+ label: 'Body Text on Surface BG', 
+ numerator: previewScheme.onSurface, 
+ denominator: previewScheme.surface 
+ },
+ { 
+ label: 'Secondary Text on Pill', 
+ numerator: previewScheme.onSecondaryContainer, 
+ denominator: previewScheme.secondaryContainer 
+ }
+ ].map((check, idx) => {
+ const ratio = getContrastRatio(check.numerator, check.denominator);
+ let passText = 'FAIL';
+ let passClass = 'text-red-500 bg-red-500/10 border-red-500/20';
+
+ if (ratio >= 7.0) {
+ passText = 'AAA Pass';
+ passClass = 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
+ } else if (ratio >= 4.5) {
+ passText = 'AA Pass';
+ passClass = 'text-emerald-500/90 bg-emerald-500/5 border-emerald-500/10';
+ } else if (ratio >= 3.0) {
+ passText = 'AA Large Only';
+ passClass = 'text-amber-500 bg-amber-500/10 border-amber-500/20';
+ }
+
+ return (
+ <div key={idx} className="flex items-center justify-between border-b border-m3-outline-variant/10 pb-1 last:border-0 last:pb-0">
+ <div className="space-y-0.5">
+ <span className="font-extrabold text-m3-on-surface-variant block leading-none">{check.label}</span>
+ <span className="text-[8px] font-mono text-zinc-450 font-bold uppercase">{check.numerator} on {check.denominator}</span>
+ </div>
+ <div className="flex items-center gap-1.5 shrink-0 font-mono">
+ <span className="font-black text-m3-on-surface">{ratio.toFixed(1)}:1</span>
+ <span className={`text-[7.5px] font-black uppercase px-1 py-0.5 rounded border ${passClass}`}>{passText}</span>
+ </div>
+ </div>
+ );
+ })}
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ )}
+
+ {/* TAB: FEATURES AND PRIVACY PREFERENCES */}
+ {activeTab === 'features' && (
+ <div className="space-y-4 animate-fade-in font-sans">
+ <div>
+ <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
+ Cookie & Browser Data Consent
+ </h4>
+ <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
+ Customize what data categories are indexed locally. Our cookies are entirely stored under sandbox boundaries inside local indexes to optimize system load speeds.
+ </p>
+ </div>
+
+ <div className="h-px bg-m3-outline-variant/15" />
+
+ <div className="space-y-3.5">
+ {/* NECESSARY COOKIE */}
+ <div className="p-4 rounded-xl border border-m3-outline-variant/20 bg-m3-surface-low/50 flex gap-3.5 items-start">
+ <Check className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
+ <div className="space-y-1">
+ <div className="flex items-center gap-2">
+ <span className="text-xs font-extrabold font-sans text-m3-on-surface">Necessary System Cookies</span>
+ <span className="text-[8.5px] font-mono bg-emerald-500/10 text-emerald-500 rounded px-1.5 font-bold uppercase tracking-wider">Permanent</span>
+ </div>
+ <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ Stores session authentication tokens, active shift tracking, and local workspace configurations. Cannot be disabled as they are required to maintain secure user sessions.
+ </p>
+ </div>
+ </div>
+
+ {/* FUNCTIONAL COOKIE */}
+ <div
+ onClick={() => setCookiePreferences(p => ({ ...p, functional: !p.functional }))}
+ className={`p-4 rounded-xl border flex gap-3.5 items-start transition-all cursor-pointer ${
+ cookiePreferences.functional ? 'border-m3-primary bg-m3-primary/5' : 'border-m3-outline-variant/20 bg-transparent'
+ }`}
+ >
+ <div className="pt-0.5">
+ <input
+ type="checkbox"
+ checked={cookiePreferences.functional}
+ readOnly
+ className="h-4 w-4 bg-m3-surface border-m3-outline-variant rounded-md accent-m3-primary cursor-pointer shrink-0"
+ />
+ </div>
+ <div className="space-y-1">
+ <div className="flex items-center gap-2 font-sans">
+ <span className="text-xs font-extrabold text-m3-on-surface">Functional App Preferences</span>
+ <span className="text-[8.5px] font-mono bg-m3-primary/10 text-m3-primary rounded px-1.5 font-bold uppercase tracking-wider">Active</span>
+ </div>
+ <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ Saves light/dark mode states, active ERP OS shopping baskets, custom branch profiles, and accessibility profiles to prevent re-configuring options on every system log-in.
+ </p>
+ </div>
+ </div>
+
+ {/* AUDIT LOGGER / ANALYTIC COOKIE */}
+ <div
+ onClick={() => setCookiePreferences(p => ({ ...p, analytical: !p.analytical }))}
+ className={`p-4 rounded-xl border flex gap-3.5 items-start transition-all cursor-pointer ${
+ cookiePreferences.analytical ? 'border-m3-primary bg-m3-primary/5' : 'border-m3-outline-variant/20 bg-transparent'
+ }`}
+ >
+ <div className="pt-0.5">
+ <input
+ type="checkbox"
+ checked={cookiePreferences.analytical}
+ readOnly
+ className="h-4 w-4 bg-m3-surface border-m3-outline-variant rounded-md accent-m3-primary cursor-pointer shrink-0"
+ />
+ </div>
+ <div className="space-y-1">
+ <div className="flex items-center gap-2 font-sans">
+ <span className="text-xs font-extrabold text-m3-on-surface">On-Prem Trace Audit Logger</span>
+ <span className="text-[8.5px] font-mono bg-zinc-450 text-zinc-400 rounded px-1.5 font-bold uppercase tracking-wider">Opt-In</span>
+ </div>
+ <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ Retains local system operations telemetry, audit logs, error diagnostics logs, and SQL-blocker responses in your local console to aid debugging. Generates zero tracking cookies.
+ </p>
+ </div>
+ </div>
+ </div>
+
+ <div className="pt-2">
+ <button
+ type="button"
+ onClick={handleSavePreferences}
+ className="w-full py-3.5 px-4 font-black rounded-xl bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 text-xs uppercase tracking-wider shadow-sm transition-all cursor-pointer"
+ >
+ Save Preferences
+ </button>
+ </div>
+
+ <div className="h-px bg-m3-outline-variant/15 my-6" />
+
+ {/* INTERACTIVE ONBOARDING SETUP ASSISTANT */}
+ <div className="p-4 rounded-xl border border-m3-primary/25 bg-m3-primary/5 space-y-2.5">
+ <span className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono flex items-center gap-1.5">
+ <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+ Interactive Setup Wizard
+ </span>
+ <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed font-sans">
+ Need to re-configure starting catalogs, seed initial products, or bulk migrate raw spreadsheet rows? Relaunch the interactive Onboarding Setup Assistant instantly.
+ </p>
+ <button
+ type="button"
+ onClick={() => {
+ setIsOpen(false);
+ window.dispatchEvent(new Event('open-setup-wizard'));
+ }}
+ className="w-full bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary text-[10px] font-extrabold uppercase tracking-wider py-2.5 rounded-lg cursor-pointer transition-all text-center flex items-center justify-center gap-1.5 border border-m3-outline-variant/30 shadow-md font-sans"
+ >
+ <Play className="h-3 w-3" />
+ Relaunch Setup Wizard
+ </button>
+ </div>
+
+ <div className="h-px bg-m3-outline-variant/15 my-6" />
+
+ {/* INTEGRATED PRIVACY POLICY SECTION */}
+ <div className="space-y-4 text-xs leading-relaxed text-m3-on-surface">
+ <div className="border-b border-m3-outline-variant/15 pb-4">
+ <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
+ Privacy & Security Policy
+ </h4>
+ <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed font-sans">
+ Last Refreshed: June 8, 2026. This policy details how data privacy, local offline storage, and system security are handled.
+ </p>
+ </div>
+
+ <div className="space-y-4 font-sans select-text max-h-[340px] overflow-y-auto pr-2">
+ <div className="space-y-1">
+ <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">1. No Third-Party Tracking</h5>
+ <p className="text-[11px] text-m3-on-surface-variant">
+ We guarantee that your company data, customer rosters, inventory records, and sales transactions are never transmitted or shared with third parties. All operational data is stored securely.
+ </p>
+ </div>
+
+ <div className="space-y-1">
+ <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">2. Local Data Storage</h5>
+ <p className="text-[11px] text-m3-on-surface-variant">
+ All operational logs, employee assignments, and branch records are stored locally in the database. Administrators can clear local data through the Backups settings if needed to delete history.
+ </p>
+ </div>
+
+ <div className="space-y-1">
+ <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">3. Offline Saving</h5>
+ <p className="text-[11px] text-m3-on-surface-variant">
+ When working offline, sales transactions and stock changes are saved securely in your browser and automatically synchronized with the main server as soon as connection is restored.
+ </p>
+ </div>
+
+ <div className="space-y-1">
+ <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">4. Data Preservation and Browser Cache</h5>
+ <p className="text-[11px] text-m3-on-surface-variant">
+ The system stores pending offline data locally to prevent interruptions during network dropouts. Clearing your browser cache or using private/incognito windows before offline data is synced may result in data loss.
+ </p>
+ </div>
+
+ <div className="space-y-1">
+ <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">5. Encrypted Network Transmissions</h5>
+ <p className="text-[11px] text-m3-on-surface-variant">
+ All data transmitted between cashiers and the central database is fully encrypted. Business transactions, manager approvals, and active checkout carts are protected over local networks.
+ </p>
+ </div>
+
+ <div className="space-y-1">
+ <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">6. Automatic Logouts</h5>
+ <p className="text-[11px] text-m3-on-surface-variant">
+ To protect system security, user sessions are automatically logged out after 8 hours of inactivity or when the browser session ends.
+ </p>
+ </div>
+
+ <div className="space-y-1">
+ <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">7. Access Controls & Permissions</h5>
+ <p className="text-[11px] text-m3-on-surface-variant">
+ Every data update is recorded for security tracking. Administrators can review database settings and manage security profiles under the Backups tab.
+ </p>
+ </div>
+
+ <div className="space-y-1">
+ <h5 className="font-extrabold text-[#ffffff] text-xs font-mono uppercase tracking-wider">8. Tax Compliance</h5>
+ <p className="text-[11px] text-m3-on-surface-variant">
+ TilePoint complies with tax register guidelines. Daily sales reports, tax transmittals, and historical tax logs are protected and marked read-only to comply with audit requirements.
+ </p>
+ </div>
+
+ <div className="space-y-2 pt-2 border-t border-m3-outline-variant/15 text-[10.5px]">
+ <p className="text-zinc-400 font-bold">
+ If you have security inquiries regarding TilePoint, please contact system administration.
+ </p>
+ <span className="inline-flex items-center gap-1.5 text-[9px] uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-full font-bold">
+ <Check className="h-3 w-3" /> System Status: Certified & Secured
+ </span>
+ </div>
+ </div>
+ </div>
+ </div>
+ )}
+
+ {/* TAB D: ABOUT SYSTEM & DEVELOPER PROFILE */}
+ {activeTab === 'about' && (
+ <div className="space-y-5 animate-fade-in font-sans">
+ <div>
+ <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
+ System Configuration & Developer Profile
+ </h4>
+ <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
+ TilePoint point-of-sale node telemetry data, compiled engineering details, and systems developer metadata.
+ </p>
+ </div>
+
+ <div className="h-px bg-m3-outline-variant/15" />
+
+ {/* Developer Profile Card */}
+ <div className="m3-card bg-m3-surface-low border border-m3-outline-variant/15 p-5 sm:p-6 rounded-2xl shadow-sm relative overflow-hidden flex flex-col md:flex-row items-start md:items-center gap-5 sm:gap-6">
+ 
+ {/* Left side: Pure CSS aesthetic terminal/ring representation inspired by the mockup */}
+ <div className="relative h-24 w-24 shrink-0 flex items-center justify-center bg-m3-surface/30 rounded-2xl border border-m3-outline-variant/10 overflow-hidden shadow-inner self-center sm:self-start md:self-center">
+ {/* Decorative concentric translucent rings */}
+ <div className="absolute -top-6 -left-6 h-20 w-20 rounded-full border border-m3-primary/15 bg-m3-primary/5" />
+ <div className="absolute -bottom-4 -right-4 h-16 w-16 rounded-full border border-m3-primary/10 bg-m3-primary/5" />
+ <div className="absolute h-14 w-14 rounded-full border border-m3-primary/20 bg-m3-primary/5 animate-pulse" />
+ 
+ {/* Interactive-looking terminal display box */}
+ <div className="relative z-10 h-11 w-11 rounded-xl bg-[#0b0f19] border border-m3-primary/40 shadow-[0_0_12px_rgba(28,100,242,0.15)] flex items-center justify-center font-mono text-xs text-m3-primary font-black">
+ <span>&gt;_</span>
+ </div>
+ </div>
+
+ {/* Right side: Clean stack hierarchy */}
+ <div className="flex-1 space-y-3 font-sans w-full">
+ <div>
+ <div className="flex items-center justify-between gap-2">
+ <span className="text-[9px] sm:text-[10px] font-mono font-black uppercase text-zinc-400 tracking-widest block leading-3">
+ Senior Systems Architect &amp; Creator
+ </span>
+ <span className="text-[8.5px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 uppercase font-black tracking-wider shadow-sm select-none">
+ Verified Architect
+ </span>
+ </div>
+ 
+ <h4 className="text-base sm:text-lg font-black text-white uppercase tracking-wider font-sans mt-1.5 leading-tight">
+ Mark Jefferson Monares
+ </h4>
+ 
+ <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-m3-on-surface-variant text-[10.5px] mt-2">
+ <div className="flex items-center gap-1.5">
+ <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+ <span className="font-semibold text-zinc-300">Dipolog City, Philippines</span>
+ </div>
+ <a
+ href="https://github.com/uznom"
+ target="_blank"
+ rel="noopener noreferrer"
+ className="flex items-center gap-1.5 text-m3-primary hover:text-m3-primary/80 transition-colors font-bold group"
+ >
+ <Github className="h-3.5 w-3.5 shrink-0" />
+ <span className="font-mono group-hover:underline">@uznom</span>
+ </a>
+ </div>
+ </div>
+
+ <div className="h-px bg-m3-outline-variant/10 !my-2" />
+
+ <div className="text-[11px] sm:text-xs text-m3-on-surface-variant leading-relaxed">
+ <p className="text-zinc-200 border-l-2 border-m3-primary/60 pl-2.5 font-medium italic">
+ Mark Jefferson builds streamlined systems that are both technically disciplined and exceptionally practical.
+ </p>
+ </div>
+ </div>
+ </div>
+
+ {/* System specs info card */}
+ <div className="space-y-4">
+ {/* Tech stack card */}
+ <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/40 space-y-2 animate-fade-in text-left">
+ <div className="flex items-center gap-2">
+ <Code className="h-4.5 w-4.5 text-m3-primary" />
+ <h5 className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono">
+ Enterprise Tech Stack
+ </h5>
+ </div>
+ <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] leading-normal font-mono text-zinc-300">
+ <li className="flex items-center gap-1.5">
+ <span className="h-1 w-1 rounded-full bg-m3-primary shrink-0" />
+ <span>React 18 & TypeScript (Safe Typings)</span>
+ </li>
+ <li className="flex items-center gap-1.5">
+ <span className="h-1 w-1 rounded-full bg-m3-primary shrink-0" />
+ <span>Vite Build System (optimized bundles)</span>
+ </li>
+ <li className="flex items-center gap-1.5">
+ <span className="h-1 w-1 rounded-full bg-m3-primary shrink-0" />
+ <span>Tailwind CSS v4 (Material design context)</span>
+ </li>
+ <li className="flex items-center gap-1.5">
+ <span className="h-1 w-1 rounded-full bg-m3-primary shrink-0" />
+ <span>Framer Motion & Lucide Icons</span>
+ </li>
+ <li className="flex items-center gap-1.5">
+ <span className="h-1 w-1 rounded-full bg-m3-primary shrink-0" />
+ <span>D3.js / Recharts (Data Visualizations)</span>
+ </li>
+ </ul>
+ </div>
+ </div>
+
+ {/* Operating Manual Section with download and print options */}
+ <div className="m3-card bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl shadow-sm animate-fade-in space-y-4 text-left">
+ <div className="flex items-center gap-2.5">
+ <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center border border-red-500/20 text-red-500">
+ <Download className="h-4 w-4" />
+ </div>
+ <div>
+ <h5 className="text-xs font-black uppercase text-m3-on-surface tracking-wider">
+ TilePoint Operating Manual &amp; Operators Handbook
+ </h5>
+ <span className="text-[10px] text-zinc-400 font-medium block">
+ Natively formulated, portable PDF guidance document referencing inventory auditing and ERP OS protocols.
+ </span>
+ </div>
+ </div>
+
+ <div className="p-4 rounded-xl bg-m3-surface border border-m3-outline-variant/5 text-xs text-m3-on-surface-variant leading-relaxed space-y-2.5">
+ <p className="text-[11px] font-bold text-zinc-300">
+ This portable operations guidelines document covers:
+ </p>
+ <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-mono pl-1">
+ <li className="flex items-center gap-1.5">
+ <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
+ <span>Ch 1: ERP OS Sales &amp; Coverage Calculators</span>
+ </li>
+ <li className="flex items-center gap-1.5">
+ <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
+ <span>Ch 2: Branch Inventories &amp; Unified Pools</span>
+ </li>
+ <li className="flex items-center gap-1.5">
+ <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
+ <span>Ch 3: Custom Alert Threshold Overrides</span>
+ </li>
+ <li className="flex items-center gap-1.5">
+ <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
+ <span>Ch 4: Double-Entry Inter-Branch Transfers</span>
+ </li>
+ <li className="flex items-center gap-1.5">
+ <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
+ <span>Ch 5: Shifts, Cash Float &amp; Registers Audits</span>
+ </li>
+ <li className="flex items-center gap-1.5">
+ <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
+ <span>Ch 6: Sales Reporting Exports (CSV, Excel)</span>
+ </li>
+ <li className="flex items-center gap-1.5">
+ <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
+ <span>Ch 7: Scraps, Damage Register &amp; Loss Logs</span>
+ </li>
+ <li className="flex items-center gap-1.5">
+ <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
+ <span>Ch 8: Locks, Security &amp; Intrusion Protection</span>
+ </li>
+ </ul>
+ </div>
+
+ <div className="flex flex-wrap gap-2.5 pt-1">
+ <button
+ type="button"
+ onClick={() => {
+ // Let's call our PDF Generator and Trigger direct portable document save
+ const pdfContent = `%PDF-1.4
 %âãÏÓ
 1 0 obj
 << /Type /Catalog /Pages 2 0 R >>
@@ -1737,7 +1737,7 @@ T*
 T*
 (A: Locate Ledger -> Click 'Manual Stock Correction', create an 'ADJUST' entry) Tj
 T*
-(   representing the count delta. This perfectly balances digital records.) Tj
+( representing the count delta. This perfectly balances digital records.) Tj
 T*
 (Q: Who can export sales reports?) Tj
 T*
@@ -1763,1393 +1763,1393 @@ startxref
 1780
 %%EOF`;
 
-                            const blob = new Blob([pdfContent], { type: 'application/pdf' });
-                            const url = URL.createObjectURL(blob);
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.download = 'TilePoint_System_Operations_Manual.pdf';
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                            URL.revokeObjectURL(url);
-                          }}
-                          className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-[10px] font-black uppercase tracking-wider rounded-xl shadow-xs transition-all active:scale-[0.98] cursor-pointer flex items-center gap-1.5"
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                          <span>Download Manual PDF</span>
-                        </button>
+ const blob = new Blob([pdfContent], { type: 'application/pdf' });
+ const url = URL.createObjectURL(blob);
+ const link = document.createElement('a');
+ link.href = url;
+ link.download = 'TilePoint_System_Operations_Manual.pdf';
+ document.body.appendChild(link);
+ link.click();
+ document.body.removeChild(link);
+ URL.revokeObjectURL(url);
+ }}
+ className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-[10px] font-black uppercase tracking-wider rounded-xl shadow-xs transition-all active:scale-[0.98] cursor-pointer flex items-center gap-1.5"
+ >
+ <Download className="h-3.5 w-3.5" />
+ <span>Download Manual PDF</span>
+ </button>
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsOpen(false);
-                            setIsShowingHandbook(true);
-                          }}
-                          className="px-4 py-2.5 bg-m3-surface-high hover:bg-m3-surface-highest text-m3-on-surface text-[10px] font-black uppercase tracking-wider rounded-xl border border-m3-outline-variant/20 transition-all active:scale-[0.98] cursor-pointer flex items-center gap-1.5"
-                        >
-                          <Info className="h-3.5 w-3.5" />
-                          <span>View Guided Handbook</span>
-                        </button>
-                      </div>
-                    </div>
+ <button
+ type="button"
+ onClick={() => {
+ setIsOpen(false);
+ setIsShowingHandbook(true);
+ }}
+ className="px-4 py-2.5 bg-m3-surface-high hover:bg-m3-surface-highest text-m3-on-surface text-[10px] font-black uppercase tracking-wider rounded-xl border border-m3-outline-variant/20 transition-all active:scale-[0.98] cursor-pointer flex items-center gap-1.5"
+ >
+ <Info className="h-3.5 w-3.5" />
+ <span>View Guided Handbook</span>
+ </button>
+ </div>
+ </div>
 
-                    <div className="flex items-center justify-between pt-1 border-t border-m3-outline-variant/10 text-[10px] text-m3-on-surface-variant/70">
-                      <span>Version 2.4.1</span>
-                      <span className="text-emerald-500 font-bold">Status: Online</span>
-                    </div>
-                  </div>
-                )}
+ <div className="flex items-center justify-between pt-1 border-t border-m3-outline-variant/10 text-[10px] text-m3-on-surface-variant/70">
+ <span>Version 2.4.1</span>
+ <span className="text-emerald-500 font-bold">Status: Online</span>
+ </div>
+ </div>
+ )}
 
-                {/* TAB: SYSTEM LEGITIMACY CERTIFICATE */}
-                {activeTab === 'legitimacy' && (
-                  <div className="space-y-5 animate-fade-in font-sans">
-                    {/* Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div>
-                        <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
-                          Legitimacy Certificate & License verification
-                        </h4>
-                        <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
-                          Verify the authenticity of this TilePoint ERP Operating System installation and view official copyright compliance certificates.
-                        </p>
-                      </div>
+ {/* TAB: SYSTEM LEGITIMACY CERTIFICATE */}
+ {activeTab === 'legitimacy' && (
+ <div className="space-y-5 animate-fade-in font-sans">
+ {/* Header */}
+ <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+ <div>
+ <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
+ Legitimacy Certificate & License verification
+ </h4>
+ <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
+ Verify the authenticity of this TilePoint ERP Operating System installation and view official copyright compliance certificates.
+ </p>
+ </div>
 
-                      {/* Print Certificate trigger button */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          window.print();
-                          triggerToast('Opening native print dialog for the Legitimacy Certificate.', 'info');
-                        }}
-                        className="px-4 py-2 bg-amber-500 text-black hover:bg-amber-600 font-black text-[10.5px] uppercase tracking-wide rounded-xl shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 shrink-0 self-start sm:self-center"
-                      >
-                        <Printer className="h-4 w-4 text-black" />
-                        <span>Print Physical Certificate</span>
-                      </button>
-                    </div>
+ {/* Print Certificate trigger button */}
+ <button
+ type="button"
+ onClick={() => {
+ window.print();
+ triggerToast('Opening native print dialog for the Legitimacy Certificate.', 'info');
+ }}
+ className="px-4 py-2 bg-amber-500 text-black hover:bg-amber-600 font-black text-[10.5px] uppercase tracking-wide rounded-xl shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 shrink-0 self-start sm:self-center"
+ >
+ <Printer className="h-4 w-4 text-black" />
+ <span>Print Physical Certificate</span>
+ </button>
+ </div>
 
-                    <div className="h-px bg-m3-outline-variant/15" />
+ <div className="h-px bg-m3-outline-variant/15" />
 
-                    {/* DYNAMIC MEDIA PRINT STYLES */}
-                    <style dangerouslySetInnerHTML={{ __html: `
-                      @media print {
-                        /* Hide everything in the document */
-                        body * {
-                          visibility: hidden !important;
-                        }
-                        /* Except the printable certificate container */
-                        #tilepoint-printable-certificate, #tilepoint-printable-certificate * {
-                          visibility: visible !important;
-                        }
-                        #tilepoint-printable-certificate {
-                          position: fixed !important;
-                          left: 0 !important;
-                          top: 0 !important;
-                          width: 100% !important;
-                          height: 100% !important;
-                          margin: 0 !important;
-                          padding: 40px !important;
-                          background: white !important;
-                          color: black !important;
-                          border: 8px double #d97706 !important;
-                          display: flex !important;
-                          flex-direction: column !important;
-                          justify-content: space-between !important;
-                          box-sizing: border-box !important;
-                        }
-                        /* Force light colors on print */
-                        .print-dark-text {
-                          color: #111827 !important;
-                        }
-                        .print-amber-text {
-                          color: #d97706 !important;
-                        }
-                        .print-sub-text {
-                          color: #4b5563 !important;
-                        }
-                        .print-gray-bg {
-                          background-color: #f3f4f6 !important;
-                          border-color: #e5e7eb !important;
-                        }
-                        .print-no-shadow {
-                          box-shadow: none !important;
-                        }
-                        /* Hide the print/floating elements on paper */
-                        .print-hidden {
-                          display: none !important;
-                        }
-                      }
-                    `}} />
+ {/* DYNAMIC MEDIA PRINT STYLES */}
+ <style dangerouslySetInnerHTML={{ __html: `
+ @media print {
+ /* Hide everything in the document */
+ body * {
+ visibility: hidden !important;
+ }
+ /* Except the printable certificate container */
+ #tilepoint-printable-certificate, #tilepoint-printable-certificate * {
+ visibility: visible !important;
+ }
+ #tilepoint-printable-certificate {
+ position: fixed !important;
+ left: 0 !important;
+ top: 0 !important;
+ width: 100% !important;
+ height: 100% !important;
+ margin: 0 !important;
+ padding: 40px !important;
+ background: white !important;
+ color: black !important;
+ border: 8px double #d97706 !important;
+ display: flex !important;
+ flex-direction: column !important;
+ justify-content: space-between !important;
+ box-sizing: border-box !important;
+ }
+ /* Force light colors on print */
+ .print-dark-text {
+ color: #111827 !important;
+ }
+ .print-amber-text {
+ color: #d97706 !important;
+ }
+ .print-sub-text {
+ color: #4b5563 !important;
+ }
+ .print-gray-bg {
+ background-color: #f3f4f6 !important;
+ border-color: #e5e7eb !important;
+ }
+ .print-no-shadow {
+ box-shadow: none !important;
+ }
+ /* Hide the print/floating elements on paper */
+ .print-hidden {
+ display: none !important;
+ }
+ }
+ `}} />
 
-                    {/* THE VISUAL CERTIFICATE CARD */}
-                    <div 
-                      id="tilepoint-printable-certificate"
-                      className="relative m3-card border-2 border-amber-500/30 bg-gradient-to-b from-[#0e1322] to-[#070911] p-6 sm:p-8 rounded-[24px] shadow-xl overflow-hidden text-center text-m3-on-surface border-double"
-                      style={{ borderStyle: 'double', borderWidth: '6px' }}
-                    >
-                      {/* Decorative corner framing */}
-                      <div className="absolute top-3 left-3 w-6 h-6 border-t-2 border-l-2 border-amber-500/40 rounded-tl-md print-hidden" />
-                      <div className="absolute top-3 right-3 w-6 h-6 border-t-2 border-r-2 border-amber-500/40 rounded-tr-md print-hidden" />
-                      <div className="absolute bottom-3 left-3 w-6 h-6 border-b-2 border-l-2 border-amber-500/40 rounded-bl-md print-hidden" />
-                      <div className="absolute bottom-3 right-3 w-6 h-6 border-b-2 border-r-2 border-amber-500/40 rounded-br-md print-hidden" />
+ {/* THE VISUAL CERTIFICATE CARD */}
+ <div 
+ id="tilepoint-printable-certificate"
+ className="relative m3-card border-2 border-amber-500/30 bg-gradient-to-b from-[#0e1322] to-[#070911] p-6 sm:p-8 rounded-[24px] shadow-xl overflow-hidden text-center text-m3-on-surface border-double"
+ style={{ borderStyle: 'double', borderWidth: '6px' }}
+ >
+ {/* Decorative corner framing */}
+ <div className="absolute top-3 left-3 w-6 h-6 border-t-2 border-l-2 border-amber-500/40 rounded-tl-md print-hidden" />
+ <div className="absolute top-3 right-3 w-6 h-6 border-t-2 border-r-2 border-amber-500/40 rounded-tr-md print-hidden" />
+ <div className="absolute bottom-3 left-3 w-6 h-6 border-b-2 border-l-2 border-amber-500/40 rounded-bl-md print-hidden" />
+ <div className="absolute bottom-3 right-3 w-6 h-6 border-b-2 border-r-2 border-amber-500/40 rounded-br-md print-hidden" />
 
-                      {/* Concentric radial watermark decoration */}
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(217,119,6,0.02)_0%,transparent_70%)] pointer-events-none" />
+ {/* Concentric radial watermark decoration */}
+ <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(217,119,6,0.02)_0%,transparent_70%)] pointer-events-none" />
 
-                      {/* Header Logo & Title */}
-                      <div className="space-y-2 relative z-10">
-                        <div className="flex justify-center items-center gap-2">
-                          <ShieldCheck className="h-9 w-9 text-amber-400 print-amber-text animate-pulse shrink-0" />
-                          <span className="font-mono text-xs font-black tracking-[0.25em] text-amber-500/90 print-amber-text uppercase">
-                            TilePoint Enterprise POS/ERP
-                          </span>
-                        </div>
-                        <h2 className="text-xl sm:text-2xl font-black tracking-widest text-white print-dark-text uppercase mt-2 font-sans">
-                          Certificate of System Legitimacy
-                        </h2>
-                        <div className="h-0.5 w-32 bg-amber-500/40 print-amber-text mx-auto mt-2" />
-                      </div>
+ {/* Header Logo & Title */}
+ <div className="space-y-2 relative z-10">
+ <div className="flex justify-center items-center gap-2">
+ <ShieldCheck className="h-9 w-9 text-amber-400 print-amber-text animate-pulse shrink-0" />
+ <span className="font-mono text-xs font-black tracking-[0.25em] text-amber-500/90 print-amber-text uppercase">
+ TilePoint Enterprise POS/ERP
+ </span>
+ </div>
+ <h2 className="text-xl sm:text-2xl font-black tracking-widest text-white print-dark-text uppercase mt-2 font-sans">
+ Certificate of System Legitimacy
+ </h2>
+ <div className="h-0.5 w-32 bg-amber-500/40 print-amber-text mx-auto mt-2" />
+ </div>
 
-                      {/* Middle: Granting statement */}
-                      <div className="my-6 sm:my-8 space-y-4 relative z-10 max-w-2xl mx-auto">
-                        <p className="text-[11px] sm:text-xs tracking-wider uppercase text-zinc-400 print-sub-text font-mono font-bold">
-                          This document certifies and verifies that the business establishment
-                        </p>
+ {/* Middle: Granting statement */}
+ <div className="my-6 sm:my-8 space-y-4 relative z-10 max-w-2xl mx-auto">
+ <p className="text-[11px] sm:text-xs tracking-wider uppercase text-zinc-400 print-sub-text font-mono font-bold">
+ This document certifies and verifies that the business establishment
+ </p>
 
-                        {/* Company Name Box */}
-                        <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 print-gray-bg my-3 sm:my-4">
-                          <h3 className="text-lg sm:text-xl font-black text-amber-400 print-amber-text tracking-wide uppercase font-sans">
-                            {companyName}
-                          </h3>
-                          <span className="text-[9px] font-mono text-amber-500/70 print-amber-text font-bold block mt-1 tracking-wider">
-                            REGISTERED ON-PREMISE LICENSEE
-                          </span>
-                        </div>
+ {/* Company Name Box */}
+ <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 print-gray-bg my-3 sm:my-4">
+ <h3 className="text-lg sm:text-xl font-black text-amber-400 print-amber-text tracking-wide uppercase font-sans">
+ {companyName}
+ </h3>
+ <span className="text-[9px] font-mono text-amber-500/70 print-amber-text font-bold block mt-1 tracking-wider">
+ REGISTERED ON-PREMISE LICENSEE
+ </span>
+ </div>
 
-                        <p className="text-[11px] sm:text-xs leading-relaxed text-zinc-300 print-dark-text font-sans">
-                          is a fully authorized, verified, and legally compliant deployment of the <strong className="text-white print-dark-text font-extrabold">TilePoint ERP Operating System (v2.4)</strong>. All modules are officially activated and verified under proprietary license terms.
-                        </p>
-                      </div>
+ <p className="text-[11px] sm:text-xs leading-relaxed text-zinc-300 print-dark-text font-sans">
+ is a fully authorized, verified, and legally compliant deployment of the <strong className="text-white print-dark-text font-extrabold">TilePoint ERP Operating System (v2.4)</strong>. All modules are officially activated and verified under proprietary license terms.
+ </p>
+ </div>
 
-                      {/* Legislation Citations & Foolproofing */}
-                      <div className="p-4 rounded-xl bg-[#090d16] border border-m3-outline-variant/10 print-gray-bg text-left max-w-2xl mx-auto space-y-3 relative z-10 text-[9.5px] sm:text-[10px] leading-relaxed text-zinc-400 print-sub-text">
-                        <span className="text-[8.5px] font-black tracking-wider uppercase text-amber-500/90 print-amber-text font-mono block border-b border-m3-outline-variant/10 pb-1 flex items-center gap-1.5">
-                          <Lock className="h-3.5 w-3.5" /> Legal Framework &amp; IP Protection Decrees
-                        </span>
+ {/* Legislation Citations & Foolproofing */}
+ <div className="p-4 rounded-xl bg-[#090d16] border border-m3-outline-variant/10 print-gray-bg text-left max-w-2xl mx-auto space-y-3 relative z-10 text-[9.5px] sm:text-[10px] leading-relaxed text-zinc-400 print-sub-text">
+ <span className="text-[8.5px] font-black tracking-wider uppercase text-amber-500/90 print-amber-text font-mono block border-b border-m3-outline-variant/10 pb-1 flex items-center gap-1.5">
+ <Lock className="h-3.5 w-3.5" /> Legal Framework &amp; IP Protection Decrees
+ </span>
 
-                        <div className="space-y-2">
-                          <p>
-                            <strong className="text-zinc-200 print-dark-text font-bold font-sans">1. Intellectual Property Code of the Philippines (Republic Act No. 8293):</strong> This software system, including its underlying source code compiles, CSS-theme configurations, structural components, and databases, is copyrighted material owned solely by the developers. No part of this software may be copied, redistributed, modified, or white-labeled without explicit written consent.
-                          </p>
-                          <p>
-                            <strong className="text-zinc-200 print-dark-text font-bold font-sans">2. Cybercrime Prevention Act of 2012 (Republic Act No. 10175):</strong> Any unauthorized reproduction, commercial distribution, structural mirroring, or reverse engineering of this operational terminal constitutes a criminal offense under Philippine cyber law and is subject to severe penal terms, civil liquidated damages, and prosecution.
-                          </p>
-                          <p>
-                            <strong className="text-zinc-200 print-dark-text font-bold font-sans">3. International Copyright Conventions:</strong> Protected globally under the terms of the <strong className="text-zinc-300 print-dark-text font-bold">Berne Convention for the Protection of Literary and Artistic Works</strong> and the <strong className="text-zinc-300 print-dark-text font-bold">WIPO Copyright Treaty (WCT)</strong>.
-                          </p>
-                        </div>
-                      </div>
+ <div className="space-y-2">
+ <p>
+ <strong className="text-zinc-200 print-dark-text font-bold font-sans">1. Intellectual Property Code of the Philippines (Republic Act No. 8293):</strong> This software system, including its underlying source code compiles, CSS-theme configurations, structural components, and databases, is copyrighted material owned solely by the developers. No part of this software may be copied, redistributed, modified, or white-labeled without explicit written consent.
+ </p>
+ <p>
+ <strong className="text-zinc-200 print-dark-text font-bold font-sans">2. Cybercrime Prevention Act of 2012 (Republic Act No. 10175):</strong> Any unauthorized reproduction, commercial distribution, structural mirroring, or reverse engineering of this operational terminal constitutes a criminal offense under Philippine cyber law and is subject to severe penal terms, civil liquidated damages, and prosecution.
+ </p>
+ <p>
+ <strong className="text-zinc-200 print-dark-text font-bold font-sans">3. International Copyright Conventions:</strong> Protected globally under the terms of the <strong className="text-zinc-300 print-dark-text font-bold">Berne Convention for the Protection of Literary and Artistic Works</strong> and the <strong className="text-zinc-300 print-dark-text font-bold">WIPO Copyright Treaty (WCT)</strong>.
+ </p>
+ </div>
+ </div>
 
-                      {/* Bottom Signatures & Seal */}
-                      <div className="mt-8 pt-6 border-t border-m3-outline-variant/10 grid grid-cols-1 md:grid-cols-3 gap-6 items-center max-w-3xl mx-auto relative z-10">
-                        {/* Signature A */}
-                        <div className="space-y-1 text-center">
-                          <div className="h-9 flex items-end justify-center">
-                            {/* Visual Script Signature representation */}
-                            <span className="font-mono text-base italic text-amber-300/85 print-amber-text tracking-widest select-none font-bold" style={{ fontFamily: 'Georgia, serif' }}>
-                              E. Manaban
-                            </span>
-                          </div>
-                          <div className="h-px bg-zinc-600 print-dark-text w-32 mx-auto" />
-                          <h5 className="text-[9px] font-black text-white print-dark-text uppercase tracking-wider font-mono">
-                            Erica Manaban
-                          </h5>
-                          <span className="text-[8px] text-zinc-500 print-sub-text font-semibold block uppercase">
-                            Co-Owner & Managing Director
-                          </span>
-                        </div>
+ {/* Bottom Signatures & Seal */}
+ <div className="mt-8 pt-6 border-t border-m3-outline-variant/10 grid grid-cols-1 md:grid-cols-3 gap-6 items-center max-w-3xl mx-auto relative z-10">
+ {/* Signature A */}
+ <div className="space-y-1 text-center">
+ <div className="h-9 flex items-end justify-center">
+ {/* Visual Script Signature representation */}
+ <span className="font-mono text-base italic text-amber-300/85 print-amber-text tracking-widest select-none font-bold" style={{ fontFamily: 'Georgia, serif' }}>
+ E. Manaban
+ </span>
+ </div>
+ <div className="h-px bg-zinc-600 print-dark-text w-32 mx-auto" />
+ <h5 className="text-[9px] font-black text-white print-dark-text uppercase tracking-wider font-mono">
+ Erica Manaban
+ </h5>
+ <span className="text-[8px] text-zinc-500 print-sub-text font-semibold block uppercase">
+ Co-Owner & Managing Director
+ </span>
+ </div>
 
-                        {/* Seal Block */}
-                        <div className="flex justify-center py-2 md:py-0 print-no-shadow">
-                          <div className="relative h-18 w-18 rounded-full bg-gradient-to-tr from-amber-600 to-yellow-400 p-0.5 shadow-lg select-none flex items-center justify-center animate-spin-slow">
-                            <div className="h-full w-full rounded-full bg-[#070911] print-gray-bg flex flex-col items-center justify-center text-center p-1 border border-amber-500/30">
-                              <span className="text-[6.5px] font-mono font-black text-amber-500 print-amber-text tracking-tighter leading-none block">
-                                TILEPOINT
-                              </span>
-                              <ShieldCheck className="h-4.5 w-4.5 text-amber-400 print-amber-text my-0.5" />
-                              <span className="text-[6px] font-mono text-amber-400/80 print-amber-text tracking-tighter leading-none block uppercase">
-                                ORIGINAL
-                              </span>
-                            </div>
-                          </div>
-                        </div>
+ {/* Seal Block */}
+ <div className="flex justify-center py-2 md:py-0 print-no-shadow">
+ <div className="relative h-18 w-18 rounded-full bg-gradient-to-tr from-amber-600 to-yellow-400 p-0.5 shadow-lg select-none flex items-center justify-center animate-spin-slow">
+ <div className="h-full w-full rounded-full bg-[#070911] print-gray-bg flex flex-col items-center justify-center text-center p-1 border border-amber-500/30">
+ <span className="text-[6.5px] font-mono font-black text-amber-500 print-amber-text tracking-tighter leading-none block">
+ TILEPOINT
+ </span>
+ <ShieldCheck className="h-4.5 w-4.5 text-amber-400 print-amber-text my-0.5" />
+ <span className="text-[6px] font-mono text-amber-400/80 print-amber-text tracking-tighter leading-none block uppercase">
+ ORIGINAL
+ </span>
+ </div>
+ </div>
+ </div>
 
-                        {/* Signature B */}
-                        <div className="space-y-1 text-center">
-                          <div className="h-9 flex items-end justify-center">
-                            {/* Visual Script Signature representation */}
-                            <span className="font-mono text-base italic text-amber-300/85 print-amber-text tracking-widest select-none font-bold" style={{ fontFamily: 'Georgia, serif' }}>
-                              M.J. Monares
-                            </span>
-                          </div>
-                          <div className="h-px bg-zinc-600 print-dark-text w-32 mx-auto" />
-                          <h5 className="text-[9px] font-black text-white print-dark-text uppercase tracking-wider font-mono">
-                            Mark Jefferson Monares
-                          </h5>
-                          <span className="text-[8px] text-zinc-500 print-sub-text font-semibold block uppercase">
-                            Co-Owner & Chief Systems Architect
-                          </span>
-                        </div>
-                      </div>
+ {/* Signature B */}
+ <div className="space-y-1 text-center">
+ <div className="h-9 flex items-end justify-center">
+ {/* Visual Script Signature representation */}
+ <span className="font-mono text-base italic text-amber-300/85 print-amber-text tracking-widest select-none font-bold" style={{ fontFamily: 'Georgia, serif' }}>
+ M.J. Monares
+ </span>
+ </div>
+ <div className="h-px bg-zinc-600 print-dark-text w-32 mx-auto" />
+ <h5 className="text-[9px] font-black text-white print-dark-text uppercase tracking-wider font-mono">
+ Mark Jefferson Monares
+ </h5>
+ <span className="text-[8px] text-zinc-500 print-sub-text font-semibold block uppercase">
+ Co-Owner & Chief Systems Architect
+ </span>
+ </div>
+ </div>
 
-                      {/* Cryptographic verification telemetry */}
-                      <div className="mt-6 pt-3 border-t border-m3-outline-variant/10 flex flex-col sm:flex-row items-center justify-between gap-2 text-[8px] font-mono text-zinc-500 print-sub-text">
-                        <span>
-                          VERIFICATION KEY: <strong className="text-zinc-400 print-dark-text uppercase font-bold">TP-8293-10175-{companyName.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8)}-{new Date().getFullYear()}</strong>
-                        </span>
-                        <span>
-                          LICENSING JURISDICTION: DIPOLOG CITY, PH &bull; GLOBAL DIGITAL ARCHIVES
-                        </span>
-                      </div>
-                    </div>
+ {/* Cryptographic verification telemetry */}
+ <div className="mt-6 pt-3 border-t border-m3-outline-variant/10 flex flex-col sm:flex-row items-center justify-between gap-2 text-[8px] font-mono text-zinc-500 print-sub-text">
+ <span>
+ VERIFICATION KEY: <strong className="text-zinc-400 print-dark-text uppercase font-bold">TP-8293-10175-{companyName.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8)}-{new Date().getFullYear()}</strong>
+ </span>
+ <span>
+ LICENSING JURISDICTION: DIPOLOG CITY, PH &bull; GLOBAL DIGITAL ARCHIVES
+ </span>
+ </div>
+ </div>
 
-                    {/* Protection notice */}
-                    <div className="p-4 rounded-xl border border-amber-500/10 bg-amber-500/5 text-left text-[10px] text-zinc-300 leading-normal font-sans">
-                      <strong className="text-amber-400 uppercase tracking-wider block mb-0.5">📜 Hanging Certificate Recommendation</strong>
-                      You may print this Legitimacy Certificate and display it prominently on-site at your retail establishment (e.g., showroom wall). Click <strong className="text-amber-500">Print Physical Certificate</strong> above to export this page directly to a local printer or write a high-fidelity PDF copy.
-                    </div>
-                  </div>
-                )}
+ {/* Protection notice */}
+ <div className="p-4 rounded-xl border border-amber-500/10 bg-amber-500/5 text-left text-[10px] text-zinc-300 leading-normal font-sans">
+ <strong className="text-amber-400 uppercase tracking-wider block mb-0.5"> Hanging Certificate Recommendation</strong>
+ You may print this Legitimacy Certificate and display it prominently on-site at your retail establishment (e.g., showroom wall). Click <strong className="text-amber-500">Print Physical Certificate</strong> above to export this page directly to a local printer or write a high-fidelity PDF copy.
+ </div>
+ </div>
+ )}
 
-                {/* TAB E: DATABASE PERFORMANCE TUNING & SECURITY */}
-                {activeTab === 'backups' && (
-                  <div className="space-y-4 animate-fade-in font-sans">
-                    <div>
-                      <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono flex items-center gap-2">
-                        <Database className="h-4 w-4" />
-                        Database Settings & Backups
-                      </h4>
-                      <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
-                        Adjust database saving delay, view system security rules, and manage data backup points.
-                      </p>
-                    </div>
+ {/* TAB E: DATABASE PERFORMANCE TUNING & SECURITY */}
+ {activeTab === 'backups' && (
+ <div className="space-y-4 animate-fade-in font-sans">
+ <div>
+ <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono flex items-center gap-2">
+ <Database className="h-4 w-4" />
+ Database Settings & Backups
+ </h4>
+ <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
+ Adjust database saving delay, view system security rules, and manage data backup points.
+ </p>
+ </div>
 
-                    {/* Sub-tab Pill navigation inside dbtuning */}
-                    <div className="flex border-b border-m3-outline-variant/15 pb-2 gap-1.5 select-none shrink-0">
-                      {[
-                        { id: 'performance', name: 'Save Settings' },
-                        { id: 'rules', name: 'Security Rules' },
-                        { id: 'backup', name: 'Backups' }
-                      ].map(sub => (
-                        <button
-                          key={sub.id}
-                          type="button"
-                          onClick={() => setDbSubTab(sub.id as any)}
-                          className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                            dbSubTab === sub.id
-                              ? 'bg-m3-primary/15 text-m3-primary border border-m3-primary/30'
-                              : 'hover:bg-m3-primary/5 text-m3-on-surface-variant'
-                          }`}
-                        >
-                          {sub.name}
-                        </button>
-                      ))}
-                    </div>
+ {/* Sub-tab Pill navigation inside dbtuning */}
+ <div className="flex border-b border-m3-outline-variant/15 pb-2 gap-1.5 select-none shrink-0">
+ {[
+ { id: 'performance', name: 'Save Settings' },
+ { id: 'rules', name: 'Security Rules' },
+ { id: 'backup', name: 'Backups' }
+ ].map(sub => (
+ <button
+ key={sub.id}
+ type="button"
+ onClick={() => setDbSubTab(sub.id as any)}
+ className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+ dbSubTab === sub.id
+ ? 'bg-m3-primary/15 text-m3-primary border border-m3-primary/30'
+ : 'hover:bg-m3-primary/5 text-m3-on-surface-variant'
+ }`}
+ >
+ {sub.name}
+ </button>
+ ))}
+ </div>
 
-                    {/* Subtab A: PERFORMANCE TUNING PANEL */}
-                    {dbSubTab === 'performance' && (
-                      <div className="space-y-4 animate-fade-in">
-                        {/* Status Widget */}
-                        <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                          <div className="flex items-center gap-3">
-                            <div className="relative">
-                              <div className={`h-9 w-9 rounded-full flex items-center justify-center ${
-                                db.dbSyncStatus === 'idle' ? 'bg-emerald-500/10 text-emerald-400' :
-                                db.dbSyncStatus === 'queued' ? 'bg-amber-500/10 text-amber-400 animate-pulse' :
-                                'bg-m3-primary/10 text-m3-primary animate-spin'
-                              }`}>
-                                <RefreshCw className={`h-4.5 w-4.5 animate-spin-slow`} />
-                              </div>
-                              <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border border-m3-surface-low ${
-                                db.dbSyncStatus === 'idle' ? 'bg-emerald-500' :
-                                db.dbSyncStatus === 'queued' ? 'bg-amber-500' :
-                                'bg-m3-primary'
-                              }`} />
-                            </div>
+ {/* Subtab A: PERFORMANCE TUNING PANEL */}
+ {dbSubTab === 'performance' && (
+ <div className="space-y-4 animate-fade-in">
+ {/* Status Widget */}
+ <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+ <div className="flex items-center gap-3">
+ <div className="relative">
+ <div className={`h-9 w-9 rounded-full flex items-center justify-center ${
+ db.dbSyncStatus === 'idle' ? 'bg-emerald-500/10 text-emerald-400' :
+ db.dbSyncStatus === 'queued' ? 'bg-amber-500/10 text-amber-400 animate-pulse' :
+ 'bg-m3-primary/10 text-m3-primary animate-spin'
+ }`}>
+ <RefreshCw className={`h-4.5 w-4.5 animate-spin-slow`} />
+ </div>
+ <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border border-m3-surface-low ${
+ db.dbSyncStatus === 'idle' ? 'bg-emerald-500' :
+ db.dbSyncStatus === 'queued' ? 'bg-amber-500' :
+ 'bg-m3-primary'
+ }`} />
+ </div>
 
-                            <div>
-                              <div className="text-[11px] font-black uppercase font-mono text-m3-on-surface">
-                                Database Status: <span className={
-                                  db.dbSyncStatus === 'idle' ? 'text-emerald-400' :
-                                  db.dbSyncStatus === 'queued' ? 'text-amber-400' :
-                                  'text-m3-primary'
-                                }>{db.dbSyncStatus === 'idle' ? 'UP TO DATE' : db.dbSyncStatus.toUpperCase()}</span>
-                              </div>
-                              <p className="text-[10px] text-m3-on-surface-variant leading-relaxed mt-0.5">
-                                {db.dbSyncStatus === 'idle' && 'All changes saved. Database is currently idle.'}
-                                {db.dbSyncStatus === 'queued' && 'Changes are queued for saving...'}
-                                {db.dbSyncStatus === 'syncing' && 'Saving database changes...'}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          <button
-                            type="button"
-                            onClick={() => db.forceSyncAll()}
-                            className="bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-lg transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-sm"
-                          >
-                            <RefreshCw className="h-3 w-3 animate-spin-slow" />
-                            Save Now
-                          </button>
-                        </div>
+ <div>
+ <div className="text-[11px] font-black uppercase font-mono text-m3-on-surface">
+ Database Status: <span className={
+ db.dbSyncStatus === 'idle' ? 'text-emerald-400' :
+ db.dbSyncStatus === 'queued' ? 'text-amber-400' :
+ 'text-m3-primary'
+ }>{db.dbSyncStatus === 'idle' ? 'UP TO DATE' : db.dbSyncStatus.toUpperCase()}</span>
+ </div>
+ <p className="text-[10px] text-m3-on-surface-variant leading-relaxed mt-0.5">
+ {db.dbSyncStatus === 'idle' && 'All changes saved. Database is currently idle.'}
+ {db.dbSyncStatus === 'queued' && 'Changes are queued for saving...'}
+ {db.dbSyncStatus === 'syncing' && 'Saving database changes...'}
+ </p>
+ </div>
+ </div>
+ 
+ <button
+ type="button"
+ onClick={() => db.forceSyncAll()}
+ className="bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-lg transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-sm"
+ >
+ <RefreshCw className="h-3 w-3 animate-spin-slow" />
+ Save Now
+ </button>
+ </div>
 
-                        {/* Debounce delay control */}
-                        <div className="space-y-2 p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/30">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-m3-primary font-mono block">
-                            Database Save Frequency Delay
-                          </label>
-                          <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
-                            Adding a small save delay pools database writes together. This reduces database requests and improves application performance.
-                          </p>
-                          <div className="grid grid-cols-5 gap-2 pt-2 text-[10.5px]">
-                            {[
-                              { id: 0, label: 'Instant', desc: 'No delay' },
-                              { id: 250, label: 'Fast', desc: '0.25s delay' },
-                              { id: 500, label: 'Optimal', desc: '0.5s delay' },
-                              { id: 1000, label: 'Safe', desc: '1s delay' },
-                              { id: 2000, label: 'Max', desc: '2s delay' }
-                            ].map(op => (
-                              <button
-                                key={op.id}
-                                type="button"
-                                onClick={() => {
-                                  db.setDebounceDelay(op.id);
-                                  localStorage.setItem('tp_debounce_delay', String(op.id));
-                                }}
-                                className={`p-2 rounded-xl border flex flex-col justify-center items-center gap-1 transition-all cursor-pointer text-center ${
-                                  db.debounceDelay === op.id
-                                    ? 'bg-m3-primary/10 border-m3-primary text-m3-primary font-bold'
-                                    : 'bg-m3-surface border-m3-outline-variant/20 hover:bg-m3-primary/5 text-m3-on-surface-variant'
-                                }`}
-                              >
-                                <span className="text-[10px] font-extrabold font-mono">{op.label}</span>
-                                <span className="text-[8px] opacity-70 font-sans">{op.desc}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+ {/* Debounce delay control */}
+ <div className="space-y-2 p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/30">
+ <label className="text-[10px] font-black uppercase tracking-widest text-m3-primary font-mono block">
+ Database Save Frequency Delay
+ </label>
+ <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ Adding a small save delay pools database writes together. This reduces database requests and improves application performance.
+ </p>
+ <div className="grid grid-cols-5 gap-2 pt-2 text-[10.5px]">
+ {[
+ { id: 0, label: 'Instant', desc: 'No delay' },
+ { id: 250, label: 'Fast', desc: '0.25s delay' },
+ { id: 500, label: 'Optimal', desc: '0.5s delay' },
+ { id: 1000, label: 'Safe', desc: '1s delay' },
+ { id: 2000, label: 'Max', desc: '2s delay' }
+ ].map(op => (
+ <button
+ key={op.id}
+ type="button"
+ onClick={() => {
+ db.setDebounceDelay(op.id);
+ localStorage.setItem('tp_debounce_delay', String(op.id));
+ }}
+ className={`p-2 rounded-xl border flex flex-col justify-center items-center gap-1 transition-all cursor-pointer text-center ${
+ db.debounceDelay === op.id
+ ? 'bg-m3-primary/10 border-m3-primary text-m3-primary font-bold'
+ : 'bg-m3-surface border-m3-outline-variant/20 hover:bg-m3-primary/5 text-m3-on-surface-variant'
+ }`}
+ >
+ <span className="text-[10px] font-extrabold font-mono">{op.label}</span>
+ <span className="text-[8px] opacity-70 font-sans">{op.desc}</span>
+ </button>
+ ))}
+ </div>
+ </div>
 
-                        {/* Efficiency statistics */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-1">
-                          <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/30 space-y-1">
-                            <span className="text-[9px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">
-                              Consolidated Write Requests
-                            </span>
-                            <div className="flex items-center justify-between pt-1">
-                              <span className="text-xl font-bold font-mono text-m3-primary">
-                                {db.writeStatsCount.toLocaleString()}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => db.resetWriteStats()}
-                                className="text-[9.5px] font-mono text-m3-on-surface-variant hover:text-m3-primary underline cursor-pointer"
-                              >
-                                Reset Stats
-                              </button>
-                            </div>
-                            <p className="text-[9.5px] text-zinc-400 font-sans pt-1">
-                              Number of database save operations pooled to optimize performance.
-                            </p>
-                          </div>
+ {/* Efficiency statistics */}
+ <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-1">
+ <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/30 space-y-1">
+ <span className="text-[9px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">
+ Consolidated Write Requests
+ </span>
+ <div className="flex items-center justify-between pt-1">
+ <span className="text-xl font-bold font-mono text-m3-primary">
+ {db.writeStatsCount.toLocaleString()}
+ </span>
+ <button
+ type="button"
+ onClick={() => db.resetWriteStats()}
+ className="text-[9.5px] font-mono text-m3-on-surface-variant hover:text-m3-primary underline cursor-pointer"
+ >
+ Reset Stats
+ </button>
+ </div>
+ <p className="text-[9.5px] text-zinc-400 font-sans pt-1">
+ Number of database save operations pooled to optimize performance.
+ </p>
+ </div>
 
-                          <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/30 space-y-1">
-                            <span className="text-[9px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">
-                              Database Load Reduction
-                            </span>
-                            <div className="flex items-center justify-between pt-1">
-                              <span className="text-xl font-bold font-mono text-emerald-400">
-                                {db.debounceDelay === 0 ? '0.0%' : db.writeStatsCount > 0 ? `${Math.min(99.6, Math.max(74.2, 85 + (db.debounceDelay / 50)))}%` : '91.8%'}
-                              </span>
-                              <span className="text-[9px] px-2 py-0.5 bg-emerald-500/10 text-emerald-400 font-mono uppercase font-black">
-                                Highly Efficient
-                              </span>
-                            </div>
-                            <p className="text-[9.5px] text-zinc-400 font-sans pt-1">
-                              Estimated percentage of database load saved by pooling requests.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+ <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/30 space-y-1">
+ <span className="text-[9px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">
+ Database Load Reduction
+ </span>
+ <div className="flex items-center justify-between pt-1">
+ <span className="text-xl font-bold font-mono text-emerald-400">
+ {db.debounceDelay === 0 ? '0.0%' : db.writeStatsCount > 0 ? `${Math.min(99.6, Math.max(74.2, 85 + (db.debounceDelay / 50)))}%` : '91.8%'}
+ </span>
+ <span className="text-[9px] px-2 py-0.5 bg-emerald-500/10 text-emerald-400 font-mono uppercase font-black">
+ Highly Efficient
+ </span>
+ </div>
+ <p className="text-[9.5px] text-zinc-400 font-sans pt-1">
+ Estimated percentage of database load saved by pooling requests.
+ </p>
+ </div>
+ </div>
+ </div>
+ )}
 
-                    {/* Subtab B: SECURITY & STORAGE RULES */}
-                    {dbSubTab === 'rules' && (
-                      <div className="space-y-4 animate-fade-in font-sans">
-                        <div className="space-y-2">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-m3-outline-variant/10 pb-2">
-                            <div className="flex gap-2.5">
-                              <button
-                                type="button"
-                                onClick={() => setSelectedRuleset('firestore')}
-                                className={`text-[10px] font-black uppercase tracking-wider pb-1 ${
-                                  selectedRuleset === 'firestore'
-                                    ? 'text-m3-primary border-b border-m3-primary font-black'
-                                    : 'text-m3-on-surface-variant hover:text-m3-primary'
-                                }`}
-                              >
-                                🔒 Secure Firestore Rules
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setSelectedRuleset('storage')}
-                                className={`text-[10px] font-black uppercase tracking-wider pb-1 ${
-                                  selectedRuleset === 'storage'
-                                    ? 'text-m3-primary border-b border-m3-primary font-black'
-                                    : 'text-m3-on-surface-variant hover:text-m3-primary'
-                                }`}
-                              >
-                                📂 Public / Secure Storage Rules
-                              </button>
-                            </div>
+ {/* Subtab B: SECURITY & STORAGE RULES */}
+ {dbSubTab === 'rules' && (
+ <div className="space-y-4 animate-fade-in font-sans">
+ <div className="space-y-2">
+ <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-m3-outline-variant/10 pb-2">
+ <div className="flex gap-2.5">
+ <button
+ type="button"
+ onClick={() => setSelectedRuleset('firestore')}
+ className={`text-[10px] font-black uppercase tracking-wider pb-1 ${
+ selectedRuleset === 'firestore'
+ ? 'text-m3-primary border-b border-m3-primary font-black'
+ : 'text-m3-on-surface-variant hover:text-m3-primary'
+ }`}
+ >
+ Secure Firestore Rules
+ </button>
+ <button
+ type="button"
+ onClick={() => setSelectedRuleset('storage')}
+ className={`text-[10px] font-black uppercase tracking-wider pb-1 ${
+ selectedRuleset === 'storage'
+ ? 'text-m3-primary border-b border-m3-primary font-black'
+ : 'text-m3-on-surface-variant hover:text-m3-primary'
+ }`}
+ >
+ Public / Secure Storage Rules
+ </button>
+ </div>
 
-                            {/* Verification Badge */}
-                            <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full self-start">
-                              <Lock className="h-2.5 w-2.5" /> Rule Engine Validated
-                            </span>
-                          </div>
+ {/* Verification Badge */}
+ <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full self-start">
+ <Lock className="h-2.5 w-2.5" /> Rule Engine Validated
+ </span>
+ </div>
 
-                          <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
-                            {selectedRuleset === 'firestore' 
-                              ? 'This secure rule set defines Role-Based Access Controls (RBAC) on database schemas to protect transactions and ERP OS configurations.'
-                              : 'Provides public-read credentials for assets like receipt logs and barcode catalogs while enforcing strictly private limits on operational archives.'
-                            }
-                          </p>
-                        </div>
+ <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ {selectedRuleset === 'firestore' 
+ ? 'This secure rule set defines Role-Based Access Controls (RBAC) on database schemas to protect transactions and ERP OS configurations.'
+ : 'Provides public-read credentials for assets like receipt logs and barcode catalogs while enforcing strictly private limits on operational archives.'
+ }
+ </p>
+ </div>
 
-                        {/* Rules Editor Terminal / Visual Blocks */}
-                        <div className="m3-card bg-zinc-950 border border-m3-outline-variant/30 rounded-xl font-mono text-[9.5px] leading-relaxed p-4 h-[170px] overflow-y-auto select-text scrollbar relative group">
-                          {selectedRuleset === 'firestore' ? (
-                            <pre className="text-zinc-300">
-                              <span className="text-amber-400">rules_version</span> = <span className="text-emerald-400">'2'</span>;<br />
-                              <span className="text-purple-400">service</span> cloud.firestore &#123;<br />
-                              &nbsp;&nbsp;<span className="text-purple-400">match</span> /databases/&#123;database&#125;/documents &#123;<br /><br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-zinc-500">// RBAC Security: Require active session & valid employee token</span><br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-purple-400">match</span> /users/&#123;userId&#125; &#123;<br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-amber-400">allow read</span>: <span className="text-purple-400">if</span> request.auth != <span className="text-emerald-400">null</span>;<br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-amber-400">allow write</span>: <span className="text-purple-400">if</span> request.auth.token.role == <span className="text-emerald-400">'ADMIN'</span>;<br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;&#125;<br /><br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-zinc-500">// Transaction ledger records are append-only</span><br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-purple-400">match</span> /sales/&#123;saleId&#125; &#123;<br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-amber-400">allow read, write</span>: <span className="text-purple-400">if</span> request.auth != <span className="text-emerald-400">null</span>;<br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;&#125;<br /><br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-zinc-500">// Products catalog read-only for cashiers</span><br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-purple-400">match</span> /products/&#123;productId&#125; &#123;<br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-amber-400">allow read</span>: <span className="text-purple-400">if</span> request.auth != <span className="text-emerald-400">null</span>;<br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-amber-400">allow write</span>: <span className="text-purple-400">if</span> request.auth.token.role <span className="text-purple-400">in</span> [<span className="text-emerald-400">'ADMIN'</span>, <span className="text-emerald-400">'MANAGER'</span>];<br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;&#125;<br />
-                              &nbsp;&nbsp;&#125;<br />
-                              &#125;
-                            </pre>
-                          ) : (
-                            <pre className="text-zinc-300">
-                              <span className="text-amber-400">rules_version</span> = <span className="text-emerald-400">'2'</span>;<br />
-                              <span className="text-purple-400">service</span> firebase.storage &#123;<br />
-                              &nbsp;&nbsp;<span className="text-purple-400">match</span> /b/&#123;bucket&#125;/o &#123;<br /><br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-zinc-500">// Public asset ruleset - allows high contrast themes & barcodes</span><br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-purple-400">match</span> /public/&#123;allPaths=**&#125; &#123;<br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-amber-400">allow read</span>: <span className="text-purple-400">if</span> <span className="text-emerald-400">true</span>;<br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-amber-400">allow write</span>: <span className="text-purple-400">if</span> request.auth != <span className="text-emerald-400">null</span>;<br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;&#125;<br /><br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-zinc-500">// Transactional proof-of-delivery receipts</span><br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-purple-400">match</span> /receipts/&#123;allPaths=**&#125; &#123;<br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-amber-400">allow read</span>: <span className="text-purple-400">if</span> <span className="text-emerald-400">true</span>;<br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-amber-400">allow write</span>: <span className="text-purple-400">if</span> request.auth != <span className="text-emerald-400">null</span>;<br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;&#125;<br /><br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-zinc-500">// Private server operational snapshot files</span><br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-purple-400">match</span> /backups/&#123;backupId&#125; &#123;<br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-amber-400">allow read, write</span>: <span className="text-purple-400">if</span> request.auth != <span className="text-emerald-400">null</span> && request.auth.token.role == <span className="text-emerald-400">'ADMIN'</span>;<br />
-                              &nbsp;&nbsp;&nbsp;&nbsp;&#125;<br />
-                              &nbsp;&nbsp;&#125;<br />
-                              &#125;
-                            </pre>
-                          )}
-                          <span className="absolute bottom-2 right-2 text-[8px] bg-zinc-900 border border-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded select-none opacity-0 group-hover:opacity-100 transition-opacity uppercase font-sans">
-                            Read Only Blueprint
-                          </span>
-                        </div>
+ {/* Rules Editor Terminal / Visual Blocks */}
+ <div className="m3-card bg-zinc-950 border border-m3-outline-variant/30 rounded-xl font-mono text-[9.5px] leading-relaxed p-4 h-[170px] overflow-y-auto select-text scrollbar relative group">
+ {selectedRuleset === 'firestore' ? (
+ <pre className="text-zinc-300">
+ <span className="text-amber-400">rules_version</span> = <span className="text-emerald-400">'2'</span>;<br />
+ <span className="text-purple-400">service</span> cloud.firestore &#123;<br />
+ &nbsp;&nbsp;<span className="text-purple-400">match</span> /databases/&#123;database&#125;/documents &#123;<br /><br />
+ &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-zinc-500">// RBAC Security: Require active session & valid employee token</span><br />
+ &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-purple-400">match</span> /users/&#123;userId&#125; &#123;<br />
+ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-amber-400">allow read</span>: <span className="text-purple-400">if</span> request.auth != <span className="text-emerald-400">null</span>;<br />
+ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-amber-400">allow write</span>: <span className="text-purple-400">if</span> request.auth.token.role == <span className="text-emerald-400">'ADMIN'</span>;<br />
+ &nbsp;&nbsp;&nbsp;&nbsp;&#125;<br /><br />
+ &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-zinc-500">// Transaction ledger records are append-only</span><br />
+ &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-purple-400">match</span> /sales/&#123;saleId&#125; &#123;<br />
+ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-amber-400">allow read, write</span>: <span className="text-purple-400">if</span> request.auth != <span className="text-emerald-400">null</span>;<br />
+ &nbsp;&nbsp;&nbsp;&nbsp;&#125;<br /><br />
+ &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-zinc-500">// Products catalog read-only for cashiers</span><br />
+ &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-purple-400">match</span> /products/&#123;productId&#125; &#123;<br />
+ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-amber-400">allow read</span>: <span className="text-purple-400">if</span> request.auth != <span className="text-emerald-400">null</span>;<br />
+ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-amber-400">allow write</span>: <span className="text-purple-400">if</span> request.auth.token.role <span className="text-purple-400">in</span> [<span className="text-emerald-400">'ADMIN'</span>, <span className="text-emerald-400">'MANAGER'</span>];<br />
+ &nbsp;&nbsp;&nbsp;&nbsp;&#125;<br />
+ &nbsp;&nbsp;&#125;<br />
+ &#125;
+ </pre>
+ ) : (
+ <pre className="text-zinc-300">
+ <span className="text-amber-400">rules_version</span> = <span className="text-emerald-400">'2'</span>;<br />
+ <span className="text-purple-400">service</span> firebase.storage &#123;<br />
+ &nbsp;&nbsp;<span className="text-purple-400">match</span> /b/&#123;bucket&#125;/o &#123;<br /><br />
+ &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-zinc-500">// Public asset ruleset - allows high contrast themes & barcodes</span><br />
+ &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-purple-400">match</span> /public/&#123;allPaths=**&#125; &#123;<br />
+ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-amber-400">allow read</span>: <span className="text-purple-400">if</span> <span className="text-emerald-400">true</span>;<br />
+ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-amber-400">allow write</span>: <span className="text-purple-400">if</span> request.auth != <span className="text-emerald-400">null</span>;<br />
+ &nbsp;&nbsp;&nbsp;&nbsp;&#125;<br /><br />
+ &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-zinc-500">// Transactional proof-of-delivery receipts</span><br />
+ &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-purple-400">match</span> /receipts/&#123;allPaths=**&#125; &#123;<br />
+ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-amber-400">allow read</span>: <span className="text-purple-400">if</span> <span className="text-emerald-400">true</span>;<br />
+ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-amber-400">allow write</span>: <span className="text-purple-400">if</span> request.auth != <span className="text-emerald-400">null</span>;<br />
+ &nbsp;&nbsp;&nbsp;&nbsp;&#125;<br /><br />
+ &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-zinc-500">// Private server operational snapshot files</span><br />
+ &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-purple-400">match</span> /backups/&#123;backupId&#125; &#123;<br />
+ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-amber-400">allow read, write</span>: <span className="text-purple-400">if</span> request.auth != <span className="text-emerald-400">null</span> && request.auth.token.role == <span className="text-emerald-400">'ADMIN'</span>;<br />
+ &nbsp;&nbsp;&nbsp;&nbsp;&#125;<br />
+ &nbsp;&nbsp;&#125;<br />
+ &#125;
+ </pre>
+ )}
+ <span className="absolute bottom-2 right-2 text-[8px] bg-zinc-900 border border-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded select-none opacity-0 group-hover:opacity-100 transition-opacity uppercase font-sans">
+ Read Only Blueprint
+ </span>
+ </div>
 
-                        {/* Additional rules settings */}
-                        <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/30 space-y-3.5 select-none">
-                          <span className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono block">
-                            Database Protection Level Profile
-                          </span>
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                            {[
-                              { id: 'strict', name: 'Strict Fortified Mode', desc: 'Read/write checks enabled' },
-                              { id: 'audit', name: 'Audit Monitor Mode', desc: 'Logs rule violations but writes' },
-                              { id: 'open', name: 'Open Sandboxed Mode', desc: 'Full development accessibility' }
-                            ].map(prof => (
-                              <button
-                                key={prof.id}
-                                type="button"
-                                onClick={() => {
-                                  setRuleEnforcementProfile(prof.id as any);
-                                  setRulesAlert(`Enforcement rules applied: set security policy profile to ${prof.name}.`);
-                                  setTimeout(() => setRulesAlert(null), 3000);
-                                }}
-                                className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
-                                  ruleEnforcementProfile === prof.id
-                                    ? 'bg-m3-primary/10 border-m3-primary text-m3-on-surface'
-                                    : 'bg-m3-surface border-m3-outline-variant/15 hover:bg-m3-primary/5'
-                                }`}
-                              >
-                                <span className="text-[10px] font-extrabold flex items-center justify-between font-sans">
-                                  <span>{prof.name}</span>
-                                  {ruleEnforcementProfile === prof.id && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
-                                </span>
-                                <span className="text-[9px] text-m3-on-surface-variant leading-tight mt-1">{prof.desc}</span>
-                              </button>
-                            ))}
-                          </div>
-                          
-                          {rulesAlert && (
-                            <div className="p-2.5 rounded-lg font-mono text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase animate-fade-in text-center font-bold">
-                              {rulesAlert}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
+ {/* Additional rules settings */}
+ <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/30 space-y-3.5 select-none">
+ <span className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono block">
+ Database Protection Level Profile
+ </span>
+ <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+ {[
+ { id: 'strict', name: 'Strict Fortified Mode', desc: 'Read/write checks enabled' },
+ { id: 'audit', name: 'Audit Monitor Mode', desc: 'Logs rule violations but writes' },
+ { id: 'open', name: 'Open Sandboxed Mode', desc: 'Full development accessibility' }
+ ].map(prof => (
+ <button
+ key={prof.id}
+ type="button"
+ onClick={() => {
+ setRuleEnforcementProfile(prof.id as any);
+ setRulesAlert(`Enforcement rules applied: set security policy profile to ${prof.name}.`);
+ setTimeout(() => setRulesAlert(null), 3000);
+ }}
+ className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
+ ruleEnforcementProfile === prof.id
+ ? 'bg-m3-primary/10 border-m3-primary text-m3-on-surface'
+ : 'bg-m3-surface border-m3-outline-variant/15 hover:bg-m3-primary/5'
+ }`}
+ >
+ <span className="text-[10px] font-extrabold flex items-center justify-between font-sans">
+ <span>{prof.name}</span>
+ {ruleEnforcementProfile === prof.id && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
+ </span>
+ <span className="text-[9px] text-m3-on-surface-variant leading-tight mt-1">{prof.desc}</span>
+ </button>
+ ))}
+ </div>
+ 
+ {rulesAlert && (
+ <div className="p-2.5 rounded-lg font-mono text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase animate-fade-in text-center font-bold">
+ {rulesAlert}
+ </div>
+ )}
+ </div>
+ </div>
+ )}
 
-                    {/* Subtab C: DISASTER RECOVERY & OFF-SITE BACKUPS */}
-                    {dbSubTab === 'backup' && (
-                      <div className="space-y-4 animate-fade-in font-sans">
-                        {/* Snapshot Generation Form */}
-                        <form
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            db.createDbSnapshot(snapshotName);
-                            setSnapshotName('');
-                            setBackupActionStatus('Successfully created database backup.');
-                            setTimeout(() => setBackupActionStatus(null), 2500);
-                          }}
-                          className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/30 space-y-3 shrink-0"
-                        >
-                          <label className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono block">
-                            Create Database Backup
-                          </label>
-                          <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
-                            Generates a secure backup point of your complete store records, including products, stock levels, shifts, and transactions.
-                          </p>
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              value={snapshotName}
-                              onChange={(e) => setSnapshotName(e.target.value)}
-                              placeholder="E.g., Pre-Inventory Audit Backup, v2.1-Prod"
-                              className="flex-1 px-3.5 py-2 text-xs rounded-lg bg-m3-surface border border-m3-outline-variant/20 focus:border-m3-primary outline-none text-m3-on-surface font-sans"
-                            />
-                            <button
-                              type="submit"
-                              className="bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 text-[10px] font-black uppercase tracking-wider px-4 py-2 rounded-lg cursor-pointer transition-all shrink-0 font-sans shadow-sm"
-                            >
-                              Create Backup
-                            </button>
-                          </div>
-                        </form>
+ {/* Subtab C: DISASTER RECOVERY & OFF-SITE BACKUPS */}
+ {dbSubTab === 'backup' && (
+ <div className="space-y-4 animate-fade-in font-sans">
+ {/* Snapshot Generation Form */}
+ <form
+ onSubmit={(e) => {
+ e.preventDefault();
+ db.createDbSnapshot(snapshotName);
+ setSnapshotName('');
+ setBackupActionStatus('Successfully created database backup.');
+ setTimeout(() => setBackupActionStatus(null), 2500);
+ }}
+ className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/30 space-y-3 shrink-0"
+ >
+ <label className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono block">
+ Create Database Backup
+ </label>
+ <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ Generates a secure backup point of your complete store records, including products, stock levels, shifts, and transactions.
+ </p>
+ <div className="flex gap-2">
+ <input
+ type="text"
+ value={snapshotName}
+ onChange={(e) => setSnapshotName(e.target.value)}
+ placeholder="E.g., Pre-Inventory Audit Backup, v2.1-Prod"
+ className="flex-1 px-3.5 py-2 text-xs rounded-lg bg-m3-surface border border-m3-outline-variant/20 focus:border-m3-primary outline-none text-m3-on-surface font-sans"
+ />
+ <button
+ type="submit"
+ className="bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 text-[10px] font-black uppercase tracking-wider px-4 py-2 rounded-lg cursor-pointer transition-all shrink-0 font-sans shadow-sm"
+ >
+ Create Backup
+ </button>
+ </div>
+ </form>
 
-                        {backupActionStatus && (
-                          <div className="p-3 rounded-xl font-mono text-[9px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold uppercase tracking-widest text-center">
-                            {backupActionStatus}
-                          </div>
-                        )}
+ {backupActionStatus && (
+ <div className="p-3 rounded-xl font-mono text-[9px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold uppercase tracking-widest text-center">
+ {backupActionStatus}
+ </div>
+ )}
 
-                        {/* Existing Snapshots */}
-                        <div className="space-y-2">
-                          <span className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">
-                            Available Backups ({db.dbSnapshots.length})
-                          </span>
-                          <div className="max-h-[120px] overflow-y-auto pr-2 space-y-2 hover:scrollbar scrollbar text-[10.5px]">
-                            {db.dbSnapshots.length === 0 ? (
-                              <div className="p-4 rounded-xl border border-dashed border-m3-outline-variant/20 text-center text-zinc-500 italic">
-                                No backups found. Create a backup using the form above to safeguard your records.
-                              </div>
-                            ) : (
-                              db.dbSnapshots.map(snap => (
-                                <div key={snap.id} className="p-3 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/50 flex items-center justify-between gap-3 animate-fade-in hover:bg-m3-surface-low/80 transition-all">
-                                  <div className="space-y-0.5 max-w-[70%]">
-                                    <div className="font-extrabold text-white font-sans flex items-center gap-2">
-                                      <span>{snap.name}</span>
-                                      <span className="text-[8.5px] font-mono bg-zinc-800 text-zinc-400 px-1.5 rounded font-normal uppercase">{snap.id}</span>
-                                    </div>
-                                    <div className="text-[9.5px] text-zinc-400 font-mono">
-                                      Created at: {new Date(snap.timestamp).toLocaleString()} &bull; Author: {snap.creator} &bull; Size: {Math.max(1, Math.round(snap.sizeBytes / 1024))} KB
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-1.5 shrink-0">
-                                    <button
-                                      type="button"
-                                      onClick={async () => {
-                                        const success = await db.restoreDbSnapshot(snap.id);
-                                        if (success) {
-                                          setBackupActionStatus(`Successfully restored database records from backup "${snap.name}".`);
-                                          setTimeout(() => setBackupActionStatus(null), 3000);
-                                        } else {
-                                          setBackupActionStatus('Failed to restore database: invalid backup file format.');
-                                          setTimeout(() => setBackupActionStatus(null), 3500);
-                                        }
-                                      }}
-                                      className="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/15 font-black uppercase text-[9px] tracking-wider cursor-pointer border border-emerald-500/20"
-                                      title="Restore DB to this recovery marker"
-                                    >
-                                      Restore
-                                    </button>
-                                    {(() => {
-                                      const confirmCount = deleteConfirm[snap.id] || 0;
-                                      if (confirmCount === 0) {
-                                        return (
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              setDeleteConfirm(prev => ({ ...prev, [snap.id]: 1 }));
-                                              setTimeout(() => {
-                                                setDeleteConfirm(prev => {
-                                                  if (prev[snap.id] < 3) {
-                                                    const updated = { ...prev };
-                                                    delete updated[snap.id];
-                                                    return updated;
-                                                  }
-                                                  return prev;
-                                                });
-                                              }, 4000);
-                                            }}
-                                            className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg shrink-0 transition-all cursor-pointer border border-transparent hover:border-red-500/20"
-                                            title="Delete Snap (Requires 3x confirmation)"
-                                          >
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                          </button>
-                                        );
-                                      } else if (confirmCount === 1) {
-                                        return (
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              setDeleteConfirm(prev => ({ ...prev, [snap.id]: 2 }));
-                                            }}
-                                            className="px-2 py-1 text-[8px] font-black uppercase tracking-wider bg-amber-500 text-black hover:bg-amber-600 rounded-md transition-all cursor-pointer animate-pulse shrink-0"
-                                            title="Confirm deletion (Stage 1 of 3)"
-                                          >
-                                            Confirm 1/3
-                                          </button>
-                                        );
-                                      } else {
-                                        return (
-                                          <button
-                                            type="button"
-                                            onClick={async () => {
-                                              await db.deleteDbSnapshot(snap.id);
-                                              setBackupActionStatus(`Deleted snapshot marker key ${snap.id}.`);
-                                              setTimeout(() => setBackupActionStatus(null), 2000);
-                                              setDeleteConfirm(prev => {
-                                                const updated = { ...prev };
-                                                delete updated[snap.id];
-                                                return updated;
-                                              });
-                                            }}
-                                            className="px-2 py-1 text-[8px] font-black uppercase tracking-wider bg-rose-600 text-white hover:bg-rose-700 rounded-md transition-all cursor-pointer animate-bounce shrink-0"
-                                            title="Final Confirmation (Stage 2 of 3 - Delete!)"
-                                          >
-                                            Confirm 2/3 (Delete)
-                                          </button>
-                                        );
-                                      }
-                                    })()}
-                                  </div>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </div>
+ {/* Existing Snapshots */}
+ <div className="space-y-2">
+ <span className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">
+ Available Backups ({db.dbSnapshots.length})
+ </span>
+ <div className="max-h-[120px] overflow-y-auto pr-2 space-y-2 hover:scrollbar scrollbar text-[10.5px]">
+ {db.dbSnapshots.length === 0 ? (
+ <div className="p-4 rounded-xl border border-dashed border-m3-outline-variant/20 text-center text-zinc-500 italic">
+ No backups found. Create a backup using the form above to safeguard your records.
+ </div>
+ ) : (
+ db.dbSnapshots.map(snap => (
+ <div key={snap.id} className="p-3 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/50 flex items-center justify-between gap-3 animate-fade-in hover:bg-m3-surface-low/80 transition-all">
+ <div className="space-y-0.5 max-w-[70%]">
+ <div className="font-extrabold text-white font-sans flex items-center gap-2">
+ <span>{snap.name}</span>
+ <span className="text-[8.5px] font-mono bg-zinc-800 text-zinc-400 px-1.5 rounded font-normal uppercase">{snap.id}</span>
+ </div>
+ <div className="text-[9.5px] text-zinc-400 font-mono">
+ Created at: {new Date(snap.timestamp).toLocaleString()} &bull; Author: {snap.creator} &bull; Size: {Math.max(1, Math.round(snap.sizeBytes / 1024))} KB
+ </div>
+ </div>
+ <div className="flex items-center gap-1.5 shrink-0">
+ <button
+ type="button"
+ onClick={async () => {
+ const success = await db.restoreDbSnapshot(snap.id);
+ if (success) {
+ setBackupActionStatus(`Successfully restored database records from backup "${snap.name}".`);
+ setTimeout(() => setBackupActionStatus(null), 3000);
+ } else {
+ setBackupActionStatus('Failed to restore database: invalid backup file format.');
+ setTimeout(() => setBackupActionStatus(null), 3500);
+ }
+ }}
+ className="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/15 font-black uppercase text-[9px] tracking-wider cursor-pointer border border-emerald-500/20"
+ title="Restore DB to this recovery marker"
+ >
+ Restore
+ </button>
+ {(() => {
+ const confirmCount = deleteConfirm[snap.id] || 0;
+ if (confirmCount === 0) {
+ return (
+ <button
+ type="button"
+ onClick={() => {
+ setDeleteConfirm(prev => ({ ...prev, [snap.id]: 1 }));
+ setTimeout(() => {
+ setDeleteConfirm(prev => {
+ if (prev[snap.id] < 3) {
+ const updated = { ...prev };
+ delete updated[snap.id];
+ return updated;
+ }
+ return prev;
+ });
+ }, 4000);
+ }}
+ className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg shrink-0 transition-all cursor-pointer border border-transparent hover:border-red-500/20"
+ title="Delete Snap (Requires 3x confirmation)"
+ >
+ <Trash2 className="h-3.5 w-3.5" />
+ </button>
+ );
+ } else if (confirmCount === 1) {
+ return (
+ <button
+ type="button"
+ onClick={() => {
+ setDeleteConfirm(prev => ({ ...prev, [snap.id]: 2 }));
+ }}
+ className="px-2 py-1 text-[8px] font-black uppercase tracking-wider bg-amber-500 text-black hover:bg-amber-600 rounded-md transition-all cursor-pointer animate-pulse shrink-0"
+ title="Confirm deletion (Stage 1 of 3)"
+ >
+ Confirm 1/3
+ </button>
+ );
+ } else {
+ return (
+ <button
+ type="button"
+ onClick={async () => {
+ await db.deleteDbSnapshot(snap.id);
+ setBackupActionStatus(`Deleted snapshot marker key ${snap.id}.`);
+ setTimeout(() => setBackupActionStatus(null), 2000);
+ setDeleteConfirm(prev => {
+ const updated = { ...prev };
+ delete updated[snap.id];
+ return updated;
+ });
+ }}
+ className="px-2 py-1 text-[8px] font-black uppercase tracking-wider bg-rose-600 text-white hover:bg-rose-700 rounded-md transition-all cursor-pointer animate-bounce shrink-0"
+ title="Final Confirmation (Stage 2 of 3 - Delete!)"
+ >
+ Confirm 2/3 (Delete)
+ </button>
+ );
+ }
+ })()}
+ </div>
+ </div>
+ ))
+ )}
+ </div>
+ </div>
 
-                        {/* JSON Export/Import Section */}
-                        <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/30 space-y-2.5">
-                          <span className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono block">
-                            Direct Offline Local Backups (Offline Portability)
-                          </span>
-                          <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
-                            Backup files represent your database physically as raw JSON blocks. You can export these to flash storage or import/replace tables below in case of storage wipe.
-                          </p>
-                          <div className="flex gap-2">
-                            <ActionButton
-                              variant="slate"
-                              className="flex-1 py-2 text-[9.5px]"
-                              isLoading={isExportingFullDb}
-                              loadingText="Serializing tables..."
-                              onClick={() => {
-                                setIsExportingFullDb(true);
-                                setTimeout(() => {
-                                  const payload = {
-                                    isConfigured: db.isConfigured,
-                                    users: db.users,
-                                    branches: db.branches,
-                                    suppliers: db.suppliers,
-                                    products: db.products,
-                                    purchaseOrders: db.purchaseOrders,
-                                    poItems: db.poItems,
-                                    transmittals: db.transmittals,
-                                    shifts: db.shifts,
-                                    sales: db.sales,
-                                    saleItems: db.saleItems,
-                                    movements: db.movements,
-                                    auditLogs: db.auditLogs,
-                                    parkedSales: db.parkedSales,
-                                    stockTransfers: db.stockTransfers,
-                                    branchStock: db.branchStock,
-                                    ledgerEntries: db.ledgerEntries,
-                                    branchSalesReports: db.branchSalesReports,
-                                    deliveries: db.deliveries
-                                  };
-                                  const filename = `tilepoint_full_backup_${Date.now()}.json`;
-                                  saveFileToBackup(JSON.stringify(payload, null, 2), filename, 'Database_Backups').then((res) => {
-                                    setBackupActionStatus(`Success: Exported portable backup to ${res.path || filename}`);
-                                    setTimeout(() => setBackupActionStatus(null), 2500);
-                                    setIsExportingFullDb(false);
-                                  });
-                                }, 1000);
-                              }}
-                              icon={<Download className="h-3.5 w-3.5 text-m3-primary" />}
-                            >
-                              Export Full DB as JSON
-                            </ActionButton>
-                            
-                            <label className="flex-1 bg-zinc-800 text-zinc-300 hover:bg-zinc-750 text-[9.5px] font-bold uppercase tracking-wider py-2 rounded-lg cursor-pointer transition-all text-center flex items-center justify-center gap-2 border border-zinc-700 font-sans shadow-sm select-none">
-                              <Upload className="h-3.5 w-3.5 text-m3-primary" />
-                              Import JSON Schema
-                              <input
-                                type="file"
-                                accept=".json"
-                                className="hidden"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (!file) return;
-                                  const reader = new FileReader();
-                                  reader.onload = async (event) => {
-                                    try {
-                                      const rawText = event.target?.result as string;
-                                      const payload = await verifyAndUnwrapBackup(rawText);
-                                      if (!payload.users || !payload.products) {
-                                        throw new Error("Invalid schema template structure.");
-                                      }
-                                      
-                                      // Take auto recovery snap before updating in case user made mistake
-                                      await db.createDbSnapshot(`Auto-Snapshot Before Manual Import`);
+ {/* JSON Export/Import Section */}
+ <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/30 space-y-2.5">
+ <span className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono block">
+ Direct Offline Local Backups (Offline Portability)
+ </span>
+ <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ Backup files represent your database physically as raw JSON blocks. You can export these to flash storage or import/replace tables below in case of storage wipe.
+ </p>
+ <div className="flex gap-2">
+ <ActionButton
+ variant="slate"
+ className="flex-1 py-2 text-[9.5px]"
+ isLoading={isExportingFullDb}
+ loadingText="Serializing tables..."
+ onClick={() => {
+ setIsExportingFullDb(true);
+ setTimeout(() => {
+ const payload = {
+ isConfigured: db.isConfigured,
+ users: db.users,
+ branches: db.branches,
+ suppliers: db.suppliers,
+ products: db.products,
+ purchaseOrders: db.purchaseOrders,
+ poItems: db.poItems,
+ transmittals: db.transmittals,
+ shifts: db.shifts,
+ sales: db.sales,
+ saleItems: db.saleItems,
+ movements: db.movements,
+ auditLogs: db.auditLogs,
+ parkedSales: db.parkedSales,
+ stockTransfers: db.stockTransfers,
+ branchStock: db.branchStock,
+ ledgerEntries: db.ledgerEntries,
+ branchSalesReports: db.branchSalesReports,
+ deliveries: db.deliveries
+ };
+ const filename = `tilepoint_full_backup_${Date.now()}.json`;
+ saveFileToBackup(JSON.stringify(payload, null, 2), filename, 'Database_Backups').then((res) => {
+ setBackupActionStatus(`Success: Exported portable backup to ${res.path || filename}`);
+ setTimeout(() => setBackupActionStatus(null), 2500);
+ setIsExportingFullDb(false);
+ });
+ }, 1000);
+ }}
+ icon={<Download className="h-3.5 w-3.5 text-m3-primary" />}
+ >
+ Export Full DB as JSON
+ </ActionButton>
+ 
+ <label className="flex-1 bg-zinc-800 text-zinc-300 hover:bg-zinc-750 text-[9.5px] font-bold uppercase tracking-wider py-2 rounded-lg cursor-pointer transition-all text-center flex items-center justify-center gap-2 border border-zinc-700 font-sans shadow-sm select-none">
+ <Upload className="h-3.5 w-3.5 text-m3-primary" />
+ Import JSON Schema
+ <input
+ type="file"
+ accept=".json"
+ className="hidden"
+ onChange={(e) => {
+ const file = e.target.files?.[0];
+ if (!file) return;
+ const reader = new FileReader();
+ reader.onload = async (event) => {
+ try {
+ const rawText = event.target?.result as string;
+ const payload = await verifyAndUnwrapBackup(rawText);
+ if (!payload.users || !payload.products) {
+ throw new Error("Invalid schema template structure.");
+ }
+ 
+ // Take auto recovery snap before updating in case user made mistake
+ await db.createDbSnapshot(`Auto-Snapshot Before Manual Import`);
 
-                                      // Save to snapshots index first
-                                      const newSnap: DbSnapshot = {
-                                        id: `IMPORT-${Date.now()}`,
-                                        name: `Imported Database - ${file.name}`,
-                                        timestamp: new Date().toISOString(),
-                                        creator: db.currentUser.fullName,
-                                        sizeBytes: file.size,
-                                        data: JSON.stringify(payload)
-                                      };
-                                      
-                                      // Save to server
-                                      await fetch('/api/db/backups', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ snapshot: newSnap })
-                                      });
-                                      
-                                      // Trigger snapshot restore to apply
-                                      await db.restoreDbSnapshot(newSnap.id);
-                                      setBackupActionStatus(`SUCCESSFULLY IMPORTED PORTABLE BACKUP: "${file.name}" APPROVED.`);
-                                      setTimeout(() => setBackupActionStatus(null), 3000);
-                                    } catch (err: any) {
-                                      setBackupActionStatus(`ERROR: ${err.message || 'APPROVED FILE IS CORRUPTED OR INVALID SCHEMA TILEPOINT FORMAT.'}`);
-                                      setTimeout(() => setBackupActionStatus(null), 5000);
-                                    }
-                                  };
-                                  reader.readAsText(file);
-                                }}
-                              />
-                            </label>
-                          </div>
-                        </div>
+ // Save to snapshots index first
+ const newSnap: DbSnapshot = {
+ id: `IMPORT-${Date.now()}`,
+ name: `Imported Database - ${file.name}`,
+ timestamp: new Date().toISOString(),
+ creator: db.currentUser.fullName,
+ sizeBytes: file.size,
+ data: JSON.stringify(payload)
+ };
+ 
+ // Save to server
+ await fetch('/api/db/backups', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' },
+ body: JSON.stringify({ snapshot: newSnap })
+ });
+ 
+ // Trigger snapshot restore to apply
+ await db.restoreDbSnapshot(newSnap.id);
+ setBackupActionStatus(`SUCCESSFULLY IMPORTED PORTABLE BACKUP: "${file.name}" APPROVED.`);
+ setTimeout(() => setBackupActionStatus(null), 3000);
+ } catch (err: any) {
+ setBackupActionStatus(`ERROR: ${err.message || 'APPROVED FILE IS CORRUPTED OR INVALID SCHEMA TILEPOINT FORMAT.'}`);
+ setTimeout(() => setBackupActionStatus(null), 5000);
+ }
+ };
+ reader.readAsText(file);
+ }}
+ />
+ </label>
+ </div>
+ </div>
 
-                        {/* User-Defined Device Storage Backups Mapping */}
-                        <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/30 space-y-4">
-                          <div className="flex items-center gap-2">
-                            <span className="p-1.5 bg-amber-500/10 text-amber-500 rounded-lg shrink-0">
-                              <HardDrive className="h-4 w-4" />
-                            </span>
-                            <div>
-                              <span className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono block">
-                                Persistent Device Storage Mapping
-                              </span>
-                              <span className="text-[9px] text-zinc-400 font-medium">
-                                Configure a dedicated path and filename pattern on your physical device for snapshot saves.
-                              </span>
-                            </div>
-                          </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                            <div className="space-y-1">
-                              <label className="text-[9.5px] font-bold text-zinc-300 font-mono block">
-                                Custom Storage Directory Path
-                              </label>
-                              <div className="flex gap-2">
-                                <input
-                                  type="text"
-                                  value={activeFolderHandle ? `[Native Sync Folder]: ${activeFolderHandle.name}` : deviceBackupPath}
-                                  onChange={(e) => setDeviceBackupPath(e.target.value)}
-                                  disabled={!!activeFolderHandle}
-                                  placeholder="e.g. C:/TilePoint_Backups/ or /sdcard/TilePoint/"
-                                  className="flex-1 px-3 py-2 text-xs rounded-lg bg-m3-surface border border-m3-outline-variant/20 focus:border-m3-primary outline-none text-white font-mono disabled:opacity-75 disabled:text-emerald-400 disabled:font-bold"
-                                />
-                                {isFsaSupported && (
-                                  <button
-                                    type="button"
-                                    onClick={async () => {
-                                      if (activeFolderHandle) {
-                                        await clearDirectoryHandle();
-                                        setActiveFolderHandle(null);
-                                        setBackupActionStatus("Cleared native backup directory association.");
-                                        setTimeout(() => setBackupActionStatus(null), 3000);
-                                      } else {
-                                        try {
-                                          const handle = await (window as any).showDirectoryPicker({
-                                            mode: 'readwrite'
-                                          });
-                                          await saveDirectoryHandle(handle);
-                                          setActiveFolderHandle(handle);
-                                          setBackupActionStatus(`Successfully authorized native folder: "${handle.name}".`);
-                                          setTimeout(() => setBackupActionStatus(null), 3000);
-                                        } catch (err) {
-                                          console.error("Directory picker cancelled or failed:", err);
-                                        }
-                                      }
-                                    }}
-                                    className={`px-3 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all border shrink-0 ${
-                                      activeFolderHandle
-                                        ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/30'
-                                        : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/30'
-                                    }`}
-                                  >
-                                    {activeFolderHandle ? "Disconnect" : "Pick Device Folder"}
-                                  </button>
-                                )}
-                              </div>
-                              <p className="text-[8.5px] text-zinc-500 italic">
-                                {activeFolderHandle
-                                  ? `All downloaded backups, transmittals, and logs will be saved directly into "TilePoint_Backups" inside "${activeFolderHandle.name}" automatically!`
-                                  : "Type a reference path OR click Pick Device Folder to enable zero-prompt direct saving on your computer."}
-                              </p>
-                            </div>
+ {/* User-Defined Device Storage Backups Mapping */}
+ <div className="p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low/30 space-y-4">
+ <div className="flex items-center gap-2">
+ <span className="p-1.5 bg-amber-500/10 text-amber-500 rounded-lg shrink-0">
+ <HardDrive className="h-4 w-4" />
+ </span>
+ <div>
+ <span className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono block">
+ Persistent Device Storage Mapping
+ </span>
+ <span className="text-[9px] text-zinc-400 font-medium">
+ Configure a dedicated path and filename pattern on your physical device for snapshot saves.
+ </span>
+ </div>
+ </div>
+ <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+ <div className="space-y-1">
+ <label className="text-[9.5px] font-bold text-zinc-300 font-mono block">
+ Custom Storage Directory Path
+ </label>
+ <div className="flex gap-2">
+ <input
+ type="text"
+ value={activeFolderHandle ? `[Native Sync Folder]: ${activeFolderHandle.name}` : deviceBackupPath}
+ onChange={(e) => setDeviceBackupPath(e.target.value)}
+ disabled={!!activeFolderHandle}
+ placeholder="e.g. C:/TilePoint_Backups/ or /sdcard/TilePoint/"
+ className="flex-1 px-3 py-2 text-xs rounded-lg bg-m3-surface border border-m3-outline-variant/20 focus:border-m3-primary outline-none text-white font-mono disabled:opacity-75 disabled:text-emerald-400 disabled:font-bold"
+ />
+ {isFsaSupported && (
+ <button
+ type="button"
+ onClick={async () => {
+ if (activeFolderHandle) {
+ await clearDirectoryHandle();
+ setActiveFolderHandle(null);
+ setBackupActionStatus("Cleared native backup directory association.");
+ setTimeout(() => setBackupActionStatus(null), 3000);
+ } else {
+ try {
+ const handle = await (window as any).showDirectoryPicker({
+ mode: 'readwrite'
+ });
+ await saveDirectoryHandle(handle);
+ setActiveFolderHandle(handle);
+ setBackupActionStatus(`Successfully authorized native folder: "${handle.name}".`);
+ setTimeout(() => setBackupActionStatus(null), 3000);
+ } catch (err) {
+ console.error("Directory picker cancelled or failed:", err);
+ }
+ }
+ }}
+ className={`px-3 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all border shrink-0 ${
+ activeFolderHandle
+ ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/30'
+ : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/30'
+ }`}
+ >
+ {activeFolderHandle ? "Disconnect" : "Pick Device Folder"}
+ </button>
+ )}
+ </div>
+ <p className="text-[8.5px] text-zinc-500 italic">
+ {activeFolderHandle
+ ? `All downloaded backups, transmittals, and logs will be saved directly into "TilePoint_Backups" inside "${activeFolderHandle.name}" automatically!`
+ : "Type a reference path OR click Pick Device Folder to enable zero-prompt direct saving on your computer."}
+ </p>
+ </div>
 
-                            <div className="space-y-1">
-                              <label className="text-[9.5px] font-bold text-zinc-300 font-mono block">
-                                Filename Prefix Pattern
-                              </label>
-                              <input
-                                type="text"
-                                value={filenamePattern}
-                                onChange={(e) => setFilenamePattern(e.target.value)}
-                                placeholder="e.g. tilepoint_full_backup"
-                                className="w-full px-3 py-2 text-xs rounded-lg bg-m3-surface border border-m3-outline-variant/20 focus:border-m3-primary outline-none text-white font-mono"
-                              />
-                              <p className="text-[8.5px] text-zinc-500 italic">
-                                Saved file name: <strong className="text-zinc-400">{filenamePattern}_[timestamp].json</strong>
-                              </p>
-                            </div>
-                          </div>
+ <div className="space-y-1">
+ <label className="text-[9.5px] font-bold text-zinc-300 font-mono block">
+ Filename Prefix Pattern
+ </label>
+ <input
+ type="text"
+ value={filenamePattern}
+ onChange={(e) => setFilenamePattern(e.target.value)}
+ placeholder="e.g. tilepoint_full_backup"
+ className="w-full px-3 py-2 text-xs rounded-lg bg-m3-surface border border-m3-outline-variant/20 focus:border-m3-primary outline-none text-white font-mono"
+ />
+ <p className="text-[8.5px] text-zinc-500 italic">
+ Saved file name: <strong className="text-zinc-400">{filenamePattern}_[timestamp].json</strong>
+ </p>
+ </div>
+ </div>
 
-                          {/* Save Snapshot Button with simulated directory persistence */}
-                          <button
-                            type="button"
-                            disabled={isExportingDevicePath}
-                            onClick={() => {
-                              setIsExportingDevicePath(true);
-                              const cleanPath = deviceBackupPath.replace(/\/+$/, "") + "/";
-                              const stamp = Date.now();
-                              const finalFilename = `${filenamePattern}_${stamp}.json`;
-                              const fullSimulatedPath = `${cleanPath}${finalFilename}`;
+ {/* Save Snapshot Button with simulated directory persistence */}
+ <button
+ type="button"
+ disabled={isExportingDevicePath}
+ onClick={() => {
+ setIsExportingDevicePath(true);
+ const cleanPath = deviceBackupPath.replace(/\/+$/, "") + "/";
+ const stamp = Date.now();
+ const finalFilename = `${filenamePattern}_${stamp}.json`;
+ const fullSimulatedPath = `${cleanPath}${finalFilename}`;
 
-                              setTimeout(() => {
-                                const payload = {
-                                  isConfigured: db.isConfigured,
-                                  users: db.users,
-                                  branches: db.branches,
-                                  suppliers: db.suppliers,
-                                  products: db.products,
-                                  purchaseOrders: db.purchaseOrders,
-                                  poItems: db.poItems,
-                                  transmittals: db.transmittals,
-                                  shifts: db.shifts,
-                                  sales: db.sales,
-                                  saleItems: db.saleItems,
-                                  movements: db.movements,
-                                  auditLogs: db.auditLogs,
-                                  parkedSales: db.parkedSales,
-                                  stockTransfers: db.stockTransfers,
-                                  branchStock: db.branchStock,
-                                  ledgerEntries: db.ledgerEntries,
-                                  branchSalesReports: db.branchSalesReports,
-                                  deliveries: db.deliveries
-                                };
+ setTimeout(() => {
+ const payload = {
+ isConfigured: db.isConfigured,
+ users: db.users,
+ branches: db.branches,
+ suppliers: db.suppliers,
+ products: db.products,
+ purchaseOrders: db.purchaseOrders,
+ poItems: db.poItems,
+ transmittals: db.transmittals,
+ shifts: db.shifts,
+ sales: db.sales,
+ saleItems: db.saleItems,
+ movements: db.movements,
+ auditLogs: db.auditLogs,
+ parkedSales: db.parkedSales,
+ stockTransfers: db.stockTransfers,
+ branchStock: db.branchStock,
+ ledgerEntries: db.ledgerEntries,
+ branchSalesReports: db.branchSalesReports,
+ deliveries: db.deliveries
+ };
 
-                                // Use centralized saveFileToBackup instead of document.createElement
-                                saveFileToBackup(JSON.stringify(payload, null, 2), finalFilename, 'Database_Backups').then((res) => {
-                                  // Append to Audit Log & Snapshots
-                                  db.createDbSnapshot(`Device Snapshot Folder Backup [Manual]`);
+ // Use centralized saveFileToBackup instead of document.createElement
+ saveFileToBackup(JSON.stringify(payload, null, 2), finalFilename, 'Database_Backups').then((res) => {
+ // Append to Audit Log & Snapshots
+ db.createDbSnapshot(`Device Snapshot Folder Backup [Manual]`);
 
-                                  setBackupActionStatus(`SUCCESS: Snapshot saved physically as: ${res.path || finalFilename}`);
-                                  setTimeout(() => setBackupActionStatus(null), 5000);
-                                  setIsExportingDevicePath(false);
-                                });
-                              }, 1200);
-                            }}
-                            className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-black text-xs font-black uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-md"
-                          >
-                            <HardDrive className="h-4 w-4" /> {isExportingDevicePath ? "Establishing Storage Connection..." : "Compile & Save Backup to Custom Device Path"}
-                          </button>
-                        </div>
+ setBackupActionStatus(`SUCCESS: Snapshot saved physically as: ${res.path || finalFilename}`);
+ setTimeout(() => setBackupActionStatus(null), 5000);
+ setIsExportingDevicePath(false);
+ });
+ }, 1200);
+ }}
+ className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-black text-xs font-black uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-md"
+ >
+ <HardDrive className="h-4 w-4" /> {isExportingDevicePath ? "Establishing Storage Connection..." : "Compile & Save Backup to Custom Device Path"}
+ </button>
+ </div>
 
-                        {/* Immutability & Undeletability Security Safeguards Status */}
-                        <div className="p-4 rounded-xl border border-m3-primary/25 bg-m3-primary/5 space-y-3">
-                          <div className="flex items-start gap-3">
-                            <span className="p-1.5 bg-m3-primary/15 text-m3-primary rounded-lg shrink-0 mt-0.5">
-                              <ShieldCheck className="h-4 w-4 text-m3-primary" />
-                            </span>
-                            <div className="space-y-1">
-                              <span className="text-[10px] font-black uppercase tracking-widest text-m3-primary font-mono block">
-                                Cryptographic Immutability & Undeletable File Guards
-                              </span>
-                              <p className="text-[9px] text-zinc-300 leading-relaxed">
-                                Standard web browsers run in a sandboxed security model that restricts changing native file write permissions or deletion blocks on the physical hard drive. To satisfy enterprise write-protection policies, TilePoint enforces the following active logical safeguards:
-                              </p>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-2">
-                                <div className="p-2 bg-zinc-900/50 rounded-lg border border-zinc-800 space-y-1">
-                                  <span className="text-[8.5px] font-bold uppercase text-emerald-400 font-mono flex items-center gap-1">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                    Uneditable Cryptographic Seals
-                                  </span>
-                                  <p className="text-[8px] text-zinc-400 leading-normal">
-                                    Every JSON and CSV backup is sealed with a digital SHA-256 signature. Any manual editing or tampering of the files outside of the application invalidates the cryptographic seal, causing the restore parser to reject the file.
-                                  </p>
-                                </div>
-                                <div className="p-2 bg-zinc-900/50 rounded-lg border border-zinc-800 space-y-1">
-                                  <span className="text-[8.5px] font-bold uppercase text-emerald-400 font-mono flex items-center gap-1">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                    Undeletable Direct Recovery
-                                  </span>
-                                  <p className="text-[8px] text-zinc-400 leading-normal">
-                                    All exported backups are logged in a secure IndexedDB history database. When the device directory is connected, the application automatically scans for deleted files and regenerates them to the folder in the background.
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+ {/* Immutability & Undeletability Security Safeguards Status */}
+ <div className="p-4 rounded-xl border border-m3-primary/25 bg-m3-primary/5 space-y-3">
+ <div className="flex items-start gap-3">
+ <span className="p-1.5 bg-m3-primary/15 text-m3-primary rounded-lg shrink-0 mt-0.5">
+ <ShieldCheck className="h-4 w-4 text-m3-primary" />
+ </span>
+ <div className="space-y-1">
+ <span className="text-[10px] font-black uppercase tracking-widest text-m3-primary font-mono block">
+ Cryptographic Immutability & Undeletable File Guards
+ </span>
+ <p className="text-[9px] text-zinc-300 leading-relaxed">
+ Standard web browsers run in a sandboxed security model that restricts changing native file write permissions or deletion blocks on the physical hard drive. To satisfy enterprise write-protection policies, TilePoint enforces the following active logical safeguards:
+ </p>
+ <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-2">
+ <div className="p-2 bg-zinc-900/50 rounded-lg border border-zinc-800 space-y-1">
+ <span className="text-[8.5px] font-bold uppercase text-emerald-400 font-mono flex items-center gap-1">
+ <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+ Uneditable Cryptographic Seals
+ </span>
+ <p className="text-[8px] text-zinc-400 leading-normal">
+ Every JSON and CSV backup is sealed with a digital SHA-256 signature. Any manual editing or tampering of the files outside of the application invalidates the cryptographic seal, causing the restore parser to reject the file.
+ </p>
+ </div>
+ <div className="p-2 bg-zinc-900/50 rounded-lg border border-zinc-800 space-y-1">
+ <span className="text-[8.5px] font-bold uppercase text-emerald-400 font-mono flex items-center gap-1">
+ <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+ Undeletable Direct Recovery
+ </span>
+ <p className="text-[8px] text-zinc-400 leading-normal">
+ All exported backups are logged in a secure IndexedDB history database. When the device directory is connected, the application automatically scans for deleted files and regenerates them to the folder in the background.
+ </p>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
 
-                        {/* Guaranteed Historical Transaction Retention Policy Status */}
-                        <div className="p-4 rounded-xl border border-emerald-500/25 bg-emerald-500/5 space-y-3">
-                          <div className="flex items-center gap-2">
-                            <span className="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg shrink-0">
-                              <ShieldCheck className="h-4 w-4" />
-                            </span>
-                            <div>
-                              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 font-mono block">
-                                Historical Data Permanent Retention Active
-                              </span>
-                              <span className="text-[9px] text-zinc-400 font-medium">
-                                Compliant with corporate and regulatory audit policies.
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <div className="text-[10.5px] text-zinc-300 leading-relaxed space-y-2">
-                            <p>
-                              TilePoint is strictly configured to protect core business archives. High-integrity records including <strong>sales invoices, general ledger journals, cashier shift history, and corporate audit logs</strong> can never be automatically deleted or recycled.
-                            </p>
-                            <p className="text-zinc-400 text-[9.5px]">
-                              All historical transactions—including those from previous calendar years—are stored safely within the browser index and device snapshots. Standard purging or clean-up operations cannot affect archived sales ledger data, guaranteeing 100% long-term visibility.
-                            </p>
-                          </div>
+ {/* Guaranteed Historical Transaction Retention Policy Status */}
+ <div className="p-4 rounded-xl border border-emerald-500/25 bg-emerald-500/5 space-y-3">
+ <div className="flex items-center gap-2">
+ <span className="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg shrink-0">
+ <ShieldCheck className="h-4 w-4" />
+ </span>
+ <div>
+ <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 font-mono block">
+ Historical Data Permanent Retention Active
+ </span>
+ <span className="text-[9px] text-zinc-400 font-medium">
+ Compliant with corporate and regulatory audit policies.
+ </span>
+ </div>
+ </div>
+ 
+ <div className="text-[10.5px] text-zinc-300 leading-relaxed space-y-2">
+ <p>
+ TilePoint is strictly configured to protect core business archives. High-integrity records including <strong>sales invoices, general ledger journals, cashier shift history, and corporate audit logs</strong> can never be automatically deleted or recycled.
+ </p>
+ <p className="text-zinc-400 text-[9.5px]">
+ All historical transactions—including those from previous calendar years—are stored safely within the browser index and device snapshots. Standard purging or clean-up operations cannot affect archived sales ledger data, guaranteeing 100% long-term visibility.
+ </p>
+ </div>
 
-                          <div className="flex items-center justify-between p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[9.5px] font-bold text-emerald-400 font-mono uppercase tracking-wide">
-                            <span>Compliance Status:</span>
-                            <span className="flex items-center gap-1">
-                              <span className="h-1.5 w-1.5 bg-emerald-400 rounded-full animate-ping" />
-                              Immutable Sales Archives Locked
-                            </span>
-                          </div>
-                        </div>
+ <div className="flex items-center justify-between p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[9.5px] font-bold text-emerald-400 font-mono uppercase tracking-wide">
+ <span>Compliance Status:</span>
+ <span className="flex items-center gap-1">
+ <span className="h-1.5 w-1.5 bg-emerald-400 rounded-full animate-ping" />
+ Immutable Sales Archives Locked
+ </span>
+ </div>
+ </div>
 
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+ </div>
+ )}
+ </div>
+ )}
+ </div>
+ </div>
+ </div>
+ </div>
+ )}
 
-      {isShowingHandbook && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-[200] p-4 animate-fade-in font-sans">
-          <div className="absolute inset-0 bg-gray-950/80 backdrop-blur-md animate-fade-in" onClick={() => { setIsShowingHandbook(false); setIsOpen(true); }} />
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            id="tilepoint-printable-handbook"
-            className="relative w-full max-w-4xl rounded-[32px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-5 max-h-[90vh] overflow-hidden flex flex-col"
-          >
-            {/* Header Block */}
-            <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-4 shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-m3-primary/10 text-m3-primary rounded-xl">
-                  <BookOpen className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-m3-primary uppercase tracking-widest leading-none">
-                    TilePoint Systems Guided Handbook
-                  </h3>
-                  <span className="text-[10px] text-zinc-400 font-mono mt-1 block">
-                    Official Reference Operations Manual • Build Version 2.5.0 (Audited)
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsShowingHandbook(false);
-                  setIsOpen(true);
-                }}
-                className="p-1.5 rounded-full hover:bg-m3-outline-variant/15 text-m3-on-surface-variant cursor-pointer transition-colors"
-                aria-label="Close Handbook"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+ {isShowingHandbook && (
+ <div className="fixed inset-0 bg-transparent flex items-center justify-center z-[200] p-4 animate-fade-in font-sans">
+ <div className="absolute inset-0 bg-gray-950/80 backdrop-blur-md animate-fade-in" onClick={() => { setIsShowingHandbook(false); setIsOpen(true); }} />
+ <motion.div
+ initial={{ scale: 0.95, opacity: 0 }}
+ animate={{ scale: 1, opacity: 1 }}
+ exit={{ scale: 0.95, opacity: 0 }}
+ id="tilepoint-printable-handbook"
+ className="relative w-full max-w-4xl rounded-[32px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-5 max-h-[90vh] overflow-hidden flex flex-col"
+ >
+ {/* Header Block */}
+ <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-4 shrink-0">
+ <div className="flex items-center gap-2.5">
+ <div className="p-2 bg-m3-primary/10 text-m3-primary rounded-xl">
+ <BookOpen className="h-5 w-5" />
+ </div>
+ <div>
+ <h3 className="text-sm font-black text-m3-primary uppercase tracking-widest leading-none">
+ TilePoint Systems Guided Handbook
+ </h3>
+ <span className="text-[10px] text-zinc-400 font-mono mt-1 block">
+ Official Reference Operations Manual • Build Version 2.5.0 (Audited)
+ </span>
+ </div>
+ </div>
+ <button
+ type="button"
+ onClick={() => {
+ setIsShowingHandbook(false);
+ setIsOpen(true);
+ }}
+ className="p-1.5 rounded-full hover:bg-m3-outline-variant/15 text-m3-on-surface-variant cursor-pointer transition-colors"
+ aria-label="Close Handbook"
+ >
+ <X className="h-5 w-5" />
+ </button>
+ </div>
 
-            {/* Quick search input header */}
-            <div className="p-3 bg-m3-surface-lowest rounded-2xl border border-m3-outline-variant/10 flex items-center gap-2 shrink-0">
-              <Search className="h-4 w-4 text-zinc-400 shrink-0" />
-              <input
-                type="text"
-                placeholder="Search systems manual chapters or frequently asked questions (FAQs)..."
-                value={faqSearch}
-                onChange={(e) => setFaqSearch(e.target.value)}
-                className="w-full bg-transparent text-xs text-m3-on-surface placeholder-zinc-500 border-0 focus:outline-none"
-              />
-              {faqSearch && (
-                <button
-                  type="button"
-                  onClick={() => setFaqSearch('')}
-                  className="p-1 rounded-full text-zinc-400 hover:text-white hover:bg-m3-outline-variant/20 text-[10px] uppercase font-mono font-bold cursor-pointer"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
+ {/* Quick search input header */}
+ <div className="p-3 bg-m3-surface-lowest rounded-2xl border border-m3-outline-variant/10 flex items-center gap-2 shrink-0">
+ <Search className="h-4 w-4 text-zinc-400 shrink-0" />
+ <input
+ type="text"
+ placeholder="Search systems manual chapters or frequently asked questions (FAQs)..."
+ value={faqSearch}
+ onChange={(e) => setFaqSearch(e.target.value)}
+ className="w-full bg-transparent text-xs text-m3-on-surface placeholder-zinc-500 border-0 focus:outline-none"
+ />
+ {faqSearch && (
+ <button
+ type="button"
+ onClick={() => setFaqSearch('')}
+ className="p-1 rounded-full text-zinc-400 hover:text-white hover:bg-m3-outline-variant/20 text-[10px] uppercase font-mono font-bold cursor-pointer"
+ >
+ Clear
+ </button>
+ )}
+ </div>
 
-            {/* Scrollable Document Body */}
-            <div className="flex-1 overflow-y-auto space-y-6 pr-2 scrollbar-thin scrollbar-thumb-m3-outline-variant">
-              {/* CHAPTERS INDEX SECTION */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-450 font-mono">
-                    System Core Features &amp; Modules
-                  </h4>
-                  <span className="text-[9px] text-m3-primary font-bold bg-m3-primary/10 px-2 py-0.5 rounded-full font-mono">
-                    Chapters 1 - 8
-                  </span>
-                </div>
+ {/* Scrollable Document Body */}
+ <div className="flex-1 overflow-y-auto space-y-6 pr-2 scrollbar-thin scrollbar-thumb-m3-outline-variant">
+ {/* CHAPTERS INDEX SECTION */}
+ <div className="space-y-4">
+ <div className="flex items-center justify-between">
+ <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-450 font-mono">
+ System Core Features &amp; Modules
+ </h4>
+ <span className="text-[9px] text-m3-primary font-bold bg-m3-primary/10 px-2 py-0.5 rounded-full font-mono">
+ Chapters 1 - 8
+ </span>
+ </div>
 
-                <div className="grid grid-cols-1 gap-4">
-                  {/* Chapter 1 */}
-                  {ch1Visible && (
-                    <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
-                      <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
-                        <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 1</span>
-                        The ERP OS Checkout Desk &amp; Area Estimators
-                      </h4>
-                      <p className="text-[11px] text-zinc-350 leading-relaxed">
-                        The ERP OS Checkout Desk accepts real-time barcode scans, manual item code lookups, and direct SKU lookups.
-                      </p>
-                      <ul className="list-disc pl-5 text-[10.5px] text-zinc-400 space-y-1 mt-2 font-mono">
-                        <li>Use the <strong className="text-zinc-200">Interactive Tile Coverage Estimator</strong> to dynamically translate physical floor dimensions (length and width in meters) into exact retail tile box counts.</li>
-                        <li>Adapts standard wastage overrides (+5% standard grid bonds, +10% diagonal cuts) to prevent shortfalls over tile clipping boundaries.</li>
-                        <li>Tendering handles precise decimal change calculations, printing receipt vouchers, and instantly subtracting sold quantities from active branch inventories.</li>
-                      </ul>
-                    </div>
-                  )}
+ <div className="grid grid-cols-1 gap-4">
+ {/* Chapter 1 */}
+ {ch1Visible && (
+ <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
+ <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
+ <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 1</span>
+ The ERP OS Checkout Desk &amp; Area Estimators
+ </h4>
+ <p className="text-[11px] text-zinc-350 leading-relaxed">
+ The ERP OS Checkout Desk accepts real-time barcode scans, manual item code lookups, and direct SKU lookups.
+ </p>
+ <ul className="list-disc pl-5 text-[10.5px] text-zinc-400 space-y-1 mt-2 font-mono">
+ <li>Use the <strong className="text-zinc-200">Interactive Tile Coverage Estimator</strong> to dynamically translate physical floor dimensions (length and width in meters) into exact retail tile box counts.</li>
+ <li>Adapts standard wastage overrides (+5% standard grid bonds, +10% diagonal cuts) to prevent shortfalls over tile clipping boundaries.</li>
+ <li>Tendering handles precise decimal change calculations, printing receipt vouchers, and instantly subtracting sold quantities from active branch inventories.</li>
+ </ul>
+ </div>
+ )}
 
-                  {/* Chapter 2 */}
-                  {ch2Visible && (
-                    <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
-                      <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
-                        <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 2</span>
-                        Regional Warehouse Stock &amp; Unified Pools View
-                      </h4>
-                      <p className="text-[11px] text-zinc-350 leading-relaxed">
-                        Administrators possess master privileges to analyze global stocking pipelines on-screen.
-                      </p>
-                      <ul className="list-disc pl-5 text-[10.5px] text-zinc-400 space-y-1 mt-2 font-mono">
-                        <li>The <strong className="text-zinc-200">Unified Global Pools</strong> (Ledger sub-tab) lists comparative stock levels side-by-side across all active branches.</li>
-                        <li>Branch filters filter main catalog lists. A consolidated dropdown is available to verify stock indices across multiple depots simultaneously.</li>
-                        <li>Automated visual flags indicate stock health: <span className="text-emerald-400">In Stock</span>, <span className="text-amber-500/90">Low Stock</span>, or <span className="text-red-400">Critical Warning</span>.</li>
-                      </ul>
-                    </div>
-                  )}
+ {/* Chapter 2 */}
+ {ch2Visible && (
+ <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
+ <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
+ <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 2</span>
+ Regional Warehouse Stock &amp; Unified Pools View
+ </h4>
+ <p className="text-[11px] text-zinc-350 leading-relaxed">
+ Administrators possess master privileges to analyze global stocking pipelines on-screen.
+ </p>
+ <ul className="list-disc pl-5 text-[10.5px] text-zinc-400 space-y-1 mt-2 font-mono">
+ <li>The <strong className="text-zinc-200">Unified Global Pools</strong> (Ledger sub-tab) lists comparative stock levels side-by-side across all active branches.</li>
+ <li>Branch filters filter main catalog lists. A consolidated dropdown is available to verify stock indices across multiple depots simultaneously.</li>
+ <li>Automated visual flags indicate stock health: <span className="text-emerald-400">In Stock</span>, <span className="text-amber-500/90">Low Stock</span>, or <span className="text-red-400">Critical Warning</span>.</li>
+ </ul>
+ </div>
+ )}
 
-                  {/* Chapter 3 */}
-                  {ch3Visible && (
-                    <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
-                      <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
-                        <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 3</span>
-                        Custom Alert Threshold Overrides
-                      </h4>
-                      <p className="text-[11px] text-zinc-350 leading-relaxed">
-                        Since different locations experience unique sales velocities, low-stock trigger boundaries can be custom-defined at a local level.
-                      </p>
-                      <ul className="list-disc pl-5 text-[10.5px] text-zinc-400 space-y-1 mt-2 font-mono">
-                        <li>Each tile preserves a master baseline minimum threshold designated at registration.</li>
-                        <li>From the product detail editor, branch managers can submit localized <strong className="text-zinc-200">Alert Overrides</strong> that apply uniquely to their specific branch codes.</li>
-                        <li>Overrides trigger amber alert status rows inside the central lists for local reorder warning awareness.</li>
-                      </ul>
-                    </div>
-                  )}
+ {/* Chapter 3 */}
+ {ch3Visible && (
+ <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
+ <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
+ <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 3</span>
+ Custom Alert Threshold Overrides
+ </h4>
+ <p className="text-[11px] text-zinc-350 leading-relaxed">
+ Since different locations experience unique sales velocities, low-stock trigger boundaries can be custom-defined at a local level.
+ </p>
+ <ul className="list-disc pl-5 text-[10.5px] text-zinc-400 space-y-1 mt-2 font-mono">
+ <li>Each tile preserves a master baseline minimum threshold designated at registration.</li>
+ <li>From the product detail editor, branch managers can submit localized <strong className="text-zinc-200">Alert Overrides</strong> that apply uniquely to their specific branch codes.</li>
+ <li>Overrides trigger amber alert status rows inside the central lists for local reorder warning awareness.</li>
+ </ul>
+ </div>
+ )}
 
-                  {/* Chapter 4 */}
-                  {ch4Visible && (
-                    <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
-                      <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
-                        <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 4</span>
-                        Inter-Branch Stock Transfers &amp; Verification Chain
-                      </h4>
-                      <p className="text-[11px] text-zinc-350 leading-relaxed">
-                        Stock dispatches are regulated by a multi-stage, double-entry reconciliation pipeline.
-                      </p>
-                      <ul className="list-disc pl-5 text-[10.5px] text-zinc-400 space-y-1 mt-2 font-mono">
-                        <li>Dispatches create a formal <strong className="text-zinc-200">Transfer Invoice</strong> that deducts quantities from the origin branch's active inventory immediately and sets it to "Transit" state.</li>
-                        <li>The destination branch's inventory will NOT increment until a destination operator physically inspects and approves the shipment.</li>
-                        <li>Clicking <strong className="text-zinc-350">Acknowledge Receipt &amp; Add Stock</strong> merges the items into target pools, committing the double-entry transaction.</li>
-                      </ul>
-                    </div>
-                  )}
+ {/* Chapter 4 */}
+ {ch4Visible && (
+ <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
+ <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
+ <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 4</span>
+ Inter-Branch Stock Transfers &amp; Verification Chain
+ </h4>
+ <p className="text-[11px] text-zinc-350 leading-relaxed">
+ Stock dispatches are regulated by a multi-stage, double-entry reconciliation pipeline.
+ </p>
+ <ul className="list-disc pl-5 text-[10.5px] text-zinc-400 space-y-1 mt-2 font-mono">
+ <li>Dispatches create a formal <strong className="text-zinc-200">Transfer Invoice</strong> that deducts quantities from the origin branch's active inventory immediately and sets it to "Transit" state.</li>
+ <li>The destination branch's inventory will NOT increment until a destination operator physically inspects and approves the shipment.</li>
+ <li>Clicking <strong className="text-zinc-350">Acknowledge Receipt &amp; Add Stock</strong> merges the items into target pools, committing the double-entry transaction.</li>
+ </ul>
+ </div>
+ )}
 
-                  {/* Chapter 5 */}
-                  {ch5Visible && (
-                    <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
-                      <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
-                        <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 5</span>
-                        Shift Control, Daily Drawer Balancing &amp; Audits
-                      </h4>
-                      <p className="text-[11px] text-zinc-350 leading-relaxed">
-                        Secure cash drawer compliance and operations control are driven by local shift events.
-                      </p>
-                      <ul className="list-disc pl-5 text-[10.5px] text-zinc-400 space-y-1 mt-2 font-mono">
-                        <li>Cashiers open shifts by logging a physical <strong className="text-zinc-200">Starting Cash Float</strong> inside the active register interface.</li>
-                        <li>All offline sales journals are aggregated against cash and digital credit payments inside the shift module.</li>
-                        <li>Closing shifts requires logging a final drawers count to isolate cash discrepancies, which are committed as audited records.</li>
-                      </ul>
-                    </div>
-                  )}
+ {/* Chapter 5 */}
+ {ch5Visible && (
+ <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
+ <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
+ <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 5</span>
+ Shift Control, Daily Drawer Balancing &amp; Audits
+ </h4>
+ <p className="text-[11px] text-zinc-350 leading-relaxed">
+ Secure cash drawer compliance and operations control are driven by local shift events.
+ </p>
+ <ul className="list-disc pl-5 text-[10.5px] text-zinc-400 space-y-1 mt-2 font-mono">
+ <li>Cashiers open shifts by logging a physical <strong className="text-zinc-200">Starting Cash Float</strong> inside the active register interface.</li>
+ <li>All offline sales journals are aggregated against cash and digital credit payments inside the shift module.</li>
+ <li>Closing shifts requires logging a final drawers count to isolate cash discrepancies, which are committed as audited records.</li>
+ </ul>
+ </div>
+ )}
 
-                  {/* Chapter 6 */}
-                  {ch6Visible && (
-                    <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
-                      <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
-                        <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 6</span>
-                        Multi-Format Sales Reporting, CSVs &amp; Print PDFs
-                      </h4>
-                      <p className="text-[11px] text-zinc-350 leading-relaxed">
-                        To maintain rigorous retail compliance, TilePoint supports high-fidelity output exports for managers.
-                      </p>
-                      <ul className="list-disc pl-5 text-[10.5px] text-zinc-400 space-y-1 mt-2 font-mono">
-                        <li>Daily summary sheets can be compiled into standard <strong className="text-zinc-200">Raw CSV</strong> files or formatted <strong className="text-zinc-200">Excel Templates</strong> featuring formatted columns.</li>
-                        <li>The <strong className="text-zinc-200">Sales Print Modal</strong> builds formal visual papers including structured pricing pools, item invoice listings, and operator signature spots.</li>
-                        <li>Click <em className="text-zinc-150">Trigger System Print</em> inside the modal to output to paper or select <em className="text-zinc-150">"Save as PDF"</em> to write digital PDF files.</li>
-                      </ul>
-                    </div>
-                  )}
+ {/* Chapter 6 */}
+ {ch6Visible && (
+ <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
+ <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
+ <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 6</span>
+ Multi-Format Sales Reporting, CSVs &amp; Print PDFs
+ </h4>
+ <p className="text-[11px] text-zinc-350 leading-relaxed">
+ To maintain rigorous retail compliance, TilePoint supports high-fidelity output exports for managers.
+ </p>
+ <ul className="list-disc pl-5 text-[10.5px] text-zinc-400 space-y-1 mt-2 font-mono">
+ <li>Daily summary sheets can be compiled into standard <strong className="text-zinc-200">Raw CSV</strong> files or formatted <strong className="text-zinc-200">Excel Templates</strong> featuring formatted columns.</li>
+ <li>The <strong className="text-zinc-200">Sales Print Modal</strong> builds formal visual papers including structured pricing pools, item invoice listings, and operator signature spots.</li>
+ <li>Click <em className="text-zinc-150">Trigger System Print</em> inside the modal to output to paper or select <em className="text-zinc-150">"Save as PDF"</em> to write digital PDF files.</li>
+ </ul>
+ </div>
+ )}
 
-                  {/* Chapter 7 */}
-                  {ch7Visible && (
-                    <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
-                      <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
-                        <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 7</span>
-                        Damage Registers, Wastage Logs &amp; Loss Write-Offs
-                      </h4>
-                      <p className="text-[11px] text-zinc-350 leading-relaxed">
-                        Handles damaged stock reconciliation for cracked, shattered, or flawed inventory.
-                      </p>
-                      <ul className="list-disc pl-5 text-[10.5px] text-zinc-400 space-y-1 mt-2 font-mono">
-                        <li>Broken tiles must be logged inside the <strong className="text-zinc-200">Damage Register Module</strong> by entering specific product codes, quantities, and detailed causes.</li>
-                        <li>Submitting a damage voucher instantly writeoff the target branch's stocks and adds historical entries down the general ledger.</li>
-                        <li>Ensures precise inventory costs valuation by separating shrinkage (wastage) losses from regular sales records.</li>
-                      </ul>
-                    </div>
-                  )}
+ {/* Chapter 7 */}
+ {ch7Visible && (
+ <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
+ <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
+ <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 7</span>
+ Damage Registers, Wastage Logs &amp; Loss Write-Offs
+ </h4>
+ <p className="text-[11px] text-zinc-350 leading-relaxed">
+ Handles damaged stock reconciliation for cracked, shattered, or flawed inventory.
+ </p>
+ <ul className="list-disc pl-5 text-[10.5px] text-zinc-400 space-y-1 mt-2 font-mono">
+ <li>Broken tiles must be logged inside the <strong className="text-zinc-200">Damage Register Module</strong> by entering specific product codes, quantities, and detailed causes.</li>
+ <li>Submitting a damage voucher instantly writeoff the target branch's stocks and adds historical entries down the general ledger.</li>
+ <li>Ensures precise inventory costs valuation by separating shrinkage (wastage) losses from regular sales records.</li>
+ </ul>
+ </div>
+ )}
 
-                  {/* Chapter 8 */}
-                  {ch8Visible && (
-                    <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
-                      <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
-                        <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 8</span>
-                        Access Control Security &amp; Lockout Rules
-                      </h4>
-                      <p className="text-[11px] text-zinc-350 leading-relaxed">
-                        Rigorous role-based security prevents unauthorized edits and maintains system integrity.
-                      </p>
-                      <ul className="list-disc pl-5 text-[10.5px] text-zinc-400 space-y-1 mt-2 font-mono">
-                        <li>Core actions are gated by explicit credentials. Standard sales desks prevent workers from altering records or viewing other branch balances.</li>
-                        <li>Under professional standards, login panels enforce an automated <strong className="text-zinc-200">Security Intrusion Lockout</strong>. If a user enters an incorrect passcode five consecutive times, the console blocks access to prevent database breaches.</li>
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              </div>
+ {/* Chapter 8 */}
+ {ch8Visible && (
+ <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/10 hover:border-m3-primary/20 transition-colors">
+ <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider mb-2 font-mono flex items-center gap-1.5">
+ <span className="px-1.5 py-0.5 bg-m3-primary/10 rounded text-[9px]">CH 8</span>
+ Access Control Security &amp; Lockout Rules
+ </h4>
+ <p className="text-[11px] text-zinc-350 leading-relaxed">
+ Rigorous role-based security prevents unauthorized edits and maintains system integrity.
+ </p>
+ <ul className="list-disc pl-5 text-[10.5px] text-zinc-400 space-y-1 mt-2 font-mono">
+ <li>Core actions are gated by explicit credentials. Standard sales desks prevent workers from altering records or viewing other branch balances.</li>
+ <li>Under professional standards, login panels enforce an automated <strong className="text-zinc-200">Security Intrusion Lockout</strong>. If a user enters an incorrect passcode five consecutive times, the console blocks access to prevent database breaches.</li>
+ </ul>
+ </div>
+ )}
+ </div>
+ </div>
 
-              {/* SYSTEM FAQ INTERACTIVE SECTION */}
-              <div className="space-y-4 pt-4 border-t border-m3-outline-variant/15">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-[#71717a] font-mono flex items-center gap-1.5">
-                    <HelpCircle className="h-4 w-4 text-m3-primary" />
-                    <span>Frequently Asked Questions (System Q&amp;As)</span>
-                  </h4>
-                  <span className="text-[8px] font-bold text-emerald-400 bg-emerald-950/30 border border-emerald-500/20 px-2 py-0.5 rounded uppercase tracking-wider font-mono">
-                    Search Active
-                  </span>
-                </div>
+ {/* SYSTEM FAQ INTERACTIVE SECTION */}
+ <div className="space-y-4 pt-4 border-t border-m3-outline-variant/15">
+ <div className="flex items-center justify-between">
+ <h4 className="text-[10px] font-black uppercase tracking-widest text-[#71717a] font-mono flex items-center gap-1.5">
+ <HelpCircle className="h-4 w-4 text-m3-primary" />
+ <span>Frequently Asked Questions (System Q&amp;As)</span>
+ </h4>
+ <span className="text-[8px] font-bold text-emerald-400 bg-emerald-950/30 border border-emerald-500/20 px-2 py-0.5 rounded uppercase tracking-wider font-mono">
+ Search Active
+ </span>
+ </div>
 
-                <div className="space-y-2.5">
-                  {(() => {
-                    const faqs = [
-                      {
-                        q: "How can the Administrator check the inventory of specific branches?",
-                        a: "There are two official methods to check branch stocks: (1) Use the primary Branch Filter Dropdown at the top of the main stock table to isolate listing balances for Cebu Main, Bacolod, Iloilo, or Dumaguete. (2) For a comprehensive comparative view, go to the 'Ledger & Heatmap' tab. The 'Unified Global Pools Matrix' and 'Multi-Branch Heatmap' show quantities side-by-side for all live depots simultaneously."
-                      },
-                      {
-                        q: "How can the Admin verify if physical stocks match digital inventory records?",
-                        a: "Admins perform an inventory count on-site (a physical stocktake). If a discrepancy is identified (e.g. theft, physical recounts, or clerical slip-ups), use the Ledger sub-tab then click 'Manual Stock Correction'. Insert a matching balancing record with movement type 'ADJUST' indicating the discrepancy value (positive/negative delta). This modifies the digital ledger to perfectly synchronize with physical floor counts while creating an immutable double-entry audit log."
-                      },
-                      {
-                        q: "What user roles are authorized to export sales reports?",
-                        a: "For security and tax integrity, only users assigned the Admin (Administrator) or Manager (Branch Manager) role are permitted to export raw sales reports. Standard cashiers or register clerks do not have access and see warning indicators."
-                      },
-                      {
-                        q: "What options are available for exporting sales reports?",
-                        a: "TilePoint supports four core formats: (1) Standard CSV: Raw analytical values. (2) Excel Spreadsheet: Formatted matrix suited for spreadsheets. (3) System Print: High-fidelity voucher layouts for printing. (4) Save PDF: Digital document printing destination option."
-                      },
-                      {
-                        q: "How do I print a sales report or export/save it as a PDF?",
-                        a: "To output reports: (1) Choose the report inside the active Draft Daily sheet or Transmitted archives. (2) Click the 'Print PDF' button. (3) Inside the preview modal, click 'Trigger System Print'. (4) In the native dialog that opens, pick a local office printer. Alternatively, select 'Save as PDF' or 'Microsoft Print to PDF' to save a digital copy."
-                      },
-                      {
-                        q: "How does the Inter-Branch Transfer double-entry pipeline prevent inventory leaks?",
-                        a: "Transfers are completely decoupled. When a transfer starts, items are deducted from the sender's stock immediately and placed in a transit bucket. The target branch's inventory is NOT incremented until an authorized destination manager receives the delivery and clicks 'Acknowledge Receipt & Add Stock'. This prevents losses during transport."
-                      },
-                      {
-                        q: "What happens if a user enters incorrect passwords multiple times?",
-                        a: "If a user enters an incorrect security PIN or password 5 consecutive times, the system triggers the automatic login lockout mechanism, locking the user out to protect database profiles from unauthorized brute-force attempts."
-                      },
-                      {
-                        q: "Are sales registers preserved if the network connection drops?",
-                        a: "Yes. Cashier sales are collected offline into safe local browser storage journals. When connection is recovered, drafts can be transmitted safely to the unified database clusters."
-                      }
-                    ];
+ <div className="space-y-2.5">
+ {(() => {
+ const faqs = [
+ {
+ q: "How can the Administrator check the inventory of specific branches?",
+ a: "There are two official methods to check branch stocks: (1) Use the primary Branch Filter Dropdown at the top of the main stock table to isolate listing balances for Cebu Main, Bacolod, Iloilo, or Dumaguete. (2) For a comprehensive comparative view, go to the 'Ledger & Heatmap' tab. The 'Unified Global Pools Matrix' and 'Multi-Branch Heatmap' show quantities side-by-side for all live depots simultaneously."
+ },
+ {
+ q: "How can the Admin verify if physical stocks match digital inventory records?",
+ a: "Admins perform an inventory count on-site (a physical stocktake). If a discrepancy is identified (e.g. theft, physical recounts, or clerical slip-ups), use the Ledger sub-tab then click 'Manual Stock Correction'. Insert a matching balancing record with movement type 'ADJUST' indicating the discrepancy value (positive/negative delta). This modifies the digital ledger to perfectly synchronize with physical floor counts while creating an immutable double-entry audit log."
+ },
+ {
+ q: "What user roles are authorized to export sales reports?",
+ a: "For security and tax integrity, only users assigned the Admin (Administrator) or Manager (Branch Manager) role are permitted to export raw sales reports. Standard cashiers or register clerks do not have access and see warning indicators."
+ },
+ {
+ q: "What options are available for exporting sales reports?",
+ a: "TilePoint supports four core formats: (1) Standard CSV: Raw analytical values. (2) Excel Spreadsheet: Formatted matrix suited for spreadsheets. (3) System Print: High-fidelity voucher layouts for printing. (4) Save PDF: Digital document printing destination option."
+ },
+ {
+ q: "How do I print a sales report or export/save it as a PDF?",
+ a: "To output reports: (1) Choose the report inside the active Draft Daily sheet or Transmitted archives. (2) Click the 'Print PDF' button. (3) Inside the preview modal, click 'Trigger System Print'. (4) In the native dialog that opens, pick a local office printer. Alternatively, select 'Save as PDF' or 'Microsoft Print to PDF' to save a digital copy."
+ },
+ {
+ q: "How does the Inter-Branch Transfer double-entry pipeline prevent inventory leaks?",
+ a: "Transfers are completely decoupled. When a transfer starts, items are deducted from the sender's stock immediately and placed in a transit bucket. The target branch's inventory is NOT incremented until an authorized destination manager receives the delivery and clicks 'Acknowledge Receipt & Add Stock'. This prevents losses during transport."
+ },
+ {
+ q: "What happens if a user enters incorrect passwords multiple times?",
+ a: "If a user enters an incorrect security PIN or password 5 consecutive times, the system triggers the automatic login lockout mechanism, locking the user out to protect database profiles from unauthorized brute-force attempts."
+ },
+ {
+ q: "Are sales registers preserved if the network connection drops?",
+ a: "Yes. Cashier sales are collected offline into safe local browser storage journals. When connection is recovered, drafts can be transmitted safely to the unified database clusters."
+ }
+ ];
 
-                    const matchedFaqs = faqs.filter(faq => {
-                      if (!faqSearch) return true;
-                      const cleanSearch = faqSearch.toLowerCase().trim();
-                      const searchTerms = cleanSearch.split(/\s+/).filter(Boolean);
-                      const combinedText = `${faq.q} ${faq.a}`.toLowerCase();
-                      return searchTerms.every(term => combinedText.includes(term));
-                    });
+ const matchedFaqs = faqs.filter(faq => {
+ if (!faqSearch) return true;
+ const cleanSearch = faqSearch.toLowerCase().trim();
+ const searchTerms = cleanSearch.split(/\s+/).filter(Boolean);
+ const combinedText = `${faq.q} ${faq.a}`.toLowerCase();
+ return searchTerms.every(term => combinedText.includes(term));
+ });
 
-                    return (
-                      <>
-                        {matchedFaqs.map((faq, index) => {
-                          const isOpen = activeFaq === index;
-                          return (
-                            <div
-                              key={index}
-                              className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 hover:border-m3-outline-variant/25 transition-all text-left"
-                            >
-                              <button
-                                type="button"
-                                onClick={() => setActiveFaq(isOpen ? null : index)}
-                                className="w-full flex items-center justify-between text-left text-xs font-black text-m3-on-surface hover:text-m3-primary font-mono select-none"
-                              >
-                                <span className="pr-4">{faq.q}</span>
-                                {isOpen ? (
-                                  <ChevronUp className="h-4 w-4 shrink-0 text-m3-primary animate-pulse" />
-                                ) : (
-                                  <ChevronDown className="h-4 w-4 shrink-0 text-zinc-500 hover:text-m3-primary" />
-                                )}
-                              </button>
-                              {isOpen && (
-                                <div className="mt-2.5 pt-2.5 border-t border-m3-outline-variant/5 text-[11px] text-zinc-300 leading-relaxed font-sans">
-                                  {faq.a}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
+ return (
+ <>
+ {matchedFaqs.map((faq, index) => {
+ const isOpen = activeFaq === index;
+ return (
+ <div
+ key={index}
+ className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 hover:border-m3-outline-variant/25 transition-all text-left"
+ >
+ <button
+ type="button"
+ onClick={() => setActiveFaq(isOpen ? null : index)}
+ className="w-full flex items-center justify-between text-left text-xs font-black text-m3-on-surface hover:text-m3-primary font-mono select-none"
+ >
+ <span className="pr-4">{faq.q}</span>
+ {isOpen ? (
+ <ChevronUp className="h-4 w-4 shrink-0 text-m3-primary animate-pulse" />
+ ) : (
+ <ChevronDown className="h-4 w-4 shrink-0 text-zinc-500 hover:text-m3-primary" />
+ )}
+ </button>
+ {isOpen && (
+ <div className="mt-2.5 pt-2.5 border-t border-m3-outline-variant/5 text-[11px] text-zinc-300 leading-relaxed font-sans">
+ {faq.a}
+ </div>
+ )}
+ </div>
+ );
+ })}
 
-                        {!anyChapterVisible && matchedFaqs.length === 0 && (
-                          <div className="text-center py-6 text-zinc-500 italic text-xs">
-                            No matching manual chapters or FAQ questions found for your query. Try a different search term like "inventory" or "print".
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
-                </div>
-              </div>
-            </div>
+ {!anyChapterVisible && matchedFaqs.length === 0 && (
+ <div className="text-center py-6 text-zinc-500 italic text-xs">
+ No matching manual chapters or FAQ questions found for your query. Try a different search term like "inventory" or "print".
+ </div>
+ )}
+ </>
+ );
+ })()}
+ </div>
+ </div>
+ </div>
 
-            {/* Modal Footer Controls */}
-            <div className="border-t border-m3-outline-variant/15 pt-4 flex flex-wrap gap-4 items-center justify-between shrink-0">
-              <span className="text-[10px] font-mono text-zinc-400">
-                Official Guided Operational Directive • Authorized Version
-              </span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsShowingHandbook(false);
-                    setIsOpen(true);
-                  }}
-                  className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-white rounded-full transition-all cursor-pointer font-mono"
-                >
-                  Dismiss
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    window.print();
-                    triggerToast('Initiated printable operations guide layout download.', 'success');
-                  }}
-                  className="px-5 py-2 bg-m3-primary hover:bg-m3-primary/95 text-m3-on-primary font-black text-xs uppercase tracking-wide rounded-full shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
-                >
-                  <Printer className="h-4 w-4" />
-                  <span>Print Reference Manual</span>
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      )}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-60 bg-m3-surface-low border border-emerald-500/30 text-emerald-400 font-mono text-[10px] uppercase font-bold tracking-widest px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 animate-fade-in">
-          <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
-    </>
-  );
+ {/* Modal Footer Controls */}
+ <div className="border-t border-m3-outline-variant/15 pt-4 flex flex-wrap gap-4 items-center justify-between shrink-0">
+ <span className="text-[10px] font-mono text-zinc-400">
+ Official Guided Operational Directive • Authorized Version
+ </span>
+ <div className="flex gap-2">
+ <button
+ type="button"
+ onClick={() => {
+ setIsShowingHandbook(false);
+ setIsOpen(true);
+ }}
+ className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-white rounded-full transition-all cursor-pointer font-mono"
+ >
+ Dismiss
+ </button>
+ <button
+ type="button"
+ onClick={() => {
+ window.print();
+ triggerToast('Initiated printable operations guide layout download.', 'success');
+ }}
+ className="px-5 py-2 bg-m3-primary hover:bg-m3-primary/95 text-m3-on-primary font-black text-xs uppercase tracking-wide rounded-full shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+ >
+ <Printer className="h-4 w-4" />
+ <span>Print Reference Manual</span>
+ </button>
+ </div>
+ </div>
+ </motion.div>
+ </div>
+ )}
+ {toastMessage && (
+ <div className="fixed bottom-6 right-6 z-60 bg-m3-surface-low border border-emerald-500/30 text-emerald-400 font-mono text-[10px] uppercase font-bold tracking-widest px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 animate-fade-in">
+ <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+ <span>{toastMessage}</span>
+ </div>
+ )}
+ </>
+ );
 }

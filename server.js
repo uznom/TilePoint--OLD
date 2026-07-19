@@ -12,6 +12,16 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 3000;
 
+// Simple request debug log to understand failing client fetches
+app.use((req, res, next) => {
+  const logFile = path.join(__dirname, 'server-debug.log');
+  const logEntry = `[${new Date().toISOString()}] ${req.method} ${req.url} - IP: ${req.ip} - UA: ${req.headers['user-agent']}\n`;
+  try {
+    fs.appendFileSync(logFile, logEntry);
+  } catch (err) {}
+  next();
+});
+
 // SSL Certificate configurations for local secure deployments (such as PM2 HTTPS)
 const SSL_KEY_PATH = process.env.SSL_KEY_PATH || path.join(__dirname, 'key.pem');
 const SSL_CERT_PATH = process.env.SSL_CERT_PATH || path.join(__dirname, 'cert.pem');
@@ -31,6 +41,19 @@ try {
   console.warn('[Shared DB Server] SSL config detected but could not load files:', error.message);
 }
 
+// --- SOLID CORS & PREFLIGHT MIDDLEWARE ---
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Session-Token, X-Client-ID');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 // Increase body payload size limit to accommodate larger database files (images, logs, catalogs)
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
@@ -40,7 +63,6 @@ app.use((req, res, next) => {
   // 1. Inject strict robots headers into all responses to prevent indexing of files, assets, and APIs
   res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   
   const userAgent = (req.headers['user-agent'] || '').toLowerCase();
   const clientIp = req.ip || req.connection.remoteAddress || '';
@@ -181,12 +203,16 @@ function verifyAndExtractToken(req) {
   }
 
   if (!token) {
+    console.warn("[Security Alert] Token is missing from the request headers.");
     return null;
   }
 
   try {
     const parts = token.split('.');
-    if (parts.length !== 2) return null;
+    if (parts.length !== 2) {
+      console.warn("[Security Alert] Token structure is invalid (must have 2 parts).");
+      return null;
+    }
 
     const [payloadBase64, signature] = parts;
     const expectedSignature = sha256Pure(payloadBase64 + "." + SECRET);
@@ -199,9 +225,10 @@ function verifyAndExtractToken(req) {
     const payloadJson = Buffer.from(payloadBase64, 'base64').toString('utf8');
     const payload = JSON.parse(payloadJson);
 
-    // Enforce expiry within 24 hours
-    if (Date.now() - payload.timestamp > 24 * 60 * 60 * 1000) {
-      console.warn("[Security Alert] Session token has expired.");
+    // Enforce expiry/skew within a more generous window (7 days) to prevent clock drift issues
+    const drift = Math.abs(Date.now() - payload.timestamp);
+    if (drift > 7 * 24 * 60 * 60 * 1000) {
+      console.warn(`[Security Alert] Session token has expired or clock drift is too large. Server: ${Date.now()}, Payload: ${payload.timestamp}, Drift: ${drift}ms`);
       return null;
     }
 
@@ -243,6 +270,7 @@ app.get('/api/db', (req, res) => {
   const db = readDatabase();
   const dbCopy = { ...db };
   delete dbCopy.tp_db_snapshots; // completely decouple backups to keep general sync lightweight
+  delete dbCopy.tp_processed_delta_ids; // exclude server-only delta IDs to keep sync payload compact
   res.json({
     success: true,
     timestamp: new Date().toISOString(),

@@ -1263,6 +1263,7 @@ html.accessibility-no-animation table tbody tr:hover td {
   .bir-receipt-container {
     background-color: #fcfcf9 !important; /* Soft ivory/white authentic thermal receipt paper */
     color: #111111 !important; /* Rich carbon black printed text style */
+    padding: 1.25rem !important; /* Elegant horizontal and vertical spacing on screen */
     border: 1px solid rgba(0, 0, 0, 0.15) !important;
     border-top: 4px solid #111111 !important; /* Simulated roll-starter top border */
     border-bottom: 8px dashed #cccccc !important; /* Simulated jagged tear-off bottom edge */
@@ -1273,28 +1274,34 @@ html.accessibility-no-animation table tbody tr:hover td {
     font-family: 'JetBrains Mono', 'Courier New', Courier, monospace !important;
   }
 
+  /* Ensure backgrounds of elements inside the receipt are transparent so they read perfectly on ivory */
+  .bir-receipt-container *:not(.bir-report-no-print):not(.bir-report-no-print *):not(img):not(.bg-white) {
+    background-color: transparent !important;
+    background: transparent !important;
+  }
+
   /* Force monochrome high-contrast carbon black colors for all inner typography */
-  .bir-receipt-container *,
-  .bir-receipt-container span,
-  .bir-receipt-container p,
-  .bir-receipt-container div,
-  .bir-receipt-container h3,
-  .bir-receipt-container h4 {
+  .bir-receipt-container *:not(.bir-report-no-print):not(.bir-report-no-print *),
+  .bir-receipt-container span:not(.bir-report-no-print):not(.bir-report-no-print *),
+  .bir-receipt-container p:not(.bir-report-no-print):not(.bir-report-no-print *),
+  .bir-receipt-container div:not(.bir-report-no-print):not(.bir-report-no-print *),
+  .bir-receipt-container h3:not(.bir-report-no-print):not(.bir-report-no-print *),
+  .bir-receipt-container h4:not(.bir-report-no-print):not(.bir-report-no-print *) {
     color: #111111 !important;
     font-family: 'JetBrains Mono', 'Courier New', Courier, monospace !important;
     text-shadow: none !important;
   }
 
   /* Override specific Tailwind brand colors/accents to keep the layout realistic monochrome black on ivory */
-  .bir-receipt-container [class*="text-m3-"],
-  .bir-receipt-container [class*="text-zinc-"],
-  .bir-receipt-container [class*="text-gray-"],
-  .bir-receipt-container [class*="text-neutral-"],
-  .bir-receipt-container [class*="text-amber-"],
-  .bir-receipt-container [class*="text-emerald-"],
-  .bir-receipt-container [class*="text-red-"],
-  .bir-receipt-container [class*="text-primary"],
-  .bir-receipt-container .font-black {
+  .bir-receipt-container [class*="text-m3-"]:not(.bir-report-no-print):not(.bir-report-no-print *),
+  .bir-receipt-container [class*="text-zinc-"]:not(.bir-report-no-print):not(.bir-report-no-print *),
+  .bir-receipt-container [class*="text-gray-"]:not(.bir-report-no-print):not(.bir-report-no-print *),
+  .bir-receipt-container [class*="text-neutral-"]:not(.bir-report-no-print):not(.bir-report-no-print *),
+  .bir-receipt-container [class*="text-amber-"]:not(.bir-report-no-print):not(.bir-report-no-print *),
+  .bir-receipt-container [class*="text-emerald-"]:not(.bir-report-no-print):not(.bir-report-no-print *),
+  .bir-receipt-container [class*="text-red-"]:not(.bir-report-no-print):not(.bir-report-no-print *),
+  .bir-receipt-container [class*="text-primary"]:not(.bir-report-no-print):not(.bir-report-no-print *),
+  .bir-receipt-container .font-black:not(.bir-report-no-print):not(.bir-report-no-print *) {
     color: #111111 !important;
   }
 
@@ -1340,7 +1347,36 @@ html.accessibility-no-animation table tbody tr:hover td {
   }
 
   .bir-receipt-container .bir-report-no-print * {
-    font-family: var(--font-sans) !important;
+    font-family: var(--font-sans), system-ui, sans-serif !important;
+  }
+
+  /* Specific color restoration rules to fix receipt preview action buttons */
+  .bir-receipt-container .bir-report-no-print button {
+    color: inherit !important;
+  }
+
+  .bir-receipt-container .bir-report-no-print button.bg-m3-primary,
+  .bir-receipt-container .bir-report-no-print button.bg-m3-tertiary,
+  .bir-receipt-container .bir-report-no-print button:not(.border) {
+    background-color: #111111 !important;
+    color: #ffffff !important;
+    border: none !important;
+  }
+
+  .bir-receipt-container .bir-report-no-print button.bg-m3-primary *,
+  .bir-receipt-container .bir-report-no-print button.bg-m3-tertiary *,
+  .bir-receipt-container .bir-report-no-print button:not(.border) * {
+    color: #ffffff !important;
+  }
+
+  .bir-receipt-container .bir-report-no-print button.border {
+    background-color: transparent !important;
+    color: #111111 !important;
+    border: 1px solid rgba(17, 17, 17, 0.4) !important;
+  }
+
+  .bir-receipt-container .bir-report-no-print button.border * {
+    color: #111111 !important;
   }
 
   /* High-contrast accessible buttons that fit the receipt theme beautifully on screen */

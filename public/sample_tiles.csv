@@ -1,0 +1,9 @@
+Tile Name,Product Code,SKU Code,Barcode,Category,Brand,Purchase Price,Selling Price,Dimensions,Quantity,Minimum Stock,Design Name,Supplier ID,Unit,Box Quantity,Location
+Carrara White Polished,T-CAR-6060,SKU-CARR-001,4801122334455,Porcelain,Ceramica Italica,450.00,850.00,60x60 cm,120,20,Carrara Marble,SUP-001,PCS,4,Warehouse A
+Calacatta Gold Matte,T-CAL-6012,SKU-CALG-002,4801122334462,Porcelain,Ceramica Italica,1150.00,2100.00,60x120 cm,85,15,Calacatta Gold,SUP-001,PCS,2,Warehouse A
+Rustic Slate Grey,T-RST-3060,SKU-RSLG-003,4801122334479,Ceramic,Terracotta Co.,180.00,380.00,30x60 cm,350,50,Rustic Stone,SUP-002,PCS,8,Warehouse B
+Spanish Terracotta,T-TER-3030,SKU-STER-004,4801122334486,Clay Ceramic,Iberia Tiles,120.00,280.00,30x30 cm,500,100,Traditional Terracotta,SUP-003,PCS,10,Warehouse B
+Royal Black Granite,T-BLK-6060,SKU-RBLK-005,4801122334493,Granite,Granite Masters,1350.00,2450.00,60x60 cm,40,10,Absolute Black,SUP-004,PCS,1,Warehouse A
+Emerald Green Glazed,T-EMR-1030,SKU-EGGL-006,4801122334509,Ceramic,Metro Backsplash,95.00,195.00,10x30 cm,1000,200,Beveled Subway,SUP-002,PCS,20,Warehouse B
+Wood Plank Walnut,T-WWD-1590,SKU-WPWN-007,4801122334516,Porcelain,Forest Wood Tiles,320.00,690.00,15x90 cm,240,40,Walnut Timber,SUP-005,PCS,6,Warehouse A
+Classic Travertine,T-TRA-4040,SKU-CTRA-008,4801122334523,Travertine,Iberia Tiles,650.00,1250.00,40x40 cm,150,30,Honed Travertine,SUP-003,PCS,6,Warehouse B
