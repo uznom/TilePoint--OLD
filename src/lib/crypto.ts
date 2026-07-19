@@ -312,7 +312,7 @@ export function generateSessionToken(user: { id: string; username: string; role:
  };
  const payloadJson = JSON.stringify(payload);
  const payloadBase64 = btoa(unescape(encodeURIComponent(payloadJson)));
- const secret = "TILEPOINT_SECURE_PERIMETER_HMAC_SECRET_2026";
+ const secret = import.meta.env.VITE_SECURITY_SECRET || "TILEPOINT_SECURE_PERIMETER_HMAC_FALLBACK_2026";
  const signature = sha256Pure(payloadBase64 + "." + secret);
  return `${payloadBase64}.${signature}`;
 }

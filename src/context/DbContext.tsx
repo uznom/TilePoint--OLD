@@ -945,7 +945,7 @@ export const decryptString = (cipherStr: string, secretKey: string): string => {
  * with security checks and a dynamically generated or environment-managed fallback seed to avoid forging of security signatures.
  */
 export const getSecuritySecretKey = (): string => {
- const envSecret = (import.meta as any).env?.VITE_SECURITY_SECRET;
+ const envSecret = import.meta.env.VITE_SECURITY_SECRET;
 
  // Validation wrapper checks:
  // 1. Must exist and not be empty
