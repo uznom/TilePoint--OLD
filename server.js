@@ -5,6 +5,9 @@ import http from 'http';
 import https from 'https';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -188,7 +191,7 @@ const runInTransaction = async (operationFn) => {
   return nextLock;
 };
 
-const SECRET = "TILEPOINT_SECURE_PERIMETER_HMAC_SECRET_2026";
+const SECRET = process.env.VITE_SECURITY_SECRET || "TILEPOINT_SECURE_PERIMETER_HMAC_FALLBACK_2026";
 
 function sha256Pure(str) {
   return crypto.createHash('sha256').update(str).digest('hex');
