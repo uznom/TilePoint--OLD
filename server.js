@@ -191,7 +191,11 @@ const runInTransaction = async (operationFn) => {
   return nextLock;
 };
 
-const SECRET = process.env.VITE_SECURITY_SECRET || "TILEPOINT_SECURE_PERIMETER_HMAC_FALLBACK_2026";
+const SECRET = process.env.VITE_SECURITY_SECRET;
+if (!SECRET) {
+  console.error("FATAL ERROR: VITE_SECURITY_SECRET environment variable is not set. A secure deployment requires this cryptographic key.");
+  process.exit(1);
+}
 
 function sha256Pure(str) {
   return crypto.createHash('sha256').update(str).digest('hex');
