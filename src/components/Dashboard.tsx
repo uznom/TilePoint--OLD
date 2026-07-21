@@ -424,70 +424,68 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  });
 
  // Slow moving Tile Aging data dynamically modeled based on active catalog products & assigned branches
- const getDynamicSlowMovingCandidates = () => {
- const list: Array<{
- productId: string;
- productName: string;
- branchId: string;
- branchName: string;
- daysUnsold: number;
- riskLevel: 'HIGH' | 'MEDIUM' | 'LOW';
- suggestedAction: string;
- targetBranchId: string;
- }> = [];
+ const slowMovingCandidates = React.useMemo(() => {
+  const list: Array<{
+   productId: string;
+   productName: string;
+   branchId: string;
+   branchName: string;
+   daysUnsold: number;
+   riskLevel: 'HIGH' | 'MEDIUM' | 'LOW';
+   suggestedAction: string;
+   targetBranchId: string;
+  }> = [];
 
- products.filter(p => !p.isDeleted).forEach((p) => {
- branches.filter(b => !b.isDeleted).forEach((b) => {
- const stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id)?.quantity || 0;
- if (stock <= 0) return;
+  products.filter(p => !p.isDeleted).forEach((p) => {
+   branches.filter(b => !b.isDeleted).forEach((b) => {
+    const stock = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id)?.quantity || 0;
+    if (stock <= 0) return;
 
- // Find sales for this product at this branch
- const bSaleItems = saleItems.filter(si => si.productId === p.id && !si.isDeleted);
- const bSaleIds = new Set(bSaleItems.map(si => si.saleId));
- const bSales = sales.filter(s => bSaleIds.has(s.id) && s.branchId === b.id && !s.isDeleted);
+    // Find sales for this product at this branch
+    const bSaleItems = saleItems.filter(si => si.productId === p.id && !si.isDeleted);
+    const bSaleIds = new Set(bSaleItems.map(si => si.saleId));
+    const bSales = sales.filter(s => bSaleIds.has(s.id) && s.branchId === b.id && !s.isDeleted);
 
- let lastSaleDate = new Date(p.createdAt || '2026-01-01');
- if (bSales.length > 0) {
- const saleTimes = bSales.map(s => new Date(s.createdAt).getTime());
- const latestTime = Math.max(...saleTimes);
- if (!isNaN(latestTime)) {
- lastSaleDate = new Date(latestTime);
- }
- }
+    let lastSaleDate = new Date(p.createdAt || '2026-01-01');
+    if (bSales.length > 0) {
+     const saleTimes = bSales.map(s => new Date(s.createdAt).getTime());
+     const latestTime = Math.max(...saleTimes);
+     if (!isNaN(latestTime)) {
+      lastSaleDate = new Date(latestTime);
+     }
+    }
 
- const now = new Date();
- const diffTime = now.getTime() - lastSaleDate.getTime();
- const daysUnsold = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+    const now = new Date();
+    const diffTime = now.getTime() - lastSaleDate.getTime();
+    const daysUnsold = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
 
- if (daysUnsold >= 30 && b.id !== 'B1') {
- let riskLevel: 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
- let suggestedAction = 'Consolidate directly to Main hub';
- if (daysUnsold >= 120) {
- riskLevel = 'HIGH';
- suggestedAction = 'Redistribute to Main showroom';
- } else if (daysUnsold >= 60) {
- riskLevel = 'MEDIUM';
- suggestedAction = 'Local Discounted Bundle Clearance';
- }
+    if (daysUnsold >= 30 && b.id !== 'B1') {
+     let riskLevel: 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
+     let suggestedAction = 'Consolidate directly to Main hub';
+     if (daysUnsold >= 120) {
+      riskLevel = 'HIGH';
+      suggestedAction = 'Redistribute to Main showroom';
+     } else if (daysUnsold >= 60) {
+      riskLevel = 'MEDIUM';
+      suggestedAction = 'Local Discounted Bundle Clearance';
+     }
 
- list.push({
- productId: p.id,
- productName: p.productName,
- branchId: b.id,
- branchName: b.name,
- daysUnsold,
- riskLevel,
- suggestedAction,
- targetBranchId: 'B1'
- });
- }
- });
- });
+     list.push({
+      productId: p.id,
+      productName: p.productName,
+      branchId: b.id,
+      branchName: b.name,
+      daysUnsold,
+      riskLevel,
+      suggestedAction,
+      targetBranchId: 'B1'
+     });
+    }
+   });
+  });
 
- return list;
- };
-
- const slowMovingCandidates = getDynamicSlowMovingCandidates();
+  return list;
+ }, [products, branches, branchStock, saleItems, sales]);
 
  // Initiate stock redistribution transfers dynamically
  const handleExecuteRedistribution = (candidate: typeof slowMovingCandidates[0]) => {

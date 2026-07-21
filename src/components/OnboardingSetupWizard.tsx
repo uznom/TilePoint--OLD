@@ -585,34 +585,18 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  )}
 
  {step === 'yes_migrate' && (
- <div className="space-y-5 animate-fade-in text-left">
- <div className="space-y-1 text-center sm:text-left">
- <h3 className="text-lg font-black uppercase tracking-wider text-m3-primary flex items-center justify-center sm:justify-start gap-2">
- <Upload className="h-5 w-5" />
- Legacy Product Importer Hub
- </h3>
- <p className="text-xs text-slate-400">
- Paste raw values or click buttons below to load samples and test out the layout!
- </p>
- </div>
+        <div className="space-y-5 animate-fade-in text-left">
+          <div className="space-y-1 text-center sm:text-left">
+            <h3 className="text-lg font-black uppercase tracking-wider text-m3-primary flex items-center justify-center sm:justify-start gap-2">
+              <Upload className="h-5 w-5" />
+              Legacy Product Importer Hub
+            </h3>
+            <p className="text-xs text-slate-400">
+              Paste raw values or drag & drop files to import into the catalog!
+            </p>
+          </div>
 
- {/* Quick Sample Selectors */}
- <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
- <button
- onClick={() => handleApplySample('json')}
- className="py-1 px-2.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary border border-m3-primary/20 rounded-md text-[10px] font-mono font-bold uppercase cursor-pointer"
- >
- Load JSON Sample
- </button>
- <button
- onClick={() => handleApplySample('csv')}
- className="py-1 px-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-md text-[10px] font-mono font-bold uppercase cursor-pointer"
- >
- Load CSV Sample
- </button>
- </div>
-
- <div className="space-y-3">
+          <div className="space-y-3">
  <div 
  onDragOver={handleDragOver}
  onDragLeave={handleDragLeave}

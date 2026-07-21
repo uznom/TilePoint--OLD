@@ -304,16 +304,21 @@ export function detectSQLi(input: string): SQLiCheckResult {
  * Signs the user profile and role with a shared secret to carry to server.
  */
 export function generateSessionToken(user: { id: string; username: string; role: string }): string {
- const payload = {
- id: user.id,
- username: user.username,
- role: user.role,
- timestamp: Date.now()
- };
- const payloadJson = JSON.stringify(payload);
- const payloadBase64 = btoa(unescape(encodeURIComponent(payloadJson)));
- const secret = import.meta.env.VITE_SECURITY_SECRET || "TILEPOINT_SECURE_PERIMETER_HMAC_FALLBACK_2026";
- const signature = sha256Pure(payloadBase64 + "." + secret);
- return `${payloadBase64}.${signature}`;
+  const payload = {
+    id: user.id,
+    username: user.username,
+    role: user.role,
+    timestamp: Date.now()
+  };
+  const payloadJson = JSON.stringify(payload);
+  const payloadBase64 = btoa(unescape(encodeURIComponent(payloadJson)));
+  
+  let secret = import.meta.env.VITE_SECURITY_SECRET;
+  if (!secret || secret.trim() === "" || secret.length < 16) {
+    secret = "tile_point_salt_retneC eliT nammE_secure_fallback";
+  }
+  
+  const signature = sha256Pure(payloadBase64 + "." + secret);
+  return `${payloadBase64}.${signature}`;
 }
 
