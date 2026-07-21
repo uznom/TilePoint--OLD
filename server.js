@@ -286,6 +286,16 @@ app.get('/api/db', (req, res) => {
 
 // API: Optimized Get backups/snapshots list (with metadataOnly support for lightweight fetching)
 app.get('/api/db/backups', (req, res) => {
+  if (isDatabaseConfigured()) {
+    const user = verifyAndExtractToken(req);
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Valid session token or identity header required.' });
+    }
+    if (user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Forbidden: Backup management is restricted to Administrators.' });
+    }
+  }
+
   const db = readDatabase();
   const snapshots = db.tp_db_snapshots || [];
   
@@ -306,6 +316,16 @@ app.get('/api/db/backups', (req, res) => {
 
 // API: Get single full snapshot details (including the heavy data body on-demand)
 app.get('/api/db/backups/:id', (req, res) => {
+  if (isDatabaseConfigured()) {
+    const user = verifyAndExtractToken(req);
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Valid session token or identity header required.' });
+    }
+    if (user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Forbidden: Backup management is restricted to Administrators.' });
+    }
+  }
+
   const db = readDatabase();
   const snapshots = db.tp_db_snapshots || [];
   const snapshot = snapshots.find(s => s.id === req.params.id);
@@ -319,6 +339,16 @@ app.get('/api/db/backups/:id', (req, res) => {
 
 // API: Save heavy snapshot directly on the server (bypassing Client LocalStorage limit)
 app.post('/api/db/backups', express.json({ limit: '100mb' }), async (req, res) => {
+  if (isDatabaseConfigured()) {
+    const user = verifyAndExtractToken(req);
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Valid session token or identity header required.' });
+    }
+    if (user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Forbidden: Backup management is restricted to Administrators.' });
+    }
+  }
+
   const { snapshot } = req.body;
   if (!snapshot || !snapshot.id) {
     return res.status(400).json({ success: false, error: 'Invalid snapshot payload' });
@@ -354,6 +384,16 @@ app.post('/api/db/backups', express.json({ limit: '100mb' }), async (req, res) =
 
 // API: Delete single snapshot
 app.delete('/api/db/backups/:id', async (req, res) => {
+  if (isDatabaseConfigured()) {
+    const user = verifyAndExtractToken(req);
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Valid session token or identity header required.' });
+    }
+    if (user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Forbidden: Backup management is restricted to Administrators.' });
+    }
+  }
+
   try {
     const result = await runInTransaction(async () => {
       const db = readDatabase();

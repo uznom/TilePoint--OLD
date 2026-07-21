@@ -6,3 +6,7 @@
 **Vulnerability:** A critical HMAC signing secret (`TILEPOINT_SECURE_PERIMETER_HMAC_SECRET_2026`) was hardcoded in both the frontend (`src/lib/crypto.ts`) and backend (`server.js`), allowing potential session token forgery if source code is exposed.
 **Learning:** In applications with shared logic or symmetry between client and server (like session signing), removing hardcoded secrets requires careful orchestration. The secret must be provided via environment variables (like `dotenv` for Node and `import.meta.env` for Vite), AND any fallback mechanisms must be identical on both ends. Otherwise, cryptographic mismatches occur.
 **Prevention:** Use environment variables for secrets, ensure symmetric fallback logic when defaults are necessary, and add TypeScript definitions for Vite env variables to prevent compilation issues.
+## 2026-07-21 - Unauthenticated Database Backups Endpoints
+**Vulnerability:** The four API routes used for managing database backup snapshots (`GET /api/db/backups`, `GET /api/db/backups/:id`, `POST /api/db/backups`, and `DELETE /api/db/backups/:id`) lacked any authentication and authorization constraints.
+**Learning:** This exposes the entire database system allowing arbitrary users or potential attackers to download or overwrite critical application state without providing valid authorization.
+**Prevention:** Always enforce role-based access control (RBAC) via middleware or within route handlers (e.g., using `verifyAndExtractToken(req)` and role checks) when exposing sensitive actions that query or mutate global state or backups.
