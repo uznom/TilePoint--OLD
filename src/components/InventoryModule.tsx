@@ -323,56 +323,121 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
  // Batch Expiration & Shelf-life Tracker state
  const [batches, setBatches] = useState<BatchExpiration[]>(() => {
- try {
- const cached = localStorage.getItem("tp_batch_expirations");
- if (cached) return JSON.parse(cached);
- } catch (_) {}
+  try {
+    const cached = localStorage.getItem("tp_batch_expirations");
+    if (cached) {
+      const parsed = JSON.parse(cached) as BatchExpiration[];
+      return parsed.map(b => {
+        if (b.id === "batch-1") {
+          const prod = products.find(p => p.productCode === "GR-CAR-60") || products[0];
+          return {
+            ...b,
+            productId: prod?.id || "P-CARRARA-60",
+            productName: prod?.productName || "Polished Granite Carrara 60x60 cm",
+            productCode: prod?.productCode || "GR-CAR-60",
+            batchNumber: "#B-260115A",
+            quantity: 120,
+            manufactureDate: "2026-01-15",
+            expiryDate: "2027-01-15",
+            branchId: "B1",
+            status: "Good",
+            remarks: b.remarks || "High humidity storage area"
+          };
+        }
+        if (b.id === "batch-2") {
+          const prod = products.find(p => p.productCode === "CR-WHT-30") || products[1];
+          return {
+            ...b,
+            productId: prod?.id || "P-WHITE-30",
+            productName: prod?.productName || "Glossy White Ceramic 30x60 cm",
+            productCode: prod?.productCode || "CR-WHT-30",
+            batchNumber: "#B-250810B",
+            quantity: 45,
+            manufactureDate: "2025-08-10",
+            expiryDate: "2026-08-10",
+            branchId: "B1",
+            status: "Expiring Soon",
+            remarks: b.remarks || "Front aisle display shelf"
+          };
+        }
+        if (b.id === "batch-3") {
+          const prod = products.find(p => p.productCode === "TC-RST-40") || products[2];
+          return {
+            ...b,
+            productId: prod?.id || "P-RUSTIC-40",
+            productName: prod?.productName || "Rustic Terra Cotta 40x40 cm",
+            productCode: prod?.productCode || "TC-RST-40",
+            batchNumber: "#B-250520C",
+            quantity: 20,
+            manufactureDate: "2025-05-20",
+            expiryDate: "2026-05-20",
+            branchId: "B2",
+            status: "Expired",
+            remarks: b.remarks || "Expired cement adhesive batch. this is from shelf-life & expiry calendar"
+          };
+        }
+        const p = products.find(prod => prod.id === b.productId);
+        if (p) {
+          return {
+            ...b,
+            productName: p.productName,
+            productCode: p.productCode
+          };
+        }
+        return b;
+      });
+    }
+  } catch (_) {}
 
- // Provide high-quality interactive seeds
- return [
- {
- id: "batch-1",
- productId: products[0]?.id || "P1",
- productName: products[0]?.productName || "Polished Granite Carrara 60x60 cm",
- productCode: products[0]?.productCode || "GR-CAR-60",
- batchNumber: "B-260115A",
- quantity: 120,
- manufactureDate: "2026-01-15",
- expiryDate: "2027-01-15",
- branchId: "B1",
- status: "Good",
- remarks: "High humidity storage area"
- },
- {
- id: "batch-2",
- productId: products[1]?.id || "P2",
- productName: products[1]?.productName || "Glossy White Ceramic 30x60 cm",
- productCode: products[1]?.productCode || "CR-WHT-30",
- batchNumber: "B-250810B",
- quantity: 45,
- manufactureDate: "2025-08-10",
- expiryDate: "2026-08-10",
- branchId: "B1",
- status: "Expiring Soon",
- remarks: "Front aisle display shelf"
- },
- {
- id: "batch-3",
- productId: products[2]?.id || "P3",
- productName: products[2]?.productName || "Rustic Terra Cotta 40x40 cm",
- productCode: products[2]?.productCode || "TC-RST-40",
- batchNumber: "B-250520C",
- quantity: 20,
- manufactureDate: "2025-05-20",
- expiryDate: "2026-05-20",
- branchId: "B2",
- status: "Expired",
- remarks: "Expired cement adhesive batch. Needs immediate disposal logging"
- }
- ];
- });
+  // Provide high-quality interactive seeds
+  const p1 = products.find(p => p.productCode === "GR-CAR-60") || products[0];
+  const p2 = products.find(p => p.productCode === "CR-WHT-30") || products[1];
+  const p3 = products.find(p => p.productCode === "TC-RST-40") || products[2];
 
- // Sync batch changes to local storage so Notification Center reads them dynamically
+  return [
+    {
+      id: "batch-1",
+      productId: p1?.id || "P-CARRARA-60",
+      productName: p1?.productName || "Polished Granite Carrara 60x60 cm",
+      productCode: p1?.productCode || "GR-CAR-60",
+      batchNumber: "#B-260115A",
+      quantity: 120,
+      manufactureDate: "2026-01-15",
+      expiryDate: "2027-01-15",
+      branchId: "B1",
+      status: "Good",
+      remarks: "High humidity storage area"
+    },
+    {
+      id: "batch-2",
+      productId: p2?.id || "P-WHITE-30",
+      productName: p2?.productName || "Glossy White Ceramic 30x60 cm",
+      productCode: p2?.productCode || "CR-WHT-30",
+      batchNumber: "#B-250810B",
+      quantity: 45,
+      manufactureDate: "2025-08-10",
+      expiryDate: "2026-08-10",
+      branchId: "B1",
+      status: "Expiring Soon",
+      remarks: "Front aisle display shelf"
+    },
+    {
+      id: "batch-3",
+      productId: p3?.id || "P-RUSTIC-40",
+      productName: p3?.productName || "Rustic Terra Cotta 40x40 cm",
+      productCode: p3?.productCode || "TC-RST-40",
+      batchNumber: "#B-250520C",
+      quantity: 20,
+      manufactureDate: "2025-05-20",
+      expiryDate: "2026-05-20",
+      branchId: "B2",
+      status: "Expired",
+      remarks: "Expired cement adhesive batch. this is from shelf-life & expiry calendar"
+    }
+  ];
+});
+
+  // Sync batch changes to local storage so Notification Center reads them dynamically
  useEffect(() => {
  try {
  localStorage.setItem("tp_batch_expirations", JSON.stringify(batches));
@@ -2112,7 +2177,10 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  'originbranchid': 'origin',
  'origin_branch_id': 'origin',
  'expirydate': 'expirationDate',
- 'expiry_date': 'expirationDate'
+ 'expiry_date': 'expirationDate',
+  'mu%': 'markupPercent',
+  'tax type': 'taxType',
+  'tax_type': 'taxType'
  };
 
  parsed = csvRows.map(row => {
@@ -2121,7 +2189,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  const cleanKey = key.toLowerCase().trim();
  const mappedKey = headerMapping[cleanKey];
  if (mappedKey) {
- const numericFields = ['costPrice', 'sellingPrice', 'stockQuantity', 'minimumStock', 'boxQuantity', 'coveragePerBox'];
+ const numericFields = ['costPrice', 'sellingPrice', 'stockQuantity', 'minimumStock', 'boxQuantity', 'coveragePerBox', 'markupPercent'];
  if (numericFields.includes(mappedKey)) {
  const cleanVal = String(row[key]).replace(/[$,₱ ]/g, '').replace(/,/g, '');
  const valNum = parseFloat(cleanVal);
@@ -4676,19 +4744,23 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
         {/* Expiring Batches & Products list inside day block */}
         {hasExpirations && (
           <div className="w-full space-y-0.5 mt-1 overflow-hidden">
-            {dayBatches.map(b => (
-              <div
-                key={b.id}
-                className={`text-[8px] font-bold px-1 py-0.5 rounded truncate text-left w-full leading-none ${
-                  b.status === "Expired"
-                    ? "bg-rose-500/15 text-rose-500 border border-rose-500/10"
-                    : "bg-amber-500/15 text-amber-500 border border-amber-500/10"
-                }`}
-                title={`${b.productCode} Batch #${b.batchNumber} (${b.quantity} bags) Expiry`}
-              >
-                #${b.batchNumber} (${b.quantity})
-              </div>
-            ))}
+            {dayBatches.map(b => {
+              const prod = products.find(p => p.id === b.productId);
+              const pCode = prod ? prod.productCode : b.productCode;
+              return (
+                <div
+                  key={b.id}
+                  className={`text-[8px] font-bold px-1 py-0.5 rounded truncate text-left w-full leading-none ${
+                    b.status === "Expired"
+                      ? "bg-rose-500/15 text-rose-500 border border-rose-500/10"
+                      : "bg-amber-500/15 text-amber-500 border border-amber-500/10"
+                  }`}
+                  title={`${pCode} Batch #${b.batchNumber} (${b.quantity} bags) Expiry`}
+                >
+                  #{b.batchNumber} ({b.quantity})
+                </div>
+              );
+            })}
             {dayProducts.map(p => (
               <div
                 key={`p-exp-${p.id}`}
@@ -4788,56 +4860,115 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  </td>
  </tr>
  ) : (
- batches.map(b => (
+ batches.map(b => {
+
+ const prod = products.find(p => p.id === b.productId);
+
+ const pName = prod ? prod.productName : b.productName;
+
+ const pCode = prod ? prod.productCode : b.productCode;
+
+ return (
+
  <tr key={b.id} className="hover:bg-m3-surface/30 transition-colors">
+
  <td className="py-3 px-4 font-sans">
- <strong className="text-m3-on-surface font-black block">{b.productName}</strong>
- <span className="text-[9px] font-mono text-m3-primary font-bold">{b.productCode}</span>
+
+ <strong className="text-m3-on-surface font-black block">{pName}</strong>
+
+ <span className="text-[9px] font-mono text-m3-primary font-bold">{pCode}</span>
+
  </td>
+
  <td className="py-3 px-4 font-mono text-center font-bold text-zinc-600 dark:text-zinc-300">
+
  #{b.batchNumber}
+
  </td>
+
  <td className="py-3 px-4 font-mono text-right font-black text-m3-on-surface">
+
  {b.quantity} bags
+
  </td>
+
  <td className="py-3 px-4 font-mono text-center text-zinc-500 font-semibold">
+
  {b.manufactureDate}
+
  </td>
+
  <td className="py-3 px-4 font-mono text-center text-zinc-700 dark:text-zinc-300 font-bold">
+
  {b.expiryDate}
+
  </td>
+
  <td className="py-3 px-4 text-center font-bold">
+
  {branches.find(br => br.id === b.branchId)?.name || b.branchId}
+
  </td>
+
  <td className="py-3 px-4 text-center">
+
  <span className={`px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wide border ${
+
  b.status === "Expired"
+
  ? "bg-rose-500/10 text-rose-500 border-rose-500/20 font-black animate-pulse"
+
  : b.status === "Expiring Soon"
+
  ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+
  : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+
  }`}>
+
  {b.status}
+
  </span>
+
  </td>
+
  <td className="py-3 px-4 font-sans text-zinc-500 italic font-medium max-w-[200px] truncate" title={b.remarks}>
+
  {b.remarks || "N/A"}
+
  </td>
+
  <td className="py-3 px-4">
+
  <div className="flex items-center justify-center">
+
  {!hasActiveShift && (
+
  <button
+
  onClick={() => handleRemoveBatch(b.id)}
+
  className="p-1 hover:bg-rose-500/10 hover:text-rose-500 text-zinc-400 rounded-full transition-colors cursor-pointer"
+
  title="Remove batch log"
+
  >
+
  <Trash2 className="h-4 w-4" />
+
  </button>
+
  )}
+
  </div>
+
  </td>
+
  </tr>
- ))
+
+ );
+
+ })
  )}
  </tbody>
  </table>

@@ -945,7 +945,7 @@ export const decryptString = (cipherStr: string, secretKey: string): string => {
  * with security checks and a dynamically generated or environment-managed fallback seed to avoid forging of security signatures.
  */
 export const getSecuritySecretKey = (): string => {
- const envSecret = import.meta.env.VITE_SECURITY_SECRET;
+  const envSecret = import.meta.env.VITE_SECURITY_SECRET;
 
  // Validation wrapper checks:
  // 1. Must exist and not be empty
@@ -1604,8 +1604,33 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  throw new Error(msg);
  }
 
- try {
- const res = await fetch(input, init);
+ const authHeaders = getAuthHeaders();
+  const mergedInit = { ...init };
+  if (Object.keys(authHeaders).length > 0) {
+    if (!mergedInit.headers) {
+      mergedInit.headers = authHeaders;
+    } else if (mergedInit.headers instanceof Headers) {
+      Object.entries(authHeaders).forEach(([key, val]) => {
+        (mergedInit.headers as Headers).set(key, val);
+      });
+    } else if (Array.isArray(mergedInit.headers)) {
+      const headersArr = [...mergedInit.headers];
+      Object.entries(authHeaders).forEach(([key, val]) => {
+        if (!headersArr.some(([k]) => k.toLowerCase() === key.toLowerCase())) {
+          headersArr.push([key, val]);
+        }
+      });
+      mergedInit.headers = headersArr;
+    } else {
+      mergedInit.headers = {
+        ...authHeaders,
+        ...mergedInit.headers,
+      };
+    }
+  }
+
+  try {
+ const res = await fetch(input, mergedInit);
 
  if (!res.ok) {
  const statusCode = res.status;
@@ -2230,6 +2255,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  });
 
  const fetchDbSnapshots = async () => {
+  const userStr = typeof window !== 'undefined' ? (sessionStorage.getItem("tp_current_user") || localStorage.getItem("tp_current_user")) : null;
+  if (!userStr) {
+    return;
+  }
  try {
  const res = await safeApiFetch("/api/db/backups?metadataOnly=true");
  if (res.ok) {
@@ -2459,6 +2488,13 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const syncFromSharedServer = async (silent = false) => {
+  const userStr = typeof window !== 'undefined' ? (sessionStorage.getItem("tp_current_user") || localStorage.getItem("tp_current_user")) : null;
+  if (!userStr) {
+    if (!silent) {
+      console.log('[Shared DB Client] User is not logged in. Bypassing server sync.');
+    }
+    return;
+  }
  if (typeof window !== 'undefined' && localStorage.getItem('tp_setting_up') === 'true') {
  console.log('[Shared DB Client] System setup in progress. Bypassing server sync to avoid overwrite race condition.');
  return;
@@ -3274,6 +3310,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }
 
  const writeToServer = async () => {
+  const authHeaders = getAuthHeaders();
+  if (!authHeaders.Authorization) {
+    console.log(`[Shared DB Client] Skipping server write for key "${key}" since user is logged out.`);
+    return;
+  }
  if (
  key === "tp_current_user" ||
  key === "tp_is_logged_in" ||
@@ -6700,6 +6741,134 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
  }
 
+ // Helper functions for CSV spelling and formatting correction
+ const correctCategoryName = (rawCat: string): string => {
+   if (!rawCat) return "Porcelain Tiles";
+   const clean = rawCat.toUpperCase().trim();
+   const catMapping: Record<string, string> = {
+     "WATERCLOSET": "Water Closet",
+     "DOORKNOBS": "Doorknobs",
+     "STAIRNOSING": "Stair Nosing",
+     "PLUMBING ACC.": "Plumbing Accessories",
+     "PLUMBING ACC": "Plumbing Accessories",
+     "PLUMBING": "Plumbing Accessories",
+     "CEILING PANEL": "Ceiling Panels",
+     "KITCHEN SINK": "Kitchen Sinks",
+     "BATHROOM ACCESSORIES": "Bathroom Accessories",
+     "BATHROOM ACCESORIES": "Bathroom Accessories",
+     "BATHROOM ACCS": "Bathroom Accessories",
+     "TILE TRIM": "Tile Trims",
+     "WPC PANEL": "WPC Panels",
+     "GROUTS": "Grout & Adhesives",
+     "ADHESIVES": "Grout & Adhesives",
+     "LOCKSET": "Locksets",
+     "SHOWER": "Showers",
+     "TANK": "Tanks",
+     "SLABSTONE": "Slabstone",
+     "HINGES": "Hinges",
+     "DAMAGES": "Damaged Products",
+     "PAVERS": "Pavers",
+     "ASSORTED": "Assorted Products",
+     "BIDET": "Bidets",
+     "GLOVES": "Gloves",
+     "MOULDING": "Mouldings",
+     "HARDWARE": "Hardware",
+     "TILES": "Tiles",
+     "ELECTRICAL": "Electrical",
+     "ACCESSORIES": "Accessories",
+     "FITTINGS": "Fittings",
+     "DOOR": "Doors",
+     "FAUCET": "Faucets",
+     "OTHERS": "Others"
+   };
+   
+   if (catMapping[clean]) {
+     return catMapping[clean];
+   }
+   return clean
+     .toLowerCase()
+     .split(/\s+/)
+     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+     .join(" ");
+ };
+
+ const correctUnitName = (rawUnit: string): string => {
+   if (!rawUnit) return "PCS";
+   const clean = rawUnit.toUpperCase().trim();
+   const unitMapping: Record<string, string> = {
+     "PCS": "PCS",
+     "PC": "PCS",
+     "PIECE": "PCS",
+     "PIECES": "PCS",
+     "PACK": "Pack",
+     "SET": "Set",
+     "UNIT": "Unit",
+     "METERS": "Meters",
+     "METER": "Meters",
+     "KILO": "Kilo",
+     "KILOGRAM": "Kilo",
+     "BAG": "Bag",
+     "BAGS": "Bag",
+     "PAIR": "Pair",
+     "PALLET": "Pallet",
+     "PALLETS": "Pallet",
+     "BOX": "Box",
+     "BOXES": "Box",
+     "SACK": "Sack",
+     "SACKS": "Sack",
+     "ROLL": "Roll",
+     "ROLLS": "Roll",
+     "GALLON": "Gallon",
+     "CAN": "Can"
+   };
+   if (unitMapping[clean]) {
+     return unitMapping[clean];
+   }
+   return clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+ };
+
+ const correctProductName = (rawName: string): string => {
+   if (!rawName) return "";
+   let cleaned = rawName;
+   const replacements: Array<[RegExp, string]> = [
+     [/stairnossing/gi, "Stair Nosing"],
+     [/stairnosing/gi, "Stair Nosing"],
+     [/accesories/gi, "Accessories"],
+     [/accesory/gi, "Accessory"],
+     [/watercloset/gi, "Water Closet"],
+     [/doorknobs/gi, "Doorknobs"],
+     [/doorknob\b/gi, "Doorknob"],
+     [/slightly damage/gi, "Slightly Damaged"],
+     [/slight damage/gi, "Slightly Damaged"],
+     [/slight damaged/gi, "Slightly Damaged"],
+     [/damage\b/gi, "Damaged"],
+     [/damages\b/gi, "Damaged"],
+     [/1pallet/gi, "1 Pallet"],
+   ];
+
+   replacements.forEach(([regex, rep]) => {
+     cleaned = cleaned.replace(regex, rep);
+   });
+
+   cleaned = cleaned
+     .toLowerCase()
+     .split(/\s+/)
+     .map((word) => {
+       const upperWords = ["pvc", "wpc", "s/s", "h", "wc", "led", "mu", "usd", "php", "coa", "boa"];
+       if (upperWords.includes(word)) {
+         return word.toUpperCase();
+       }
+       if (/^\d+(\.\d+)?[xx]\d+(\.\d+)?$/.test(word)) {
+         return word.toLowerCase();
+       }
+       return word.charAt(0).toUpperCase() + word.slice(1);
+     })
+     .join(" ");
+
+   cleaned = cleaned.replace(/(\d+)\s*[xX]\s*(\d+)/g, "$1x$2");
+   return cleaned.trim();
+ };
+
  const sanitized = uniqueImported.map((p, i) => {
  const barcode =
  sanitizeInputText(p.barcode) || `BAR-${Date.now()}-${i}`;
@@ -6707,8 +6876,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  sanitizeInputText(p.productCode) ||
  barcode ||
  `TL-IMP-${Date.now()}-${i}`;
- const pName =
- sanitizeInputText(p.productName) || "Unnamed Imported Product";
+ const rawPName = sanitizeInputText(p.productName) || "Unnamed Imported Product";
+ const pName = correctProductName(rawPName);
 
  // Extrapolate size if not set e.g. from productName "20X30 # SENEPA BEIGE"
  let size = sanitizeInputText(p.size);
@@ -6743,12 +6912,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  sku,
  barcode,
  qrCode: p.qrCode || `TP-${productCode}`,
- category: sanitizeInputText(p.category) || "Porcelain Tiles",
+ category: correctCategoryName(sanitizeInputText(p.category)),
  brand: sanitizeInputText(p.brand) || "Generic",
  size,
- designName: sanitizeInputText(p.designName) || pName,
+ designName: correctProductName(sanitizeInputText(p.designName) || p.productName || pName),
  supplierId: sanitizeInputText(p.supplierId) || "central",
- unit: sanitizeInputText(p.unit) || "Boxes",
+ unit: correctUnitName(sanitizeInputText(p.unit) || "Boxes"),
  origin: p.origin ? sanitizeInputText(p.origin) : undefined,
 
  boxQuantity: sanitizeAndValidateNumber(
@@ -6835,6 +7004,86 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  });
  return updated;
  });
+
+ // Automatically parse and log imported damages into the Materials Breakage Registry (tp_damage_logs)
+ const importedDamageLogs: DamageLog[] = [];
+ sanitized.forEach((item) => {
+   const isDamage = (item.category || "").toUpperCase() === "DAMAGES" || 
+                    (item.productName || "").toUpperCase().includes("DAMAGE") ||
+                    (item.category || "").toUpperCase().includes("DAMAGE");
+   if (isDamage && item.stockQuantity > 0) {
+     let targetBranchId = currentUser.branchAssignmentId || "B1";
+     let targetBranchName = "ETC_DIPOLOG MAIN";
+     if (item.origin) {
+       const cleanedOrigin = item.origin.toLowerCase().trim();
+       if (branchMapping && branchMapping[cleanedOrigin]) {
+         targetBranchId = branchMapping[cleanedOrigin];
+       } else {
+         const matchedB = branches.find(
+           (b) =>
+             !b.isDeleted &&
+             (b.id.toLowerCase().trim() === cleanedOrigin ||
+             (b.branchCode && b.branchCode.toLowerCase().trim() === cleanedOrigin) ||
+             b.name.toLowerCase().trim() === cleanedOrigin)
+         );
+         if (matchedB) {
+           targetBranchId = matchedB.id;
+           targetBranchName = matchedB.name;
+         }
+       }
+     } else {
+       const matchedB = branches.find(b => b.id === targetBranchId);
+       if (matchedB) {
+         targetBranchName = matchedB.name;
+       }
+     }
+
+     // Map unit type
+     const uom = (item.unit || "").toUpperCase();
+     const unitType = (uom === "BOX" || uom === "BOXES" || uom === "PALLET" || uom === "CARTON") ? "Box" : "Piece";
+
+     // Determine category/reason
+     let cat = "Warehouse Breakage";
+     if ((item.productName || "").toUpperCase().includes("BOA")) {
+       cat = "BOA";
+     } else if ((item.productName || "").toUpperCase().includes("TRANSIT") || (item.productName || "").toUpperCase().includes("DELIVERY")) {
+       cat = "Delivery Transit";
+     } else if ((item.productName || "").toUpperCase().includes("SHOWROOM") || (item.productName || "").toUpperCase().includes("SLIGHT")) {
+       cat = "Showroom Casualty";
+     }
+
+     let action = "Disposed / Scrapped";
+     if ((item.productName || "").toUpperCase().includes("MOSAIC") || (item.productName || "").toUpperCase().includes("BARGAIN") || (item.productName || "").toUpperCase().includes("SLIGHT")) {
+       action = "Saved for Mosaic";
+     }
+
+     importedDamageLogs.push({
+       id: `DMG-IMPORT-${item.id}`,
+       productId: item.id,
+       productName: item.productName,
+       productSku: item.sku,
+       branchId: targetBranchId,
+       branchName: targetBranchName,
+       quantity: item.stockQuantity,
+       unitType,
+       category: cat,
+       actionTaken: action,
+       notes: `Legacy stock damage imported from ERP file.`,
+       reportedBy: currentUser.fullName || "Admin",
+       reportedAt: new Date().toISOString(),
+       createdAt: new Date().toISOString(),
+       isDeleted: false,
+     });
+   }
+ });
+
+ if (importedDamageLogs.length > 0) {
+   setDamageLogs((prev) => {
+     const existingIds = new Set(prev.map(l => l.id));
+     const filteredNew = importedDamageLogs.filter(l => !existingIds.has(l.id));
+     return [...filteredNew, ...prev];
+   });
+ }
 
  const blockedMsg = blockedDuplicates.length > 0 
  ? ` (${blockedDuplicates.length} duplicate entries blocked)`

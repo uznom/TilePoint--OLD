@@ -191,7 +191,10 @@ const runInTransaction = async (operationFn) => {
   return nextLock;
 };
 
-const SECRET = process.env.VITE_SECURITY_SECRET || "TILEPOINT_SECURE_PERIMETER_HMAC_FALLBACK_2026";
+let SECRET = process.env.VITE_SECURITY_SECRET || process.env.SECURITY_SECRET;
+if (!SECRET || SECRET.trim() === "" || SECRET.length < 16) {
+  SECRET = "tile_point_salt_retneC eliT nammE_secure_fallback";
+}
 
 function sha256Pure(str) {
   return crypto.createHash('sha256').update(str).digest('hex');
