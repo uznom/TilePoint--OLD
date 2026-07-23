@@ -6,3 +6,7 @@
 **Vulnerability:** A critical HMAC signing secret (`TILEPOINT_SECURE_PERIMETER_HMAC_SECRET_2026`) was hardcoded in both the frontend (`src/lib/crypto.ts`) and backend (`server.js`), allowing potential session token forgery if source code is exposed.
 **Learning:** In applications with shared logic or symmetry between client and server (like session signing), removing hardcoded secrets requires careful orchestration. The secret must be provided via environment variables (like `dotenv` for Node and `import.meta.env` for Vite), AND any fallback mechanisms must be identical on both ends. Otherwise, cryptographic mismatches occur.
 **Prevention:** Use environment variables for secrets, ensure symmetric fallback logic when defaults are necessary, and add TypeScript definitions for Vite env variables to prevent compilation issues.
+## 2026-07-23 - Hardcoded Simulation Backdoor in Production
+**Vulnerability:** A hardcoded "admin/admin123" credential check existed in `src/context/DbContext.tsx` to enable a simulation mode, which was not stripped out during production builds.
+**Learning:** Testing or simulation modes with hardcoded credentials must be strictly guarded with environment variables (e.g., `import.meta.env.DEV` in Vite) so that static analysis tools like Vite's dead-code elimination can remove them from production bundles.
+**Prevention:** Always wrap simulation, testing, or debugging credentials/logic in `import.meta.env.DEV` blocks (or equivalent production-check mechanisms). Never ship hardcoded backdoors, even for testing, in production code.

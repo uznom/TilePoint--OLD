@@ -39,7 +39,7 @@ export const LoginModule: React.FC = () => {
  const [showTermsModal, setShowTermsModal] = useState(false);
 
  // List of simulation accounts for quick selection
- const simulatedAccounts: any[] = simulationModeActive ? [
+ const simulatedAccounts: any[] = (import.meta.env.DEV && simulationModeActive) ? [
  { name: 'Simulated Admin', username: 'admin', pass: 'admin123', role: 'ADMIN', avatar: 'AD', desc: 'Full authority, bypasses standard restrictions.' },
  { name: 'Simulated Manager', username: 'manager', pass: 'tilepoint', role: 'MANAGER', avatar: 'MN', desc: 'Approves transmittals, manages stock & pricing.' },
  { name: 'Simulated Cashier', username: 'cashier', pass: 'tilepoint', role: 'CASHIER', avatar: 'CS', desc: 'Performs checkout sales in ERP OS module.' },
