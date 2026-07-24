@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDb } from '../context/DbContext';
 import { DamageLog, DamageCategory, DamageActionTaken, UserRole, Product } from '../types/db';
+import { isProductInBranch } from '../lib/branchUtils';
 import { motion, AnimatePresence } from 'motion/react';
 import { useResponsivePageSize, TablePagination } from './TablePagination';
 import {
@@ -38,6 +39,7 @@ interface DamageRegisterModuleProps {
 export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  const {
  products,
+ branchStock,
  branches,
  damageLogs,
  createDamageLog,
@@ -50,7 +52,20 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
 
  const [searchTerm, setSearchTerm] = useState('');
  const [categoryFilter, setCategoryFilter] = useState<string>('All');
- const [branchFilter, setBranchFilter] = useState<string>('All');
+ const [branchFilter, setBranchFilter] = useState<string>(
+    (currentUser?.role as any) === 'Admin' || (currentUser?.role as any) === UserRole.ADMIN ? 'All' : (currentUser?.branchAssignmentId || '')
+  );
+
+ useEffect(() => {
+   const isAdmin = (currentUser?.role as any) === 'Admin' || (currentUser?.role as any) === UserRole.ADMIN;
+   if (isAdmin) {
+     setBranchFilter('All');
+   } else {
+     const uBranch = currentUser?.branchAssignmentId || '';
+     setBranchFilter(uBranch);
+     setSelectedBranchId(uBranch);
+   }
+ }, [currentUser?.id, currentUser?.role, currentUser?.branchAssignmentId]);
  const [showAddForm, setShowAddForm] = useState(false);
 
  // Pagination states
@@ -80,6 +95,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  // Filtered Products for the selection panel
  const filteredProductsSelect = products.filter(p => {
  if (p.isDeleted) return false;
+ if (!isProductInBranch(p, selectedBranchId, branchStock, branches)) return false;
  const searchString = `${p.productName} ${p.sku} ${p.productCode} ${p.brand}`.toLowerCase();
  return searchString.includes(productSearch.toLowerCase());
  }).slice(0, 5); // display top 5 matches for convenience
@@ -351,16 +367,22 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  
  <div>
  <label className="block text-[10px] uppercase font-black text-zinc-400 tracking-wider mb-1.5">2. Reporting Showroom Branch</label>
- <select
- value={selectedBranchId}
- onChange={(e) => setSelectedBranchId(e.target.value)}
- className="w-full p-2.5 text-xs font-semibold rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none focus:ring-1 focus:ring-rose-500"
- >
- <option value="">-- Choose Showroom Branch --</option>
- {branches.map(b => (
- <option key={b.id} value={b.id}>{b.name} ({b.address.split(',')[0]})</option>
- ))}
- </select>
+  {currentUser?.role === 'Admin' ? (
+  <select
+  value={selectedBranchId}
+  onChange={(e) => setSelectedBranchId(e.target.value)}
+  className="w-full p-2.5 text-xs font-semibold rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none focus:ring-1 focus:ring-rose-500"
+  >
+  <option value="">-- Choose Showroom Branch --</option>
+  {branches.map(b => (
+  <option key={b.id} value={b.id}>{b.name} ({b.address.split(',')[0]})</option>
+  ))}
+  </select>
+  ) : (
+  <div className="w-full p-2.5 text-xs font-black font-mono bg-m3-surface border border-rose-500/10 text-rose-500 rounded-lg">
+  {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'} (Reporting Branch Locked)
+  </div>
+  )}
  </div>
 
  <div className="grid grid-cols-2 gap-3">
@@ -509,16 +531,22 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  {/* Branch Filter */}
  <div className="space-y-1.5">
  <label className="text-[10px] uppercase font-black text-zinc-400 tracking-wider mb-1">Branch Store Location</label>
- <select
- value={branchFilter}
- onChange={(e) => setBranchFilter(e.target.value)}
- className="w-full p-2 text-xs font-semibold rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none"
- >
- <option value="All">All Branches</option>
- {branches.map(b => (
- <option key={b.id} value={b.id}>{b.name}</option>
- ))}
- </select>
+  {currentUser?.role === 'Admin' ? (
+  <select
+  value={branchFilter}
+  onChange={(e) => setBranchFilter(e.target.value)}
+  className="w-full p-2 text-xs font-semibold rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none"
+  >
+  <option value="All">All Branches</option>
+  {branches.map(b => (
+  <option key={b.id} value={b.id}>{b.name}</option>
+  ))}
+  </select>
+  ) : (
+  <div className="w-full p-2 text-xs font-semibold rounded-lg border border-m3-outline-variant/30 bg-m3-surface/60 text-zinc-400 font-mono">
+  {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'} (Locked)
+  </div>
+  )}
  </div>
 
  {/* Category Quick stats bar */}
@@ -648,7 +676,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  </td>
  </tr>
  )}
- </tbody>
+</tbody>
  </table>
  </div>
 

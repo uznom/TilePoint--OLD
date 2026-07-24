@@ -7,9 +7,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useDb } from '../context/DbContext';
 import { saveFileToBackup } from '../lib/fileBackupHelper';
+import { isProductInBranch, getBranchStockQuantity, getBranchStockRecord, slugifyBranchStr } from '../lib/branchUtils';
 import { Product, UserRole, TransferType, TransferStatus } from '../types/db';
 import { HoldToConfirmButton } from './HoldToConfirmButton';
-import { useResponsivePageSize } from './TablePagination';
+import { useResponsivePageSize, useTableAutoPageSize, TablePagination } from './TablePagination';
 import {
  Plus,
  Edit2,
@@ -44,7 +45,9 @@ import {
  ArrowRightLeft,
  Truck,
  Database,
- Copy
+ Copy,
+ MapPin,
+ ShieldAlert
 } from 'lucide-react';
 
 interface InventoryModuleProps {
@@ -269,256 +272,289 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  };
  }, []);
 
- // Highlight and filter product for "Inspect Section" interactions
- const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null);
+ const isAdminUser = (currentUser?.role as any) === 'Admin' || (currentUser?.role as any) === UserRole.ADMIN;
+
+ const [selectedViewBranchId, setSelectedViewBranchId] = useState<string>(
+   isAdminUser ? 'consolidated' : (currentUser?.branchAssignmentId || 'B1')
+ );
 
  useEffect(() => {
- const checkAndApplyFilter = (targetCode?: string) => {
- const code = targetCode || localStorage.getItem("tp_pending_product_filter");
- if (code) {
- // Clear the localStorage trigger so it doesn't run indefinitely
- localStorage.removeItem("tp_pending_product_filter");
- 
- // Find product
- const found = products.find(p => !p.isDeleted && p.productCode.toLowerCase() === code.toLowerCase());
- if (found) {
- // Change subtab to catalog
- changeActiveSubTab("catalog");
- 
- // Set search term so the product is visible and filtered
- setTerm(found.productCode);
- 
- // Ensure it is on the first page
- setProdPage(1);
- 
- // Highlight it
- setHighlightedProductId(found.id);
- 
- // Auto-expand it for full inspect view!
- setExpandedProductIds(prev => ({ ...prev, [found.id]: true }));
- 
- // Clear highlighted product after 2.5 seconds
- setTimeout(() => {
- setHighlightedProductId(null);
- }, 2500);
- }
- }
- };
+   const isNowAdmin = (currentUser?.role as any) === 'Admin' || (currentUser?.role as any) === UserRole.ADMIN;
+   if (isNowAdmin) {
+     setSelectedViewBranchId('consolidated');
+   } else {
+     const bId = currentUser?.branchAssignmentId || 'B1';
+     setSelectedViewBranchId(bId);
+     setBatchFormBranchId(bId);
+     setSelectedPoolBranchId(bId);
+     setTransferSource(bId);
+     setManualLedgerBranchId(bId);
+   }
+ }, [currentUser?.id, currentUser?.role, currentUser?.branchAssignmentId]);
 
- // Check immediately on mount/load
- checkAndApplyFilter();
+ const activeBranchId = isAdminUser 
+   ? selectedViewBranchId 
+   : (currentUser?.branchAssignmentId || 'B1');
 
- const handleSearchEvent = (e: Event) => {
- const customEvent = e as CustomEvent;
- if (customEvent.detail) {
- checkAndApplyFilter(customEvent.detail);
- }
- };
+ // Strict branch isolation filter: products list filtered by active branchAssignmentId / scope
+ const branchProducts = React.useMemo(() => {
+   return products.filter(p => !p.isDeleted && isProductInBranch(p, activeBranchId, branchStock, branches));
+ }, [products, activeBranchId, branchStock, branches]);
+  // Highlight and filter product for "Inspect Section" interactions
+  const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null);
 
- window.addEventListener("tp-search-product", handleSearchEvent);
- return () => {
- window.removeEventListener("tp-search-product", handleSearchEvent);
- };
- }, [products]);
+  useEffect(() => {
+    const checkAndApplyFilter = (targetCode?: string) => {
+      const code = targetCode || localStorage.getItem("tp_pending_product_filter");
+      if (code) {
+        localStorage.removeItem("tp_pending_product_filter");
+        
+        const query = code.trim().toLowerCase();
+        const found = products.find(p => 
+          !p.isDeleted && (
+            p.productCode.toLowerCase() === query ||
+            (p.barcode && p.barcode.toLowerCase() === query) ||
+            (p.sku && p.sku.toLowerCase() === query) ||
+            p.id.toLowerCase() === query
+          )
+        );
 
- // Batch Expiration & Shelf-life Tracker state
- const [batches, setBatches] = useState<BatchExpiration[]>(() => {
-  try {
-    const cached = localStorage.getItem("tp_batch_expirations");
-    if (cached) {
-      const parsed = JSON.parse(cached) as BatchExpiration[];
-      return parsed.map(b => {
-        if (b.id === "batch-1") {
-          const prod = products.find(p => p.productCode === "GR-CAR-60") || products[0];
-          return {
-            ...b,
-            productId: prod?.id || "P-CARRARA-60",
-            productName: prod?.productName || "Polished Granite Carrara 60x60 cm",
-            productCode: prod?.productCode || "GR-CAR-60",
-            batchNumber: "#B-260115A",
-            quantity: 120,
-            manufactureDate: "2026-01-15",
-            expiryDate: "2027-01-15",
-            branchId: "B1",
-            status: "Good",
-            remarks: b.remarks || "High humidity storage area"
-          };
+        if (found) {
+          const isInBranch = isProductInBranch(found, activeBranchId, branchStock, branches);
+          if (!isInBranch) {
+            if (currentUser?.role === "Admin") {
+              setSelectedViewBranchId("consolidated");
+              showToast("Scanned item is allocated to another branch. Switched view to Consolidated Inventory.");
+            } else {
+              const assignedBranches = branchStock
+                .filter(bs => bs.productId === found.id && bs.quantity > 0)
+                .map(bs => branches.find(b => b.id === bs.branchId)?.name || bs.branchId);
+              const bNames = assignedBranches.length > 0 ? assignedBranches.join(", ") : "other branches";
+              showToast("Scanned item is allocated to " + bNames + " (not in your assigned branch).");
+            }
+          }
+
+          changeActiveSubTab("catalog");
+          setTerm(found.productCode);
+          setProdPage(1);
+          setHighlightedProductId(found.id);
+          setExpandedProductIds(prev => ({ ...prev, [found.id]: true }));
+          
+          setTimeout(() => {
+            setHighlightedProductId(null);
+          }, 2500);
+        } else {
+          showToast("No product found matching scannable code \"" + code + "\".");
         }
-        if (b.id === "batch-2") {
-          const prod = products.find(p => p.productCode === "CR-WHT-30") || products[1];
-          return {
-            ...b,
-            productId: prod?.id || "P-WHITE-30",
-            productName: prod?.productName || "Glossy White Ceramic 30x60 cm",
-            productCode: prod?.productCode || "CR-WHT-30",
-            batchNumber: "#B-250810B",
-            quantity: 45,
-            manufactureDate: "2025-08-10",
-            expiryDate: "2026-08-10",
-            branchId: "B1",
-            status: "Expiring Soon",
-            remarks: b.remarks || "Front aisle display shelf"
-          };
+      }
+    };
+
+    checkAndApplyFilter();
+
+    const handleSearchEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        checkAndApplyFilter(customEvent.detail);
+      }
+    };
+
+    window.addEventListener("tp-search-product", handleSearchEvent);
+    return () => {
+      window.removeEventListener("tp-search-product", handleSearchEvent);
+    };
+  }, [products, activeBranchId, branchStock, branches, currentUser]);
+
+  // Dynamic status evaluator based on current system date
+  const computeLiveBatchStatus = (expiryDateStr: string): "Good" | "Expiring Soon" | "Expired" => {
+    if (!expiryDateStr) return "Good";
+    const exp = new Date(expiryDateStr);
+    exp.setHours(23, 59, 59, 999);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (exp.getTime() < today.getTime()) {
+      return "Expired";
+    }
+    const diffTime = exp.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays <= 30) {
+      return "Expiring Soon";
+    }
+    return "Good";
+  };
+
+  // Batch Expiration & Shelf-life Tracker state
+  const [batches, setBatches] = useState<BatchExpiration[]>(() => {
+    try {
+      const cached = localStorage.getItem("tp_batch_expirations");
+      if (cached) {
+        const parsed = JSON.parse(cached) as BatchExpiration[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Remove legacy hardcoded fake seed batches if they are old mock simulation items
+          const cleaned = parsed.filter(b => b.id !== "batch-1" && b.id !== "batch-2" && b.id !== "batch-3");
+          if (cleaned.length > 0) return cleaned;
         }
-        if (b.id === "batch-3") {
-          const prod = products.find(p => p.productCode === "TC-RST-40") || products[2];
-          return {
-            ...b,
-            productId: prod?.id || "P-RUSTIC-40",
-            productName: prod?.productName || "Rustic Terra Cotta 40x40 cm",
-            productCode: prod?.productCode || "TC-RST-40",
-            batchNumber: "#B-250520C",
-            quantity: 20,
-            manufactureDate: "2025-05-20",
-            expiryDate: "2026-05-20",
-            branchId: "B2",
-            status: "Expired",
-            remarks: b.remarks || "Expired cement adhesive batch. this is from shelf-life & expiry calendar"
-          };
+      }
+    } catch (_) {}
+    return [];
+  });
+
+  // Automatically synchronize batch records with products catalog (and recalculate status dynamically)
+  useEffect(() => {
+    setBatches(prevBatches => {
+      let updatedList = [...prevBatches];
+
+      // Remove legacy simulation mock seeds
+      updatedList = updatedList.filter(b => b.id !== "batch-1" && b.id !== "batch-2" && b.id !== "batch-3");
+
+      // Find all catalog products in active branch scope that have expiration flagged or expiry dates
+      const expiryTrackedProds = branchProducts.filter(p => p.hasExpiration || p.expirationDate);
+
+      // Ensure every tracked product has at least one dynamic batch entry
+      expiryTrackedProds.forEach(prod => {
+        const exists = updatedList.some(b => b.productId === prod.id);
+        if (!exists) {
+          const expDate = prod.expirationDate || new Date(Date.now() + 180 * 86400000).toISOString().split('T')[0];
+          const mfgDate = new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0];
+          updatedList.push({
+            id: `batch-${prod.id}`,
+            productId: prod.id,
+            productName: prod.productName,
+            productCode: prod.productCode,
+            batchNumber: `B-${prod.productCode.replace(/[^A-Z0-9]/gi, '')}-${expDate.replace(/-/g, '').slice(2)}`,
+            quantity: prod.stockQuantity || 25,
+            manufactureDate: mfgDate,
+            expiryDate: expDate,
+            branchId: prod.origin || 'B1',
+            status: computeLiveBatchStatus(expDate),
+            remarks: `Auto-linked from catalog (${prod.category || 'Chemical'})`
+          });
         }
-        const p = products.find(prod => prod.id === b.productId);
-        if (p) {
-          return {
-            ...b,
-            productName: p.productName,
-            productCode: p.productCode
-          };
-        }
-        return b;
       });
-    }
-  } catch (_) {}
 
-  // Provide high-quality interactive seeds
-  const p1 = products.find(p => p.productCode === "GR-CAR-60") || products[0];
-  const p2 = products.find(p => p.productCode === "CR-WHT-30") || products[1];
-  const p3 = products.find(p => p.productCode === "TC-RST-40") || products[2];
-
-  return [
-    {
-      id: "batch-1",
-      productId: p1?.id || "P-CARRARA-60",
-      productName: p1?.productName || "Polished Granite Carrara 60x60 cm",
-      productCode: p1?.productCode || "GR-CAR-60",
-      batchNumber: "#B-260115A",
-      quantity: 120,
-      manufactureDate: "2026-01-15",
-      expiryDate: "2027-01-15",
-      branchId: "B1",
-      status: "Good",
-      remarks: "High humidity storage area"
-    },
-    {
-      id: "batch-2",
-      productId: p2?.id || "P-WHITE-30",
-      productName: p2?.productName || "Glossy White Ceramic 30x60 cm",
-      productCode: p2?.productCode || "CR-WHT-30",
-      batchNumber: "#B-250810B",
-      quantity: 45,
-      manufactureDate: "2025-08-10",
-      expiryDate: "2026-08-10",
-      branchId: "B1",
-      status: "Expiring Soon",
-      remarks: "Front aisle display shelf"
-    },
-    {
-      id: "batch-3",
-      productId: p3?.id || "P-RUSTIC-40",
-      productName: p3?.productName || "Rustic Terra Cotta 40x40 cm",
-      productCode: p3?.productCode || "TC-RST-40",
-      batchNumber: "#B-250520C",
-      quantity: 20,
-      manufactureDate: "2025-05-20",
-      expiryDate: "2026-05-20",
-      branchId: "B2",
-      status: "Expired",
-      remarks: "Expired cement adhesive batch. this is from shelf-life & expiry calendar"
-    }
-  ];
-});
+      // Update names, codes, quantities, and live status for all existing batches from products catalog
+      return updatedList.map(b => {
+        const liveProd = products.find(p => p.id === b.productId);
+        const liveStatus = computeLiveBatchStatus(b.expiryDate);
+        return {
+          ...b,
+          productName: liveProd ? liveProd.productName : b.productName,
+          productCode: liveProd ? liveProd.productCode : b.productCode,
+          quantity: liveProd ? liveProd.stockQuantity : b.quantity,
+          status: liveStatus
+        };
+      });
+    });
+  }, [branchProducts]);
 
   // Sync batch changes to local storage so Notification Center reads them dynamically
- useEffect(() => {
- try {
- localStorage.setItem("tp_batch_expirations", JSON.stringify(batches));
- } catch (_) {}
- }, [batches]);
+  useEffect(() => {
+    try {
+      localStorage.setItem("tp_batch_expirations", JSON.stringify(batches));
+    } catch (_) {}
+  }, [batches]);
 
- // Expiration Calendar view dates (default to July 2026 as per metadata date)
- const [calendarYear, setCalendarYear] = useState(2026);
- const [calendarMonth, setCalendarMonth] = useState(6); // 0-indexed, so 6 is July
+  // Expiration Calendar view dates (default to live system date)
+  const [calendarYear, setCalendarYear] = useState(() => new Date().getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date().getMonth()); // 0-indexed
+  const [calendarSelectedDay, setCalendarSelectedDay] = useState<string | null>(null);
 
- // Add Batch Form states
- const [showAddBatchModal, setShowAddBatchModal] = useState(false);
- const [batchFormProductId, setBatchFormProductId] = useState("");
- const [batchFormNo, setBatchFormNo] = useState("");
- const [batchFormQty, setBatchFormQty] = useState(50);
- const [batchFormMfgDate, setBatchFormMfgDate] = useState("2025-07-16");
- const [batchFormExpDate, setBatchFormExpDate] = useState("2026-07-16");
- const [batchFormBranchId, setBatchFormBranchId] = useState("B1");
- const [batchFormRemarks, setBatchFormRemarks] = useState("");
+  // Add Batch Form & Detail Modal states
+  const [showAddBatchModal, setShowAddBatchModal] = useState(false);
+  const [selectedBatchDetail, setSelectedBatchDetail] = useState<BatchExpiration | null>(null);
+  const [batchFormProductId, setBatchFormProductId] = useState("");
+  const [batchFormNo, setBatchFormNo] = useState("");
+  const [batchFormQty, setBatchFormQty] = useState(50);
+  const [batchFormMfgDate, setBatchFormMfgDate] = useState(() => new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0]);
+  const [batchFormExpDate, setBatchFormExpDate] = useState(() => new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0]);
+  const [batchFormBranchId, setBatchFormBranchId] = useState(currentUser?.branchAssignmentId || "B1");
+  const [batchFormRemarks, setBatchFormRemarks] = useState("");
 
- const handleRegisterBatch = (e: React.FormEvent) => {
- e.preventDefault();
- if (!batchFormProductId) {
- showToast("Please select a target product for the batch.");
- return;
- }
- if (!batchFormNo.trim()) {
- showToast("Please provide a valid Batch / Lot Number.");
- return;
- }
+  const handleRegisterBatch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!batchFormProductId) {
+      showToast("Please select a target product for the batch.");
+      return;
+    }
 
- const prod = products.find(p => p.id === batchFormProductId);
- if (!prod) return;
+    const prod = products.find(p => p.id === batchFormProductId);
+    if (!prod) return;
 
- // Assess status based on 2026-07-16 current local time
- const today = new Date("2026-07-16");
- const exp = new Date(batchFormExpDate);
- const diffTime = exp.getTime() - today.getTime();
- const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const bNo = batchFormNo.trim() || `B-${prod.productCode.replace(/[^A-Z0-9]/gi, '')}-${Date.now().toString().slice(-4)}`;
+    const computedStatus = computeLiveBatchStatus(batchFormExpDate);
 
- let computedStatus: "Good" | "Expiring Soon" | "Expired" = "Good";
- if (diffDays < 0) {
- computedStatus = "Expired";
- } else if (diffDays <= 30) {
- computedStatus = "Expiring Soon";
- }
+    const newBatch: BatchExpiration = {
+      id: `batch-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      productId: batchFormProductId,
+      productName: prod.productName,
+      productCode: prod.productCode,
+      batchNumber: bNo,
+      quantity: batchFormQty,
+      manufactureDate: batchFormMfgDate,
+      expiryDate: batchFormExpDate,
+      branchId: batchFormBranchId,
+      status: computedStatus,
+      remarks: batchFormRemarks.trim() || "Manual batch log entry"
+    };
 
- const newBatch: BatchExpiration = {
- id: `batch-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
- productId: batchFormProductId,
- productName: prod.productName,
- productCode: prod.productCode,
- batchNumber: batchFormNo.trim(),
- quantity: batchFormQty,
- manufactureDate: batchFormMfgDate,
- expiryDate: batchFormExpDate,
- branchId: batchFormBranchId,
- status: computedStatus,
- remarks: batchFormRemarks.trim() || undefined
- };
+    setBatches(prev => [newBatch, ...prev]);
 
- setBatches(prev => [newBatch, ...prev]);
- showToast(`Logged Batch #${batchFormNo} for ${prod.productName} successfully!`);
- 
- // Reset Form
- setBatchFormNo("");
- setBatchFormQty(50);
- setBatchFormRemarks("");
- setShowAddBatchModal(false);
- };
+    // Automatically flag product in catalog as expiry-tracked if not already
+    if (!prod.hasExpiration || prod.expirationDate !== batchFormExpDate) {
+      updateProduct(prod.id, {
+        hasExpiration: true,
+        expirationDate: batchFormExpDate
+      });
+    }
 
- const handleRemoveBatch = (id: string) => {
- setBatches(prev => prev.filter(b => b.id !== id));
- showToast("Batch record removed from ERP shelf-life database.");
- };
+    showToast(`Logged Chemical Batch #${bNo} for "${prod.productName}" successfully!`);
+
+    // Reset Form
+    setBatchFormNo("");
+    setBatchFormQty(50);
+    setBatchFormRemarks("");
+    setShowAddBatchModal(false);
+  };
+
+  const handleResetSimulationBatches = () => {
+    if (window.confirm("Purge legacy simulation data and synchronize chemical batches directly with live catalog products?")) {
+      localStorage.removeItem("tp_batch_expirations");
+      const expiryTrackedProds = branchProducts.filter(p => p.hasExpiration || p.expirationDate);
+      const freshBatches: BatchExpiration[] = expiryTrackedProds.map(prod => {
+        const expDate = prod.expirationDate || new Date(Date.now() + 180 * 86400000).toISOString().split('T')[0];
+        const mfgDate = new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0];
+        return {
+          id: `batch-${prod.id}`,
+          productId: prod.id,
+          productName: prod.productName,
+          productCode: prod.productCode,
+          batchNumber: `B-${prod.productCode.replace(/[^A-Z0-9]/gi, '')}-${expDate.replace(/-/g, '').slice(2)}`,
+          quantity: prod.stockQuantity || 25,
+          manufactureDate: mfgDate,
+          expiryDate: expDate,
+          branchId: prod.origin || 'B1',
+          status: computeLiveBatchStatus(expDate),
+          remarks: `Catalog dynamic batch for ${prod.productName}`
+        };
+      });
+      setBatches(freshBatches);
+      showToast("Chemical batch log entries synchronized directly with live inventory catalog!");
+    }
+  };
+
+  const handleRemoveBatch = (id: string) => {
+    const target = batches.find(b => b.id === id);
+    if (!target) return;
+    if (window.confirm(`Are you sure you want to delete Chemical Batch #${target.batchNumber} (${target.productName})? This action cannot be undone.`)) {
+      setBatches(prev => prev.filter(b => b.id !== id));
+      showToast("Batch record removed from ERP shelf-life database.");
+    }
+  };
 
  // Search & Filters
  const [term, setTerm] = useState('');
  const [categoryFilter, setCategoryFilter] = useState('All');
  const [statusFilter, setStatusFilter] = useState('All');
- const [selectedViewBranchId, setSelectedViewBranchId] = useState<string>('consolidated');
+ 
  const [showPortabilityHubModal, setShowPortabilityHubModal] = useState<boolean>(false);
 
  const canSeeFinancialCostsAndSources = currentUser.role === 'Admin';
@@ -532,16 +568,23 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  const [prodPage, setProdPage] = useState(1);
  const [ledgerPage, setLedgerPage] = useState(1);
 
- const responsiveProdsPerPage = useResponsivePageSize(64, 450, 5); // product table row is 64px tall
+ const catalogTableContainerRef = useRef<HTMLDivElement | null>(null);
+ const catalogRowHeight = isCompactColumns ? 52 : 68;
+ const autoCatalogPageSize = useTableAutoPageSize(catalogTableContainerRef, {
+ rowHeight: catalogRowHeight,
+ minRows: 4,
+ maxRows: 50,
+ });
+
  const responsiveLedgerPerPage = useResponsivePageSize(48, 480, 10); // ledger table row is 48px tall
 
- const [prodsPerPage, setProdsPerPage] = useState<number>(5);
+ const [prodsPerPage, setProdsPerPage] = useState<number>(8);
  const [ledgerPerPage, setLedgerPerPage] = useState<number>(10);
 
  // Sync with responsive sizing
  useEffect(() => {
- setProdsPerPage(responsiveProdsPerPage);
- }, [responsiveProdsPerPage]);
+ setProdsPerPage(autoCatalogPageSize);
+ }, [autoCatalogPageSize]);
 
  useEffect(() => {
  setLedgerPerPage(responsiveLedgerPerPage);
@@ -567,6 +610,24 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  const [tempProductId, setTempProductId] = useState('');
  const [tempQty, setTempQty] = useState(15);
  const [transferFilterStatus, setTransferFilterStatus] = useState<string>('All');
+
+ // Ensure non-Admin users are strictly locked to their branchAssignmentId for viewing stocks and performing actions
+ useEffect(() => {
+   if (currentUser) {
+     const assignedBranch = currentUser.branchAssignmentId || 'B1';
+     if (currentUser.role !== 'Admin') {
+       if (selectedViewBranchId !== assignedBranch) {
+         setSelectedViewBranchId(assignedBranch);
+       }
+       if (selectedPoolBranchId !== assignedBranch) {
+         setSelectedPoolBranchId(assignedBranch);
+       }
+       if (transferSource !== assignedBranch) {
+         setTransferSource(assignedBranch);
+       }
+     }
+   }
+ }, [currentUser, selectedViewBranchId, selectedPoolBranchId, transferSource]);
 
  // Add/Edit Modals state
  const [showModal, setShowModal] = useState(false);
@@ -640,7 +701,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  // Manual Stock Ledger entry form state
  const [showManualLedgerModal, setShowManualLedgerModal] = useState(false);
  const [manualLedgerProductId, setManualLedgerProductId] = useState('');
- const [manualLedgerBranchId, setManualLedgerBranchId] = useState('B1');
+ const [manualLedgerBranchId, setManualLedgerBranchId] = useState(currentUser?.branchAssignmentId || 'B1');
  const [manualLedgerType, setManualLedgerType] = useState<'IN' | 'OUT' | 'ADJUST' | 'TRANSFER' | 'PURCHASE' | 'SALE'>('ADJUST');
  const [manualLedgerQty, setManualLedgerQty] = useState<number>(10);
  const [manualLedgerRefNo, setManualLedgerRefNo] = useState('');
@@ -663,6 +724,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  const [toastMessage, setToastMessage] = useState<string | null>(null);
  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
  const [confirmDeleteName, setConfirmDeleteName] = useState<string>('');
+ const [targetBranchId, setTargetBranchId] = useState<string>('B1');
+ const [importTargetBranchId, setImportTargetBranchId] = useState<string>('B1');
+ const [showBranchRecommendationBanner, setShowBranchRecommendationBanner] = useState<boolean>(true);
  const [showImportModal, setShowImportModal] = useState(false);
  const [rawImportText, setRawImportText] = useState('');
  const [isDragging, setIsDragging] = useState(false);
@@ -724,7 +788,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type: 'Deficit' | 'Overstock';
  }[] = [];
 
- const activeProds = products.filter(p => !p.isDeleted);
+ const activeProds = branchProducts;
  const activeBranches = branches.filter(b => !b.isDeleted);
  
  // Dynamically identify the main distribution branch (either B1 or a branch marked as isDistributionBranch)
@@ -867,9 +931,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
  // Catalog Filtration
  const filteredProducts = React.useMemo(() => {
- return products.filter(p => {
- if (p.isDeleted) return false;
-
+ return branchProducts.filter(p => {
  const matchSearch =
  p.productName.toLowerCase().includes(term.toLowerCase()) ||
  p.productCode.toLowerCase().includes(term.toLowerCase()) ||
@@ -881,13 +943,12 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  const matchCategory = categoryFilter === 'All' || p.category === categoryFilter;
 
  // Stock Status evaluations based on selected branch/consolidated view mode
- const qty = selectedViewBranchId === 'consolidated'
- ? p.stockQuantity
- : (branchStock.find(bs => bs.productId === p.id && bs.branchId === selectedViewBranchId)?.quantity ?? 0);
+ const qty = getBranchStockQuantity(p, selectedViewBranchId, branchStock, branches);
 
+ const bsRec = getBranchStockRecord(p, selectedViewBranchId, branchStock, branches);
  const threshold = selectedViewBranchId === 'consolidated'
  ? p.minimumStock
- : (branchStock.find(bs => bs.productId === p.id && bs.branchId === selectedViewBranchId)?.lowStockThresholdOverride ?? p.minimumStock);
+ : (bsRec?.lowStockThresholdOverride ?? p.minimumStock);
 
  let currentStatus = 'In Stock';
  if (qty === 0) {
@@ -907,7 +968,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
  return matchSearch && matchCategory && matchStatus;
  });
- }, [products, branchStock, term, categoryFilter, statusFilter, selectedViewBranchId]);
+ }, [branchProducts, branchStock, term, categoryFilter, statusFilter, selectedViewBranchId]);
 
  const totalProdPages = Math.ceil(filteredProducts.length / prodsPerPage) || 1;
  const paginatedProducts = React.useMemo(() => {
@@ -930,30 +991,49 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  };
 
  const getSelectedProducts = () => {
- return products.filter(p => !p.isDeleted && selectedProdIds[p.id]);
+ return branchProducts.filter(p => selectedProdIds[p.id]);
  };
 
- const totalLedgerPages = Math.ceil(ledgerEntries.length / ledgerPerPage) || 1;
+ const filteredLedgerEntries = React.useMemo(() => {
+   return ledgerEntries.filter(le => {
+     if (activeBranchId !== 'consolidated') {
+       const targetBranch = branches.find(b => b.id === activeBranchId);
+       const leBranchSlug = slugifyBranchStr(le.branchId);
+       const matchBranch = 
+         le.branchId === activeBranchId || 
+         (targetBranch && (
+           leBranchSlug === slugifyBranchStr(targetBranch.id) ||
+           leBranchSlug === slugifyBranchStr(targetBranch.name) ||
+           leBranchSlug === slugifyBranchStr(targetBranch.branchCode)
+         ));
+       if (!matchBranch) return false;
+     }
+     const prod = products.find(p => p.id === le.productId || p.productName === le.productName);
+     if (prod && !isProductInBranch(prod, activeBranchId, branchStock, branches)) return false;
+     return true;
+   });
+ }, [ledgerEntries, activeBranchId, branches, products, branchStock]);
+
+ const totalLedgerPages = Math.ceil(filteredLedgerEntries.length / ledgerPerPage) || 1;
  const paginatedLedger = React.useMemo(() => {
- return ledgerEntries.slice((ledgerPage - 1) * ledgerPerPage, ledgerPage * ledgerPerPage);
- }, [ledgerEntries, ledgerPage, ledgerPerPage]);
+   return filteredLedgerEntries.slice((ledgerPage - 1) * ledgerPerPage, ledgerPage * ledgerPerPage);
+ }, [filteredLedgerEntries, ledgerPage, ledgerPerPage]);
 
  // Calculate Key Inventory Performance Indicators (Dashboard Statistics)
  const stats = React.useMemo(() => {
- const nonDeleted = products.filter(p => !p.isDeleted);
+ const nonDeleted = branchProducts;
  let totalValue = 0;
  let lowStock = 0;
  let criticalStock = 0;
  let outOfStock = 0;
 
  nonDeleted.forEach(p => {
- const qty = selectedViewBranchId === 'consolidated'
- ? p.stockQuantity
- : (branchStock.find(bs => bs.productId === p.id && bs.branchId === selectedViewBranchId)?.quantity ?? 0);
+ const qty = getBranchStockQuantity(p, selectedViewBranchId, branchStock, branches);
 
+ const bsRec = getBranchStockRecord(p, selectedViewBranchId, branchStock, branches);
  const threshold = selectedViewBranchId === 'consolidated'
  ? p.minimumStock
- : (branchStock.find(bs => bs.productId === p.id && bs.branchId === selectedViewBranchId)?.lowStockThresholdOverride ?? p.minimumStock);
+ : (bsRec?.lowStockThresholdOverride ?? p.minimumStock);
 
  totalValue += qty * p.costPrice;
  if (qty === 0) {
@@ -972,7 +1052,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  criticalStockCount: criticalStock,
  outOfStockCount: outOfStock
  };
- }, [products, branchStock, selectedViewBranchId]);
+ }, [branchProducts, branchStock, branches, activeBranchId, selectedViewBranchId]);
 
  // Movemet logs filtering logic
  const filteredMovements = movements.filter(m => {
@@ -992,8 +1072,37 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  const matchType = 
  movementTypeFilter === 'All' || m.type === movementTypeFilter;
 
- return matchSearch && matchType;
+ const matchBranch = activeBranchId === 'consolidated' || (m as any).branchId === activeBranchId || m.sourceBranchId === activeBranchId || m.destinationBranchId === activeBranchId;
+
+ return matchSearch && matchType && matchBranch;
  });
+
+ // Dynamic Chemical Stock Batches Filtering
+ const filteredBatches = React.useMemo(() => {
+ return batches.filter(b => {
+ const matchBranch = activeBranchId === 'consolidated' || b.branchId === activeBranchId;
+ const prod = products.find(p => p.id === b.productId);
+ const pName = prod ? prod.productName.toLowerCase() : (b.productName?.toLowerCase() || '');
+ const pCode = prod ? prod.productCode.toLowerCase() : (b.productCode?.toLowerCase() || '');
+ const bNo = b.batchNumber ? b.batchNumber.toLowerCase() : '';
+
+ const matchSearch = !term.trim() ||
+ pName.includes(term.toLowerCase()) ||
+ pCode.includes(term.toLowerCase()) ||
+ bNo.includes(term.toLowerCase());
+
+ const matchStatus = statusFilter === 'All' ||
+ (statusFilter === 'In Stock' && b.status === 'Good') ||
+ (statusFilter === 'Low Stock' && b.status === 'Expiring Soon') ||
+ (statusFilter === 'Out of Stock' && b.status === 'Expired') ||
+ (statusFilter === 'Critical' && (b.status === 'Expiring Soon' || b.status === 'Expired')) ||
+ b.status === statusFilter;
+
+ const matchDate = !calendarSelectedDay || b.expiryDate === calendarSelectedDay;
+
+ return matchBranch && matchSearch && matchStatus && matchDate;
+ });
+ }, [batches, activeBranchId, products, term, statusFilter, calendarSelectedDay]);
 
  // Handle image conversion and store in state
  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1043,7 +1152,11 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  setTaxType('12% VAT');
  setStockQuantity(50);
  setMinimumStock(20);
- setOrigin('');
+ const initBranch = currentUser?.role === UserRole.ADMIN 
+   ? (selectedViewBranchId === 'consolidated' ? 'B1' : selectedViewBranchId)
+   : (currentUser?.branchAssignmentId || 'B1');
+ setTargetBranchId(initBranch);
+ setOrigin(initBranch);
  setHasExpiration(false);
  setExpirationDate('');
 
@@ -1093,6 +1206,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  setStockQuantity(p.stockQuantity);
  setMinimumStock(p.minimumStock);
  setOrigin(p.origin || '');
+ setTargetBranchId(p.origin || (currentUser?.branchAssignmentId || 'B1'));
  setHasExpiration(!!p.hasExpiration);
  setExpirationDate(p.expirationDate || '');
 
@@ -1179,7 +1293,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  sellingPrice: Number(sellingPrice),
  stockQuantity: Number(stockQuantity),
  minimumStock: Number(minimumStock),
- origin,
+ origin: targetBranchId || origin,
  markupPercent: Number(markupPercent),
  taxType,
  hasExpiration,
@@ -1193,7 +1307,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  releasePessimisticLock(editingId);
  } else {
  createProduct(payload);
- showToast('Registered new item with recorded supplier in catalogs.');
+ const targetBName = branches.find(b => b.id === targetBranchId)?.name || targetBranchId;
+ showToast(`Registered new item assigned to ${targetBName} branch.`);
  }
  setShowModal(false);
  };
@@ -1791,7 +1906,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
  const handleBulkSubmitDamage = (e: React.FormEvent) => {
  e.preventDefault();
- const selected = products.filter(p => !p.isDeleted && selectedProdIds[p.id]);
+ const selected = branchProducts.filter(p => selectedProdIds[p.id]);
  if (selected.length === 0) {
  showToast("Error: No items selected.");
  return;
@@ -1827,7 +1942,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
  // Bulk Import / Export simulations
  const handleExportJSON = () => {
- const jsonString = JSON.stringify(products.filter(p => !p.isDeleted), null, 2);
+ const jsonString = JSON.stringify(branchProducts, null, 2);
  const filename = `TilePoint_Inventory_${new Date().toISOString().slice(0, 10)}.json`;
  saveFileToBackup(jsonString, filename, 'Inventory_Exports').then((res) => {
  addAuditLog('INVENTORY_EXPORT', 'Exported product database as JSON file', 'Products', 'EXPORT');
@@ -1882,7 +1997,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  let filename = '';
 
  if (type === 'products') {
- dataToExport = products.filter(p => !p.isDeleted);
+ dataToExport = branchProducts;
  filename = `enterprise-products-catalog-${Date.now()}`;
  } else if (type === 'suppliers') {
  dataToExport = suppliers.filter(s => !s.isDeleted);
@@ -1940,7 +2055,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  const handleCopyExportText = (type: 'products' | 'suppliers' | 'branches', format: 'json' | 'csv') => {
  let dataToExport: any[] = [];
  if (type === 'products') {
- dataToExport = products.filter(p => !p.isDeleted);
+ dataToExport = branchProducts;
  } else if (type === 'suppliers') {
  dataToExport = suppliers.filter(s => !s.isDeleted);
  } else if (type === 'branches') {
@@ -2246,7 +2361,11 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  `Parsing ${formatType}, validating product columns, and updating regional catalog tables...`
  );
 
- const result = importProducts(parsed);
+ const sanitizedParsed = parsed.map(item => ({
+ ...item,
+ origin: item.origin || importTargetBranchId
+ }));
+ const result = importProducts(sanitizedParsed);
  if (result.success) {
  setShowImportModal(false);
  setShowPortabilityHubModal(false);
@@ -2535,6 +2654,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  {/* VIEW 1: CATALOG STOCK LEDGER */}
  {activeSubTab === 'catalog' && (
  <>
+ 
  {/* Main Filter Controller Panel Card */}
  <div className="bg-m3-surface-low p-4 rounded-[28px] border border-m3-outline-variant/20 shadow-sm space-y-4">
  <div className="flex flex-col xl:flex-row gap-4 items-stretch xl:items-center justify-between">
@@ -2567,7 +2687,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  
  {/* Branch view select / consolidated */}
  <div className="flex items-center gap-1.5 bg-m3-surface-lowest border border-emerald-500/30 px-3 py-1.5 rounded-xl shadow-sm">
- <span className="text-[9px] uppercase font-black tracking-widest text-emerald-600 font-mono">View scope:</span>
+ <span className="text-[9px] uppercase font-black tracking-widest text-emerald-600 font-mono">Branch:</span>
+ {isAdminUser ? (
  <select
  value={selectedViewBranchId}
  onChange={e => setSelectedViewBranchId(e.target.value)}
@@ -2578,6 +2699,11 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <option key={b.id} value={b.id}>{b.name.replace('Emman Tile Center ', 'Branch: ')}</option>
  ))}
  </select>
+ ) : (
+ <span className="text-xs text-emerald-500 font-extrabold">
+ {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
+ </span>
+ )}
  </div>
 
  {/* Category select */}
@@ -2682,7 +2808,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
  {/* Database Catalog Table List */}
  <div className="m3-card shadow-sm p-0 overflow-hidden snap-start scroll-mt-20">
- <div className="overflow-auto scrollbar-thin scrollbar-thumb-m3-outline-variant h-[58vh] md:h-[64vh] lg:h-[68vh] min-h-[380px]">
+ <div ref={catalogTableContainerRef} className="overflow-auto scrollbar-thin scrollbar-thumb-m3-outline-variant min-h-[280px]">
  <table className={`w-full text-left border-collapse table-auto text-xs transition-all ${isCompactColumns ? 'min-w-[700px]' : 'min-w-[1280px]'}`}>
  <thead>
  <tr className="border-b border-m3-outline-variant/20 bg-m3-surface/30 text-[10px] uppercase font-bold text-m3-on-surface-variant tracking-wider">
@@ -2698,30 +2824,35 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  />
  </th>
  <th className="py-3 px-2 w-10 text-center bg-m3-surface-low/40 select-none"></th>
- {!isCompactColumns && <th className="py-3 px-4 w-12 text-center">Image</th>}
- <th className="py-3 px-4">Code / SKU</th>
+  <th className="py-3 px-4">Code / SKU</th>
  {!isCompactColumns && <th className="py-3 px-4">Identifier codes</th>}
  <th className="py-3 px-4">Product Details</th>
  {!isCompactColumns && <th className="py-3 px-4">Category / Brand</th>}
  {!isCompactColumns && <th className="py-3 px-4 text-center">Packaging dimensions</th>}
  {!isCompactColumns && canSeeFinancialCostsAndSources && <th className="py-3 px-4 text-right">Unit cost</th>}
  <th className="py-3 px-4 text-right">Sale Price</th>
- <th className="py-3 px-4 text-center">Current Stock</th>
+ <th className="py-3 px-4 text-center">Stock</th>
  {!isCompactColumns && <th className="py-3 px-2 text-center">Threshold</th>}
  <th className="py-3 px-4 text-center">Status</th>
  <th className="py-3 px-4 text-center">Controls</th>
  </tr>
  </thead>
  <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
- {paginatedProducts.map((p) => {
+ {paginatedProducts.length === 0 ? (
+  <tr>
+    <td colSpan={10} className="py-12 text-center text-sm font-medium text-m3-on-surface-variant/70">
+      No products found matching the search criteria or selected branch filter.
+    </td>
+  </tr>
+) : (
+  paginatedProducts.map((p) => {
  // Determine status indicators based on selected branch scope or consolidated HQ view
- const qty = selectedViewBranchId === 'consolidated'
- ? p.stockQuantity
- : (branchStock.find(bs => bs.productId === p.id && bs.branchId === selectedViewBranchId)?.quantity ?? 0);
+ const qty = getBranchStockQuantity(p, selectedViewBranchId, branchStock, branches);
 
+ const bsRec = getBranchStockRecord(p, selectedViewBranchId, branchStock, branches);
  const threshold = selectedViewBranchId === 'consolidated'
- ? p.minimumStock
- : (branchStock.find(bs => bs.productId === p.id && bs.branchId === selectedViewBranchId)?.lowStockThresholdOverride ?? p.minimumStock);
+   ? p.minimumStock
+   : (bsRec?.lowStockThresholdOverride ?? p.minimumStock);
 
  let statusLabel = 'In Stock';
  let statusClass = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/25';
@@ -2785,25 +2916,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  </button>
  </td>
  
- {/* Product Thumbnail view */}
- {!isCompactColumns && (
- <td className="py-3.5 px-4 font-mono select-none">
- <div className="w-10 h-10 rounded-xl overflow-hidden border border-zinc-200/40 dark:border-zinc-700/40 bg-zinc-300/30 flex items-center justify-center shrink-0">
- {p.image ? (
- <img
- src={p.image}
- alt={p.productName}
- className="w-full h-full object-cover"
- referrerPolicy="no-referrer"
- />
- ) : (
- <div className="text-[9px] uppercase tracking-tighter text-zinc-400 font-extrabold text-center leading-none p-1 shrink-0">
- No Pix
- </div>
- )}
- </div>
- </td>
- )}
+ 
 
  {/* Code / SKU details */}
  <td className="py-3.5 px-4 font-mono">
@@ -2919,25 +3032,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  ? 'text-m3-primary tracking-wide' 
  : 'text-m3-on-surface'
  }>
- {qty}
+ {qty} <span className="text-[10px] text-m3-on-surface-variant font-normal">Boxes</span>
  </div>
- {selectedViewBranchId === 'consolidated' && (
- <div className="flex flex-wrap justify-center gap-1 mt-1.5 max-w-[180px] mx-auto">
- {branches.filter(b => !b.isDeleted).map(b => {
- const bStock = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id)?.quantity || 0;
- if (bStock === 0) return null;
- return (
- <span
- key={b.id}
- className="text-[9px] px-1.5 py-0.5 rounded bg-m3-primary/10 text-m3-primary border border-m3-primary/15 font-sans font-bold whitespace-nowrap"
- title={`${b.name}: ${bStock} Boxes`}
- >
- {b.id}: {bStock}
- </span>
- );
- })}
- </div>
- )}
  </td>
 
  {/* Threshold warnings trigger limit */}
@@ -2985,7 +3081,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <button
  onClick={() => handleOpenEdit(p)}
  className="p-1.5 text-zinc-500 hover:text-m3-primary hover:bg-m3-outline-variant/15 transition-all rounded-full cursor-pointer shrink-0"
- title="Edit specs / Upload Image"
+ title="Edit specs"
  >
  <Edit2 className="h-4 w-4" />
  </button>
@@ -3016,23 +3112,12 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
  className="overflow-hidden"
  >
- <div className="bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/15 grid grid-cols-1 md:grid-cols-3 gap-6 shadow-inner text-left">
+ <div className={`bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/15 grid grid-cols-1 ${currentUser?.role === UserRole.ADMIN ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6 shadow-inner text-left`}>
  
  {/* Left specs: Branding & Thumbnail */}
  <div className="space-y-4 border-b md:border-b-0 md:border-r border-m3-outline-variant/10 pb-4 md:pb-0 md:pr-6">
  <div className="flex gap-4 items-start">
- <div className="w-16 h-16 rounded-xl overflow-hidden border border-zinc-200/40 dark:border-zinc-700/40 bg-zinc-300/30 flex items-center justify-center shrink-0">
- {p.image ? (
- <img
- src={p.image}
- alt={p.productName}
- className="w-full h-full object-cover"
- referrerPolicy="no-referrer"
- />
- ) : (
- <div className="text-[9px] uppercase tracking-tighter text-zinc-400 font-extrabold text-center leading-none p-2 truncate">No Image</div>
- )}
- </div>
+ 
  <div className="space-y-1">
  <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest block">Primary SKU Details</span>
  <strong className="text-sm text-m3-on-surface block leading-tight">{p.productName}</strong>
@@ -3047,7 +3132,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  </div>
 
  {/* Center specs: Dimensions, quantities and price indices */}
- <div className="space-y-3 md:border-r border-m3-outline-variant/10 md:pr-6">
+ <div className={`space-y-3 ${currentUser?.role === UserRole.ADMIN ? 'md:border-r border-m3-outline-variant/10 md:pr-6' : ''}`}>
  <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest block">Dimensional Specifications</span>
  <div className="grid grid-cols-2 gap-3 text-xs font-semibold">
  <div>
@@ -3108,1876 +3193,1306 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  </div>
 
  {/* Right specs: Regional Branch distributions */}
- <div className="space-y-3">
- <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest block">Live Multi-Branch Stock balance</span>
- <div className="space-y-2">
- {branches.filter(b => !b.isDeleted).map((b) => {
- const branchRecord = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id);
- const qty = branchRecord?.quantity || 0;
- const overrideLimit = branchRecord?.lowStockThresholdOverride !== undefined
- ? branchRecord.lowStockThresholdOverride
- : p.minimumStock;
-
- let statusBg = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/10';
- if (qty === 0) statusBg = 'bg-rose-500/10 text-rose-500 border-rose-500/10';
- else if (qty <= overrideLimit) statusBg = 'bg-amber-500/10 text-amber-500 border-amber-500/10';
-
- return (
- <div key={b.id} className="flex flex-col md:flex-row justify-between md:items-center gap-2 text-xs p-3 rounded-xl bg-m3-surface border border-m3-outline-variant/10 shadow-3xs">
- <div className="flex flex-col">
- <span className="font-extrabold text-[10px] text-m3-on-surface uppercase tracking-tight">{b.name.replace('Emman Tile Center ', '')}</span>
- <span className="text-[8px] text-zinc-400 font-mono uppercase">Current Balance: <strong className="text-m3-on-surface">{qty} {p.unit || 'Boxes'}</strong></span>
- </div>
-
- <div className="flex items-center gap-2">
- {/* Alert limit settings for each branch */}
- <div className="flex items-center gap-1 bg-m3-surface-low px-2 py-1 rounded-lg border border-m3-outline-variant/20">
- <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider">Alert Threshold:</span>
- <input
- type="number"
- className="w-12 bg-m3-surface-lowest text-xs font-mono font-bold text-center border-b border-m3-outline-variant text-m3-on-surface py-0.5"
- value={overrideLimit}
- onChange={(e) => {
- const val = parseInt(e.target.value);
- updateBranchLowStockThreshold(p.id, b.id, isNaN(val) ? p.minimumStock : val);
- }}
- min={0}
- />
- </div>
-
- <span className={`font-mono font-black text-xs px-2.5 py-1 rounded-lg border ${statusBg}`}>
- {qty} {p.unit || 'Boxes'}
- </span>
- </div>
- </div>
- );
- })}
- </div>
- </div>
-
- </div>
- </motion.div>
- </td>
- </tr>
- )}
- </AnimatePresence>
- </React.Fragment>
- );
- })}
-
- {products.filter(p => !p.isDeleted).length === 0 ? (
- <tr>
- <td colSpan={isCompactColumns ? 7 : 13} className="py-12 text-center text-amber-500 font-extrabold text-sm">
- ️ No products registered in the inventory catalog. Use "Create Product" or import from the backup panel below to add items.
- </td>
- </tr>
- ) : filteredProducts.length === 0 ? (
- <tr>
- <td colSpan={isCompactColumns ? 7 : 13} className="py-12 text-center text-m3-on-surface-variant font-bold text-sm">
- No hardware listings or tiles match your filtered search.
- </td>
- </tr>
- ) : null}
- </tbody>
- </table>
- </div>
-
- {/* Pagination Controls bar */}
- <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-m3-surface-low/80 border-t border-m3-outline-variant/30 text-xs">
- <div className="flex flex-wrap items-center gap-3">
- <span className="font-medium text-m3-on-surface-variant font-mono">
- Showing {filteredProducts.length === 0 ? 0 : Math.min(filteredProducts.length, (prodPage - 1) * prodsPerPage + 1)}-{Math.min(filteredProducts.length, prodPage * prodsPerPage)} of {filteredProducts.length} entries
- </span>
- <span className="text-zinc-400">|</span>
- <div className="flex items-center gap-1.5 font-sans">
- <span className="text-zinc-500 text-[11px]">Show</span>
- <select
- value={prodsPerPage}
- onChange={(e) => setProdsPerPage(Number(e.target.value))}
- className="bg-m3-surface-lowest text-m3-on-surface border border-m3-outline-variant/35 rounded-md px-1.5 py-1 text-xs focus:outline-none focus:border-m3-primary font-mono cursor-pointer"
- >
- <option value={5}>5</option>
- <option value={10}>10</option>
- <option value={20}>20</option>
- <option value={50}>50</option>
- <option value={100}>100</option>
- </select>
- <span className="text-zinc-500 text-[11px]">entries per page</span>
- </div>
- </div>
- <div className="flex items-center gap-1.5 select-none">
- <button
- type="button"
- disabled={prodPage === 1}
- onClick={() => setProdPage(prev => Math.max(1, prev - 1))}
- className="px-3.5 py-1.5 rounded-lg border border-m3-outline-variant/30 text-m3-on-surface hover:bg-m3-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[10px]"
- >
- Prev
- </button>
- {Array.from({ length: totalProdPages }).map((_, i) => {
- const pNum = i + 1;
- if (totalProdPages > 5 && Math.abs(pNum - prodPage) > 2 && pNum !== 1 && pNum !== totalProdPages) {
- if (pNum === 2 || pNum === totalProdPages - 1) {
- return <span key={pNum} className="px-1.5 text-zinc-400">...</span>;
- }
- return null;
- }
- return (
- <button
- key={pNum}
- type="button"
- onClick={() => setProdPage(pNum)}
- className={`h-7.5 w-7.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
- prodPage === pNum
- ? 'bg-m3-primary text-m3-on-primary shadow-sm'
- : 'border border-m3-outline-variant/20 hover:bg-m3-primary/10 text-m3-on-surface-variant'
- }`}
- >
- {pNum}
- </button>
- );
- })}
- <button
- type="button"
- disabled={prodPage === totalProdPages}
- onClick={() => setProdPage(prev => Math.min(totalProdPages, prev + 1))}
- className="px-3.5 py-1.5 rounded-lg border border-m3-outline-variant/30 text-m3-on-surface hover:bg-m3-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[10px]"
- >
- Next
- </button>
- </div>
- </div>
- </div>
- </>
- )}
-
- {/* VIEW 2: MOVEMENT HISTORY LEDGER LOGS */}
- {activeSubTab === 'movements' && (
- <>
- {/* Movement search filters */}
- <div className="bg-m3-surface-low p-4 rounded-[28px] border border-m3-outline-variant/20 shadow-sm">
- <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
- 
- <div className="relative w-full md:max-w-md shrink-0">
- <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-m3-primary">
- <Search className="h-4 w-4" />
- </span>
- <input
- type="text"
- placeholder="Filter by ref ID, code, notes, user..."
- value={movementSearch}
- onChange={e => setMovementSearch(e.target.value)}
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant/25 focus:border-m3-primary px-3.5 py-2.5 pl-10 pr-8 text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary/10 transition-all rounded-xl font-medium"
- />
- {movementSearch && (
- <button
- onClick={() => setMovementSearch('')}
- className="absolute inset-y-0 right-0 flex items-center pr-3 text-zinc-400 hover:text-rose-500 cursor-pointer text-xs font-black transition-colors"
- title="Clear search"
- >
- 
- </button>
- )}
- </div>
-
- <div className="flex items-center gap-2 w-full justify-start md:justify-end">
- <div className="flex items-center gap-1.5 bg-m3-surface-lowest border border-m3-outline-variant/25 px-3 py-1.5 rounded-xl shadow-sm">
- <span className="text-[9px] uppercase font-black tracking-widest text-m3-on-surface-variant font-mono">Type:</span>
- <select
- value={movementTypeFilter}
- onChange={e => setMovementTypeFilter(e.target.value)}
- className="bg-transparent text-xs text-m3-on-surface focus:outline-none cursor-pointer transition-colors font-bold outline-none"
- >
- <option value="All">All Movements</option>
- <option value="IN">Intake (IN)</option>
- <option value="OUT">Outtake (OUT)</option>
- <option value="ADJUST">Correction (ADJUST)</option>
- <option value="TRANSFER">Inter-Branch (TRANSFER)</option>
- </select>
- </div>
- </div>
- </div>
-
- </div>
-
- {/* Activity Logs Table */}
- <div className="m3-card shadow-sm p-0 overflow-hidden snap-start scroll-mt-20 animate-scale-up">
- <div className="overflow-auto scrollbar-thin scrollbar-thumb-m3-outline-variant h-[58vh] md:h-[64vh] lg:h-[68vh] min-h-[380px]">
- <table className="w-full text-left border-collapse table-auto text-xs min-w-[1000px]">
- <thead>
- <tr className="border-b border-m3-outline-variant/20 bg-m3-surface/30 text-[10px] uppercase font-bold text-m3-on-surface-variant tracking-wider">
- <th className="py-3 px-4">Date & Time</th>
- <th className="py-3 px-4">Associated Product</th>
- <th className="py-3 px-4 text-center">Movement Type</th>
- <th className="py-3 px-4 text-right">Quantity Change</th>
- <th className="py-3 px-4">Origin / target Location</th>
- <th className="py-3 px-4">Audit Reference ID</th>
- <th className="py-3 px-4">Descriptive context / Notes</th>
- <th className="py-3 px-4">Authorized Staff</th>
- </tr>
- </thead>
- <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
- {filteredMovements.map((m) => {
- const p = products.find(prod => prod.id === m.productId);
-
- let typeBadgeClass = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/25';
- if (m.type === 'OUT') typeBadgeClass = 'bg-rose-500/10 text-rose-500 border-rose-500/25';
- if (m.type === 'ADJUST') typeBadgeClass = 'bg-amber-500/10 text-amber-500 border-amber-500/25_ADJUST';
- if (m.type === 'TRANSFER') typeBadgeClass = 'bg-m3-tertiary/10 text-m3-tertiary border-m3-tertiary/25';
-
- const matchingBranch = branches.find(b => b.id === m.destinationBranchId);
-
- return (
- <tr key={m.id} className="hover:bg-m3-surface-low/50 transition-colors">
- {/* Timestamp */}
- <td className="py-3 px-4 font-mono text-[11px] whitespace-nowrap">
- {new Date(m.timestamp).toLocaleString()}
- </td>
-
- {/* Product spec */}
- <td className="py-3 px-4">
- {p ? (
- <div>
- <div className="font-extrabold text-m3-primary text-xs">{p.productCode}</div>
- <span className="text-[10px] text-zinc-500 inline-block truncate max-w-[200px]" title={p.productName}>{p.productName}</span>
- </div>
- ) : (
- <span className="text-zinc-500">Archived Product {m.productId}</span>
- )}
- </td>
-
- {/* Type badge */}
- <td className="py-3 px-4 text-center select-none">
- <span className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-widest border uppercase ${typeBadgeClass}`}>
- {m.type}
- </span>
- </td>
-
- {/* Quantity difference */}
- <td className="py-3 px-4 text-right font-mono font-extrabold text-sm">
- <span className={m.quantity > 0 ? 'text-emerald-500' : 'text-rose-500'}>
- {m.quantity > 0 ? '+' : ''}{m.quantity}
- </span>
- </td>
-
- {/* Locations context */}
- <td className="py-3 px-4 truncate max-w-[180px]" title={matchingBranch?.name}>
- {matchingBranch ? matchingBranch.name : 'Central Warehouse Assignment'}
- </td>
-
- {/* Transaction Reference code */}
- <td className="py-3 px-4 font-mono font-bold text-zinc-500 select-all">
- {m.referenceId}
- </td>
-
- {/* Description explanation */}
- <td className="py-3 px-4 italic max-w-[260px] truncate text-m3-on-surface/80" title={m.notes}>
- {m.notes}
- </td>
-
- {/* Employee accountability */}
- <td className="py-3 px-4 text-zinc-500 font-medium">
- {m.username} ({m.userId})
- </td>
- </tr>
- );
- })}
-
- {filteredMovements.length === 0 && (
- <tr>
- <td colSpan={8} className="py-12 text-center text-m3-on-surface-variant font-bold text-sm">
- No stock activities recorded inside the logs system.
- </td>
- </tr>
- )}
- </tbody>
- </table>
- </div>
- </div>
- </>
- )}
-
- {/* VIEW 3: STOCK TRANSFERS & DISTRIBUTION WORKFLOWS */}
- {activeSubTab === 'transfers' && (
- <div className="space-y-6">
- <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-m3-surface-low p-6 rounded-[28px] border border-m3-outline-variant/20 shadow-sm animate-scale-up">
- <div>
- <h2 className="text-lg font-black text-m3-primary uppercase tracking-wider flex items-center gap-2">
- <ArrowRightLeft className="h-5 w-5" />
- <span>Inter-Branch Stock Transfers Queue</span>
- </h2>
- <p className="text-xs text-m3-on-surface-variant font-medium mt-1">
- Request, coordinate, and approve transfers between centers. Live authorization clearance applies.
- </p>
- </div>
- 
- <button
- onClick={() => {
- setShowCreateTransfer(true);
- setTransferSource(currentUser.branchAssignmentId || 'B1');
- setTransferDest(branches.find(b => b.id !== (currentUser.branchAssignmentId || 'B1'))?.id || 'B2');
- setTransferItems([]);
- }}
- className="flex items-center gap-2 bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary text-xs font-black uppercase tracking-wider px-5 py-3 rounded-full cursor-pointer transition-all shadow-md select-none"
- >
- <Plus className="h-4 w-4" />
- <span>Create Transfer Request</span>
- </button>
- </div>
-
- {/* Quick Filters */}
- <div className="flex flex-wrap gap-2 animate-fade-in-up">
- {['All', 'Pending', 'Approved', 'In Transit', 'Received', 'Declined'].map((status) => {
- const count = status === 'All' 
- ? stockTransfers.length 
- : stockTransfers.filter(t => t.status === status).length;
- const isSel = transferFilterStatus === status;
- return (
- <button
- key={status}
- onClick={() => setTransferFilterStatus(status)}
- className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
- isSel 
- ? 'bg-m3-secondary text-m3-on-secondary shadow-sm'
- : 'bg-m3-surface-low text-m3-on-surface-variant hover:bg-m3-surface-high'
- }`}
- >
- {status} ({count})
- </button>
- );
- })}
- </div>
-
- {/* Transfer Requests List */}
- <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 animate-scale-up">
- {stockTransfers
- .filter(t => transferFilterStatus === 'All' || t.status === transferFilterStatus)
- .map((t) => {
- let statusColor = 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
- if (t.status === 'Approved') statusColor = 'bg-m3-primary/10 text-m3-primary border-m3-primary/20';
- if (t.status === 'In Transit') statusColor = 'bg-m3-tertiary/10 text-m3-tertiary border-m3-tertiary/20';
- if (t.status === 'Received') statusColor = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
- if (t.status === 'Declined') statusColor = 'bg-rose-500/10 text-rose-500 border-rose-500/20';
-
- const matchedFrom = branches.find(b => b.id === t.fromBranchId);
- const matchedTo = branches.find(b => b.id === t.toBranchId);
-
- // Live role clearances
- const isHQUser = currentUser.branchAssignmentId === 'B1';
- const currentBranchInfo = branches.find(b => b.id === currentUser.branchAssignmentId);
- const isDistHubUser = !!currentBranchInfo?.isDistributionBranch;
- const canApprove = currentUser.role === 'Admin' || (currentUser.role === 'Manager' && (isHQUser || isDistHubUser));
- const canDispatch = currentUser.role !== 'Admin' && currentUser.branchAssignmentId === t.fromBranchId;
- const canReceive = currentUser.role !== 'Admin' && currentUser.branchAssignmentId === t.toBranchId;
-
- return (
- <div key={t.id} className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] p-5 shadow-sm space-y-4 hover:shadow-md transition-all flex flex-col justify-between">
- <div>
- {/* Card Header Info */}
- <div className="flex items-center justify-between">
- <div className="flex items-center gap-2">
- <span className="font-mono text-xs font-black text-zinc-500 tracking-wider">#{t.transferNo}</span>
- <span className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-widest border uppercase ${statusColor}`}>
- {t.status}
- </span>
- </div>
- <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
- {new Date(t.createdAt).toLocaleDateString()}
- </span>
- </div>
-
- {/* Route Map */}
- <div className="mt-4 bg-m3-surface p-3 rounded-2xl flex items-center justify-between border border-m3-outline-variant/10 text-center">
- <div className="flex-1 px-1">
- <span className="text-[9px] text-zinc-500 font-extrabold uppercase block tracking-widest">DISPATCH FROM</span>
- <span className="text-xs font-black truncate max-w-[150px] inline-block mt-0.5 font-sans" title={matchedFrom?.name}>
- {matchedFrom ? matchedFrom.name.replace('Emman Tile Center ', '') : t.fromBranchId}
- </span>
- </div>
- 
- <div className="px-2 text-m3-primary animate-pulse">
- <ChevronRight className="h-4 w-4" />
- </div>
- 
- <div className="flex-1 px-1">
- <span className="text-[9px] text-zinc-500 font-extrabold uppercase block tracking-widest">RECEIVE AT</span>
- <span className="text-xs font-black truncate max-w-[150px] inline-block mt-0.5 font-sans" title={matchedTo?.name}>
- {matchedTo ? matchedTo.name.replace('Emman Tile Center ', '') : t.toBranchId}
- </span>
- </div>
- </div>
-
- {/* Info Pills */}
- <div className="flex flex-wrap gap-2 mt-3 text-[10px] font-bold">
- <span className="bg-zinc-500/10 text-zinc-600 px-2 py-0.5 rounded-full">
- Type: {t.transferType}
- </span>
- <span className="bg-zinc-500/10 text-zinc-600 px-2 py-0.5 rounded-full">
- By: {t.requestedBy}
- </span>
- {t.approvedBy && (
- <span className="bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full">
- Approved by: {t.approvedBy}
- </span>
- )}
- </div>
-
- {/* Items description list */}
- <div className="mt-4 space-y-2">
- <h4 className="text-[10px] font-black uppercase text-zinc-400 tracking-wider">Requested Items ({t.items.length})</h4>
- <div className="bg-m3-surface rounded-2xl border border-m3-outline-variant/10 overflow-hidden divide-y divide-m3-outline-variant/10">
- {t.items.map((item) => (
- <div key={item.id} className="flex items-center justify-between p-2.5 text-xs">
- <span className="font-semibold truncate max-w-[280px]">{item.productName}</span>
- <span className="font-mono font-black text-rose-500">{item.quantity} boxes</span>
- </div>
- ))}
- </div>
- </div>
-
- {/* Purpose remarks */}
- <div className="mt-4 bg-m3-secondary-container/10 p-3 rounded-2xl border border-m3-secondary/5 text-xs text-m3-on-surface-variant font-medium">
- <span className="font-bold text-m3-secondary uppercase tracking-wider block text-[9px] mb-0.5">PURPOSE & JUSTIFICATION</span>
- "{t.reason}"
- </div>
- </div>
-
- {/* Quick clearance workflow trigger actions */}
- {t.status !== 'Received' && t.status !== 'Declined' && (
- <div className="mt-5 pt-4 border-t border-m3-outline-variant/15 flex flex-wrap gap-2">
- {t.status === 'Pending' && (
- <>
- <button
- onClick={() => {
- if (!canApprove) {
- showToast('Access Denied: Requires Enterprise Admin or Main Branch/Logistics Hub Manager clearance.');
- return;
- }
- updateStockTransferStatus(t.id, 'Approved');
- showToast('Stock Transfer approved. Stock reserved at dispatch branch.');
- }}
- className={`flex-1 text-[11px] font-black uppercase tracking-wider py-2.5 px-3 rounded-xl border flex items-center justify-center gap-1 transition-all cursor-pointer ${
- canApprove 
- ? 'bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-600' 
- : 'bg-zinc-100 text-zinc-400 border-zinc-200 cursor-not-allowed opacity-60'
- }`}
- >
- <Check className="h-3 w-3" />
- <span>Approve Route</span>
- </button>
- 
- <button
- onClick={() => {
- if (!canApprove) {
- showToast('Access Denied: Only Admin or Distribution Hub Managers can decline transmittals.');
- return;
- }
- updateStockTransferStatus(t.id, 'Declined');
- showToast('Transfer request declined successfully.');
- }}
- className={`text-[11px] font-black uppercase tracking-wider py-2.5 px-3 rounded-xl border flex items-center justify-center gap-1 transition-all cursor-pointer ${
- canApprove 
- ? 'bg-rose-500 text-white border-rose-600 hover:bg-rose-600' 
- : 'bg-zinc-100 text-zinc-400 border-zinc-200 cursor-not-allowed opacity-60'
- }`}
- >
- <X className="h-3.5 w-3.5" />
- <span>Decline</span>
- </button>
- </>
- )}
-
- {t.status === 'Approved' && (
- <button
- onClick={() => {
- if (!canDispatch) {
- showToast(`Dispatch Refused: You must be assigned to dispatching branch ${t.fromBranchId} to ship this stock.`);
- return;
- }
- updateStockTransferStatus(t.id, 'In Transit');
- showToast('Stock dispatched! Deducted from dispatching branch. Items are now In-Transit.');
- }}
- className={`flex-1 text-[11px] font-black uppercase tracking-wider py-3 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
- canDispatch
- ? 'bg-m3-primary text-m3-on-primary border-m3-outline/20 hover:opacity-90 shadow'
- : 'bg-zinc-100 text-zinc-400 border-zinc-200 opacity-60 cursor-not-allowed'
- }`}
- >
- <Truck className="h-3.5 w-3.5" />
- <span>Ship / Put In Transit</span>
- </button>
- )}
-
- {t.status === 'In Transit' && (
- <button
- onClick={() => {
- if (!canReceive) {
- showToast(`Receipt Refused: You must be assigned to receiving branch ${t.toBranchId} to acknowledge.`);
- return;
- }
- updateStockTransferStatus(t.id, 'Received');
- showToast('Stock fully received! Target branch inventory incremented automatically.');
- }}
- className={`flex-1 text-[11px] font-black uppercase tracking-wider py-3 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
- canReceive
- ? 'bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-600 shadow'
- : 'bg-zinc-100 text-zinc-400 border-zinc-200 opacity-60 cursor-not-allowed'
- }`}
- >
- <Check className="h-3.5 w-3.5" />
- <span>Acknowledge Receipt & Add Stock</span>
- </button>
- )}
- </div>
- )}
- </div>
- );
- })}
-
- {stockTransfers.filter(t => transferFilterStatus === 'All' || t.status === transferFilterStatus).length === 0 && (
- <div className="col-span-2 text-center py-16 bg-m3-surface-low rounded-[32px] border border-dashed border-m3-outline-variant/30 text-m3-on-surface-variant font-black text-sm">
- No stock transfer records trace matching the "{transferFilterStatus}" criteria.
- </div>
- )}
- </div>
- </div>
- )}
-
- {/* VIEW 4: LOGISTICS LEDGER & HEATMAP */}
- {activeSubTab === 'ledger' && (
- <div className="space-y-8 animate-fade-in">
- 
- {/* SECTION A: SMART MATRIX ADVISOR & MOVEMENT RECOMMENDATIONS */}
- <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] p-6 shadow-sm space-y-6">
- <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
- <div>
- <h3 className="text-base font-black text-m3-primary uppercase tracking-wider flex items-center gap-2">
- <Flame className="h-5 w-5 text-rose-500 animate-pulse animate-bounce" />
- <span>Interactive Stock Heatmap & Automated Redistribution Advisor</span>
- </h3>
- <p className="text-xs text-m3-on-surface-variant font-medium mt-1">
- Active monitoring of stock deficits at retail branches against Main Branch buffers and dead stock.
- </p>
- </div>
- <span className="bg-rose-500 text-white font-black text-[9px] tracking-widest px-2.5 py-1 rounded-full uppercase">
- Enterprise Logistics Engine
- </span>
- </div>
-
- {/* Grid display recommendation cards */}
- <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
- {recommendedTransfers.slice(0, 4).map((rec) => (
- <div key={rec.id} className="bg-m3-surface p-4 rounded-2xl border border-m3-outline-variant/15 flex flex-col justify-between gap-3 shadow-inner hover:shadow-md transition-all">
- <div className="flex items-start gap-3">
- <div className={`p-2 rounded-xl shrink-0 ${rec.type === 'Deficit' ? 'bg-rose-500/10 text-rose-500' : 'bg-m3-primary/10 text-m3-primary'}`}>
- {rec.type === 'Deficit' ? <AlertTriangle className="h-4 w-4 shrink-0 animate-bounce" /> : <Clock className="h-4 w-4 shrink-0" />}
- </div>
- <div>
- <span className={`text-[9px] font-black uppercase tracking-wider block ${rec.type === 'Deficit' ? 'text-rose-500' : 'text-m3-primary'}`}>
- {rec.type === 'Deficit' ? 'STOCK DEFICIT ALERT' : 'IDLE STOCK REDISTRIBUTION CANDIDATE'}
- </span>
- <p className="text-xs font-semibold text-m3-on-surface mt-1">"{rec.reason}"</p>
- </div>
- </div>
- 
- <div className="pt-2 border-t border-m3-outline-variant/10 flex items-center justify-between">
- <span className="text-[10px] font-mono text-zinc-400 font-bold">Transfer Quantity: {rec.suggestedQty} boxes</span>
- <button
- onClick={() => handleExecuteRecommendation(rec)}
- className="flex items-center gap-1 bg-m3-primary hover:bg-m3-primary/95 text-[10px] font-black uppercase tracking-wider text-m3-on-primary px-3 py-1.5 rounded-full cursor-pointer transition-all"
- >
- <ArrowRightLeft className="h-3 w-3" />
- <span>Execute Redistribution</span>
- </button>
- </div>
- </div>
- ))}
-
- {recommendedTransfers.length === 0 && (
- <div className="col-span-2 text-center py-6 text-zinc-500 font-black text-xs">
- Balanced Load: All tile channels maintain robust optimal safety levels. No active redistribution loops requested.
- </div>
- )}
- </div>
- </div>
-
- {/* SECTION B: RELATIONAL BRANCH STOCK MATRIX */}
- <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] overflow-hidden shadow-sm snap-start scroll-mt-20">
- <div 
- onClick={() => toggleSection('heatmap')}
- className="p-5 border-b border-m3-outline-variant/15 flex justify-between items-center cursor-pointer hover:bg-m3-surface-low/60 transition-colors select-none"
- title="Click to toggle Section Visibility"
- >
- <div>
- <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest flex items-center gap-2">
- <span>Multi-Branch Stock Balance Heatmap</span>
- {collapsedSections.heatmap && <span className="text-[9px] bg-m3-primary/10 text-m3-primary px-2 py-0.5 rounded font-mono font-bold uppercase tracking-wider">Collapsed</span>}
- </h3>
- <p className="text-[10px] text-zinc-400 font-medium">Grid inventory of active products across the franchise spectrum</p>
- </div>
- <button 
- type="button" 
- className="p-1.5 text-zinc-500 hover:text-m3-primary hover:bg-m3-outline-variant/10 rounded-full transition-all"
- >
- {collapsedSections.heatmap ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
- </button>
- </div>
- 
- {!collapsedSections.heatmap && (
- <div className="overflow-auto scrollbar-thin scrollbar-thumb-m3-outline-variant max-h-[50vh] md:max-h-[55vh] lg:max-h-[60vh] min-h-[300px]">
- <table className="w-full text-left border-collapse min-w-[750px]">
- <thead>
- <tr className="bg-m3-surface text-[10px] font-black uppercase tracking-wider text-zinc-500 border-b border-m3-outline-variant/15">
- <th className="py-3 px-4">Associated Product</th>
- {branches.filter(b => !b.isDeleted).map((b) => (
- <th key={b.id} className="py-3 px-4 text-center">{b.id}: {b.name.replace('Emman Tile Center ', '').replace('TilePoint ', '')}</th>
- ))}
- <th className="py-3 px-4 text-right">Unified Global Pools</th>
- </tr>
- </thead>
- <tbody className="divide-y divide-m3-outline-variant/10 text-xs font-semibold">
- {products.filter(p => !p.isDeleted).map((p) => {
- const activeBranches = branches.filter(b => !b.isDeleted);
- let totalGlobal = 0;
-
- return (
- <tr key={p.id} className="hover:bg-m3-surface-high/30 transition-colors">
- <td className="py-3.5 px-4 font-black">
- <span className="block truncate max-w-[200px]" title={p.productName}>{p.productName}</span>
- <span className="text-[9px] font-mono font-bold text-zinc-400">SKU Code: {p.sku} | Category: {p.category}</span>
- </td>
- 
- {/* Branch cells with interactive alerts */}
- {activeBranches.map((b) => {
- const bStockRec = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id);
- const bStock = bStockRec?.quantity || 0;
- totalGlobal += bStock;
-
- const threshold = bStockRec?.lowStockThresholdOverride !== undefined
- ? bStockRec.lowStockThresholdOverride
- : p.minimumStock;
-
- const isLow = bStock <= threshold;
- const isZero = bStock === 0;
-
- let alertClass = 'text-m3-on-surface';
- if (isZero) {
- alertClass = 'bg-rose-500/15 text-rose-600 border border-rose-500/20 px-2 py-0.5 rounded-lg text-xs';
- } else if (isLow) {
- alertClass = 'bg-amber-500/15 text-amber-600 border border-amber-500/20 px-2 py-0.5 rounded-lg text-xs';
- }
-
- return (
- <td key={b.id} className="py-3.5 px-4 text-center font-mono font-extrabold text-sm border-r border-m3-outline-variant/5">
- <span className={alertClass}>
- {bStock} {p.unit || 'boxes'}
- </span>
- </td>
- );
- })}
-
- <td className="py-3.5 px-4 text-right font-mono font-black text-sm text-m3-primary">
- {totalGlobal} {p.unit || 'boxes'}
- </td>
- </tr>
- );
- })}
- </tbody>
- </table>
- </div>
- )}
- </div>
-
- {/* SECTION C: CHRONOLOGICAL DOUBLE-ENTRY LEDGER VIEW */}
- <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] overflow-hidden shadow-sm snap-start scroll-mt-20">
- <div 
- onClick={() => toggleSection('ledger')}
- className="p-5 border-b border-m3-outline-variant/15 flex justify-between items-center cursor-pointer hover:bg-m3-surface-low/60 transition-colors select-none"
- title="Click to toggle Section Visibility"
- >
- <div>
- <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest flex items-center gap-2">
- <span>Double-Entry Logistics Audit Ledger (Chronicler)</span>
- {collapsedSections.ledger && <span className="text-[9px] bg-m3-primary/10 text-m3-primary px-2 py-0.5 rounded font-mono font-bold uppercase tracking-wider">Collapsed</span>}
- </h3>
- <p className="text-[10px] text-zinc-400 font-medium">Unalterable transaction ledger tracking chronological inventory movements</p>
- </div>
- <button 
- type="button" 
- className="p-1.5 text-zinc-500 hover:text-m3-primary hover:bg-m3-outline-variant/10 rounded-full transition-all"
- >
- {collapsedSections.ledger ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
- </button>
- </div>
-
- {!collapsedSections.ledger && (
- <>
- <div className="p-4 bg-m3-surface border-b border-m3-outline-variant/15 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
- <div className="space-y-0.5">
- <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest block font-mono">System Ledger Maintenance</span>
- <p className="text-xs text-m3-on-surface-variant font-medium">Inject custom debit/credit movements directly into the chronological double-entry ledger database.</p>
- </div>
- <button
- type="button"
- onClick={(e) => {
- e.stopPropagation();
- // Pre-fill defaults
- const firstProduct = products.filter(p => !p.isDeleted)[0];
- if (firstProduct) {
- setManualLedgerProductId(firstProduct.id);
- }
- setManualLedgerQty(10);
- setManualLedgerType('ADJUST');
- setManualLedgerRefNo(`MAN-${Date.now().toString().slice(-6)}`);
- setManualLedgerRemarks('');
- setShowManualLedgerModal(true);
- }}
- className="flex items-center gap-1.5 bg-m3-primary hover:bg-m3-primary/95 text-xs font-black uppercase tracking-wider text-m3-on-primary px-4 py-2.5 rounded-2xl cursor-pointer shadow-md transition-all shrink-0 hover:scale-[1.02] active:scale-95 border-0"
- >
- <Plus className="h-4 w-4" />
- <span>Insert Ledger Entry</span>
- </button>
- </div>
-
- <div className="overflow-auto scrollbar-thin scrollbar-thumb-m3-outline-variant max-h-[50vh] md:max-h-[55vh] lg:max-h-[60vh] min-h-[300px]">
- <table className="w-full text-left border-collapse min-w-[900px]">
- <thead>
- <tr className="bg-m3-surface text-[10px] font-black uppercase tracking-wider text-zinc-500 border-b border-m3-outline-variant/15">
- <th className="py-3 px-4">Date / Timestamp</th>
- <th className="py-3 px-4">Associated Tile Catalog</th>
- <th className="py-3 px-4 text-center">Affected Yard</th>
- <th className="py-3 px-4 text-center">Type</th>
- <th className="py-3 px-4 text-right">Debit / Credit Change</th>
- <th className="py-3 px-4 font-mono">Reference No</th>
- <th className="py-3 px-4 w-[280px]">Audit Signature Remarks</th>
- </tr>
- </thead>
- <tbody className="divide-y divide-m3-outline-variant/10 text-xs font-medium">
- {paginatedLedger.map((l) => {
- const matchedB = branches.find(b => b.id === l.branchId);
- 
- let eventBadge = 'bg-zinc-500/10 text-zinc-500 border-zinc-500/15';
- if (l.movementType === 'SALE') eventBadge = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/15';
- if (l.movementType === 'TRANSFER') eventBadge = 'bg-m3-primary/10 text-m3-primary border-m3-primary/15';
- if (l.movementType === 'ADJUST') eventBadge = 'bg-yellow-500/10 text-yellow-500 border-yellow-500/15';
-
- return (
- <tr key={l.id} className="hover:bg-m3-surface-high/30 transition-colors">
- <td className="py-3.5 px-4 text-zinc-400 font-mono text-[10px] whitespace-nowrap">
- {new Date(l.date).toLocaleString()}
- </td>
- 
- <td className="py-3.5 px-4 font-black">
- {l.productName}
- <span className="block text-[9px] font-mono font-bold text-zinc-400 uppercase">PROD CODE: #{l.productId}</span>
- </td>
- 
- <td className="py-3.5 px-4 text-center font-bold">
- {matchedB ? matchedB.name.replace('Emman Tile Center ', '') : l.branchId}
- </td>
- 
- <td className="py-3.5 px-4 text-center select-none">
- <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border uppercase tracking-wider ${eventBadge}`}>
- {l.movementType}
- </span>
- </td>
-
- <td className="py-3.5 px-4 text-right font-mono font-extrabold text-sm">
- <span className={l.quantity > 0 ? 'text-emerald-500' : 'text-rose-500'}>
- {l.quantity > 0 ? '+' : ''}{l.quantity} boxes
- </span>
- </td>
-
- <td className="py-3.5 px-4 font-mono font-bold text-zinc-500 whitespace-nowrap">
- {l.referenceNo}
- </td>
-
- <td className="py-3.5 px-4 italic text-zinc-400 text-xs truncate max-w-[280px]" title={l.remarks}>
- "{l.remarks}"
- </td>
- </tr>
- );
- })}
- </tbody>
- </table>
- </div>
-
- {/* Pagination Controls bar */}
- <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-m3-surface-low/80 border-t border-m3-outline-variant/30 text-xs font-sans">
- <div className="flex flex-wrap items-center gap-3">
- <span className="font-medium text-m3-on-surface-variant font-mono">
- Showing {ledgerEntries.length === 0 ? 0 : Math.min(ledgerEntries.length, (ledgerPage - 1) * ledgerPerPage + 1)}-{Math.min(ledgerEntries.length, ledgerPage * ledgerPerPage)} of {ledgerEntries.length} movements
- </span>
- <span className="text-zinc-400">|</span>
- <div className="flex items-center gap-1.5 font-sans">
- <span className="text-zinc-500 text-[11px]">Show</span>
- <select
- value={ledgerPerPage}
- onChange={(e) => setLedgerPerPage(Number(e.target.value))}
- className="bg-m3-surface-lowest text-m3-on-surface border border-m3-outline-variant/35 rounded-md px-1.5 py-1 text-xs focus:outline-none focus:border-m3-primary font-mono cursor-pointer"
- >
- <option value={5}>5</option>
- <option value={10}>10</option>
- <option value={25}>25</option>
- <option value={50}>50</option>
- <option value={100}>100</option>
- <option value={250}>250</option>
- </select>
- <span className="text-zinc-500 text-[11px]">movements per page</span>
- </div>
- </div>
- <div className="flex items-center gap-1.5 select-none">
- <button
- type="button"
- disabled={ledgerPage === 1}
- onClick={() => setLedgerPage(prev => Math.max(1, prev - 1))}
- className="px-3.5 py-1.5 rounded-lg border border-m3-outline-variant/30 text-m3-on-surface hover:bg-m3-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[10px]"
- >
- Prev
- </button>
- {Array.from({ length: totalLedgerPages }).map((_, i) => {
- const pNum = i + 1;
- if (totalLedgerPages > 5 && Math.abs(pNum - ledgerPage) > 2 && pNum !== 1 && pNum !== totalLedgerPages) {
- if (pNum === 2 || pNum === totalLedgerPages - 1) {
- return <span key={pNum} className="px-1.5 text-zinc-400">...</span>;
- }
- return null;
- }
- return (
- <button
- key={pNum}
- type="button"
- onClick={() => setLedgerPage(pNum)}
- className={`h-7.5 w-7.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
- ledgerPage === pNum
- ? 'bg-m3-primary text-m3-on-primary shadow-sm'
- : 'border border-m3-outline-variant/30 hover:bg-m3-primary/10 text-m3-on-surface-variant'
- }`}
- >
- {pNum}
- </button>
- );
- })}
- <button
- type="button"
- disabled={ledgerPage === totalLedgerPages}
- onClick={() => setLedgerPage(prev => Math.min(totalLedgerPages, prev + 1))}
- className="px-3.5 py-1.5 rounded-lg border border-m3-outline-variant/30 text-m3-on-surface hover:bg-m3-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[10px]"
- >
- Next
- </button>
- </div>
- </div>
- </>
- )}
- </div>
-
- {/* SECTION D: PRODUCT STOCK AGING ANALYSIS */}
- <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] overflow-hidden shadow-sm snap-start scroll-mt-20">
- <div 
- onClick={() => toggleSection('aging')}
- className="p-5 border-b border-m3-outline-variant/15 flex justify-between items-center cursor-pointer hover:bg-m3-surface-low/60 transition-colors select-none"
- title="Click to toggle Section Visibility"
- >
- <div>
- <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest flex items-center gap-2">
- <span>Inventory Aging & Capital Velocity Audit</span>
- {collapsedSections.aging && <span className="text-[9px] bg-m3-primary/10 text-m3-primary px-2 py-0.5 rounded font-mono font-bold uppercase tracking-wider">Collapsed</span>}
- </h3>
- <p className="text-[10px] text-zinc-400 font-medium">Tracks stock sales velocities and identifies non-liquidating capital slots</p>
- </div>
- <button 
- type="button" 
- className="p-1.5 text-zinc-500 hover:text-m3-primary hover:bg-m3-outline-variant/10 rounded-full transition-all"
- >
- {collapsedSections.aging ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
- </button>
- </div>
- 
- {!collapsedSections.aging && (
- <div className="overflow-auto scrollbar-thin scrollbar-thumb-m3-outline-variant max-h-[50vh] md:max-h-[55vh] lg:max-h-[60vh] min-h-[300px]">
- <table className="w-full text-left border-collapse min-w-[800px]">
- <thead>
- <tr className="bg-m3-surface text-[10px] font-black uppercase tracking-wider text-zinc-500 border-b border-m3-outline-variant/15">
- <th className="py-3 px-4">Associated Hard Product</th>
- <th className="py-3 px-4 text-center">Global Stock Balance</th>
- <th className="py-3 px-4 text-center">Days Idle Since Last Sale</th>
- <th className="py-3 px-4 text-center">Velocity Classification</th>
- <th className="py-3 px-4">Advisory Recommendation</th>
- </tr>
- </thead>
- <tbody className="divide-y divide-m3-outline-variant/10 text-xs font-semibold">
- {products.filter(p => !p.isDeleted).map((p) => {
- const totalGlobal = branchStock
- .filter(bs => bs.productId === p.id && branches.some(b => b.id === bs.branchId && !b.isDeleted))
- .reduce((acc, curr) => acc + curr.quantity, 0);
-
- // Calculate real idle days since last sale globally
- const pSaleItems = saleItems.filter(si => si.productId === p.id && !si.isDeleted);
- const pSaleIds = new Set(pSaleItems.map(si => si.saleId));
- const pSales = sales.filter(s => pSaleIds.has(s.id) && !s.isDeleted);
-
- let lastSaleDateGlobal = new Date(p.createdAt || '2026-01-01');
- if (pSales.length > 0) {
- const saleTimes = pSales.map(s => new Date(s.createdAt).getTime());
- const latestTime = Math.max(...saleTimes);
- if (!isNaN(latestTime)) {
- lastSaleDateGlobal = new Date(latestTime);
- }
- }
-
- const now = new Date();
- const diffTimeGlobal = now.getTime() - lastSaleDateGlobal.getTime();
- const ageDays = Math.max(0, Math.floor(diffTimeGlobal / (1000 * 60 * 60 * 24)));
- 
- let agingLabel = 'Fast-Moving';
- let agingBadge = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/15';
- let recommendationText = 'Strong consumer interest. Maintain high replenishment safety factors at Main HQ.';
- 
- if (ageDays >= 30 && ageDays < 90) {
- agingLabel = 'Stable';
- agingBadge = 'bg-m3-primary/10 text-m3-primary border-m3-primary/15';
- recommendationText = 'Baseline performance. Keep standard order levels linked to monthly ERP OS logs.';
- } else if (ageDays >= 90 && ageDays < 180) {
- agingLabel = 'Slow-Moving';
- agingBadge = 'bg-amber-500/10 text-amber-500 border-amber-500/15';
- recommendationText = 'Redistribution target. Flagged for regional pull out back to high-density hubs.';
- } else if (ageDays >= 180) {
- agingLabel = 'Dead Stock Alert';
- agingBadge = 'bg-rose-500/10 text-rose-500 border-rose-500/15 animate-pulse';
- recommendationText = 'Urgent clear-out required! Recommend bundle promotion discount cash registers.';
- }
-
- return (
- <tr key={p.id} className="hover:bg-m3-surface-high/30 transition-colors">
- <td className="py-3.5 px-4 font-black">
- {p.productName}
- <span className="block text-[9px] font-mono font-bold text-zinc-400">SKU Code: {p.sku}</span>
- </td>
- <td className="py-3.5 px-4 text-center font-mono font-extrabold text-sm text-m3-primary">
- {totalGlobal} boxes
- </td>
- <td className="py-3.5 px-4 text-center font-mono font-bold text-sm text-zinc-600">
- {ageDays} days sold out clock
- </td>
- <td className="py-3.5 px-4 text-center">
- <span className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-wider uppercase border ${agingBadge}`}>
- {agingLabel}
- </span>
- </td>
- <td className="py-3.5 px-4 italic text-zinc-500 font-medium max-w-[280px]">
- {recommendationText}
- </td>
- </tr>
- );
- })}
- </tbody>
- </table>
- </div>
- )}
- </div>
-
- </div>
- )}
-
- {/* VIEW 5: ENTERPRISE DATA PORTABILITY HUB & MIGRATION TOOL */}
- {activeSubTab === 'import' && (
- <div className="space-y-6 animate-fade-in text-left">
- <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] p-6 shadow-sm space-y-6">
- 
- {/* Header Area */}
- <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-m3-outline-variant/15 pb-4">
- <div>
- <h3 className="text-base font-black text-m3-primary uppercase tracking-wider flex items-center gap-2">
- <Database className="h-5 w-5 text-emerald-500" />
- <span>Migration &amp; Data Portability Hub</span>
- </h3>
- <p className="text-xs text-m3-on-surface-variant font-medium mt-1">
- Import inventory catalog records from legacy files, or back up and export your real-time enterprise registers as secure, portable spreadsheets or raw database copies.
- </p>
- </div>
- <span className="bg-emerald-500 text-white font-black text-[9px] tracking-widest px-2.5 py-1 rounded-full uppercase">
- Active Integration Unit
- </span>
- </div>
-
- {/* Inner Sub-Navigation (Import vs Export) */}
- <div className="flex border-b border-m3-outline-variant/10 pb-1 gap-2">
- <button
- type="button"
- onClick={() => setMigrationSubTab('import')}
- className={`px-4 py-2 text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 rounded-t-xl ${
- migrationSubTab === 'import'
- ? 'border-b-2 border-m3-primary text-m3-primary bg-m3-primary/5'
- : 'text-m3-on-surface-variant hover:text-m3-on-surface hover:bg-m3-surface-high/20'
- }`}
- >
- <Upload className="h-4 w-4" />
- <span>Smart Import Engine</span>
- </button>
- <button
- type="button"
- onClick={() => setMigrationSubTab('export')}
- className={`px-4 py-2 text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 rounded-t-xl ${
- migrationSubTab === 'export'
- ? 'border-b-2 border-m3-primary text-m3-primary bg-m3-primary/5'
- : 'text-m3-on-surface-variant hover:text-m3-on-surface hover:bg-m3-surface-high/20'
- }`}
- >
- <Download className="h-4 w-4" />
- <span>Backup &amp; Export Center</span>
- </button>
- </div>
-
- {/* MIGRATION: IMPORT SECTION */}
- {migrationSubTab === 'import' && (
- !allowedToImport ? (
- <div className="p-8 rounded-[24px] bg-rose-500/5 border border-rose-500/15 text-center space-y-4 max-w-2xl mx-auto my-6 font-sans">
- <span className="text-5xl block animate-bounce">️</span>
- <h4 className="text-sm font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest">Administrative Import Restrained</h4>
- <p className="text-xs text-m3-on-surface-variant leading-relaxed max-w-md mx-auto">
- Your account is assigned the <strong>{currentUser.role}</strong> credentials profile. To maintain absolute safety across physical branch networks and regional stocks, only <strong>System Administrators (Admins)</strong> are allowed to run older legacy ERP CSV or JSON data rosters.
- </p>
- <div className="flex justify-center gap-2 pt-2">
- <button
- type="button"
- onClick={() => setMigrationSubTab('export')}
- className="px-6 py-2.5 bg-m3-primary text-white font-black text-xs uppercase tracking-wider rounded-full shadow-md hover:bg-m3-primary/95 transition-all"
- >
- Go to Backup & Export Center
- </button>
- </div>
- </div>
- ) : (
- <div className="space-y-6 animate-fade-in">
- {/* Instruction units */}
- <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
- <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
- <span className="text-[10px] font-black text-m3-primary uppercase tracking-wider block">STEP 1: Legacy Extraction</span>
- <p className="text-xs text-m3-on-surface-variant font-medium">
- Export product database or copy inventory rows from your older checkout apps in <strong>CSV</strong> or <strong>JSON</strong> format.
- </p>
- </div>
- <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
- <span className="text-[10px] font-black text-emerald-500 uppercase tracking-wider block">STEP 2: Smart Mapper</span>
- <p className="text-xs text-m3-on-surface-variant font-medium">
- Paste the raw CSV rows or JSON array. The smart importer automatically maps keys like codes, quantities, and prices!
- </p>
- </div>
- <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/10 space-y-2">
- <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider block">STEP 3: Verify &amp; Commit</span>
- <p className="text-xs text-m3-on-surface-variant font-medium">
- The engine parses columns, generates robust secure keys/IDs, and upserts product records into the system catalog.
- </p>
- </div>
- </div>
-
- {/* Paste Space */}
- <div className="space-y-3">
- <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
- <label className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">Paste raw older ERP OS CSV rows or JSON data here</label>
- </div>
-
- <div className="space-y-4">
- <div 
- onDragOver={handleImportDragOver}
- onDragLeave={handleImportDragLeave}
- onDrop={handleImportDrop}
- onClick={() => fileInputRef.current?.click()}
- className={`p-10 border-2 border-dashed rounded-[24px] text-center space-y-3 transition-all cursor-pointer ${
- isDragging 
- ? 'border-m3-primary bg-m3-primary/10 shadow-lg' 
- : 'border-m3-outline-variant/45 hover:border-m3-primary/60 bg-m3-surface-low'
- }`}
- >
- <input 
- type="file" 
- ref={fileInputRef} 
- onChange={handleFileSelect} 
- className="hidden" 
- accept=".csv,.json,.txt"
- />
- <Upload className="h-8 w-8 text-m3-primary mx-auto animate-bounce" />
- <div>
- <h4 className="text-sm font-black uppercase text-m3-on-surface">Drag &amp; Drop Older ERP OS File Here</h4>
- <p className="text-[11px] text-m3-on-surface-variant mt-1.5 max-w-md mx-auto select-none font-medium">
- Supports spreadsheet .csv exports, backup raw .json database copies, text tables. Or click inside to request manual file browser dialog.
- </p>
- </div>
- </div>
-
- <div className="space-y-2">
- <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1 block font-mono">Or paste clipboard rows / raw database snippet text below:</label>
- <textarea
- value={rawImportText}
- onChange={(e) => setRawImportText(e.target.value)}
- rows={8}
- placeholder={`--- CSV FORMAT EXAMPLE ---
-Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
-"Old ERP OS Tile X",OPT-001,120.00,190.00,80,Porcelain,"ETC_DIPOLOG MAIN"
-
---- OR JSON FORMAT EXAMPLE ---
-[
- {
- "productName": "Old ERP OS Tile Y",
- "productCode": "OPT-002",
- "costPrice": 150,
- "sellingPrice": 240,
- "stockQuantity": 110,
- "origin": "ETC_DIPOLOG MAIN"
- }
-]`}
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant/40 focus:border-m3-primary p-4 text-xs font-mono text-m3-on-surface rounded-3xl focus:outline-none transition-colors"
- />
- </div>
- </div>
- </div>
-
- <div className="flex flex-wrap gap-2 pt-2">
- <button
- type="button"
- onClick={executeBulkImport}
- className="px-6 py-3 bg-m3-primary hover:bg-m3-primary/95 text-white font-black text-xs uppercase tracking-wider rounded-full shadow-lg transition-all active:scale-95 cursor-pointer flex items-center gap-2"
- >
- <Check className="h-4 w-4" />
- <span>Run Importer &amp; Commit Data</span>
- </button>
- <button
- type="button"
- onClick={() => setRawImportText('')}
- className="px-5 py-3 bg-m3-surface-high/30 hover:bg-m3-surface-high/60 text-m3-on-surface font-black text-xs uppercase tracking-wide rounded-full transition-all cursor-pointer"
- >
- Clear zone
- </button>
- </div>
-
- {/* Smart Import Template Guidelines */}
- <div className="bg-amber-500/5 border border-amber-500/20 p-4 rounded-3xl space-y-2 text-xs font-medium">
- <h4 className="font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
- <AlertCircle className="h-4 w-4" />
- <span>Auto-Mapping &amp; Validation Compliance</span>
- </h4>
- <p className="text-m3-on-surface-variant leading-relaxed">
- Our legacy sync engine maps key fields from other systems. 
- If any fields such as <code>barcode</code>, <code>size</code> or <code>sku</code> are missing, the importer generates clean defaults dynamically to maintain full database integrity.
- </p>
- </div>
- </div>
- )
- )}
-
- {/* MIGRATION: EXPORT SECTION */}
- {migrationSubTab === 'export' && (
- <div className="space-y-6 animate-fade-in">
- 
- <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
- 
- {/* Export Configuration Controls */}
- <div className="lg:col-span-1 space-y-5">
- <div className="p-5 rounded-3xl bg-m3-surface border border-m3-outline-variant/15 space-y-4">
- <span className="text-[10px] font-black text-m3-primary uppercase tracking-widest block font-sans">
- 1. Select Data Register
- </span>
- <div className="space-y-2">
- {[
- { id: 'products', name: 'Products Catalog', count: products.filter(p => !p.isDeleted).length },
- { id: 'suppliers', name: 'Suppliers Directory', count: suppliers.filter(s => !s.isDeleted).length },
- { id: 'branches', name: 'Branches Register', count: branches.filter(b => !b.isDeleted).length }
- ].map((item) => (
- <button
- key={item.id}
- type="button"
- onClick={() => setExportDataType(item.id as any)}
- className={`w-full p-3 rounded-2xl border text-left flex justify-between items-center transition-all cursor-pointer ${
- exportDataType === item.id
- ? 'border-m3-primary bg-m3-primary/5 text-m3-primary ring-1 ring-m3-primary'
- : 'border-m3-outline-variant/10 bg-m3-surface-low hover:bg-m3-surface-high/30 text-m3-on-surface'
- }`}
- >
- <span className="text-xs font-bold">{item.name}</span>
- <span className="text-[10px] bg-m3-surface-high text-m3-on-surface-variant font-black px-2 py-0.5 rounded-full">
- {item.count} items
- </span>
- </button>
- ))}
- </div>
- </div>
-
- <div className="p-5 rounded-3xl bg-m3-surface border border-m3-outline-variant/15 space-y-4">
- <span className="text-[10px] font-black text-m3-primary uppercase tracking-widest block font-sans">
- 2. Select Export Format
- </span>
- <div className="grid grid-cols-2 gap-2">
- {[
- { id: 'json', label: 'JSON Format', desc: 'Secure database backup' },
- { id: 'csv', label: 'CSV Format', desc: 'Spreadsheet-friendly' }
- ].map((format) => (
- <button
- key={format.id}
- type="button"
- onClick={() => setExportFormat(format.id as any)}
- className={`p-3 rounded-2xl border text-center transition-all cursor-pointer ${
- exportFormat === format.id
- ? 'border-emerald-500 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500'
- : 'border-m3-outline-variant/10 bg-m3-surface-low hover:bg-m3-surface-high/30 text-m3-on-surface-variant'
- }`}
- >
- <div className="text-xs font-extrabold uppercase">{format.id}</div>
- <div className="text-[9px] mt-1 font-medium">{format.desc}</div>
- </button>
- ))}
- </div>
- </div>
-
- {/* Operational Action buttons */}
- <div className="space-y-2">
- <button
- type="button"
- onClick={() => handleExportData(exportDataType, exportFormat)}
- className="w-full py-3.5 bg-m3-primary hover:bg-m3-primary/95 text-white font-black text-xs uppercase tracking-wider rounded-full shadow-lg transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
- >
- <Download className="h-4 w-4" />
- <span>Download backup file</span>
- </button>
-
- <button
- type="button"
- onClick={() => handleCopyExportText(exportDataType, exportFormat)}
- className="w-full py-3 bg-m3-surface-high/30 hover:bg-m3-surface-high/60 text-m3-on-surface font-black text-xs uppercase tracking-wide rounded-full transition-all cursor-pointer flex items-center justify-center gap-2"
- >
- <Copy className="h-3.5 w-3.5" />
- <span>Copy to Clipboard</span>
- </button>
- </div>
- </div>
-
- {/* Active Preview Area */}
- <div className="lg:col-span-2 flex flex-col space-y-3">
- <div className="flex justify-between items-center px-1">
- <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider font-mono">
- Real-Time Export Data Snippet Preview ({exportFormat.toUpperCase()})
- </label>
- <span className="text-[10px] text-m3-on-surface-variant font-bold">
- Showing first 3 records as structural template
- </span>
- </div>
-
- <div className="relative flex-grow bg-zinc-950 text-emerald-400 border border-zinc-800 p-4 text-xs font-mono rounded-3xl overflow-auto max-h-[360px] min-h-[250px]">
- <pre className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed">
- {(() => {
- let dataToExport: any[] = [];
- if (exportDataType === 'products') {
- dataToExport = products.filter(p => !p.isDeleted).slice(0, 3);
- } else if (exportDataType === 'suppliers') {
- dataToExport = suppliers.filter(s => !s.isDeleted).slice(0, 3);
- } else if (exportDataType === 'branches') {
- dataToExport = branches.filter(b => !b.isDeleted).slice(0, 3);
- }
-
- if (dataToExport.length === 0) {
- return `// No active records found for "${exportDataType}" in current database.`;
- }
-
- if (exportFormat === 'json') {
- return JSON.stringify(dataToExport, null, 2);
- } else {
- let headers: string[] = [];
- if (exportDataType === 'products') {
- headers = ['productName', 'productCode', 'sku', 'barcode', 'category', 'brand', 'costPrice', 'sellingPrice', 'stockQuantity', 'size', 'unit', 'origin'];
- } else if (exportDataType === 'suppliers') {
- headers = ['id', 'name', 'contactPerson', 'email', 'phone', 'address'];
- } else if (exportDataType === 'branches') {
- headers = ['id', 'name', 'manager', 'address', 'phone', 'monthlySales', 'staffCount'];
- }
-
- const csvRows = [];
- csvRows.push(headers.join(','));
-
- for (const row of dataToExport) {
- const values = headers.map(header => {
- const val = row[header];
- const stringVal = val === undefined || val === null ? '' : String(val);
- const escaped = stringVal.replace(/"/g, '""');
- return `"${escaped}"`;
- });
- csvRows.push(values.join(','));
- }
-
- return csvRows.join('\n');
- }
- })()}
- </pre>
- </div>
-
- <div className="bg-emerald-500/5 border border-emerald-500/20 p-4 rounded-3xl space-y-1.5 text-xs font-medium">
- <h5 className="font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
- <ShieldCheck className="h-4 w-4" />
- <span>Data Portability Compliance Guard</span>
- </h5>
- <p className="text-m3-on-surface-variant leading-relaxed">
- The downloaded formats strictly adhere to international enterprise database structures. Product CSV headers align with our <strong>Smart Mapper</strong> algorithm so you can easily migrate exported packages between system instances without structural loss.
- </p>
- </div>
-
- </div>
- </div>
-
- </div>
- )}
-
- </div>
- </div>
- )}
-
- {/* VIEW 6: BRANCH MSRP & SRP OVERRIDES Tab */}
- {activeSubTab === 'branch-prices' && (
- <div className="space-y-6 animate-fade-in text-left">
- <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] p-6 shadow-sm space-y-6">
- <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-m3-outline-variant/15 pb-4">
- <div>
- <h3 className="text-base font-black text-m3-primary uppercase tracking-wider flex items-center gap-2">
- <DollarSign className="h-5 w-5 text-emerald-500" />
- <span>Branch MSRP &amp; Localized SRP Suggestions</span>
- </h3>
- <p className="text-xs text-m3-on-surface-variant font-medium mt-1">
- Adjust product retail prices dynamically. Transport, freight, and logistics added cost vary by branch. Set overrides here to customize ERP OS selling prices.
- </p>
- </div>
- </div>
-
- {/* Selection profile & transport cost explanation block */}
- <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
- <div className="bg-m3-surface p-4 rounded-2xl border border-m3-outline-variant/15 space-y-2">
- <span className="text-[10px] font-black text-m3-primary uppercase tracking-widest block font-sans">Role Assignment Profile</span>
- <div className="text-xs space-y-1.5 font-medium">
- <div><strong>Your Account:</strong> {currentUser?.fullName}</div>
- <div><strong>Role:</strong> <span className="bg-m3-primary/10 text-m3-primary px-1.5 py-0.5 rounded font-black uppercase text-[9px]">{currentUser?.role}</span></div>
- <div><strong>Branch:</strong> {branches.find(b => b.id === currentUser?.branchAssignmentId)?.name || 'Central Head Office'}</div>
- </div>
- </div>
-
- <div className="bg-m3-surface p-4 rounded-2xl border border-m3-outline-variant/15 space-y-2 col-span-2">
- <span className="text-[10px] font-black text-m3-primary uppercase tracking-widest block font-sans">Logistical Surcharge Guide</span>
- <p className="text-xs text-m3-on-surface-variant font-medium leading-relaxed font-sans">
- Admins have universal permissions to set Suggested Retail Price (SRP) overrides for any branch. Managers possess authority to make localized price adjustments specifically for their assigned branch to offset dynamic port fees, terminal logistics, and localized trucking tariffs.
- </p>
- </div>
- </div>
-
- {/* Filter controls */}
- <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-m3-surface/40 p-4 rounded-2xl border border-m3-outline-variant/10">
- <div className="w-full md:w-1/3 space-y-1">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 block font-sans">Quick Find Product</label>
- <input
- type="text"
- placeholder="Filter by name, code or sku..."
- value={branchPriceSearch}
- onChange={(e) => setBranchPriceSearch(e.target.value)}
- className="w-full bg-m3-surface px-4 py-2 text-xs border border-m3-outline-variant/20 rounded-xl focus:outline-none focus:border-m3-primary font-bold"
- />
- </div>
-
- <div className="w-full md:w-1/3 space-y-1">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 block font-sans">Active Branch Zone</label>
- {currentUser?.role === UserRole.ADMIN ? (
- <select
- value={selectedPoolBranchId}
- onChange={(e) => setSelectedPoolBranchId(e.target.value)}
- className="w-full bg-m3-surface px-3 py-2 text-xs border border-m3-outline-variant/25 rounded-xl focus:outline-none focus:border-m3-primary font-bold"
- >
- {branches.map(b => (
- <option key={b.id} value={b.id}>{b.name} ({b.id})</option>
- ))}
- </select>
- ) : (
- <div className="w-full bg-m3-surface/60 px-3 py-2 text-xs border border-m3-outline-variant/15 rounded-xl font-bold font-mono text-zinc-400">
- {branches.find(b => b.id === currentUser?.branchAssignmentId)?.name || 'N/A'} (Self-Lock)
- </div>
- )}
- </div>
- </div>
-
- {/* Table of products */}
- <div className="overflow-x-auto rounded-3xl border border-m3-outline-variant/15 bg-m3-surface">
- <table className="w-full min-w-[700px] text-xs text-left">
- <thead className="bg-m3-surface-low text-m3-on-surface-variant font-black uppercase text-[10px] tracking-wider border-b border-m3-outline-variant/20">
- <tr>
- <th className="py-4 px-4 font-sans">Product Name / Unit</th>
- <th className="py-4 px-4 font-sans">Core SKU</th>
- <th className="py-4 px-4 text-right font-sans">Default SRP Price</th>
- <th className="py-4 px-4 text-center font-sans">Branch SRP Overrides</th>
- <th className="py-4 px-4 text-center font-sans">Action Adjustments</th>
- </tr>
- </thead>
- <tbody className="divide-y divide-m3-outline-variant/10">
- {products
- .filter(p => !p.isDeleted && (
- p.productName.toLowerCase().includes(branchPriceSearch.toLowerCase()) ||
- p.productCode.toLowerCase().includes(branchPriceSearch.toLowerCase()) ||
- p.sku.toLowerCase().includes(branchPriceSearch.toLowerCase())
- ))
- .map(p => {
- const activeBranchId = currentUser?.role === UserRole.ADMIN ? selectedPoolBranchId : currentUser?.branchAssignmentId;
- const branchStockRec = branchStock.find(bs => bs.productId === p.id && bs.branchId === activeBranchId);
- const currentOverride = branchStockRec?.sellingPriceOverride || 0;
-
- // Local input state key
- const stateKey = `${p.id}-${activeBranchId}`;
-
- return (
- <tr key={p.id} className="hover:bg-m3-outline-variant/5 transition-colors font-medium">
- <td className="py-3.5 px-4 font-sans">
- <div className="font-extrabold text-m3-on-surface">{p.productName}</div>
- <span className="text-[10px] text-zinc-400 uppercase font-mono font-bold">{p.unit}</span>
- </td>
- <td className="py-3.5 px-4 font-mono font-bold text-m3-primary">{p.sku}</td>
- <td className="py-3.5 px-4 font-mono font-black text-right text-m3-on-surface">₱{p.sellingPrice.toFixed(2)}</td>
- <td className="py-3.5 px-4 text-center">
- {currentOverride > 0 ? (
- <span className="bg-emerald-500/15 text-emerald-500 font-extrabold px-2 py-0.5 rounded-full font-mono text-[10px]">
- ₱{currentOverride.toFixed(2)}
- </span>
- ) : (
- <span className="text-zinc-500 italic font-mono font-bold text-[10px]">
- Use Default SRP (₱{p.sellingPrice.toFixed(2)})
- </span>
- )}
- </td>
- <td className="py-3.5 px-4">
- <div className="flex items-center justify-center gap-2">
- <input
- type="number"
- placeholder={p.sellingPrice.toString()}
- value={priceOverridesInput[stateKey] ?? (currentOverride > 0 ? currentOverride.toString() : '')}
- onChange={(e) => {
- const val = e.target.value;
- setPriceOverridesInput(prev => ({ ...prev, [stateKey]: val }));
- }}
- className="w-24 bg-m3-surface-low border border-m3-outline-variant/30 hover:border-m3-primary focus:border-m3-primary text-center px-2 py-1 text-xs rounded-lg font-bold font-mono focus:outline-none focus:ring-1 focus:ring-m3-primary text-m3-on-surface"
- />
- <button
- onClick={() => {
- if (!activeBranchId) {
- showToast("Error: No branch selected or assigned!");
- return;
- }
- const rawVal = priceOverridesInput[stateKey] ?? (currentOverride > 0 ? currentOverride.toString() : '');
- const priceVal = parseFloat(rawVal);
- if (isNaN(priceVal) || priceVal < 0) {
- showToast("Error: Please provide a valid positive price override value.");
- return;
- }
- updateBranchPriceOverride(p.id, activeBranchId, priceVal);
- showToast(`Committed SRP override of ₱${priceVal.toFixed(2)} for ${p.productName} in branch!`);
- }}
- className="px-3 py-1 bg-m3-primary text-white text-[10px] font-black uppercase tracking-wider rounded-lg hover:shadow-xs transition-colors cursor-pointer"
- >
- Commit
- </button>
- {currentOverride > 0 && (
- <button
- onClick={() => {
- if (!activeBranchId) return;
- updateBranchPriceOverride(p.id, activeBranchId, 0);
- setPriceOverridesInput(prev => {
- const next = { ...prev };
- delete next[stateKey];
- return next;
- });
- showToast(`Reset SRP suggestion for ${p.productName} back to basic catalog price.`);
- }}
- className="text-zinc-400 hover:text-rose-500 p-1 rounded-full hover:bg-rose-500/10 transition-colors"
- title="Revert override"
- >
- <X className="h-4 w-4" />
- </button>
- )}
- </div>
- </td>
- </tr>
- );
- })}
- </tbody>
- </table>
- </div>
-
- </div>
- </div>
- )}
-
- {/* VIEW 7: SHELF LIFE & EXPIRY CALENDAR */}
- {activeSubTab === 'expiry' && (
- <div className="space-y-6 animate-fade-in text-left">
- {/* Main Container */}
- <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] p-6 shadow-sm space-y-6">
- 
- {/* Header */}
- <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-m3-outline-variant/15 pb-4">
- <div>
- <h3 className="text-base font-black text-m3-primary uppercase tracking-wider flex items-center gap-2">
- <Clock className="h-5 w-5 text-rose-500 animate-pulse" />
- <span>Shelf-Life &amp; Expiration Batch Tracker</span>
- </h3>
- <p className="text-xs text-m3-on-surface-variant font-medium mt-1">
- Chemical materials such as adhesives, grouts, sealants, and primers have strict shelf-life limitations. Track batches, monitor manufacture/expiry dates, and prevent structural de-bonding failures.
- </p>
- </div>
- <button
- onClick={() => {
- if (products.length > 0) {
- setBatchFormProductId(products[0].id);
- }
- setShowAddBatchModal(true);
- }}
- className="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95"
- >
- <Plus className="h-4 w-4" />
- <span>Register New Batch</span>
- </button>
- </div>
-
- {/* Calendar & Stats Grid */}
- <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
- 
- {/* Column 1 & 2: Interactive Expiry Calendar */}
- <div className="xl:col-span-2 bg-m3-surface border border-m3-outline-variant/15 p-5 rounded-2xl space-y-4">
- <div className="flex items-center justify-between border-b border-m3-outline-variant/10 pb-3">
- <div className="flex items-center gap-2">
- <span className="font-sans font-black text-xs uppercase tracking-widest text-m3-primary">Monthly Shelf-Life Calendar</span>
- <span className="text-[10px] bg-rose-500/10 text-rose-500 font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
- Batch Expirations
- </span>
- </div>
- 
- {/* Calendar Month Navigation */}
- <div className="flex items-center gap-2">
- <button
- onClick={() => {
- if (calendarMonth === 0) {
- setCalendarMonth(11);
- setCalendarYear(prev => prev - 1);
- } else {
- setCalendarMonth(prev => prev - 1);
- }
- }}
- className="p-1.5 hover:bg-m3-surface-low rounded-lg border border-m3-outline-variant/15 text-m3-on-surface hover:text-m3-primary transition-all cursor-pointer"
- >
- <ChevronLeft className="h-4 w-4" />
- </button>
- <span className="text-xs font-black uppercase tracking-wider text-m3-on-surface-variant select-none min-w-[100px] text-center">
- {new Date(calendarYear, calendarMonth).toLocaleString("en-US", { month: "long", year: "numeric" })}
- </span>
- <button
- onClick={() => {
- if (calendarMonth === 11) {
- setCalendarMonth(0);
- setCalendarYear(prev => prev + 1);
- } else {
- setCalendarMonth(prev => prev + 1);
- }
- }}
- className="p-1.5 hover:bg-m3-surface-low rounded-lg border border-m3-outline-variant/15 text-m3-on-surface hover:text-m3-primary transition-all cursor-pointer"
- >
- <ChevronRight className="h-4 w-4" />
- </button>
- </div>
- </div>
-
- {/* Calendar Grid Header */}
- <div className="grid grid-cols-7 gap-1 text-center font-bold text-[10px] uppercase text-zinc-400 border-b border-m3-outline-variant/10 pb-1.5">
- <div>Sun</div>
- <div>Mon</div>
- <div>Tue</div>
- <div>Wed</div>
- <div>Thu</div>
- <div>Fri</div>
- <div>Sat</div>
- </div>
-
- <div className="grid grid-cols-7 gap-1.5 min-h-[260px]">
- {/* Blank placeholder slots before first of month */}
- {Array.from({ length: new Date(calendarYear, calendarMonth, 1).getDay() }).map((_, idx) => (
- <div key={`blank-${idx}`} className="bg-m3-surface-lowest/15 rounded-xl min-h-[48px] border border-transparent" />
- ))}
-
-  {/* Calendar Days */}
-  {Array.from({ length: new Date(calendarYear, calendarMonth + 1, 0).getDate() }).map((_, idx) => {
-    const day = idx + 1;
-    const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    
-    // Filter batches expiring on this day
-    const dayBatches = batches.filter(b => b.expiryDate === dateStr);
-
-    // Filter catalog products expiring on this day
-    const dayProducts = products.filter(p => !p.isDeleted && p.hasExpiration && p.expirationDate === dateStr);
-    
-    const today = new Date();
-    const isToday = calendarYear === today.getFullYear() && calendarMonth === today.getMonth() && day === today.getDate();
-
-    const hasExpirations = dayBatches.length > 0 || dayProducts.length > 0;
-
-    return (
-      <div
-        key={`day-${day}`}
-        onClick={() => {
-          setBatchFormExpDate(dateStr);
-          if (products.length > 0) {
-            setBatchFormProductId(products[0].id);
-          }
-          setShowAddBatchModal(true);
-        }}
-        className={`group min-h-[54px] p-1.5 bg-m3-surface-lowest border rounded-xl flex flex-col justify-between items-start transition-all cursor-pointer hover:border-m3-primary/50 hover:shadow-xs relative ${
-          isToday 
-            ? "border-m3-primary ring-2 ring-m3-primary/20 bg-m3-primary/5" 
-            : hasExpirations 
-              ? "border-rose-500/40 bg-rose-500/[0.02]" 
-              : "border-m3-outline-variant/15"
-        }`}
-        title="Click to register batch expiring on this day"
-      >
-        <span className={`text-[10px] font-black leading-none px-1.5 py-0.5 rounded ${
-          isToday ? "bg-m3-primary text-white" : "text-m3-on-surface-variant bg-m3-surface-low/50"
-        }`}>
-          {day}
-        </span>
-
-        {/* Expiring Batches & Products list inside day block */}
-        {hasExpirations && (
-          <div className="w-full space-y-0.5 mt-1 overflow-hidden">
-            {dayBatches.map(b => {
-              const prod = products.find(p => p.id === b.productId);
-              const pCode = prod ? prod.productCode : b.productCode;
-              return (
-                <div
-                  key={b.id}
-                  className={`text-[8px] font-bold px-1 py-0.5 rounded truncate text-left w-full leading-none ${
-                    b.status === "Expired"
-                      ? "bg-rose-500/15 text-rose-500 border border-rose-500/10"
-                      : "bg-amber-500/15 text-amber-500 border border-amber-500/10"
-                  }`}
-                  title={`${pCode} Batch #${b.batchNumber} (${b.quantity} bags) Expiry`}
-                >
-                  #{b.batchNumber} ({b.quantity})
-                </div>
-              );
-            })}
-            {dayProducts.map(p => (
-              <div
-                key={`p-exp-${p.id}`}
-                className="text-[8px] font-extrabold px-1 py-0.5 rounded truncate text-left w-full leading-none bg-indigo-500/15 text-indigo-500 border border-indigo-500/10 dark:text-indigo-400"
-                title={`Catalog Product Expiry: ${p.productName} (${p.productCode})`}
-              >
-                📦 ${p.productCode}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
+  {currentUser?.role === UserRole.ADMIN && (
+  <div className="space-y-3">
+  <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest block">Live Multi-Branch Stock balance</span>
+  <div className="space-y-2">
+  {branches.filter(b => !b.isDeleted).map((b) => {
+  const branchRecord = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id);
+  const qty = branchRecord?.quantity || 0;
+  const overrideLimit = branchRecord?.lowStockThresholdOverride !== undefined
+  ? branchRecord.lowStockThresholdOverride
+  : p.minimumStock;
+
+  let statusBg = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/10';
+  if (qty === 0) statusBg = 'bg-rose-500/10 text-rose-500 border-rose-500/10';
+  else if (qty <= overrideLimit) statusBg = 'bg-amber-500/10 text-amber-500 border-amber-500/10';
+
+  return (
+  <div key={b.id} className="flex flex-col md:flex-row justify-between md:items-center gap-2 text-xs p-3 rounded-xl bg-m3-surface border border-m3-outline-variant/10 shadow-3xs">
+  <div className="flex flex-col">
+  <span className="font-extrabold text-[10px] text-m3-on-surface uppercase tracking-tight">{b.name.replace('Emman Tile Center ', '')}</span>
+  <span className="text-[8px] text-zinc-400 font-mono uppercase">Current Balance: <strong className="text-m3-on-surface">{qty} {p.unit || 'Boxes'}</strong></span>
+  </div>
+
+  <div className="flex items-center gap-2">
+  {/* Alert limit settings for each branch */}
+  <div className="flex items-center gap-1 bg-m3-surface-low px-2 py-1 rounded-lg border border-m3-outline-variant/20">
+  <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider">Alert Threshold:</span>
+  <input
+  type="number"
+  className="w-12 bg-m3-surface-lowest text-xs font-mono font-bold text-center border-b border-m3-outline-variant text-m3-on-surface py-0.5"
+  value={overrideLimit}
+  onChange={(e) => {
+  const val = parseInt(e.target.value);
+  updateBranchLowStockThreshold(p.id, b.id, isNaN(val) ? p.minimumStock : val);
+  }}
+  min={0}
+  />
+  </div>
+
+  <span className={`font-mono font-black text-xs px-2.5 py-1 rounded-lg border ${statusBg}`}>
+  {qty} {p.unit || 'Boxes'}
+  </span>
+  </div>
+  </div>
+  );
   })}
   </div>
   </div>
-
-
- {/* Column 3: Shelf-Life Analytics & Real-Time Alerts */}
- <div className="bg-m3-surface border border-m3-outline-variant/15 p-5 rounded-2xl space-y-4 text-left">
- <span className="font-sans font-black text-xs uppercase tracking-widest text-m3-primary block border-b border-m3-outline-variant/10 pb-3">
- Shelf-Life Warnings &amp; Logs
- </span>
-
- <div className="space-y-3">
- {/* Expired count stat */}
- <div className="flex justify-between items-center bg-rose-500/5 p-3.5 rounded-xl border border-rose-500/10">
- <div className="flex items-center gap-2">
- <span className="h-2 w-2 rounded-full bg-rose-500" />
- <span className="text-[11px] font-bold text-rose-500 uppercase">Expired Batches</span>
- </div>
- <span className="font-mono text-sm font-black text-rose-600 dark:text-rose-400">
- {batches.filter(b => b.status === "Expired").length}
- </span>
- </div>
-
- {/* Expiring Soon count stat */}
- <div className="flex justify-between items-center bg-amber-500/5 p-3.5 rounded-xl border border-amber-500/10">
- <div className="flex items-center gap-2">
- <span className="h-2 w-2 rounded-full bg-amber-500" />
- <span className="text-[11px] font-bold text-amber-500 uppercase">Expiring (30 days)</span>
- </div>
- <span className="font-mono text-sm font-black text-amber-600 dark:text-amber-400">
- {batches.filter(b => b.status === "Expiring Soon").length}
- </span>
- </div>
-
- {/* Healthy count stat */}
- <div className="flex justify-between items-center bg-emerald-500/5 p-3.5 rounded-xl border border-emerald-500/10">
- <div className="flex items-center gap-2">
- <span className="h-2 w-2 rounded-full bg-emerald-500" />
- <span className="text-[11px] font-bold text-emerald-500 uppercase">Stable Stocks</span>
- </div>
- <span className="font-mono text-sm font-black text-emerald-600 dark:text-emerald-400">
- {batches.filter(b => b.status === "Good").length}
- </span>
- </div>
- </div>
-
- {/* Expiry Action Protocol Notice */}
- <div className="p-3.5 rounded-xl bg-m3-surface-low border border-m3-outline-variant/20 space-y-1.5">
- <span className="text-[9px] font-black text-m3-primary uppercase tracking-wider block font-sans">ERP Safety protocol</span>
- <p className="text-[11px] text-m3-on-surface-variant font-medium leading-relaxed font-sans">
- <strong>Notice:</strong> Expired grout or tile mortar adhesives must be quarantined immediately to protect physical builds. Do not sell expired chemicals. Dispose of expired items and log them in the <strong>Logistics Adjustments logs</strong>.
- </p>
- </div>
- </div>
-
- </div>
-
- {/* Batches Log Table */}
- <div className="space-y-3.5 text-left">
- <span className="font-sans font-black text-xs uppercase tracking-widest text-m3-primary block">
- Chemical Batch Expiration Log Entries
- </span>
-
- <div className="overflow-x-auto rounded-2xl border border-m3-outline-variant/15">
- <table className="w-full text-left border-collapse text-xs">
- <thead className="bg-m3-surface-high/15 border-b border-m3-outline-variant/20 font-black text-m3-on-surface">
- <tr>
- <th className="py-3 px-4 font-sans">Product / Code</th>
- <th className="py-3 px-4 font-sans text-center">Batch Number</th>
- <th className="py-3 px-4 font-sans text-right">Quantity</th>
- <th className="py-3 px-4 font-sans text-center">Mfg Date</th>
- <th className="py-3 px-4 font-sans text-center">Expiry Date</th>
- <th className="py-3 px-4 font-sans text-center">Branch</th>
- <th className="py-3 px-4 font-sans text-center">Status</th>
- <th className="py-3 px-4 font-sans text-center">Remarks / Notes</th>
- <th className="py-3 px-4 font-sans text-center">Actions</th>
- </tr>
- </thead>
- <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
- {batches.length === 0 ? (
- <tr>
- <td colSpan={9} className="py-8 text-center text-zinc-400 italic">
- No active batches tracked in the shelf-life database. Click Register New Batch to begin.
- </td>
- </tr>
- ) : (
- batches.map(b => {
-
- const prod = products.find(p => p.id === b.productId);
-
- const pName = prod ? prod.productName : b.productName;
-
- const pCode = prod ? prod.productCode : b.productCode;
-
- return (
-
- <tr key={b.id} className="hover:bg-m3-surface/30 transition-colors">
-
- <td className="py-3 px-4 font-sans">
-
- <strong className="text-m3-on-surface font-black block">{pName}</strong>
-
- <span className="text-[9px] font-mono text-m3-primary font-bold">{pCode}</span>
-
- </td>
-
- <td className="py-3 px-4 font-mono text-center font-bold text-zinc-600 dark:text-zinc-300">
-
- #{b.batchNumber}
-
- </td>
-
- <td className="py-3 px-4 font-mono text-right font-black text-m3-on-surface">
-
- {b.quantity} bags
-
- </td>
-
- <td className="py-3 px-4 font-mono text-center text-zinc-500 font-semibold">
-
- {b.manufactureDate}
-
- </td>
-
- <td className="py-3 px-4 font-mono text-center text-zinc-700 dark:text-zinc-300 font-bold">
-
- {b.expiryDate}
-
- </td>
-
- <td className="py-3 px-4 text-center font-bold">
-
- {branches.find(br => br.id === b.branchId)?.name || b.branchId}
-
- </td>
-
- <td className="py-3 px-4 text-center">
-
- <span className={`px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wide border ${
-
- b.status === "Expired"
-
- ? "bg-rose-500/10 text-rose-500 border-rose-500/20 font-black animate-pulse"
-
- : b.status === "Expiring Soon"
-
- ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
-
- : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-
- }`}>
-
- {b.status}
-
- </span>
-
- </td>
-
- <td className="py-3 px-4 font-sans text-zinc-500 italic font-medium max-w-[200px] truncate" title={b.remarks}>
-
- {b.remarks || "N/A"}
-
- </td>
-
- <td className="py-3 px-4">
-
- <div className="flex items-center justify-center">
-
- {!hasActiveShift && (
-
- <button
-
- onClick={() => handleRemoveBatch(b.id)}
-
- className="p-1 hover:bg-rose-500/10 hover:text-rose-500 text-zinc-400 rounded-full transition-colors cursor-pointer"
-
- title="Remove batch log"
-
- >
-
- <Trash2 className="h-4 w-4" />
-
- </button>
-
- )}
-
- </div>
-
- </td>
-
- </tr>
-
- );
-
- })
- )}
- </tbody>
- </table>
- </div>
- </div>
-
- </div>
- </div>
- )}
+  )}
+  </div>
+  </motion.div>
+  </td>
+  </tr>
+  )}
+  </AnimatePresence>
+  </React.Fragment>
+  );
+  })
+  )}
+</tbody>
+  </table>
+  </div>
+  </div>
+
+  {/* Table Pagination */}
+  <TablePagination
+    currentPage={prodPage}
+    pageSize={prodsPerPage}
+    totalItems={filteredProducts.length}
+    onPageChange={setProdPage}
+    itemName="products"
+  />
+  </>
+  )}
+
+  {/* VIEW 7: SHELF-LIFE & EXPIRY CALENDAR */}
+  {activeSubTab === 'expiry' && (() => {
+    const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+    const startDayOfWeek = new Date(calendarYear, calendarMonth, 1).getDay(); // 0 = Sun
+    const todayStr = new Date().toISOString().split('T')[0];
+    const MONTH_NAMES = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+
+    const prevMonth = () => {
+      if (calendarMonth === 0) {
+        setCalendarMonth(11);
+        setCalendarYear(v => v - 1);
+      } else {
+        setCalendarMonth(v => v - 1);
+      }
+    };
+
+    const nextMonth = () => {
+      if (calendarMonth === 11) {
+        setCalendarMonth(0);
+        setCalendarYear(v => v + 1);
+      } else {
+        setCalendarMonth(v => v + 1);
+      }
+    };
+
+    const jumpToToday = () => {
+      const now = new Date();
+      setCalendarYear(now.getFullYear());
+      setCalendarMonth(now.getMonth());
+      setCalendarSelectedDay(now.toISOString().split('T')[0]);
+    };
+
+    return (
+      <div className="space-y-6 text-left animate-fade-in">
+        {/* Top Split: Calendar View Matrix (cols 1 & 2) + Analytics / Protocol (col 3) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Column 1 & 2: Interactive Expiration Calendar Matrix */}
+          <div className="lg:col-span-2 bg-m3-surface border border-m3-outline-variant/15 p-5 rounded-2xl space-y-4 shadow-sm">
+            {/* Calendar Header Navigation */}
+            <div className="flex flex-wrap justify-between items-center gap-3 border-b border-m3-outline-variant/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-m3-primary" />
+                <span className="font-sans font-black text-xs uppercase tracking-widest text-m3-primary">
+                  Interactive Expiration Calendar
+                </span>
+                {calendarSelectedDay && (
+                  <span className="text-[10px] font-mono bg-m3-primary/10 text-m3-primary px-2 py-0.5 rounded-full font-bold border border-m3-primary/20 flex items-center gap-1">
+                    Selected: {calendarSelectedDay}
+                    <button 
+                      onClick={() => setCalendarSelectedDay(null)}
+                      className="ml-1 hover:text-rose-500 font-black cursor-pointer"
+                      title="Clear date filter"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={jumpToToday}
+                  className="px-2.5 py-1 text-[10px] font-extrabold uppercase rounded-lg border border-m3-outline-variant/30 hover:bg-m3-surface-high text-m3-on-surface transition-colors cursor-pointer"
+                >
+                  Today
+                </button>
+                <div className="flex items-center gap-1 bg-m3-surface-low rounded-xl p-1 border border-m3-outline-variant/20">
+                  <button
+                    type="button"
+                    onClick={prevMonth}
+                    className="p-1 hover:bg-m3-surface-high text-m3-on-surface rounded-lg transition-colors cursor-pointer"
+                    title="Previous month"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span className="text-xs font-black font-sans px-3 min-w-[120px] text-center text-m3-on-surface">
+                    {MONTH_NAMES[calendarMonth]} {calendarYear}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={nextMonth}
+                    className="p-1 hover:bg-m3-surface-high text-m3-on-surface rounded-lg transition-colors cursor-pointer"
+                    title="Next month"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Days of Week Header */}
+            <div className="grid grid-cols-7 gap-1 text-center font-mono text-[10px] font-black uppercase text-m3-on-surface-variant/70 border-b border-m3-outline-variant/10 pb-2">
+              <span className="text-rose-500/80">Sun</span>
+              <span>Mon</span>
+              <span>Tue</span>
+              <span>Wed</span>
+              <span>Thu</span>
+              <span>Fri</span>
+              <span>Sat</span>
+            </div>
+
+            {/* Monthly Day Grid Matrix */}
+            <div className="grid grid-cols-7 gap-1.5">
+              {/* Empty leading slots */}
+              {Array.from({ length: startDayOfWeek }).map((_, idx) => (
+                <div key={`empty-${idx}`} className="h-16 rounded-xl bg-m3-surface-low/30 border border-transparent opacity-30" />
+              ))}
+
+              {/* Day Tiles */}
+              {Array.from({ length: daysInMonth }).map((_, idx) => {
+                const dayNum = idx + 1;
+                const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                
+                // Find batches expiring on dateStr
+                const dayBatches = batches.filter(b => b.expiryDate === dateStr);
+                const expiredCount = dayBatches.filter(b => computeLiveBatchStatus(b.expiryDate) === 'Expired').length;
+                const expiringSoonCount = dayBatches.filter(b => computeLiveBatchStatus(b.expiryDate) === 'Expiring Soon').length;
+                const goodCount = dayBatches.filter(b => computeLiveBatchStatus(b.expiryDate) === 'Good').length;
+
+                const isToday = dateStr === todayStr;
+                const isSelected = calendarSelectedDay === dateStr;
+
+                return (
+                  <div
+                    key={`day-${dayNum}`}
+                    onClick={() => setCalendarSelectedDay(isSelected ? null : dateStr)}
+                    className={`h-16 p-1.5 rounded-xl border flex flex-col justify-between transition-all cursor-pointer select-none relative ${
+                      isSelected
+                        ? 'bg-m3-primary/15 border-m3-primary ring-2 ring-m3-primary/30 shadow-md scale-[1.02]'
+                        : isToday
+                        ? 'bg-amber-500/10 border-amber-500/40'
+                        : dayBatches.length > 0
+                        ? 'bg-m3-surface-low border-m3-outline-variant/30 hover:border-m3-primary/50 hover:bg-m3-surface-high'
+                        : 'bg-m3-surface-low/50 border-m3-outline-variant/15 opacity-70 hover:opacity-100 hover:border-m3-outline-variant/30'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className={`text-[10px] font-black font-mono ${
+                        isToday ? 'text-amber-500 font-extrabold' : 'text-m3-on-surface'
+                      }`}>
+                        {dayNum}
+                      </span>
+                      {isToday && (
+                        <span className="text-[7.5px] font-extrabold uppercase bg-amber-500 text-black px-1 rounded">
+                          Today
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Expiry Indicators */}
+                    <div className="space-y-0.5">
+                      {expiredCount > 0 && (
+                        <div className="bg-rose-500 text-white text-[8px] font-black px-1 py-0.2 rounded truncate flex items-center justify-between">
+                          <span>Expired</span>
+                          <span>{expiredCount}</span>
+                        </div>
+                      )}
+                      {expiringSoonCount > 0 && (
+                        <div className="bg-amber-500 text-slate-950 text-[8px] font-black px-1 py-0.2 rounded truncate flex items-center justify-between">
+                          <span>Soon</span>
+                          <span>{expiringSoonCount}</span>
+                        </div>
+                      )}
+                      {goodCount > 0 && expiredCount === 0 && expiringSoonCount === 0 && (
+                        <div className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[8px] font-bold px-1 rounded truncate text-center">
+                          {goodCount} Stable
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-m3-outline-variant/10 text-[10px] text-m3-on-surface-variant font-sans">
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-rose-500 inline-block" /> Expired
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-amber-500 inline-block" /> Expiring &lt;= 30 Days
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" /> Stable (&gt; 30 Days)
+                </span>
+              </div>
+              <span className="text-[9px] font-mono text-m3-on-surface-variant/70">
+                Click any day tile to isolate batch entries
+              </span>
+            </div>
+          </div>
+
+          {/* Column 3: Shelf-Life Analytics & Real-Time Alerts */}
+          <div className="bg-m3-surface border border-m3-outline-variant/15 p-5 rounded-2xl space-y-4 text-left flex flex-col justify-between">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center border-b border-m3-outline-variant/10 pb-3">
+                <span className="font-sans font-black text-xs uppercase tracking-widest text-m3-primary block">
+                  Shelf-Life Warnings &amp; Logs
+                </span>
+                <button
+                  type="button"
+                  onClick={handleResetSimulationBatches}
+                  className="text-[9.5px] font-extrabold text-m3-primary hover:underline flex items-center gap-1 cursor-pointer"
+                  title="Re-synchronize chemical stock batch logs directly with products catalog"
+                >
+                  <span>Re-Sync Database</span>
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {/* Expired count stat */}
+                <div className="flex justify-between items-center bg-rose-500/5 p-3.5 rounded-xl border border-rose-500/10">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-rose-500" />
+                    <span className="text-[11px] font-bold text-rose-500 uppercase">Expired Batches</span>
+                  </div>
+                  <span className="font-mono text-sm font-black text-rose-600 dark:text-rose-400">
+                    {filteredBatches.filter(b => computeLiveBatchStatus(b.expiryDate) === "Expired").length}
+                  </span>
+                </div>
+
+                {/* Expiring Soon count stat */}
+                <div className="flex justify-between items-center bg-amber-500/5 p-3.5 rounded-xl border border-amber-500/10">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-amber-500" />
+                    <span className="text-[11px] font-bold text-amber-500 uppercase">Expiring (&lt;= 30 days)</span>
+                  </div>
+                  <span className="font-mono text-sm font-black text-amber-600 dark:text-amber-400">
+                    {filteredBatches.filter(b => computeLiveBatchStatus(b.expiryDate) === "Expiring Soon").length}
+                  </span>
+                </div>
+
+                {/* Healthy count stat */}
+                <div className="flex justify-between items-center bg-emerald-500/5 p-3.5 rounded-xl border border-emerald-500/10">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <span className="text-[11px] font-bold text-emerald-500 uppercase">Stable Stocks</span>
+                  </div>
+                  <span className="font-mono text-sm font-black text-emerald-600 dark:text-emerald-400">
+                    {filteredBatches.filter(b => computeLiveBatchStatus(b.expiryDate) === "Good").length}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Expiry Action Protocol Notice */}
+            <div className="p-3.5 rounded-xl bg-m3-surface-low border border-m3-outline-variant/20 space-y-1.5 mt-2">
+              <span className="text-[9px] font-black text-m3-primary uppercase tracking-wider block font-sans">
+                ERP Quality &amp; Safety Protocol
+              </span>
+              <p className="text-[11px] text-m3-on-surface-variant font-medium leading-relaxed font-sans">
+                <strong>Notice:</strong> Expired grout, tile mortar adhesives, and chemical sealants must be quarantined immediately. Expired chemicals lose bonding strength and cannot be sold.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Batches Log Table */}
+        <div className="space-y-3.5 text-left pt-2">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="font-sans font-black text-xs uppercase tracking-widest text-m3-primary block">
+                Chemical Batch Expiration Log Entries ({filteredBatches.length})
+              </span>
+              {calendarSelectedDay && (
+                <span className="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                  Filtered for {calendarSelectedDay}
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setBatchFormBranchId(selectedViewBranchId === 'consolidated' ? (currentUser?.branchAssignmentId || 'B1') : selectedViewBranchId);
+                setShowAddBatchModal(true);
+              }}
+              className="px-3.5 py-1.5 rounded-xl bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary text-xs font-black uppercase tracking-wider transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Register Chemical Stock Batch</span>
+            </button>
+          </div>
+
+          <div className="overflow-x-auto rounded-2xl border border-m3-outline-variant/15">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead className="bg-m3-surface-high/15 border-b border-m3-outline-variant/20 font-black text-m3-on-surface">
+                <tr>
+                  <th className="py-3 px-4 font-sans">Product / Code</th>
+                  <th className="py-3 px-4 font-sans text-center">Batch Number</th>
+                  <th className="py-3 px-4 font-sans text-right">Quantity</th>
+                  <th className="py-3 px-4 font-sans text-center">Mfg Date</th>
+                  <th className="py-3 px-4 font-sans text-center">Expiry Date</th>
+                  <th className="py-3 px-4 font-sans text-center">Branch Allocation</th>
+                  <th className="py-3 px-4 font-sans text-center">Status</th>
+                  <th className="py-3 px-4 font-sans text-center">Remarks / Notes</th>
+                  <th className="py-3 px-4 font-sans text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
+                {filteredBatches.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-8 text-center text-zinc-400 italic">
+                      No chemical stock batches match the active filters or selected date. Click "Register Chemical Stock Batch" to log a new record.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredBatches.map(b => {
+                    const prod = products.find(p => p.id === b.productId);
+                    const pName = prod ? prod.productName : b.productName;
+                    const pCode = prod ? prod.productCode : b.productCode;
+                    const pUnit = prod?.unit || 'bags';
+                    const liveStatus = computeLiveBatchStatus(b.expiryDate);
+
+                    return (
+                      <tr 
+                        key={b.id} 
+                        onClick={() => setSelectedBatchDetail(b)}
+                        className="hover:bg-m3-surface-high/60 transition-colors cursor-pointer group"
+                      >
+                        <td className="py-3 px-4 font-sans">
+                          <strong className="text-m3-on-surface font-black block group-hover:text-m3-primary transition-colors">{pName}</strong>
+                          <span className="text-[9px] font-mono text-m3-primary font-bold">{pCode}</span>
+                        </td>
+
+                        <td className="py-3 px-4 font-mono text-center font-bold text-zinc-700 dark:text-zinc-300">
+                          #{b.batchNumber}
+                        </td>
+
+                        <td className="py-3 px-4 font-mono text-right font-black text-m3-on-surface">
+                          {b.quantity} {pUnit}
+                        </td>
+
+                        <td className="py-3 px-4 font-mono text-center text-zinc-500 font-semibold">
+                          {b.manufactureDate}
+                        </td>
+
+                        <td className="py-3 px-4 font-mono text-center text-zinc-700 dark:text-zinc-300 font-bold">
+                          {b.expiryDate}
+                        </td>
+
+                        <td className="py-3 px-4 text-center font-bold">
+                          {branches.find(br => br.id === b.branchId)?.name || b.branchId}
+                        </td>
+
+                        <td className="py-3 px-4 text-center">
+                          <span className={`px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wide border ${
+                            liveStatus === "Expired"
+                              ? "bg-rose-500/10 text-rose-500 border-rose-500/20 font-black animate-pulse"
+                              : liveStatus === "Expiring Soon"
+                              ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                              : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                          }`}>
+                            {liveStatus}
+                          </span>
+                        </td>
+
+                        <td className="py-3 px-4 font-sans text-zinc-500 italic font-medium max-w-[200px] truncate" title={b.remarks}>
+                          {b.remarks || "N/A"}
+                        </td>
+
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedBatchDetail(b);
+                              }}
+                              className="p-1 hover:bg-m3-primary/10 text-m3-primary/70 hover:text-m3-primary rounded-full transition-colors cursor-pointer"
+                              title="View Full Batch Details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                            {!hasActiveShift && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveBatch(b.id);
+                                }}
+                                className="p-1 hover:bg-rose-500/10 hover:text-rose-500 text-zinc-400 rounded-full transition-colors cursor-pointer"
+                                title="Remove batch log entry"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  })()}
+
+  {/* ---------------------------------------------------------------------- */}
+  {/* SUB-TAB 2: ADJUSTMENTS & MOVEMENT LOGS */}
+  {/* ---------------------------------------------------------------------- */}
+  {activeSubTab === 'movements' && (
+    <div className="space-y-6 text-left animate-fade-in">
+      {/* Header & Primary Action Controls */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-m3-surface-low p-5 rounded-[24px] border border-m3-outline-variant/20 shadow-sm">
+        <div>
+          <h2 className="text-base font-black text-m3-on-surface uppercase tracking-wider flex items-center gap-2">
+            <Activity className="h-5 w-5 text-m3-primary" />
+            <span>Stock Adjustments & Audit Movement Logs</span>
+          </h2>
+          <p className="text-xs text-m3-on-surface-variant font-medium mt-0.5">
+            Complete audit trail of all physical stock additions, inventory manual write-offs, damages, and reconciliations.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowAdjustModal(true)}
+          className="px-4 py-2.5 rounded-xl bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center gap-2 cursor-pointer active:scale-95"
+        >
+          <Sliders className="h-4 w-4" />
+          <span>Record Manual Adjustment</span>
+        </button>
+      </div>
+
+      {/* KPI Overview Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-m3-surface p-4 rounded-2xl border border-m3-outline-variant/15 space-y-1">
+          <span className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant">Total Movement Logs</span>
+          <div className="text-xl font-black font-mono text-m3-on-surface">{filteredMovements.length}</div>
+        </div>
+        <div className="bg-emerald-500/5 p-4 rounded-2xl border border-emerald-500/15 space-y-1">
+          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Stock Inflows (+)</span>
+          <div className="text-xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+            +{filteredMovements.filter(m => m.quantity > 0).reduce((acc, m) => acc + m.quantity, 0)} boxes
+          </div>
+        </div>
+        <div className="bg-rose-500/5 p-4 rounded-2xl border border-rose-500/15 space-y-1">
+          <span className="text-[10px] font-black uppercase tracking-wider text-rose-600 dark:text-rose-400">Deductions & Outflows (-)</span>
+          <div className="text-xl font-black font-mono text-rose-600 dark:text-rose-400">
+            {filteredMovements.filter(m => m.quantity < 0).reduce((acc, m) => acc + m.quantity, 0)} boxes
+          </div>
+        </div>
+        <div className="bg-amber-500/5 p-4 rounded-2xl border border-amber-500/15 space-y-1">
+          <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">Damaged / Write-Offs</span>
+          <div className="text-xl font-black font-mono text-amber-600 dark:text-amber-400">
+            {filteredMovements.filter(m => (m.type || '').toUpperCase().includes('DAMAGE')).length} incidents
+          </div>
+        </div>
+      </div>
+
+      {/* Search & Filter bar */}
+      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-m3-on-surface-variant/60" />
+          <input
+            type="text"
+            value={movementSearch}
+            onChange={(e) => setMovementSearch(e.target.value)}
+            placeholder="Search log by notes, ref #, or operator..."
+            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-m3-surface-low border border-m3-outline-variant/30 focus:border-m3-primary focus:outline-none text-m3-on-surface"
+          />
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <select
+            value={movementTypeFilter}
+            onChange={(e) => setMovementTypeFilter(e.target.value)}
+            className="px-3 py-2 text-xs rounded-xl bg-m3-surface-low border border-m3-outline-variant/30 text-m3-on-surface font-bold focus:outline-none"
+          >
+            <option value="All">All Movement Types</option>
+            <option value="IN">Stock Inflow (IN)</option>
+            <option value="OUT">Stock Outflow (OUT)</option>
+            <option value="ADJUST">Manual Adjustments</option>
+            <option value="DAMAGE">Damage & Breakage</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Logs Table */}
+      <div className="overflow-x-auto rounded-2xl border border-m3-outline-variant/20 bg-m3-surface shadow-sm">
+        <table className="w-full text-left border-collapse text-xs">
+          <thead className="bg-m3-surface-high/20 border-b border-m3-outline-variant/20 font-black text-m3-on-surface">
+            <tr>
+              <th className="py-3 px-4">Date & Time</th>
+              <th className="py-3 px-4">Branch</th>
+              <th className="py-3 px-4">Product Name</th>
+              <th className="py-3 px-4 text-center">Movement Type</th>
+              <th className="py-3 px-4 text-right">Quantity Change</th>
+              <th className="py-3 px-4">Reference No.</th>
+              <th className="py-3 px-4">Operator / User</th>
+              <th className="py-3 px-4">Notes / Reason</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
+            {filteredMovements.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="py-12 text-center text-m3-on-surface-variant/70 italic font-medium">
+                  No movement log entries match the selected filters or branch view scope.
+                </td>
+              </tr>
+            ) : (
+              filteredMovements.map((m) => {
+                const prod = products.find(p => p.id === m.productId);
+                const br = branches.find(b => b.id === (m.sourceBranchId || m.destinationBranchId));
+                const brName = br ? br.name : (m.sourceBranchId || 'Central');
+                const isPositive = m.quantity > 0;
+
+                return (
+                  <tr key={m.id} className="hover:bg-m3-surface-low/40 transition-colors">
+                    <td className="py-3 px-4 font-mono text-[11px] text-m3-on-surface-variant">
+                      {new Date(m.timestamp).toLocaleString()}
+                    </td>
+                    <td className="py-3 px-4 font-bold text-m3-on-surface">
+                      {brName}
+                    </td>
+                    <td className="py-3 px-4 font-extrabold text-m3-on-surface">
+                      {prod ? prod.productName : m.productId}
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[9.5px] font-black uppercase tracking-wider border ${
+                        m.type === 'IN' || m.type === 'PURCHASE'
+                          ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                          : m.type === 'DAMAGE' || m.type === 'LOSS'
+                          ? 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                          : 'bg-m3-primary/10 text-m3-primary border-m3-primary/20'
+                      }`}>
+                        {m.type}
+                      </span>
+                    </td>
+                    <td className={`py-3 px-4 text-right font-mono font-black ${isPositive ? 'text-emerald-500' : 'text-rose-500'}`}>
+                      {isPositive ? `+${m.quantity}` : m.quantity} units
+                    </td>
+                    <td className="py-3 px-4 font-mono text-m3-on-surface-variant">
+                      {m.referenceId || 'N/A'}
+                    </td>
+                    <td className="py-3 px-4 text-m3-on-surface-variant">
+                      {m.username || m.userId || 'System Admin'}
+                    </td>
+                    <td className="py-3 px-4 text-m3-on-surface-variant/80 italic max-w-xs truncate" title={m.notes}>
+                      {m.notes || 'Routine stock operation'}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )}
+
+  {/* ---------------------------------------------------------------------- */}
+  {/* SUB-TAB 3: STOCK TRANSFERS */}
+  {/* ---------------------------------------------------------------------- */}
+  {activeSubTab === 'transfers' && (
+    <div className="space-y-6 text-left animate-fade-in">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-m3-surface-low p-5 rounded-[24px] border border-m3-outline-variant/20 shadow-sm">
+        <div>
+          <h2 className="text-base font-black text-m3-on-surface uppercase tracking-wider flex items-center gap-2">
+            <ArrowRightLeft className="h-5 w-5 text-m3-primary" />
+            <span>Inter-Branch Stock Transfers & Transmittals</span>
+          </h2>
+          <p className="text-xs text-m3-on-surface-variant font-medium mt-0.5">
+            Manage multi-store inventory relocations, pending dispatch approvals, and branch receipt confirmations.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowCreateTransfer(true)}
+          className="px-4 py-2.5 rounded-xl bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center gap-2 cursor-pointer active:scale-95"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Initiate Stock Transfer Request</span>
+        </button>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-m3-surface p-4 rounded-2xl border border-m3-outline-variant/15 space-y-1">
+          <span className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant">Total Transfer Orders</span>
+          <div className="text-xl font-black font-mono text-m3-on-surface">{stockTransfers.length}</div>
+        </div>
+        <div className="bg-amber-500/5 p-4 rounded-2xl border border-amber-500/15 space-y-1">
+          <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">Pending Approval</span>
+          <div className="text-xl font-black font-mono text-amber-600 dark:text-amber-400">
+            {stockTransfers.filter(t => t.status === 'Pending').length} requests
+          </div>
+        </div>
+        <div className="bg-sky-500/5 p-4 rounded-2xl border border-sky-500/15 space-y-1">
+          <span className="text-[10px] font-black uppercase tracking-wider text-sky-600 dark:text-sky-400">In Transit / Dispatched</span>
+          <div className="text-xl font-black font-mono text-sky-600 dark:text-sky-400">
+            {stockTransfers.filter(t => t.status === 'Dispatched').length} orders
+          </div>
+        </div>
+        <div className="bg-emerald-500/5 p-4 rounded-2xl border border-emerald-500/15 space-y-1">
+          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Completed Transfers</span>
+          <div className="text-xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+            {stockTransfers.filter(t => t.status === 'Received' || t.status === 'Completed').length} received
+          </div>
+        </div>
+      </div>
+
+      {/* Transfers List Table */}
+      <div className="overflow-x-auto rounded-2xl border border-m3-outline-variant/20 bg-m3-surface shadow-sm">
+        <table className="w-full text-left border-collapse text-xs">
+          <thead className="bg-m3-surface-high/20 border-b border-m3-outline-variant/20 font-black text-m3-on-surface">
+            <tr>
+              <th className="py-3 px-4">Transfer Ref #</th>
+              <th className="py-3 px-4">Date & Time</th>
+              <th className="py-3 px-4">Source Origin</th>
+              <th className="py-3 px-4">Destination Store</th>
+              <th className="py-3 px-4 text-center">Items Count</th>
+              <th className="py-3 px-4 text-center">Status</th>
+              <th className="py-3 px-4">Requested By</th>
+              <th className="py-3 px-4">Reason / Notes</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
+            {stockTransfers.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="py-12 text-center text-m3-on-surface-variant/70 italic font-medium">
+                  No stock transfer orders recorded yet. Click Initiate Stock Transfer Request to transfer items between branches.
+                </td>
+              </tr>
+            ) : (
+              stockTransfers.map((t) => {
+                const srcBranch = branches.find(b => b.id === t.fromBranchId);
+                const destBranch = branches.find(b => b.id === t.toBranchId);
+                const itemCount = (t.items || []).reduce((acc, item) => acc + item.quantity, 0);
+
+                return (
+                  <tr key={t.id} className="hover:bg-m3-surface-low/40 transition-colors">
+                    <td className="py-3 px-4 font-mono font-bold text-m3-primary">
+                      {t.transferNo || t.id.slice(-8)}
+                    </td>
+                    <td className="py-3 px-4 font-mono text-[11px] text-m3-on-surface-variant">
+                      {new Date(t.createdAt).toLocaleString()}
+                    </td>
+                    <td className="py-3 px-4 font-bold text-m3-on-surface">
+                      {srcBranch ? srcBranch.name : t.fromBranchId}
+                    </td>
+                    <td className="py-3 px-4 font-bold text-m3-on-surface">
+                      {destBranch ? destBranch.name : t.toBranchId}
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono font-bold">
+                      {itemCount} units ({t.items?.length || 0} SKUs)
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[9.5px] font-black uppercase tracking-wider border ${
+                        t.status === 'Completed' || t.status === 'Received'
+                          ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                          : t.status === 'Dispatched'
+                          ? 'bg-sky-500/10 text-sky-500 border-sky-500/20'
+                          : t.status === 'Pending'
+                          ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 animate-pulse'
+                          : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                      }`}>
+                        {t.status}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-m3-on-surface-variant">
+                      {t.requestedBy || 'Store Manager'}
+                    </td>
+                    <td className="py-3 px-4 text-m3-on-surface-variant/80 italic max-w-xs truncate" title={t.reason}>
+                      {t.reason || 'Inter-branch inventory rebalancing'}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )}
+
+  {/* ---------------------------------------------------------------------- */}
+  {/* SUB-TAB 4: LOGISTICS LEDGER & HEATMAP */}
+  {/* ---------------------------------------------------------------------- */}
+  {activeSubTab === 'ledger' && (
+    <div className="space-y-6 text-left animate-fade-in">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-m3-surface-low p-5 rounded-[24px] border border-m3-outline-variant/20 shadow-sm">
+        <div>
+          <h2 className="text-base font-black text-m3-on-surface uppercase tracking-wider flex items-center gap-2">
+            <Sliders className="h-5 w-5 text-m3-primary" />
+            <span>Branch Logistics Distribution & Ledger Heatmap</span>
+          </h2>
+          <p className="text-xs text-m3-on-surface-variant font-medium mt-0.5">
+            Real-time visual map of inventory volume, cross-node movement intensity, and financial stock ledgers.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowManualLedgerModal(true)}
+          className="px-4 py-2.5 rounded-xl bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center gap-2 cursor-pointer active:scale-95"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Manual Ledger Entry</span>
+        </button>
+      </div>
+
+      {/* Branch Heatmap Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {branches.filter(b => !b.isDeleted && (isAdminUser || b.id === activeBranchId)).map(b => {
+          const bStockItems = branchStock.filter(bs => bs.branchId === b.id);
+          const totalUnitsInBranch = bStockItems.reduce((acc, bs) => acc + bs.quantity, 0);
+          const lowStockCount = bStockItems.filter(bs => bs.quantity < 20).length;
+
+          return (
+            <div key={b.id} className="bg-m3-surface p-5 rounded-2xl border border-m3-outline-variant/20 space-y-3 relative overflow-hidden">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-sm font-black text-m3-on-surface">{b.name}</h3>
+                  <span className="text-[10px] text-m3-on-surface-variant font-mono">Code: {b.branchCode || b.id}</span>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${
+                  b.id === selectedViewBranchId || selectedViewBranchId === 'consolidated'
+                    ? 'bg-m3-primary/10 text-m3-primary border-m3-primary/20'
+                    : 'bg-m3-surface-low text-m3-on-surface-variant border-transparent'
+                }`}>
+                  {b.isDistributionBranch ? 'HQ Hub' : 'Store Branch'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-m3-surface-low p-2.5 rounded-xl">
+                  <span className="text-[9.5px] text-m3-on-surface-variant font-bold block">Physical Units</span>
+                  <span className="text-base font-black font-mono text-m3-primary">{totalUnitsInBranch.toLocaleString()}</span>
+                </div>
+                <div className="bg-m3-surface-low p-2.5 rounded-xl">
+                  <span className="text-[9.5px] text-m3-on-surface-variant font-bold block">Low Stock Items</span>
+                  <span className={`text-base font-black font-mono ${lowStockCount > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                    {lowStockCount}
+                  </span>
+                </div>
+              </div>
+
+              {/* Intensity Bar */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] font-bold text-m3-on-surface-variant">
+                  <span>Capacity Volume Allocation</span>
+                  <span>{Math.min(100, Math.round((totalUnitsInBranch / 5000) * 100))}%</span>
+                </div>
+                <div className="h-2 w-full bg-m3-surface-low rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-m3-primary rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, Math.round((totalUnitsInBranch / 5000) * 100))}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Ledger Entries Table */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-black uppercase tracking-wider text-m3-primary">
+          Enterprise Financial & Movement Ledger Log ({filteredLedgerEntries.length})
+        </h3>
+        <div className="overflow-x-auto rounded-2xl border border-m3-outline-variant/20 bg-m3-surface shadow-sm">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead className="bg-m3-surface-high/20 border-b border-m3-outline-variant/20 font-black text-m3-on-surface">
+              <tr>
+                <th className="py-3 px-4">Date</th>
+                <th className="py-3 px-4">Branch Node</th>
+                <th className="py-3 px-4">Product Name</th>
+                <th className="py-3 px-4 text-center">Movement Type</th>
+                <th className="py-3 px-4 text-right">Quantity</th>
+                <th className="py-3 px-4">Reference No</th>
+                <th className="py-3 px-4">Remarks</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
+              {filteredLedgerEntries.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-m3-on-surface-variant/70 italic font-medium">
+                    No ledger entries recorded for this branch scope yet.
+                  </td>
+                </tr>
+              ) : (
+                paginatedLedger.map((le) => {
+                  const br = branches.find(b => b.id === le.branchId);
+                  return (
+                    <tr key={le.id} className="hover:bg-m3-surface-low/40 transition-colors">
+                      <td className="py-3 px-4 font-mono text-[11px] text-m3-on-surface-variant">
+                        {le.date}
+                      </td>
+                      <td className="py-3 px-4 font-bold text-m3-on-surface">
+                        {br ? br.name : le.branchId}
+                      </td>
+                      <td className="py-3 px-4 font-bold text-m3-on-surface">
+                        {le.productName}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[9.5px] font-black uppercase tracking-wider border ${
+                          le.movementType === 'IN' || le.movementType === 'PURCHASE'
+                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                            : 'bg-m3-primary/10 text-m3-primary border-m3-primary/20'
+                        }`}>
+                          {le.movementType}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono font-black text-m3-on-surface">
+                        {le.quantity}
+                      </td>
+                      <td className="py-3 px-4 font-mono text-m3-on-surface-variant">
+                        {le.referenceNo || 'N/A'}
+                      </td>
+                      <td className="py-3 px-4 text-m3-on-surface-variant/80 italic max-w-xs truncate" title={le.remarks}>
+                        {le.remarks || 'Standard ledger entry'}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* ---------------------------------------------------------------------- */}
+  {/* SUB-TAB 5: PORTABILITY & IMPORT HUB */}
+  {/* ---------------------------------------------------------------------- */}
+  {activeSubTab === 'import' && (
+    <div className="space-y-6 text-left animate-fade-in">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-m3-surface-low p-5 rounded-[24px] border border-m3-outline-variant/20 shadow-sm">
+        <div>
+          <h2 className="text-base font-black text-m3-on-surface uppercase tracking-wider flex items-center gap-2">
+            <Database className="h-5 w-5 text-emerald-500" />
+            <span>Data Portability & Legacy ERP Migration Hub</span>
+          </h2>
+          <p className="text-xs text-m3-on-surface-variant font-medium mt-0.5">
+            Import tile products, bulk CSV lists, or backup catalog files into TilePoint enterprise database.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowPortabilityHubModal(true)}
+          className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center gap-2 cursor-pointer active:scale-95"
+        >
+          <Database className="h-4 w-4" />
+          <span>Launch Full Import / Export Wizard</span>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Drag & Drop Import Box */}
+        <div className="bg-m3-surface p-6 rounded-2xl border border-m3-outline-variant/20 space-y-4">
+          <h3 className="text-sm font-black text-m3-on-surface uppercase tracking-wider flex items-center gap-2">
+            <Plus className="h-4 w-4 text-m3-primary" />
+            <span>Quick CSV / JSON Import</span>
+          </h3>
+          <p className="text-xs text-m3-on-surface-variant leading-relaxed">
+            Drag and drop your exported product CSV or JSON array below, or paste raw JSON text to migrate inventory datasets directly into TilePoint.
+          </p>
+          <div
+            onDragOver={handleImportDragOver}
+            onDragLeave={handleImportDragLeave}
+            onDrop={handleImportDrop}
+            className="border-2 border-dashed border-m3-outline-variant/30 hover:border-m3-primary p-8 rounded-2xl text-center cursor-pointer transition-all bg-m3-surface-low hover:bg-m3-primary/5 space-y-2"
+            onClick={() => setShowPortabilityHubModal(true)}
+          >
+            <Database className="h-8 w-8 text-m3-primary mx-auto animate-bounce" />
+            <div className="text-xs font-black text-m3-on-surface">Click or Drag & Drop Catalog Files Here</div>
+            <div className="text-[10.5px] text-m3-on-surface-variant font-mono">Supports .csv, .json format exports</div>
+          </div>
+        </div>
+
+        {/* Export Data Backup Card */}
+        <div className="bg-m3-surface p-6 rounded-2xl border border-m3-outline-variant/20 space-y-4">
+          <h3 className="text-sm font-black text-m3-on-surface uppercase tracking-wider flex items-center gap-2">
+            <Sliders className="h-4 w-4 text-m3-primary" />
+            <span>System Data Export & Backups</span>
+          </h3>
+          <p className="text-xs text-m3-on-surface-variant leading-relaxed">
+            Download local backup copies of your entire product catalog, branch stock levels, and transaction logs.
+          </p>
+          <div className="space-y-2 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(products, null, 2));
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", `tilepoint_catalog_export_${new Date().toISOString().slice(0,10)}.json`);
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                downloadAnchor.remove();
+                showToast("Product catalog JSON backup downloaded!");
+              }}
+              className="w-full py-2.5 px-4 rounded-xl bg-m3-surface-low hover:bg-m3-surface-high border border-m3-outline-variant/30 text-xs font-extrabold text-m3-on-surface transition-all text-left flex items-center justify-between cursor-pointer"
+            >
+              <span>Export Product Catalog (.JSON)</span>
+              <span className="text-[10px] text-m3-primary font-mono">{branchProducts.length} Branch Products</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const csvHeader = "ID,Product Code,Product Name,Category,Brand,Selling Price,Stock Quantity\n";
+                const csvRows = branchProducts.map(p => `"${p.id}","${p.productCode}","${p.productName}","${p.category}","${p.brand}",${p.sellingPrice},${p.stockQuantity}`).join("\n");
+                const dataStr = "data:text/csv;charset=utf-8," + encodeURIComponent(csvHeader + csvRows);
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", `tilepoint_catalog_${new Date().toISOString().slice(0,10)}.csv`);
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                downloadAnchor.remove();
+                showToast("Product catalog CSV exported!");
+              }}
+              className="w-full py-2.5 px-4 rounded-xl bg-m3-surface-low hover:bg-m3-surface-high border border-m3-outline-variant/30 text-xs font-extrabold text-m3-on-surface transition-all text-left flex items-center justify-between cursor-pointer"
+            >
+              <span>Export Inventory CSV Spreadsheet</span>
+              <span className="text-[10px] text-emerald-500 font-mono">.CSV Table</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* ---------------------------------------------------------------------- */}
+  {/* SUB-TAB 6: BRANCH PRICE OVERRIDES */}
+  {/* ---------------------------------------------------------------------- */}
+  {activeSubTab === 'branch-prices' && (
+    <div className="space-y-6 text-left animate-fade-in">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-m3-surface-low p-5 rounded-[24px] border border-m3-outline-variant/20 shadow-sm">
+        <div>
+          <h2 className="text-base font-black text-m3-on-surface uppercase tracking-wider flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-m3-primary" />
+            <span>Branch MSRP & SRP Pricing Overrides</span>
+          </h2>
+          <p className="text-xs text-m3-on-surface-variant font-medium mt-0.5">
+            Configure custom branch selling prices or localized retail price markups for specific store locations.
+          </p>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto rounded-2xl border border-m3-outline-variant/20 bg-m3-surface shadow-sm">
+        <table className="w-full text-left border-collapse text-xs">
+          <thead className="bg-m3-surface-high/20 border-b border-m3-outline-variant/20 font-black text-m3-on-surface">
+            <tr>
+              <th className="py-3 px-4">Product Code / Name</th>
+              <th className="py-3 px-4">Category</th>
+              <th className="py-3 px-4 text-right">Central Base SRP</th>
+              {branches.filter(b => !b.isDeleted && (isAdminUser || b.id === activeBranchId)).map(b => (
+                <th key={b.id} className="py-3 px-4 text-center font-black text-m3-primary">
+                  {b.name}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
+            {branchProducts.slice(0, 30).map((p) => {
+              return (
+                <tr key={p.id} className="hover:bg-m3-surface-low/40 transition-colors">
+                  <td className="py-3 px-4">
+                    <div className="font-extrabold text-m3-on-surface">{p.productName}</div>
+                    <div className="text-[10.5px] font-mono text-m3-on-surface-variant">{p.productCode}</div>
+                  </td>
+                  <td className="py-3 px-4 text-m3-on-surface-variant font-medium">
+                    {p.category}
+                  </td>
+                  <td className="py-3 px-4 text-right font-mono font-bold text-m3-on-surface">
+                    ₱{p.sellingPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </td>
+                  {branches.filter(b => !b.isDeleted && (isAdminUser || b.id === activeBranchId)).map(b => {
+                    const bsRec = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id);
+                    const overridePrice = bsRec?.sellingPriceOverride ?? p.sellingPrice;
+
+                    return (
+                      <td key={b.id} className="py-3 px-4 text-center font-mono font-bold">
+                        <span className="px-2.5 py-1 rounded-lg bg-m3-surface-low border border-m3-outline-variant/25 text-m3-primary">
+                          ₱{overridePrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </span>
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )}
+
+  {/* CHEMICAL BATCH DETAIL MODAL */}
+  {selectedBatchDetail && (() => {
+    const b = selectedBatchDetail;
+    const prod = products.find(p => p.id === b.productId);
+    const pName = prod ? prod.productName : b.productName;
+    const pCode = prod ? prod.productCode : b.productCode;
+    const pUnit = prod?.unit || 'bags';
+    const liveStatus = computeLiveBatchStatus(b.expiryDate);
+    const branchName = branches.find(br => br.id === b.branchId)?.name || b.branchId;
+
+    // Find supplier info from product
+    const supplier = suppliers.find(s => s.id === prod?.supplierId);
+
+    // Calculate days remaining or days past expiry
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expDateObj = new Date(b.expiryDate);
+    expDateObj.setHours(0, 0, 0, 0);
+    const diffTime = expDateObj.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    // Branch stock for this product
+    const currentBranchStock = branchStock.find(bs => bs.productId === b.productId && bs.branchId === b.branchId)?.quantity ?? prod?.stockQuantity ?? 0;
+
+    const handleTriggerTransfer = () => {
+      setSelectedBatchDetail(null);
+      changeActiveSubTab('transfers');
+      setShowCreateTransfer(true);
+      setTransferSource(b.branchId);
+      setTempProductId(b.productId);
+      setTempQty(b.quantity);
+      setTransferItems(prev => {
+        const existingIdx = prev.findIndex(it => it.productId === b.productId);
+        if (existingIdx !== -1) {
+          return prev.map((it, idx) => idx === existingIdx ? { ...it, quantity: it.quantity + b.quantity } : it);
+        }
+        return [...prev, { productId: b.productId, quantity: b.quantity }];
+      });
+      showToast(`Stock transfer order form pre-filled for Batch #${b.batchNumber} (${pName}) - ${b.quantity} ${pUnit}`);
+    };
+
+    return (
+      <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
+        <div 
+          className="absolute inset-0 bg-gray-950/80 backdrop-blur-sm shadow-xl" 
+          onClick={() => setSelectedBatchDetail(null)} 
+        />
+        <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-[32px] border border-m3-outline-variant/30 p-6 z-30 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-5">
+          
+          {/* Header */}
+          <div className="flex justify-between items-start border-b border-m3-outline-variant/15 pb-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-mono font-black uppercase tracking-wider bg-m3-primary/10 text-m3-primary px-2.5 py-0.5 rounded-full border border-m3-primary/20">
+                  Batch #{b.batchNumber}
+                </span>
+                <span className={`px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wide border ${
+                  liveStatus === "Expired"
+                    ? "bg-rose-500/10 text-rose-500 border-rose-500/20 font-black animate-pulse"
+                    : liveStatus === "Expiring Soon"
+                    ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                    : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                }`}>
+                  {liveStatus}
+                </span>
+              </div>
+              <h3 className="text-base font-black text-m3-on-surface leading-tight">
+                {pName}
+              </h3>
+              <span className="text-xs font-mono font-bold text-m3-primary">
+                Product Code: {pCode}
+              </span>
+            </div>
+            <button 
+              type="button" 
+              onClick={() => setSelectedBatchDetail(null)} 
+              className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1.5 rounded-full hover:bg-m3-surface-high transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Details Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            
+            {/* Section 1: Quantity & Location */}
+            <div className="bg-m3-surface p-4 rounded-2xl border border-m3-outline-variant/15 space-y-2.5">
+              <span className="text-[10px] font-black uppercase tracking-widest text-m3-primary block">
+                Stock &amp; Allocation
+              </span>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center py-1 border-b border-m3-outline-variant/10">
+                  <span className="text-m3-on-surface-variant font-medium">Batch Quantity Remaining:</span>
+                  <span className="font-mono font-black text-sm text-m3-primary">
+                    {b.quantity} {pUnit}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-m3-outline-variant/10">
+                  <span className="text-m3-on-surface-variant font-medium">Branch Location:</span>
+                  <span className="font-extrabold text-m3-on-surface">
+                    {branchName}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-m3-on-surface-variant font-medium">Total Branch Stock:</span>
+                  <span className="font-mono font-bold text-m3-on-surface">
+                    {currentBranchStock} {pUnit}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 2: Shelf-Life & Dates */}
+            <div className="bg-m3-surface p-4 rounded-2xl border border-m3-outline-variant/15 space-y-2.5">
+              <span className="text-[10px] font-black uppercase tracking-widest text-m3-primary block">
+                Manufacture &amp; Expiry
+              </span>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center py-1 border-b border-m3-outline-variant/10">
+                  <span className="text-m3-on-surface-variant font-medium">Manufacture Date:</span>
+                  <span className="font-mono font-semibold text-m3-on-surface">
+                    {b.manufactureDate}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-m3-outline-variant/10">
+                  <span className="text-m3-on-surface-variant font-medium">Expiration Date:</span>
+                  <span className="font-mono font-bold text-m3-on-surface">
+                    {b.expiryDate}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-m3-on-surface-variant font-medium">Timeline Status:</span>
+                  <span className={`font-mono font-bold ${
+                    isNaN(diffDays) ? 'text-m3-on-surface-variant' : diffDays < 0 ? 'text-rose-500' : diffDays <= 30 ? 'text-amber-500' : 'text-emerald-500'
+                  }`}>
+                    {isNaN(diffDays)
+                      ? "Unspecified / Lifetime"
+                      : diffDays < 0 
+                      ? `Expired ${Math.abs(diffDays)} days ago` 
+                      : diffDays === 0 
+                      ? `Expires today!` 
+                      : `${diffDays} days remaining`}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 3: Supplier Information */}
+            <div className="md:col-span-2 bg-m3-surface p-4 rounded-2xl border border-m3-outline-variant/15 space-y-2.5">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase tracking-widest text-m3-primary block">
+                  Supplier &amp; Vendor Information
+                </span>
+                {prod?.brand && (
+                  <span className="text-[9.5px] font-mono bg-m3-surface-high px-2 py-0.5 rounded text-m3-on-surface-variant font-bold">
+                    Brand: {prod.brand}
+                  </span>
+                )}
+              </div>
+              
+              {supplier ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <span className="text-[9px] text-m3-on-surface-variant uppercase tracking-wider block font-bold">Company Name</span>
+                    <span className="font-bold text-m3-on-surface">{supplier.name}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-m3-on-surface-variant uppercase tracking-wider block font-bold">Contact Person</span>
+                    <span className="font-semibold text-m3-on-surface">{supplier.contactPerson || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-m3-on-surface-variant uppercase tracking-wider block font-bold">Phone / Mobile</span>
+                    <span className="font-mono text-m3-on-surface">{supplier.phone || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-m3-on-surface-variant uppercase tracking-wider block font-bold">Email Address</span>
+                    <span className="font-mono text-m3-on-surface">{supplier.email || 'N/A'}</span>
+                  </div>
+                  {supplier.address && (
+                    <div className="sm:col-span-2">
+                      <span className="text-[9px] text-m3-on-surface-variant uppercase tracking-wider block font-bold">Business Address</span>
+                      <span className="text-m3-on-surface text-[11px]">{supplier.address}</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-3 bg-m3-surface-low rounded-xl border border-dashed border-m3-outline-variant/20 text-[11px] text-m3-on-surface-variant leading-relaxed">
+                  <p>
+                    <strong>Supplier Note:</strong> No specific supplier record is linked to this product (Brand: <strong>{prod?.brand || 'Default Chemical Supplier'}</strong>).
+                  </p>
+                  <p className="text-[10px] text-zinc-400 mt-1">
+                    You can assign a registered supplier to this product from the Catalog module edit page.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Section 4: Remarks / Log Notes */}
+            <div className="md:col-span-2 bg-m3-surface p-4 rounded-2xl border border-m3-outline-variant/15 space-y-1.5">
+              <span className="text-[10px] font-black uppercase tracking-widest text-m3-primary block">
+                Batch Remarks &amp; ERP Notes
+              </span>
+              <p className="text-xs text-m3-on-surface-variant italic font-medium">
+                {b.remarks || "No custom remarks recorded for this chemical stock batch entry."}
+              </p>
+            </div>
+          </div>
+
+          {/* Footer Actions */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-3 border-t border-m3-outline-variant/15">
+            <button
+              type="button"
+              onClick={() => setSelectedBatchDetail(null)}
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-m3-outline-variant/30 hover:bg-m3-surface-high text-m3-on-surface text-xs font-bold transition-all cursor-pointer"
+            >
+              Close
+            </button>
+
+            <button
+              type="button"
+              onClick={handleTriggerTransfer}
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+            >
+              <ArrowRightLeft className="h-4 w-4" />
+              <span>Trigger Stock Transfer</span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+    );
+  })()}
 
  {/* REGISTER NEW BATCH MODAL */}
  {showAddBatchModal && (
@@ -5003,12 +4518,21 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  <label className="font-extrabold text-m3-on-surface-variant uppercase tracking-wider text-[10px]">Select Catalog Product</label>
  <select
  value={batchFormProductId}
- onChange={e => setBatchFormProductId(e.target.value)}
+ onChange={e => {
+ const val = e.target.value;
+ setBatchFormProductId(val);
+ const prod = products.find(p => p.id === val);
+ if (prod) {
+ if (prod.expirationDate) setBatchFormExpDate(prod.expirationDate);
+ if (prod.stockQuantity) setBatchFormQty(prod.stockQuantity);
+ if (!batchFormNo) setBatchFormNo(`B-${prod.productCode.replace(/[^A-Z0-9]/gi, '')}-${Date.now().toString().slice(-4)}`);
+ }
+ }}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 focus:border-m3-primary px-3 py-2 text-xs focus:outline-none rounded-xl font-bold text-m3-on-surface"
  required
  >
  <option value="" disabled>Select a product...</option>
- {products.filter(p => !p.isDeleted).map(p => (
+ {branchProducts.map(p => (
  <option key={p.id} value={p.id}>
  {p.productName} ({p.productCode}){p.hasExpiration ? ' - [⚠️ Expiry Tracked]' : ''}
  </option>
@@ -5080,6 +4604,7 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  {/* Branch Assignment */}
  <div className="space-y-1">
  <label className="font-extrabold text-m3-on-surface-variant uppercase tracking-wider text-[10px]">Branch Allocation</label>
+ {currentUser?.role === 'Admin' ? (
  <select
  value={batchFormBranchId}
  onChange={e => setBatchFormBranchId(e.target.value)}
@@ -5092,6 +4617,11 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  </option>
  ))}
  </select>
+ ) : (
+ <div className="w-full bg-m3-surface-lowest/60 border border-m3-outline-variant/15 px-3 py-2 text-xs rounded-xl font-bold font-mono text-zinc-400">
+ {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
+ </div>
+ )}
  </div>
 
  {/* Remarks */}
@@ -5247,50 +4777,6 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  </div>
 
  <div className="space-y-6">
- {/* PRODUCT INTERACTIVE FILE UPLOAD BOX */}
- <div className="space-y-2">
- <span className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Product Image Asset Upload</span>
- <div
- onDragOver={handleDragOver}
- onDrop={handleDrop}
- className="border-2 border-dashed border-m3-outline-variant/50 hover:border-m3-primary bg-m3-surface-lowest/70 p-4 rounded-2xl flex flex-col items-center justify-center text-center gap-3 transition-colors cursor-pointer group relative"
- >
- <input
- type="file"
- accept="image/png, image/jpeg, image/webp"
- onChange={handleImageChange}
- className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
- />
- 
- {productImage ? (
- <div className="flex items-center gap-4 w-full justify-center select-none relative z-10">
- <img 
- src={productImage} 
- alt="Thumbnail preview" 
- className="w-16 h-16 rounded-xl object-cover shadow-md border border-m3-outline-variant/30"
- referrerPolicy="no-referrer"
- />
- <div className="text-left">
- <span className="text-xs font-bold text-emerald-500 flex items-center gap-1">
- <Check className="h-3.5 w-3.5" /> High-Res Asset Linked
- </span>
- <p className="text-[10px] text-m3-on-surface-variant max-w-xs mt-0.5">Drag a different file or click to replace this asset in DB cache storage.</p>
- </div>
- </div>
- ) : (
- <div className="flex flex-col items-center gap-2 select-none relative z-10">
- <div className="p-3 bg-m3-outline-variant/20 rounded-full group-hover:scale-110 group-hover:text-m3-primary transition-all text-m3-on-surface-variant">
- <Camera className="h-5 w-5" />
- </div>
- <div>
- <strong className="text-xs text-m3-on-surface font-sans block">Drop image file or click to select</strong>
- <span className="text-[9px] text-m3-on-surface-variant font-bold uppercase tracking-wider block mt-1">Supports JPEG, WEBP, PNG up to 1MB</span>
- </div>
- </div>
- )}
- </div>
- </div>
-
  {/* SECTION 1: GENERAL SPECIFICATIONS */}
  <div className="p-4 rounded-2xl bg-m3-surface-lowest/40 border border-m3-outline-variant/20 space-y-4">
  <div className="flex items-center gap-2 border-b border-m3-outline-variant/10 pb-2 mb-1">
@@ -5624,6 +5110,41 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  </div>
 
  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+ <div className="space-y-1 relative pl-0 md:col-span-3 bg-m3-surface-lowest p-3 rounded-2xl border border-m3-outline-variant/30">
+ <div className="flex items-center justify-between mb-1">
+ <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none flex items-center gap-1.5">
+ <MapPin className="h-3.5 w-3.5" />
+ <span>Assigned Branch / Stock Location</span>
+ </label>
+ {currentUser?.role !== UserRole.ADMIN && (
+ <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
+ 🔒 Manager Assignment Locked ({currentUser?.branchAssignmentId || 'B1'})
+ </span>
+ )}
+ </div>
+ {currentUser?.role === UserRole.ADMIN ? (
+ <select
+ value={targetBranchId}
+ onChange={e => {
+ setTargetBranchId(e.target.value);
+ setOrigin(e.target.value);
+ }}
+ className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs font-bold text-m3-on-surface focus:outline-none transition-colors rounded-t-md cursor-pointer"
+ >
+ {branches.filter(b => !b.isDeleted).map(b => (
+ <option key={b.id} value={b.id}>
+ {b.name} ({b.id}) - {b.address}
+ </option>
+ ))}
+ </select>
+ ) : (
+ <div className="px-3 py-2 text-xs font-bold text-m3-on-surface bg-m3-surface-low rounded-lg border border-m3-outline-variant/20 flex items-center justify-between">
+ <span>{branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || currentUser?.branchAssignmentId}</span>
+ <span className="text-[10px] font-mono font-bold text-m3-tertiary">ID: {currentUser?.branchAssignmentId || 'B1'}</span>
+ </div>
+ )}
+ </div>
+
  <div className="space-y-1 relative pl-0">
  <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Initial Warehouse Stock</label>
  <input
@@ -5870,7 +5391,7 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface rounded-xl focus:outline-none transition-colors font-sans"
  >
  <option value="" disabled>-- Choose a product --</option>
- {products.filter(p => !p.isDeleted).map(p => (
+ {branchProducts.map(p => (
  <option key={p.id} value={p.id}>
  {p.productName} ({p.sku || p.id.slice(-6)}) - Current Qty: {p.stockQuantity}
  </option>
@@ -5883,6 +5404,7 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  {/* Branch Yard selector */}
  <div className="space-y-1">
  <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Impacted Yard / Branch</label>
+ {currentUser?.role === 'Admin' ? (
  <select
  required
  value={manualLedgerBranchId}
@@ -5893,6 +5415,11 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  <option key={b.id} value={b.id}>{b.name}</option>
  ))}
  </select>
+ ) : (
+ <div className="w-full bg-m3-surface-lowest/60 border border-m3-outline-variant/30 px-3 py-2 text-xs rounded-xl font-bold font-mono text-zinc-400">
+ {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
+ </div>
+ )}
  </div>
 
  {/* Movement Type */}
@@ -6165,7 +5692,7 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
 
  {/* MODAL 4: Bulk JSON Data Portability Hub and Import/Migration Modal */}
  {showPortabilityHubModal && (
- <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-m3-scrim/60 backdrop-blur-sm animate-fade-in">
+ <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-m3-scrim/60 backdrop-blur-sm animate-fade-in" onClick={(e) => { if (e.target === e.currentTarget) setShowPortabilityHubModal(false); }}>
  <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[28px] p-6 shadow-2xl space-y-6 w-full max-w-2xl animate-scale-up text-left max-h-[90vh] overflow-y-auto">
  <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-4">
  <div>
@@ -6215,7 +5742,37 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  </p>
  </div>
  ) : (
- <div className="space-y-2">
+ <div className="space-y-3">
+ <div className="p-3 rounded-2xl bg-m3-surface border border-m3-outline-variant/20 space-y-1.5">
+ <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider flex items-center justify-between">
+ <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> Target Destination Branch Allocation</span>
+ {currentUser?.role !== UserRole.ADMIN && (
+ <span className="text-[9px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+ 🔒 Locked to {currentUser?.branchAssignmentId || 'B1'}
+ </span>
+ )}
+ </label>
+ {currentUser?.role === UserRole.ADMIN ? (
+ <select
+ value={importTargetBranchId}
+ onChange={e => setImportTargetBranchId(e.target.value)}
+ className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 px-3 py-2 text-xs font-bold text-m3-on-surface rounded-xl focus:outline-none focus:border-m3-primary cursor-pointer"
+ >
+ {branches.filter(b => !b.isDeleted).map(b => (
+ <option key={b.id} value={b.id}>
+ {b.name} ({b.id}) - {b.address}
+ </option>
+ ))}
+ </select>
+ ) : (
+ <div className="px-3 py-2 text-xs font-bold text-m3-on-surface bg-m3-surface-low rounded-xl border border-m3-outline-variant/20 flex items-center justify-between">
+ <span>{branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name}</span>
+ <span className="text-[10px] font-mono text-m3-tertiary">({currentUser?.branchAssignmentId || 'B1'})</span>
+ </div>
+ )}
+ </div>
+
+ <div className="space-y-1">
  <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider block">Paste JSON import array data block</label>
  <textarea
  value={rawImportText}
@@ -6232,6 +5789,7 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
 ]`}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 focus:border-m3-primary p-3.5 text-xs font-mono text-m3-on-surface rounded-2xl focus:outline-none transition-colors"
  />
+ </div>
  </div>
  )}
 
@@ -6264,7 +5822,7 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
 
  {/* NEW MODAL: Newly Discovered Outlets / Branches Configure & Register Form Panel */}
  {showBranchConfigs && (
- <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-m3-scrim/60 backdrop-blur-sm animate-fade-in text-m3-on-surface">
+ <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-m3-scrim/60 backdrop-blur-sm animate-fade-in text-m3-on-surface" onClick={(e) => { if (e.target === e.currentTarget) setShowBranchConfigs(false); }}>
  <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[28px] p-6 shadow-2xl space-y-6 w-full max-w-4xl animate-scale-up text-left max-h-[90vh] overflow-y-auto">
  <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-4">
  <div>
@@ -6592,7 +6150,7 @@ Product Name,Product Code,Cost Price,Selling Price,Quantity,Category,Location
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/20 focus:border-m3-primary px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-lg font-sans"
  >
  <option value="">Choose a product...</option>
- {products.filter(p => !p.isDeleted).map(p => {
+ {branchProducts.map(p => {
  const stockInBranch = branchStock.find(bs => bs.productId === p.id && bs.branchId === transferSource)?.quantity || 0;
  return (
  <option key={p.id} value={p.id}>

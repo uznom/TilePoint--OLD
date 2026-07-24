@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDb } from '../context/DbContext';
 import { Product } from '../types/db';
+import { isProductInBranch } from '../lib/branchUtils';
 import {
  Calculator,
  Ruler,
@@ -28,7 +29,7 @@ interface CalculatorModuleProps {
 }
 
 export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, onApply }) => {
- const { products } = useDb();
+ const { products, branchStock, branches, currentUser } = useDb();
 
  // Dimensional Inputs
  const [roomLength, setRoomLength] = useState('4.0');
@@ -50,9 +51,11 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  const [showProductDropdown, setShowProductDropdown] = useState(false);
 
  // Filter only tile products
+ const userBranchId = currentUser?.branchAssignmentId || 'B1';
  const tileProducts = useMemo(() => {
  return products.filter((p) => {
  if (p.isDeleted) return false;
+ if (!isProductInBranch(p, userBranchId, branchStock, branches)) return false;
 
  // Classify if it's actually a tile product
  const cat = (p.category || '').toLowerCase().trim();

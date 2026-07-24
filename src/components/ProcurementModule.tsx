@@ -1520,7 +1520,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </td>
  </tr>
  )}
- </tbody>
+</tbody>
  </table>
  </div>
  </div>
@@ -1713,7 +1713,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </td>
  </tr>
  )}
- </tbody>
+</tbody>
  </table>
  </div>
  </div>
@@ -2009,7 +2009,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </td>
  </tr>
  );
- })}
+  })}
  </tbody>
  </table>
  </div>
@@ -2335,6 +2335,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">
  Warehouse / Branch Assignment
  </label>
+ {currentUser?.role === UserRole.ADMIN ? (
  <select
  value={selectedBranchId}
  onChange={(e) => setSelectedBranchId(e.target.value)}
@@ -2346,6 +2347,11 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </option>
  ))}
  </select>
+ ) : (
+ <div className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/30 px-3 py-2 text-xs text-zinc-400 font-mono font-bold rounded-t-md">
+ {branches.find(b => b.id === (currentUser?.branchAssignmentId || "B1"))?.name || 'N/A'} (Locked Assignment)
+ </div>
+ )}
  </div>
 
  {/* Supplier Payment Terms & Payout Deadline Selection */}
@@ -4051,4 +4057,4 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  )}
  </div>
  );
-};
+}

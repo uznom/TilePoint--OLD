@@ -15,7 +15,6 @@ import {
  KeyRound, 
  ShieldCheck, 
  Wifi, 
- Cpu, 
  Eye, 
  EyeOff,
  Database,
@@ -24,10 +23,9 @@ import {
  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { UserRole } from '../types/db';
 
 export const LoginModule: React.FC = () => {
- const { login, isRateLimited, rateLimitTimeLeft, users, simulationModeActive, resetLockout } = useDb();
+ const { login, isRateLimited, rateLimitTimeLeft, users, resetLockout } = useDb();
 
  const [username, setUsername] = useState('');
  const [password, setPassword] = useState('');
@@ -37,21 +35,6 @@ export const LoginModule: React.FC = () => {
  const [isSubmitting, setIsSubmitting] = useState(false);
  const [acceptedTerms, setAcceptedTerms] = useState(false);
  const [showTermsModal, setShowTermsModal] = useState(false);
-
- // List of simulation accounts for quick selection
- const simulatedAccounts: any[] = simulationModeActive ? [
- { name: 'Simulated Admin', username: 'admin', pass: 'admin123', role: 'ADMIN', avatar: 'AD', desc: 'Full authority, bypasses standard restrictions.' },
- { name: 'Simulated Manager', username: 'manager', pass: 'tilepoint', role: 'MANAGER', avatar: 'MN', desc: 'Approves transmittals, manages stock & pricing.' },
- { name: 'Simulated Cashier', username: 'cashier', pass: 'tilepoint', role: 'CASHIER', avatar: 'CS', desc: 'Performs checkout sales in ERP OS module.' },
- { name: 'Simulated Staff', username: 'staff', pass: 'tilepoint', role: 'STAFF', avatar: 'ST', desc: 'Checks prices & scans catalogs in staff portal.' }
- ] : [];
-
- const handleSelectAccount = (acc: any) => {
- setUsername(acc.username);
- setPassword(acc.pass);
- setErrorMsg(null);
- setIsSQLiBlocked(false);
- };
 
  const handleManualSubmit = async (e: React.FormEvent) => {
  e.preventDefault();
@@ -238,39 +221,6 @@ export const LoginModule: React.FC = () => {
  </form>
  </div>
  </div>
-
- {/* Simulate role block - centered underneath */}
- {simulatedAccounts.length > 0 && (
- <div className="w-full max-w-xl m3-card !rounded-2xl border-m3-outline-variant/30 text-left bg-m3-surface-low/80 p-5 mt-2">
- <h3 className="text-xs font-black uppercase tracking-widest text-m3-primary flex items-center gap-2 mb-3">
- <Cpu className="h-4 w-4" /> Simulation &amp; Role Pre-selectors
- </h3>
- <p className="text-[11px] text-m3-on-surface-variant font-medium mb-4 leading-normal font-sans">
- Instantly switch accounts to preview the specific role layouts, clearance tiers, and permissions across the ERP OS, Inventory, and Admin panels:
- </p>
-
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
- {simulatedAccounts.map((acc) => (
- <button
- key={acc.username}
- onClick={() => handleSelectAccount(acc)}
- className={`flex items-start text-left gap-3 p-3 rounded-xl border border-m3-outline-variant/35 bg-m3-surface hover:bg-m3-primary-container/30 hover:border-m3-primary/40 transition-all cursor-pointer group ${
- username === acc.username ? 'ring-2 ring-m3-primary/80 bg-m3-primary-container/20 border-m3-primary/50' : ''
- }`}
- >
- <div className="h-9 w-9 rounded-xl bg-m3-primary text-m3-on-primary font-extrabold text-sm justify-center items-center flex m3-shape-asymmetric shadow-sm shrink-0">
- {acc.avatar}
- </div>
- <div>
- <span className="text-xs font-black text-m3-on-surface block leading-tight">{acc.name}</span>
- <span className="text-[10px] uppercase font-bold text-m3-primary tracking-wide block mb-0.5">{acc.role}</span>
- <span className="text-[10px] text-m3-on-surface-variant leading-tight block font-sans">{acc.desc}</span>
- </div>
- </button>
- ))}
- </div>
- </div>
- )}
 
  </div>
 

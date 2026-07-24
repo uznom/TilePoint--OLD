@@ -21,6 +21,7 @@ import {
  generateSessionToken,
 } from "../lib/crypto";
 import { saveFileToBackup } from "../lib/fileBackupHelper";
+import { isProductInBranch, slugifyBranchStr } from "../lib/branchUtils";
 import {
  User,
  UserRole,
@@ -429,6 +430,7 @@ interface DbContextType {
  currentUser: User | null;
  setCurrentUser: (user: User | null) => void;
  updateCurrentUser: (updates: Partial<User>) => void;
+ validateInventoryAccess: (item: any) => boolean;
  isLoggedIn: boolean;
  login: (
  username: string,
@@ -569,12 +571,14 @@ interface DbContextType {
  amountTendered: number,
  customVat?: number,
  idempotencyKey?: string,
+ discountType?: string,
  ) => Sale;
  voidSale: (saleId: string) => void;
 
  // Actions - Shifts
  openShift: (startCash: number) => void;
  closeShift: (cashCount: number) => void;
+ forceCloseAllShifts: () => void;
  getShiftReportStats: (shift: Shift) => {
  salesCount: number;
  salesTotal: number;
@@ -1546,6 +1550,18 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  return { success: true };
  };
+
+  const validateInventoryAccess = (item: any): boolean => {
+    if (!currentUser) return false;
+    // Admins and Managers have unrestricted access to all branch stock data
+    if (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER) return true;
+    
+    // Check if the currentBranchId (or fallback branchId) matches the user's branchAssignmentId
+    const currentBranchId = item?.currentBranchId || item?.branchId;
+    if (!currentBranchId) return true;
+    
+    return currentBranchId === currentUser.branchAssignmentId;
+  };
 
  const logout = () => {
  setIsLoggedIn(false);
@@ -3295,7 +3311,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  "tp_movements",
  "tp_audit_logs",
  "tp_ledger_entries",
- "atpos_v2_expenses"
+ "atpos_v2_expenses",
+  "tp_shifts"
  ];
 
  let deltas: any[] = [];
@@ -5117,6 +5134,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  branchId: string,
  price: number,
  ) => {
+ if (!validateInventoryAccess({ currentBranchId: branchId })) {
+   console.warn("Unauthorized cross-branch pricing adjustment blocked.");
+   return;
+ }
  setBranchStock((prevList) => {
  const matchIndex = prevList.findIndex(
  (bs) => bs.productId === productId && bs.branchId === branchId,
@@ -5158,6 +5179,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  branchId: string,
  threshold: number,
  ) => {
+ if (!validateInventoryAccess({ currentBranchId: branchId })) {
+   console.warn("Unauthorized cross-branch threshold adjustment blocked.");
+   return;
+ }
  setBranchStock((prevList) => {
  const matchIndex = prevList.findIndex(
  (bs) => bs.productId === productId && bs.branchId === branchId,
@@ -7141,6 +7166,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  amountTendered: number,
  customVat?: number,
  idempotencyKey?: string,
+ discountType?: string,
  ): Sale => {
  // Idempotency check: prevent duplicate transactions
  if (idempotencyKey) {
@@ -7257,6 +7283,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  createdAt: new Date().toISOString(),
  isDeleted: false,
  idempotencyKey,
+ discountType,
  };
 
  // Save sale items
@@ -7602,6 +7629,27 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  "Shifts",
  activeShift.id,
  );
+ };
+
+ const forceCloseAllShifts = () => {
+   setShifts((prev) =>
+     prev.map((s) => {
+       if (s.status === "Open" || !s.closedAt) {
+         return {
+           ...s,
+           status: "CLOSED" as any,
+           closedAt: new Date().toISOString(),
+         };
+       }
+       return s;
+     })
+   );
+   addAuditLog(
+     "SHIFT_FORCE_CLOSE_ALL",
+     "Forced closure of all open/unclosed drawer shifts via System Operations Center.",
+     "Shifts",
+     "ALL"
+   );
  };
 
  const getShiftReportStats = (shift: Shift) => {
@@ -8264,9 +8312,51 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  );
  };
 
- // CALCULATE LIVE SYSTEM KPIs (Memoized to prevent UI stuttering on non-related updates)
- const stats = useMemo((): SummaryStats => {
- const activeProducts = products.filter((p) => !p.isDeleted);
+ const filteredBranchStock = useMemo(() => {
+    if (!currentUser) return branchStock;
+    if (
+      currentUser.role === UserRole.ADMIN ||
+      !currentUser.branchAssignmentId ||
+      currentUser.branchAssignmentId === 'consolidated' ||
+      currentUser.branchAssignmentId === 'ALL'
+    ) {
+      return branchStock;
+    }
+    const uBranchId = currentUser.branchAssignmentId;
+    const targetBranch = branches.find(b => b.id === uBranchId);
+    const uSlug = slugifyBranchStr(uBranchId);
+    const uNameSlug = slugifyBranchStr(targetBranch?.name);
+    const uCodeSlug = slugifyBranchStr(targetBranch?.branchCode);
+
+    return branchStock.filter(bs => {
+      if (bs.branchId === uBranchId) return true;
+      const bsSlug = slugifyBranchStr(bs.branchId);
+      if (bsSlug === uSlug) return true;
+      if (uNameSlug && bsSlug === uNameSlug) return true;
+      if (uCodeSlug && bsSlug === uCodeSlug) return true;
+      return false;
+    });
+  }, [branchStock, currentUser, branches]);
+
+  const filteredProducts = useMemo(() => {
+    if (!currentUser) return products;
+    if (
+      currentUser.role === UserRole.ADMIN ||
+      !currentUser.branchAssignmentId ||
+      currentUser.branchAssignmentId === 'consolidated' ||
+      currentUser.branchAssignmentId === 'ALL'
+    ) {
+      return products;
+    }
+    const uBranchId = currentUser.branchAssignmentId;
+    return products.filter(
+      p => !p.isDeleted && isProductInBranch(p, uBranchId, branchStock, branches)
+    );
+  }, [products, currentUser, branchStock, branches]);
+
+  // CALCULATE LIVE SYSTEM KPIs (Memoized to prevent UI stuttering on non-related updates)
+  const stats = useMemo((): SummaryStats => {
+ const activeProducts = filteredProducts.filter((p) => !p.isDeleted);
  const totalProducts = activeProducts.length;
 
  // Unique non-deleted product categories
@@ -8329,7 +8419,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  monthlyRevenue,
  activeCashiers,
  };
- }, [products, suppliers, sales, users]);
+ }, [filteredProducts, suppliers, sales, users]);
 
  return (
  <DbContext.Provider
@@ -8337,6 +8427,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  currentUser,
  setCurrentUser,
  updateCurrentUser,
+ validateInventoryAccess,
  isLoggedIn,
  login,
  logout,
@@ -8349,7 +8440,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  branches,
  suppliers,
  brands,
- products,
+ products: filteredProducts,
  purchaseOrders,
  poItems,
  transmittals,
@@ -8360,7 +8451,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  auditLogs,
  activeShift,
  stockTransfers,
- branchStock,
+ branchStock: filteredBranchStock,
  ledgerEntries,
  customBills,
  setCustomBills,
@@ -8399,6 +8490,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  voidSale,
  openShift,
  closeShift,
+ forceCloseAllShifts,
  getShiftReportStats,
  createPO,
  updatePOStatus,

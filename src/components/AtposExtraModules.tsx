@@ -63,9 +63,9 @@ export default function AtposExtraModules({
 
  // States from DbContext
  const {
- members,
+ members: rawMembers,
  setMembers,
- expenses,
+ expenses: rawExpenses,
  setExpenses,
  productReturns,
  setProductReturns,
@@ -86,6 +86,25 @@ export default function AtposExtraModules({
  const [newMemberLimit, setNewMemberLimit] = useState(15000);
  const [memberSearch, setMemberSearch] = useState("");
  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+
+ const isAdmin = db.currentUser?.role === "Admin" || db.currentUser?.role?.toUpperCase() === "ADMIN";
+ const userBranchId = db.currentUser?.branchAssignmentId || "B1";
+
+ const members = React.useMemo(() => {
+ return rawMembers.filter((m) => {
+ if (isAdmin) return true;
+ const memberBranch = m.branchId || "B1";
+ return memberBranch === userBranchId;
+ });
+ }, [rawMembers, isAdmin, userBranchId]);
+
+ const expenses = React.useMemo(() => {
+ return rawExpenses.filter((ex) => {
+ if (isAdmin) return true;
+ const expenseBranch = ex.branchId || "B1";
+ return expenseBranch === userBranchId;
+ });
+ }, [rawExpenses, isAdmin, userBranchId]);
  const [paymentAmount, setPaymentAmount] = useState("");
 
  // Add Expense
@@ -198,8 +217,9 @@ export default function AtposExtraModules({
  creditLimit: limitNum,
  outstandingBalance: 0,
  status: "Active",
+  branchId: db.currentUser?.branchAssignmentId || "ETC_DIPOLOG MAIN",
  };
- saveMembers([...members, m]);
+ saveMembers([...rawMembers, m]);
 
  db.addAuditLog(
  "MEMBER_REGISTER",
@@ -232,7 +252,7 @@ export default function AtposExtraModules({
  return;
  }
 
- const updated = members.map((m) => {
+ const updated = rawMembers.map((m) => {
  if (m.id === selectedMember.id) {
  const bal = Math.max(
  0,
@@ -304,7 +324,7 @@ export default function AtposExtraModules({
  JSON.stringify(entry),
  );
 
- saveExpenses([entry, ...expenses]);
+ saveExpenses([entry, ...rawExpenses]);
  setExpAmount("");
  setExpNotes("");
  setCustomCategory("");
@@ -314,8 +334,8 @@ export default function AtposExtraModules({
  };
 
  const handleDeleteExpense = (id: string) => {
- const target = expenses.find((ex) => ex.id === id);
- const updated = expenses.map((ex) =>
+ const target = rawExpenses.find((ex) => ex.id === id);
+ const updated = rawExpenses.map((ex) =>
  ex.id === id ? { ...ex, isDeleted: true, deletedAt: new Date().toISOString() } : ex
  );
  saveExpenses(updated);
@@ -1171,7 +1191,7 @@ export default function AtposExtraModules({
  <td className="p-3 font-semibold text-m3-on-surface">
  <div>{ex.notes}</div>
  <div className="text-[10px] text-zinc-400 font-mono mt-0.5">
- {new Date(ex.dateTime).toLocaleString("en-US")}
+ {ex.dateTime && !isNaN(new Date(ex.dateTime).getTime()) ? new Date(ex.dateTime).toLocaleString("en-US") : "N/A"}
  </div>
  </td>
  <td className="p-3">
@@ -1369,7 +1389,7 @@ export default function AtposExtraModules({
                         {ex.id}
                       </td>
                       <td className="p-3 text-m3-on-surface-variant text-xs align-middle font-mono">
-                        {new Date(ex.dateTime).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
+                        {ex.dateTime && !isNaN(new Date(ex.dateTime).getTime()) ? new Date(ex.dateTime).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) : "N/A"}
                       </td>
                       <td className="p-3 align-middle">
                         <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-m3-primary/10 text-m3-primary border border-m3-primary/20">
@@ -1397,7 +1417,7 @@ export default function AtposExtraModules({
                       </td>
                     </tr>
                   ))}
-                </tbody>
+</tbody>
               </table>
             </div>
           </div>
@@ -1566,7 +1586,7 @@ export default function AtposExtraModules({
  </div>
  <div className="text-[10px] text-zinc-400 font-mono mt-0.5">
  {rt.id} ·{" "}
- {new Date(rt.dateTime).toLocaleString("en-US")}
+ {rt.dateTime && !isNaN(new Date(rt.dateTime).getTime()) ? new Date(rt.dateTime).toLocaleString("en-US") : "N/A"}
  </div>
  </td>
  <td className="p-3 font-mono font-black">
@@ -2133,92 +2153,7 @@ export default function AtposExtraModules({
  setSelectedCalendarDay(null);
  };
 
- const handleAutomatePayments = () => {
- const duePayables = flatPayablesList.filter((item) => {
- const payHistory = installments[item.poId] || [];
- const totalPaid = payHistory.reduce((sum, inst) => sum + inst.amount, 0);
- return totalPaid < item.amount;
- });
-
- if (duePayables.length === 0) {
- alert("All accounts payable for this calendar month are already fully settled!");
- return;
- }
-
- if (
- !confirm(
- `Automate Payout Engine: Would you like to automatically clear and settle all ${duePayables.length} pending supplier payables for ${months[calendarMonth]} ${calendarYear}? This will generate automated cash installments and sync them with the Consolidated Profitability Model.`
- )
- ) {
- return;
- }
-
- const updatedInstallments = { ...installments };
- let automatedCount = 0;
- let totalSettleAmount = 0;
- const authorizerName = db.currentUser?.fullName || "Automated System";
-
- // Clone customBills for updates
- let updatedBills = [...customBills];
-
- duePayables.forEach((payVal) => {
- const currentHistory = updatedInstallments[payVal.poId] || [];
- const totalPaidSoFar = currentHistory.reduce((sum, inst) => sum + inst.amount, 0);
- const remaining = payVal.amount - totalPaidSoFar;
-
- if (remaining <= 0) return;
-
- const newInstallment = {
- id: `INST-AUTO-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
- amount: remaining,
- date: new Date(calendarYear, calendarMonth, payVal.day).toISOString(),
- notes: `Automated Payout (Auto-Pay Sweep) - Authorized by ${authorizerName}`
- };
-
- updatedInstallments[payVal.poId] = [...currentHistory, newInstallment];
- automatedCount++;
- totalSettleAmount += remaining;
-
- // Create Audit Log
- db.addAuditLog(
- "PAYABLE_INSTALLMENT",
- `[AUTOMATED SWEEP] Settled remaining balance of ₱${remaining.toLocaleString()} for ${payVal.poNumber} (${payVal.supplierName}) on due date. Authorized by ${authorizerName}.`,
- "Procurement",
- payVal.poId,
- JSON.stringify({ poId: payVal.poId, poNumber: payVal.poNumber, payment: newInstallment, isFullyPaid: true, authorizer: authorizerName })
- );
-
- // Adjust custom bills if it's a recurring bill
- if (payVal.poNumber.startsWith("BILL-")) {
- updatedBills = updatedBills.map((b) => {
- if (b.id === payVal.poId) {
- return {
- ...b,
- remainingBalance: 0,
- status: "Completed" as any,
- isDeleted: true,
- deletedAt: new Date().toISOString()
- };
- }
- return b;
- });
- } else if (payVal.poId && !payVal.poId.startsWith("SIM-")) {
- // Mark Purchase Order as Completed
- db.updatePOStatus(payVal.poId, "Completed");
- }
- });
-
- // Save to database/localstorage
- saveInstallments(updatedInstallments);
- setCustomBills(updatedBills);
-
- alert(
- ` Automation Complete!
-Succeeded in auto-settling ${automatedCount} supplier transactions.
-Total amount cleared: ₱${totalSettleAmount.toLocaleString()}.
-All settlements have been synchronized with the Consolidated Profitability Model!`
- );
- };
+ ;
 
  return (
  <motion.div
@@ -2553,15 +2488,7 @@ All settlements have been synchronized with the Consolidated Profitability Model
  <CalendarDays className="h-5 w-5" />
  Supplier Payment Calendar Cycle
  </h3>
- <button
- type="button"
- onClick={handleAutomatePayments}
- className="px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/15 text-emerald-500 border border-emerald-500/20 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
- title="Automatically settle all pending payables for this month"
- >
- <Zap className="h-3 w-3" />
- <span>Auto-Pay Sweep</span>
- </button>
+ 
  </div>
  
  {/* Interactive Month & Year Navigation Widget */}
@@ -2876,7 +2803,7 @@ All settlements have been synchronized with the Consolidated Profitability Model
  <div className="max-h-[70px] overflow-y-auto space-y-1 scrollbar-none">
  {payHistory.map((inst, hIdx) => (
  <div key={inst.id || hIdx} className="flex justify-between items-center text-[9px] font-mono text-zinc-400">
- <span>{new Date(inst.date).toLocaleDateString()}</span>
+ <span>{inst.date && !isNaN(new Date(inst.date).getTime()) ? new Date(inst.date).toLocaleDateString() : "N/A"}</span>
  <span className="text-emerald-400 font-bold">₱{inst.amount.toLocaleString()}</span>
  </div>
  ))}
@@ -3470,19 +3397,30 @@ All settlements have been synchronized with the Consolidated Profitability Model
  const filteredRows = db.sales
  .filter((s) => !s.isDeleted)
  .map((s, idx) => {
- const isPwd =
- activeSubTab === "bir-pwd" && idx % 2 === 0;
- const isSenior20 =
- activeSubTab === "bir-senior20" && idx % 3 === 0;
- const isSenior5 =
- activeSubTab === "bir-senior5" && idx % 3 === 1;
- const isSolo =
- activeSubTab === "bir-solo" && idx % 4 === 1;
- const isAthletes =
- activeSubTab === "bir-athletes" && idx % 5 === 2;
- const isRegular =
- activeSubTab === "bir-regular" &&
- (s.discount || 0) > 0;
+  const sDiscountType = s.discountType;
+ let isPwd = false;
+ let isSenior20 = false;
+ let isSenior5 = false;
+ let isSolo = false;
+ let isAthletes = false;
+ let isRegular = false;
+
+ if (sDiscountType) {
+ isPwd = activeSubTab === "bir-pwd" && sDiscountType === "PWD";
+ isSenior20 = activeSubTab === "bir-senior20" && sDiscountType === "SENIOR";
+ isSenior5 = activeSubTab === "bir-senior5" && sDiscountType === "SENIOR5";
+ isSolo = activeSubTab === "bir-solo" && sDiscountType === "SOLO";
+ isAthletes = activeSubTab === "bir-athletes" && sDiscountType === "ATHLETES";
+ isRegular = activeSubTab === "bir-regular" && (s.discount || 0) > 0 && !["PWD", "SENIOR", "SENIOR5", "SOLO", "ATHLETES"].includes(sDiscountType);
+ } else {
+ const keyVal = idx % 12;
+ isPwd = activeSubTab === "bir-pwd" && keyVal === 0;
+ isSenior20 = activeSubTab === "bir-senior20" && keyVal === 1;
+ isSenior5 = activeSubTab === "bir-senior5" && keyVal === 2;
+ isSolo = activeSubTab === "bir-solo" && keyVal === 3;
+ isAthletes = activeSubTab === "bir-athletes" && keyVal === 4;
+ isRegular = activeSubTab === "bir-regular" && (s.discount || 0) > 0 && ![0, 1, 2, 3, 4].includes(keyVal);
+ }
  const isSummary = activeSubTab === "bir-summary";
 
  const matchesFilter =

@@ -30,6 +30,76 @@ export function useResponsivePageSize(rowHeight = 48, offsetHeight = 360, defaul
  return pageSize;
 }
 
+export interface TableAutoPageSizeOptions {
+ rowHeight?: number;
+ minRows?: number;
+ maxRows?: number;
+ paddingOffset?: number;
+ bottomBuffer?: number;
+}
+
+/**
+ * React Hook that calculates the available screen/viewport height for table components
+ * and dynamically adjusts the row count per page to ensure optimal display without vertical scrolling.
+ */
+export function useTableAutoPageSize(
+ containerRef?: React.RefObject<HTMLElement | null>,
+ options: TableAutoPageSizeOptions = {}
+) {
+ const {
+ rowHeight = 52,
+ minRows = 4,
+ maxRows = 50,
+ paddingOffset = 340,
+ bottomBuffer = 95,
+ } = options;
+
+ const [pageSize, setPageSize] = useState<number>(() => {
+ if (typeof window === "undefined") return 8;
+ return Math.max(Math.floor((window.innerHeight - paddingOffset) / rowHeight), minRows);
+ });
+
+ useEffect(() => {
+ const calculatePageSize = () => {
+ if (typeof window === "undefined") return;
+ let availableHeight = window.innerHeight - paddingOffset;
+
+ if (containerRef?.current) {
+ const rect = containerRef.current.getBoundingClientRect();
+ const remainingScreenHeight = window.innerHeight - rect.top - bottomBuffer;
+ if (remainingScreenHeight > 100) {
+ availableHeight = remainingScreenHeight;
+ }
+ }
+
+ const calculated = Math.floor(availableHeight / rowHeight);
+ const fittedRows = Math.min(Math.max(calculated, minRows), maxRows);
+ setPageSize(fittedRows);
+ };
+
+ calculatePageSize();
+
+ window.addEventListener("resize", calculatePageSize);
+
+ let resizeObserver: ResizeObserver | null = null;
+ if (containerRef?.current && typeof ResizeObserver !== "undefined") {
+ resizeObserver = new ResizeObserver(() => {
+ calculatePageSize();
+ });
+ resizeObserver.observe(containerRef.current);
+ }
+
+ return () => {
+ window.removeEventListener("resize", calculatePageSize);
+ if (resizeObserver) {
+ resizeObserver.disconnect();
+ }
+ };
+ }, [containerRef, rowHeight, minRows, maxRows, paddingOffset, bottomBuffer]);
+
+ return pageSize;
+}
+
 interface TablePaginationProps {
  currentPage: number;
  totalItems: number;

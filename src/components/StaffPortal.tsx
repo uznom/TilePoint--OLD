@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useDb } from '../context/DbContext';
 import { Product } from '../types/db';
+import { isProductInBranch } from '../lib/branchUtils';
 import {
  QrCode,
  Search,
@@ -43,7 +44,7 @@ interface StaffPortalProps {
 }
 
 export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode }) => {
- const { currentUser, products, logout, branches, addAuditLog, holdSale } = useDb();
+ const { currentUser, products, branchStock, logout, branches, addAuditLog, holdSale } = useDb();
 
  // Customer order cart states
  const [staffCart, setStaffCart] = useState<{ product: Product; quantity: number }[]>([]);
@@ -85,7 +86,8 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  const [calcBoxesNeeded, setCalcBoxesNeeded] = useState(0);
 
  // Load target branch-specific products for this staff assignment
- const staffBranchProducts = products.filter(p => !p.isDeleted);
+ const userBranchId = currentUser?.branchAssignmentId || 'B1';
+ const staffBranchProducts = products.filter(p => !p.isDeleted && isProductInBranch(p, userBranchId, branchStock, branches));
 
  // Search filter matches
  const filteredProducts = searchQuery.trim() === ''

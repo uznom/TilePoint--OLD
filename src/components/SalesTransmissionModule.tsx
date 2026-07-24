@@ -387,7 +387,9 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
 
  // Search filter for Admin report list
  const [adminSearchQuery, setAdminSearchQuery] = useState('');
- const [adminBranchFilter, setAdminBranchFilter] = useState('ALL');
+ const [adminBranchFilter, setAdminBranchFilter] = useState(
+   currentUser.role === UserRole.ADMIN ? 'ALL' : (currentUser.branchAssignmentId || 'B1')
+ );
  const [adminStatusFilter, setAdminStatusFilter] = useState('ALL');
 
  // Selected report for viewing details
@@ -888,7 +890,11 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  const filteredReports = useMemo(() => {
  return branchSalesReports.filter(report => {
  // Branch assignment or filter
+ if (currentUser.role !== UserRole.ADMIN) {
+ if (report.branchId !== (currentUser.branchAssignmentId || 'B1')) return false;
+ } else {
  if (adminBranchFilter !== 'ALL' && report.branchId !== adminBranchFilter) return false;
+ }
  // Status filter
  if (adminStatusFilter !== 'ALL' && report.status !== adminStatusFilter) return false;
  // Search text query matching date, ID or branch name
@@ -1597,6 +1603,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
 
  <div className="sm:col-span-3 space-y-1">
  <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 pl-0.5 font-mono">Branch origin:</label>
+ {currentUser.role === UserRole.ADMIN ? (
  <select
  value={adminBranchFilter}
  onChange={(e) => setAdminBranchFilter(e.target.value)}
@@ -1607,6 +1614,11 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  <option key={b.id} value={b.id}>{b.name}</option>
  ))}
  </select>
+ ) : (
+ <div className="w-full bg-m3-surface-container/60 border border-m3-outline-variant/20 rounded-xl px-3 py-2 text-xs font-mono font-bold text-zinc-400">
+ {branches.find(b => b.id === (currentUser.branchAssignmentId || 'B1'))?.name || 'N/A'} (Locked)
+ </div>
+ )}
  </div>
 
  <div className="sm:col-span-3 space-y-1">
@@ -1698,7 +1710,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  </td>
  </tr>
  )}
- </tbody>
+</tbody>
  </table>
  </div>
  </div>
@@ -2108,7 +2120,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
          <td colSpan={4} className="p-8 text-center text-zinc-500">No branch expenses logged on this reporting date.</td>
         </tr>
        )}
-      </tbody>
+</tbody>
      </table>
     </div>
    </div>
@@ -2190,7 +2202,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
         <td colSpan={5} className="p-8 text-center text-zinc-500">No cargo deliveries scheduled on this reporting date.</td>
        </tr>
       )}
-     </tbody>
+</tbody>
     </table>
    </div>
   </div>
@@ -2265,7 +2277,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
         <td colSpan={4} className="p-8 text-center text-zinc-500">No branch purchase orders created or received on this date.</td>
        </tr>
       )}
-     </tbody>
+</tbody>
     </table>
    </div>
   </div>
@@ -2352,7 +2364,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  <td colSpan={4} className="py-6 text-center text-zinc-500 italic">No itemized products found in this transaction record.</td>
  </tr>
  )}
- </tbody>
+</tbody>
  </table>
  </div>
 

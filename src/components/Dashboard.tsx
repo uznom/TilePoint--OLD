@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDb } from '../context/DbContext';
+import { isProductInBranch, getBranchStockQuantity } from '../lib/branchUtils';
 import {
  Package,
  FolderOpen,
@@ -67,7 +68,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  updateBranch,
  updateCurrentUser,
  checkoutSale,
- simulationModeActive
+ simulationModeActive,
+ users
  } = useDb();
 
  const [hoveredBar, setHoveredBar] = useState<number | null>(null);
@@ -80,7 +82,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
 
  // Admin Drill-down & Analytics States
- const [selectedBranchId, setSelectedBranchId] = useState<string>('all');
+ const [selectedBranchId, setSelectedBranchId] = useState<string>(
+   currentUser.role === UserRole.ADMIN || (currentUser.role as any) === 'Admin' ? 'all' : (currentUser.branchAssignmentId || 'B1')
+ );
+
+ useEffect(() => {
+   const isAdmin = currentUser.role === UserRole.ADMIN || (currentUser.role as any) === 'Admin';
+   if (isAdmin) {
+     setSelectedBranchId('all');
+   } else {
+     setSelectedBranchId(currentUser.branchAssignmentId || 'B1');
+   }
+ }, [currentUser.id, currentUser.role, currentUser.branchAssignmentId]);
  const [branchSortKey, setBranchSortKey] = useState<'sales' | 'growth' | 'name' | 'staff'>('sales');
  const [branchSortOrder, setBranchSortOrder] = useState<'asc' | 'desc'>('desc');
  const [bestsellerSortBy, setBestsellerSortBy] = useState<'qty' | 'revenue'>('qty');
@@ -141,12 +154,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
  // Helper to resolve specific product stock count within current active filter context
  const getProductStockForCurrentContext = (pId: string) => {
- if (activeBranchId) {
- const bs = branchStock.find(item => item.productId === pId && item.branchId === activeBranchId);
- return bs ? bs.quantity : 0;
- }
  const p = products.find(item => item.id === pId);
- return p ? p.stockQuantity : 0;
+ if (!p) return 0;
+ if (activeBranchId) {
+ return getBranchStockQuantity(p, activeBranchId, branchStock, branches);
+ }
+ return p.stockQuantity;
  };
 
  // Today's Sales
@@ -178,7 +191,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  return acc + (product ? bs.quantity * product.costPrice : 0);
  }, 0);
 
- const activeProducts = products.filter(p => !p.isDeleted);
+ const activeProducts = products.filter(p => !p.isDeleted && isProductInBranch(p, activeBranchId, branchStock, branches));
  
  // Quantitative lists for health drilling using context-aware stock counts
  const lowStockProducts = activeProducts.filter(p => {
@@ -613,6 +626,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <div className="flex flex-col sm:flex-row gap-3 shrink-0 items-stretch sm:items-end md:items-center w-full md:w-auto">
  <div className="flex flex-col gap-1 w-full sm:w-auto">
  <span className="text-[9px] text-m3-primary font-mono uppercase font-black pl-1">Active View-Port Branch:</span>
+ {currentUser.role === UserRole.ADMIN ? (
  <select
  value={selectedBranchId}
  onChange={(e) => {
@@ -626,6 +640,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <option key={b.id} value={b.id}>{b.name}</option>
  ))}
  </select>
+ ) : (
+ <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-2xl text-xs font-mono font-bold p-3 text-zinc-400 min-w-[210px]">
+ {branches.find(b => b.id === (currentUser.branchAssignmentId || 'B1'))?.name || 'N/A'} (Locked View-Port)
+ </div>
+ )}
  </div>
 
  <div className="flex gap-2 w-full sm:w-auto justify-end">
@@ -667,7 +686,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  type="button"
  onClick={() => {
  // Simulate 1-click live sale
- const activeProducts = products.filter(p => !p.isDeleted);
+ const activeProducts = products.filter(p => !p.isDeleted && isProductInBranch(p, activeBranchId, branchStock, branches));
  if (activeProducts.length === 0) {
  showToastMsg('Catalog is empty. Add products in the Inventory page first.', 'error');
  return;
@@ -1516,7 +1535,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </button>
  </div>
  <div className="text-[10.5px] text-zinc-400 mt-0.5 font-mono">
- Manager: {b.manager} • {b.staffCount} floor staff • Target: ₱{branchQuota.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+ Manager: {(() => {
+ const assigned = users.filter(u => u.branchAssignmentId === b.id && u.status === 'Active');
+ const mgrs = assigned.filter(u => u.role === UserRole.MANAGER || (u.role as string) === 'Manager');
+ if (mgrs.length > 0) return mgrs.map(m => m.fullName).join(', ');
+ const adm = assigned.filter(u => u.role === UserRole.ADMIN || (u.role as string) === 'Admin');
+ if (adm.length > 0) return `${adm.map(a => a.fullName).join(', ')} (Admin)`;
+ return 'Unassigned';
+ })()} • {b.staffCount} floor staff • Target: ₱{branchQuota.toLocaleString(undefined, { maximumFractionDigits: 0 })}
  </div>
  </>
  )}
@@ -1543,8 +1569,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </td>
  </tr>
  );
- })}
- </tbody>
+  })}
+</tbody>
  </table>
  </div>
  </div>
@@ -1696,8 +1722,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </td>
  </tr>
  );
- })
- )}
+  })
+  )}
  </tbody>
  </table>
  </div>
@@ -1995,7 +2021,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </button>
  </div>
 
- {(activeDrilldown === 'products' ? activeProducts : activeDrilldown === 'low' ? lowStockProducts : activeDrilldown === 'critical' ? criticalStockProducts : outOfStockProducts).map((p, idx) => {
+ {(activeDrilldown === 'products' ? activeProducts : activeDrilldown === 'low' ? lowStockProducts : activeDrilldown === 'critical' ? criticalStockProducts : outOfStockProducts).length === 0 ? (
+ <div className="p-6 text-center text-xs text-zinc-400 bg-m3-surface-lowest rounded-xl border border-dashed border-m3-outline-variant/20 flex flex-col items-center gap-1.5">
+ <ShieldCheck className="h-7 w-7 text-emerald-500 mb-1" />
+ <span className="font-bold text-m3-on-surface block">No Stock Exceptions Found</span>
+ <span className="text-[10.5px] text-zinc-500">There are currently no products under this stock status filter category.</span>
+ </div>
+ ) : (
+ activeDrilldown === 'products' ? activeProducts : activeDrilldown === 'low' ? lowStockProducts : activeDrilldown === 'critical' ? criticalStockProducts : outOfStockProducts
+ ).map((p, idx) => {
  // Calculate branch stock breakdown ("display it per item")
  const itemBranchStocks = branchStock.filter(bs => bs.productId === p.id);
  
@@ -3202,4 +3236,5 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
  </div>
  );
-};
+}
+
