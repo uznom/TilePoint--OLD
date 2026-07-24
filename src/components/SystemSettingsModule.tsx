@@ -40,7 +40,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  followSystemTheme = false,
  setFollowSystemTheme
 }) => {
- const { currentUser, updateCurrentUser, truncateDatabase, isRowClearingBlocked, getRowClearingBlockedReason } = useDb();
+ const { currentUser, updateCurrentUser, truncateDatabase, isRowClearingBlocked, getRowClearingBlockedReason, forceCloseAllShifts } = useDb();
  const isAuthorized = currentUser && (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER);
 
  // Enterprise details states
@@ -797,6 +797,20 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  <p className="text-[9.5px] text-zinc-400 font-mono">
  Please resolve/export these pending transactions to unlock.
  </p>
+ {getRowClearingBlockedReason().includes("unexported shift payload") && (
+  <div className="pt-2">
+   <button
+    type="button"
+    onClick={() => {
+     forceCloseAllShifts();
+     alert("All open or unclosed shifts have been forced to CLOSED status. The system clearing safety guard has been updated.");
+    }}
+    className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 font-mono text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors border border-amber-500/30 cursor-pointer"
+   >
+    Force-Close All Unclosed Shifts
+   </button>
+  </div>
+ )}
  </div>
  ) : (
  <div className="flex flex-col gap-1">

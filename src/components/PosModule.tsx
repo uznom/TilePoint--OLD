@@ -9,6 +9,7 @@ import { useDb } from "../context/DbContext";
 import { Product, Sale, SaleItem, UserRole } from "../types/db";
 import { verifyPasswordWithToken } from "../lib/crypto";
 import { saveFileToBackup } from "../lib/fileBackupHelper";
+import { isProductInBranch, getBranchStockQuantity } from "../lib/branchUtils";
 import {
  ShoppingCart,
  Trash2,
@@ -127,7 +128,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  showImmersiveControls = true,
 }) => {
  const {
- products,
+ products: rawProducts,
  activeShift,
  openShift,
  closeShift,
@@ -150,9 +151,32 @@ export const PosModule: React.FC<PosModuleProps> = ({
  branchStock,
  syncFromSharedServer,
  syncStatus,
- 	members,
+ 	members: rawMembers,
 	setMembers,
 	} = useDb();
+
+  const products = React.useMemo(() => {
+    const userBranchId = currentUser?.branchAssignmentId || "B1";
+    return rawProducts.map((p) => {
+      const stockQty = getBranchStockQuantity(p, userBranchId, branchStock, branches);
+      return {
+        ...p,
+        stockQuantity: stockQty,
+      };
+    });
+  }, [rawProducts, branchStock, branches, currentUser]);
+
+  const branchFilteredMembers = React.useMemo(() => {
+    const isAdmin = currentUser?.role === "Admin" || currentUser?.role?.toUpperCase() === "ADMIN";
+    const userBranchId = currentUser?.branchAssignmentId || "B1";
+    return rawMembers.filter((m) => {
+      if (isAdmin) return true;
+      const memberBranch = m.branchId || "B1";
+      return memberBranch === userBranchId;
+    });
+  }, [rawMembers, currentUser]);
+
+  const members = branchFilteredMembers;
 
  const getBranchPrice = (p: Product) => {
  const branchStockItem = branchStock.find(
@@ -230,8 +254,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
  null,
  );
  const [selectedPoolBranchId, setSelectedPoolBranchId] = useState<string>(
- currentUser?.branchAssignmentId || "All",
- );
+    currentUser?.role === "Admin" ? "All" : (currentUser?.branchAssignmentId || "B1")
+  );
  const [ledgerSearchQuery, setLedgerSearchQuery] = useState("");
  const [ledgerPaymentFilter, setLedgerPaymentFilter] = useState<string>("All");
  const [ledgerDateFilter, setLedgerDateFilter] = useState<string>("");
@@ -453,8 +477,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
  ];
 
  // Map products
+ const userBranchId = currentUser?.branchAssignmentId || "B1";
  const filteredProducts = products.filter((p) => {
  if (p.isDeleted) return false;
+ if (!isProductInBranch(p, userBranchId, branchStock, branches)) {
+ return false;
+ }
  const matchCat =
  selectedCategory === "All" || p.category === selectedCategory;
  const matchSearch =
@@ -846,6 +874,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  parseFloat(amountTendered) || grandTotal,
  vat,
  idempKey,
+ discountType,
  );
 
  setDeliveryNotes(customerNotes || "");
@@ -925,56 +954,77 @@ export const PosModule: React.FC<PosModuleProps> = ({
  };
 
  const handleBarcodeSubmit = (e: React.FormEvent) => {
- e.preventDefault();
- if (!barcodeSearchTerm.trim()) return;
+    e.preventDefault();
+    if (!barcodeSearchTerm.trim()) return;
 
- const query = barcodeSearchTerm.trim().toLowerCase();
+    const query = barcodeSearchTerm.trim().toLowerCase();
+    const userBranchId = currentUser?.branchAssignmentId || "B1";
 
- // Search exact matches first
- const found = products.find(
- (p) =>
- !p.isDeleted &&
- (p.barcode.toLowerCase() === query ||
- p.sku.toLowerCase() === query ||
- p.productCode.toLowerCase() === query ||
- p.productName.toLowerCase() === query),
- );
+    // Search exact matches first
+    const exactMatches = products.filter(
+      (p) =>
+        !p.isDeleted &&
+        (p.barcode.toLowerCase() === query ||
+          p.sku.toLowerCase() === query ||
+          p.productCode.toLowerCase() === query ||
+          p.productName.toLowerCase() === query)
+    );
 
- if (found) {
- if (found.stockQuantity <= 0) {
- showToast(
- `Out of stock: Cannot add ${found.productName} (0 remaining)`,
- );
- return;
- }
- addToCart(found);
- setBarcodeAddFeedback(`Added to Basket: ${found.productName}`);
- setBarcodeSearchTerm("");
- setTimeout(() => setBarcodeAddFeedback(null), 3000);
- } else {
- // Search partial matches as fallback
- const looseFound = products.find(
- (p) =>
- !p.isDeleted &&
- (p.barcode.toLowerCase().includes(query) ||
- p.sku.toLowerCase().includes(query) ||
- p.productName.toLowerCase().includes(query)),
- );
+    const foundInBranch = exactMatches.find(p => isProductInBranch(p, userBranchId, branchStock, branches));
 
- if (looseFound) {
- if (looseFound.stockQuantity <= 0) {
- showToast(`Out of stock: ${looseFound.productName} (0 remaining)`);
- return;
- }
- addToCart(looseFound);
- setBarcodeAddFeedback(`Added Loose Match: ${looseFound.productName}`);
- setBarcodeSearchTerm("");
- setTimeout(() => setBarcodeAddFeedback(null), 3000);
- } else {
- showToast("Match Failure: No tile product matches that barcode/SKU.");
- }
- }
- };
+    if (foundInBranch) {
+      const branchQty = getBranchStockQuantity(foundInBranch, userBranchId, branchStock, branches);
+
+      if (branchQty <= 0) {
+        showToast("Branch Stock Depleted: Cannot add " + foundInBranch.productName + " (0 remaining in " + (branches.find(b => b.id === userBranchId)?.name || userBranchId) + ")");
+        return;
+      }
+      addToCart(foundInBranch);
+      setBarcodeAddFeedback("Added to Basket: " + foundInBranch.productName + " (" + branchQty + " in stock)");
+      setBarcodeSearchTerm("");
+      setTimeout(() => setBarcodeAddFeedback(null), 3000);
+      return;
+    }
+
+    if (exactMatches.length > 0) {
+      const otherProduct = exactMatches[0];
+      const locatedBranches = branchStock
+        .filter(bs => bs.productId === otherProduct.id && bs.quantity > 0)
+        .map(bs => branches.find(b => b.id === bs.branchId)?.name || bs.branchId)
+        .join(", ");
+
+      showToast("Branch Mismatch: \"" + otherProduct.productName + "\" is allocated to " + (locatedBranches || "other branches") + ", not available at your assigned branch.");
+      return;
+    }
+
+    // Fallback loose match
+    const looseMatches = products.filter(
+      (p) =>
+        !p.isDeleted &&
+        (p.barcode.toLowerCase().includes(query) ||
+          p.sku.toLowerCase().includes(query) ||
+          p.productName.toLowerCase().includes(query))
+    );
+
+    const looseInBranch = looseMatches.find(p => isProductInBranch(p, userBranchId, branchStock, branches));
+
+    if (looseInBranch) {
+      const branchQty = getBranchStockQuantity(looseInBranch, userBranchId, branchStock, branches);
+
+      if (branchQty <= 0) {
+        showToast("Branch Stock Depleted: " + looseInBranch.productName + " (0 remaining in " + (branches.find(b => b.id === userBranchId)?.name || userBranchId) + ")");
+        return;
+      }
+      addToCart(looseInBranch);
+      setBarcodeAddFeedback("Added Loose Match: " + looseInBranch.productName + " (" + branchQty + " in stock)");
+      setBarcodeSearchTerm("");
+      setTimeout(() => setBarcodeAddFeedback(null), 3000);
+    } else if (looseMatches.length > 0) {
+      showToast("Product found in catalog, but not allocated to your assigned branch.");
+    } else {
+      showToast("Match Failure: No tile product matches that barcode/SKU.");
+    }
+  };
 
  // Quick Open shift function
  const handleOpenShiftSubmit = (e: React.FormEvent) => {
@@ -2559,6 +2609,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <span className="h-2 w-2 bg-[#10B981] rounded-full animate-pulse" />
  <span>Active Pool</span>
  </span>
+ {currentUser?.role === 'Admin' ? (
  <select
  value={selectedPoolBranchId}
  onChange={(e) => setSelectedPoolBranchId(e.target.value)}
@@ -2571,6 +2622,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </option>
  ))}
  </select>
+ ) : (
+ <div className="w-full text-[11px] font-sans font-black bg-m3-surface/60 border border-m3-outline-variant/20 px-3 py-2 rounded-xl text-zinc-400 uppercase tracking-wider">
+ {branches.find(b => b.id === (currentUser?.branchAssignmentId || "B1"))?.name || 'N/A'} (Locked)
+ </div>
+ )}
  </div>
 
  {/* Payment Filter */}
@@ -4512,4 +4568,4 @@ export const PosModule: React.FC<PosModuleProps> = ({
  )}
  </div>
  );
-};
+}

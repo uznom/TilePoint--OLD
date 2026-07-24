@@ -48,56 +48,91 @@ interface BranchModuleProps {
 }
 
 export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
- const {
- branches,
- createBranch,
- updateBranch,
- deleteBranch,
- currentUser,
- users
- } = useDb();
+  const {
+    branches,
+    createBranch,
+    updateBranch,
+    deleteBranch,
+    currentUser,
+    users,
+    createUser,
+    updateUser,
+    sales
+  } = useDb();
 
- const primaryBranchId = localStorage.getItem("tilepoint_primary_branch_id") || "B1";
+  const primaryBranchId = localStorage.getItem("tilepoint_primary_branch_id") || "B1";
+  const isUserAdmin = currentUser?.role === UserRole.ADMIN;
 
- // Create Modal settings
- const [showModal, setShowModal] = useState(false);
- const [isEditMode, setIsEditMode] = useState(false);
- const [editingId, setEditingId] = useState('');
+  const getDynamicBranchManager = (branchId: string) => {
+    const assigned = users.filter(u => u.branchAssignmentId === branchId && u.status === 'Active');
+    const managers = assigned.filter(u => u.role === UserRole.MANAGER || (u.role as string) === 'Manager');
+    if (managers.length > 0) {
+      return managers.map(m => m.fullName).join(', ');
+    }
+    const admins = assigned.filter(u => u.role === UserRole.ADMIN || (u.role as string) === 'Admin');
+    if (admins.length > 0) {
+      return `${admins.map(a => a.fullName).join(', ')} (Admin)`;
+    }
+    return 'Unassigned';
+  };
 
- // Form Fields State
- const [customBranchId, setCustomBranchId] = useState('');
- const [storeLogo, setStoreLogo] = useState('');
- const [receiptFacebook, setReceiptFacebook] = useState('');
- const [receiptPromoText, setReceiptPromoText] = useState('');
- const [receiptQrBase64, setReceiptQrBase64] = useState('');
- const [receiptThankYou, setReceiptThankYou] = useState('');
- const [tin, setTin] = useState('');
- const [name, setName] = useState('');
- const [manager, setManager] = useState('');
- const [address, setAddress] = useState('');
- const [phone, setPhone] = useState('');
- const [monthlySales, setMonthlySales] = useState(500000);
- const [staffCount, setStaffCount] = useState(5);
- const [activeCashiers, setActiveCashiers] = useState(1);
- const [isDistributionBranch, setIsDistributionBranch] = useState(false);
- const [branchCode, setBranchCode] = useState('');
- const [localIp, setLocalIp] = useState('192.168.1.1');
- const [gatewayRules, setGatewayRules] = useState('ALLOW-LOCAL-ONLY');
- const [openingTime, setOpeningTime] = useState('08:00');
- const [closingTime, setClosingTime] = useState('18:00');
- const [operatingDays, setOperatingDays] = useState<string[]>(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]);
+  // Create Modal settings
+  const [showModal, setShowModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingId, setEditingId] = useState('');
 
- // Inline Receipt Editor States
- const [inlineBranchId, setInlineBranchId] = useState('');
- const [inlineFacebook, setInlineFacebook] = useState('');
- const [inlinePromoText, setInlinePromoText] = useState('');
- const [inlineThankYou, setInlineThankYou] = useState('');
+  // Form Fields State
+  const [customBranchId, setCustomBranchId] = useState('');
+  const [storeLogo, setStoreLogo] = useState('');
+  const [receiptFacebook, setReceiptFacebook] = useState('');
+  const [receiptPromoText, setReceiptPromoText] = useState('');
+  const [receiptQrBase64, setReceiptQrBase64] = useState('');
+  const [receiptThankYou, setReceiptThankYou] = useState('');
+  const [tin, setTin] = useState('');
+  const [name, setName] = useState('');
+  const [manager, setManager] = useState('');
+  const [address, setAddress] = useState('');
+  const [phone, setPhone] = useState('');
+  const [monthlySales, setMonthlySales] = useState(500000);
+  const [staffCount, setStaffCount] = useState(5);
+  const [activeCashiers, setActiveCashiers] = useState(1);
+  const [isDistributionBranch, setIsDistributionBranch] = useState(false);
+  const [branchCode, setBranchCode] = useState('');
+  const [localIp, setLocalIp] = useState('192.168.1.1');
+  const [gatewayRules, setGatewayRules] = useState('ALLOW-LOCAL-ONLY');
+  const [openingTime, setOpeningTime] = useState('08:00');
+  const [closingTime, setClosingTime] = useState('18:00');
+  const [operatingDays, setOperatingDays] = useState<string[]>(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]);
+
+  // Employee Selection and Registration States
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
+  const [inlineStaffList, setInlineStaffList] = useState<any[]>([]);
+  const [showAddInlineStaff, setShowAddInlineStaff] = useState(false);
+  const [inlineFullName, setInlineFullName] = useState('');
+  const [inlineUsername, setInlineUsername] = useState('');
+  const [inlineEmail, setInlineEmail] = useState('');
+  const [inlineRole, setInlineRole] = useState<UserRole>(UserRole.CASHIER);
+  const [inlinePin, setInlinePin] = useState('');
+
+  // Advanced collapsible network options
+  const [showAdvancedNetwork, setShowAdvancedNetwork] = useState(false);
+  const [expandedNetwork, setExpandedNetwork] = useState<Record<string, boolean>>({});
+
+  const toggleNetworkSettings = (branchId: string) => {
+    setExpandedNetwork(prev => ({ ...prev, [branchId]: !prev[branchId] }));
+  };
+
+  // Inline Receipt Editor States
+  const [inlineBranchId, setInlineBranchId] = useState('');
+  const [inlineFacebook, setInlineFacebook] = useState('');
+  const [inlinePromoText, setInlinePromoText] = useState('');
+  const [inlineThankYou, setInlineThankYou] = useState('');
  const [inlineQrBase64, setInlineQrBase64] = useState('');
  const [inlineTin, setInlineTin] = useState('');
  const [inlineStoreLogo, setInlineStoreLogo] = useState('');
  const [inlineLogoSize, setInlineLogoSize] = useState(40);
 
- const activeBranchesForReceipt = branches.filter(b => !b.isDeleted);
+ const activeBranchesForReceipt = branches.filter(b => !b.isDeleted && (isUserAdmin || b.id === currentUser?.branchAssignmentId));
  const selectedBranchForPreview = branches.find(b => b.id === inlineBranchId);
  useEffect(() => {
  if (activeBranchesForReceipt.length > 0 && !inlineBranchId) {
@@ -144,7 +179,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
  const [confirmDeleteName, setConfirmDeleteName] = useState<string>('');
 
- const isUserAdmin = currentUser.role === UserRole.ADMIN;
+
 
  // Pagination states
  const [branchPage, setBranchPage] = useState(1);
@@ -184,133 +219,206 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  };
 
  const handleOpenAdd = () => {
- setCustomBranchId('');
- setStoreLogo('');
- setReceiptFacebook('');
- setReceiptPromoText('');
- setReceiptQrBase64('');
- setReceiptThankYou('');
- setTin('');
- setName('');
- setManager('');
- setAddress('');
- setPhone('');
- setMonthlySales(450000);
- setStaffCount(5);
- setActiveCashiers(1);
- setIsDistributionBranch(false);
- setBranchCode('');
- setLocalIp('192.168.1.1');
- setGatewayRules('ALLOW-LOCAL-ONLY');
- setOpeningTime('08:00');
- setClosingTime('18:00');
- setOperatingDays(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]);
+  setCustomBranchId('');
+  setStoreLogo('');
+  setReceiptFacebook('');
+  setReceiptPromoText('');
+  setReceiptQrBase64('');
+  setReceiptThankYou('');
+  setTin('');
+  setName('');
+  setManager('');
+  setAddress('');
+  setPhone('');
+  setMonthlySales(450000);
+  setStaffCount(5);
+  setActiveCashiers(1);
+  setIsDistributionBranch(false);
+  setBranchCode('');
+  setLocalIp('192.168.1.1');
+  setGatewayRules('ALLOW-LOCAL-ONLY');
+  setOpeningTime('08:00');
+  setClosingTime('18:00');
+  setOperatingDays(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]);
 
- setIsEditMode(false);
- setShowModal(true);
+  setSelectedEmployeeIds([]);
+  setInlineStaffList([]);
+  setShowAddInlineStaff(false);
+  setInlineFullName('');
+  setInlineUsername('');
+  setInlineEmail('');
+  setInlineRole(UserRole.CASHIER);
+  setInlinePin('');
+  setShowAdvancedNetwork(false);
+
+  setIsEditMode(false);
+  setShowModal(true);
  };
 
  const handleOpenEdit = (b: Branch) => {
- setEditingId(b.id);
- setCustomBranchId(b.id);
- setStoreLogo(b.storeLogo || '');
- setReceiptFacebook(b.receiptFacebook || '');
- setReceiptPromoText(b.receiptPromoText || '');
- setReceiptQrBase64(b.receiptQrBase64 || '');
- setReceiptThankYou(b.receiptThankYou || '');
- setTin(formatTin(b.tin || ''));
- setName(b.name);
- setManager(b.manager);
- setAddress(b.address);
- setPhone(b.phone);
- setMonthlySales(b.monthlySales);
- setStaffCount(b.staffCount);
- setActiveCashiers(b.activeCashiers);
- setIsDistributionBranch(b.isDistributionBranch || false);
- setBranchCode(b.branchCode || '');
- setLocalIp(b.localIp || '192.168.1.1');
- setGatewayRules(b.gatewayRules || 'ALLOW-LOCAL-ONLY');
- setOpeningTime(b.openingTime || '08:00');
- setClosingTime(b.closingTime || '18:00');
- setOperatingDays(b.operatingDays || ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]);
+  setEditingId(b.id);
+  setCustomBranchId(b.id);
+  setStoreLogo(b.storeLogo || '');
+  setReceiptFacebook(b.receiptFacebook || '');
+  setReceiptPromoText(b.receiptPromoText || '');
+  setReceiptQrBase64(b.receiptQrBase64 || '');
+  setReceiptThankYou(b.receiptThankYou || '');
+  setTin(formatTin(b.tin || ''));
+  setName(b.name);
+  setManager(b.manager);
+  setAddress(b.address);
+  setPhone(b.phone);
+  setMonthlySales(b.monthlySales);
+  setStaffCount(b.staffCount);
+  setActiveCashiers(b.activeCashiers);
+  setIsDistributionBranch(b.isDistributionBranch || false);
+  setBranchCode(b.branchCode || '');
+  setLocalIp(b.localIp || '192.168.1.1');
+  setGatewayRules(b.gatewayRules || 'ALLOW-LOCAL-ONLY');
+  setOpeningTime(b.openingTime || '08:00');
+  setClosingTime(b.closingTime || '18:00');
+  setOperatingDays(b.operatingDays || ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]);
 
- setIsEditMode(true);
- setShowModal(true);
+  setSelectedEmployeeIds(users.filter(u => u.branchAssignmentId === b.id).map(u => u.id));
+  setInlineStaffList([]);
+  setShowAddInlineStaff(false);
+  setInlineFullName('');
+  setInlineUsername('');
+  setInlineEmail('');
+  setInlineRole(UserRole.CASHIER);
+  setInlinePin('');
+  setShowAdvancedNetwork(false);
+
+  setIsEditMode(true);
+  setShowModal(true);
  };
 
- const handleSubmit = (e: React.FormEvent) => {
- e.preventDefault();
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
 
- if (!isUserAdmin) {
- showToast('Permission Denied: Branch modifications are restricted to Admins.');
- return;
- }
+    if (!isUserAdmin) {
+      showToast('Permission Denied: Branch modifications are restricted to Admins.');
+      return;
+    }
 
- // Validate Branch Code
- const trimmedCode = branchCode.trim().toUpperCase();
- if (trimmedCode && !/^[A-Z0-9_-]{3,15}$/.test(trimmedCode)) {
- showToast('Validation Error: Branch Code must be 3-15 characters (A-Z, 0-9, _, -).');
- return;
- }
+    // Validate Branch Code
+    const trimmedCode = branchCode.trim().toUpperCase();
+    if (trimmedCode && !/^[A-Z0-9_-]{3,15}$/.test(trimmedCode)) {
+      showToast('Validation Error: Branch Code must be 3-15 characters (A-Z, 0-9, _, -).');
+      return;
+    }
 
- // Validate Local IP
- const trimmedIp = localIp.trim();
- const ipRegex = /^(127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})$/;
- if (trimmedIp && !ipRegex.test(trimmedIp)) {
- showToast('Validation Error: Must be a valid local private IPv4 address (e.g., 192.168.1.50).');
- return;
- }
+    // Validate Local IP
+    const trimmedIp = localIp.trim();
+    const ipRegex = /^(127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})$/;
+    if (trimmedIp && !ipRegex.test(trimmedIp)) {
+      showToast('Validation Error: Must be a valid local private IPv4 address (e.g., 192.168.1.50).');
+      return;
+    }
 
- const trimmedCustomId = customBranchId.trim();
- if (trimmedCustomId) {
- if (!isEditMode) {
- const exists = branches.some(b => b.id.toLowerCase() === trimmedCustomId.toLowerCase());
- if (exists) {
- showToast(`Validation Error: A branch with ID "${trimmedCustomId}" already exists.`);
- return;
- }
- } else if (trimmedCustomId.toLowerCase() !== editingId.toLowerCase()) {
- const exists = branches.some(b => b.id.toLowerCase() === trimmedCustomId.toLowerCase());
- if (exists) {
- showToast(`Validation Error: A branch with ID "${trimmedCustomId}" already exists.`);
- return;
- }
- }
- }
+    const trimmedCustomId = customBranchId.trim();
+    if (trimmedCustomId) {
+      if (!isEditMode) {
+        const exists = branches.some(b => b.id.toLowerCase() === trimmedCustomId.toLowerCase());
+        if (exists) {
+          showToast(`Validation Error: A branch with ID "${trimmedCustomId}" already exists.`);
+          return;
+        }
+      } else if (trimmedCustomId.toLowerCase() !== editingId.toLowerCase()) {
+        const exists = branches.some(b => b.id.toLowerCase() === trimmedCustomId.toLowerCase());
+        if (exists) {
+          showToast(`Validation Error: A branch with ID "${trimmedCustomId}" already exists.`);
+          return;
+        }
+      }
+    }
 
- const payload = {
- name,
- manager,
- address,
- phone,
- monthlySales: Number(monthlySales),
- staffCount: Number(staffCount),
- activeCashiers: Number(activeCashiers),
- isDistributionBranch,
- branchCode: trimmedCode,
- localIp: trimmedIp,
- gatewayRules: gatewayRules.trim(),
- storeLogo,
- receiptFacebook,
- receiptPromoText,
- receiptQrBase64,
- receiptThankYou,
- tin,
- openingTime,
- closingTime,
- operatingDays,
- ...(trimmedCustomId ? { id: trimmedCustomId } : {})
- };
+    const finalBranchId = isEditMode ? editingId : (trimmedCustomId || 'B-' + Date.now());
 
- if (isEditMode) {
- updateBranch(editingId, payload);
- showToast(`Updated records for branch '${name}'.`);
- } else {
- createBranch(payload);
- showToast(`Launched new branch location '${name}'.`);
- }
- setShowModal(false);
- };
+    const payload = {
+      name,
+      manager,
+      address,
+      phone,
+      monthlySales: Number(monthlySales),
+      staffCount: Number(staffCount),
+      activeCashiers: Number(activeCashiers),
+      isDistributionBranch,
+      branchCode: trimmedCode,
+      localIp: trimmedIp,
+      gatewayRules: gatewayRules.trim(),
+      storeLogo,
+      receiptFacebook,
+      receiptPromoText,
+      receiptQrBase64,
+      receiptThankYou,
+      tin,
+      openingTime,
+      closingTime,
+      operatingDays,
+      id: finalBranchId
+    };
+
+    if (isEditMode) {
+      updateBranch(editingId, payload);
+
+      // 1. Unassign anyone who was previously assigned to this branch but is no longer selected
+      const previouslyAssigned = users.filter(u => u.branchAssignmentId === finalBranchId);
+      previouslyAssigned.forEach(u => {
+        if (!selectedEmployeeIds.includes(u.id)) {
+          updateUser(u.id, { branchAssignmentId: 'B1' });
+        }
+      });
+
+      // 2. Assign anyone who is currently selected
+      selectedEmployeeIds.forEach(uId => {
+        const u = users.find(x => x.id === uId);
+        if (u && u.branchAssignmentId !== finalBranchId) {
+          updateUser(uId, { branchAssignmentId: finalBranchId });
+        }
+      });
+
+      // 3. Register newly added inline staff
+      inlineStaffList.forEach(s => {
+        createUser({
+          fullName: s.fullName,
+          username: s.username,
+          email: s.email,
+          role: s.role,
+          managerPin: s.managerPin,
+          avatarInitials: s.avatarInitials,
+          branchAssignmentId: finalBranchId,
+          status: 'Active'
+        });
+      });
+
+      showToast(`Updated records for branch '${name}'.`);
+    } else {
+      createBranch(payload);
+
+      // Assign checked employees
+      selectedEmployeeIds.forEach(uId => {
+        updateUser(uId, { branchAssignmentId: finalBranchId });
+      });
+
+      // Register newly added inline staff
+      inlineStaffList.forEach(s => {
+        createUser({
+          fullName: s.fullName,
+          username: s.username,
+          email: s.email,
+          role: s.role,
+          managerPin: s.managerPin,
+          avatarInitials: s.avatarInitials,
+          branchAssignmentId: finalBranchId,
+          status: 'Active'
+        });
+      });
+
+      showToast(`Launched new branch location '${name}'.`);
+    }
+    setShowModal(false);
+  };
 
  const triggerDelete = (id: string, branchName: string) => {
  if (!isUserAdmin) {
@@ -356,7 +464,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  <div className="space-y-4">
  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
  {branches
- .filter(b => !b.isDeleted)
+ .filter(b => !b.isDeleted && (isUserAdmin || b.id === currentUser?.branchAssignmentId))
  .slice((branchPage - 1) * branchPageSize, branchPage * branchPageSize)
  .map((b) => {
  const branchEmployees = users.filter(u => u.branchAssignmentId === b.id);
@@ -386,7 +494,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  </div>
  <div className="flex items-center gap-1.5 text-xs text-m3-on-surface-variant/90 pl-1">
  <UserCheck className="h-3.5 w-3.5 text-m3-tertiary font-bold" />
- <span>Manager: <strong className="font-bold text-m3-on-surface">{b.manager}</strong></span>
+ <span>Manager: <strong className="font-bold text-m3-on-surface">{getDynamicBranchManager(b.id)}</strong></span>
  </div>
  <div className="flex flex-wrap gap-1.5 pt-1 pl-1">
  {b.id === primaryBranchId && (
@@ -440,20 +548,41 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  <span>TIN: <strong className="font-mono">{formatTin(b.tin) || 'None declared.'}</strong></span>
  </div>
 
- {/* Secure network variables */}
- <div className="bg-m3-surface-low/50 p-2.5 rounded-xl border border-m3-outline-variant/10 space-y-1.5 font-mono text-[10.5px] mt-2 text-left">
- <div className="flex justify-between">
- <span className="text-zinc-400 font-bold">SECURE CODE:</span>
- <span className="text-m3-primary font-black uppercase">{b.branchCode || 'PENDING'}</span>
- </div>
- <div className="flex justify-between">
- <span className="text-zinc-400 font-bold">IP BINDING:</span>
- <span className="text-m3-on-surface font-extrabold">{b.localIp || '192.168.1.1'}</span>
- </div>
- <div className="flex justify-between">
- <span className="text-zinc-400 font-bold">GATEWAY:</span>
- <span className="text-m3-tertiary font-black uppercase">{b.gatewayRules || 'ALLOW-LOCAL-ONLY'}</span>
- </div>
+ {/* Secure network variables & collapsible Advanced settings */}
+ <div className="mt-2 text-left">
+  <button
+    type="button"
+    onClick={() => toggleNetworkSettings(b.id)}
+    className="flex items-center justify-between w-full px-2.5 py-1.5 bg-m3-surface-low/30 hover:bg-m3-surface-low/60 rounded-xl border border-m3-outline-variant/10 text-[10.5px] font-bold text-m3-on-surface-variant transition-all cursor-pointer"
+  >
+    <span className="flex items-center gap-1.5">
+      <ShieldCheck className="h-3.5 w-3.5 text-m3-primary" />
+      <span>Network & Security Settings</span>
+    </span>
+    <span className="text-[9px] font-mono font-bold text-m3-primary">
+      {expandedNetwork[b.id] ? 'COLLAPSE' : 'SHOW DETAILS'}
+    </span>
+  </button>
+  
+  {expandedNetwork[b.id] && (
+    <div className="bg-m3-surface-low/50 p-2.5 rounded-xl border-x border-b border-m3-outline-variant/10 space-y-1.5 font-mono text-[10.5px] text-left mt-1">
+      <div className="flex justify-between">
+        <span className="text-zinc-400 font-bold">SECURE CODE:</span>
+        <span className="text-m3-primary font-black uppercase">{b.branchCode || 'PENDING'}</span>
+      </div>
+      <div className="flex justify-between">
+        <span className="text-zinc-400 font-bold">IP BINDING:</span>
+        <span className="text-m3-on-surface font-extrabold">{b.localIp || '192.168.1.1'}</span>
+      </div>
+      <div className="flex justify-between">
+        <span className="text-zinc-400 font-bold">GATEWAY:</span>
+        <span className="text-m3-tertiary font-black uppercase">{b.gatewayRules || 'ALLOW-LOCAL-ONLY'}</span>
+      </div>
+      <div className="mt-2 text-[9px] text-m3-on-surface-variant/75 font-sans leading-relaxed border-t border-m3-outline-variant/10 pt-1.5">
+        <strong>Help Desk:</strong> IP Binding locks cashier terminal syncs to the branch's local subnet IP. Gateway (ALLOW-LOCAL-ONLY) restricts database operations to physical local endpoints for hardware security.
+      </div>
+    </div>
+  )}
  </div>
 
  {/* Schedule & Timing parameters */}
@@ -557,21 +686,21 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  <div className="space-y-0.5 text-center">
  <span className="text-[9px] uppercase tracking-widest font-bold text-m3-on-surface-variant/70">Staff roster</span>
  <div className="text-xs font-bold font-mono flex items-center justify-center gap-1 text-m3-on-surface">
- <Users className="h-3.5 w-3.5 text-m3-primary/70" /> {b.staffCount}
+ <Users className="h-3.5 w-3.5 text-m3-primary/70" /> {branchEmployees.length}
  </div>
  </div>
 
  <div className="space-y-0.5 text-center">
  <span className="text-[9px] uppercase tracking-widest font-bold text-m3-on-surface-variant/70">Terminal Cashiers</span>
  <div className="text-xs font-bold font-mono flex items-center justify-center gap-1 text-m3-on-surface">
- <CreditCard className="h-3.5 w-3.5 text-m3-tertiary/70" /> {b.activeCashiers}
+ <CreditCard className="h-3.5 w-3.5 text-m3-tertiary/70" /> {branchEmployees.filter(u => u.role === UserRole.CASHIER).length || b.activeCashiers || 0}
  </div>
  </div>
 
  <div className="space-y-0.5 text-center">
  <span className="text-[9px] uppercase tracking-widest font-bold text-m3-on-surface-variant/70">Sales (MO)</span>
  <div className="text-xs font-black font-mono text-m3-tertiary flex items-center justify-center gap-0.5">
- <TrendingUp className="h-3.5 w-3.5" /> ₱{b.monthlySales.toLocaleString(undefined, { notation: 'compact' })}
+ <TrendingUp className="h-3.5 w-3.5" /> ₱{((sales ? sales.filter(s => s.branchId === b.id && s.createdAt.startsWith(new Date().toISOString().slice(0, 7)) && !s.isDeleted).reduce((sum, s) => sum + s.grandTotal, 0) : 0) || b.monthlySales || 0).toLocaleString(undefined, { notation: 'compact' })}
  </div>
  </div>
  </div>
@@ -579,14 +708,14 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  );
  })}
 
- {branches.filter(b => !b.isDeleted).length === 0 && (
+ {branches.filter(b => !b.isDeleted && (isUserAdmin || b.id === currentUser?.branchAssignmentId)).length === 0 && (
  <div className="col-span-full py-12 text-center text-m3-on-surface-variant font-medium">No corporate branches logged. Use the launch button above.</div>
  )}
  </div>
 
  <TablePagination
  currentPage={branchPage}
- totalItems={branches.filter(b => !b.isDeleted).length}
+ totalItems={branches.filter(b => !b.isDeleted && (isUserAdmin || b.id === currentUser?.branchAssignmentId)).length}
  pageSize={branchPageSize}
  onPageChange={setBranchPage}
  itemName="branches"
@@ -594,7 +723,8 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  </div>
 
  {/* BRAND-WIDE RECEIPT CUSTOMIZER (INLINE & ACCESSIBLE) */}
- <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] p-6 shadow-sm space-y-6">
+ {isUserAdmin && (
+  <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] p-6 shadow-sm space-y-6">
  <div>
  <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest flex items-center gap-2 font-mono">
  <Receipt className="h-4.5 w-4.5 text-m3-primary" />
@@ -1030,6 +1160,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  </div>
  </div>
  </div>
+ )}
 
  {/* SECTION E: GLOBAL CORPORATE DIRECTORY & STAFF ROSTER */}
  <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] overflow-hidden shadow-sm mt-8">
@@ -1153,8 +1284,8 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  </td>
  </tr>
  );
- })}
- </tbody>
+  })}
+</tbody>
  </table>
  </div>
 
@@ -1216,18 +1347,6 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  value={name}
  onChange={e => setName(e.target.value)}
  placeholder="TilePoint Silay branch"
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
- />
- </div>
-
- <div className="space-y-1 relative">
- <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">Manager Name</label>
- <input
- type="text"
- required
- value={manager}
- onChange={e => setManager(e.target.value)}
- placeholder="Carlos Diaz"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
  />
  </div>
@@ -1406,7 +1525,162 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  </span>
  </label>
  </div>
- )}
+  )}
+
+  {/* Present Employee Selector Checklist & Inline Employee Adder */}
+  <div className="space-y-3 p-3.5 bg-m3-surface-lowest border border-m3-outline-variant/30 rounded-2xl animate-fade-in text-left">
+   <div className="flex items-center gap-1.5 border-b border-m3-outline-variant/10 pb-1.5">
+    <Users className="h-4 w-4 text-m3-primary" />
+    <span className="text-[11px] font-black tracking-wider text-m3-primary uppercase">Staff & Cashier Roster</span>
+   </div>
+   
+   {/* Select present employees */}
+   <div className="space-y-2">
+    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pl-1 block">Assign Existing Employees</label>
+    <div className="max-h-32 overflow-y-auto border border-m3-outline-variant/15 rounded-lg p-2 space-y-1.5 bg-m3-surface">
+     {users.filter(u => u.status === 'Active' && u.role !== UserRole.ADMIN).map(u => {
+      const isAssigned = selectedEmployeeIds.includes(u.id);
+      return (
+       <label key={u.id} className="flex items-center gap-2 text-xs font-medium cursor-pointer text-m3-on-surface hover:text-m3-primary select-none">
+        <input
+         type="checkbox"
+         checked={isAssigned}
+         onChange={() => {
+          if (isAssigned) {
+           setSelectedEmployeeIds(selectedEmployeeIds.filter(id => id !== u.id));
+          } else {
+           setSelectedEmployeeIds([...selectedEmployeeIds, u.id]);
+          }
+         }}
+         className="h-3.5 w-3.5 text-m3-primary border-m3-outline rounded cursor-pointer accent-m3-primary"
+        />
+        <span>{u.fullName} <span className="text-[9px] text-m3-on-surface-variant font-bold uppercase font-mono">({u.role})</span></span>
+       </label>
+      );
+     })}
+     {users.filter(u => u.status === 'Active' && u.role !== UserRole.ADMIN).length === 0 && (
+      <div className="text-[10px] text-zinc-400 italic text-center py-2">No active employees available to select.</div>
+     )}
+    </div>
+   </div>
+
+   {/* Inline Employee Adder */}
+   <div className="space-y-2 border-t border-m3-outline-variant/10 pt-2.5">
+    <div className="flex justify-between items-center">
+     <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pl-1">Register New Employee Inline</label>
+     <button
+      type="button"
+      onClick={() => setShowAddInlineStaff(!showAddInlineStaff)}
+      className="text-[9.5px] font-black text-m3-primary hover:text-m3-primary/85 transition-all flex items-center gap-0.5 uppercase tracking-wider"
+     >
+      <Plus className="h-3 w-3" /> {showAddInlineStaff ? 'Collapse' : 'Add Staff'}
+     </button>
+    </div>
+
+    {showAddInlineStaff && (
+     <div className="p-2.5 bg-m3-surface border border-m3-outline-variant/15 rounded-xl space-y-2.5 animate-fade-in text-left">
+      <div className="space-y-1">
+       <input
+        type="text"
+        placeholder="Full Name (e.g. Juan Cruz)"
+        value={inlineFullName}
+        onChange={e => setInlineFullName(e.target.value)}
+        className="w-full bg-m3-surface-lowest border-b border-m3-outline-variant/40 focus:border-m3-primary px-2 py-1 text-xs text-m3-on-surface focus:outline-none rounded-t-sm"
+       />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+       <input
+        type="text"
+        placeholder="Username"
+        value={inlineUsername}
+        onChange={e => setInlineUsername(e.target.value)}
+        className="w-full bg-m3-surface-lowest border-b border-m3-outline-variant/40 focus:border-m3-primary px-2 py-1 text-xs text-m3-on-surface focus:outline-none rounded-t-sm"
+       />
+       <input
+        type="text"
+        placeholder="4-6 Digit Security PIN"
+        maxLength={6}
+        value={inlinePin}
+        onChange={e => setInlinePin(e.target.value.replace(/\D/g, ''))}
+        className="w-full bg-m3-surface-lowest border-b border-m3-outline-variant/40 focus:border-m3-primary px-2 py-1 text-xs text-m3-on-surface focus:outline-none rounded-t-sm font-mono"
+       />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+       <input
+        type="email"
+        placeholder="Email Address"
+        value={inlineEmail}
+        onChange={e => setInlineEmail(e.target.value)}
+        className="w-full bg-m3-surface-lowest border-b border-m3-outline-variant/40 focus:border-m3-primary px-2 py-1 text-xs text-m3-on-surface focus:outline-none rounded-t-sm"
+       />
+       <select
+        value={inlineRole}
+        onChange={e => setInlineRole(e.target.value as UserRole)}
+        className="w-full bg-m3-surface-lowest border-b border-m3-outline-variant/40 focus:border-m3-primary px-2 py-1 text-xs text-m3-on-surface focus:outline-none rounded-t-sm"
+       >
+        <option value={UserRole.CASHIER}>Cashier</option>
+        <option value={UserRole.MANAGER}>Manager</option>
+        <option value={UserRole.STAFF}>Staff</option>
+       </select>
+      </div>
+      <button
+       type="button"
+       onClick={() => {
+        if (!inlineFullName.trim() || !inlineUsername.trim() || !inlinePin.trim()) {
+         showToast('Please provide a full name, username, and numeric security PIN.');
+         return;
+        }
+        if (inlinePin.length < 4) {
+         showToast('Pin must be at least 4 digits long.');
+         return;
+        }
+        const avatar = inlineFullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        const newStaff = {
+         fullName: inlineFullName.trim(),
+         username: inlineUsername.trim().toLowerCase(),
+         email: inlineEmail.trim() || `${inlineUsername.trim().toLowerCase()}@tilepoint.com`,
+         role: inlineRole,
+         managerPin: inlinePin,
+         avatarInitials: avatar || 'US'
+        };
+        setInlineStaffList([...inlineStaffList, newStaff]);
+        setInlineFullName('');
+        setInlineUsername('');
+        setInlinePin('');
+        setInlineEmail('');
+        setInlineRole(UserRole.CASHIER);
+        setShowAddInlineStaff(false);
+        showToast(`Staged staff "${newStaff.fullName}" for enrollment.`);
+       }}
+       className="w-full py-1.5 bg-m3-primary text-m3-on-primary rounded-lg text-xs font-bold hover:bg-m3-primary/90 transition-all cursor-pointer text-center"
+      >
+       Stage Staff Enrollment
+      </button>
+     </div>
+    )}
+
+    {/* Render list of staged inline enrollments */}
+    {inlineStaffList.length > 0 && (
+     <div className="space-y-1 mt-1.5 text-left">
+      <div className="text-[9px] uppercase tracking-wider font-extrabold text-zinc-400">Staged Staff Pending Save:</div>
+      <div className="space-y-1">
+       {inlineStaffList.map((s, idx) => (
+        <div key={idx} className="flex justify-between items-center text-xs bg-m3-surface-lowest p-1.5 px-2.5 rounded-lg border border-m3-outline-variant/20">
+         <span>{s.fullName} <span className="text-[9px] text-m3-primary uppercase font-bold">({s.role})</span></span>
+         <button
+          type="button"
+          onClick={() => setInlineStaffList(inlineStaffList.filter((_, i) => i !== idx))}
+          className="text-red-500 hover:text-red-650 cursor-pointer text-[10px] font-bold"
+         >
+          Remove
+         </button>
+        </div>
+       ))}
+      </div>
+     </div>
+    )}
+   </div>
+  </div>
 
  <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-4 flex-shrink-0">
  <button
@@ -1468,4 +1742,4 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  )}
  </div>
  );
-};
+}

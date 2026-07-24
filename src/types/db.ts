@@ -243,6 +243,7 @@ export interface Sale {
  deletedAt?: string;
  createdAt: string;
  idempotencyKey?: string;
+ discountType?: string;
 }
 
 export interface SaleItem {
@@ -495,6 +496,7 @@ export interface Member {
  status: "Active" | "Suspended";
  createdAt?: string;
  updatedAt?: string;
+ branchId?: string;
 }
 
 export interface Expense {

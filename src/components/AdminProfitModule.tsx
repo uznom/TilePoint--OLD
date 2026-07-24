@@ -1128,7 +1128,7 @@ export function AdminProfitModule({
  <td colSpan={7} className="text-center py-6 text-xs text-m3-on-surface-variant">No branch records available.</td>
  </tr>
  )}
- </tbody>
+</tbody>
  </table>
  </div>
  </div>
@@ -1378,7 +1378,7 @@ export function AdminProfitModule({
  <div>
  <div className="font-extrabold text-m3-on-surface dark:text-zinc-300">Cashier: {sh.cashierName}</div>
  <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 font-mono">
- Opened: {new Date(sh.openedAt).toLocaleDateString()} • Branch: {getBranchName(sh.branchId)}
+ Opened: {sh.openedAt && !isNaN(new Date(sh.openedAt).getTime()) ? new Date(sh.openedAt).toLocaleDateString() : "N/A"} • Branch: {getBranchName(sh.branchId)}
  </div>
  </div>
  <div className={`font-mono font-black ${isShortage ? "text-rose-600 dark:text-rose-400" : isOverage ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400"}`}>
@@ -1403,7 +1403,7 @@ export function AdminProfitModule({
  <div>
  <div className="font-extrabold text-m3-on-surface dark:text-zinc-300">Invoice: {sale.saleNumber}</div>
  <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 font-mono">
- Voided At: {sale.deletedAt ? new Date(sale.deletedAt).toLocaleDateString() : "Unknown"} • Branch: {getBranchName(sale.branchId)}
+ Voided At: {sale.deletedAt && !isNaN(new Date(sale.deletedAt).getTime()) ? new Date(sale.deletedAt).toLocaleDateString() : "Unknown"} • Branch: {getBranchName(sale.branchId)}
  </div>
  </div>
  <div className="font-mono text-zinc-600 dark:text-zinc-400 font-black shrink-0">
@@ -1436,7 +1436,7 @@ export function AdminProfitModule({
  )}
  </div>
  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">{exp.notes || "Itemized expense receipt"}</p>
- <span className="text-[9.5px] text-zinc-600 dark:text-zinc-500 block font-mono mt-0.5">Recorded: {new Date(exp.dateTime).toLocaleDateString()}</span>
+ <span className="text-[9.5px] text-zinc-600 dark:text-zinc-500 block font-mono mt-0.5">Recorded: {exp.dateTime && !isNaN(new Date(exp.dateTime).getTime()) ? new Date(exp.dateTime).toLocaleDateString() : "Unknown"}</span>
  </div>
  <div className="flex items-center gap-3 shrink-0">
  <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">₱{exp.amount.toLocaleString()}</span>
@@ -1475,4 +1475,4 @@ export function AdminProfitModule({
 
  </div>
  );
-}
+};

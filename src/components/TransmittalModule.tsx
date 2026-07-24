@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useDb } from "../context/DbContext";
+import { isProductInBranch } from "../lib/branchUtils";
 import { saveFileToBackup, verifyAndUnwrapBackup } from "../lib/fileBackupHelper";
 import { Transmittal, TransmittalDocType, UserRole } from "../types/db";
 import { useResponsivePageSize, TablePagination } from "./TablePagination";
@@ -509,7 +510,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  // Unique products per category
  Object.keys(categoryBreakdown).forEach((cat) => {
  const pCount = products.filter(
- (p) => p.category === cat && !p.isDeleted,
+ (p) => p.category === cat && !p.isDeleted && isProductInBranch(p, fromBranchId, branchStock, branches),
  ).length;
  categoryBreakdown[cat].uniqueProductsCount = pCount;
  });
@@ -1002,8 +1003,8 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </td>
  </tr>
  );
- })}
- </tbody>
+  })}
+</tbody>
  </table>
  </div>
  </div>
@@ -1283,7 +1284,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </td>
 
  <td className="py-3.5 px-4 text-right text-m3-on-surface-variant font-mono">
- {new Date(t.submittedAt).toLocaleDateString()}
+ {t.submittedAt && !isNaN(new Date(t.submittedAt).getTime()) ? new Date(t.submittedAt).toLocaleDateString() : 'N/A'}
  </td>
 
  <td className="py-3.5 px-4 text-center">
@@ -1322,7 +1323,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </td>
  </tr>
  )}
- </tbody>
+</tbody>
  </table>
  </div>
 

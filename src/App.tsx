@@ -148,7 +148,7 @@ function AppContent() {
  invalidateLocalCache,
  syncFromSharedServer,
  } = useDb();
- const showSaleRedDot = parkedSales.length > 0; const showDeliveriesRedDot = deliveries.some(d => d.status === 'Scheduled' || d.status === 'Packed' || d.status === 'Out For Delivery'); let showInventoryRedDot = false; try { const cached = localStorage.getItem("tp_batch_expirations"); if (cached) { const parsed = JSON.parse(cached); const today = new Date("2026-07-18"); showInventoryRedDot = parsed.some((b: any) => { if (!b.expiryDate) return false; const exp = new Date(b.expiryDate); const diffTime = exp.getTime() - today.getTime(); const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); return diffDays <= 30; }); } else { showInventoryRedDot = true; } } catch (_) { showInventoryRedDot = true; } const showTransferRedDot = stockTransfers.some(t => { if (t.status !== 'Pending') return false; return t.fromBranchId !== t.toBranchId; }); const showExpiryRedDot = showInventoryRedDot; const initialSavedTabRef = useRef<string | null>(null);
+ const showSaleRedDot = parkedSales.length > 0; const showDeliveriesRedDot = deliveries.some(d => d.status === 'Scheduled' || d.status === 'Packed' || d.status === 'Out For Delivery'); let showInventoryRedDot = false; try { const cached = localStorage.getItem("tp_batch_expirations"); if (cached) { const parsed = JSON.parse(cached); const today = new Date(); showInventoryRedDot = parsed.some((b: any) => { if (!b.expiryDate) return false; const exp = new Date(b.expiryDate); const diffTime = exp.getTime() - today.getTime(); const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); return diffDays <= 30; }); } else { showInventoryRedDot = true; } } catch (_) { showInventoryRedDot = true; } const showTransferRedDot = stockTransfers.some(t => { if (t.status !== 'Pending') return false; return t.fromBranchId !== t.toBranchId; }); const showExpiryRedDot = showInventoryRedDot; const initialSavedTabRef = useRef<string | null>(null);
  if (initialSavedTabRef.current === null && typeof window !== "undefined") {
  initialSavedTabRef.current =
  localStorage.getItem("tilepoint_active_tab") || "none";
@@ -1080,7 +1080,7 @@ function AppContent() {
  id: "branches",
  name: "Branches Profile",
  icon: Building2,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
+ roles: [UserRole.ADMIN],
  },
  {
  id: "users",
@@ -2079,7 +2079,7 @@ function AppContent() {
    const cached = localStorage.getItem("tp_batch_expirations");
    if (cached) {
     const parsed = JSON.parse(cached);
-    const today = new Date("2026-07-18");
+    const today = new Date();
     showExpirySubRedDot = parsed.some((b: any) => {
      if (!b.expiryDate) return false;
      const exp = new Date(b.expiryDate);
@@ -2112,7 +2112,7 @@ function AppContent() {
   <span className="h-1.5 w-1.5 rounded-full bg-m3-primary animate-pulse" />
   </div>
   <div className="flex items-center gap-2">
-  {isInventoryCategory && (
+  {(activeTab === "inventory" || activeTab === "inventory-stocks") && (
   <button
   onClick={() => setIsCompactColumns(!isCompactColumns)}
   className="p-1 px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/10 rounded-lg transition-all cursor-pointer border border-m3-outline-variant/15 bg-m3-surface flex items-center gap-1.5 shadow-sm"

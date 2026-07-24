@@ -253,7 +253,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
  <span className="font-mono font-black text-xs text-m3-on-surface">₱{previouslyClosedShift.cashCount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
  </div>
  <p className="text-[9.5px] text-m3-on-surface-variant/80">
- Closed by <strong className="text-m3-on-surface-variant font-semibold">{previouslyClosedShift.cashierName}</strong> on {new Date(previouslyClosedShift.closedAt || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.
+ Closed by <strong className="text-m3-on-surface-variant font-semibold">{previouslyClosedShift.cashierName}</strong> on {previouslyClosedShift.closedAt && !isNaN(new Date(previouslyClosedShift.closedAt).getTime()) ? new Date(previouslyClosedShift.closedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'recently'}.
  </p>
  <button
  type="button"
@@ -341,7 +341,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
  </td>
  </tr>
  ))}
- </tbody>
+</tbody>
  </table>
  </div>
 

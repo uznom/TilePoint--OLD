@@ -946,7 +946,14 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                                           </tr>
                                         </thead>
                                         <tbody>
-                                          {stats.saleItemCogsMap[s.id]?.items.map((item: any) => {
+                                          {(!stats.saleItemCogsMap[s.id]?.items || stats.saleItemCogsMap[s.id].items.length === 0) ? (
+                                            <tr>
+                                              <td colSpan={6} className="p-4 text-center text-xs text-m3-on-surface-variant italic">
+                                                No itemized product details found for this transaction.
+                                              </td>
+                                            </tr>
+                                          ) : (
+                                            stats.saleItemCogsMap[s.id].items.map((item: any) => {
                                             const prod = products.find((p) => p.id === item.productId);
                                             const cost = prod && prod.costPrice > 0 ? prod.costPrice : item.unitPrice * 0.6;
                                             const margin = item.unitPrice > 0 ? ((item.unitPrice - cost) / item.unitPrice) * 100 : 0;
@@ -970,8 +977,9 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                                                 </td>
                                               </tr>
                                             );
-                                          })}
-                                        </tbody>
+                                          })
+                                        )}
+</tbody>
                                       </table>
                                     </div>
                                   </div>
@@ -982,7 +990,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                         );
                       })
                     )}
-                  </tbody>
+ </tbody>
                 </table>
               </div>
             )}

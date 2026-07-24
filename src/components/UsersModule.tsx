@@ -79,6 +79,17 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  };
 
  const isUserAdmin = currentUser.role === UserRole.ADMIN;
+ const userBranchId = currentUser.branchAssignmentId || "B1";
+
+ // Filter users list based on role
+ const allowedUsers = users.filter(u => isUserAdmin || u.branchAssignmentId === userBranchId);
+
+ // Filter activeSessions based on role
+ const allowedActiveSessions = activeSessions.filter(session => {
+  if (isUserAdmin) return true;
+  const sessionUser = users.find(u => u.username === session.username);
+  return sessionUser && sessionUser.branchAssignmentId === userBranchId;
+ });
 
  const getBranchName = (id: string | null) => {
  if (!id || id === "B1" || id === "main") {
@@ -99,7 +110,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  setUsername('');
  setEmail('');
  setRole(UserRole.CASHIER);
- setBranchAssignmentId('B1');
+ setBranchAssignmentId(isUserAdmin ? 'B1' : userBranchId);
  setStatus('Active');
  setManagerPin('');
 
@@ -113,7 +124,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  setUsername(u.username);
  setEmail(u.email);
  setRole(u.role);
- setBranchAssignmentId(u.branchAssignmentId);
+ setBranchAssignmentId(u.branchAssignmentId || 'B1');
  setStatus(u.status);
  setManagerPin(u.managerPin || '');
 
@@ -124,9 +135,28 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  const handleSubmit = (e: React.FormEvent) => {
  e.preventDefault();
 
- if (!isUserAdmin) {
- showToast('Permission Denied: Corporate structure edits are locked to Admins.');
+ const isUserManager = currentUser?.role === UserRole.MANAGER;
+ if (!isUserAdmin && !isUserManager) {
+ showToast('Permission Denied: Corporate structure edits are restricted.');
  return;
+ }
+
+ if (!isUserAdmin) {
+ if (branchAssignmentId !== userBranchId) {
+ showToast('Permission Denied: You can only assign personnel to your own branch.');
+ return;
+ }
+ if (role === UserRole.ADMIN) {
+ showToast('Permission Denied: You cannot assign the Admin role.');
+ return;
+ }
+ if (isEditMode) {
+ const targetUser = users.find(u => u.id === editingId);
+ if (!targetUser || targetUser.branchAssignmentId !== userBranchId) {
+ showToast('Permission Denied: You can only edit personnel assigned to your own branch.');
+ return;
+ }
+ }
  }
 
  const initials = fullName
@@ -159,8 +189,9 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  };
 
  const handleToggleStatus = (u: User) => {
- if (!isUserAdmin) {
- showToast('Action Denied: Requires Administrator credentials.');
+ const isUserManager = currentUser?.role === UserRole.MANAGER;
+ if (!isUserAdmin && !(isUserManager && u.branchAssignmentId === userBranchId)) {
+ showToast('Action Denied: Requires Administrator or Branch Manager credentials.');
  return;
  }
  const targetStatus: UserStatus = u.status === 'Active' ? 'Disabled' : 'Active';
@@ -169,8 +200,10 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  };
 
  const handleResetPassword = (id: string, name: string) => {
- if (!isUserAdmin) {
- showToast('Action Denied: Requires Administrator credentials.');
+ const targetUser = users.find(u => u.id === id);
+ const isUserManager = currentUser?.role === UserRole.MANAGER;
+ if (!isUserAdmin && !(isUserManager && targetUser?.branchAssignmentId === userBranchId)) {
+ showToast('Action Denied: Requires Administrator or Branch Manager credentials.');
  return;
  }
  resetPassword(id);
@@ -228,7 +261,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  <p className="text-xs text-m3-on-surface-variant/80 mt-0.5">Role-Based Access Control list (RBAC)</p>
  </div>
 
- {isUserAdmin && subTab === 'employees' && (
+ {(isUserAdmin || currentUser?.role === UserRole.MANAGER) && subTab === 'employees' && (
  <button
  onClick={handleOpenAdd}
  className="m3-btn-primary flex items-center gap-1.5 cursor-pointer shadow-sm text-xs shrink-0"
@@ -249,7 +282,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  }`}
  >
  <Users className="h-4 w-4" />
- Employees Directory ({users.length})
+ Employees Directory ({allowedUsers.length})
  </button>
  <button
  onClick={() => setSubTab('active_sessions')}
@@ -263,14 +296,14 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  <Activity className="h-4 w-4" />
  <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 bg-green-550 rounded-full animate-ping" />
  </div>
- Active Terminals ({activeSessions.length})
+ Active Terminals ({allowedActiveSessions.length})
  </button>
  </div>
 
  {subTab === 'employees' ? (
  /* Grid of users card logs */
  <div className="space-y-4">
- {users.length === 0 ? (
+ {allowedUsers.length === 0 ? (
  <div className="text-center py-12 bg-m3-surface-low rounded-[20px] border border-m3-outline-variant/10">
  <Users className="h-10 w-10 text-m3-on-surface-variant/40 mx-auto mb-2.5" />
  <p className="text-sm font-semibold text-m3-on-surface-variant">No Registered Employees Found</p>
@@ -278,7 +311,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  </div>
  ) : (
  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in">
- {users.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((u) => {
+ {allowedUsers.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((u) => {
  // Status badge coloring
  const activeClass = u.status === 'Active'
  ? 'bg-m3-tertiary-container text-m3-on-tertiary-container border-m3-tertiary/20'
@@ -354,7 +387,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  </div>
 
  {/* Commands for admin operation */}
- {isUserAdmin && (
+ {(isUserAdmin || (currentUser?.role === UserRole.MANAGER && u.branchAssignmentId === userBranchId)) && (
  <div className="flex gap-2 border-t border-m3-outline-variant/20 pt-3 mt-4 justify-end">
  <button
  onClick={() => handleResetPassword(u.id, u.fullName)}
@@ -392,7 +425,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
 
  <TablePagination
  currentPage={currentPage}
- totalItems={users.length}
+ totalItems={allowedUsers.length}
  pageSize={pageSize}
  onPageChange={setCurrentPage}
  itemName="employees"
@@ -416,7 +449,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  </div>
 
  {/* Active Sessions Grid */}
- {activeSessions.length === 0 ? (
+ {allowedActiveSessions.length === 0 ? (
  <div className="text-center py-12 bg-m3-surface-low rounded-[20px] border border-m3-outline-variant/10">
  <Laptop className="h-10 w-10 text-m3-on-surface-variant/40 mx-auto mb-2.5" />
  <p className="text-sm font-semibold text-m3-on-surface-variant">No Active Sessions Registered</p>
@@ -425,7 +458,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  ) : (
  <div className="space-y-4">
  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
- {activeSessions.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((session) => {
+ {allowedActiveSessions.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((session) => {
  const isCurrent = session.id === activeSessionId;
  return (
  <div key={session.id} className="m3-card shadow-sm flex flex-col justify-between border border-m3-outline-variant/15 relative">
@@ -495,7 +528,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  </div>
 
  {/* Actions panel */}
- {!isCurrent && isUserAdmin && (
+ {!isCurrent && (isUserAdmin || (currentUser?.role === UserRole.MANAGER && users.find(u => u.username === session.username)?.branchAssignmentId === userBranchId)) && (
  <div className="border-t border-m3-outline-variant/20 pt-3 mt-4 flex justify-end">
  <button
  onClick={() => handleTerminateRemote(session.id, session.fullName)}
@@ -513,7 +546,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
 
  <TablePagination
  currentPage={currentPage}
- totalItems={activeSessions.length}
+ totalItems={allowedActiveSessions.length}
  pageSize={pageSize}
  onPageChange={setCurrentPage}
  itemName="terminals"

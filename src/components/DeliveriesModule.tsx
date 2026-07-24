@@ -396,7 +396,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
 
  {/* Unloading target Date */}
  <td className="py-3.5 px-4 font-medium text-m3-on-surface">
- <div>{new Date(d.deliveryDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div>
+ <div>{d.deliveryDate && !isNaN(new Date(d.deliveryDate).getTime()) ? new Date(d.deliveryDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'N/A'}</div>
  {d.deliveryTime && <div className="text-[9px] text-m3-on-surface-variant font-medium mt-0.5">{d.deliveryTime}</div>}
  </td>
 
@@ -567,7 +567,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  <span className="text-[9px] font-black text-zinc-500 uppercase tracking-wider block">Target Unload Date</span>
  <span className="text-xs font-black text-m3-on-surface flex items-center gap-1">
  <Calendar className="h-3 w-3 inline text-m3-primary" />
- {new Date(activeDelivery.deliveryDate).toLocaleDateString(undefined, {month:'short', day:'numeric'})}
+ {activeDelivery.deliveryDate && !isNaN(new Date(activeDelivery.deliveryDate).getTime()) ? new Date(activeDelivery.deliveryDate).toLocaleDateString(undefined, {month:'short', day:'numeric'}) : 'N/A'}
  </span>
  </div>
 
@@ -907,3 +907,4 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  </div>
  );
 };
+
