@@ -996,7 +996,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  }}
  className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
  activeSubTab === "po"
- ? "border-m3-primary text-m3-primary scale-102 font-bold"
+ ? "border-m3-primary text-m3-primary scale-[1.02] font-bold"
  : "border-transparent text-m3-on-surface-variant"
  }`}
  >
@@ -1011,7 +1011,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  }}
  className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
  activeSubTab === "suppliers"
- ? "border-m3-primary text-m3-primary scale-102 font-bold"
+ ? "border-m3-primary text-m3-primary scale-[1.02] font-bold"
  : "border-transparent text-m3-on-surface-variant"
  }`}
  >
@@ -1029,7 +1029,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  }}
  className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
  activeSubTab === "brands"
- ? "border-m3-primary text-m3-primary scale-102 font-bold"
+ ? "border-m3-primary text-m3-primary scale-[1.02] font-bold"
  : "border-transparent text-m3-on-surface-variant"
  }`}
  >
@@ -1045,7 +1045,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  }}
  className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
  activeSubTab === "consolidation"
- ? "border-m3-primary text-m3-primary scale-102 font-bold"
+ ? "border-m3-primary text-m3-primary scale-[1.02] font-bold"
  : "border-transparent text-m3-on-surface-variant"
  }`}
  >

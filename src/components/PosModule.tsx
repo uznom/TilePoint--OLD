@@ -1111,7 +1111,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  // Row detail population
  filteredSales.forEach((s) => {
  const branchName = branches.find((b) => b.id === s.branchId)?.name || s.branchId;
- const formattedDate = new Date(s.createdAt).toISOString().replace("T", " ").slice(0, 19);
+ const formattedDate = (s.createdAt && !isNaN(new Date(s.createdAt).getTime())) ? new Date(s.createdAt).toISOString().replace("T", " ").slice(0, 19) : "N/A";
  const customer = s.customerName || "Walk-in Buyer";
  
  const row = [
@@ -1774,7 +1774,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
 
  {/* Customer context assignment */}
- <div>
+ <div className="mb-4 bg-m3-surface-low/60 border border-m3-outline-variant/25 p-3 rounded-2xl shadow-sm">
  <button
  type="button"
  onClick={() =>
@@ -1809,7 +1809,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  animate={{ opacity: 1, height: "auto" }}
  exit={{ opacity: 0, height: 0 }}
  transition={{ duration: 0.15 }}
- className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2 overflow-hidden"
+ className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2 overflow-visible relative pb-1"
  >
  <div className="relative pl-0">
  <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest pl-1 block mb-1">
@@ -2227,7 +2227,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
       onClick={() => {
         setPaymentMethod(method.name);
         if (method.name !== "Cash") {
-          setAmountTendered(grandTotal.toString());
+          setAmountTendered(Math.abs(grandTotal).toString());
         } else {
           setAmountTendered("");
         }
@@ -2324,7 +2324,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
             {/* Payment Instruction Copy */}
             <div className="sm:col-span-8 space-y-1 text-[11px] leading-tight text-m3-on-surface">
               <p className="font-extrabold text-m3-primary text-xs flex items-center gap-1">
-                Collect <span>PHP {grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                Collect <span>PHP {Math.abs(grandTotal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </p>
               <div className="space-y-0.5 text-[10px] text-zinc-500 dark:text-zinc-400">
                 {(paymentMethod === "GCash" || paymentMethod === "Maya") ? (
@@ -2744,7 +2744,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  className="py-3 px-4 text-zinc-550 font-sans font-medium hover:text-emerald-500"
  title="Settled instant transaction date"
  >
- {new Date(s.createdAt).toLocaleString()}
+ {(s.createdAt && !isNaN(new Date(s.createdAt).getTime())) ? new Date(s.createdAt).toLocaleString() : "N/A"}
  </td>
  <td className="py-3 px-4 text-m3-on-surface font-sans font-extrabold">
  {s.customerName}
@@ -3388,7 +3388,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <div className="flex justify-between">
  <span>Terminal Date:</span>
  <span>
- {new Date(activeReceipt.createdAt).toLocaleString()}
+ {(activeReceipt?.createdAt && !isNaN(new Date(activeReceipt.createdAt).getTime())) ? new Date(activeReceipt.createdAt).toLocaleString() : "N/A"}
  </span>
  </div>
  <div className="flex justify-between">
@@ -4353,7 +4353,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  Settled Timestamp
  </span>
  <span className="font-mono mt-0.5 block">
- {new Date(selectedSaleDetail.createdAt).toLocaleString()}
+ {(selectedSaleDetail?.createdAt && !isNaN(new Date(selectedSaleDetail.createdAt).getTime())) ? new Date(selectedSaleDetail.createdAt).toLocaleString() : "N/A"}
  </span>
  </div>
  <div>

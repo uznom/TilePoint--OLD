@@ -2768,7 +2768,7 @@ export default function AtposExtraModules({
  onClick={() => setSelectedCalendarDay(day)}
  className={`p-2 min-h-[85px] border rounded-xl flex flex-col justify-between transition-all cursor-pointer ${
  isSelected
- ? "border-m3-primary bg-m3-primary/5 scale-102 ring-1 ring-m3-primary"
+ ? "border-m3-primary bg-m3-primary/5 scale-[1.02] ring-1 ring-m3-primary"
  : isToday
  ? "border-amber-500 bg-amber-500/10 ring-2 ring-amber-500/50 shadow-md shadow-amber-500/10"
  : isFullyPaid

@@ -650,7 +650,7 @@ export const SetupModule: React.FC = () => {
  />
  <label
  htmlFor="logo-upload"
- className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-[9px] font-extrabold uppercase tracking-widest text-zinc-800 dark:text-white border border-zinc-300 dark:border-zinc-850 rounded-lg cursor-pointer transition-all hover:scale-102"
+ className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-[9px] font-extrabold uppercase tracking-widest text-zinc-800 dark:text-white border border-zinc-300 dark:border-zinc-850 rounded-lg cursor-pointer transition-all hover:scale-[1.02]"
  >
  <Upload className="h-3 w-3" /> Select Image
  </label>

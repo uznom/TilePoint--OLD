@@ -727,8 +727,29 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  const [toastMessage, setToastMessage] = useState<string | null>(null);
  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
  const [confirmDeleteName, setConfirmDeleteName] = useState<string>('');
- const [targetBranchId, setTargetBranchId] = useState<string>('B1');
- const [importTargetBranchId, setImportTargetBranchId] = useState<string>('B1');
+ const getDefaultBranchId = (): string => {
+   if (currentUser?.branchAssignmentId && branches.some(b => b.id === currentUser.branchAssignmentId && !b.isDeleted)) {
+     return currentUser.branchAssignmentId;
+   }
+   const activeB = branches.find(b => !b.isDeleted);
+   if (activeB) return activeB.id;
+   return 'ETC_DIPOLOG MAIN';
+ };
+
+ const [targetBranchId, setTargetBranchId] = useState<string>(() => getDefaultBranchId());
+ const [importTargetBranchId, setImportTargetBranchId] = useState<string>(() => getDefaultBranchId());
+
+ useEffect(() => {
+   const activeDefaultId = getDefaultBranchId();
+   if (activeDefaultId) {
+     if (!branches.some(b => b.id === targetBranchId && !b.isDeleted)) {
+       setTargetBranchId(activeDefaultId);
+     }
+     if (!branches.some(b => b.id === importTargetBranchId && !b.isDeleted)) {
+       setImportTargetBranchId(activeDefaultId);
+     }
+   }
+ }, [branches, currentUser]);
  const [showBranchRecommendationBanner, setShowBranchRecommendationBanner] = useState<boolean>(true);
  const [showImportModal, setShowImportModal] = useState(false);
  const [rawImportText, setRawImportText] = useState('');
@@ -2408,7 +2429,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  if (mappedKey) {
  const numericFields = ['costPrice', 'sellingPrice', 'stockQuantity', 'minimumStock', 'boxQuantity', 'coveragePerBox', 'markupPercent'];
  if (numericFields.includes(mappedKey)) {
- const cleanVal = String(row[key]).replace(/[$,₱ ]/g, '').replace(/,/g, '');
+ const cleanVal = String(row[key]).replace(/[$,₱ %]/g, '').replace(/,/g, '');
  const valNum = parseFloat(cleanVal);
  mappedRow[mappedKey] = isNaN(valNum) ? 0 : valNum;
  } else {
@@ -2576,7 +2597,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  onClick={() => changeActiveSubTab('catalog')}
  className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
  activeSubTab === 'catalog'
- ? 'border-m3-primary text-m3-primary font-black scale-102'
+ ? 'border-m3-primary text-m3-primary font-black scale-[1.02]'
  : 'border-transparent text-m3-on-surface-variant'
  }`}
  >
@@ -2588,7 +2609,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  onClick={() => changeActiveSubTab('movements')}
  className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
  activeSubTab === 'movements'
- ? 'border-m3-primary text-m3-primary font-black scale-102'
+ ? 'border-m3-primary text-m3-primary font-black scale-[1.02]'
  : 'border-transparent text-m3-on-surface-variant'
  }`}
  >
@@ -2600,7 +2621,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  onClick={() => changeActiveSubTab('transfers')}
  className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl relative ${
  activeSubTab === 'transfers'
- ? 'border-m3-primary text-m3-primary font-black scale-102'
+ ? 'border-m3-primary text-m3-primary font-black scale-[1.02]'
  : 'border-transparent text-m3-on-surface-variant'
  }`}
  >
@@ -2617,7 +2638,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  onClick={() => changeActiveSubTab('ledger')}
  className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
  activeSubTab === 'ledger'
- ? 'border-m3-primary text-m3-primary font-black scale-102'
+ ? 'border-m3-primary text-m3-primary font-black scale-[1.02]'
  : 'border-transparent text-m3-on-surface-variant'
  }`}
  >
@@ -2629,7 +2650,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  onClick={() => changeActiveSubTab('import')}
  className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
  activeSubTab === 'import'
- ? 'border-m3-primary text-m3-primary font-black scale-102'
+ ? 'border-m3-primary text-m3-primary font-black scale-[1.02]'
  : 'border-transparent text-m3-on-surface-variant'
  }`}
  >
@@ -2641,7 +2662,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  onClick={() => changeActiveSubTab('branch-prices')}
  className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
  activeSubTab === 'branch-prices'
- ? 'border-m3-primary text-m3-primary font-black scale-102'
+ ? 'border-m3-primary text-m3-primary font-black scale-[1.02]'
  : 'border-transparent text-m3-on-surface-variant'
  }`}
  >
@@ -2653,7 +2674,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  onClick={() => changeActiveSubTab('expiry')}
  className={`flex items-center gap-2 py-3 px-4 md:px-5 text-xs font-black uppercase tracking-wider transition-all duration-200 border-b-2 hover:bg-m3-surface-low rounded-t-xl ${
  activeSubTab === 'expiry'
- ? 'border-m3-primary text-m3-primary font-black scale-102'
+ ? 'border-m3-primary text-m3-primary font-black scale-[1.02]'
  : 'border-transparent text-m3-on-surface-variant'
  }`}
  >
@@ -2676,6 +2697,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  )}
 
  {/* INVENTORY DASHBOARD SUMMARY STATS */}
+ {['catalog', 'movements', 'ledger'].includes(activeSubTab) && (
  <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
  {/* Total SKUs */}
  <div className="p-4 rounded-3xl bg-m3-surface-low border border-m3-outline-variant/30 flex items-center gap-3.5 relative shadow-sm overflow-hidden group">
@@ -2752,6 +2774,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  </div>
  </div>
  </div>
+ )}
 
  {/* VIEW 1: CATALOG STOCK LEDGER */}
  {activeSubTab === 'catalog' && (
@@ -4202,162 +4225,242 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   {/* ---------------------------------------------------------------------- */}
   {activeSubTab === 'import' && (
     <div className="space-y-6 text-left animate-fade-in">
+      {/* Tool Header & Mode Selector */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-m3-surface-low p-5 rounded-[24px] border border-m3-outline-variant/20 shadow-sm">
         <div>
           <h2 className="text-base font-black text-m3-on-surface uppercase tracking-wider flex items-center gap-2">
             <Database className="h-5 w-5 text-emerald-500" />
-            <span>Data Portability & Legacy ERP Migration Hub</span>
+            <span>Migration & Import / Export Tool</span>
           </h2>
           <p className="text-xs text-m3-on-surface-variant font-medium mt-0.5">
-            Import tile products, bulk CSV lists, or backup catalog files into TilePoint enterprise database.
+            Import tile catalog CSV or JSON files into TilePoint database or download full system backups.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowPortabilityHubModal(true)}
-          className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center gap-2 cursor-pointer active:scale-95"
-        >
-          <Database className="h-4 w-4" />
-          <span>Launch Full Import / Export Wizard</span>
-        </button>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Drag & Drop Import Box */}
-        <div className="bg-m3-surface p-6 rounded-2xl border border-m3-outline-variant/20 space-y-4">
-          <h3 className="text-sm font-black text-m3-on-surface uppercase tracking-wider flex items-center gap-2">
-            <Plus className="h-4 w-4 text-m3-primary" />
-            <span>Quick CSV / JSON Import</span>
-          </h3>
-          <p className="text-xs text-m3-on-surface-variant leading-relaxed">
-            Drag and drop your exported product CSV or JSON array below, or paste raw JSON text to migrate inventory datasets directly into TilePoint.
-          </p>
-          <div
-            onDragOver={handleImportDragOver}
-            onDragLeave={handleImportDragLeave}
-            onDrop={handleImportDrop}
-            className="border-2 border-dashed border-m3-outline-variant/30 hover:border-m3-primary p-8 rounded-2xl text-center cursor-pointer transition-all bg-m3-surface-low hover:bg-m3-primary/5 space-y-2"
-            onClick={() => setShowPortabilityHubModal(true)}
-          >
-            <Database className="h-8 w-8 text-m3-primary mx-auto animate-bounce" />
-            <div className="text-xs font-black text-m3-on-surface">Click or Drag & Drop Catalog Files Here</div>
-            <div className="text-[10.5px] text-m3-on-surface-variant font-mono">Supports .csv, .json format exports</div>
-          </div>
-        </div>
-
-        {/* Export Data Backup Card */}
-        <div className="bg-m3-surface p-6 rounded-2xl border border-m3-outline-variant/20 space-y-4">
-          <h3 className="text-sm font-black text-m3-on-surface uppercase tracking-wider flex items-center gap-2">
-            <Sliders className="h-4 w-4 text-m3-primary" />
-            <span>System Data Export & Backups</span>
-          </h3>
-          <p className="text-xs text-m3-on-surface-variant leading-relaxed">
-            Download local backup copies of your entire product catalog, branch stock levels, and transaction logs.
-          </p>
-          <div className="space-y-2 pt-2">
-            <button
-              type="button"
-              onClick={() => {
-                const jsonStr = JSON.stringify(products, null, 2);
-                const filename = `tilepoint_catalog_export_${new Date().toISOString().slice(0, 10)}.json`;
-                saveFileToBackup(jsonStr, filename, "Inventory_Exports", "application/json")
-                  .then((res) => {
-                    showToast(`Product catalog JSON backup saved to ${res.path || filename}!`);
-                  })
-                  .catch(() => {
-                    const blob = new Blob([jsonStr], { type: "application/json" });
-                    const url = URL.createObjectURL(blob);
-                    const downloadAnchor = document.createElement("a");
-                    downloadAnchor.setAttribute("href", url);
-                    downloadAnchor.setAttribute("download", filename);
-                    document.body.appendChild(downloadAnchor);
-                    downloadAnchor.click();
-                    downloadAnchor.remove();
-                    URL.revokeObjectURL(url);
-                    showToast("Product catalog JSON backup downloaded!");
-                  });
-              }}
-              className="w-full py-2.5 px-4 rounded-xl bg-m3-surface-low hover:bg-m3-surface-high border border-m3-outline-variant/30 text-xs font-extrabold text-m3-on-surface transition-all text-left flex items-center justify-between cursor-pointer"
-            >
-              <span>Export Product Catalog (.JSON)</span>
-              <span className="text-[10px] text-m3-primary font-mono">{branchProducts.length} Branch Products</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const csvHeader = "ID,Product Code,Product Name,Category,Brand,Selling Price,Stock Quantity\n";
-                const csvRows = branchProducts.map(p => `"${p.id}","${p.productCode}","${p.productName}","${p.category}","${p.brand}",${p.sellingPrice},${p.stockQuantity}`).join("\n");
-                const csvContent = "\uFEFF" + csvHeader + csvRows;
-                const filename = `tilepoint_catalog_${new Date().toISOString().slice(0, 10)}.csv`;
-
-                saveFileToBackup(csvContent, filename, "Inventory_Exports", "text/csv;charset=utf-8;")
-                  .then((res) => {
-                    showToast(`Product catalog CSV exported to ${res.path || filename}!`);
-                  })
-                  .catch(() => {
-                    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-                    const url = URL.createObjectURL(blob);
-                    const downloadAnchor = document.createElement("a");
-                    downloadAnchor.setAttribute("href", url);
-                    downloadAnchor.setAttribute("download", filename);
-                    document.body.appendChild(downloadAnchor);
-                    downloadAnchor.click();
-                    downloadAnchor.remove();
-                    URL.revokeObjectURL(url);
-                    showToast("Product catalog CSV exported!");
-                  });
-              }}
-              className="w-full py-2.5 px-4 rounded-xl bg-m3-surface-low hover:bg-m3-surface-high border border-m3-outline-variant/30 text-xs font-extrabold text-m3-on-surface transition-all text-left flex items-center justify-between cursor-pointer"
-            >
-              <span>Export Inventory CSV Spreadsheet</span>
-              <span className="text-[10px] text-emerald-500 font-mono">.CSV Table</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Embedded Pre-Flight Schema & Branch Compatibility Inspector */}
-      <div className="bg-m3-surface p-6 rounded-2xl border border-m3-outline-variant/20 space-y-4">
-        <div className="flex justify-between items-center flex-wrap gap-2">
-          <div>
-            <h3 className="text-sm font-black text-m3-on-surface uppercase tracking-wider flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-emerald-500" />
-              <span>Pre-Flight Schema & Branch Compatibility Inspector</span>
-            </h3>
-            <p className="text-xs text-m3-on-surface-variant mt-0.5">
-              Paste raw JSON or upload files to inspect structural integrity and branch location compatibility before committing to local DB.
-            </p>
-          </div>
+        {/* Tab Switcher: Import vs Export */}
+        <div className="flex bg-m3-surface p-1 rounded-xl border border-m3-outline-variant/20 shrink-0">
           <button
             type="button"
-            onClick={handleRunPreflightManual}
-            disabled={!rawImportText.trim() || isAnalyzingPreflight}
-            className="px-4 py-2 bg-m3-primary hover:bg-m3-primary/95 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            onClick={() => setMigrationSubTab('import')}
+            className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+              migrationSubTab === 'import'
+                ? 'bg-m3-primary text-white shadow-sm'
+                : 'text-m3-on-surface-variant hover:text-m3-on-surface'
+            }`}
           >
-            <ShieldCheck className="h-4 w-4" />
-            <span>Run Pre-Flight Inspection</span>
+            <Upload className="h-3.5 w-3.5" />
+            <span>Import & Migration</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMigrationSubTab('export')}
+            className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+              migrationSubTab === 'export'
+                ? 'bg-m3-primary text-white shadow-sm'
+                : 'text-m3-on-surface-variant hover:text-m3-on-surface'
+            }`}
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span>Export & Backups</span>
           </button>
         </div>
-
-        <div className="space-y-1">
-          <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider block">Raw JSON / Backup Payload Input</label>
-          <textarea
-            value={rawImportText}
-            onChange={(e) => setRawImportText(e.target.value)}
-            rows={6}
-            placeholder="Paste raw JSON array, StockTally JSON, or sealed backup snapshot here..."
-            className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 focus:border-m3-primary p-3.5 text-xs font-mono text-m3-on-surface rounded-2xl focus:outline-none transition-colors"
-          />
-        </div>
-
-        <PreflightReportCard
-          report={preflightReport}
-          isAnalyzing={isAnalyzingPreflight}
-          onRunInspection={handleRunPreflightManual}
-          onConfirmCommit={executeBulkImport}
-          allowedToImport={allowedToImport}
-        />
       </div>
+
+      {/* MODE 1: IMPORT & MIGRATION */}
+      {migrationSubTab === 'import' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Target Branch Selection */}
+          <div className="p-4 rounded-2xl bg-m3-surface border border-m3-outline-variant/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+            <div className="flex items-center gap-2 text-xs font-black uppercase text-m3-primary tracking-wider">
+              <MapPin className="h-4 w-4" />
+              <span>Target Destination Branch Allocation</span>
+            </div>
+            {currentUser?.role === UserRole.ADMIN ? (
+              <select
+                value={importTargetBranchId}
+                onChange={e => setImportTargetBranchId(e.target.value)}
+                className="bg-m3-surface-lowest border border-m3-outline-variant/30 px-3 py-2 text-xs font-bold text-m3-on-surface rounded-xl focus:outline-none focus:border-m3-primary cursor-pointer max-w-md w-full sm:w-auto"
+              >
+                {branches.filter(b => !b.isDeleted).map(b => (
+                  <option key={b.id} value={b.id}>
+                    {b.name} ({b.id}) - {b.address}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="px-3 py-1.5 text-xs font-bold text-m3-on-surface bg-m3-surface-low rounded-xl border border-m3-outline-variant/20 flex items-center gap-2">
+                <span>{branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name}</span>
+                <span className="text-[10px] font-mono text-m3-tertiary">({currentUser?.branchAssignmentId || 'B1'})</span>
+              </div>
+            )}
+          </div>
+
+          {/* Upload Box & Drag Zone */}
+          <div className="bg-m3-surface p-6 rounded-2xl border border-m3-outline-variant/20 space-y-4">
+            <h3 className="text-sm font-black text-m3-on-surface uppercase tracking-wider flex items-center gap-2">
+              <Upload className="h-4 w-4 text-emerald-500" />
+              <span>Upload CSV / JSON Dataset</span>
+            </h3>
+            
+            <div
+              onDragOver={handleImportDragOver}
+              onDragLeave={handleImportDragLeave}
+              onDrop={handleImportDrop}
+              onClick={() => {
+                const fileInput = document.getElementById('inventory-import-file-input');
+                if (fileInput) fileInput.click();
+              }}
+              className="border-2 border-dashed border-m3-outline-variant/30 hover:border-m3-primary p-8 rounded-2xl text-center cursor-pointer transition-all bg-m3-surface-low hover:bg-m3-primary/5 space-y-2 group"
+            >
+              <input
+                id="inventory-import-file-input"
+                type="file"
+                accept=".csv,.json,text/csv,application/json"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <Database className="h-8 w-8 text-m3-primary mx-auto group-hover:scale-110 transition-transform" />
+              <div className="text-xs font-black text-m3-on-surface">Click to Browse or Drag & Drop Catalog Files Here</div>
+              <div className="text-[10.5px] text-m3-on-surface-variant font-mono">Supports .CSV spreadsheet tables and .JSON exports</div>
+            </div>
+          </div>
+
+          {/* Raw Text Input & Inspector */}
+          <div className="bg-m3-surface p-6 rounded-2xl border border-m3-outline-variant/20 space-y-4">
+            <div className="flex justify-between items-center flex-wrap gap-2">
+              <div>
+                <h3 className="text-sm font-black text-m3-on-surface uppercase tracking-wider flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                  <span>Pre-Flight Schema & Validation Inspector</span>
+                </h3>
+                <p className="text-xs text-m3-on-surface-variant mt-0.5">
+                  Paste raw JSON array or CSV text, or check loaded dataset before committing to live inventory.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleRunPreflightManual}
+                disabled={!rawImportText.trim() || isAnalyzingPreflight}
+                className="px-4 py-2 bg-m3-primary hover:bg-m3-primary/95 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                <span>Run Pre-Flight Inspection</span>
+              </button>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider block">Raw Data / Payload Preview</label>
+              <textarea
+                value={rawImportText}
+                onChange={(e) => setRawImportText(e.target.value)}
+                rows={5}
+                placeholder="Paste raw JSON array or CSV text content here..."
+                className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 focus:border-m3-primary p-3.5 text-xs font-mono text-m3-on-surface rounded-2xl focus:outline-none transition-colors"
+              />
+            </div>
+
+            <PreflightReportCard
+              report={preflightReport}
+              isAnalyzing={isAnalyzingPreflight}
+              onRunInspection={handleRunPreflightManual}
+              onConfirmCommit={executeBulkImport}
+              allowedToImport={allowedToImport}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* MODE 2: EXPORT & BACKUPS */}
+      {migrationSubTab === 'export' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+          {/* JSON Export Card */}
+          <div className="bg-m3-surface p-6 rounded-2xl border border-m3-outline-variant/20 space-y-4 flex flex-col justify-between">
+            <div className="space-y-2">
+              <h3 className="text-sm font-black text-m3-on-surface uppercase tracking-wider flex items-center gap-2">
+                <Database className="h-4 w-4 text-m3-primary" />
+                <span>Export Product Catalog (.JSON)</span>
+              </h3>
+              <p className="text-xs text-m3-on-surface-variant leading-relaxed">
+                Download a complete, structured JSON backup of your active product listings and metadata suitable for cross-system database restores.
+              </p>
+            </div>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const jsonStr = JSON.stringify(products, null, 2);
+                  const filename = `tilepoint_catalog_export_${new Date().toISOString().slice(0, 10)}.json`;
+                  saveFileToBackup(jsonStr, filename, "Inventory_Exports", "application/json")
+                    .then((res) => {
+                      showToast(`Product catalog JSON backup saved to ${res.path || filename}!`);
+                    })
+                    .catch(() => {
+                      const blob = new Blob([jsonStr], { type: "application/json" });
+                      const url = URL.createObjectURL(blob);
+                      const downloadAnchor = document.createElement("a");
+                      downloadAnchor.setAttribute("href", url);
+                      downloadAnchor.setAttribute("download", filename);
+                      document.body.appendChild(downloadAnchor);
+                      downloadAnchor.click();
+                      downloadAnchor.remove();
+                      URL.revokeObjectURL(url);
+                      showToast("Product catalog JSON backup downloaded!");
+                    });
+                }}
+                className="w-full py-3 px-4 rounded-xl bg-m3-primary hover:bg-m3-primary/95 text-white font-black text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-between shadow-md"
+              >
+                <span className="flex items-center gap-2"><Download className="h-4 w-4" /> Download JSON Backup</span>
+                <span className="text-[10px] font-mono bg-white/20 px-2 py-0.5 rounded-full">{branchProducts.length} Items</span>
+              </button>
+            </div>
+          </div>
+
+          {/* CSV Export Card */}
+          <div className="bg-m3-surface p-6 rounded-2xl border border-m3-outline-variant/20 space-y-4 flex flex-col justify-between">
+            <div className="space-y-2">
+              <h3 className="text-sm font-black text-m3-on-surface uppercase tracking-wider flex items-center gap-2">
+                <Sliders className="h-4 w-4 text-emerald-500" />
+                <span>Export Inventory CSV Spreadsheet</span>
+              </h3>
+              <p className="text-xs text-m3-on-surface-variant leading-relaxed">
+                Export standard UTF-8 encoded CSV files compatible with Microsoft Excel, Google Sheets, or third-party POS/ERP accounting tools.
+              </p>
+            </div>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const csvHeader = "ID,Product Code,Product Name,Category,Brand,Selling Price,Stock Quantity\n";
+                  const csvRows = branchProducts.map(p => `"${p.id}","${p.productCode}","${p.productName}","${p.category}","${p.brand}",${p.sellingPrice},${p.stockQuantity}`).join("\n");
+                  const csvContent = "\uFEFF" + csvHeader + csvRows;
+                  const filename = `tilepoint_catalog_${new Date().toISOString().slice(0, 10)}.csv`;
+
+                  saveFileToBackup(csvContent, filename, "Inventory_Exports", "text/csv;charset=utf-8;")
+                    .then((res) => {
+                      showToast(`Product catalog CSV exported to ${res.path || filename}!`);
+                    })
+                    .catch(() => {
+                      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+                      const url = URL.createObjectURL(blob);
+                      const downloadAnchor = document.createElement("a");
+                      downloadAnchor.setAttribute("href", url);
+                      downloadAnchor.setAttribute("download", filename);
+                      document.body.appendChild(downloadAnchor);
+                      downloadAnchor.click();
+                      downloadAnchor.remove();
+                      URL.revokeObjectURL(url);
+                      showToast("Product catalog CSV exported!");
+                    });
+                }}
+                className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-between shadow-md"
+              >
+                <span className="flex items-center gap-2"><Download className="h-4 w-4" /> Download CSV Spreadsheet</span>
+                <span className="text-[10px] font-mono bg-white/20 px-2 py-0.5 rounded-full">.CSV Table</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )}
 

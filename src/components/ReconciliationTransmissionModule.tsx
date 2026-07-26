@@ -34,7 +34,7 @@ export const ReconciliationTransmissionModule: React.FC<ReconciliationTransmissi
           onClick={() => setActiveSubTab("reconciliation")}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
             activeSubTab === "reconciliation"
-              ? "bg-m3-primary text-m3-on-primary shadow-md scale-[1.02]"
+              ? "bg-m3-primary text-m3-on-primary shadow-md"
               : "text-m3-on-surface-variant hover:bg-m3-surface-high/60 hover:text-m3-on-surface"
           }`}
         >
@@ -47,12 +47,12 @@ export const ReconciliationTransmissionModule: React.FC<ReconciliationTransmissi
             onClick={() => setActiveSubTab("transmission")}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
               activeSubTab === "transmission"
-                ? "bg-m3-primary text-m3-on-primary shadow-md scale-[1.02]"
+                ? "bg-m3-primary text-m3-on-primary shadow-md"
                 : "text-m3-on-surface-variant hover:bg-m3-surface-high/60 hover:text-m3-on-surface"
             }`}
           >
             <Send className="h-4 w-4" />
-            <span>Reports Transmission</span>
+            <span>HQ Transmission Hub</span>
           </button>
         )}
 
@@ -61,12 +61,12 @@ export const ReconciliationTransmissionModule: React.FC<ReconciliationTransmissi
             onClick={() => setActiveSubTab("import")}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
               activeSubTab === "import"
-                ? "bg-amber-600 dark:bg-amber-500 text-white shadow-md scale-[1.02]"
+                ? "bg-amber-600 dark:bg-amber-500 text-white shadow-md"
                 : "text-m3-on-surface-variant hover:bg-m3-surface-high/60 hover:text-m3-on-surface"
             }`}
           >
             <Upload className="h-4 w-4" />
-            <span>Admin JSON Import</span>
+            <span>Admin JSON Ingestion</span>
           </button>
         )}
 
