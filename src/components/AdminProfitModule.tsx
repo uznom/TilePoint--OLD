@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { useDb } from "../context/DbContext";
 import { UserRole } from "../types/db";
 import { saveFileToBackup } from "../lib/fileBackupHelper";
-import { generateTransactionCsv, autoSaveDailyTransactionCsv, downloadWindowsLauncherScript } from "../lib/transactionLogger";
+import { generateTransactionCsv, downloadWindowsLauncherScript } from "../lib/transactionLogger";
 import { Download, Search, HardDrive, Terminal } from "lucide-react";
 import { ProfitAnalytics } from "./ProfitAnalytics";
 import {
@@ -474,6 +474,26 @@ export function AdminProfitModule({
  };
  }).sort((a, b) => b.net - a.net);
  }, [branches, sales, saleItems, products, expenses, damageLogs, shifts, branchLandingModifiers, customBills, purchaseOrders]);
+
+  const consolidatedSummary = useMemo(() => {
+    const gross = branchLeaderboard.reduce((acc, b) => acc + b.gross, 0);
+    const cogs = branchLeaderboard.reduce((acc, b) => acc + b.cogs, 0);
+    const opex = branchLeaderboard.reduce((acc, b) => acc + b.opex, 0);
+    const loss = branchLeaderboard.reduce((acc, b) => acc + b.loss, 0);
+    const net = branchLeaderboard.reduce((acc, b) => acc + b.net, 0);
+    const margin = gross > 0 ? (net / gross) * 100 : 0;
+
+    return {
+      id: "all",
+      name: "Consolidated (All Branches)",
+      gross,
+      cogs,
+      opex,
+      loss,
+      net,
+      margin,
+    };
+  }, [branchLeaderboard]);
 
  return (
  <div className="space-y-6" id="isolated-accounting-console">
@@ -1087,9 +1107,18 @@ export function AdminProfitModule({
  </h3>
  <p className="text-[11px] text-zinc-400 dark:text-zinc-300">Real-time profitability leaderboard of enterprise nodes</p>
  </div>
- <span className="text-[9px] font-mono bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-lg border border-emerald-500/20 font-bold">
- Consolidated Rankings
- </span>
+   <button
+    onClick={() => setSelectedBranchId("all")}
+    className={`text-[9px] font-mono px-2.5 py-1 rounded-lg border font-bold cursor-pointer transition-all flex items-center gap-1 ${
+      selectedBranchId === "all"
+        ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-sm ring-1 ring-emerald-500/30 font-black"
+        : "bg-m3-surface-low text-zinc-400 border-m3-outline-variant/20 hover:bg-emerald-500/10 hover:text-emerald-400"
+    }`}
+    title="Click to view Consolidated All Branches in Financial Health Trend Matrix"
+  >
+    <Layers className="h-3 w-3" />
+    Consolidated View {selectedBranchId === "all" ? "✓ Active" : ""}
+  </button>
  </div>
 
  <div className="overflow-x-auto">
@@ -1105,8 +1134,36 @@ export function AdminProfitModule({
  <th className="py-2.5 text-right pr-2">Net Marg</th>
  </tr>
  </thead>
- <tbody className="divide-y divide-m3-outline-variant/10">
- {branchLeaderboard.map((item, index) => {
+   <tbody className="divide-y divide-m3-outline-variant/10">
+    {/* Consolidated Enterprise Row */}
+    <tr
+      key="consolidated-all"
+      className={`transition-colors cursor-pointer border-b-2 border-m3-outline-variant/25 ${
+        selectedBranchId === "all"
+          ? "bg-m3-primary/10 font-black text-m3-primary dark:bg-m3-primary/20"
+          : "hover:bg-m3-primary/5 bg-m3-surface-low/60 font-bold text-m3-on-surface"
+      }`}
+      onClick={() => setSelectedBranchId("all")}
+    >
+      <td className="py-3 font-extrabold flex items-center gap-2">
+        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-emerald-500/20 text-emerald-500 dark:text-emerald-400 font-black uppercase tracking-wider">
+          ALL
+        </span>
+        <span className="truncate">{consolidatedSummary.name}</span>
+      </td>
+      <td className="py-3 text-right font-mono font-bold">₱{consolidatedSummary.gross.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+      <td className="py-3 text-right font-mono text-zinc-400 dark:text-zinc-300">₱{consolidatedSummary.cogs.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+      <td className="py-3 text-right font-mono text-zinc-400 dark:text-zinc-300">₱{consolidatedSummary.opex.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+      <td className="py-3 text-right font-mono text-zinc-400 dark:text-zinc-300">₱{consolidatedSummary.loss.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+      <td className={`py-3 text-right font-mono font-black ${consolidatedSummary.net >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+        ₱{consolidatedSummary.net.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+      </td>
+      <td className={`py-3 text-right pr-2 font-mono font-black ${consolidatedSummary.margin >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+        {consolidatedSummary.margin.toFixed(1)}%
+      </td>
+    </tr>
+
+  {branchLeaderboard.map((item, index) => {
  const rankBadge = index === 0 ? "1st" : index === 1 ? "2nd" : index === 2 ? "3rd" : `#${index + 1}`;
  
  return (
@@ -1148,7 +1205,7 @@ export function AdminProfitModule({
  
  <div className="text-[10px] text-zinc-500 dark:text-zinc-400 font-sans italic pt-4 mt-4 border-t border-m3-outline-variant/10 text-center flex items-center justify-center gap-2">
  <Sparkles className="h-3.5 w-3.5 text-m3-primary" />
- <span>Click on any branch row to filter and isolate P&L timelines above.</span>
+   <span>Click on any branch row or Consolidated to filter and isolate P&L timelines above.</span>
  </div>
  </div>
 
@@ -1478,9 +1535,8 @@ export function AdminProfitModule({
       <div className="p-3 bg-zinc-900 text-white rounded-xl space-y-2 border border-zinc-800">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
             <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
-              Automated Background CSV Logger Active
+              Transaction History CSV Export Hub
             </span>
           </div>
           <span className="text-[10px] font-mono bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded">
@@ -1489,26 +1545,10 @@ export function AdminProfitModule({
         </div>
         
         <p className="text-[11px] text-zinc-300 leading-relaxed">
-          Every completed sales transaction is automatically logged in <code className="text-amber-300 font-mono">TilePoint_Backups/Sales_Reports/</code> in real time without location prompts.
+          Export full store transaction logs formatted for ledger audits or launch the Windows LAN connector.
         </p>
 
         <div className="flex flex-wrap items-center gap-2 pt-1">
-          <button
-            type="button"
-            onClick={async () => {
-              const res = await autoSaveDailyTransactionCsv(sales, saleItems, branches);
-              if (res.success) {
-                setCsvSyncStatus("Successfully updated background transaction CSV logs!");
-              } else {
-                setCsvSyncStatus("Downloaded CSV backup to default downloads.");
-              }
-              setTimeout(() => setCsvSyncStatus(null), 3000);
-            }}
-            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <RefreshCw className="h-3 w-3" />
-            <span>Force CSV Sync</span>
-          </button>
 
           <button
             type="button"

@@ -21,7 +21,6 @@ import {
  generateSessionToken,
 } from "../lib/crypto";
 import { saveFileToBackup } from "../lib/fileBackupHelper";
-import { autoSaveDailyTransactionCsv } from "../lib/transactionLogger";
 import { isProductInBranch, slugifyBranchStr } from "../lib/branchUtils";
 import {
  User,
@@ -2029,15 +2028,6 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return safeParse<Member[]>("atpos_v2_members_list", []);
  });
 
- // Background Transaction CSV Logger Trigger
-  useEffect(() => {
-    if (sales.length > 0 && typeof window !== "undefined") {
-      const timer = setTimeout(() => {
-        autoSaveDailyTransactionCsv(sales, saleItems, branches);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [sales.length, saleItems.length, branches.length]);
 
   const [expenses, setExpenses] = useState<Expense[]>(() => {
  return safeParse<Expense[]>("atpos_v2_expenses", []);

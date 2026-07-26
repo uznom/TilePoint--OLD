@@ -593,15 +593,15 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  setLedgerPerPage(responsiveLedgerPerPage);
  }, [responsiveLedgerPerPage]);
 
- // Reset prodPage when filters or page size changes
- useEffect(() => {
- setProdPage(1);
- }, [term, categoryFilter, statusFilter, prodsPerPage]);
+   // Reset prodPage when filters change
+  useEffect(() => {
+    setProdPage(1);
+  }, [term, categoryFilter, statusFilter]);
 
- // Reset ledgerPage when sub-tab or page size changes
- useEffect(() => {
- setLedgerPage(1);
- }, [activeSubTab, ledgerPerPage]);
+  // Reset ledgerPage when sub-tab changes
+  useEffect(() => {
+    setLedgerPage(1);
+  }, [activeSubTab]);
 
  // Stock Transfer Creation Form States
  const [showCreateTransfer, setShowCreateTransfer] = useState(false);
@@ -1026,6 +1026,12 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  }, [branchProducts, branchStock, term, categoryFilter, statusFilter, selectedViewBranchId]);
 
  const totalProdPages = Math.ceil(filteredProducts.length / prodsPerPage) || 1;
+
+ useEffect(() => {
+ if (prodPage > totalProdPages && totalProdPages > 0) {
+ setProdPage(totalProdPages);
+ }
+ }, [prodPage, totalProdPages]);
  const paginatedProducts = React.useMemo(() => {
  return filteredProducts.slice((prodPage - 1) * prodsPerPage, prodPage * prodsPerPage);
  }, [filteredProducts, prodPage, prodsPerPage]);
@@ -1070,6 +1076,12 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  }, [ledgerEntries, activeBranchId, branches, products, branchStock]);
 
  const totalLedgerPages = Math.ceil(filteredLedgerEntries.length / ledgerPerPage) || 1;
+
+ useEffect(() => {
+ if (ledgerPage > totalLedgerPages && totalLedgerPages > 0) {
+ setLedgerPage(totalLedgerPages);
+ }
+ }, [ledgerPage, totalLedgerPages]);
  const paginatedLedger = React.useMemo(() => {
    return filteredLedgerEntries.slice((ledgerPage - 1) * ledgerPerPage, ledgerPage * ledgerPerPage);
  }, [filteredLedgerEntries, ledgerPage, ledgerPerPage]);

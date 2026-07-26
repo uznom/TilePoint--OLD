@@ -123,12 +123,16 @@ async function verifyPermission(fileHandle: any, readWrite: boolean): Promise<bo
  }
  }
  if (typeof fileHandle.requestPermission === 'function') {
+ try {
  if ((await fileHandle.requestPermission(options)) === 'granted') {
  return true;
  }
+ } catch {
+ return false;
+ }
  }
  } catch (e) {
- console.error('[Backup Helper] Permission verification failed:', e);
+ console.warn('[Backup Helper] Permission verification failed:', e);
  }
  return false;
 }
@@ -388,7 +392,7 @@ export async function saveFileToBackup(
  
  // Specifying "TilePoint_Backups/Category/Filename" in the download attribute
  // directs the browser to structure it into subfolders inside their default Downloads folder automatically.
- a.download = `TilePoint_Backups/${category}/${filename}`;
+  a.download = filename;
  a.style.display = 'none';
  document.body.appendChild(a);
  a.click();
