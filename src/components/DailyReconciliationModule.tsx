@@ -1025,8 +1025,14 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                   <tbody>
                     {stats.expenses.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="p-6 text-center text-m3-on-surface-variant italic">
-                          No operating expenses logged for this branch on selected date.
+                        <td colSpan={4} className="p-8 text-center">
+                          <div className="flex flex-col items-center justify-center space-y-2 py-4">
+                            <Receipt className="h-8 w-8 text-rose-400/40" />
+                            <p className="font-bold text-xs text-m3-on-surface">No Operating Expenses Logged</p>
+                            <p className="text-[11px] text-m3-on-surface-variant max-w-xs">
+                              No operating expenses logged for this branch on the selected reporting date.
+                            </p>
+                          </div>
                         </td>
                       </tr>
                     ) : (

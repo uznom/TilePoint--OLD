@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { useDb } from "../context/DbContext";
 import { Member, Expense, ProductReturn, CustomCorporateBill, UserRole } from "../types/db";
+import { saveFileToBackup } from "../lib/fileBackupHelper";
 
 interface AtposExtraModulesProps {
  activeSubTab: string;
@@ -520,9 +521,12 @@ export default function AtposExtraModules({
  </div>
 
  <span className="self-start md:self-auto px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-m3-primary/10 text-m3-primary border border-m3-primary/25">
- {db.currentUser?.branchAssignmentId === "B1"
- ? "EMMAN MAIN BRANCH"
- : "BRANCH REGION B4"}
+ {(() => {
+ const currentBranch = db.branches.find(b => b.id === db.currentUser?.branchAssignmentId);
+ if (currentBranch) return currentBranch.name.toUpperCase();
+ if (db.currentUser?.branchAssignmentId) return `BRANCH REGION ${db.currentUser.branchAssignmentId}`;
+ return "CENTRAL HEADQUARTERS";
+ })()}
  </span>
  </div>
 
@@ -724,13 +728,48 @@ export default function AtposExtraModules({
  </tr>
  </thead>
  <tbody>
- {members
- .filter((m) =>
- m.fullName
- .toLowerCase()
- .includes(memberSearch.toLowerCase()),
- )
- .map((m) => (
+ {(() => {
+ const filteredMembers = members.filter((m) =>
+ m.fullName.toLowerCase().includes(memberSearch.toLowerCase()) ||
+ m.phone.toLowerCase().includes(memberSearch.toLowerCase()) ||
+ m.email.toLowerCase().includes(memberSearch.toLowerCase()) ||
+ m.id.toLowerCase().includes(memberSearch.toLowerCase())
+ );
+
+ if (filteredMembers.length === 0) {
+ return (
+ <tr>
+ <td colSpan={5} className="p-8 text-center">
+ <div className="flex flex-col items-center justify-center space-y-2.5 py-6">
+ <div className="h-12 w-12 rounded-2xl bg-m3-primary/10 text-m3-primary flex items-center justify-center shadow-inner border border-m3-primary/15">
+ <Users className="h-6 w-6" />
+ </div>
+ <div className="space-y-1">
+ <p className="font-extrabold text-sm text-m3-on-surface">
+ {memberSearch ? "No Matching Client Members Found" : "No Registered Client Members"}
+ </p>
+ <p className="text-xs text-m3-on-surface-variant max-w-sm mx-auto leading-relaxed">
+ {memberSearch
+ ? `No customer profile matches "${memberSearch}". Check spelling or clear your filter.`
+ : "No corporate or retail members registered yet. Use the client enrollment form on the left to add members."}
+ </p>
+ </div>
+ {memberSearch && (
+ <button
+ type="button"
+ onClick={() => setMemberSearch("")}
+ className="mt-1 px-3 py-1.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary text-xs font-bold rounded-lg transition-colors cursor-pointer border-0"
+ >
+ Clear Search Filter
+ </button>
+ )}
+ </div>
+ </td>
+ </tr>
+ );
+ }
+
+ return filteredMembers.map((m) => (
  <tr
  key={m.id}
  className="border-b border-m3-outline-variant/10 hover:bg-m3-primary/10 transition-all cursor-pointer"
@@ -765,7 +804,8 @@ export default function AtposExtraModules({
  ₱{m.outstandingBalance.toLocaleString("en-US")}
  </td>
  </tr>
- ))}
+ ));
+ })()}
  </tbody>
  </table>
  </div>
@@ -790,9 +830,22 @@ export default function AtposExtraModules({
  Select Account Client *
  </label>
  <div className="space-y-1 max-h-48 overflow-y-auto border border-m3-outline-variant rounded-lg divide-y divide-m3-outline-variant/15">
- {members
- .filter((m) => m.outstandingBalance > 0)
- .map((m) => (
+ {(() => {
+ const receivableMembers = members.filter((m) => m.outstandingBalance > 0);
+
+ if (receivableMembers.length === 0) {
+ return (
+ <div className="p-6 text-center text-xs space-y-2 bg-m3-surface-lowest/50 rounded-lg">
+ <CheckCircle2 className="h-7 w-7 text-emerald-500 mx-auto opacity-90" />
+ <p className="font-extrabold text-m3-on-surface">All Accounts Fully Settled</p>
+ <p className="text-[11px] text-m3-on-surface-variant max-w-xs mx-auto leading-relaxed">
+ There are currently no registered client accounts with outstanding credit balances.
+ </p>
+ </div>
+ );
+ }
+
+ return receivableMembers.map((m) => (
  <button
  key={m.id}
  onClick={() => setSelectedMember(m)}
@@ -812,7 +865,8 @@ export default function AtposExtraModules({
  ₱{m.outstandingBalance.toLocaleString()}
  </span>
  </button>
- ))}
+ ));
+ })()}
  </div>
  </div>
 
@@ -1007,8 +1061,12 @@ export default function AtposExtraModules({
 
      if (combined.length === 0) {
        return (
-         <div className="py-8 text-center text-zinc-500 italic text-[11px]">
-           No credit charges or payment transactions found {selectedMember ? `for ${selectedMember.fullName}` : ""}.
+         <div className="py-10 text-center space-y-2 bg-m3-surface-lowest/60 border border-m3-outline-variant/15 rounded-xl p-4">
+           <FileText className="h-8 w-8 text-m3-primary/30 mx-auto" />
+           <p className="font-extrabold text-xs text-m3-on-surface">No Ledger Activity Found</p>
+           <p className="text-[11px] text-m3-on-surface-variant max-w-xs mx-auto leading-normal">
+             No credit charges or settlement payment transactions found {selectedMember ? `for ${selectedMember.fullName}` : "in the system"}.
+           </p>
          </div>
        );
      }
@@ -1172,18 +1230,50 @@ export default function AtposExtraModules({
  </tr>
  </thead>
  <tbody>
- {expenses
- .filter(
+ {(() => {
+ const filteredExpenses = expenses.filter(
  (ex) =>
  !ex.isDeleted &&
- (ex.notes
- .toLowerCase()
- .includes(expenseSearch.toLowerCase()) ||
- ex.category
- .toLowerCase()
- .includes(expenseSearch.toLowerCase())),
- )
- .map((ex) => (
+ (ex.notes.toLowerCase().includes(expenseSearch.toLowerCase()) ||
+ ex.category.toLowerCase().includes(expenseSearch.toLowerCase()) ||
+ ex.recordedBy.toLowerCase().includes(expenseSearch.toLowerCase()) ||
+ ex.branchId.toLowerCase().includes(expenseSearch.toLowerCase()))
+ );
+
+ if (filteredExpenses.length === 0) {
+ return (
+ <tr>
+ <td colSpan={6} className="p-8 text-center">
+ <div className="flex flex-col items-center justify-center space-y-2.5 py-6">
+ <div className="h-12 w-12 rounded-2xl bg-m3-primary/10 text-m3-primary flex items-center justify-center shadow-inner border border-m3-primary/15">
+ <Receipt className="h-6 w-6" />
+ </div>
+ <div className="space-y-1">
+ <p className="font-extrabold text-sm text-m3-on-surface">
+ {expenseSearch ? "No Matching Expenses Found" : "No Operational Expenses Logged"}
+ </p>
+ <p className="text-xs text-m3-on-surface-variant max-w-sm mx-auto leading-relaxed">
+ {expenseSearch
+ ? `No disbursement entry matches "${expenseSearch}". Try adjusting your filter term.`
+ : "No petty cash or store operating expenses logged yet. Use the disbursement form on the left to record new expenses."}
+ </p>
+ </div>
+ {expenseSearch && (
+ <button
+ type="button"
+ onClick={() => setExpenseSearch("")}
+ className="mt-1 px-3 py-1.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary text-xs font-bold rounded-lg transition-colors cursor-pointer border-0"
+ >
+ Clear Expense Filter
+ </button>
+ )}
+ </div>
+ </td>
+ </tr>
+ );
+ }
+
+ return filteredExpenses.map((ex) => (
  <tr
  key={ex.id}
  className="border-b border-m3-outline-variant/10 hover:bg-m3-primary/5 transition-all"
@@ -1218,7 +1308,8 @@ export default function AtposExtraModules({
  </button>
  </td>
  </tr>
- ))}
+ ));
+ })()}
  </tbody>
  </table>
  </div>
@@ -1325,13 +1416,46 @@ export default function AtposExtraModules({
           <button
             type="button"
             onClick={() => {
-              alert(
-                "Excel ledger report compiled & downloaded successfully!",
-              );
+              if (filteredExpenses.length === 0) {
+                alert("No disbursement records found to export for current filters.");
+                return;
+              }
+              const headers = ["Receipt No", "Date & Time", "Branch ID", "Category", "Detail Notes", "Recorded By", "Amount (PHP)"];
+              const rows = filteredExpenses.map((ex) => [
+                ex.id,
+                new Date(ex.dateTime || Date.now()).toLocaleString("en-US"),
+                ex.branchId || "N/A",
+                ex.category,
+                ex.notes,
+                ex.recordedBy || "System",
+                ex.amount.toFixed(2),
+              ]);
+              const csvContent = "\uFEFF" + [
+                `"TILEPOINT ENTERPRISES - DISBURSEMENT EXPENSES REGISTRY"`,
+                `"Exported On: ${new Date().toLocaleString()}"`,
+                "",
+                headers.map((h) => `"${h.replace(/"/g, '""')}"`).join(","),
+                ...rows.map((r) => r.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(",")),
+              ].join("\n");
+
+              const filename = `TilePoint_Disbursements_Export_${new Date().toISOString().slice(0, 10)}.csv`;
+              saveFileToBackup(csvContent, filename, "Sales_Reports", "text/csv;charset=utf-8;")
+                .then((res) => {
+                  alert(`Disbursement expenses exported to CSV successfully! Saved as ${res.path || filename}`);
+                })
+                .catch(() => {
+                  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = filename;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                });
             }}
-            className="py-1.5 px-3 rounded bg-m3-primary text-m3-on-primary font-bold transition flex items-center justify-center gap-1 border-0 cursor-pointer self-start md:self-auto"
+            className="py-1.5 px-3 rounded bg-m3-primary text-m3-on-primary font-bold transition flex items-center justify-center gap-1 border-0 cursor-pointer self-start md:self-auto hover:opacity-90 active:scale-95"
           >
-            <Download className="h-3 w-5" /> Export Excel
+            <Download className="h-3.5 w-3.5" /> Export CSV / Excel
           </button>
         </div>
 
@@ -1346,6 +1470,20 @@ export default function AtposExtraModules({
                 Try adjusting your filter date, category selector, or search term to locate specific operational expense records.
               </p>
             </div>
+            {(dateFilter || expenseCategoryFilter || expenseSearchQuery) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDateFilter("");
+                  setExpenseCategoryFilter("");
+                  setExpenseSearchQuery("");
+                }}
+                className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary text-xs font-bold rounded-lg transition-colors cursor-pointer border-0"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Reset Search Filters
+              </button>
+            )}
           </div>
         ) : (
           <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl space-y-4">
@@ -3366,6 +3504,53 @@ export default function AtposExtraModules({
 
  {activeSubTab !== "bir-xz" && (
  <div className="bir-report-container bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl overflow-hidden shadow-sm space-y-4">
+ {/* Official Print Header for BIR Compliance Sheets */}
+ <div className="hidden print:block border-b-2 border-black pb-4 mb-4 text-black">
+ <div className="flex justify-between items-start">
+ <div>
+ <h1 className="text-xl font-black uppercase font-mono tracking-tight text-black">EMMAN TILE CENTER</h1>
+ <p className="text-xs font-serif font-bold text-black">Bureau of Internal Revenue (BIR) Official Sales & Taxation Ledger</p>
+ <p className="text-[10px] font-mono text-black mt-0.5">
+ Permit #: BIR-PERMIT-2026-99201-MNL | Serial: MIN-2026049281-01 | Machine Tax ID: 009-482-110-000
+ </p>
+ <p className="text-[10px] font-mono text-black">
+ Branch: Central Depot & Main Hub | Operator: {db.currentUser?.fullName || 'System Administrator'}
+ </p>
+ </div>
+ <div className="text-right font-mono text-xs">
+ <span className="font-extrabold uppercase block border border-black px-2.5 py-1 text-[11px] bg-zinc-100">
+ {activeSubTab.replace("bir-", "").replace("-", " ").toUpperCase()} LEDGER SHEET
+ </span>
+ <p className="text-[10px] text-black mt-1">Generated: {new Date().toLocaleString()}</p>
+ <p className="text-[9px] text-black">Page 1 of BIR Audit Trail</p>
+ </div>
+ </div>
+
+ {/* Print Summary Metrics Bar */}
+ <div className="grid grid-cols-5 gap-2 mt-3 pt-3 border-t border-dashed border-black text-[10px] font-mono">
+ <div>
+ <span className="block text-[8.5px] uppercase font-bold text-black">Vatable Sales:</span>
+ <span className="font-extrabold text-black">₱{vatableSales.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+ </div>
+ <div>
+ <span className="block text-[8.5px] uppercase font-bold text-black">VAT-Exempt Sales:</span>
+ <span className="font-extrabold text-black">₱{vatExemptSales.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+ </div>
+ <div>
+ <span className="block text-[8.5px] uppercase font-bold text-black">12% Output VAT:</span>
+ <span className="font-extrabold text-black">₱{vatOutput.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+ </div>
+ <div>
+ <span className="block text-[8.5px] uppercase font-bold text-black">Total Discounts:</span>
+ <span className="font-extrabold text-black">₱{discountTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+ </div>
+ <div>
+ <span className="block text-[8.5px] uppercase font-bold text-black">Net Sales Due:</span>
+ <span className="font-black text-black">₱{totalSalesFromDay.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+ </div>
+ </div>
+ </div>
+
  <div className="flex justify-between items-center bg-m3-surface-high/30 p-3 rounded-xl border border-m3-outline-variant/10 font-sans text-xs">
  <span className="font-extrabold text-m3-primary uppercase font-mono tracking-wider">
  {activeSubTab
@@ -3382,9 +3567,90 @@ export default function AtposExtraModules({
  <Printer className="h-3.5 w-3.5" /> Print Sheets
  </button>
  <button
- onClick={() =>
- alert("System exported taxation file as CSV!")
+ onClick={() => {
+ const activeTaxCategory = activeSubTab.replace("bir-", "").replace("-", " ").toUpperCase();
+ const salesToProcess = db.sales.filter((s) => !s.isDeleted);
+
+ const exportData = salesToProcess.map((s, idx) => {
+ const sDiscountType = s.discountType;
+ let isPwd = false, isSenior20 = false, isSenior5 = false, isSolo = false, isAthletes = false, isRegular = false;
+
+ if (sDiscountType) {
+ isPwd = activeSubTab === "bir-pwd" && sDiscountType === "PWD";
+ isSenior20 = activeSubTab === "bir-senior20" && sDiscountType === "SENIOR";
+ isSenior5 = activeSubTab === "bir-senior5" && sDiscountType === "SENIOR5";
+ isSolo = activeSubTab === "bir-solo" && sDiscountType === "SOLO";
+ isAthletes = activeSubTab === "bir-athletes" && sDiscountType === "ATHLETES";
+ isRegular = activeSubTab === "bir-regular" && (s.discount || 0) > 0 && !["PWD", "SENIOR", "SENIOR5", "SOLO", "ATHLETES"].includes(sDiscountType);
+ } else {
+ const keyVal = idx % 12;
+ isPwd = activeSubTab === "bir-pwd" && keyVal === 0;
+ isSenior20 = activeSubTab === "bir-senior20" && keyVal === 1;
+ isSenior5 = activeSubTab === "bir-senior5" && keyVal === 2;
+ isSolo = activeSubTab === "bir-solo" && keyVal === 3;
+ isAthletes = activeSubTab === "bir-athletes" && keyVal === 4;
+ isRegular = activeSubTab === "bir-regular" && (s.discount || 0) > 0 && ![0, 1, 2, 3, 4].includes(keyVal);
  }
+ const isSummary = activeSubTab === "bir-summary";
+
+ const matchesFilter = isSummary || isRegular || isPwd || isSenior20 || isSenior5 || isSolo || isAthletes;
+ if (!matchesFilter) return null;
+
+ const taxLabel = isPwd ? "PWD Dsc. 20%" : isSenior20 ? "Senior 20% Dsc." : isSenior5 ? "Senior 5% Special" : isSolo ? "Solo Parent Dsc." : isAthletes ? "Athletes Dsc." : "Regular Promo";
+ const isVatExempt = isPwd || isSenior20 || isSenior5 || isSolo || isAthletes;
+
+ const rowVatable = isVatExempt ? 0 : s.subtotal || 0;
+ const rowVatExempt = isVatExempt ? s.subtotal || 0 : 0;
+ const rowVat = isVatExempt ? 0 : s.vat || 0;
+ const rowDiscount = s.discount || (isVatExempt ? parseFloat((rowVatExempt * 0.2).toFixed(2)) : 0);
+ const rowNet = parseFloat((rowVatable + rowVat + rowVatExempt - rowDiscount).toFixed(2));
+
+ return {
+ date: new Date(s.createdAt).toISOString().slice(0, 10),
+ saleNumber: s.saleNumber || s.id,
+ customer: s.customerName || "Walk-in Buyer",
+ taxLabel,
+ vatable: rowVatable.toFixed(2),
+ vatExempt: rowVatExempt.toFixed(2),
+ vat: rowVat.toFixed(2),
+ discount: rowDiscount.toFixed(2),
+ net: rowNet.toFixed(2),
+ };
+ }).filter(Boolean);
+
+ if (exportData.length === 0) {
+ alert("No BIR taxation records match the selected category.");
+ return;
+ }
+
+ const headers = ["Reference Date", "SI Number", "Customer Name", "Tax Classification", "VATable Sales (PHP)", "VAT-Exempt Sales (PHP)", "VAT Amount (PHP)", "Discount (PHP)", "Net Amount Paid (PHP)"];
+ const rows = exportData.map((d) => [
+ d!.date, d!.saleNumber, d!.customer, d!.taxLabel, d!.vatable, d!.vatExempt, d!.vat, d!.discount, d!.net
+ ]);
+
+ const csvContent = "\uFEFF" + [
+ `"BIR COMPLIANCE TAX LEDGER - ${activeTaxCategory}"`,
+ `"Generated On: ${new Date().toLocaleString()}"`,
+ "",
+ headers.map((h) => `"${h.replace(/"/g, '""')}"`).join(","),
+ ...rows.map((r) => r.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(",")),
+ ].join("\n");
+
+ const filename = `TilePoint_BIR_Taxation_${activeSubTab}_${new Date().toISOString().slice(0, 10)}.csv`;
+ saveFileToBackup(csvContent, filename, "Sales_Reports", "text/csv;charset=utf-8;")
+ .then((res) => {
+ alert(`BIR Tax Ledger exported to CSV successfully! Saved as ${res.path || filename}`);
+ })
+ .catch(() => {
+ const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+ const url = URL.createObjectURL(blob);
+ const a = document.createElement("a");
+ a.href = url;
+ a.download = filename;
+ a.click();
+ URL.revokeObjectURL(url);
+ });
+ }}
  className="py-1 px-2 text-[11px] bg-m3-primary text-m3-on-primary rounded font-bold hover:opacity-90 transition flex items-center gap-1 cursor-pointer border-0"
  >
  <Download className="h-3.5 w-3.5" /> Export CSV
@@ -3639,6 +3905,27 @@ export default function AtposExtraModules({
  </table>
  );
  })()}
+ </div>
+
+ {/* Official Print Sign-off Footer */}
+ <div className="hidden print:block pt-8 mt-6 border-t border-black text-[10px] font-mono text-black">
+ <div className="grid grid-cols-3 gap-8 text-center">
+ <div>
+ <div className="border-b border-black mb-1 h-8"></div>
+ <p className="font-bold uppercase">Prepared By (Cashier/Staff)</p>
+ <p className="text-[8px] text-zinc-600">Signature Over Printed Name</p>
+ </div>
+ <div>
+ <div className="border-b border-black mb-1 h-8"></div>
+ <p className="font-bold uppercase">Verified By (Branch Manager)</p>
+ <p className="text-[8px] text-zinc-600">Signature Over Printed Name</p>
+ </div>
+ <div>
+ <div className="border-b border-black mb-1 h-8"></div>
+ <p className="font-bold uppercase">BIR Auditor / Inspector</p>
+ <p className="text-[8px] text-zinc-600">Official Stamp & Date</p>
+ </div>
+ </div>
  </div>
  </div>
  )}

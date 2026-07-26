@@ -7,6 +7,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useDb } from '../context/DbContext';
 import { saveFileToBackup } from '../lib/fileBackupHelper';
+import { runPreflightValidation, PreflightReport } from '../lib/preflightValidator';
+import { PreflightReportCard } from './PreflightReportCard';
 import { isProductInBranch, getBranchStockQuantity, getBranchStockRecord, slugifyBranchStr } from '../lib/branchUtils';
 import { Product, UserRole, TransferType, TransferStatus } from '../types/db';
 import { HoldToConfirmButton } from './HoldToConfirmButton';
@@ -183,7 +185,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  acquirePessimisticLock,
  releasePessimisticLock,
  isResourceLocked,
- pessimisticLocks
+ pessimisticLocks,
+ restoreDbSnapshot
  } = useDb();
 
   const hasActiveShift = !!activeShift || (shifts && shifts.some(s => s.status === "Open" || s.status === "OPEN"));
@@ -729,6 +732,37 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  const [showBranchRecommendationBanner, setShowBranchRecommendationBanner] = useState<boolean>(true);
  const [showImportModal, setShowImportModal] = useState(false);
  const [rawImportText, setRawImportText] = useState('');
+ const [preflightReport, setPreflightReport] = useState<PreflightReport | null>(null);
+ const [isAnalyzingPreflight, setIsAnalyzingPreflight] = useState(false);
+
+ const handleRunPreflightManual = async () => {
+ if (!rawImportText.trim()) {
+ showToast('Please enter or upload JSON / CSV data first.');
+ return;
+ }
+ setIsAnalyzingPreflight(true);
+ try {
+ const report = await runPreflightValidation(
+ rawImportText,
+ importTargetBranchId,
+ branches,
+ products,
+ currentUser?.role
+ );
+ setPreflightReport(report);
+ if (report.status === 'PASS') {
+ showToast('Pre-flight Validation PASSED! Schema & Branch compatibility verified.');
+ } else if (report.status === 'WARNING') {
+ showToast('Pre-flight Validation PASSED WITH WARNINGS. Check branch mapping report.');
+ } else {
+ showToast('Pre-flight Validation REJECTED! Review critical diagnostics.');
+ }
+ } catch (err: any) {
+ showToast(`Pre-flight Analysis Error: ${err.message}`);
+ } finally {
+ setIsAnalyzingPreflight(false);
+ }
+ };
  const [isDragging, setIsDragging] = useState(false);
  const [pendingProducts, setPendingProducts] = useState<Product[]>([]);
  const [pendingBranches, setPendingBranches] = useState<any[]>([]);
@@ -1982,11 +2016,26 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
  const processSelectedFile = (file: File) => {
  const reader = new FileReader();
- reader.onload = (event) => {
+ reader.onload = async (event) => {
  const text = event.target?.result as string;
  if (text) {
  setRawImportText(text);
- showToast(`Successfully loaded file: ${file.name}`);
+ showToast(`Loaded file: ${file.name}. Running pre-flight schema inspection...`);
+ setIsAnalyzingPreflight(true);
+ try {
+ const report = await runPreflightValidation(
+ text,
+ importTargetBranchId,
+ branches,
+ products,
+ currentUser?.role
+ );
+ setPreflightReport(report);
+ } catch (err: any) {
+ showToast(`Pre-flight analysis error: ${err.message}`);
+ } finally {
+ setIsAnalyzingPreflight(false);
+ }
  }
  };
  reader.readAsText(file);
@@ -2085,8 +2134,61 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  }
  const trimmedInput = rawImportText.trim();
  if (!trimmedInput) {
- showToast('Error: Please input valid JSON or CSV older ERP OS product data.');
+ showToast('Error: Please input valid JSON or CSV product data.');
  return;
+ }
+
+ // Pre-flight schema & branch compatibility validation step
+ let currentReport = preflightReport;
+ if (!currentReport) {
+ setIsAnalyzingPreflight(true);
+ try {
+ currentReport = await runPreflightValidation(
+ trimmedInput,
+ importTargetBranchId,
+ branches,
+ products,
+ currentUser?.role
+ );
+ setPreflightReport(currentReport);
+ } catch (e: any) {
+ showToast(`Pre-flight Schema Error: ${e.message}`);
+ setIsAnalyzingPreflight(false);
+ return;
+ } finally {
+ setIsAnalyzingPreflight(false);
+ }
+ }
+
+ if (currentReport.status === 'FAIL') {
+ showToast('Commit Rejected: Pre-flight schema or cryptographic signature validation failed.');
+ return;
+ }
+
+ // If full database backup snapshot was uploaded, commit directly using atomic restore
+ if (currentReport.parsedFullSnapshot) {
+ try {
+ const newSnap = {
+ id: `SNAP-IMPORT-${Date.now()}`,
+ name: `Imported Snapshot Data Payload`,
+ timestamp: new Date().toISOString(),
+ creator: currentUser.fullName,
+ sizeBytes: new Blob([trimmedInput]).size,
+ data: JSON.stringify(currentReport.parsedFullSnapshot),
+ };
+ await fetch('/api/db/backups', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' },
+ body: JSON.stringify({ snapshot: newSnap })
+ });
+ await restoreDbSnapshot(newSnap.id);
+ showToast('Successfully committed full snapshot import! Reloading UI...');
+ setTimeout(() => window.location.reload(), 1200);
+ return;
+ } catch (snapErr: any) {
+ showToast(`Snapshot Commit Failure: ${snapErr.message}`);
+ return;
+ }
  }
 
  // Helper to parse CSV raw text into rows
@@ -4156,14 +4258,24 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
             <button
               type="button"
               onClick={() => {
-                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(products, null, 2));
-                const downloadAnchor = document.createElement('a');
-                downloadAnchor.setAttribute("href", dataStr);
-                downloadAnchor.setAttribute("download", `tilepoint_catalog_export_${new Date().toISOString().slice(0,10)}.json`);
-                document.body.appendChild(downloadAnchor);
-                downloadAnchor.click();
-                downloadAnchor.remove();
-                showToast("Product catalog JSON backup downloaded!");
+                const jsonStr = JSON.stringify(products, null, 2);
+                const filename = `tilepoint_catalog_export_${new Date().toISOString().slice(0, 10)}.json`;
+                saveFileToBackup(jsonStr, filename, "Inventory_Exports", "application/json")
+                  .then((res) => {
+                    showToast(`Product catalog JSON backup saved to ${res.path || filename}!`);
+                  })
+                  .catch(() => {
+                    const blob = new Blob([jsonStr], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+                    const downloadAnchor = document.createElement("a");
+                    downloadAnchor.setAttribute("href", url);
+                    downloadAnchor.setAttribute("download", filename);
+                    document.body.appendChild(downloadAnchor);
+                    downloadAnchor.click();
+                    downloadAnchor.remove();
+                    URL.revokeObjectURL(url);
+                    showToast("Product catalog JSON backup downloaded!");
+                  });
               }}
               className="w-full py-2.5 px-4 rounded-xl bg-m3-surface-low hover:bg-m3-surface-high border border-m3-outline-variant/30 text-xs font-extrabold text-m3-on-surface transition-all text-left flex items-center justify-between cursor-pointer"
             >
@@ -4175,14 +4287,25 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
               onClick={() => {
                 const csvHeader = "ID,Product Code,Product Name,Category,Brand,Selling Price,Stock Quantity\n";
                 const csvRows = branchProducts.map(p => `"${p.id}","${p.productCode}","${p.productName}","${p.category}","${p.brand}",${p.sellingPrice},${p.stockQuantity}`).join("\n");
-                const dataStr = "data:text/csv;charset=utf-8," + encodeURIComponent(csvHeader + csvRows);
-                const downloadAnchor = document.createElement('a');
-                downloadAnchor.setAttribute("href", dataStr);
-                downloadAnchor.setAttribute("download", `tilepoint_catalog_${new Date().toISOString().slice(0,10)}.csv`);
-                document.body.appendChild(downloadAnchor);
-                downloadAnchor.click();
-                downloadAnchor.remove();
-                showToast("Product catalog CSV exported!");
+                const csvContent = "\uFEFF" + csvHeader + csvRows;
+                const filename = `tilepoint_catalog_${new Date().toISOString().slice(0, 10)}.csv`;
+
+                saveFileToBackup(csvContent, filename, "Inventory_Exports", "text/csv;charset=utf-8;")
+                  .then((res) => {
+                    showToast(`Product catalog CSV exported to ${res.path || filename}!`);
+                  })
+                  .catch(() => {
+                    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+                    const url = URL.createObjectURL(blob);
+                    const downloadAnchor = document.createElement("a");
+                    downloadAnchor.setAttribute("href", url);
+                    downloadAnchor.setAttribute("download", filename);
+                    document.body.appendChild(downloadAnchor);
+                    downloadAnchor.click();
+                    downloadAnchor.remove();
+                    URL.revokeObjectURL(url);
+                    showToast("Product catalog CSV exported!");
+                  });
               }}
               className="w-full py-2.5 px-4 rounded-xl bg-m3-surface-low hover:bg-m3-surface-high border border-m3-outline-variant/30 text-xs font-extrabold text-m3-on-surface transition-all text-left flex items-center justify-between cursor-pointer"
             >
@@ -4191,6 +4314,49 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Embedded Pre-Flight Schema & Branch Compatibility Inspector */}
+      <div className="bg-m3-surface p-6 rounded-2xl border border-m3-outline-variant/20 space-y-4">
+        <div className="flex justify-between items-center flex-wrap gap-2">
+          <div>
+            <h3 className="text-sm font-black text-m3-on-surface uppercase tracking-wider flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-emerald-500" />
+              <span>Pre-Flight Schema & Branch Compatibility Inspector</span>
+            </h3>
+            <p className="text-xs text-m3-on-surface-variant mt-0.5">
+              Paste raw JSON or upload files to inspect structural integrity and branch location compatibility before committing to local DB.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleRunPreflightManual}
+            disabled={!rawImportText.trim() || isAnalyzingPreflight}
+            className="px-4 py-2 bg-m3-primary hover:bg-m3-primary/95 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            <ShieldCheck className="h-4 w-4" />
+            <span>Run Pre-Flight Inspection</span>
+          </button>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider block">Raw JSON / Backup Payload Input</label>
+          <textarea
+            value={rawImportText}
+            onChange={(e) => setRawImportText(e.target.value)}
+            rows={6}
+            placeholder="Paste raw JSON array, StockTally JSON, or sealed backup snapshot here..."
+            className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 focus:border-m3-primary p-3.5 text-xs font-mono text-m3-on-surface rounded-2xl focus:outline-none transition-colors"
+          />
+        </div>
+
+        <PreflightReportCard
+          report={preflightReport}
+          isAnalyzing={isAnalyzingPreflight}
+          onRunInspection={handleRunPreflightManual}
+          onConfirmCommit={executeBulkImport}
+          allowedToImport={allowedToImport}
+        />
       </div>
     </div>
   )}
@@ -5117,8 +5283,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <span>Assigned Branch / Stock Location</span>
  </label>
  {currentUser?.role !== UserRole.ADMIN && (
- <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
- 🔒 Manager Assignment Locked ({currentUser?.branchAssignmentId || 'B1'})
+ <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-m3-primary/10 text-m3-primary border border-m3-primary/20">
+ {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || `Branch ${currentUser?.branchAssignmentId}`}
  </span>
  )}
  </div>
@@ -5747,8 +5913,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider flex items-center justify-between">
  <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> Target Destination Branch Allocation</span>
  {currentUser?.role !== UserRole.ADMIN && (
- <span className="text-[9px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
- 🔒 Locked to {currentUser?.branchAssignmentId || 'B1'}
+ <span className="text-[9px] font-bold text-m3-primary bg-m3-primary/10 px-2 py-0.5 rounded-full border border-m3-primary/20">
+ {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || `Branch ${currentUser?.branchAssignmentId}`}
  </span>
  )}
  </label>
@@ -5777,7 +5943,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <textarea
  value={rawImportText}
  onChange={(e) => setRawImportText(e.target.value)}
- rows={8}
+ rows={6}
  placeholder={`[
  {
  "productName": "Old ERP OS Ceramic Tile x5",
@@ -5788,6 +5954,19 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  }
 ]`}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 focus:border-m3-primary p-3.5 text-xs font-mono text-m3-on-surface rounded-2xl focus:outline-none transition-colors"
+ />
+ </div>
+
+ <div className="pt-2">
+ <PreflightReportCard
+ report={preflightReport}
+ isAnalyzing={isAnalyzingPreflight}
+ onRunInspection={handleRunPreflightManual}
+ onConfirmCommit={() => {
+ executeBulkImport();
+ }}
+ onCancel={() => setShowPortabilityHubModal(false)}
+ allowedToImport={allowedToImport}
  />
  </div>
  </div>
@@ -6097,7 +6276,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  ))}
  </select>
  {currentUser.role !== 'Admin' && (
- <span className="text-[9px] text-zinc-400 pl-1">Locked to current branch assignment</span>
+ <span className="text-[9px] text-zinc-400 pl-1">{branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name}</span>
  )}
  </div>
 

@@ -10,6 +10,7 @@ import { Branch, UserRole } from '../types/db';
 import { useResponsivePageSize, TablePagination } from './TablePagination';
 import {
  Building2,
+ Sparkles,
  Phone,
  MapPin,
  TrendingUp,
@@ -62,6 +63,8 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
 
   const primaryBranchId = localStorage.getItem("tilepoint_primary_branch_id") || "B1";
   const isUserAdmin = currentUser?.role === UserRole.ADMIN;
+  const isUserManager = currentUser?.role === UserRole.MANAGER || (currentUser?.role as string) === 'Manager';
+  const isUserAdminOrManager = isUserAdmin || isUserManager;
 
   const getDynamicBranchManager = (branchId: string) => {
     const assigned = users.filter(u => u.branchAssignmentId === branchId && u.status === 'Active');
@@ -135,11 +138,15 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  const activeBranchesForReceipt = branches.filter(b => !b.isDeleted && (isUserAdmin || b.id === currentUser?.branchAssignmentId));
  const selectedBranchForPreview = branches.find(b => b.id === inlineBranchId);
  useEffect(() => {
- if (activeBranchesForReceipt.length > 0 && !inlineBranchId) {
- const initialBranch = activeBranchesForReceipt.find(b => b.id === primaryBranchId) || activeBranchesForReceipt[0];
+ if (activeBranchesForReceipt.length > 0) {
+ if (!inlineBranchId || !activeBranchesForReceipt.some(b => b.id === inlineBranchId)) {
+ const initialBranch = activeBranchesForReceipt.find(b => b.id === currentUser?.branchAssignmentId) || activeBranchesForReceipt.find(b => b.id === primaryBranchId) || activeBranchesForReceipt[0];
+ if (initialBranch) {
  setInlineBranchId(initialBranch.id);
  }
- }, [branches]);
+ }
+ }
+ }, [branches, currentUser?.branchAssignmentId]);
 
  useEffect(() => {
  const selectedBranch = branches.find(b => b.id === inlineBranchId);
@@ -388,7 +395,8 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
           managerPin: s.managerPin,
           avatarInitials: s.avatarInitials,
           branchAssignmentId: finalBranchId,
-          status: 'Active'
+          status: 'Active',
+          isNew: true
         });
       });
 
@@ -411,7 +419,8 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
           managerPin: s.managerPin,
           avatarInitials: s.avatarInitials,
           branchAssignmentId: finalBranchId,
-          status: 'Active'
+          status: 'Active',
+          isNew: true
         });
       });
 
@@ -723,7 +732,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  </div>
 
  {/* BRAND-WIDE RECEIPT CUSTOMIZER (INLINE & ACCESSIBLE) */}
- {isUserAdmin && (
+ {isUserAdminOrManager && (
   <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-[28px] p-6 shadow-sm space-y-6">
  <div>
  <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest flex items-center gap-2 font-mono">
@@ -1233,7 +1242,14 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  {item.avatarInitials || (item.fullName ? item.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : '??')}
  </div>
  <div>
+ <div className="flex items-center gap-1.5">
  <span className="block font-bold text-m3-on-surface">{item.fullName}</span>
+ {item.isNew && (
+ <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-500 border border-amber-500/30 text-[9px] font-black uppercase tracking-wider flex items-center gap-0.5" title="Newly Enlisted Employee">
+ <Sparkles className="h-2.5 w-2.5" /> NEW
+ </span>
+ )}
+ </div>
  <span className="block text-[10px] text-zinc-400 font-mono font-medium">Employee ID: #{item.id}</span>
  </div>
  </div>
@@ -1619,7 +1635,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
         className="w-full bg-m3-surface-lowest border-b border-m3-outline-variant/40 focus:border-m3-primary px-2 py-1 text-xs text-m3-on-surface focus:outline-none rounded-t-sm"
        >
         <option value={UserRole.CASHIER}>Cashier</option>
-        <option value={UserRole.MANAGER}>Manager</option>
+        {isUserAdmin && <option value={UserRole.MANAGER}>Manager</option>}
         <option value={UserRole.STAFF}>Staff</option>
        </select>
       </div>
@@ -1628,6 +1644,10 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
        onClick={() => {
         if (!inlineFullName.trim() || !inlineUsername.trim() || !inlinePin.trim()) {
          showToast('Please provide a full name, username, and numeric security PIN.');
+         return;
+        }
+        if (!isUserAdmin && inlineRole !== UserRole.CASHIER && inlineRole !== UserRole.STAFF) {
+         showToast('Permission Denied: Managers can only enlist Cashier and Staff employees.');
          return;
         }
         if (inlinePin.length < 4) {

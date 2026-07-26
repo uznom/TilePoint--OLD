@@ -21,7 +21,9 @@ import {
  Lock,
  Shield,
  Trash2,
- Database
+ Database,
+ ShieldCheck,
+ Search
 } from 'lucide-react';
 import { useDb } from '../context/DbContext';
 import { UserRole } from '../types/db';
@@ -40,8 +42,22 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  followSystemTheme = false,
  setFollowSystemTheme
 }) => {
- const { currentUser, updateCurrentUser, truncateDatabase, isRowClearingBlocked, getRowClearingBlockedReason, forceCloseAllShifts } = useDb();
+ const { currentUser, updateCurrentUser, truncateDatabase, isRowClearingBlocked, getRowClearingBlockedReason, forceCloseAllShifts, auditLogs } = useDb();
  const isAuthorized = currentUser && (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER);
+
+ const [auditSearchTerm, setAuditSearchTerm] = useState('');
+ const safeLogs = auditLogs || [];
+ const filteredAuditLogs = safeLogs.filter(log => {
+ if (!auditSearchTerm.trim()) return true;
+ const term = auditSearchTerm.toLowerCase();
+ return (
+ (log.action || '').toLowerCase().includes(term) ||
+ (log.actionCode || '').toLowerCase().includes(term) ||
+ (log.description || '').toLowerCase().includes(term) ||
+ (log.username || '').toLowerCase().includes(term) ||
+ (log.tableAffected || '').toLowerCase().includes(term)
+ );
+ });
 
  // Enterprise details states
  const [companyName, setCompanyName] = useState<string>(() => {
@@ -316,6 +332,78 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  Preferences applied & propagated in real-time
  </div>
  )}
+
+ {/* 1. GLOBAL ENTERPRISE SECURITY AUDIT STREAM - FIRST VIEW */}
+ <div className="bg-m3-surface-lowest border border-m3-outline-variant/20 rounded-2xl p-5 shadow-sm space-y-4">
+ <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-m3-outline-variant/15">
+ <div>
+ <h3 className="text-sm font-black uppercase font-mono tracking-wider text-m3-primary flex items-center gap-2">
+ <ShieldCheck className="h-5 w-5 text-m3-primary" /> Global Enterprise Security Audit Stream
+ </h3>
+ <p className="text-[11px] text-m3-on-surface-variant font-medium mt-0.5">
+ Live audit ledger tracking voided sales, manager code approvals and system activity
+ </p>
+ </div>
+ <div className="flex items-center gap-2">
+ <div className="relative">
+ <Search className="h-3.5 w-3.5 text-zinc-400 absolute left-2.5 top-2.5" />
+ <input
+ type="text"
+ value={auditSearchTerm}
+ onChange={(e) => setAuditSearchTerm(e.target.value)}
+ placeholder="Filter audit logs..."
+ className="pl-8 pr-3 py-1.5 text-xs bg-m3-surface-low border border-m3-outline-variant/20 rounded-xl focus:outline-none focus:border-m3-primary w-44 font-mono text-m3-on-surface"
+ />
+ </div>
+ <span className="text-[10px] font-mono font-bold bg-m3-primary/10 text-m3-primary px-2.5 py-1 rounded-lg border border-m3-primary/20 shrink-0">
+ {filteredAuditLogs.length} Events
+ </span>
+ </div>
+ </div>
+
+ <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1 font-sans">
+ {filteredAuditLogs.map((log, idx) => {
+ const actionText = log.action || log.actionCode || '';
+ const isDanger = actionText.includes('VOID') || actionText.includes('DELETE') || actionText.includes('REJECT');
+ const isSuccess = actionText.includes('APPROVE') || actionText.includes('RECEIVE') || actionText.includes('SUCCESS');
+ 
+ return (
+ <div key={idx} className="flex justify-between items-start text-xs border border-m3-outline-variant/10 rounded-xl p-3 bg-m3-surface-low/40 hover:bg-m3-surface-low transition-colors">
+ <div className="space-y-1.5 pr-4">
+ <div className="flex items-center gap-2">
+ <span className={`text-[9.5px] uppercase tracking-wider font-extrabold inline-block px-2.5 py-0.5 rounded-md font-mono border ${
+ isDanger 
+ ? 'bg-rose-500/10 text-rose-400 border-rose-500/25' 
+ : isSuccess 
+ ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' 
+ : 'bg-m3-primary/10 text-m3-primary border-m3-primary/25'
+ }`}>
+ {log.action || log.actionCode || 'SYSTEM'}
+ </span>
+ <span className="text-[10px] text-zinc-400 font-mono">
+ Target: <span className="text-m3-on-surface font-semibold">{log.tableAffected || 'System'}</span> ({log.recordId || 'Global'})
+ </span>
+ </div>
+ <p className="text-m3-on-surface font-medium leading-snug">{log.description}</p>
+ <span className="text-[10px] text-zinc-400 block font-mono">
+ Operator: <span className="text-m3-primary font-bold">@{log.username || 'system'}</span>
+ </span>
+ </div>
+ <div className="text-right text-[10.5px] text-zinc-400 font-mono shrink-0 ml-2">
+ {new Date(log.timestamp).toLocaleTimeString()}
+ <span className="block text-[9px] text-zinc-500">{new Date(log.timestamp).toLocaleDateString()}</span>
+ </div>
+ </div>
+ );
+ })}
+
+ {filteredAuditLogs.length === 0 && (
+ <div className="text-center py-8 text-xs text-m3-on-surface-variant font-mono bg-m3-surface-low/30 rounded-xl border border-dashed border-m3-outline-variant/15">
+ No security audit entries match your current search parameters.
+ </div>
+ )}
+ </div>
+ </div>
 
  {/* PERFORMANCE & ENGINE CONTROLS SECTION */}
  <div className="space-y-4">

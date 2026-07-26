@@ -88,6 +88,11 @@ app.use((req, res, next) => {
     'crawler', 'spider', 'robot'
   ];
 
+  // Allow all internal API endpoints (/api/*) and standard application routes
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
+
   // Check if user agent matches any known indexing bots
   const isBot = crawlerBots.some(bot => userAgent.includes(bot));
   
@@ -626,7 +631,11 @@ app.post('/api/db/bulk', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Payload object data is required' });
   }
 
-  const isSetupPayload = data && (data.tilepoint_onboarded_setup === "false" || data.tilepoint_onboarded_setup === false);
+  const isSetupPayload = data && (
+    data.tilepoint_onboarded_setup !== undefined ||
+    data.tp_bootstrap_init !== undefined ||
+    data.tp_is_configured !== undefined
+  );
   if (isDatabaseConfigured() && !isSetupPayload) {
     const user = verifyAndExtractToken(req);
     if (!user) {

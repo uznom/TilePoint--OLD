@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useDb } from "../context/DbContext";
 import { UserRole } from "../types/db";
+import { saveFileToBackup } from "../lib/fileBackupHelper";
 import { ProfitAnalytics } from "./ProfitAnalytics";
 import {
  TrendingUp,
@@ -187,17 +188,25 @@ export function AdminProfitModule({
  [`Net Profit Margin: ${metrics.netMarginPercent.toFixed(2)}%`]
  ];
 
- const csvContent = "data:text/csv;charset=utf-8," 
- + csvRows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(",")).join("\n");
- 
- const encodedUri = encodeURI(csvContent);
+ const csvText = "\uFEFF" + csvRows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(",")).join("\n");
+ const filename = `TilePoint_PL_Statement_${selectedBranchId}_${new Date().toISOString().slice(0, 10)}.csv`;
+
+ saveFileToBackup(csvText, filename, "Sales_Reports", "text/csv;charset=utf-8;")
+ .then((res) => {
+ showToastMsg(`P&L Statement saved successfully as ${res.path || filename}!`, "success");
+ })
+ .catch(() => {
+ const blob = new Blob([csvText], { type: "text/csv;charset=utf-8;" });
+ const url = URL.createObjectURL(blob);
  const link = document.createElement("a");
- link.setAttribute("href", encodedUri);
- link.setAttribute("download", `TilePoint_PL_Statement_${selectedBranchId}.csv`);
+ link.href = url;
+ link.setAttribute("download", filename);
  document.body.appendChild(link);
  link.click();
  document.body.removeChild(link);
+ URL.revokeObjectURL(url);
  showToastMsg("P&L Statement exported to CSV successfully!", "success");
+ });
  };
 
  const handleModifierSave = (branchId: string) => {
@@ -1028,7 +1037,7 @@ export function AdminProfitModule({
 
     </div>
   </div>
-{/* Dynamic AI accounting advice / corporate narrative */}
+{/* Operational Health Commentary */}
  <div className="mt-5 p-4 rounded-xl bg-zinc-100 dark:bg-zinc-950/40 border border-m3-outline-variant/20 flex gap-3">
  <div className="p-2 bg-m3-primary/10 text-m3-primary rounded-lg shrink-0 h-9 w-9 flex items-center justify-center">
  <Sparkles className="h-4 w-4 text-emerald-500" />
