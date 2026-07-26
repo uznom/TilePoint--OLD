@@ -245,6 +245,15 @@ export interface Sale {
  createdAt: string;
  idempotencyKey?: string;
  discountType?: string;
+ pointsEarned?: number;
+ pointsRedeemed?: number;
+}
+
+export interface LoyaltyConfig {
+ spendPerPoint: number;
+ pointsPerSpend: number;
+ pointValueInPhp: number;
+ enabled: boolean;
 }
 
 export interface SaleItem {

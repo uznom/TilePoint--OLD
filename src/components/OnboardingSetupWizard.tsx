@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { useDb } from '../context/DbContext';
-import { Sparkles, Database, Upload, Play, CheckCircle, HelpCircle, ArrowRight, Save, Plus, X } from 'lucide-react';
+import { Sparkles, Database, Upload, Play, CheckCircle, HelpCircle, ArrowRight, Save, Plus, X, HardDrive, FolderCheck, Terminal } from 'lucide-react';
+import { saveDirectoryHandle, getSavedDirectoryHandle } from '../lib/fileBackupHelper';
+import { downloadWindowsLauncherScript } from '../lib/transactionLogger';
 import { Product } from '../types/db';
 
 export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
@@ -8,7 +10,8 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  
  // Local wizard navigation
  // 'welcome' -> 'question' -> 'yes_migrate' | 'no_enter' | 'blank_confirm' | 'configure_branches'
- const [step, setStep] = useState<'welcome' | 'question' | 'yes_migrate' | 'no_enter' | 'blank_confirm' | 'configure_branches'>('welcome');
+ const [step, setStep] = useState<'welcome' | 'backup_location' | 'question' | 'yes_migrate' | 'no_enter' | 'blank_confirm' | 'configure_branches'>('welcome');
+  const [savedFolderHandle, setSavedFolderHandle] = useState<any>(null);
  const [rawImportText, setRawImportText] = useState('');
  const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
  const [isDragging, setIsDragging] = useState(false);
@@ -25,6 +28,12 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  const [pendingBranches, setPendingBranches] = useState<PendingBranch[]>([]);
 
  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    getSavedDirectoryHandle().then((handle) => {
+      if (handle) setSavedFolderHandle(handle);
+    });
+  }, []);
 
  const handleDragOver = (e: React.DragEvent) => {
  e.preventDefault();
@@ -112,42 +121,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  const [newProdCategory, setNewProdCategory] = useState('Ceramic Tiles');
  const [newProdBrand, setNewProdBrand] = useState('Generic');
 
- const handleApplySample = (type: 'json' | 'csv') => {
- if (type === 'json') {
- const sample = [
- {
- "productName": "Heritage White Glazed Porcelain",
- "productCode": "HW-GL-80",
- "skuCode": "SKU-HW-80",
- "barcode": "4801122334455",
- "category": "Porcelain Tiles",
- "brand": "Heritage Slabs",
- "costPrice": 420,
- "sellingPrice": 650,
- "size": "80x80 cm",
- "stockQuantity": 150
- },
- {
- "productName": "EcoSlate Anti-Slip Terracotta",
- "productCode": "ES-AS-30",
- "skuCode": "SKU-ES-30",
- "barcode": "4805566778899",
- "category": "Ceramic Tiles",
- "brand": "EcoStone",
- "costPrice": 180,
- "sellingPrice": 280,
- "size": "30x30 cm",
- "stockQuantity": 320
- }
- ];
- setRawImportText(JSON.stringify(sample, null, 2));
- setImportStatus({ type: 'success', message: 'Sample JSON loaded successfully' });
- } else {
- const sampleCsv = `Product Name,Product Code,SKU,Barcode,Category,Brand,Cost Price,Selling Price,Size,Quantity\n"Heritage White Glazed Porcelain",HW-GL-80,SKU-HW-80,4801122334455,Porcelain Tiles,Heritage Slabs,420,650,80x80 cm,150\n"EcoSlate Anti-Slip Terracotta",ES-AS-30,SKU-ES-30,4805566778899,Ceramic Tiles,EcoStone,180,280,30x30 cm,320`;
- setRawImportText(sampleCsv);
- setImportStatus({ type: 'success', message: 'Sample CSV loaded successfully' });
- }
- };
+ 
 
  const handleImportMigrate = () => {
  const trimmedInput = rawImportText.trim();
@@ -520,7 +494,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  <div className="h-px bg-slate-800 max-w-xs mx-auto" />
 
  <button
- onClick={() => setStep('question')}
+ onClick={() => setStep('backup_location')}
  className="py-3 px-6 bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary font-extrabold text-xs tracking-wider uppercase rounded-full shadow-lg shadow-m3-primary/20 active:scale-95 transition-all inline-flex items-center gap-2 cursor-pointer"
  >
  <span>Get Started</span>
@@ -675,7 +649,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  Register First Tile Catalog
  </h3>
  <p className="text-xs text-slate-400">
- Register sample tile inventory rows or launch system immediately as a fresh empty terminal.
+ Register initial tile inventory rows or launch system immediately as a fresh empty terminal.
  </p>
  </div>
 

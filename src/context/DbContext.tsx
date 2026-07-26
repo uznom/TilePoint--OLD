@@ -21,6 +21,7 @@ import {
  generateSessionToken,
 } from "../lib/crypto";
 import { saveFileToBackup } from "../lib/fileBackupHelper";
+import { autoSaveDailyTransactionCsv } from "../lib/transactionLogger";
 import { isProductInBranch, slugifyBranchStr } from "../lib/branchUtils";
 import {
  User,
@@ -55,6 +56,7 @@ import {
  Member,
  Expense,
  ProductReturn,
+  LoyaltyConfig,
 } from "../types/db";
 
 // Hard-locked database tables containing active transactions, shift summaries, and stock levels (absolutely exempt from auto-purging)
@@ -487,6 +489,8 @@ interface DbContextType {
  setCalendarNotes: (notes: string) => void;
  dayMemos: Record<string, string>;
  setDayMemos: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+ loyaltyConfig: LoyaltyConfig;
+ updateLoyaltyConfig: (updates: Partial<LoyaltyConfig>) => void;
 
  // Actions - Users
  createUser: (user: Omit<User, "id" | "createdAt" | "updatedAt">) => void;
@@ -572,6 +576,8 @@ interface DbContextType {
  customVat?: number,
  idempotencyKey?: string,
  discountType?: string,
+ targetBranchId?: string,
+ pointsRedeemed?: number,
  ) => Sale;
  voidSale: (saleId: string) => void;
 
@@ -2023,7 +2029,17 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return safeParse<Member[]>("atpos_v2_members_list", []);
  });
 
- const [expenses, setExpenses] = useState<Expense[]>(() => {
+ // Background Transaction CSV Logger Trigger
+  useEffect(() => {
+    if (sales.length > 0 && typeof window !== "undefined") {
+      const timer = setTimeout(() => {
+        autoSaveDailyTransactionCsv(sales, saleItems, branches);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [sales.length, saleItems.length, branches.length]);
+
+  const [expenses, setExpenses] = useState<Expense[]>(() => {
  return safeParse<Expense[]>("atpos_v2_expenses", []);
  });
 
@@ -2034,6 +2050,25 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const [calendarNotes, setCalendarNotes] = useState<string>(() => {
  return localStorage.getItem("atpos_v2_calendar_notes") || "";
  });
+
+ const DEFAULT_LOYALTY_CONFIG: LoyaltyConfig = {
+ spendPerPoint: 500,
+ pointsPerSpend: 1,
+ pointValueInPhp: 1.0,
+ enabled: true,
+ };
+
+ const [loyaltyConfig, setLoyaltyConfig] = useState<LoyaltyConfig>(() => {
+ return safeParse<LoyaltyConfig>("tilepoint_loyalty_config", DEFAULT_LOYALTY_CONFIG);
+ });
+
+ const updateLoyaltyConfig = (updates: Partial<LoyaltyConfig>) => {
+ setLoyaltyConfig((prev) => {
+ const next = { ...prev, ...updates };
+ localStorage.setItem("tilepoint_loyalty_config", JSON.stringify(next));
+ return next;
+ });
+ };
 
  const [dayMemos, setDayMemos] = useState<Record<string, string>>(() => {
  return safeParse<Record<string, string>>("atpos_v2_calendar_day_memos", {});
@@ -7240,6 +7275,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  customVat?: number,
  idempotencyKey?: string,
  discountType?: string,
+ targetBranchId?: string,
+ pointsRedeemed?: number,
  ): Sale => {
  // Idempotency check: prevent duplicate transactions
  if (idempotencyKey) {
@@ -7257,7 +7294,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  .toString()
  .padStart(4, "0")}`;
 
- const userBranchId = currentUser?.branchAssignmentId || "B1";
+ const userBranchId = targetBranchId || currentUser?.branchAssignmentId || "B1";
 
  // Anti-collision Lock: Defensive stock verification immediately before deductions
  for (const item of cartItems) {
@@ -7302,11 +7339,17 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  ? parseFloat((amountTendered - grandTotal).toFixed(2))
  : 0.0;
 
-  // MEMBER CREDIT CEILING VERIFICATION & UPDATE
+  const matchingMember = members.find(
+    (m) => m.fullName.toLowerCase() === (customerName || "").toLowerCase()
+  );
+
+  const pointsEarned = (loyaltyConfig.enabled && loyaltyConfig.spendPerPoint > 0 && grandTotal > 0)
+    ? Math.floor(grandTotal / loyaltyConfig.spendPerPoint) * loyaltyConfig.pointsPerSpend
+    : 0;
+  const ptsRedeemed = pointsRedeemed || 0;
+
+  // MEMBER CREDIT CEILING VERIFICATION & LOYALTY POINTS UPDATE
   if (paymentMethod === "Member Credit") {
-    const matchingMember = members.find(
-      (m) => m.fullName.toLowerCase() === customerName.toLowerCase()
-    );
     if (matchingMember) {
       if (matchingMember.status !== "Active") {
         throw new Error(
@@ -7319,13 +7362,13 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
           `Credit Limit Exceeded: Customer "${matchingMember.fullName}" has a remaining credit limit of ₱${remainingLimit.toLocaleString()}, but this transaction total is ₱${grandTotal.toLocaleString()}.`
         );
       }
-      // Update member balance
       setMembers((prevMembers) =>
         prevMembers.map((m) =>
           m.id === matchingMember.id
             ? {
                 ...m,
                 outstandingBalance: parseFloat((m.outstandingBalance + grandTotal).toFixed(2)),
+                points: Math.max(0, (m.points || 0) + pointsEarned - ptsRedeemed),
               }
             : m
         )
@@ -7335,6 +7378,17 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         `Invalid Credit Profile: No registered Corporate Member found matching the customer name "${customerName}". Please assign an active member first via F5 or the Customer Info tab.`
       );
     }
+  } else if (matchingMember) {
+    setMembers((prevMembers) =>
+      prevMembers.map((m) =>
+        m.id === matchingMember.id
+          ? {
+              ...m,
+              points: Math.max(0, (m.points || 0) + pointsEarned - ptsRedeemed),
+            }
+          : m
+      )
+    );
   }
 
   const newSale: Sale = {
@@ -7356,6 +7410,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  createdAt: new Date().toISOString(),
  isDeleted: false,
  idempotencyKey,
+ pointsEarned,
+ pointsRedeemed: ptsRedeemed,
  discountType,
  };
 
@@ -8559,6 +8615,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  holdSale,
  parkedSales,
  setParkedSales,
+ loyaltyConfig,
+ updateLoyaltyConfig,
  checkoutSale,
  voidSale,
  openShift,

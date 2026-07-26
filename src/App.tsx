@@ -68,6 +68,7 @@ import {
  Building,
  Menu,
  X,
+ Sparkles,
  ChevronLeft,
  ChevronDown,
  ChevronRight,
@@ -1211,6 +1212,12 @@ function AppContent() {
  icon: UsersIcon,
  roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
  },
+ {
+ id: "members-loyalty",
+ name: "Member Loyalty Points",
+ icon: Sparkles,
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+ },
 
  {
  id: "expenses-add",
@@ -1323,6 +1330,7 @@ function AppContent() {
  subItems: [
  { id: "members-manage", name: "Manage Members" },
  { id: "members-receivables", name: "Account Receivables" },
+ { id: "members-loyalty", name: "Member Loyalty Points" },
  ],
  },
  {
@@ -2349,7 +2357,7 @@ function AppContent() {
  )}
 
  {/* ATPOS v2 Sub-items routing to standard Core Modules */}
- {activeTab.startsWith("inventory-") &&
+ {activeTab.startsWith("inventory-") && activeTab !== "inventory-damage" &&
  (() => {
  const map: Record<
  string,
@@ -2409,6 +2417,7 @@ function AppContent() {
  {[
  "members-manage",
  "members-receivables",
+ "members-loyalty",
  "members-search-sales",
  "expenses-add",
  "expenses-search",

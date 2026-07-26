@@ -1001,81 +1001,16 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
               {/* PASTE DIALOG */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-[9px] font-black uppercase tracking-widest text-m3-on-surface-variant pl-0.5 font-mono">Raw JSON content string:</label>
-                  <div className="flex items-center gap-3">
-                    {pastedJson && (
-                      <button
-                        onClick={() => setPastedJson('')}
-                        className="text-[10px] text-rose-500 hover:underline font-bold cursor-pointer"
-                        type="button"
-                      >
-                        Clear
-                      </button>
-                    )}
+                  <label className="text-[9px] font-black uppercase tracking-widest text-m3-on-surface-variant pl-0.5 font-mono">JSON Payload Text / File Contents:</label>
+                  {pastedJson && (
                     <button
-                      onClick={() => {
-                        const sampleJson = {
-                          "branchId": "B2",
-                          "branchName": "Emman Tile Center Branch",
-                          "reportingDate": "2026-07-18",
-                          "sales": [
-                            {
-                              "id": "SALE-B2-001",
-                              "saleNumber": "TP-B2-SALE-2001",
-                              "shiftId": "SHIFT-B2-01",
-                              "branchId": "B2",
-                              "cashierId": "USER-02",
-                              "cashierName": "Juan dela Cruz",
-                              "subtotal": 12000,
-                              "vat": 1440,
-                              "discount": 500,
-                              "grandTotal": 12940,
-                              "amountTendered": 13000,
-                              "changeAmount": 60
-                            }
-                          ],
-                          "saleItems": [
-                            {
-                              "id": "SALEITEM-B2-001",
-                              "saleId": "SALE-B2-001",
-                              "productId": "PROD-001",
-                              "productName": "Ceramic Floor Tile 60x60",
-                              "quantity": 20,
-                              "unitPrice": 600,
-                              "total": 12000
-                            }
-                          ]
-                        };
-                        setPastedJson(JSON.stringify(sampleJson, null, 2));
-                        triggerToast('Loaded sample import JSON structure!', 'success');
-                      }}
-                      className="text-[10px] text-m3-primary hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                      onClick={() => setPastedJson('')}
+                      className="text-[10px] text-rose-500 hover:underline font-bold cursor-pointer"
                       type="button"
                     >
-                      <span>Load Sample JSON</span>
+                      Clear
                     </button>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] font-bold text-m3-on-surface">JSON Payload Text / File Contents:</span>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        const resp = await fetch('/sample_sales_report.json');
-                        if (resp.ok) {
-                          const sample = await resp.text();
-                          setPastedJson(sample);
-                          triggerToast('Sample sales report JSON package loaded!', 'info');
-                        }
-                      } catch (err) {
-                        triggerToast('Could not fetch sample JSON file', 'error');
-                      }
-                    }}
-                    className="text-[10px] font-bold text-m3-primary hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <FileText className="w-3 h-3" /> Load Sample Sales Package
-                  </button>
+                  )}
                 </div>
                 <textarea
                   value={pastedJson}
@@ -2411,59 +2346,15 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
         <label className="text-[9px] font-black uppercase tracking-widest text-m3-on-surface-variant pl-0.5 font-mono">Raw JSON content string:</label>
-        <div className="flex items-center gap-3">
-          {pastedJson && (
-            <button
-              onClick={() => setPastedJson('')}
-              className="text-[10px] text-rose-500 hover:underline font-bold cursor-pointer"
-              type="button"
-            >
-              Clear
-            </button>
-          )}
+        {pastedJson && (
           <button
-            onClick={() => {
-              const sampleJson = {
-                "branchId": "B1",
-                "branchName": "Manila Main Branch",
-                "reportingDate": "2026-07-18",
-                "sales": [
-                  {
-                    "id": "SALE-001",
-                    "saleNumber": "TP-SALE-1001",
-                    "shiftId": "SHIFT-01",
-                    "branchId": "B1",
-                    "cashierId": "USER-02",
-                    "cashierName": "Juan dela Cruz",
-                    "subtotal": 12000,
-                    "vat": 1440,
-                    "discount": 500,
-                    "grandTotal": 12940,
-                    "amountTendered": 13000,
-                    "changeAmount": 60
-                  }
-                ],
-                "saleItems": [
-                  {
-                    "id": "SALEITEM-001",
-                    "saleId": "SALE-001",
-                    "productId": "PROD-001",
-                    "productName": "Ceramic Floor Tile 60x60",
-                    "quantity": 20,
-                    "unitPrice": 600,
-                    "total": 12000
-                  }
-                ]
-              };
-              setPastedJson(JSON.stringify(sampleJson, null, 2));
-              triggerToast('Loaded sample import JSON structure!', 'success');
-            }}
-            className="text-[10px] text-m3-primary hover:underline font-bold flex items-center gap-1 cursor-pointer"
+            onClick={() => setPastedJson('')}
+            className="text-[10px] text-rose-500 hover:underline font-bold cursor-pointer"
             type="button"
           >
-            <span>Load Sample JSON</span>
+            Clear
           </button>
-        </div>
+        )}
       </div>
       <textarea
         value={pastedJson}
