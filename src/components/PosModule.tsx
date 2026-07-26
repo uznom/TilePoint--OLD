@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useDb } from "../context/DbContext";
-import { Product, Sale, SaleItem, UserRole } from "../types/db";
+import { Product, Sale, SaleItem, UserRole, Member } from "../types/db";
 import { verifyPasswordWithToken } from "../lib/crypto";
 import { saveFileToBackup } from "../lib/fileBackupHelper";
 import { isProductInBranch, getBranchStockQuantity } from "../lib/branchUtils";
@@ -40,6 +40,9 @@ import {
   Wallet,
   Smartphone,
   ArrowRight,
+  UserPlus,
+  Plus,
+  Minus,
 } from "lucide-react";
 import { CalculatorModule } from "./CalculatorModule";
 import { ExpressiveTooltip } from "./ExpressiveTooltip";
@@ -78,22 +81,28 @@ const CartQtyInput: React.FC<{
  const val = e.target.value;
  setLocalVal(val);
 
+ if (val === "-") return;
+
  const parsed = parseInt(val, 10);
- if (!isNaN(parsed) && parsed > 0) {
- if (parsed <= maxStock) {
- updateCartQty(productId, parsed, maxStock);
- } else {
+ if (!isNaN(parsed) && parsed !== 0) {
+ if (parsed > 0 && parsed > maxStock) {
  updateCartQty(productId, maxStock, maxStock);
  setLocalVal(maxStock.toString());
+ } else {
+ updateCartQty(productId, parsed, maxStock);
  }
  }
  };
 
  const handleBlur = () => {
- const parsed = parseInt(localVal, 10);
- if (isNaN(parsed) || parsed <= 0) {
+ if (localVal === "-" || localVal.trim() === "") {
  removeFromCart(productId);
- } else if (parsed > maxStock) {
+ return;
+ }
+ const parsed = parseInt(localVal, 10);
+ if (isNaN(parsed) || parsed === 0) {
+ removeFromCart(productId);
+ } else if (parsed > 0 && parsed > maxStock) {
  updateCartQty(productId, maxStock, maxStock);
  setLocalVal(maxStock.toString());
  } else {
@@ -115,9 +124,9 @@ const CartQtyInput: React.FC<{
  onChange={handleChange}
  onBlur={handleBlur}
  onKeyDown={handleKeyDown}
- className="w-12 text-center bg-transparent border-y-0 border-x border-m3-outline-variant/30 text-xs font-mono font-black text-m3-on-surface focus:outline-none focus:bg-m3-surface-low rounded-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
- min="1"
- max={maxStock}
+ className={`w-12 text-center bg-transparent border-y-0 border-x border-m3-outline-variant/30 text-xs font-mono font-black ${
+ quantity < 0 ? "text-rose-500 bg-rose-500/10 font-bold" : "text-m3-on-surface"
+ } focus:outline-none focus:bg-m3-surface-low rounded-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
  />
  );
 };
@@ -154,28 +163,38 @@ export const PosModule: React.FC<PosModuleProps> = ({
  syncStatus,
  	members: rawMembers,
 	setMembers,
+	loyaltyConfig,
+	updateLoyaltyConfig,
 	} = useDb();
 
+  const [activePosBranchId, setActivePosBranchId] = useState<string>(
+    currentUser?.branchAssignmentId || "B1"
+  );
+
+  useEffect(() => {
+    if (currentUser?.branchAssignmentId) {
+      setActivePosBranchId(currentUser.branchAssignmentId);
+    }
+  }, [currentUser?.branchAssignmentId]);
+
   const products = React.useMemo(() => {
-    const userBranchId = currentUser?.branchAssignmentId || "B1";
     return rawProducts.map((p) => {
-      const stockQty = getBranchStockQuantity(p, userBranchId, branchStock, branches);
+      const stockQty = getBranchStockQuantity(p, activePosBranchId, branchStock, branches);
       return {
         ...p,
         stockQuantity: stockQty,
       };
     });
-  }, [rawProducts, branchStock, branches, currentUser]);
+  }, [rawProducts, branchStock, branches, activePosBranchId]);
 
   const branchFilteredMembers = React.useMemo(() => {
     const isAdmin = currentUser?.role === "Admin" || currentUser?.role?.toUpperCase() === "ADMIN";
-    const userBranchId = currentUser?.branchAssignmentId || "B1";
     return rawMembers.filter((m) => {
       if (isAdmin) return true;
       const memberBranch = m.branchId || "B1";
-      return memberBranch === userBranchId;
+      return memberBranch === activePosBranchId;
     });
-  }, [rawMembers, currentUser]);
+  }, [rawMembers, currentUser, activePosBranchId]);
 
   const members = branchFilteredMembers;
 
@@ -212,6 +231,73 @@ export const PosModule: React.FC<PosModuleProps> = ({
  const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
  const [closeShiftCashInput, setCloseShiftCashInput] = useState("");
  const [showTileCalculatorModal, setShowTileCalculatorModal] = useState(false);
+
+ // Add Member Modal states for Corporate Member Credit Desk
+ const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+ const [pointsToRedeem, setPointsToRedeem] = useState<number>(0);
+ const [showLoyaltyConfigModal, setShowLoyaltyConfigModal] = useState<boolean>(false);
+ const [loyaltySpendInput, setLoyaltySpendInput] = useState<string>("500");
+ const [loyaltyPointValueInput, setLoyaltyPointValueInput] = useState<string>("1.0");
+ const [newMemberName, setNewMemberName] = useState("");
+ const [newMemberPhone, setNewMemberPhone] = useState("");
+ const [newMemberEmail, setNewMemberEmail] = useState("");
+ const [newMemberLimit, setNewMemberLimit] = useState("15000");
+ const [addMemberError, setAddMemberError] = useState("");
+
+ const handleAddCorporateMember = (e?: React.FormEvent) => {
+ if (e) e.preventDefault();
+ setAddMemberError("");
+
+ if (!newMemberName.trim()) {
+ setAddMemberError("Please enter member full name or company name.");
+ return;
+ }
+ if (!newMemberPhone.trim()) {
+ setAddMemberError("Please enter contact phone number.");
+ return;
+ }
+ const limitNum = Number(newMemberLimit);
+ if (isNaN(limitNum) || limitNum < 0) {
+ setAddMemberError("Credit limit must be a non-negative number.");
+ return;
+ }
+
+ const newM: Member = {
+ id: "M" + (rawMembers.length + 1) + "-" + Math.floor(Math.random() * 900 + 100),
+ fullName: newMemberName.trim(),
+ phone: newMemberPhone.trim(),
+ email: newMemberEmail.trim() || "none@specified.com",
+ points: 10,
+ creditLimit: limitNum,
+ outstandingBalance: 0,
+ status: "Active",
+ branchId: currentUser?.branchAssignmentId || "ETC_DIPOLOG MAIN",
+ createdAt: new Date().toISOString(),
+ };
+
+ const updatedMembers = [...rawMembers, newM];
+ setMembers(updatedMembers);
+ try {
+ localStorage.setItem("atpos_v2_members_list", JSON.stringify(updatedMembers));
+ } catch (_) {}
+
+ addAuditLog(
+ "MEMBER_REGISTER",
+ `Registered member ${newM.fullName} with credit ceiling of ₱${newM.creditLimit.toLocaleString()} via Corporate Member Credit Desk`,
+ "Members",
+ newM.id,
+ JSON.stringify(newM)
+ );
+
+ setCustomerName(newM.fullName);
+ showToast(`Registered and linked corporate member: ${newM.fullName}`);
+
+ setNewMemberName("");
+ setNewMemberPhone("");
+ setNewMemberEmail("");
+ setNewMemberLimit("15000");
+ setShowAddMemberModal(false);
+ };
 
  // Find the last closed shift at this branch to pre-fill starting cash
  const previouslyClosedShift = React.useMemo(() => {
@@ -478,7 +564,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  ];
 
  // Map products
- const userBranchId = currentUser?.branchAssignmentId || "B1";
+ const userBranchId = activePosBranchId;
  const filteredProducts = products.filter((p) => {
  if (p.isDeleted) return false;
  if (!isProductInBranch(p, userBranchId, branchStock, branches)) {
@@ -597,7 +683,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  // Cart operations
  const addToCart = (product: Product) => {
- const userBranchId = currentUser?.branchAssignmentId || "B1";
+ const userBranchId = activePosBranchId;
  const realBranchStock = getBranchStockQuantity(product, userBranchId, branchStock, branches);
 
  if (realBranchStock <= 0) {
@@ -626,7 +712,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  };
 
  const updateCartQty = (productId: string, val: any, _maxStockOverride?: number) => {
- const userBranchId = currentUser?.branchAssignmentId || "B1";
+ const userBranchId = activePosBranchId;
  const matchedProduct = products.find((p) => p.id === productId);
  const cartProduct = cart.find((item) => item.product.id === productId)?.product;
  const realBranchStock = matchedProduct
@@ -634,13 +720,13 @@ export const PosModule: React.FC<PosModuleProps> = ({
  : getBranchStockQuantity(cartProduct, userBranchId, branchStock, branches);
 
  let parsedQty = parseInt(val, 10);
- if (isNaN(parsedQty) || parsedQty <= 0) {
+ if (isNaN(parsedQty) || parsedQty === 0) {
  removeFromCart(productId);
  return;
  }
- const newQty = Math.max(1, parsedQty);
+ const newQty = parsedQty;
 
- if (newQty > realBranchStock) {
+ if (newQty > 0 && newQty > realBranchStock) {
  showToast(
  `Excess Volume: Cannot exceed active stock level of ${realBranchStock}.`,
  );
@@ -884,17 +970,24 @@ export const PosModule: React.FC<PosModuleProps> = ({
     ? `[${paymentMethod} Ref: ${paymentRef.trim()}] ${customerNotes}`.trim()
     : customerNotes;
 
+  const ptsDiscount = (pointsToRedeem || 0) * (loyaltyConfig?.pointValueInPhp || 1.0);
+  const finalDiscount = discountAmount + ptsDiscount;
+  const netPayable = Math.max(0, grandTotal - ptsDiscount);
+
   const completedInvoice = checkoutSale(
     cart,
     customerName,
     finalNotes,
- discountAmount,
+ finalDiscount,
  paymentMethod,
- parseFloat(amountTendered) || grandTotal,
+ parseFloat(amountTendered) || netPayable,
  vat,
  idempKey,
  discountType,
+ activePosBranchId,
+ pointsToRedeem,
  );
+  setPointsToRedeem(0);
 
  setDeliveryNotes(customerNotes || "");
  setDeliveryCustomerName(customerName || "");
@@ -977,7 +1070,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
     if (!barcodeSearchTerm.trim()) return;
 
     const query = barcodeSearchTerm.trim().toLowerCase();
-    const userBranchId = currentUser?.branchAssignmentId || "B1";
+    const userBranchId = activePosBranchId;
 
     // Search exact matches first
     const exactMatches = products.filter(
@@ -1738,6 +1831,28 @@ export const PosModule: React.FC<PosModuleProps> = ({
  )}
  </h3>
  <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[10px] font-black uppercase tracking-wide">
+<div className="flex items-center gap-1.5 bg-m3-surface border border-m3-outline-variant/30 px-2.5 py-1 rounded-full text-[10px] font-bold text-m3-on-surface shadow-xs">
+  <Building2 className="h-3.5 w-3.5 text-m3-primary shrink-0" />
+  <span className="text-zinc-400 font-medium">Branch:</span>
+  {currentUser?.role === 'Admin' || currentUser?.role === 'Manager' ? (
+    <select
+      value={activePosBranchId}
+      onChange={(e) => setActivePosBranchId(e.target.value)}
+      className="bg-transparent text-m3-primary font-black focus:outline-none cursor-pointer uppercase"
+    >
+      {branches.filter(b => !b.isDeleted).map(b => (
+        <option key={b.id} value={b.id} className="bg-m3-surface text-m3-on-surface">
+          {b.name} ({b.id})
+        </option>
+      ))}
+    </select>
+  ) : (
+    <span className="font-black text-m3-primary uppercase">
+      {branches.find(b => b.id === activePosBranchId)?.name || activePosBranchId}
+    </span>
+  )}
+</div>
+<span className="text-zinc-500">•</span>
  <button
  type="button"
  onClick={() => setShowTileCalculatorModal(true)}
@@ -2057,25 +2172,36 @@ export const PosModule: React.FC<PosModuleProps> = ({
  >
  [Override]
  </button>
+ {item.quantity < 0 && (
+ <>
+ <span>•</span>
+ <span className="text-[9px] font-black uppercase text-rose-500 bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20 shrink-0">
+ Return / Refund Item
+ </span>
+ </>
+ )}
  </div>
  </div>
 
  <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 w-full sm:w-auto shrink-0">
  {(() => {
- const userBranchId = currentUser?.branchAssignmentId || "B1";
+ const userBranchId = activePosBranchId;
  const currentMaxStock = products.find((p) => p.id === item.product.id)?.stockQuantity ?? getBranchStockQuantity(item.product, userBranchId, branchStock, branches);
  return (
  <div className="flex items-center border border-m3-outline-variant rounded-lg overflow-hidden shrink-0 bg-m3-surface">
  <button
  type="button"
- onClick={() =>
+ title="Decrement quantity"
+ onClick={() => {
+ let nextQty = item.quantity - 1;
+ if (nextQty === 0) nextQty = -1;
  updateCartQty(
  item.product.id,
- item.quantity - 1,
+ nextQty,
  currentMaxStock,
- )
- }
- className="px-2 py-0.5 hover:bg-m3-outline-variant/20 text-xs font-mono font-bold text-m3-on-surface"
+ );
+ }}
+ className="px-2 py-0.5 hover:bg-m3-outline-variant/20 text-xs font-mono font-bold text-m3-on-surface cursor-pointer"
  >
  -
  </button>
@@ -2088,16 +2214,37 @@ export const PosModule: React.FC<PosModuleProps> = ({
  />
  <button
  type="button"
+ title="Increment quantity"
+ onClick={() => {
+ let nextQty = item.quantity + 1;
+ if (nextQty === 0) nextQty = 1;
+ updateCartQty(
+ item.product.id,
+ nextQty,
+ currentMaxStock,
+ );
+ }}
+ className="px-2 py-0.5 hover:bg-m3-outline-variant/20 text-xs font-mono font-bold text-m3-on-surface cursor-pointer"
+ >
+ +
+ </button>
+ <button
+ type="button"
+ title="Toggle positive/negative quantity (Return item)"
  onClick={() =>
  updateCartQty(
  item.product.id,
- item.quantity + 1,
+ -item.quantity,
  currentMaxStock,
  )
  }
- className="px-2 py-0.5 hover:bg-m3-outline-variant/20 text-xs font-mono font-bold text-m3-on-surface"
+ className={`px-1.5 py-0.5 text-[10px] font-mono font-black border-l border-m3-outline-variant/30 cursor-pointer transition-colors ${
+ item.quantity < 0
+ ? "bg-rose-500/20 text-rose-500 hover:bg-rose-500/30"
+ : "text-zinc-400 hover:text-m3-primary hover:bg-m3-outline-variant/20"
+ }`}
  >
- +
+ +/-
  </button>
  </div>
  );
@@ -2218,7 +2365,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
       { name: `GCash`, label: `GCash`, color: `border-sky-500/25 text-sky-600 dark:text-sky-400 bg-sky-500/5`, activeColor: `bg-sky-600 border-sky-600 text-white` },
       { name: `Maya`, label: `Maya`, color: `border-green-500/25 text-green-600 dark:text-green-400 bg-green-500/5`, activeColor: `bg-green-600 border-green-600 text-white` },
       { name: `Card / Bank Terminal`, label: `Card / Bank Terminal`, color: `border-violet-500/25 text-violet-600 dark:text-violet-400 bg-violet-500/5`, activeColor: `bg-violet-600 border-violet-600 text-white` },
-      { name: `Member Credit`, label: `Member Credit`, color: `border-m3-primary/25 text-m3-primary bg-m3-primary/5`, activeColor: `bg-m3-primary border-m3-primary text-white` },
+      { name: `Member Credit`, label: `Member`, color: `border-m3-primary/25 text-m3-primary bg-m3-primary/5`, activeColor: `bg-m3-primary border-m3-primary text-white` },
     ] as const
   ).map((method) => (
     <button
@@ -2292,61 +2439,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
 {paymentMethod !== "Cash" && paymentMethod !== "Member Credit" && (
         <div className="p-3 bg-m3-surface-low border border-m3-outline-variant/30 rounded-xl space-y-2 mt-2 font-sans animate-fade-in text-xs text-left">
-          {/* Header */}
-          <div className="flex items-center justify-between font-bold text-[10px] text-m3-primary uppercase tracking-wider">
-            <div className="flex items-center gap-1.5">
-              {(paymentMethod === "GCash" || paymentMethod === "Maya") && <Smartphone className="h-4 w-4 text-sky-500" />}
-              {paymentMethod === "Card / Bank Terminal" && <CreditCard className="h-4 w-4 text-violet-500" />}
-              <span>
-                {paymentMethod === "Card / Bank Terminal" ? "Bank Terminal Collection Desk" : "Digital Collection Desk"}
-              </span>
-            </div>
-            <span className="text-[8px] bg-m3-primary/15 text-m3-primary px-2 py-0.5 rounded-full font-extrabold uppercase tracking-widest">
-              {paymentMethod === "Card / Bank Terminal" ? "Receipt Collection Mandated" : "Reference Verification"}
-            </span>
-          </div>
-
-          {/* Visual payment prompt */}
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 bg-m3-surface-lowest p-2.5 rounded-lg border border-m3-outline-variant/15 items-center">
-            
-            {/* Visual Container */}
-            <div className="sm:col-span-4 flex flex-col items-center justify-center p-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-sm text-center">
-              {paymentMethod === "Card / Bank Terminal" ? (
-                <CreditCard className="h-10 w-10 text-violet-500 animate-pulse" />
-              ) : (
-                <Smartphone className="h-10 w-10 text-sky-500 animate-pulse" />
-              )}
-              <span className="text-[7px] text-zinc-500 font-bold mt-1 uppercase tracking-wider">
-                {paymentMethod === "Card / Bank Terminal" ? "Bank Terminal" : "E-Wallet Transfer"}
-              </span>
-            </div>
-
-            {/* Payment Instruction Copy */}
-            <div className="sm:col-span-8 space-y-1 text-[11px] leading-tight text-m3-on-surface">
-              <p className="font-extrabold text-m3-primary text-xs flex items-center gap-1">
-                Collect <span>PHP {Math.abs(grandTotal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </p>
-              <div className="space-y-0.5 text-[10px] text-zinc-500 dark:text-zinc-400">
-                {(paymentMethod === "GCash" || paymentMethod === "Maya") ? (
-                  <>
-                    <p className="font-bold text-zinc-700 dark:text-zinc-300">1. Customer completes payment via {paymentMethod} transfer.</p>
-                    <p>2. Ask client for the 13-digit Reference Number from their completed transaction.</p>
-                    <p>3. Input the reference number below to verify collection.</p>
-                  </>
-                ) : (
-                  <>
-                    <p className="font-bold text-zinc-700 dark:text-zinc-300">1. Initiate payment on the dedicated Bank/Card POS Terminal.</p>
-                    <p>2. Customer completes payment on terminal or banking app.</p>
-                    <p className="font-extrabold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1 py-0.5 rounded inline-block mt-0.5">
-                      MANDATE: Collect printed receipt or slip from customer.
-                    </p>
-                    <p className="text-zinc-600 dark:text-zinc-300">3. Type the Receipt Reference Code or Approval Code from the collected slip below.</p>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
           {/* Verification Reference Number Field */}
           <div className="space-y-1">
             <div className="flex justify-between items-center">
@@ -2388,56 +2480,181 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  )}
 
-				{paymentMethod === "Member Credit" && (() => {
+				{(paymentMethod === "Member Credit" || members.some(m => m.fullName.toLowerCase() === customerName.toLowerCase())) && (() => {
 					const matchingMember = members.find(
 						(m) => m.fullName.toLowerCase() === customerName.toLowerCase()
 					);
+					const spendPerPt = loyaltyConfig?.spendPerPoint || 500;
+					const ptValPhp = loyaltyConfig?.pointValueInPhp || 1.0;
+					const netAmountForPts = Math.max(0, grandTotal - (pointsToRedeem * ptValPhp));
+					const projectedEarnedPts = (loyaltyConfig?.enabled && spendPerPt > 0 && netAmountForPts > 0)
+						? Math.floor(netAmountForPts / spendPerPt) * (loyaltyConfig?.pointsPerSpend || 1)
+						: 0;
+
 					return (
-						<div className="p-3 bg-m3-surface-low border border-m3-outline-variant/30 rounded-xl space-y-2 mt-2 font-sans animate-fade-in text-xs">
-							<div className="flex items-center gap-1.5 font-bold text-[11px] text-m3-primary uppercase tracking-wider">
-								<Users className="h-4 w-4" />
-								Corporate Member Credit Desk
+						<div className="p-3 bg-m3-surface-low border border-m3-outline-variant/30 rounded-xl space-y-2 mt-2 font-sans animate-fade-in text-xs text-left">
+							<div className="flex items-center justify-between font-bold text-[11px] text-m3-primary uppercase tracking-wider">
+								<div className="flex items-center gap-1.5">
+									<Users className="h-4 w-4" />
+									<span>Member Account & Loyalty Desk</span>
+								</div>
+								<div className="flex items-center gap-1.5">
+									<button
+										type="button"
+										onClick={() => {
+											setNewMemberName(customerName !== "Walk-in Customer" ? customerName : "");
+											setAddMemberError("");
+											setShowAddMemberModal(true);
+										}}
+										className="px-2 py-0.5 bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary text-[10px] font-bold rounded-lg flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
+									>
+										<UserPlus className="h-3 w-3" />
+										<span>+ Member</span>
+									</button>
+								</div>
 							</div>
+
 							{matchingMember ? (
-								<div className="space-y-1 bg-m3-surface-lowest p-2.5 rounded-lg border border-m3-outline-variant/15">
-									<div className="flex justify-between items-center">
-										<span className="text-zinc-500 dark:text-zinc-400">Account:</span>
-										<span className="font-extrabold text-m3-on-surface">{matchingMember.fullName}</span>
-									</div>
-									<div className="flex justify-between items-center text-[11px]">
-										<span className="text-zinc-500 dark:text-zinc-400">Credit Limit:</span>
-										<span className="font-mono font-bold text-m3-on-surface">₱{matchingMember.creditLimit.toLocaleString()}</span>
-									</div>
-									<div className="flex justify-between items-center text-[11px]">
-										<span className="text-zinc-500 dark:text-zinc-400">Outstanding:</span>
-										<span className="font-mono font-bold text-amber-500">₱{matchingMember.outstandingBalance.toLocaleString()}</span>
-									</div>
-									<div className="border-t border-m3-outline-variant/10 my-1 pt-1 flex justify-between items-center">
-										<span className="font-bold text-zinc-500 dark:text-zinc-400">Remaining Credit:</span>
-										<span className={`font-mono font-black ${matchingMember.creditLimit - matchingMember.outstandingBalance >= grandTotal ? 'text-emerald-500' : 'text-rose-500'}`}>
-											₱{(matchingMember.creditLimit - matchingMember.outstandingBalance).toLocaleString()}
-										</span>
-									</div>
-									{matchingMember.status !== "Active" ? (
-										<div className="text-[10px] text-rose-500 font-bold bg-rose-500/10 p-1 px-2 rounded mt-1 border border-rose-500/20">
-											⚠️ Account is suspended. Credit checkout is restricted.
+								<div className="space-y-2">
+									<div className="space-y-1 bg-m3-surface-lowest p-2.5 rounded-lg border border-m3-outline-variant/15">
+										<div className="flex justify-between items-center">
+											<span className="text-zinc-500 dark:text-zinc-400">Account:</span>
+											<span className="font-extrabold text-m3-on-surface">{matchingMember.fullName}</span>
 										</div>
-									) : matchingMember.creditLimit - matchingMember.outstandingBalance < grandTotal ? (
-										<div className="text-[10px] text-rose-500 font-bold bg-rose-500/10 p-1 px-2 rounded mt-1 border border-rose-500/20">
-											⚠️ Purchase exceeds available credit limit.
+
+										{paymentMethod === "Member Credit" && (
+											<>
+												<div className="flex justify-between items-center text-[11px]">
+													<span className="text-zinc-500 dark:text-zinc-400">Credit Limit:</span>
+													<span className="font-mono font-bold text-m3-on-surface">₱{matchingMember.creditLimit.toLocaleString()}</span>
+												</div>
+												<div className="flex justify-between items-center text-[11px]">
+													<span className="text-zinc-500 dark:text-zinc-400">Outstanding Debt:</span>
+													<span className="font-mono font-bold text-amber-500">₱{matchingMember.outstandingBalance.toLocaleString()}</span>
+												</div>
+												<div className="border-t border-m3-outline-variant/10 my-1 pt-1 flex justify-between items-center">
+													<span className="font-bold text-zinc-500 dark:text-zinc-400">Available Credit:</span>
+													<span className={`font-mono font-black ${matchingMember.creditLimit - matchingMember.outstandingBalance >= grandTotal ? 'text-emerald-500' : 'text-rose-500'}`}>
+														₱{(matchingMember.creditLimit - matchingMember.outstandingBalance).toLocaleString()}
+													</span>
+												</div>
+											</>
+										)}
+
+										{matchingMember.status !== "Active" ? (
+											<div className="text-[10px] text-rose-500 font-bold bg-rose-500/10 p-1 px-2 rounded mt-1 border border-rose-500/20">
+												⚠️ Account is suspended.
+											</div>
+										) : paymentMethod === "Member Credit" && matchingMember.creditLimit - matchingMember.outstandingBalance < grandTotal ? (
+											<div className="text-[10px] text-rose-500 font-bold bg-rose-500/10 p-1 px-2 rounded mt-1 border border-rose-500/20">
+												⚠️ Purchase exceeds available credit limit.
+											</div>
+										) : (
+											<div className="text-[10px] text-emerald-500 font-bold bg-emerald-500/10 p-1 px-2 rounded mt-1 border border-emerald-500/20 flex items-center gap-1">
+												✅ Account active for checkout.
+											</div>
+										)}
+									</div>
+
+									{/* LOYALTY POINTS & REWARDS BOX */}
+									<div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-2.5 rounded-lg border border-amber-500/20 space-y-2">
+										<div className="flex items-center justify-between">
+											<span className="font-extrabold text-[11px] text-amber-500 flex items-center gap-1">
+												<Sparkles className="h-3.5 w-3.5" />
+												<span>Loyalty Points Rewards</span>
+											</span>
+											<span className="text-[10px] font-mono text-zinc-400 font-bold">
+												Formula: ₱{spendPerPt.toLocaleString()} = 1 Pt
+											</span>
 										</div>
-									) : (
-										<div className="text-[10px] text-emerald-500 font-bold bg-emerald-500/10 p-1 px-2 rounded mt-1 border border-emerald-500/20 flex items-center gap-1">
-											✅ Account active and sufficient credit available.
+
+										<div className="grid grid-cols-2 gap-2 text-[11px]">
+											<div className="bg-m3-surface-lowest/80 p-2 rounded-md border border-m3-outline-variant/10">
+												<span className="text-zinc-400 text-[10px] block font-medium">Current Balance:</span>
+												<span className="font-mono font-extrabold text-amber-500 text-xs">
+													⭐ {(matchingMember.points || 0)} Pts
+												</span>
+												<span className="text-[9px] text-zinc-400 block font-mono">
+													(Value: ₱{((matchingMember.points || 0) * ptValPhp).toFixed(2)})
+												</span>
+											</div>
+
+											<div className="bg-m3-surface-lowest/80 p-2 rounded-md border border-m3-outline-variant/10">
+												<span className="text-zinc-400 text-[10px] block font-medium">Earned This Order:</span>
+												<span className="font-mono font-extrabold text-emerald-500 text-xs">
+													+{projectedEarnedPts} Pts
+												</span>
+												<span className="text-[9px] text-zinc-400 block font-mono">
+													(Auto-credited upon checkout)
+												</span>
+											</div>
 										</div>
-									)}
+
+										{/* Point Redemption Action Box */}
+										{(matchingMember.points || 0) > 0 && grandTotal > 0 && (
+											<div className="pt-1.5 border-t border-amber-500/15 space-y-1.5">
+												<div className="flex items-center justify-between">
+													<label className="text-[10px] font-bold text-m3-on-surface uppercase tracking-wide">
+														Redeem Points for Discount
+													</label>
+													{pointsToRedeem > 0 && (
+														<span className="text-[10px] font-mono font-extrabold text-emerald-500">
+															-₱{(pointsToRedeem * ptValPhp).toFixed(2)} Off
+														</span>
+													)}
+												</div>
+
+												<div className="flex items-center gap-1.5">
+													<input
+														type="number"
+														min="0"
+														max={Math.min(matchingMember.points || 0, Math.floor(grandTotal / ptValPhp))}
+														value={pointsToRedeem || ""}
+														onChange={(e) => {
+															const val = parseInt(e.target.value) || 0;
+															const maxAllowed = Math.min(matchingMember.points || 0, Math.floor(grandTotal / ptValPhp));
+															setPointsToRedeem(Math.max(0, Math.min(val, maxAllowed)));
+														}}
+														placeholder="Enter points to redeem"
+														className="w-full bg-m3-surface-lowest border border-m3-outline-variant/40 rounded-md px-2 py-1 text-xs font-mono font-bold text-m3-on-surface focus:outline-none focus:border-amber-500"
+													/>
+													<button
+														type="button"
+														onClick={() => {
+															const maxAllowed = Math.min(matchingMember.points || 0, Math.floor(grandTotal / ptValPhp));
+															setPointsToRedeem(maxAllowed);
+														}}
+														className="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-500 text-[10px] font-extrabold rounded cursor-pointer whitespace-nowrap transition-colors"
+													>
+														Max ({Math.min(matchingMember.points || 0, Math.floor(grandTotal / ptValPhp))})
+													</button>
+													{pointsToRedeem > 0 && (
+														<button
+															type="button"
+															onClick={() => setPointsToRedeem(0)}
+															className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold rounded cursor-pointer transition-colors"
+														>
+															Clear
+														</button>
+													)}
+												</div>
+
+												{pointsToRedeem > 0 && (
+													<div className="text-[10px] font-mono font-bold text-emerald-500 bg-emerald-500/10 p-1.5 rounded border border-emerald-500/20 flex justify-between items-center">
+														<span>Discount Applied:</span>
+														<span>-₱{(pointsToRedeem * ptValPhp).toFixed(2)} | Net Payable: ₱{(Math.max(0, grandTotal - (pointsToRedeem * ptValPhp))).toFixed(2)}</span>
+													</div>
+												)}
+											</div>
+										)}
+									</div>
 								</div>
 							) : (
-								<div className="space-y-2">
-									<div className="text-[10px] text-amber-500 font-medium bg-amber-500/10 p-2 rounded border border-amber-500/20 leading-relaxed">
-										⚠️ <strong>No Matching Member Found:</strong> The current customer name <strong>"{customerName}"</strong> does not match any registered Corporate Member profile. Select an active account below to link this ticket:
+								<div className="space-y-1.5">
+									<div className="text-[10px] text-m3-on-surface-variant font-bold uppercase tracking-wider px-1">
+										Select Active Member Account:
 									</div>
-									<div className="max-h-32 overflow-y-auto space-y-1 border border-m3-outline-variant/15 rounded-lg p-1 bg-m3-surface-lowest">
+									<div className="max-h-36 overflow-y-auto space-y-1 border border-m3-outline-variant/15 rounded-lg p-1 bg-m3-surface-lowest">
 										{members.filter(m => m.status === "Active").map((m) => (
 											<button
 												type="button"
@@ -2448,7 +2665,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 												className="w-full text-left p-1.5 px-2 hover:bg-m3-primary/10 rounded text-[11px] font-bold text-m3-on-surface flex justify-between items-center cursor-pointer border-0 bg-transparent transition-colors"
 											>
 												<span>{m.fullName}</span>
-												<span className="font-mono text-[10px] text-zinc-400">Ceiling: ₱{m.creditLimit.toLocaleString()}</span>
+												<span className="font-mono text-[10px] text-amber-500">⭐ {m.points || 0} pts | Ceiling: ₱{m.creditLimit.toLocaleString()}</span>
 											</button>
 										))}
 										{members.filter(m => m.status === "Active").length === 0 && (
@@ -4553,7 +4770,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <CalculatorModule
  darkMode={darkMode}
  onApply={(product, quantity) => {
- const userBranchId = currentUser?.branchAssignmentId || "B1";
+ const userBranchId = activePosBranchId;
  const realBranchStock = getBranchStockQuantity(product, userBranchId, branchStock, branches);
  if (realBranchStock <= 0) {
  showToast("Depleted Stock: Selected product is currently out of stock.");
@@ -4607,6 +4824,255 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <span className="leading-tight">{toastMessage}</span>
  </div>
  )}
+
+ {/* Register Corporate Member Modal */}
+ <AnimatePresence>
+ {showAddMemberModal && (
+ <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+ <motion.div
+ initial={{ opacity: 0 }}
+ animate={{ opacity: 1 }}
+ exit={{ opacity: 0 }}
+ className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
+ onClick={() => setShowAddMemberModal(false)}
+ />
+ <motion.div
+ initial={{ opacity: 0, scale: 0.95, y: 15 }}
+ animate={{ opacity: 1, scale: 1, y: 0 }}
+ exit={{ opacity: 0, scale: 0.95, y: 15 }}
+ className="relative w-full max-w-lg rounded-[24px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface flex flex-col space-y-4"
+ >
+ <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-3">
+ <div className="flex items-center gap-2">
+ <div className="p-2 rounded-xl bg-m3-primary/10 text-m3-primary">
+ <UserPlus className="h-5 w-5" />
+ </div>
+ <div className="text-left">
+ <h3 className="text-sm font-extrabold text-m3-on-surface">Add Corporate Member Account</h3>
+ <p className="text-[10px] text-zinc-500 dark:text-zinc-400">Register new member profile & configure credit ceiling</p>
+ </div>
+ </div>
+ <button
+ type="button"
+ onClick={() => setShowAddMemberModal(false)}
+ className="text-m3-on-surface-variant hover:text-m3-on-surface p-1.5 rounded-full hover:bg-m3-primary/10 transition-colors cursor-pointer"
+ >
+ <X className="h-5 w-5" />
+ </button>
+ </div>
+
+ {addMemberError && (
+ <div className="p-2.5 bg-rose-500/10 border border-rose-500/25 text-rose-500 text-xs font-bold rounded-xl flex items-center gap-2">
+ <ShieldAlert className="h-4 w-4 shrink-0" />
+ <span>{addMemberError}</span>
+ </div>
+ )}
+
+ <form onSubmit={handleAddCorporateMember} className="space-y-3 text-left">
+ <div className="space-y-1">
+ <label className="text-[10px] font-black text-m3-primary uppercase tracking-wider block">
+ Full Name / Company Account Name *
+ </label>
+ <input
+ type="text"
+ required
+ value={newMemberName}
+ onChange={(e) => setNewMemberName(e.target.value)}
+ placeholder="e.g. Acme Builders Corp / Juan Dela Cruz"
+ className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl px-3.5 py-2 text-xs font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
+ />
+ </div>
+
+ <div className="grid grid-cols-2 gap-3">
+ <div className="space-y-1">
+ <label className="text-[10px] font-black text-m3-primary uppercase tracking-wider block">
+ Contact Phone Number *
+ </label>
+ <input
+ type="text"
+ required
+ value={newMemberPhone}
+ onChange={(e) => setNewMemberPhone(e.target.value)}
+ placeholder="0917-123-4567"
+ className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl px-3.5 py-2 text-xs font-mono font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
+ />
+ </div>
+
+ <div className="space-y-1">
+ <label className="text-[10px] font-black text-m3-primary uppercase tracking-wider block">
+ Email Address
+ </label>
+ <input
+ type="email"
+ value={newMemberEmail}
+ onChange={(e) => setNewMemberEmail(e.target.value)}
+ placeholder="billing@company.com"
+ className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl px-3.5 py-2 text-xs font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
+ />
+ </div>
+ </div>
+
+ <div className="space-y-1">
+ <label className="text-[10px] font-black text-m3-primary uppercase tracking-wider block">
+ Credit Line Ceiling Limit (₱) *
+ </label>
+ <input
+ type="number"
+ required
+ min="0"
+ step="500"
+ value={newMemberLimit}
+ onChange={(e) => setNewMemberLimit(e.target.value)}
+ className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl px-3.5 py-2 text-xs font-mono font-extrabold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
+ />
+ <p className="text-[9.5px] text-zinc-400 italic">Maximum authorized credit allowed for deferred billing checkout</p>
+ </div>
+
+ <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-3 mt-4">
+ <button
+ type="button"
+ onClick={() => setShowAddMemberModal(false)}
+ className="px-4 py-2 border border-m3-outline-variant/40 hover:bg-m3-surface-high text-m3-on-surface text-xs font-bold rounded-xl cursor-pointer transition-colors"
+ >
+ Cancel
+ </button>
+ <button
+ type="submit"
+ className="px-5 py-2 bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary text-xs font-extrabold rounded-xl shadow-md cursor-pointer transition-colors flex items-center gap-1.5"
+ >
+ <UserPlus className="h-4 w-4" />
+ <span>Save & Link Account</span>
+ </button>
+ </div>
+ </form>
+ </motion.div>
+ </div>
+ )}
+ </AnimatePresence>
+
+ {/* Loyalty Points Mechanics Configuration Modal */}
+ <AnimatePresence>
+ {showLoyaltyConfigModal && (
+ <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+ <motion.div
+ initial={{ opacity: 0 }}
+ animate={{ opacity: 1 }}
+ exit={{ opacity: 0 }}
+ className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
+ onClick={() => setShowLoyaltyConfigModal(false)}
+ />
+ <motion.div
+ initial={{ opacity: 0, scale: 0.95, y: 15 }}
+ animate={{ opacity: 1, scale: 1, y: 0 }}
+ exit={{ opacity: 0, scale: 0.95, y: 15 }}
+ className="relative w-full max-w-md rounded-[24px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface flex flex-col space-y-4"
+ >
+ <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-3">
+ <div className="flex items-center gap-2">
+ <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
+ <Sparkles className="h-5 w-5" />
+ </div>
+ <div className="text-left">
+ <h3 className="text-sm font-extrabold text-m3-on-surface">Member Loyalty Program Mechanics</h3>
+ <p className="text-[10px] text-zinc-400">Configure point earning rates & redemption value</p>
+ </div>
+ </div>
+ <button
+ type="button"
+ onClick={() => setShowLoyaltyConfigModal(false)}
+ className="text-m3-on-surface-variant hover:text-m3-on-surface p-1.5 rounded-full hover:bg-m3-primary/10 transition-colors cursor-pointer"
+ >
+ <X className="h-5 w-5" />
+ </button>
+ </div>
+
+ <form
+ onSubmit={(e) => {
+ e.preventDefault();
+ const spendNum = parseFloat(loyaltySpendInput) || 500;
+ const valueNum = parseFloat(loyaltyPointValueInput) || 1.0;
+ updateLoyaltyConfig({
+ spendPerPoint: spendNum,
+ pointValueInPhp: valueNum,
+ enabled: true,
+ });
+ showToast("Loyalty points program mechanics saved successfully!");
+ setShowLoyaltyConfigModal(false);
+ }}
+ className="space-y-4 text-left"
+ >
+ <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-1">
+ <div className="flex items-center justify-between text-xs font-bold text-amber-500">
+ <span>⭐ Active Formula Rules</span>
+ <span className="text-[10px] font-mono font-black uppercase">Live System Rule</span>
+ </div>
+ <p className="text-[11px] text-m3-on-surface leading-relaxed">
+ Every <strong>₱{(parseFloat(loyaltySpendInput) || 500).toLocaleString()}</strong> spent = <strong>1 Point</strong> earned.<br />
+ <strong>1 Point</strong> = <strong>₱{(parseFloat(loyaltyPointValueInput) || 1.0).toFixed(2)}</strong> discount redemption value.
+ </p>
+ </div>
+
+ <div className="space-y-1">
+ <label className="text-[10px] font-black text-m3-primary uppercase tracking-wider block">
+ Spend Amount Per 1 Point (PHP) *
+ </label>
+ <div className="relative">
+ <span className="absolute left-3 top-2.5 text-xs font-bold text-zinc-400">₱</span>
+ <input
+ type="number"
+ required
+ min="10"
+ step="10"
+ value={loyaltySpendInput}
+ onChange={(e) => setLoyaltySpendInput(e.target.value)}
+ placeholder="500"
+ className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl pl-7 pr-3 py-2 text-xs font-mono font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
+ />
+ </div>
+ <p className="text-[9.5px] text-zinc-400 italic">Example: Enter 500 so buying ₱500 worth of tiles earns 1 point (e.g. ₱1,500 purchase = 3 points).</p>
+ </div>
+
+ <div className="space-y-1">
+ <label className="text-[10px] font-black text-m3-primary uppercase tracking-wider block">
+ Redemption Value Per 1 Point (PHP) *
+ </label>
+ <div className="relative">
+ <span className="absolute left-3 top-2.5 text-xs font-bold text-zinc-400">₱</span>
+ <input
+ type="number"
+ required
+ min="0.1"
+ step="0.1"
+ value={loyaltyPointValueInput}
+ onChange={(e) => setLoyaltyPointValueInput(e.target.value)}
+ placeholder="1.00"
+ className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl pl-7 pr-3 py-2 text-xs font-mono font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
+ />
+ </div>
+ <p className="text-[9.5px] text-zinc-400 italic">Example: Enter 1.00 so 1 point deducts ₱1.00 from the bill.</p>
+ </div>
+
+ <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-3 mt-4">
+ <button
+ type="button"
+ onClick={() => setShowLoyaltyConfigModal(false)}
+ className="px-4 py-2 border border-m3-outline-variant/40 hover:bg-m3-surface-high text-m3-on-surface text-xs font-bold rounded-xl cursor-pointer transition-colors"
+ >
+ Cancel
+ </button>
+ <button
+ type="submit"
+ className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-extrabold text-xs rounded-xl shadow-md cursor-pointer transition-colors flex items-center gap-1.5"
+ >
+ <Sparkles className="h-4 w-4" />
+ <span>Save Mechanics</span>
+ </button>
+ </div>
+ </form>
+ </motion.div>
+ </div>
+ )}
+ </AnimatePresence>
  </div>
  );
 }

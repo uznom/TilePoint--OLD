@@ -2,6 +2,8 @@ import React, { useState, useMemo } from "react";
 import { useDb } from "../context/DbContext";
 import { UserRole } from "../types/db";
 import { saveFileToBackup } from "../lib/fileBackupHelper";
+import { generateTransactionCsv, autoSaveDailyTransactionCsv, downloadWindowsLauncherScript } from "../lib/transactionLogger";
+import { Download, Search, HardDrive, Terminal } from "lucide-react";
 import { ProfitAnalytics } from "./ProfitAnalytics";
 import {
  TrendingUp,
@@ -68,7 +70,9 @@ export function AdminProfitModule({
  } = useDb();
 
  // Localized tab inside the accounting console
- const [activeLedgerTab, setActiveLedgerTab] = useState<"damage" | "shift-shortages" | "voids" | "expenses">("damage");
+ const [activeLedgerTab, setActiveLedgerTab] = useState<"damage" | "shift-shortages" | "voids" | "expenses" | "csv-logger">("damage");
+  const [csvSearchQuery, setCsvSearchQuery] = useState("");
+  const [csvSyncStatus, setCsvSyncStatus] = useState<string | null>(null);
  
  // Custom branch landing cost modifiers in percentage, saved in localStorage
  const [branchLandingModifiers, setBranchLandingModifiers] = useState<Record<string, number>>(() => {
@@ -1467,6 +1471,165 @@ export function AdminProfitModule({
  )}
  </div>
  )}
+
+  {/* Tab: Transaction CSV Logger */}
+  {activeLedgerTab === "csv-logger" && (
+    <div className="space-y-3">
+      <div className="p-3 bg-zinc-900 text-white rounded-xl space-y-2 border border-zinc-800">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
+            <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
+              Automated Background CSV Logger Active
+            </span>
+          </div>
+          <span className="text-[10px] font-mono bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded">
+            Auto-Sorted Chronologically by Time
+          </span>
+        </div>
+        
+        <p className="text-[11px] text-zinc-300 leading-relaxed">
+          Every completed sales transaction is automatically logged in <code className="text-amber-300 font-mono">TilePoint_Backups/Sales_Reports/</code> in real time without location prompts.
+        </p>
+
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <button
+            type="button"
+            onClick={async () => {
+              const res = await autoSaveDailyTransactionCsv(sales, saleItems, branches);
+              if (res.success) {
+                setCsvSyncStatus("Successfully updated background transaction CSV logs!");
+              } else {
+                setCsvSyncStatus("Downloaded CSV backup to default downloads.");
+              }
+              setTimeout(() => setCsvSyncStatus(null), 3000);
+            }}
+            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <RefreshCw className="h-3 w-3" />
+            <span>Force CSV Sync</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              const csv = generateTransactionCsv(sales, saleItems, branches);
+              const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `Transaction_History_Master_Log_${new Date().toISOString().slice(0, 10)}.csv`;
+              a.click();
+              URL.revokeObjectURL(url);
+              showToastMsg("Exported Master Transaction History CSV", "success");
+            }}
+            className="px-3 py-1.5 bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary text-[10px] font-extrabold uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <Download className="h-3 w-3" />
+            <span>Export CSV</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              downloadWindowsLauncherScript();
+              showToastMsg("Downloaded TilePoint Windows Launcher (.cmd)", "info");
+            }}
+            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <Terminal className="h-3 w-3" />
+            <span>Windows Launcher (.cmd)</span>
+          </button>
+        </div>
+
+        {csvSyncStatus && (
+          <div className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 p-1.5 rounded border border-emerald-500/30">
+            {csvSyncStatus}
+          </div>
+        )}
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-zinc-400" />
+        <input
+          type="text"
+          placeholder="Filter logs by Invoice #, Cashier, Customer, Branch..."
+          value={csvSearchQuery}
+          onChange={(e) => setCsvSearchQuery(e.target.value)}
+          className="w-full bg-zinc-100 dark:bg-zinc-950/50 border border-m3-outline-variant/30 text-xs pl-8 pr-3 py-1.5 rounded-xl text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary"
+        />
+      </div>
+
+      <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+        {(() => {
+          const sorted = [...sales]
+            .filter((s) => !s.isDeleted)
+            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+          const filtered = sorted.filter((s) => {
+            if (!csvSearchQuery.trim()) return true;
+            const q = csvSearchQuery.toLowerCase();
+            return (
+              (s.saleNumber && s.saleNumber.toLowerCase().includes(q)) ||
+              (s.cashierName && s.cashierName.toLowerCase().includes(q)) ||
+              (s.customerName && s.customerName.toLowerCase().includes(q)) ||
+              (s.paymentMethod && s.paymentMethod.toLowerCase().includes(q))
+            );
+          });
+
+          if (filtered.length === 0) {
+            return (
+              <p className="text-center py-6 text-zinc-500 dark:text-zinc-400 text-xs italic">
+                No transaction logs match search criteria.
+              </p>
+            );
+          }
+
+          return filtered.slice(-15).reverse().map((s) => {
+            const dt = new Date(s.createdAt);
+            const timeFormatted = !isNaN(dt.getTime())
+              ? dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+              : s.createdAt;
+            const dateFormatted = !isNaN(dt.getTime())
+              ? dt.toLocaleDateString()
+              : s.createdAt.slice(0, 10);
+
+            return (
+              <div
+                key={s.id}
+                className="p-2.5 bg-zinc-100 dark:bg-zinc-950/30 border border-m3-outline-variant/15 rounded-xl flex items-center justify-between text-xs hover:border-m3-primary/30 transition-all"
+              >
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-black text-m3-primary">{s.saleNumber || s.id}</span>
+                    <span className="text-[10px] font-mono bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-1.5 py-0.2 rounded">
+                      {timeFormatted} ({dateFormatted})
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-zinc-500 dark:text-zinc-400 flex items-center gap-2 font-mono">
+                    <span>Cashier: {s.cashierName || "System"}</span>
+                    <span>•</span>
+                    <span>Customer: {s.customerName || "Walk-in"}</span>
+                    <span>•</span>
+                    <span className="uppercase font-bold text-zinc-600 dark:text-zinc-300">{s.paymentMethod}</span>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0 font-mono">
+                  <div className="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs">
+                    ₱{(s.grandTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </div>
+                  <div className="text-[9px] text-zinc-400">
+                    Disc: ₱{(s.discount || 0).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            );
+          });
+        })()}
+      </div>
+    </div>
+  )}
 
  </div>
  </div>

@@ -2617,9 +2617,7 @@ startxref
  setTimeout(() => setBackupActionStatus(null), 3000);
  } else {
  try {
- const handle = await (window as any).showDirectoryPicker({
- mode: 'readwrite'
- });
+ const handle = await (window as any).showDirectoryPicker();
  await saveDirectoryHandle(handle);
  setActiveFolderHandle(handle);
  setBackupActionStatus(`Successfully authorized native folder: "${handle.name}".`);
