@@ -1,0 +1,151 @@
+{
+  "id": "REP-2026-0726-001",
+  "branchId": "B1",
+  "branchName": "ETC_DIPOLOG MAIN",
+  "reportingDate": "2026-07-26",
+  "exportedByRole": "Branch Manager",
+  "transmissionId": "TRANS-20260726-001",
+  "importVerificationId": "VER-20260726-001",
+  "totalSalesCount": 2,
+  "totalSalesAmount": 6150.00,
+  "totalVatAmount": 658.93,
+  "totalDiscountAmount": 100.00,
+  "notes": "Daily sales ledger transmission package for Dipolog Main with branch operational data.",
+  "sales": [
+    {
+      "id": "S-20260726-001",
+      "saleNumber": "INV-2026-001",
+      "shiftId": "SHIFT-101",
+      "branchId": "B1",
+      "cashierId": "U1",
+      "cashierName": "Erica Manaban",
+      "customerName": "Juan Dela Cruz",
+      "subtotal": 3400.00,
+      "vat": 364.29,
+      "discount": 0.00,
+      "grandTotal": 3400.00,
+      "paymentMethod": "Cash",
+      "amountTendered": 3500.00,
+      "changeAmount": 100.00,
+      "notes": "Walk-in purchase",
+      "isDeleted": false,
+      "createdAt": "2026-07-26T10:15:00.000Z"
+    },
+    {
+      "id": "S-20260726-002",
+      "saleNumber": "INV-2026-002",
+      "shiftId": "SHIFT-101",
+      "branchId": "B1",
+      "cashierId": "U1",
+      "cashierName": "Erica Manaban",
+      "customerName": "Maria Santos",
+      "subtotal": 2850.00,
+      "vat": 294.64,
+      "discount": 100.00,
+      "grandTotal": 2750.00,
+      "paymentMethod": "GCash",
+      "amountTendered": 2750.00,
+      "changeAmount": 0.00,
+      "notes": "Promo discount applied",
+      "isDeleted": false,
+      "createdAt": "2026-07-26T14:30:00.000Z"
+    }
+  ],
+  "saleItems": [
+    {
+      "id": "SI-001-1",
+      "saleId": "S-20260726-001",
+      "productId": "P1",
+      "productName": "Carrara White Polished 60x60",
+      "quantity": 4,
+      "unitPrice": 850.00,
+      "total": 3400.00
+    },
+    {
+      "id": "SI-002-1",
+      "saleId": "S-20260726-002",
+      "productId": "P2",
+      "productName": "Calacatta Gold Matte 60x120",
+      "quantity": 1,
+      "unitPrice": 2100.00,
+      "total": 2100.00
+    },
+    {
+      "id": "SI-002-2",
+      "saleId": "S-20260726-002",
+      "productId": "P3",
+      "productName": "Rustic Slate Grey 30x60",
+      "quantity": 2,
+      "unitPrice": 380.00,
+      "total": 760.00
+    }
+  ],
+  "users": [
+    {
+      "id": "U1",
+      "username": "erica_manaban",
+      "fullName": "Erica Manaban",
+      "role": "Cashier",
+      "branchAssignmentId": "B1",
+      "branchAssignmentName": "ETC_DIPOLOG MAIN",
+      "isNew": false
+    },
+    {
+      "id": "U2",
+      "username": "mark_santos",
+      "fullName": "Mark Santos",
+      "role": "Branch Manager",
+      "branchAssignmentId": "B1",
+      "branchAssignmentName": "ETC_DIPOLOG MAIN",
+      "isNew": false
+    }
+  ],
+  "expenses": [
+    {
+      "id": "EXP-20260726-01",
+      "branchId": "B1",
+      "category": "Store Supplies",
+      "amount": 450.00,
+      "description": "Packaging tape and bubble wrap for tile shipments",
+      "recordedBy": "Erica Manaban",
+      "createdAt": "2026-07-26T11:00:00.000Z"
+    }
+  ],
+  "members": [
+    {
+      "id": "MEM-001",
+      "fullName": "Juan Dela Cruz",
+      "phone": "+639171234567",
+      "email": "juan.delacruz@example.com",
+      "tier": "Gold VIP",
+      "loyaltyPoints": 340,
+      "branchId": "B1",
+      "createdAt": "2026-01-15T00:00:00.000Z"
+    }
+  ],
+  "inventory": [
+    {
+      "productId": "P1",
+      "productName": "Carrara White Polished 60x60",
+      "quantity": 120,
+      "branchId": "B1"
+    },
+    {
+      "productId": "P2",
+      "productName": "Calacatta Gold Matte 60x120",
+      "quantity": 45,
+      "branchId": "B1"
+    }
+  ],
+  "salesAdjustments": [
+    {
+      "id": "ADJ-20260726-01",
+      "saleId": "S-20260726-002",
+      "type": "Discount Override",
+      "amount": 100.00,
+      "reason": "Contractor bulk purchase discount authorized by Manager",
+      "authorizedBy": "Mark Santos",
+      "createdAt": "2026-07-26T14:30:00.000Z"
+    }
+  ]
+}

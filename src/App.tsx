@@ -652,6 +652,37 @@ function AppContent() {
  }
  }, [showAccountSettingsModal, currentUser]);
 
+  useEffect(() => {
+  const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+  const target = e.target as HTMLElement | null;
+  if (!target) return;
+  if (
+  isAccountDropdownOpen &&
+  !target.closest("#account-dropdown-container") &&
+  !target.closest("#account-dropdown-trigger")
+  ) {
+  setIsAccountDropdownOpen(false);
+  }
+  if (
+  isSidebarProfileDropdownOpen &&
+  !target.closest("#sidebar-profile-dropdown-container") &&
+  !target.closest("#sidebar-profile-dropdown-trigger")
+  ) {
+  setIsSidebarProfileDropdownOpen(false);
+  }
+  };
+
+  if (isAccountDropdownOpen || isSidebarProfileDropdownOpen) {
+  document.addEventListener("mousedown", handleOutsideClick);
+  document.addEventListener("touchstart", handleOutsideClick);
+  }
+
+  return () => {
+  document.removeEventListener("mousedown", handleOutsideClick);
+  document.removeEventListener("touchstart", handleOutsideClick);
+  };
+  }, [isAccountDropdownOpen, isSidebarProfileDropdownOpen]);
+
  const showToast = (msg: string) => {
  setToastMessage(msg);
  setTimeout(() => {
@@ -1571,19 +1602,31 @@ function AppContent() {
  onClick={() => setIsAccountDropdownOpen(false)}
  />
  <motion.div
+ id="account-dropdown-container"
  initial={{ opacity: 0, scale: 0.95, y: -8 }}
  animate={{ opacity: 1, scale: 1, y: 0 }}
  exit={{ opacity: 0, scale: 0.95, y: -8 }}
  transition={{ duration: 0.15, ease: "easeOut" }}
  className="absolute right-0 mt-2 w-56 rounded-2xl bg-m3-surface-low border border-m3-outline-variant/40 text-m3-on-surface shadow-2xl z-50 p-2 space-y-1.5 font-sans"
  >
- <div className="px-3 py-2 border-b border-m3-outline-variant/15 bg-m3-surface-high/10 rounded-xl">
+ <div className="px-3 py-2 border-b border-m3-outline-variant/15 bg-m3-surface-high/10 rounded-xl flex items-center justify-between">
+ <div className="min-w-0 flex-1 pr-2">
  <div className="text-xs font-black text-m3-on-surface truncate">
  {currentUser.fullName}
  </div>
  <div className="text-[9.5px] text-zinc-400 font-mono font-bold mt-0.5 uppercase tracking-wider">
  {currentUser.role} Mode
  </div>
+ </div>
+ <button
+ type="button"
+ onClick={() => setIsAccountDropdownOpen(false)}
+ className="p-1 rounded-lg text-m3-on-surface-variant hover:text-m3-on-surface hover:bg-m3-outline-variant/20 transition-colors cursor-pointer shrink-0"
+ title="Close account menu"
+ aria-label="Close account menu"
+ >
+ <X className="h-3.5 w-3.5" />
+ </button>
  </div>
 
  {/* Dark / Light Toggle */}
@@ -1791,7 +1834,7 @@ function AppContent() {
   return (
    <nav
    id="sidebar-nav"
-   className="space-y-1 overflow-y-auto overflow-x-hidden max-h-[calc(100vh-250px)] pr-1 scrollbar-thin"
+   className="space-y-1.5 overflow-y-auto overflow-x-hidden max-h-[calc(100vh-250px)] p-1 scrollbar-thin"
    >
    {sidebarCategoryTree.map((category) => {
    const CategoryIcon = category.icon;
@@ -1851,7 +1894,7 @@ function AppContent() {
    }}
    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
    hasActiveSubItem
-   ? "bg-m3-primary text-m3-on-primary shadow-md shadow-m3-primary/10 font-black scale-[1.01]"
+   ? "bg-m3-primary text-m3-on-primary shadow-md shadow-m3-primary/10 font-black"
    : "hover:bg-m3-primary/5 text-m3-on-surface-variant hover:text-m3-primary"
    }`}
    >
@@ -1881,6 +1924,7 @@ function AppContent() {
 
 
  <button
+ id="sidebar-profile-dropdown-trigger"
  onClick={() =>
  setIsSidebarProfileDropdownOpen(!isSidebarProfileDropdownOpen)
  }
@@ -1944,6 +1988,7 @@ function AppContent() {
  onClick={() => setIsSidebarProfileDropdownOpen(false)}
  />
  <motion.div
+ id="sidebar-profile-dropdown-container"
  initial={{ opacity: 0, scale: 0.95, y: 8 }}
  animate={{ opacity: 1, scale: 1, y: 0 }}
  exit={{ opacity: 0, scale: 0.95, y: 8 }}
@@ -1952,13 +1997,24 @@ function AppContent() {
  isSidebarMinimized ? "left-0" : "left-0 right-0"
  }`}
  >
- <div className="px-3 py-2 border-b border-m3-outline-variant/15 bg-m3-surface-high/10 rounded-xl">
+ <div className="px-3 py-2 border-b border-m3-outline-variant/15 bg-m3-surface-high/10 rounded-xl flex items-center justify-between">
+ <div className="min-w-0 flex-1 pr-2">
  <div className="text-xs font-black text-m3-on-surface truncate">
  {currentUser.fullName}
  </div>
  <div className="text-[9.5px] text-zinc-400 font-mono font-bold mt-0.5 uppercase tracking-wider">
  {currentUser.role} Mode
  </div>
+ </div>
+ <button
+ type="button"
+ onClick={() => setIsSidebarProfileDropdownOpen(false)}
+ className="p-1 rounded-lg text-m3-on-surface-variant hover:text-m3-on-surface hover:bg-m3-outline-variant/20 transition-colors cursor-pointer shrink-0"
+ title="Close account menu"
+ aria-label="Close account menu"
+ >
+ <X className="h-3.5 w-3.5" />
+ </button>
  </div>
 
  {/* Theme Toggle */}
@@ -2172,7 +2228,7 @@ function AppContent() {
   : "px-3 py-1.5 rounded-xl"
   } ${
   isSelected
-  ? "bg-m3-primary text-m3-on-primary shadow-md shadow-m3-primary/10 font-black scale-[1.01]"
+  ? "bg-m3-primary text-m3-on-primary shadow-md shadow-m3-primary/10 font-black"
   : "bg-m3-surface border border-m3-outline-variant/15 text-m3-on-surface-variant hover:bg-m3-primary/10 hover:text-m3-primary"
   }`}
   >
@@ -2447,7 +2503,7 @@ function AppContent() {
  <div
  className={`px-4 py-1 rounded-2xl transition-[background-color,color,transform] duration-200 relative ${
  isSelected
- ? "bg-m3-primary text-m3-on-primary shadow-sm shadow-m3-primary/10 scale-[1.03]"
+ ? "bg-m3-primary text-m3-on-primary shadow-sm shadow-m3-primary/10 "
  : "text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/5"
  }`}
  >
@@ -3219,7 +3275,7 @@ function AppContent() {
  setDbBackupFileError(null);
  setManualSnapshotName("");
  }}
- className="px-5 py-2.5 bg-m3-surface hover:bg-m3-outline-variant/15 text-m3-on-surface font-extrabold text-xs uppercase tracking-wide border border-m3-outline-variant/10 rounded-full cursor-pointer transition-all hover:scale-[1.01]"
+ className="px-5 py-2.5 bg-m3-surface hover:bg-m3-outline-variant/15 text-m3-on-surface font-extrabold text-xs uppercase tracking-wide border border-m3-outline-variant/10 rounded-full cursor-pointer transition-all hover:"
  >
  Done
  </button>

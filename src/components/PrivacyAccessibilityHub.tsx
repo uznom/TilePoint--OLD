@@ -1064,8 +1064,8 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  onClick={() => handleApplyTheme(preset.value)}
  className={`group relative h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
  isSelected 
- ? 'border-m3-primary bg-m3-primary/10 ring-1 ring-m3-primary/30 scale-102' 
- : 'border-m3-outline-variant/15 hover:scale-102 hover:border-m3-primary/45 bg-m3-surface-low'
+ ? 'border-m3-primary bg-m3-primary/10 ring-1 ring-m3-primary/30 scale-[1.02]' 
+ : 'border-m3-outline-variant/15 hover:scale-[1.02] hover:border-m3-primary/45 bg-m3-surface-low'
  }`}
  title={`M3 Tonal Preset: ${preset.name}`}
  >

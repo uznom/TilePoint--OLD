@@ -140,12 +140,20 @@ const HEADER_MAPPINGS: Record<string, string> = {
   'cost price': 'costPrice',
   'cost_price': 'costPrice',
   'purchase price': 'costPrice',
+  'p price': 'costPrice',
+  'p_price': 'costPrice',
+  'p. price': 'costPrice',
+  'p.price': 'costPrice',
   'selling price': 'sellingPrice',
   'selling_price': 'sellingPrice',
   'selling': 'sellingPrice',
   'price': 'sellingPrice',
   'rate': 'sellingPrice',
   'retail': 'sellingPrice',
+  's price': 'sellingPrice',
+  's_price': 'sellingPrice',
+  's. price': 'sellingPrice',
+  's.price': 'sellingPrice',
   'size': 'size',
   'dimensions': 'size',
   'stock': 'stockQuantity',
@@ -155,12 +163,24 @@ const HEADER_MAPPINGS: Record<string, string> = {
   'stock_quantity': 'stockQuantity',
   'min stock': 'minimumStock',
   'minimum stock': 'minimumStock',
+  'alert level': 'minimumStock',
+  'alert_level': 'minimumStock',
   'unit': 'unit',
   'uom': 'unit',
   'box qty': 'boxQuantity',
   'box quantity': 'boxQuantity',
+  'mu%': 'markupPercent',
+  'mu': 'markupPercent',
+  'markup': 'markupPercent',
+  'markup %': 'markupPercent',
+  'markup_percent': 'markupPercent',
+  'tax type': 'taxType',
+  'tax_type': 'taxType',
   'origin': 'origin',
   'location': 'origin',
+  'branch': 'origin',
+  'branch id': 'origin',
+  'branch_id': 'origin',
   'originbranchid': 'origin',
 };
 
@@ -280,9 +300,9 @@ export async function runPreflightValidation(
           const cleanKey = key.toLowerCase().trim();
           const mappedKey = HEADER_MAPPINGS[cleanKey];
           if (mappedKey) {
-            const numericFields = ['costPrice', 'sellingPrice', 'stockQuantity', 'minimumStock', 'boxQuantity'];
+            const numericFields = ['costPrice', 'sellingPrice', 'stockQuantity', 'minimumStock', 'boxQuantity', 'markupPercent'];
             if (numericFields.includes(mappedKey)) {
-              const cleanVal = String(row[key]).replace(/[$,₱ ]/g, '').replace(/,/g, '');
+              const cleanVal = String(row[key]).replace(/[$,₱ %]/g, '').replace(/,/g, '');
               const valNum = parseFloat(cleanVal);
               mappedRow[mappedKey] = isNaN(valNum) ? 0 : valNum;
             } else {
@@ -332,14 +352,17 @@ export async function runPreflightValidation(
   }
 
   // Extract from product records
+  let itemsHaveExplicitOrigin = false;
   rawProductsList.forEach((item) => {
     const loc = item.origin || item.location || item.branchId || item.targetBranchId;
     if (loc && String(loc).trim()) {
       rawBranchRefs.add(String(loc).trim());
+      itemsHaveExplicitOrigin = true;
     }
   });
 
-  if (targetBranchId) {
+  // Only include targetBranchId if items in rawProductsList don't have explicit origins
+  if (targetBranchId && !itemsHaveExplicitOrigin) {
     rawBranchRefs.add(targetBranchId);
   }
 

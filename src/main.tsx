@@ -58,6 +58,17 @@ try {
 }
 
 // --- Browser environment check and polyfill for older browser versions ---
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', (event) => {
+    const reason = event?.reason;
+    const msg = typeof reason === 'string' ? reason : (reason?.message || '');
+    if (msg.includes('WebSocket') || msg === 'WebSocket closed without opened.') {
+      event.preventDefault();
+      console.warn('[Vite HMR] Ignored expected WebSocket HMR connection close in preview environment:', msg);
+    }
+  });
+}
+
 if (typeof Object.hasOwn === 'undefined') {
  // Polyfill Object.hasOwn for older Safari, Chrome, and Firefox
  Object.hasOwn = (obj: any, prop: PropertyKey) => Object.prototype.hasOwnProperty.call(obj, prop);

@@ -4,41 +4,45 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { useDb, encryptString, decryptString, getSecuritySecretKey, preprocessAndVerifyClipboardText, isStrictInboundReportSchema } from '../context/DbContext';
+import { useDb, encryptString, decryptString, getSecuritySecretKey, preprocessAndVerifyClipboardText, isStrictInboundReportSchema, unwrapInboundPayload } from '../context/DbContext';
 import { saveFileToBackup } from '../lib/fileBackupHelper';
 import { UserRole, BranchSalesReport, Sale, SaleItem } from '../types/db';
 import { ActionButton } from './ActionButton';
 import {
- Send,
- Download,
- Upload,
- CheckCircle2,
- FileText,
- AlertTriangle,
- ArrowRight,
- ShieldAlert,
- Search,
- Calendar,
- Layers,
- Sparkles,
- Check,
- FileJson,
- Plus,
- RefreshCw,
- FolderOpen,
- Share2,
- Copy,
- Printer,
- Mail
+  Send,
+  Download,
+  Upload,
+  CheckCircle2,
+  FileText,
+  AlertTriangle,
+  ArrowRight,
+  ShieldAlert,
+  ShieldCheck,
+  Building2,
+  TrendingUp,
+  Search,
+  Calendar,
+  Layers,
+  Sparkles,
+  Check,
+  FileJson,
+  Plus,
+  RefreshCw,
+  FolderOpen,
+  Share2,
+  Copy,
+  Printer,
+  Mail
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-export function validateAndMapInboundReport(parsed: any): { errors: string[]; mapped?: any } {
- const errors: string[] = [];
+export function validateAndMapInboundReport(rawParsed: any): { errors: string[]; mapped?: any } {
+  const errors: string[] = [];
 
- if (!parsed || typeof parsed !== 'object') {
- return { errors: ['Root payload must be a valid JSON object.'] };
- }
+  if (!rawParsed || typeof rawParsed !== 'object') {
+    return { errors: ['Root payload must be a valid JSON object.'] };
+  }
+  const parsed = unwrapInboundPayload(rawParsed);
 
  // Root fields validation
  if (typeof parsed.branchId !== 'string' || !parsed.branchId.trim()) {
@@ -70,66 +74,35 @@ export function validateAndMapInboundReport(parsed: any): { errors: string[]; ma
  return;
  }
 
- // Check mandatory Sale fields
- if (typeof s.id !== 'string' || !s.id.trim()) {
- errors.push(`${salePrefix} is missing "id" (string).`);
- }
- if (typeof s.saleNumber !== 'string' || !s.saleNumber.trim()) {
- errors.push(`${salePrefix} is missing "saleNumber" (string).`);
- }
- if (typeof s.shiftId !== 'string' || !s.shiftId.trim()) {
- errors.push(`${salePrefix} is missing "shiftId" (string).`);
- }
- if (typeof s.branchId !== 'string' || !s.branchId.trim()) {
- errors.push(`${salePrefix} is missing "branchId" (string).`);
- }
- if (typeof s.cashierId !== 'string' || !s.cashierId.trim()) {
- errors.push(`${salePrefix} is missing "cashierId" (string).`);
- }
- if (typeof s.cashierName !== 'string' || !s.cashierName.trim()) {
- errors.push(`${salePrefix} is missing "cashierName" (string).`);
- }
- 
- const subtotal = Number(s.subtotal);
- if (typeof s.subtotal === 'undefined' || isNaN(subtotal)) {
- errors.push(`${salePrefix}.subtotal must be a valid number.`);
- }
- const vat = Number(s.vat);
- if (typeof s.vat === 'undefined' || isNaN(vat)) {
- errors.push(`${salePrefix}.vat must be a valid number.`);
- }
- const discount = Number(s.discount);
- if (typeof s.discount === 'undefined' || isNaN(discount)) {
- errors.push(`${salePrefix}.discount must be a valid number.`);
- }
- const grandTotal = Number(s.grandTotal);
- if (typeof s.grandTotal === 'undefined' || isNaN(grandTotal)) {
- errors.push(`${salePrefix}.grandTotal must be a valid number.`);
- }
- const amountTendered = Number(s.amountTendered);
- if (typeof s.amountTendered === 'undefined' || isNaN(amountTendered)) {
- errors.push(`${salePrefix}.amountTendered must be a valid number.`);
- }
- const changeAmount = Number(s.changeAmount);
- if (typeof s.changeAmount === 'undefined' || isNaN(changeAmount)) {
- errors.push(`${salePrefix}.changeAmount must be a valid number.`);
- }
+ const id = String(s.id || s.saleNumber || `S-${Date.now()}-${idx}`).trim();
+ const saleNumber = String(s.saleNumber || s.id || `INV-${Date.now()}-${idx}`).trim();
+ const shiftId = String(s.shiftId || 'SHIFT-1').trim();
+ const branchId = String(s.branchId || parsed.branchId || 'B1').trim();
+ const cashierId = String(s.cashierId || 'U1').trim();
+ const cashierName = String(s.cashierName || 'Cashier').trim();
+
+ const subtotal = isNaN(Number(s.subtotal)) ? Number(s.grandTotal || 0) : Number(s.subtotal);
+ const vat = isNaN(Number(s.vat)) ? 0 : Number(s.vat);
+ const discount = isNaN(Number(s.discount)) ? 0 : Number(s.discount);
+ const grandTotal = isNaN(Number(s.grandTotal)) ? subtotal : Number(s.grandTotal);
+ const amountTendered = isNaN(Number(s.amountTendered)) ? grandTotal : Number(s.amountTendered);
+ const changeAmount = isNaN(Number(s.changeAmount)) ? 0 : Number(s.changeAmount);
 
  validatedSales.push({
- id: String(s.id || '').trim(),
- saleNumber: String(s.saleNumber || '').trim(),
- shiftId: String(s.shiftId || '').trim(),
- branchId: String(s.branchId || '').trim(),
- cashierId: String(s.cashierId || '').trim(),
- cashierName: String(s.cashierName || '').trim(),
+ id,
+ saleNumber,
+ shiftId,
+ branchId,
+ cashierId,
+ cashierName,
  customerName: String(s.customerName || 'Walk-in Customer').trim(),
- subtotal: isNaN(subtotal) ? 0 : subtotal,
- vat: isNaN(vat) ? 0 : vat,
- discount: isNaN(discount) ? 0 : discount,
- grandTotal: isNaN(grandTotal) ? 0 : grandTotal,
+ subtotal,
+ vat,
+ discount,
+ grandTotal,
  paymentMethod: String(s.paymentMethod || 'Cash').trim(),
- amountTendered: isNaN(amountTendered) ? 0 : amountTendered,
- changeAmount: isNaN(changeAmount) ? 0 : changeAmount,
+ amountTendered,
+ changeAmount,
  notes: s.notes ? String(s.notes).trim() : undefined,
  isDeleted: !!s.isDeleted,
  createdAt: String(s.createdAt || new Date().toISOString()).trim(),
@@ -139,55 +112,30 @@ export function validateAndMapInboundReport(parsed: any): { errors: string[]; ma
 
  // Validate saleItems and their nested properties
  const validatedSaleItems: any[] = [];
- if (parsed.saleItems !== undefined) {
- if (!Array.isArray(parsed.saleItems)) {
- errors.push('saleItems must be an array when provided.');
- } else {
+ if (parsed.saleItems !== undefined && Array.isArray(parsed.saleItems)) {
  parsed.saleItems.forEach((item: any, idx: number) => {
- const itemPrefix = `saleItems[${idx}]`;
- if (!item || typeof item !== 'object') {
- errors.push(`${itemPrefix} must be a valid object.`);
- return;
- }
+ if (!item || typeof item !== 'object') return;
 
- if (typeof item.id !== 'string' || !item.id.trim()) {
- errors.push(`${itemPrefix} is missing "id" (string).`);
- }
- if (typeof item.saleId !== 'string' || !item.saleId.trim()) {
- errors.push(`${itemPrefix} is missing "saleId" (string).`);
- }
- if (typeof item.productId !== 'string' || !item.productId.trim()) {
- errors.push(`${itemPrefix} is missing "productId" (string).`);
- }
- if (typeof item.productName !== 'string' || !item.productName.trim()) {
- errors.push(`${itemPrefix} is missing "productName" (string).`);
- }
+ const itemId = String(item.id || `SI-${Date.now()}-${idx}`).trim();
+ const saleId = String(item.saleId || (validatedSales[0]?.id || 'SALE-1')).trim();
+ const productId = String(item.productId || `P-${idx}`).trim();
+ const productName = String(item.productName || item.name || 'Tile Product').trim();
 
- const quantity = Number(item.quantity);
- if (typeof item.quantity === 'undefined' || isNaN(quantity)) {
- errors.push(`${itemPrefix}.quantity must be a valid number.`);
- }
- const unitPrice = Number(item.unitPrice);
- if (typeof item.unitPrice === 'undefined' || isNaN(unitPrice)) {
- errors.push(`${itemPrefix}.unitPrice must be a valid number.`);
- }
- const total = Number(item.total);
- if (typeof item.total === 'undefined' || isNaN(total)) {
- errors.push(`${itemPrefix}.total must be a valid number.`);
- }
+ const quantity = Number(item.quantity ?? 1);
+ const unitPrice = Number(item.unitPrice ?? 0);
+ const total = Number(item.total ?? (quantity * unitPrice));
 
  validatedSaleItems.push({
- id: String(item.id || '').trim(),
- saleId: String(item.saleId || '').trim(),
- productId: String(item.productId || '').trim(),
- productName: String(item.productName || '').trim(),
- quantity: isNaN(quantity) ? 0 : quantity,
+ id: itemId,
+ saleId,
+ productId,
+ productName,
+ quantity: isNaN(quantity) ? 1 : quantity,
  unitPrice: isNaN(unitPrice) ? 0 : unitPrice,
  total: isNaN(total) ? 0 : total,
  isDeleted: item.isDeleted !== undefined ? !!item.isDeleted : undefined,
  });
  });
- }
  }
 
  if (errors.length > 0) {
@@ -223,7 +171,7 @@ interface SalesTransmissionModuleProps {
 }
 
 export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = ({ darkMode, hideManualImport = false, showOnlyImport = false }) => {
- const { currentUser, branches, users, sales, saleItems, branchSalesReports, rollbackSnapshots, performRollbackToSnapshot, transmitSalesReport, importManualSalesReport, auditSalesReport, addAuditLog, shifts, expenses, deliveries, purchaseOrders, products, auditLogs } = useDb();
+ const { currentUser, branches, users, sales, saleItems, branchSalesReports, rollbackSnapshots, performRollbackToSnapshot, transmitSalesReport, importManualSalesReport, auditSalesReport, addAuditLog, shifts, expenses, deliveries, purchaseOrders, products, auditLogs, members, productReturns, branchStock } = useDb();
 
  // Selected date for compiling current branch report
  const [reportingDate, setReportingDate] = useState(() => {
@@ -263,7 +211,8 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  recalculatedCount: 0,
  recalculatedAmount: 0,
  signatureMeta: null as any,
- errors: [] as string[]
+ errors: [] as string[],
+ warnings: [] as string[]
  };
 
  const prep = preprocessAndVerifyClipboardText(pastedJson);
@@ -276,6 +225,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  // 1. JSON parse
  try {
  parsed = JSON.parse(prep.cleanedJson!);
+ parsed = unwrapInboundPayload(parsed);
  checks.isParsed = true;
  } catch (e: any) {
  checks.errors.push(`JSON Syntax Error: ${e.message}`);
@@ -353,7 +303,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  checks.errors.push("Security Signature corrupted or forged: Could not decrypt package signature.");
  }
  } else {
- checks.errors.push("Unsigned ledger packet: No securitySignature found.");
+ checks.warnings.push("Unsigned ledger packet: No securitySignature found. Manual import permitted as unsigned report.");
  }
 
  // 4. Totals recalculation check
@@ -538,7 +488,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  
  if (report.sales && report.sales.length > 0) {
  report.sales.forEach((s: any) => {
- csv += `"${s.saleNumber}","${(s.customerName || 'Walk-in Buyer').replace(/"/g, '""')}","${s.cashierName.replace(/"/g, '""')}","${s.paymentMethod}","${s.subtotal}","${s.discount}","${s.vat}","${s.grandTotal}","${new Date(s.createdAt).toISOString()}"\n`;
+ csv += `"${s.saleNumber}","${(s.customerName || 'Walk-in Buyer').replace(/"/g, '""')}","${s.cashierName.replace(/"/g, '""')}","${s.paymentMethod}","${s.subtotal}","${s.discount}","${s.vat}","${s.grandTotal}","${(s.createdAt && !isNaN(new Date(s.createdAt).getTime()) ? new Date(s.createdAt).toISOString() : new Date().toISOString())}"\n`;
  });
  } else {
  csv += `"No transaction invoices attached to report vector."\n`;
@@ -635,7 +585,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
   // 5. CALCULATE HOURLY HEATMAP (24 hours)
   const heatmapData = Array.from({ length: 24 }, (_, hour) => {
    const hourlySales = localSales.filter(s => {
-    const saleHour = new Date(s.createdAt).getHours();
+    const saleHour = (s.createdAt && !isNaN(new Date(s.createdAt).getTime()) ? new Date(s.createdAt).getHours() : 0);
     return saleHour === hour;
    });
    const hourlyCount = hourlySales.length;
@@ -829,7 +779,8 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  }
 
  try {
- const parsed = JSON.parse(prep.cleanedJson!);
+ let parsed = JSON.parse(prep.cleanedJson!);
+ parsed = unwrapInboundPayload(parsed);
  if (!isStrictInboundReportSchema(parsed)) {
  setImportError("Strict Schema Error: Inbound payload elements do not conform to the strict corporate sales report schema layout.");
  return;
@@ -1105,6 +1056,27 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                     </button>
                   </div>
                 </div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px] font-bold text-m3-on-surface">JSON Payload Text / File Contents:</span>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const resp = await fetch('/sample_sales_report.json');
+                        if (resp.ok) {
+                          const sample = await resp.text();
+                          setPastedJson(sample);
+                          triggerToast('Sample sales report JSON package loaded!', 'info');
+                        }
+                      } catch (err) {
+                        triggerToast('Could not fetch sample JSON file', 'error');
+                      }
+                    }}
+                    className="text-[10px] font-bold text-m3-primary hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <FileText className="w-3 h-3" /> Load Sample Sales Package
+                  </button>
+                </div>
                 <textarea
                   value={pastedJson}
                   onChange={(e) => setPastedJson(e.target.value)}
@@ -1118,16 +1090,25 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
               {liveValidation && (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-[11px] text-m3-on-surface-variant font-medium px-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${liveValidation.isParsed && liveValidation.hasRequiredFields && !liveValidation.isDuplicate ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                       <span>
                         {liveValidation.isParsed && liveValidation.hasRequiredFields && !liveValidation.isDuplicate ? (
                           <>
                             <span className="font-bold text-m3-on-surface">{liveValidation.branchName || 'Valid Report'}</span>
                             <span className="opacity-70"> ({liveValidation.reportingDate}) • Total: ₱{liveValidation.recalculatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            {liveValidation.isSignatureValid ? (
+                              <span className="ml-2 px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-[9.5px]">
+                                ✓ Cryptographically Signed
+                              </span>
+                            ) : (
+                              <span className="ml-2 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-[9.5px]">
+                                ⚠ Unsigned Ledger Packet
+                              </span>
+                            )}
                           </>
                         ) : (
-                          <span className="text-rose-500 font-bold">Unsigned or malformed JSON payload</span>
+                          <span className="text-rose-500 font-bold">{!liveValidation.isParsed ? "Invalid JSON syntax (check formatting)" : (liveValidation.errors[0] || "Malformed JSON report schema")}</span>
                         )}
                       </span>
                     </div>
@@ -1214,7 +1195,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                           <span className="text-[9px] font-mono text-zinc-400 font-normal">({snap.id.substring(0, 8)})</span>
                         </div>
                         <div className="text-[10px] text-m3-on-surface-variant font-mono">
-                          {new Date(snap.timestamp).toLocaleTimeString()} • {snap.branchName || "Manual Save"}
+                          {snap.timestamp && !isNaN(new Date(snap.timestamp).getTime()) ? new Date(snap.timestamp).toLocaleTimeString() : "N/A"} • {snap.branchName || "Manual Save"}
                         </div>
                         <div className="text-[9px] text-zinc-500 leading-tight">
                           Includes {snap.branchSalesReports?.length || 0} reports, {snap.products?.length || 0} products, {snap.movements?.length || 0} movements.
@@ -1282,7 +1263,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  </div>
  </div>
  <p className="text-xs text-m3-on-surface-variant max-w-xl leading-relaxed pl-1 pt-1">
- Ensure proper closure of books. Transmit daily sales report modules online over secure web sockets, or generate an encrypted JSON data package to transfer manually on flash storage or local network links.
+ Centralized HQ ledger for auditing, cryptographically verifying, and tracking daily sales transmissions across all branch locations. Store personnel perform daily cash drawer balancing directly in the Daily Reconciliation workspace.
  </p>
  </div>
 
@@ -1305,214 +1286,149 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  )}
  </div>
 
- {/* Grid Layout depending on User Status */}
- <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
- 
- {/* LEFT COMPILING FORM CARDS - visible to both Cashiers/Managers to submit and Admin to audit preview */}
- <div className="xl:col-span-4 space-y-6">
- <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[28px] p-6 space-y-5 text-left shadow-sm">
- <div className="space-y-0.5 border-b border-m3-outline-variant/20 pb-3">
- <h3 className="text-xs font-black uppercase tracking-widest text-m3-primary font-mono flex items-center gap-1.5">
- <Calendar className="h-4 w-4 text-amber-500" />
- Compile Report Parameters
- </h3>
- <p className="text-[10.5px] text-zinc-400">Generate local client ledger aggregates to transmit to headquarters.</p>
- </div>
+ {/* HQ Central Network Sync & Audited Transmission Overview */}
+      <div className="space-y-6">
+        {/* KPI Metrics Banner */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-2xl p-4.5 space-y-2 shadow-xs text-left">
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-[10px] font-black uppercase tracking-wider font-mono">Reports Filed</span>
+              <FileText className="h-4 w-4 text-m3-primary" />
+            </div>
+            <div className="text-2xl font-black text-m3-on-surface font-mono">
+              {branchSalesReports.length} <span className="text-xs font-normal text-zinc-400">total</span>
+            </div>
+            <p className="text-[10px] text-zinc-400 font-sans">Central HQ verified store ledgers</p>
+          </div>
 
- <div className="space-y-4">
- {/* Branch Selection (Only Admins can toggle branch context, branch users locked to assignment) */}
- <div className="space-y-1">
- <label className="text-[9.5px] font-black uppercase tracking-widest text-zinc-400 pl-0.5 font-mono">Branch assignment:</label>
- {currentUser.role === UserRole.ADMIN ? (
- <select
- value={selectedBranchId}
- onChange={(e) => setSelectedBranchId(e.target.value)}
- className="w-full bg-m3-surface-container border border-m3-outline-variant/40 rounded-xl px-3 py-2.5 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary"
- >
- {branches.map(b => (
- <option key={b.id} value={b.id}>
- {b.name} {b.id === 'B1' ? '(HQ Office)' : ''}
- </option>
- ))}
- </select>
- ) : (
- <div className="w-full bg-m3-surface-container border border-m3-outline-variant/20 rounded-xl px-3 py-2.5 text-xs text-m3-on-surface font-semibold flex items-center gap-2">
- <span className="w-2 h-2 rounded-full bg-emerald-500" />
- <span>{getBranchNameLabel(currentUser.branchAssignmentId)}</span>
- </div>
- )}
- </div>
+          <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-2xl p-4.5 space-y-2 shadow-xs text-left">
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-[10px] font-black uppercase tracking-wider font-mono">Cryptographic Vault</span>
+              <ShieldCheck className="h-4 w-4 text-emerald-400" />
+            </div>
+            <div className="text-2xl font-black text-emerald-400 font-mono">
+              {branchSalesReports.filter(r => !!r.securitySignature).length} <span className="text-xs font-normal text-zinc-400">signed</span>
+            </div>
+            <p className="text-[10px] text-emerald-400/80 font-sans">Digitally signed & replay-protected</p>
+          </div>
 
- {/* Date Input Selector */}
- <div className="space-y-1">
- <label className="text-[9.5px] font-black uppercase tracking-widest text-zinc-400 pl-0.5 font-mono font-sans">Report accounting date:</label>
- <div className="relative">
- <input
- type="date"
- value={reportingDate}
- onChange={(e) => setReportingDate(e.target.value)}
- className="w-full bg-m3-surface-container border border-m3-outline-variant/40 rounded-xl px-3 py-2.5 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary font-mono appearance-none"
- />
- </div>
- </div>
- </div>
+          <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-2xl p-4.5 space-y-2 shadow-xs text-left">
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-[10px] font-black uppercase tracking-wider font-mono">Sync Network</span>
+              <Building2 className="h-4 w-4 text-amber-500" />
+            </div>
+            <div className="text-2xl font-black text-m3-on-surface font-mono">
+              {branches.length} <span className="text-xs font-normal text-zinc-400">stores</span>
+            </div>
+            <p className="text-[10px] text-zinc-400 font-sans">Active retail branch outlets</p>
+          </div>
 
- {/* Compiled aggregates summary plate */}
- <div className="p-4 bg-m3-surface-high border border-m3-outline-variant/20 rounded-2xl space-y-3 font-mono">
- <div className="text-[10px] text-zinc-400 font-extrabold uppercase tracking-wider pb-1.5 border-b border-m3-outline-variant/15 flex justify-between">
- <span>Aggregated Sales Matrix</span>
- <span className="text-amber-500 font-bold">{reportingDate}</span>
- </div>
- 
- <div className="space-y-2 text-xs">
- <div className="flex justify-between items-center text-[11px]">
- <span className="text-zinc-500 uppercase font-bold text-[9.5px]">Receipts Issued:</span>
- <span className="text-m3-on-surface font-extrabold">{compiledLocalSalesData.count} receipts</span>
- </div>
- <div className="flex justify-between items-center text-[11px]">
- <span className="text-zinc-500 uppercase font-bold text-[9.5px]">Discount Vol:</span>
- <span className="text-m3-on-surface">₱{compiledLocalSalesData.discount.toLocaleString()}</span>
- </div>
- <div className="flex justify-between items-center text-[11px]">
- <span className="text-zinc-500 uppercase font-bold text-[9.5px]">VAT Sales:</span>
- <span className="text-m3-on-surface">₱{compiledLocalSalesData.vat.toLocaleString()}</span>
- </div>
- <div className="pt-2 border-t border-m3-outline-variant/10 flex justify-between items-center text-[12px]">
- <span className="text-m3-primary font-bold uppercase text-[10px]">TOTAL GRAND TOTAL:</span>
- <span className="text-emerald-400 font-black text-sm">₱{compiledLocalSalesData.grandTotal.toLocaleString()}</span>
- </div>
- </div>
- </div>
+          <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-2xl p-4.5 space-y-2 shadow-xs text-left">
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-[10px] font-black uppercase tracking-wider font-mono">Net Transmitted Revenue</span>
+              <TrendingUp className="h-4 w-4 text-emerald-400" />
+            </div>
+            <div className="text-2xl font-black text-m3-primary font-mono truncate">
+              ₱{branchSalesReports.reduce((acc, r) => acc + (r.totalSalesAmount || 0), 0).toLocaleString()}
+            </div>
+            <p className="text-[10px] text-zinc-400 font-sans">Sum total of verified store revenue</p>
+          </div>
+        </div>
 
- {/* Check local compile alerts */}
- {compiledLocalSalesData.count === 0 ? (
- <div className="p-3 bg-amber-500/5 text-amber-400 border border-amber-500/10 rounded-xl text-[10px] flex items-start gap-2 leading-relaxed">
- <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
- <div>
- <p className="font-extrabold uppercase tracking-wide">No Ledger records cataloged</p>
- <p className="opacity-85 text-zinc-400">There are no sales receipts registered on this branch assignment during this accounting date. Verify that sales sessions were synchronized.</p>
- </div>
- </div>
- ) : existingReport ? (
- <div className="p-3 bg-emerald-500/5 text-emerald-400 border border-emerald-500/15 rounded-xl text-[10px] flex items-start gap-2 leading-relaxed">
- <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
- <div>
- <p className="font-extrabold uppercase tracking-wider block">Report already transmitted</p>
- <p className="opacity-85 text-zinc-400">A daily summary matching this date has already been filed to headquarters audit database. Transmitted as: <span className="text-white font-mono">{existingReport.transmissionType}</span> on <span className="font-mono text-zinc-100">{new Date(existingReport.transferredAt).toLocaleTimeString()}</span>.</p>
- </div>
- </div>
- ) : (
- <div className="p-3 bg-m3-primary/5 text-m3-primary border border-m3-primary/10 rounded-xl text-[10px] flex items-start gap-2 leading-relaxed">
- <Sparkles className="h-4 w-4 text-m3-primary shrink-0 mt-0.5" />
- <div>
- <p className="font-extrabold uppercase tracking-wider block">Ready for upload transmission</p>
- <p className="opacity-85 text-zinc-400">You compile a total of {compiledLocalSalesData.count} valid non-voided receipts. Click online synchronization or download manually.</p>
- </div>
- </div>
- )}
+        {/* Live Branch Transmission Status Matrix */}
+        <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[28px] p-6 space-y-4 text-left shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-m3-outline-variant/20 pb-4">
+            <div>
+              <h3 className="text-xs font-black uppercase tracking-widest text-m3-primary font-mono flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                Inter-Branch Live Transmission Status
+              </h3>
+              <p className="text-[10.5px] text-zinc-400 mt-0.5">
+                Daily store closure & report submission matrix for accounting date <strong className="text-amber-500 font-mono">{reportingDate}</strong>.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={reportingDate}
+                onChange={(e) => setReportingDate(e.target.value)}
+                className="bg-m3-surface-container border border-m3-outline-variant/40 rounded-xl px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary font-mono"
+              />
+            </div>
+          </div>
 
- {/* Execution Actions */}
- <div className="space-y-2.5 pt-2 border-t border-m3-outline-variant/15 md:space-y-2">
- <ActionButton
- variant="outline"
- fullWidth
- disabled={compiledLocalSalesData.count === 0}
- onClick={handleDownloadOfflineJSON}
- isLoading={isDownloadingManual}
- loadingText="Assembling Encrypted JSON Packet..."
- icon={<Download className="h-4 w-4 text-amber-500" />}
- className="py-3 hover:text-white"
- >
- Download manual JSON Packet
- </ActionButton>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
+            {branches.map((b) => {
+              const matchedReport = branchSalesReports.find(
+                (r) => r.branchId === b.id && r.reportingDate === reportingDate
+              );
+              return (
+                <div
+                  key={b.id}
+                  className={`p-4 rounded-2xl border transition-all text-left flex flex-col justify-between h-[128px] ${
+                    matchedReport
+                      ? "bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/40"
+                      : "bg-m3-surface border-m3-outline-variant/20 hover:border-m3-outline-variant/40"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="text-xs font-black text-m3-on-surface flex items-center gap-1.5">
+                        <Building2 className="h-3.5 w-3.5 text-m3-primary shrink-0" />
+                        <span className="truncate">{b.name}</span>
+                      </div>
+                      <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider block mt-0.5">
+                        ID: {b.id}
+                      </span>
+                    </div>
+                    {matchedReport ? (
+                      <span className="px-2 py-0.5 rounded-full text-[8.5px] font-extrabold font-mono uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
+                        Transmitted
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-[8.5px] font-extrabold font-mono uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0">
+                        Pending
+                      </span>
+                    )}
+                  </div>
 
- {/* Local Integrity & File-Based Sync Guide */}
- <div className="p-4 bg-amber-500/5 border border-dashed border-amber-500/25 rounded-2xl space-y-2.5 text-left text-xs">
-   <div className="flex items-center gap-2 text-amber-500 font-extrabold uppercase tracking-wider text-[10.5px]">
-     <ShieldAlert className="h-4.5 w-4.5 text-amber-500 shrink-0" />
-     <span>Local File-Based Sync Service</span>
-   </div>
-   <p className="text-[11px] text-zinc-400 leading-relaxed">
-     This system is designed around a <strong>local-only and offline-first architecture</strong> to guarantee total data privacy and resiliency. Since there are no external servers, direct online sync remains a simulated sandbox loop. Follow these steps to transfer branch data to the main Admin portal:
-   </p>
-   <div className="space-y-1.5 text-[10.5px] border-t border-m3-outline-variant/15 pt-2 text-m3-on-surface font-mono leading-relaxed">
-     <div className="flex items-start gap-1.5">
-       <span className="text-amber-500 font-bold">1.</span>
-       <span>Choose the target Branch & Accounting Date above.</span>
-     </div>
-     <div className="flex items-start gap-1.5">
-       <span className="text-amber-500 font-bold">2.</span>
-       <span>Click <strong>Download manual JSON Packet</strong> to save a cryptographically signed report.</span>
-     </div>
-     <div className="flex items-start gap-1.5">
-       <span className="text-amber-500 font-bold">3.</span>
-       <span>Transfer the JSON file to your main HQ administrator (using a USB flash drive, local area network share, or communication channels).</span>
-     </div>
-     <div className="flex items-start gap-1.5">
-       <span className="text-amber-500 font-bold">4.</span>
-       <span>The HQ Administrator logs in as <strong>Admin</strong>, clicks <strong>Import manual sales JSON</strong> above, and uploads the file to verify/audit the ledger.</span>
-     </div>
-   </div>
- </div>
+                  <div className="space-y-1 font-mono text-xs pt-2 border-t border-m3-outline-variant/10">
+                    {matchedReport ? (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <span className="text-[9.5px] text-zinc-400">Report Sales:</span>
+                          <span className="font-extrabold text-emerald-400">₱{matchedReport.totalSalesAmount.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-[9px] text-zinc-500">
+                          <span>Tx Count: {matchedReport.totalSalesCount}</span>
+                          <span>{matchedReport.transmissionType || "Online Web"}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-[10px] text-zinc-500 font-sans flex items-center justify-between">
+                        <span>Awaiting daily closure</span>
+                        <button
+                          onClick={() => {
+                            setPastedJson("");
+                            setImportError(null);
+                            setImportSuccess(false);
+                            setShowJsonImport(true);
+                          }}
+                          className="text-[9px] font-bold text-amber-500 hover:underline cursor-pointer"
+                        >
+                          + Manual Import
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
- {/* Multi-Format Corporate Exports */}
- <div className="mt-4 pt-4 border-t border-m3-outline-variant/15 space-y-2">
- <div className="flex items-center justify-between">
- <span className="text-[9px] font-black uppercase tracking-widest text-m3-on-surface-variant font-mono">
- Multi-Format Reports (Admin/Manager):
- </span>
- {!isAuthorizedToExport ? (
- <span className="text-[8px] font-bold text-rose-450 font-mono bg-rose-950/20 px-1.5 py-0.5 rounded border border-rose-500/20 uppercase tracking-wide">
- Locked (Staff Role)
- </span>
- ) : (
- <span className="text-[8px] font-bold text-emerald-400 font-mono bg-emerald-950/20 px-1.5 py-0.5 rounded border border-emerald-500/20 uppercase tracking-wide">
- Authorized
- </span>
- )}
- </div>
-
- <div className="grid grid-cols-3 gap-1.5 pt-1">
- <button
- type="button"
- disabled={compiledLocalSalesData.count === 0 || !isAuthorizedToExport}
- onClick={() => handleExportCSV('compiled', false)}
- className="py-2.5 bg-m3-surface-lowest hover:bg-m3-surface border border-m3-outline-variant/20 hover:border-emerald-500/30 text-m3-on-surface hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent"
- title="Export Compiled Draft Ledger as Standard CSV Raw File"
- >
- <span className="text-[8px] uppercase font-bold text-zinc-500 font-mono block">CSV</span>
- <span>Export</span>
- </button>
-
- <button
- type="button"
- disabled={compiledLocalSalesData.count === 0 || !isAuthorizedToExport}
- onClick={() => handleExportCSV('compiled', true)}
- className="py-2.5 bg-m3-surface-lowest hover:bg-m3-surface border border-m3-outline-variant/20 hover:border-m3-primary/30 text-m3-on-surface hover:text-m3-primary dark:hover:text-m3-primary rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
- title="Export Compiled Draft Ledger as Microsoft Excel Formatted CSV Sheet"
- >
- <span className="text-[8px] uppercase font-bold text-zinc-500 font-mono block">Excel</span>
- <span>Spreadsheet</span>
- </button>
-
- <button
- type="button"
- disabled={compiledLocalSalesData.count === 0 || !isAuthorizedToExport}
- onClick={() => handleOpenPrintPreview('compiled')}
- className="py-2.5 bg-m3-surface-lowest hover:bg-m3-surface border border-m3-outline-variant/20 hover:border-amber-500/30 text-m3-on-surface hover:text-amber-600 dark:hover:text-amber-500 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
- title="Open TilePoint Audit Station Print Layout and PDF Printer"
- >
- <Printer className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
- <span>Print PDF</span>
- </button>
- </div>
- </div>
- </div>
- </div>
- </div>
-
- {/* RIGHT CENTRAL COMPILATION LEDGER AND AUDIT WORK - Visible to HQ/Admin to review reports */}
- <div className="xl:col-span-8 space-y-6">
+        {/* Central HQ Audited Sales Registry */}
+        <div className="space-y-6">
  {currentUser.role === UserRole.ADMIN && rollbackSnapshots.length > 0 && (
  <div className="bg-[#1c1316] border border-rose-500/20 rounded-[28px] p-6 space-y-4 text-left shadow-sm">
  <div className="space-y-0.5 border-b border-rose-500/20 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -1548,7 +1464,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  <span className="text-zinc-400 font-semibold">{snap.reportingDate}</span>
  </div>
  <div className="text-[10px] text-zinc-500 font-mono">
- Snapshot captured on {new Date(snap.timestamp).toLocaleString()}
+ Snapshot captured on {snap.timestamp && !isNaN(new Date(snap.timestamp).getTime()) ? new Date(snap.timestamp).toLocaleString() : "N/A"}
  </div>
  </div>
  <button
@@ -1820,7 +1736,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  </div>
  <div className="flex justify-between">
  <span className="text-zinc-500">Transferred At:</span>
- <span className="text-m3-on-surface">{new Date(selectedReport.transferredAt).toLocaleString()}</span>
+ <span className="text-m3-on-surface">{selectedReport.transferredAt && !isNaN(new Date(selectedReport.transferredAt).getTime()) ? new Date(selectedReport.transferredAt).toLocaleString() : "N/A"}</span>
  </div>
  <div className="flex justify-between">
  <span className="text-zinc-500">Sales Transactions:</span>
@@ -1852,7 +1768,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  {selectedReport.auditedBy && (
  <div className="p-3 bg-emerald-500/5 text-emerald-400 border border-emerald-500/15 rounded-xl text-[10.5px] leading-relaxed">
  <span className="font-extrabold uppercase block text-[9.5px] tracking-wider mb-0.5">Audited & approved</span>
- Verified by <strong className="text-white font-bold">{selectedReport.auditedBy}</strong> on <span className="font-mono text-zinc-200">{new Date(selectedReport.auditedAt!).toLocaleString()}</span>.
+ Verified by <strong className="text-white font-bold">{selectedReport.auditedBy}</strong> on <span className="font-mono text-zinc-200">{selectedReport.auditedAt && !isNaN(new Date(selectedReport.auditedAt).getTime()) ? new Date(selectedReport.auditedAt).toLocaleString() : "N/A"}</span>.
  </div>
  )}
 
@@ -2030,7 +1946,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
   </span>
   </div>
   <p className="text-[11px] text-zinc-400">
-  Cashier: <strong className="text-m3-on-surface font-bold">{sale.cashierName}</strong> • Date: <span className="font-mono">{new Date(sale.createdAt).toLocaleTimeString()}</span>
+  Cashier: <strong className="text-m3-on-surface font-bold">{sale.cashierName}</strong> • Date: <span className="font-mono">{sale.createdAt && !isNaN(new Date(sale.createdAt).getTime()) ? new Date(sale.createdAt).toLocaleTimeString() : "N/A"}</span>
   </p>
   <p className="text-[11px] text-zinc-400">
   Customer: <strong className="text-m3-on-surface font-semibold">{sale.customerName || "Walk-in"}</strong>
@@ -2225,7 +2141,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
         <span className="text-zinc-400 font-bold uppercase text-[9px] tracking-wider px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400">
          {log.type}
         </span>
-        <span className="text-zinc-500">{new Date(log.timestamp).toLocaleTimeString()}</span>
+        <span className="text-zinc-500">{log.timestamp && !isNaN(new Date(log.timestamp).getTime()) ? new Date(log.timestamp).toLocaleTimeString() : "N/A"}</span>
        </div>
        <p className="text-zinc-300 font-sans text-xs">{log.description}</p>
        <div className="text-[9px] text-zinc-500 flex justify-between">
@@ -2329,7 +2245,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  </div>
  <div>
  <span className="block text-[10px] uppercase font-bold text-zinc-400 tracking-wider font-mono">Date Settled</span>
- <span className="font-mono mt-0.5 block text-zinc-600 dark:text-m3-on-surface">{new Date(selectedSale.createdAt).toLocaleString()}</span>
+ <span className="font-mono mt-0.5 block text-zinc-600 dark:text-m3-on-surface">{selectedSale.createdAt && !isNaN(new Date(selectedSale.createdAt).getTime()) ? new Date(selectedSale.createdAt).toLocaleString() : "N/A"}</span>
  </div>
  <div>
  <span className="block text-[10px] uppercase font-bold text-zinc-400 tracking-wider font-mono">Cashier on Duty</span>
@@ -2571,7 +2487,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                   <span className="opacity-70"> ({liveValidation.reportingDate}) • Total: ₱{liveValidation.recalculatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </>
               ) : (
-                <span className="text-rose-500 font-bold">Unsigned or malformed JSON payload</span>
+                <span className="text-rose-500 font-bold">{!liveValidation.isParsed ? "Invalid JSON syntax (check formatting)" : (liveValidation.errors[0] || "Malformed JSON report schema")}</span>
               )}
             </span>
           </div>
