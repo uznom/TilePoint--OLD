@@ -11,6 +11,7 @@ import {
  Users,
  ShieldCheck,
  UserPlus,
+ Sparkles,
  Edit2,
  Lock,
  Power,
@@ -146,8 +147,8 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  showToast('Permission Denied: You can only assign personnel to your own branch.');
  return;
  }
- if (role === UserRole.ADMIN) {
- showToast('Permission Denied: You cannot assign the Admin role.');
+ if (role !== UserRole.CASHIER && role !== UserRole.STAFF) {
+ showToast('Permission Denied: Managers can only enlist Cashier and Staff employees.');
  return;
  }
  if (isEditMode) {
@@ -181,7 +182,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  updateUser(editingId, payload);
  showToast(`Updated profile details for ${fullName}.`);
  } else {
- createUser(payload);
+ createUser({ ...payload, isNew: true });
  showToast(`Registered and enlisted ${fullName} successfully.`);
  }
 
@@ -342,7 +343,14 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  </div>
 
  <div>
+ <div className="flex items-center gap-1.5">
  <h4 className="text-sm font-bold tracking-tight text-m3-on-surface">{u.fullName}</h4>
+ {u.isNew && (
+ <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-500 border border-amber-500/30 text-[9px] font-black uppercase tracking-wider flex items-center gap-0.5 shadow-sm" title="Newly Enlisted Employee">
+ <Sparkles className="h-2.5 w-2.5" /> NEW
+ </span>
+ )}
+ </div>
  <p className="text-[10px] text-m3-on-surface-variant font-mono">@{u.username}</p>
  </div>
  </div>
@@ -618,8 +626,8 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  onChange={e => setRole(e.target.value as UserRole)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md cursor-pointer"
  >
- <option value={UserRole.ADMIN}>Admin - Full Corporate Access</option>
- <option value={UserRole.MANAGER}>Manager - Branch Supervisor</option>
+ {isUserAdmin && <option value={UserRole.ADMIN}>Admin - Full Corporate Access</option>}
+ {isUserAdmin && <option value={UserRole.MANAGER}>Manager - Branch Supervisor</option>}
  <option value={UserRole.CASHIER}>Cashier - ERP OS Sales Clerk</option>
  <option value={UserRole.STAFF}>Staff - Mobile Stock Logistics Checker</option>
  </select>
@@ -647,7 +655,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  onChange={e => setBranchAssignmentId(e.target.value)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md cursor-pointer"
  >
- {branches.map(b => (
+ {branches.filter(b => isUserAdmin || b.id === userBranchId).map(b => (
  <option key={b.id} value={b.id}>{b.name}</option>
  ))}
  </select>

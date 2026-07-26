@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { UserRole } from '../types/db';
 import { AdminProfitModule } from './AdminProfitModule';
+import { ExpressiveTooltip } from './ExpressiveTooltip';
 
 interface DashboardProps {
  darkMode: boolean;
@@ -641,8 +642,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  ))}
  </select>
  ) : (
- <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-2xl text-xs font-mono font-bold p-3 text-zinc-400 min-w-[210px]">
- {branches.find(b => b.id === (currentUser.branchAssignmentId || 'B1'))?.name || 'N/A'} (Locked View-Port)
+ <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-2xl text-xs font-mono font-bold p-3 text-m3-on-surface min-w-[210px]">
+ {branches.find(b => b.id === (currentUser.branchAssignmentId || 'B1'))?.name || 'N/A'}
  </div>
  )}
  </div>
@@ -2001,49 +2002,107 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
  </div>
 
- {/* Dynamic Drilldown Shelf */}
- <div className="mt-4 border-t border-m3-outline-variant/15 pt-4">
- {activeDrilldown === 'none' && (
- <div className="text-center py-10 text-xs text-m3-on-surface-variant bg-m3-surface-low/30 rounded-2xl border border-dashed border-m3-outline-variant/15">
- <Layers className="h-6 w-6 mx-auto text-m3-outline-variant/70 mb-1" />
- Select any metric card above to view individual item quantities, SKUs and replenish.
+ {/* Dynamic Drilldown Card Helper */}
+ <div className="mt-4 border-t border-m3-outline-variant/15 pt-3">
+ <div className="text-center py-4 px-3 text-xs text-m3-on-surface-variant bg-m3-surface-low/40 rounded-2xl border border-dashed border-m3-outline-variant/15 flex items-center justify-center gap-2">
+ <Layers className="h-4 w-4 text-m3-primary shrink-0" />
+ <span>Click any category card above to launch the <strong>Product Level Drilldown Modal</strong>.</span>
  </div>
- )}
+ </div>
 
+ </div>
+
+ <button onClick={() => onNavigate('inventory')} className="m3-btn-tonal w-full mt-4 justify-center">
+ Open Complete Inventory Ledger <ArrowRight className="h-4 w-4" />
+ </button>
+ </div>
+ </div>
+
+ {/* MODAL DIALOG: INVENTORY HEALTH DRILLDOWN FORM */}
  {activeDrilldown !== 'none' && (
- <div className="space-y-3.5 max-h-76 overflow-y-auto pr-1 animate-fade-in">
- <div className="flex items-center justify-between">
- <span className="text-[10.5px] bg-m3-primary/10 text-m3-primary font-black px-2 py-0.5 rounded uppercase font-mono">
- {activeDrilldown === 'products' ? 'PRODUCT LIST' : activeDrilldown === 'low' ? 'LOW STOCK SHELF' : activeDrilldown === 'critical' ? 'CRITICAL STOCK' : 'OUT OF STOCK LIST'}
+ <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 md:p-6 animate-fade-in">
+ <div className="bg-m3-surface border border-m3-outline-variant/30 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+ {/* Modal Header */}
+ <div className="p-5 bg-m3-surface-low border-b border-m3-outline-variant/15 flex items-center justify-between shrink-0">
+ <div className="flex items-center gap-3">
+ <div className="p-2.5 rounded-2xl bg-m3-primary/10 text-m3-primary border border-m3-primary/20">
+ <Layers className="h-5 w-5" />
+ </div>
+ <div>
+ <span className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono block">
+ Active Inventory Health Audit
  </span>
- <button onClick={() => setActiveDrilldown('none')} className="text-[10px] text-zinc-400 hover:underline">
- Close [x]
+ <h3 className="text-base font-extrabold text-m3-on-surface">
+ {activeDrilldown === 'products' ? 'TOTAL PRODUCT CATALOG' : activeDrilldown === 'low' ? 'LOW STOCK SHELF' : activeDrilldown === 'critical' ? 'CRITICAL STOCK ALERT' : 'OUT OF STOCK LIST'}
+ </h3>
+ </div>
+ </div>
+ 
+ <button
+ onClick={() => setActiveDrilldown('none')}
+ className="p-2 rounded-xl text-zinc-400 hover:text-m3-on-surface hover:bg-m3-surface-high transition-colors cursor-pointer"
+ title="Close Modal"
+ >
+ <X className="h-5 w-5" />
  </button>
  </div>
 
+ {/* Modal Navigation Tabs */}
+ <div className="px-5 py-3 bg-m3-surface-low/50 border-b border-m3-outline-variant/10 flex flex-wrap items-center justify-between text-xs gap-2 shrink-0">
+ <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+ <button
+ onClick={() => setActiveDrilldown('products')}
+ className={`px-3 py-1 rounded-lg text-[10px] font-mono font-bold uppercase transition-all cursor-pointer ${activeDrilldown === 'products' ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-lowest text-zinc-400 hover:text-m3-on-surface'}`}
+ >
+ All ({activeProducts.length})
+ </button>
+ <button
+ onClick={() => setActiveDrilldown('low')}
+ className={`px-3 py-1 rounded-lg text-[10px] font-mono font-bold uppercase transition-all cursor-pointer ${activeDrilldown === 'low' ? 'bg-amber-500 text-white' : 'bg-m3-surface-lowest text-amber-500 hover:bg-amber-500/10'}`}
+ >
+ Low ({lowStockProducts.length})
+ </button>
+ <button
+ onClick={() => setActiveDrilldown('critical')}
+ className={`px-3 py-1 rounded-lg text-[10px] font-mono font-bold uppercase transition-all cursor-pointer ${activeDrilldown === 'critical' ? 'bg-rose-500 text-white' : 'bg-m3-surface-lowest text-rose-500 hover:bg-rose-500/10'}`}
+ >
+ Critical ({criticalStockProducts.length})
+ </button>
+ <button
+ onClick={() => setActiveDrilldown('out_of_stock')}
+ className={`px-3 py-1 rounded-lg text-[10px] font-mono font-bold uppercase transition-all cursor-pointer ${activeDrilldown === 'out_of_stock' ? 'bg-red-600 text-white' : 'bg-m3-surface-lowest text-red-500 hover:bg-red-500/10'}`}
+ >
+ Out ({outOfStockProducts.length})
+ </button>
+ </div>
+
+ <span className="text-[10px] font-mono font-bold text-zinc-400">
+ { (activeDrilldown === 'products' ? activeProducts : activeDrilldown === 'low' ? lowStockProducts : activeDrilldown === 'critical' ? criticalStockProducts : outOfStockProducts).length } Items
+ </span>
+ </div>
+
+ {/* Modal Body */}
+ <div className="p-5 overflow-y-auto space-y-3.5 flex-1">
  {(activeDrilldown === 'products' ? activeProducts : activeDrilldown === 'low' ? lowStockProducts : activeDrilldown === 'critical' ? criticalStockProducts : outOfStockProducts).length === 0 ? (
- <div className="p-6 text-center text-xs text-zinc-400 bg-m3-surface-lowest rounded-xl border border-dashed border-m3-outline-variant/20 flex flex-col items-center gap-1.5">
- <ShieldCheck className="h-7 w-7 text-emerald-500 mb-1" />
- <span className="font-bold text-m3-on-surface block">No Stock Exceptions Found</span>
- <span className="text-[10.5px] text-zinc-500">There are currently no products under this stock status filter category.</span>
+ <div className="p-8 text-center text-xs text-zinc-400 bg-m3-surface-lowest rounded-2xl border border-dashed border-m3-outline-variant/20 flex flex-col items-center gap-1.5 my-4">
+ <ShieldCheck className="h-8 w-8 text-emerald-500 mb-1" />
+ <span className="font-bold text-m3-on-surface block text-sm">No Stock Exceptions Found</span>
+ <span className="text-[11px] text-zinc-500">There are currently no products under this stock status filter category.</span>
  </div>
  ) : (
  activeDrilldown === 'products' ? activeProducts : activeDrilldown === 'low' ? lowStockProducts : activeDrilldown === 'critical' ? criticalStockProducts : outOfStockProducts
  ).map((p, idx) => {
- // Calculate branch stock breakdown ("display it per item")
  const itemBranchStocks = branchStock.filter(bs => bs.productId === p.id);
- 
- // Identify if any branch has excess stock (>25 boxes)
  const excessBranches = itemBranchStocks.filter(bs => bs.quantity > 25);
  const currentBranchId = currentUser.branchAssignmentId || 'B1';
  
  return (
- <div key={idx} className="p-3 bg-m3-surface-lowest rounded-xl border border-m3-outline-variant/15 text-xs flex flex-col justify-between gap-2.5">
+ <div key={idx} className="p-4 bg-m3-surface-lowest rounded-2xl border border-m3-outline-variant/15 text-xs flex flex-col justify-between gap-3 shadow-sm hover:border-m3-primary/30 transition-all">
  <div className="space-y-1">
- <div className="font-extrabold text-m3-on-surface leading-snug flex items-center justify-between">
+ <div className="font-extrabold text-m3-on-surface text-sm leading-snug flex items-center justify-between">
  <span>{p.productName}</span>
  {p.brand && (
- <span className="text-[9.5px] font-mono uppercase bg-amber-500/10 text-amber-500 font-bold px-2 py-0.5 rounded-full">
+ <span className="text-[9.5px] font-mono uppercase bg-amber-500/10 text-amber-500 font-bold px-2 py-0.5 rounded-full border border-amber-500/20">
  {p.brand}
  </span>
  )}
@@ -2055,17 +2114,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </div>
 
  {/* Branch Stock Breakdown Display */}
- <div className="bg-m3-surface-low/50 p-2 rounded-lg space-y-1 my-1">
- <span className="text-[9.5px] font-extrabold text-zinc-400 uppercase tracking-wide block">Branch stock records:</span>
+ <div className="bg-m3-surface-low/50 p-2.5 rounded-xl space-y-1 my-1">
+ <span className="text-[9.5px] font-extrabold text-zinc-400 uppercase tracking-wide block font-mono">Branch stock records:</span>
  <div className="grid grid-cols-2 gap-1.5 text-[10.5px] font-mono">
  {branches.filter(b => !b.isDeleted).map(br => {
  const matchedStock = itemBranchStocks.find(bs => bs.branchId === br.id)?.quantity || 0;
  const isLow = matchedStock < (p.minimumStock / 2);
  return (
- <div key={br.id} className="flex justify-between items-center pr-2 bg-m3-surface-lowest p-1 rounded">
- <span className="text-zinc-500 truncate max-w-[90px]" title={br.name}>{br.name}:</span>
+ <div key={br.id} className="flex justify-between items-center pr-2 bg-m3-surface-lowest p-1.5 rounded-lg border border-m3-outline-variant/10">
+ <span className="text-zinc-500 truncate max-w-[110px]" title={br.name}>{br.name}:</span>
  <span className={isLow ? "text-red-400 font-bold" : matchedStock > 25 ? "text-emerald-400 font-bold" : "text-m3-on-surface"}>
- {matchedStock} bx {matchedStock > 25 && ""}
+ {matchedStock} bx
  </span>
  </div>
  );
@@ -2073,12 +2132,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </div>
  </div>
 
- <div className="flex items-center justify-between border-t border-zinc-500/10 pt-2 text-[10.5px]">
+ <div className="flex items-center justify-between border-t border-m3-outline-variant/10 pt-2 text-[10.5px]">
  <span>Current Global Stock: <span className="font-black text-m3-primary font-mono">{p.stockQuantity} boxes</span></span>
  <span className="text-zinc-500 font-mono">Min req: {p.minimumStock}</span>
  </div>
 
- {/* Custom Button triggers according to user rules */}
+ {/* Action Buttons */}
  <div className="space-y-1.5 pt-1">
  {currentUser.role === 'Admin' ? (
  <div className="space-y-1">
@@ -2094,14 +2153,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  localStorage.setItem('tp_po_cart', JSON.stringify(cart));
  }
  showToastMsg(`Queued "${p.productName}" for Purchase Order! Navigating to Sourcing Desk...`, 'success');
+ setActiveDrilldown('none');
  setTimeout(() => {
  onNavigate('procurement');
- // Force sub-tab to brands so they can compile!
  localStorage.setItem('tp_active_subtab', 'brands');
  window.location.reload();
  }, 900);
  }}
- className="w-full py-1.5 bg-teal-600 hover:bg-teal-500 transition-all text-white font-black rounded-lg text-[10.5px] uppercase cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+ className="w-full py-2 bg-teal-600 hover:bg-teal-500 transition-all text-white font-black rounded-xl text-[10.5px] uppercase cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
  >
  Direct to PO Sourcing Deck
  </button>
@@ -2126,7 +2185,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  showToastMsg('Failed to dispatch balancing transfer.', 'error');
  }
  }}
- className="w-full py-1 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold rounded-lg text-[9.5px] uppercase transition-all"
+ className="w-full py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold rounded-lg text-[9.5px] uppercase transition-all cursor-pointer"
  >
  Transfer 15 boxes from surplus {donor?.name}
  </button>
@@ -2151,7 +2210,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  localStorage.setItem('tp_po_cart', JSON.stringify(cart));
  }
  }}
- className="w-full py-1.5 bg-m3-primary hover:bg-m3-primary/80 transition-all text-m3-on-primary font-bold rounded-lg text-[10.5px] uppercase cursor-pointer"
+ className="w-full py-2 bg-m3-primary hover:bg-m3-primary/80 transition-all text-m3-on-primary font-bold rounded-xl text-[10.5px] uppercase cursor-pointer"
  >
  Request Restock Order Requisition
  </button>
@@ -2171,7 +2230,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  createStockTransfer(eb.branchId, recipient.id, 'Redistribution', items, reason);
  showToastMsg(`BALANCING: Sent request to transfer 15 units from ${donor?.name}.`, 'success');
  }}
- className="w-full py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/25 rounded-md text-[9.5px] uppercase transition-all"
+ className="w-full py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/25 rounded-lg text-[9.5px] uppercase transition-all cursor-pointer"
  >
  Pull balancing stock transfer from {donor?.name}
  </button>
@@ -2190,17 +2249,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  );
  })}
  </div>
- )}
- </div>
 
- </div>
-
- <button onClick={() => onNavigate('inventory')} className="m3-btn-tonal w-full mt-4 justify-center">
- Open Complete Inventory Ledger <ArrowRight className="h-4 w-4" />
+ {/* Modal Footer */}
+ <div className="p-4 bg-m3-surface-low border-t border-m3-outline-variant/15 flex items-center justify-between shrink-0">
+ <span className="text-[10.5px] text-zinc-400 font-mono">
+ Click outside or click Close to return to main dashboard.
+ </span>
+ <button
+ onClick={() => setActiveDrilldown('none')}
+ className="px-5 py-2 bg-m3-primary text-m3-on-primary font-bold rounded-xl text-xs uppercase font-mono hover:opacity-90 transition-opacity cursor-pointer"
+ >
+ Close Audit Modal
  </button>
  </div>
-
  </div>
+ </div>
+ )}
 
  {/* Priority 3: Company-wide Revenue Charts */}
  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -2568,7 +2632,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </div>
 
  <p className="text-[10.5px] text-zinc-400 mt-4 pl-1 font-mono italic">
- *AI Model monitors slow stock sales profiles over 90 days to release dynamic pull out proposals.
+ *Automated inventory algorithm monitors slow stock sales profiles over 90 days to release dynamic pull out proposals.
  </p>
  </div>
 
@@ -3180,7 +3244,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </div>
 
  <p className="text-[10.5px] text-zinc-400 mt-4 pl-1 font-mono italic">
- *AI Model monitors slow stock sales profiles over 90 days to release dynamic pull out proposals.
+ *Automated inventory algorithm monitors slow stock sales profiles over 90 days to release dynamic pull out proposals.
  </p>
  </div>
 

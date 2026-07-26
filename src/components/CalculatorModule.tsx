@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDb } from '../context/DbContext';
 import { Product } from '../types/db';
-import { isProductInBranch } from '../lib/branchUtils';
+import { isProductInBranch, getBranchStockQuantity } from '../lib/branchUtils';
 import {
  Calculator,
  Ruler,
@@ -53,7 +53,12 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  // Filter only tile products
  const userBranchId = currentUser?.branchAssignmentId || 'B1';
  const tileProducts = useMemo(() => {
- return products.filter((p) => {
+ return products
+ .map((p) => ({
+ ...p,
+ stockQuantity: getBranchStockQuantity(p, userBranchId, branchStock, branches),
+ }))
+ .filter((p) => {
  if (p.isDeleted) return false;
  if (!isProductInBranch(p, userBranchId, branchStock, branches)) return false;
 

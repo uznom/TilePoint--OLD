@@ -223,7 +223,7 @@ interface SalesTransmissionModuleProps {
 }
 
 export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = ({ darkMode, hideManualImport = false, showOnlyImport = false }) => {
- const { currentUser, branches, sales, saleItems, branchSalesReports, rollbackSnapshots, performRollbackToSnapshot, transmitSalesReport, importManualSalesReport, auditSalesReport, addAuditLog, shifts, expenses, deliveries, purchaseOrders, products, auditLogs } = useDb();
+ const { currentUser, branches, users, sales, saleItems, branchSalesReports, rollbackSnapshots, performRollbackToSnapshot, transmitSalesReport, importManualSalesReport, auditSalesReport, addAuditLog, shifts, expenses, deliveries, purchaseOrders, products, auditLogs } = useDb();
 
  // Selected date for compiling current branch report
  const [reportingDate, setReportingDate] = useState(() => {
@@ -693,6 +693,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  setIsTransmittingOnline(true);
 
  setTimeout(() => {
+ const branchEmployees = (users || []).filter(u => u.branchAssignmentId === currentBranchMeta.id);
  transmitSalesReport({
  branchId: currentBranchMeta.id,
  branchName: currentBranchMeta.name,
@@ -704,6 +705,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  transmissionType: 'Online',
  sales: compiledLocalSalesData.sales,
  saleItems: compiledLocalSalesData.saleItems,
+ users: branchEmployees,
  notes: `Online real-time sync completed by employee ${currentUser.fullName}.`
  });
 
@@ -775,6 +777,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  transmissionId,
  sales: compiledLocalSalesData.sales,
  saleItems: compiledLocalSalesData.saleItems,
+ users: (users || []).filter(u => u.branchAssignmentId === currentBranchMeta.id),
  notes: `Offline encrypted sales package generated securely with validation signatures.`
  };
 
@@ -1615,8 +1618,8 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  ))}
  </select>
  ) : (
- <div className="w-full bg-m3-surface-container/60 border border-m3-outline-variant/20 rounded-xl px-3 py-2 text-xs font-mono font-bold text-zinc-400">
- {branches.find(b => b.id === (currentUser.branchAssignmentId || 'B1'))?.name || 'N/A'} (Locked)
+ <div className="w-full bg-m3-surface-container/60 border border-m3-outline-variant/20 rounded-xl px-3 py-2 text-xs font-mono font-bold text-m3-on-surface">
+ {branches.find(b => b.id === (currentUser.branchAssignmentId || 'B1'))?.name || 'N/A'}
  </div>
  )}
  </div>

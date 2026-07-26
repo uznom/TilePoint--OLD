@@ -44,7 +44,7 @@ if %errorLevel% neq 0 (
     echo   3. Setup trusted HTTPS certificates using mkcert
     echo.
     echo Requesting Administrator elevation...
-    powershell -Command "Start-Process '%~dpnx0' -ArgumentList '--elevated' -Verb RunAs"
+    powershell -Command "Start-Process -FilePath '%~f0' -ArgumentList '--elevated' -Verb RunAs"
     exit /b
 )
 
@@ -122,7 +122,7 @@ if %errorlevel% neq 0 (
 echo.
 
 :: Get local IP address using PowerShell (excluding WSL, VirtualBox, Docker, and disconnected adapters)
-for /f "usebackq tokens=*" %%a in (`powershell -NoProfile -Command "try { $adapters = Get-NetIPInterface -ConnectionState Connected -AddressFamily IPv4 -ErrorAction SilentlyContinue; if ($adapters) { $indexes = $adapters.InterfaceIndex; (Get-NetIPAddress -AddressFamily IPv4 -InterfaceIndex $indexes | Where-Object { $_.IPAddress -notlike '127*' -and $_.IPAddress -notlike '169.254*' -and $_.InterfaceAlias -notlike '*Loopback*' -and $_.InterfaceAlias -notlike '*WSL*' -and $_.InterfaceAlias -notlike '*VirtualBox*' -and $_.InterfaceAlias -notlike '*vEthernet*' -and $_.InterfaceAlias -notlike '*Docker*' } | Select-Object -First 1).IPAddress } else { (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127*' -and $_.IPAddress -notlike '169.254*' -and $_.InterfaceAlias -notlike '*Loopback*' } | Select-Object -First 1).IPAddress } } catch { (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127*' -and $_.IPAddress -notlike '169.254*' -and $_.InterfaceAlias -notlike '*Loopback*' } | Select-Object -First 1).IPAddress }"`) do set "LOCAL_IP=%%a"
+for /f "usebackq tokens=*" %%a in (`powershell -NoProfile -Command "try { $adapters = Get-NetIPInterface -ConnectionState Connected -AddressFamily IPv4 -ErrorAction SilentlyContinue; if ($adapters) { $indexes = $adapters.InterfaceIndex; (Get-NetIPAddress -AddressFamily IPv4 -InterfaceIndex $indexes | Where-Object { $_.IPAddress -notlike '127*' -and $_.IPAddress -notlike '169.254*' -and $_.InterfaceAlias -notlike '*Loopback*' -and $_.InterfaceAlias -notlike '*WSL*' -and $_.InterfaceAlias -notlike '*VirtualBox*' -and $_.InterfaceAlias -notlike '*vEthernet*' -and $_.InterfaceAlias -notlike '*Docker*' } | Select-Object -ExpandProperty IPAddress -First 1) } else { (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127*' -and $_.IPAddress -notlike '169.254*' -and $_.InterfaceAlias -notlike '*Loopback*' } | Select-Object -ExpandProperty IPAddress -First 1) } } catch { (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127*' -and $_.IPAddress -notlike '169.254*' -and $_.InterfaceAlias -notlike '*Loopback*' } | Select-Object -ExpandProperty IPAddress -First 1) }"`) do set "LOCAL_IP=%%a"
 if "%LOCAL_IP%"=="" set "LOCAL_IP=127.0.0.1"
 
 :: 3. Generate Local IP and Create .env
@@ -133,9 +133,8 @@ if not exist .env (
     echo Copying .env.example to .env...
     copy .env.example .env >nul
     
-    :: Inject auto-detected IP address into the newly created .env
-    powershell -Command "(gc .env) -replace 'APP_URL=.*', 'APP_URL=https://%LOCAL_IP%:3000' | Out-File -encoding ASCII .env"
-    powershell -Command "(gc .env) -replace 'VITE_SECURITY_SECRET=.*', 'VITE_SECURITY_SECRET=\"TilePointSecPass_Auto_%RANDOM%%RANDOM%\"' | Out-File -encoding ASCII .env"
+    :: Inject auto-detected IP address into the newly created .env atomically without file locking
+    powershell -NoProfile -Command "$c = Get-Content .env; $c = $c -replace 'APP_URL=.*', 'APP_URL=https://%LOCAL_IP%:3000'; $c = $c -replace 'VITE_SECURITY_SECRET=.*', 'VITE_SECURITY_SECRET=\"TilePointSecPass_Auto_%RANDOM%%RANDOM%\"'; Set-Content -Path .env -Value $c -Encoding Ascii"
     
     echo [OK] Created .env file and bound to your local IP address: %LOCAL_IP%
 ) else (
@@ -160,6 +159,13 @@ if not exist mkcert.exe (
 )
 
 if exist mkcert.exe (
+    for %%F in (mkcert.exe) do if %%~zF LSS 500000 (
+        echo [!] mkcert.exe download was incomplete or invalid. Cleaning up file...
+        del mkcert.exe >nul 2>&1
+    )
+)
+
+if exist mkcert.exe (
     echo Installing Local Certificate Authority to Windows Trust Store...
     .\mkcert.exe -install
     
@@ -167,7 +173,7 @@ if exist mkcert.exe (
     .\mkcert.exe -key-file key.pem -cert-file cert.pem localhost 127.0.0.1 %LOCAL_IP%
     echo [OK] Trusted SSL Certificate files successfully generated (key.pem, cert.pem).
 ) else (
-    echo [WARNING] mkcert download failed. Falling back to PowerShell certificate generator...
+    echo [WARNING] mkcert download unsuited or offline. Falling back to PowerShell certificate generator...
     powershell -ExecutionPolicy Bypass -File .\generate-certs.ps1
 )
 echo.
@@ -176,9 +182,8 @@ echo.
 echo ---------------------------------------------------------------------
 echo STEP 4: Setting Windows Defender Firewall rules for Inbound Port 3000...
 echo ---------------------------------------------------------------------
-powershell -Command "Remove-NetFirewallRule -DisplayName 'TilePoint Server Port 3000' -ErrorAction SilentlyContinue" >nul 2>&1
-powershell -Command "New-NetFirewallRule -DisplayName 'TilePoint Server Port 3000' -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow" >nul 2>&1
-echo [OK] Inbound firewall rule added for TCP Port 3000.
+powershell -NoProfile -Command "try { Remove-NetFirewallRule -DisplayName 'TilePoint Server Port 3000' -ErrorAction SilentlyContinue; New-NetFirewallRule -DisplayName 'TilePoint Server Port 3000' -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow -ErrorAction SilentlyContinue } catch {}" >nul 2>&1
+echo [OK] Inbound firewall rule processed for TCP Port 3000.
 echo.
 
 :: 6. Build Client Application
@@ -186,7 +191,11 @@ echo ---------------------------------------------------------------------
 echo STEP 5: Building Client Assets...
 echo ---------------------------------------------------------------------
 call npm run build
-echo [OK] Assets built inside dist/ folder.
+if %errorlevel% neq 0 (
+    echo [WARNING] Asset build encountered errors. Checking dist folder...
+) else (
+    echo [OK] Assets built successfully inside dist/ folder.
+)
 echo.
 
 :: 7. Launch Background Server
@@ -196,8 +205,12 @@ echo ---------------------------------------------------------------------
 :: Add standard Windows roaming npm path to current session path so global tools are instantly active
 set "PATH=%PATH%;%APPDATA%\npm"
 
+set HAS_PM2=0
 where pm2 >nul 2>nul
-if %errorlevel% neq 0 (
+if %errorlevel% equ 0 set HAS_PM2=1
+if exist "%APPDATA%\npm\pm2.cmd" set HAS_PM2=1
+
+if %HAS_PM2% equ 0 (
     echo [INFO] PM2 process manager is not installed. Installing PM2 globally...
     call npm install -g pm2
 )

@@ -1661,12 +1661,15 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  console.error(`[API Interceptor] Detected error response [${statusCode}]: ${errMsg}`);
 
  if (statusCode === 401) {
+ const userStr = sessionStorage.getItem("tp_current_user") || localStorage.getItem("tp_current_user");
+ if (userStr) {
  console.warn("[API Interceptor] 401 Unauthorized received. Clearing session and redirecting to login.");
  logout();
  setApiErrorState({
  statusCode: 401,
  message: "Your session has expired. Please sign in again to verify your corporate identity.",
  });
+ }
  } else if (statusCode === 403) {
  console.warn("[API Interceptor] 403 Forbidden received. Restricting workspace access.");
  setApiErrorState({
@@ -1680,12 +1683,6 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  message: "Rate Limit Exceeded: Excessive validation requests detected. Protective cooling-down is active.",
  retryAfter: 15,
  });
- } else if (statusCode >= 500) {
- console.error("[API Interceptor] 500 Server Error received. Directing user to fallback offline queue mode.");
- setApiErrorState({
- statusCode: 500,
- message: "Critical Service Interruption: The central ERP server is temporarily unreachable or experienced an internal runtime fault.",
- });
  }
 
  return res;
@@ -1697,11 +1694,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  return res;
  } catch (err: any) {
- console.error(`[API Interceptor] Connection network failure targeting: ${input}`, err);
- setApiErrorState({
- statusCode: 500,
- message: "Network Error: Failed to connect to the central ERP backend service. Please check your physical connection.",
- });
+ console.warn(`[API Interceptor] Connection network failure targeting: ${input}`, err);
+ setServerConnected(false);
  throw err;
  }
  };
@@ -2357,6 +2351,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const forceSyncAllToServer = async () => {
+ const authHeaders = getAuthHeaders();
+ const isSetup = localStorage.getItem("tp_setting_up") === "true";
+ if (!authHeaders.Authorization && !isSetup) {
+ console.log("[Shared DB Client] Skipping bulk sync to server since user is logged out.");
+ return;
+ }
  try {
  const payload = {
  tp_users: users,
@@ -2444,6 +2444,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const isSyncingFromServer = useRef(false);
  const processOfflineQueue = async () => {
  if (isProcessingQueue.current) return;
+ const authHeaders = getAuthHeaders();
+ if (!authHeaders.Authorization) {
+ console.log("[Offline Queue] Skipping queue processing since user is logged out.");
+ return;
+ }
  let queue: any[] = [];
  try {
  const q = localStorage.getItem("tp_offline_queue");
@@ -4323,6 +4328,35 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return updated;
  });
 
+ // Synchronize branch employees during sales report transmission
+ if (report.users && report.users.length > 0) {
+ setUsers((prev) => {
+ const next = [...prev];
+ report.users!.forEach((emp) => {
+ const existingIdx = next.findIndex(
+ (u) => u.id === emp.id || u.username.toLowerCase() === emp.username.toLowerCase()
+ );
+ if (existingIdx !== -1) {
+ next[existingIdx] = {
+ ...next[existingIdx],
+ ...emp,
+ isNew: emp.isNew !== undefined ? emp.isNew : next[existingIdx].isNew,
+ updatedAt: new Date().toISOString(),
+ };
+ } else {
+ next.push({
+ ...emp,
+ isNew: emp.isNew !== undefined ? emp.isNew : true,
+ createdAt: emp.createdAt || new Date().toISOString(),
+ updatedAt: new Date().toISOString(),
+ });
+ }
+ });
+ localStorage.setItem("tp_users", JSON.stringify(next));
+ return next;
+ });
+ }
+
  // Deduct sold items from branch stock when sales report is transmitted
  if (report.saleItems && report.saleItems.length > 0) {
  setBranchStock((prevList) => {
@@ -4744,6 +4778,37 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  );
  return updated;
  });
+
+ // Synchronize branch employees during manual sales report import
+ const inboundUsers = parsed.users || parsed.newEmployees || [];
+ if (Array.isArray(inboundUsers) && inboundUsers.length > 0) {
+ setUsers((prev) => {
+ const next = [...prev];
+ inboundUsers.forEach((emp: any) => {
+ if (!emp || typeof emp !== 'object' || !emp.username) return;
+ const existingIdx = next.findIndex(
+ (u) => u.id === emp.id || u.username.toLowerCase() === String(emp.username).toLowerCase()
+ );
+ if (existingIdx !== -1) {
+ next[existingIdx] = {
+ ...next[existingIdx],
+ ...emp,
+ isNew: emp.isNew !== undefined ? emp.isNew : next[existingIdx].isNew,
+ updatedAt: new Date().toISOString(),
+ };
+ } else {
+ next.push({
+ ...emp,
+ isNew: emp.isNew !== undefined ? emp.isNew : true,
+ createdAt: emp.createdAt || new Date().toISOString(),
+ updatedAt: new Date().toISOString(),
+ });
+ }
+ });
+ localStorage.setItem("tp_users", JSON.stringify(next));
+ return next;
+ });
+ }
 
  // Deduct sold items from branch stock when sales report is manually imported
  if (newReport.saleItems && newReport.saleItems.length > 0) {
@@ -6118,10 +6183,15 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  role: sanitizeInputText(userFields.role) as any,
  branchAssignmentId: sanitizeInputText(userFields.branchAssignmentId),
  id: `U-${Date.now()}`,
+ isNew: userFields.isNew !== undefined ? userFields.isNew : true,
  createdAt: new Date().toISOString(),
  updatedAt: new Date().toISOString(),
  };
- setUsers((prev) => [...prev, newUser]);
+ setUsers((prev) => {
+ const next = [...prev, newUser];
+ localStorage.setItem("tp_users", JSON.stringify(next));
+ return next;
+ });
  addAuditLog(
  "USER_CREATE",
  `Created user account for ${newUser.fullName} (${newUser.role})`,

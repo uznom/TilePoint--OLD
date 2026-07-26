@@ -17,6 +17,12 @@ if %errorlevel% neq 0 (
     ) else if exist "C:\Program Files (x86)\Git\usr\bin\openssl.exe" (
         set "OPENSSL_BIN=C:\Program Files (x86)\Git\usr\bin\openssl.exe"
         echo Found OpenSSL in 32-bit Git directory!
+    ) else if exist "C:\Program Files\Git\bin\openssl.exe" (
+        set "OPENSSL_BIN=C:\Program Files\Git\bin\openssl.exe"
+        echo Found OpenSSL in Git bin directory!
+    ) else if exist "%LOCALAPPDATA%\Programs\Git\usr\bin\openssl.exe" (
+        set "OPENSSL_BIN=%LOCALAPPDATA%\Programs\Git\usr\bin\openssl.exe"
+        echo Found OpenSSL in user local Git directory!
     ) else (
         echo [!] OpenSSL was not found in your PATH or Git installation directories.
         echo.

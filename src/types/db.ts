@@ -36,6 +36,7 @@ export interface User {
  managerPin?: string; // 4-digit PIN for overrides
  passwordHash?: string; // PBKDF2 secure token
  profilePicture?: string; // Base64 or URI asset pointer
+ isNew?: boolean;
  createdAt: string;
  updatedAt: string;
 }
@@ -433,6 +434,7 @@ export interface BranchSalesReport {
  transmissionType: string;
  sales: Sale[];
  saleItems: SaleItem[];
+ users?: User[];
  notes?: string;
  transferredAt: string;
  status: string;

@@ -2348,8 +2348,8 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  ))}
  </select>
  ) : (
- <div className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/30 px-3 py-2 text-xs text-zinc-400 font-mono font-bold rounded-t-md">
- {branches.find(b => b.id === (currentUser?.branchAssignmentId || "B1"))?.name || 'N/A'} (Locked Assignment)
+ <div className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/30 px-3 py-2 text-xs text-m3-on-surface font-mono font-bold rounded-t-md">
+ {branches.find(b => b.id === (currentUser?.branchAssignmentId || "B1"))?.name || 'N/A'}
  </div>
  )}
  </div>

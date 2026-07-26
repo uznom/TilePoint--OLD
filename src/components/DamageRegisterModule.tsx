@@ -379,8 +379,8 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
   ))}
   </select>
   ) : (
-  <div className="w-full p-2.5 text-xs font-black font-mono bg-m3-surface border border-rose-500/10 text-rose-500 rounded-lg">
-  {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'} (Reporting Branch Locked)
+  <div className="w-full p-2.5 text-xs font-black font-mono bg-m3-surface border border-m3-outline-variant/20 text-m3-on-surface rounded-lg">
+  {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
   </div>
   )}
  </div>
@@ -543,8 +543,8 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
   ))}
   </select>
   ) : (
-  <div className="w-full p-2 text-xs font-semibold rounded-lg border border-m3-outline-variant/30 bg-m3-surface/60 text-zinc-400 font-mono">
-  {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'} (Locked)
+  <div className="w-full p-2 text-xs font-semibold rounded-lg border border-m3-outline-variant/30 bg-m3-surface/60 text-m3-on-surface font-mono">
+  {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
   </div>
   )}
  </div>

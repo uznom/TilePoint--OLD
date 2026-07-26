@@ -42,6 +42,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { CalculatorModule } from "./CalculatorModule";
+import { ExpressiveTooltip } from "./ExpressiveTooltip";
 
 const formatTin = (value: string | undefined | null): string => {
  if (!value) return "";
@@ -596,30 +597,42 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  // Cart operations
  const addToCart = (product: Product) => {
- if (product.stockQuantity === 0) {
+ const userBranchId = currentUser?.branchAssignmentId || "B1";
+ const realBranchStock = getBranchStockQuantity(product, userBranchId, branchStock, branches);
+
+ if (realBranchStock <= 0) {
  showToast("Depleted Stock: Clicked product is currently out of stock.");
  return;
  }
+
+ const updatedProduct = { ...product, stockQuantity: realBranchStock };
 
  setCart((prev) => {
  const idx = prev.findIndex((item) => item.product.id === product.id);
  if (idx !== -1) {
  const currentQty = prev[idx].quantity;
- if (currentQty >= product.stockQuantity) {
+ if (currentQty >= realBranchStock) {
  showToast(
- `Stock Limit: Maximum available is ${product.stockQuantity} ${product.unit}.`,
+ `Stock Limit: Maximum available is ${realBranchStock} ${product.unit}.`,
  );
  return prev;
  }
  const updated = [...prev];
- updated[idx] = { ...updated[idx], quantity: currentQty + 1 };
+ updated[idx] = { ...updated[idx], product: updatedProduct, quantity: currentQty + 1 };
  return updated;
  }
- return [...prev, { product, quantity: 1 }];
+ return [...prev, { product: updatedProduct, quantity: 1 }];
  });
  };
 
- const updateCartQty = (productId: string, val: any, maxStock: number) => {
+ const updateCartQty = (productId: string, val: any, _maxStockOverride?: number) => {
+ const userBranchId = currentUser?.branchAssignmentId || "B1";
+ const matchedProduct = products.find((p) => p.id === productId);
+ const cartProduct = cart.find((item) => item.product.id === productId)?.product;
+ const realBranchStock = matchedProduct
+ ? matchedProduct.stockQuantity
+ : getBranchStockQuantity(cartProduct, userBranchId, branchStock, branches);
+
  let parsedQty = parseInt(val, 10);
  if (isNaN(parsedQty) || parsedQty <= 0) {
  removeFromCart(productId);
@@ -627,15 +640,21 @@ export const PosModule: React.FC<PosModuleProps> = ({
  }
  const newQty = Math.max(1, parsedQty);
 
- if (newQty > maxStock) {
+ if (newQty > realBranchStock) {
  showToast(
- `Excess Volume: Cannot exceed active stock level of ${maxStock}.`,
+ `Excess Volume: Cannot exceed active stock level of ${realBranchStock}.`,
  );
  return;
  }
  setCart((prev) =>
  prev.map((item) =>
- item.product.id === productId ? { ...item, quantity: newQty } : item,
+ item.product.id === productId
+ ? {
+ ...item,
+ product: { ...item.product, stockQuantity: realBranchStock },
+ quantity: newQty,
+ }
+ : item,
  ),
  );
  };
@@ -2042,6 +2061,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
 
  <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 w-full sm:w-auto shrink-0">
+ {(() => {
+ const userBranchId = currentUser?.branchAssignmentId || "B1";
+ const currentMaxStock = products.find((p) => p.id === item.product.id)?.stockQuantity ?? getBranchStockQuantity(item.product, userBranchId, branchStock, branches);
+ return (
  <div className="flex items-center border border-m3-outline-variant rounded-lg overflow-hidden shrink-0 bg-m3-surface">
  <button
  type="button"
@@ -2049,7 +2072,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  updateCartQty(
  item.product.id,
  item.quantity - 1,
- item.product.stockQuantity,
+ currentMaxStock,
  )
  }
  className="px-2 py-0.5 hover:bg-m3-outline-variant/20 text-xs font-mono font-bold text-m3-on-surface"
@@ -2059,7 +2082,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <CartQtyInput
  quantity={item.quantity}
  productId={item.product.id}
- maxStock={item.product.stockQuantity}
+ maxStock={currentMaxStock}
  updateCartQty={updateCartQty}
  removeFromCart={removeFromCart}
  />
@@ -2069,7 +2092,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  updateCartQty(
  item.product.id,
  item.quantity + 1,
- item.product.stockQuantity,
+ currentMaxStock,
  )
  }
  className="px-2 py-0.5 hover:bg-m3-outline-variant/20 text-xs font-mono font-bold text-m3-on-surface"
@@ -2077,6 +2100,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
  +
  </button>
  </div>
+ );
+ })()}
 
  <div className="flex items-center gap-3">
  <span className="text-xs font-black font-mono min-w-[80px] text-right text-m3-on-surface">
@@ -2623,8 +2648,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
  ))}
  </select>
  ) : (
- <div className="w-full text-[11px] font-sans font-black bg-m3-surface/60 border border-m3-outline-variant/20 px-3 py-2 rounded-xl text-zinc-400 uppercase tracking-wider">
- {branches.find(b => b.id === (currentUser?.branchAssignmentId || "B1"))?.name || 'N/A'} (Locked)
+ <div className="w-full text-[11px] font-sans font-black bg-m3-surface/60 border border-m3-outline-variant/20 px-3 py-2 rounded-xl text-m3-on-surface uppercase tracking-wider">
+ {branches.find(b => b.id === (currentUser?.branchAssignmentId || "B1"))?.name || 'N/A'}
  </div>
  )}
  </div>
@@ -3599,14 +3624,25 @@ export const PosModule: React.FC<PosModuleProps> = ({
      Search Registered Corporate Members
    </label>
    <div className="max-h-36 overflow-y-auto border border-m3-outline-variant/20 rounded-xl p-1 bg-m3-surface-lowest divide-y divide-m3-outline-variant/10 scrollbar-thin">
-     {members
-       .filter((m) => {
+     {(() => {
+       const filteredModalMembers = members.filter((m) => {
          if (!customerModalInput.trim()) return true;
          return m.fullName.toLowerCase().includes(customerModalInput.toLowerCase()) ||
                 m.phone.includes(customerModalInput) ||
                 m.email.toLowerCase().includes(customerModalInput.toLowerCase());
-       })
-       .map((m) => (
+       });
+
+       if (filteredModalMembers.length === 0) {
+         return (
+           <p className="text-center p-3 text-m3-on-surface-variant text-[11px] font-medium italic">
+             {customerModalInput.trim()
+               ? `No corporate members found matching "${customerModalInput}".`
+               : "No registered corporate members found."}
+           </p>
+         );
+       }
+
+       return filteredModalMembers.map((m) => (
          <button
            type="button"
            key={m.id}
@@ -3623,10 +3659,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
              Select
            </span>
          </button>
-       ))}
-     {members.length === 0 && (
-       <p className="text-center p-2 text-zinc-500 text-[10px] italic">No active corporate members found.</p>
-     )}
+       ));
+     })()}
    </div>
  </div>
 
@@ -4519,27 +4553,34 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <CalculatorModule
  darkMode={darkMode}
  onApply={(product, quantity) => {
- if (product.stockQuantity === 0) {
+ const userBranchId = currentUser?.branchAssignmentId || "B1";
+ const realBranchStock = getBranchStockQuantity(product, userBranchId, branchStock, branches);
+ if (realBranchStock <= 0) {
  showToast("Depleted Stock: Selected product is currently out of stock.");
  return;
  }
+ const productWithStock = { ...product, stockQuantity: realBranchStock };
  setCart((prev) => {
  const idx = prev.findIndex((item) => item.product.id === product.id);
  if (idx !== -1) {
  const currentQty = prev[idx].quantity;
- if (currentQty + quantity > product.stockQuantity) {
- showToast(`Stock Limit: Only ${product.stockQuantity} available. Added remaining stock.`);
+ if (currentQty + quantity > realBranchStock) {
+ showToast(`Stock Limit: Only ${realBranchStock} available. Added remaining stock.`);
  const updated = [...prev];
- updated[idx] = { ...updated[idx], quantity: product.stockQuantity };
+ updated[idx] = { ...updated[idx], product: productWithStock, quantity: realBranchStock };
  return updated;
  }
  const updated = [...prev];
- updated[idx] = { ...updated[idx], quantity: currentQty + quantity };
+ updated[idx] = { ...updated[idx], product: productWithStock, quantity: currentQty + quantity };
  return updated;
  }
- return [...prev, { product, quantity }];
+ const finalQty = Math.min(quantity, realBranchStock);
+ if (quantity > realBranchStock) {
+ showToast(`Stock Limit: Requested ${quantity}, but only ${realBranchStock} available in branch inventory.`);
+ }
+ return [...prev, { product: productWithStock, quantity: finalQty }];
  });
- showToast(`Added ${quantity} ${product.unit} of ${product.productName} to active invoice.`);
+ showToast(`Added ${Math.min(quantity, realBranchStock)} ${product.unit} of ${product.productName} to active invoice.`);
  setShowTileCalculatorModal(false);
  }}
  />

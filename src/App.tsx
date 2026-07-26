@@ -15,7 +15,7 @@ import {
  formatHashToken,
  verifyPasswordWithToken,
 } from "./lib/crypto";
-import { verifyAndUnwrapBackup } from "./lib/fileBackupHelper";
+import { verifyAndUnwrapBackup, saveFileToBackup } from "./lib/fileBackupHelper";
 
 // Modular components imports
 import { Dashboard } from "./components/Dashboard";
@@ -1045,19 +1045,19 @@ function AppContent() {
  id: "dashboard",
  name: "Branch Dashboard",
  icon: LayoutDashboard,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
  },
  {
  id: "profit-analytics",
  name: "P&L Accounting Desk",
  icon: DollarSign,
- roles: [UserRole.ADMIN],
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
  },
  {
  id: "pos",
  name: "ERP OS Checkout Mode",
  icon: ShoppingCart,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER],
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
  },
  {
  id: "shift",
@@ -1080,7 +1080,7 @@ function AppContent() {
  id: "branches",
  name: "Branches Profile",
  icon: Building2,
- roles: [UserRole.ADMIN],
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
  },
  {
  id: "users",
@@ -1122,25 +1122,25 @@ function AppContent() {
  id: "inventory-transfer",
  name: "Stock Transfers",
  icon: Send,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF],
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
  },
  {
  id: "inventory-logistics",
  name: "Logistics Ledger & Heatmap",
  icon: Layers,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF],
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
  },
  {
  id: "inventory-import",
  name: "Migration & Import/Export Tool",
  icon: Layers,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF],
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
  },
  {
  id: "inventory-damage",
  name: "Broken & BOA Register",
  icon: AlertTriangle,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF],
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
  },
  {
  id: "inventory-expiry",
@@ -1152,46 +1152,46 @@ function AppContent() {
  id: "inventory-branch-prices",
  name: "Branch MSRP & SRP Suggestions",
  icon: DollarSign,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF],
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
  },
 
  {
  id: "adjustments-void",
  name: "Search Voided Sales",
  icon: History,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER],
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
  },
  {
  id: "adjustments-return",
  name: "Search Returned Products",
  icon: RefreshCw,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER],
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
  },
 
  {
  id: "members-manage",
  name: "Manage Members",
  icon: UsersIcon,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER],
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
  },
  {
  id: "members-receivables",
  name: "Account Receivables",
  icon: UsersIcon,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER],
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
  },
 
  {
  id: "expenses-add",
  name: "Add Expenses",
  icon: DollarSign,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
  },
  {
  id: "expenses-search",
  name: "Search Expenses",
  icon: DollarSign,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
  },
 
  {
@@ -1217,13 +1217,13 @@ function AppContent() {
  id: "bir-xz",
  name: "Search X&Z Reading",
  icon: FileText,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
  },
  {
  id: "bir-summary",
  name: "BIR Summary Report",
  icon: FileText,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
  },
  {
  id: "reconciliation-transmission",
@@ -3074,24 +3074,29 @@ function AppContent() {
  deliveries,
  };
  const dataStr = JSON.stringify(payload, null, 2);
- const dataUri =
- "data:application/json;charset=utf-8," +
- encodeURIComponent(dataStr);
+ const filename = `tilepoint_full_backup_${Date.now()}.json`;
 
- const element = document.createElement("a");
- element.setAttribute("href", dataUri);
- element.setAttribute(
- "download",
- `tilepoint_full_backup_${Date.now()}.json`,
+ saveFileToBackup(dataStr, filename, "Database_Backups", "application/json")
+ .then((res) => {
+ showToast(
+ `Database backup exported to ${res.path || filename} successfully!`,
  );
+ })
+ .catch(() => {
+ const blob = new Blob([dataStr], { type: "application/json" });
+ const url = URL.createObjectURL(blob);
+ const element = document.createElement("a");
+ element.setAttribute("href", url);
+ element.setAttribute("download", filename);
  element.style.display = "none";
  document.body.appendChild(element);
  element.click();
  document.body.removeChild(element);
-
+ URL.revokeObjectURL(url);
  showToast(
  "Raw physical database JSON file downloaded successfully!",
  );
+ });
  }}
  className="w-full py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-xs font-extrabold uppercase tracking-wider rounded-xl border border-emerald-500/30 flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
  >

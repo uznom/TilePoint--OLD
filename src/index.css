@@ -1487,10 +1487,10 @@ html.accessibility-no-animation table tbody tr:hover td {
     color: #000000 !important;
   }
 
-  /* Dedicated 76mm format centering layout for thermal receipt rolls (75mm-76mm width) */
+  /* Dedicated A4 landscape format layout for BIR report ledger sheets and documents */
   @page {
-    size: 76mm auto !important;
-    margin: 0 !important;
+    size: A4 landscape;
+    margin: 8mm;
   }
 
   /* Reset layout for thermal receipt context to support continuous dynamic roll height */
@@ -1663,6 +1663,28 @@ html.accessibility-no-animation table tbody tr:hover td {
     color: #000000 !important;
     height: auto !important;
     overflow: visible !important;
+  }
+  body:has(.bir-report-container) .bir-report-container table {
+    width: 100% !important;
+    min-width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 10px !important;
+    color: #000000 !important;
+  }
+  body:has(.bir-report-container) .bir-report-container th,
+  body:has(.bir-report-container) .bir-report-container td {
+    border: 1px solid #000000 !important;
+    padding: 4px 6px !important;
+    color: #000000 !important;
+    background: #ffffff !important;
+  }
+  body:has(.bir-report-container) .bir-report-container tr {
+    page-break-inside: avoid !important;
+  }
+  body:has(.bir-report-container) .bir-report-container thead {
+    background-color: #f2f2f2 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   /* Robust isolation: if tilepoint-printable-pl exists on screen, hide all other DOM elements completely */

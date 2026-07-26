@@ -42,17 +42,19 @@ export const ReconciliationTransmissionModule: React.FC<ReconciliationTransmissi
           <span>Daily Reconciliation</span>
         </button>
 
-        <button
-          onClick={() => setActiveSubTab("transmission")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
-            activeSubTab === "transmission"
-              ? "bg-m3-primary text-m3-on-primary shadow-md scale-[1.02]"
-              : "text-m3-on-surface-variant hover:bg-m3-surface-high/60 hover:text-m3-on-surface"
-          }`}
-        >
-          <Send className="h-4 w-4" />
-          <span>Reports Transmission</span>
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setActiveSubTab("transmission")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+              activeSubTab === "transmission"
+                ? "bg-m3-primary text-m3-on-primary shadow-md scale-[1.02]"
+                : "text-m3-on-surface-variant hover:bg-m3-surface-high/60 hover:text-m3-on-surface"
+            }`}
+          >
+            <Send className="h-4 w-4" />
+            <span>Reports Transmission</span>
+          </button>
+        )}
 
         {isAdmin && (
           <button
@@ -80,7 +82,7 @@ export const ReconciliationTransmissionModule: React.FC<ReconciliationTransmissi
           <DailyReconciliationModule darkMode={darkMode} />
         )}
 
-        {activeSubTab === "transmission" && (
+        {activeSubTab === "transmission" && isAdmin && (
           <SalesTransmissionModule darkMode={darkMode} hideManualImport={true} />
         )}
 
