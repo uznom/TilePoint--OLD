@@ -1243,7 +1243,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  password: string,
  ): Promise<{ success: boolean; error?: string; sqliBlocked?: boolean }> => {
  // Check if the credentials are 'admin' / 'admin123' to initiate simulation mode trigger
- if (username.trim().toLowerCase() === "admin" && password === "admin123") {
+    // Security Fix: Explicitly guard the simulation mode trigger with import.meta.env.DEV
+    if (import.meta.env.DEV && username.trim().toLowerCase() === "admin" && password === "admin123") {
  const proceed = true; // Bypasses window.confirm in iframe environments for seamless login
  if (proceed) {
  setSimulationModeActive(true);
