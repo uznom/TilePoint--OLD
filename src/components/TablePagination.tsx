@@ -74,26 +74,15 @@ export function useTableAutoPageSize(
 
  const calculated = Math.floor(availableHeight / rowHeight);
  const fittedRows = Math.min(Math.max(calculated, minRows), maxRows);
- setPageSize(fittedRows);
+ setPageSize((prev) => (prev !== fittedRows ? fittedRows : prev));
  };
 
  calculatePageSize();
 
  window.addEventListener("resize", calculatePageSize);
 
- let resizeObserver: ResizeObserver | null = null;
- if (containerRef?.current && typeof ResizeObserver !== "undefined") {
- resizeObserver = new ResizeObserver(() => {
- calculatePageSize();
- });
- resizeObserver.observe(containerRef.current);
- }
-
  return () => {
  window.removeEventListener("resize", calculatePageSize);
- if (resizeObserver) {
- resizeObserver.disconnect();
- }
  };
  }, [containerRef, rowHeight, minRows, maxRows, paddingOffset, bottomBuffer]);
 
@@ -118,20 +107,22 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
  const totalPages = Math.ceil(totalItems / pageSize);
  if (totalPages <= 1) return null;
 
- const startItem = (currentPage - 1) * pageSize + 1;
- const endItem = Math.min(currentPage * pageSize, totalItems);
+ const safePage = Math.min(Math.max(1, currentPage), totalPages);
+
+ const startItem = (safePage - 1) * pageSize + 1;
+ const endItem = Math.min(safePage * pageSize, totalItems);
 
  const getPageNumbers = () => {
  const pages: number[] = [];
  if (totalPages <= 5) {
  for (let i = 1; i <= totalPages; i++) pages.push(i);
  } else {
- if (currentPage <= 3) {
+ if (safePage <= 3) {
  pages.push(1, 2, 3, 4, totalPages);
- } else if (currentPage >= totalPages - 2) {
+ } else if (safePage >= totalPages - 2) {
  pages.push(1, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
  } else {
- pages.push(1, currentPage - 1, currentPage, currentPage + 1, totalPages);
+ pages.push(1, safePage - 1, safePage, safePage + 1, totalPages);
  }
  }
  return pages;
@@ -146,8 +137,8 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
  </div>
  <div className="flex items-center gap-1">
  <button
- onClick={() => onPageChange(currentPage - 1)}
- disabled={currentPage === 1}
+ onClick={() => onPageChange(safePage - 1)}
+ disabled={safePage === 1}
  className="p-1.5 rounded-lg border border-m3-outline-variant/15 bg-zinc-950/20 hover:bg-m3-primary/10 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer transition-colors"
  title="Previous Page"
  >
@@ -162,7 +153,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
  <button
  onClick={() => onPageChange(p)}
  className={`min-w-7 h-7 rounded-lg text-center font-bold font-mono transition-all cursor-pointer ${
- currentPage === p
+ safePage === p
  ? "bg-m3-primary text-m3-on-primary shadow-sm scale-105"
  : "border border-m3-outline-variant/10 bg-zinc-950/10 hover:bg-m3-primary/10 text-zinc-400 hover:text-white"
  }`}
@@ -174,8 +165,8 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
  })}
 
  <button
- onClick={() => onPageChange(currentPage + 1)}
- disabled={currentPage === totalPages}
+ onClick={() => onPageChange(safePage + 1)}
+ disabled={safePage === totalPages}
  className="p-1.5 rounded-lg border border-m3-outline-variant/15 bg-zinc-950/20 hover:bg-m3-primary/10 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer transition-colors"
  title="Next Page"
  >

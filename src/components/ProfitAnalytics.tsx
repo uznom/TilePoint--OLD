@@ -453,6 +453,25 @@ export function ProfitAnalytics({
  Bar
  </button>
  </div>
+
+  {/* Branch Selector Dropdown */}
+  <div className="flex bg-zinc-200/50 dark:bg-zinc-950/40 p-1 rounded-xl border border-m3-outline-variant/15 text-xs font-bold items-center px-2">
+  <Building className="h-3.5 w-3.5 text-m3-primary mr-1 shrink-0" />
+  <select
+  value={selectedBranchId}
+  onChange={(e) => setSelectedBranchId(e.target.value)}
+  className="bg-transparent text-m3-on-surface dark:text-zinc-200 text-xs font-bold focus:outline-none cursor-pointer py-1"
+  >
+  <option value="all" className="bg-m3-surface text-m3-on-surface dark:bg-zinc-900 dark:text-zinc-100 font-bold">
+  Consolidated (All Branches)
+  </option>
+  {branches.filter((b) => !b.isDeleted).map((b) => (
+  <option key={b.id} value={b.id} className="bg-m3-surface text-m3-on-surface dark:bg-zinc-900 dark:text-zinc-100">
+  {b.name}
+  </option>
+  ))}
+  </select>
+  </div>
  </div>
  </div>
 

@@ -503,6 +503,103 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  </div>
  )}
 
+ {step === 'backup_location' && (
+ <div className="space-y-6 animate-fade-in text-slate-100 text-center py-2">
+ <div className="space-y-2 text-center">
+ <span className="text-[10px] font-black uppercase tracking-widest text-[#E2E8F0] font-mono bg-slate-800 px-3 py-1 rounded-full">
+ Storage Setup (Optional)
+ </span>
+ <h2 className="text-xl sm:text-2xl font-black text-white">Configure Local Backup Folder</h2>
+ <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+ Authorize a local workspace directory on your device for automatic database snapshot and log backups.
+ </p>
+ </div>
+
+ <div className="p-6 bg-slate-950/60 border border-slate-800 rounded-2xl max-w-md mx-auto space-y-4">
+ <div className="h-12 w-12 bg-m3-primary/10 rounded-2xl flex items-center justify-center mx-auto text-m3-primary border border-m3-primary/20">
+ <HardDrive className="h-6 w-6" />
+ </div>
+
+ {savedFolderHandle ? (
+ <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-xs font-bold flex items-center justify-center gap-2">
+ <FolderCheck className="h-4 w-4" />
+ <span>Authorized Directory: "{savedFolderHandle.name}"</span>
+ </div>
+ ) : (
+ <div className="text-xs text-slate-400">
+ No local backup directory selected yet.
+ </div>
+ )}
+
+ <button
+ type="button"
+ onClick={async () => {
+ if (typeof window !== 'undefined' && 'showDirectoryPicker' in window) {
+ try {
+ const handle = await (window as any).showDirectoryPicker();
+ await saveDirectoryHandle(handle);
+ setSavedFolderHandle(handle);
+ setImportStatus({
+ type: 'success',
+ message: `Successfully authorized native directory: "${handle.name}"`
+ });
+ } catch (err: any) {
+ if (err.name !== 'AbortError') {
+ setImportStatus({
+ type: 'error',
+ message: 'Folder selection was canceled or unavailable.'
+ });
+ }
+ }
+ } else {
+ setImportStatus({
+ type: 'error',
+ message: 'Native Directory Picker is not supported in this browser engine.'
+ });
+ }
+ }}
+ className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer border border-slate-700 flex items-center justify-center gap-2"
+ >
+ <FolderCheck className="h-4 w-4 text-m3-primary" />
+ <span>{savedFolderHandle ? 'Change Selected Directory' : 'Choose Local Backup Folder'}</span>
+ </button>
+ </div>
+
+ {importStatus.type && (
+ <div className={`p-3 rounded-xl border text-xs font-medium max-w-md mx-auto ${
+ importStatus.type === 'success' 
+ ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+ : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+ }`}>
+ {importStatus.message}
+ </div>
+ )}
+
+ <div className="flex justify-between items-center pt-4 border-t border-slate-800 max-w-md mx-auto">
+ <button
+ onClick={() => {
+ setStep('welcome');
+ setImportStatus({ type: null, message: '' });
+ }}
+ className="text-[10px] font-bold text-slate-400 hover:text-white uppercase tracking-wider transition-colors cursor-pointer"
+ >
+ Back
+ </button>
+
+ <button
+ onClick={() => {
+ setStep('question');
+ setImportStatus({ type: null, message: '' });
+ }}
+ className="py-2.5 px-5 bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary font-extrabold text-[11px] tracking-wider uppercase rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+ >
+ <span>Continue to Setup</span>
+ <ArrowRight className="h-4 w-4" />
+ </button>
+ </div>
+ </div>
+ )}
+
  {step === 'question' && (
  <div className="space-y-6 animate-fade-in text-slate-100">
  <div className="space-y-2 text-center">

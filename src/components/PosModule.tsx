@@ -1834,23 +1834,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
 <div className="flex items-center gap-1.5 bg-m3-surface border border-m3-outline-variant/30 px-2.5 py-1 rounded-full text-[10px] font-bold text-m3-on-surface shadow-xs">
   <Building2 className="h-3.5 w-3.5 text-m3-primary shrink-0" />
   <span className="text-zinc-400 font-medium">Branch:</span>
-  {currentUser?.role === 'Admin' || currentUser?.role === 'Manager' ? (
-    <select
-      value={activePosBranchId}
-      onChange={(e) => setActivePosBranchId(e.target.value)}
-      className="bg-transparent text-m3-primary font-black focus:outline-none cursor-pointer uppercase"
-    >
-      {branches.filter(b => !b.isDeleted).map(b => (
-        <option key={b.id} value={b.id} className="bg-m3-surface text-m3-on-surface">
-          {b.name} ({b.id})
-        </option>
-      ))}
-    </select>
-  ) : (
-    <span className="font-black text-m3-primary uppercase">
-      {branches.find(b => b.id === activePosBranchId)?.name || activePosBranchId}
-    </span>
-  )}
+  <span className="font-black text-m3-primary uppercase">
+    {branches.find(b => b.id === (currentUser?.branchAssignmentId || activePosBranchId))?.name || currentUser?.branchAssignmentId || activePosBranchId}
+  </span>
 </div>
 <span className="text-zinc-500">•</span>
  <button

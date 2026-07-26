@@ -1,5 +1,4 @@
 import { Sale, SaleItem, Branch } from '../types/db';
-import { saveFileToBackup } from './fileBackupHelper';
 
 /**
  * TilePoint Transaction History & Sales CSV Logger Engine
@@ -100,58 +99,6 @@ function escapeCsv(val: string | number | undefined | null): string {
   if (val === undefined || val === null) return '""';
   const str = String(val).replace(/"/g, '""');
   return `"${str}"`;
-}
-
-/**
- * Triggers background autosave of current day's sales and master transaction history CSV.
- * Saves directly into the configured TilePoint_Backups/Sales_Reports folder!
- */
-export async function autoSaveDailyTransactionCsv(
-  sales: Sale[],
-  saleItems: SaleItem[] = [],
-  branches: Branch[] = []
-): Promise<{ success: boolean; masterPath?: string; dailyPath?: string }> {
-  try {
-    const todayStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    const todaySales = sales.filter((s) => !s.isDeleted && s.createdAt.startsWith(todayStr));
-
-    // 1. Save Today's Log CSV
-    const todayCsv = generateTransactionCsv(
-      todaySales.length > 0 ? todaySales : sales,
-      saleItems,
-      branches
-    );
-    const dailyFilename = `Daily_Transaction_History_${todayStr}.csv`;
-    const resDaily = await saveFileToBackup(
-      todayCsv,
-      dailyFilename,
-      'Sales_Reports',
-      'text/csv;charset=utf-8;'
-    );
-
-    // 2. Save Master Transaction Log CSV
-    const masterCsv = generateTransactionCsv(sales, saleItems, branches);
-    const masterFilename = `Transaction_History_Master_Log.csv`;
-    const resMaster = await saveFileToBackup(
-      masterCsv,
-      masterFilename,
-      'Sales_Reports',
-      'text/csv;charset=utf-8;'
-    );
-
-    console.log(
-      `[Transaction Logger] Background CSV log updated successfully: ${dailyFilename} & ${masterFilename}`
-    );
-
-    return {
-      success: resDaily.success && resMaster.success,
-      dailyPath: resDaily.path,
-      masterPath: resMaster.path,
-    };
-  } catch (err) {
-    console.error('[Transaction Logger] Failed to run background CSV transaction logger:', err);
-    return { success: false };
-  }
 }
 
 /**
