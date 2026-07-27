@@ -711,7 +711,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  try {
  const subtotal = selectedItems.reduce((acc, it) => acc + (it.product.sellingPrice * it.quantity), 0);
  const vat = parseFloat((subtotal * 0.12).toFixed(2));
- const grandTotal = subtotal + vat;
+ const grandTotal = subtotal;
  
  checkoutSale(
  selectedItems,

@@ -14,6 +14,7 @@ import {
   Plus,
   Minus,
   Award,
+  Settings,
  Receipt,
  PlusCircle,
  Search,
@@ -102,6 +103,7 @@ export default function AtposExtraModules({
  const [loyaltyPointValInput, setLoyaltyPointValInput] = useState(() => (db.loyaltyConfig?.pointValueInPhp || 1.0).toString());
  const [loyaltyEnabled, setLoyaltyEnabled] = useState(() => db.loyaltyConfig?.enabled ?? true);
  const [loyaltySavedSuccess, setLoyaltySavedSuccess] = useState(false);
+ const [showLoyaltySettings, setShowLoyaltySettings] = useState(false);
  const [loyaltyMemberSearch, setLoyaltyMemberSearch] = useState("");
  const [showAdjustPointsModal, setShowAdjustPointsModal] = useState(false);
  const [selectedLoyaltyMember, setSelectedLoyaltyMember] = useState<Member | null>(null);
@@ -248,7 +250,7 @@ export default function AtposExtraModules({
  fullName: newMemberName.trim(),
  phone: newMemberPhone.trim(),
  email: newMemberEmail.trim() || "none@specified.com",
- points: 10,
+ points: 1,
  creditLimit: limitNum,
  outstandingBalance: 0,
  status: "Active",
@@ -532,7 +534,7 @@ export default function AtposExtraModules({
  );
  const vatOutput = activeSales.reduce((acc, s) => acc + (s.vat || 0), 0);
  const vatableSales = activeSales.reduce(
- (acc, s) => acc + (s.vat > 0 ? s.subtotal || 0 : 0),
+ (acc, s) => acc + (s.vat > 0 ? (s.subtotal - (s.vat || 0)) || 0 : 0),
  0,
  );
  const vatExemptSales = activeSales.reduce(
@@ -1173,25 +1175,86 @@ export default function AtposExtraModules({
       pointValueInPhp: 1.0,
     };
 
+    const totalPointsPool = members.reduce((acc, m) => acc + (m.points || 0), 0);
+    const totalMonetaryValue = totalPointsPool * (config.pointValueInPhp || 1.0);
+
     return (
       <motion.div
         key="loyalty"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="space-y-6 font-sans"
+        initial={{ opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-4 font-sans"
       >
-        {/* Top Header & Rules Section */}
-        <div className="grid md:grid-cols-3 gap-6 text-xs">
-          {/* Rules Configuration Form Card */}
-          <div className="md:col-span-1 bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl space-y-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-m3-outline-variant/10 pb-3">
-              <div className="flex items-center gap-2 text-m3-primary">
-                <Sparkles className="h-5 w-5 text-amber-500" />
-                <h3 className="font-extrabold text-sm">⚙️ Loyalty Mechanics Rules</h3>
+        {/* Simplified Header & Overview Banner */}
+        <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-2xl shadow-xs space-y-3">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-m3-outline-variant/10 pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-amber-500 shrink-0" />
+                <h3 className="font-extrabold text-sm text-m3-primary">Member Account & Loyalty Desk</h3>
+                <span className={`px-2.5 py-0.5 text-[10px] font-extrabold rounded-full font-mono uppercase ${
+                  config.enabled ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" : "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20"
+                }`}>
+                  {config.enabled ? "● Program Active" : "○ Paused"}
+                </span>
               </div>
+              <p className="text-[11px] text-zinc-400 mt-0.5">
+                Manage loyalty program rules and member reward point balances.
+              </p>
             </div>
 
-            <form
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowLoyaltySettings(!showLoyaltySettings)}
+                className="px-3 py-1.5 bg-m3-surface-high hover:bg-m3-surface-highest text-m3-on-surface text-xs font-bold rounded-xl border border-m3-outline-variant/30 flex items-center gap-1.5 cursor-pointer transition-colors"
+              >
+                <Settings className="h-3.5 w-3.5 text-amber-500" />
+                <span>{showLoyaltySettings ? "Close Rules Settings" : "⚙️ Edit Loyalty Rules"}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Metrics Bar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
+            <div className="bg-m3-surface-lowest p-2.5 rounded-xl border border-m3-outline-variant/10 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-zinc-400 uppercase font-bold block">Earning Formula</span>
+                <span className="text-xs font-extrabold text-amber-500 font-mono">₱{config.spendPerPoint.toLocaleString()} = 1 Pt</span>
+              </div>
+              <Award className="h-4 w-4 text-amber-500/30 shrink-0" />
+            </div>
+
+            <div className="bg-m3-surface-lowest p-2.5 rounded-xl border border-m3-outline-variant/10 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-zinc-400 uppercase font-bold block">Redemption Value</span>
+                <span className="text-xs font-extrabold text-emerald-500 font-mono">1 Pt = ₱{config.pointValueInPhp.toFixed(2)} Off</span>
+              </div>
+              <Sparkles className="h-4 w-4 text-emerald-500/30 shrink-0" />
+            </div>
+
+            <div className="bg-m3-surface-lowest p-2.5 rounded-xl border border-m3-outline-variant/10 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-zinc-400 uppercase font-bold block">Active Members</span>
+                <span className="text-xs font-extrabold text-m3-on-surface font-mono">{members.length} Members</span>
+              </div>
+              <Users className="h-4 w-4 text-m3-primary/30 shrink-0" />
+            </div>
+
+            <div className="bg-m3-surface-lowest p-2.5 rounded-xl border border-m3-outline-variant/10 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-zinc-400 uppercase font-bold block">Total Points Issued</span>
+                <span className="text-xs font-extrabold text-amber-500 font-mono">{totalPointsPool.toLocaleString()} Pts <span className="text-[10px] text-zinc-400 font-normal">(₱{totalMonetaryValue.toFixed(2)})</span></span>
+              </div>
+              <Award className="h-4 w-4 text-amber-500/30 shrink-0" />
+            </div>
+          </div>
+
+          {/* Collapsible Quick Settings Drawer */}
+          {showLoyaltySettings && (
+            <motion.form
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
               onSubmit={(e) => {
                 e.preventDefault();
                 const spend = parseFloat(loyaltySpendInput) || 500;
@@ -1204,160 +1267,106 @@ export default function AtposExtraModules({
                 setLoyaltySavedSuccess(true);
                 setTimeout(() => setLoyaltySavedSuccess(false), 3000);
               }}
-              className="space-y-3.5"
+              className="p-3.5 bg-m3-surface-lowest border border-amber-500/20 rounded-xl space-y-3 text-xs pt-3"
             >
-              <div className="flex items-center justify-between bg-m3-surface-high/50 p-2.5 rounded-xl border border-m3-outline-variant/10">
-                <span className="font-bold text-m3-on-surface">Enable Loyalty Rewards</span>
-                <input
-                  type="checkbox"
-                  checked={loyaltyEnabled}
-                  onChange={(e) => setLoyaltyEnabled(e.target.checked)}
-                  className="h-4 w-4 accent-amber-500 cursor-pointer"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-bold text-m3-on-surface-variant flex justify-between">
-                  <span>Spend Threshold (PHP)</span>
-                  <span className="text-zinc-400 font-normal">Amount to earn 1 Pt</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-zinc-400 font-bold">₱</span>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={loyaltySpendInput}
-                    onChange={(e) => setLoyaltySpendInput(e.target.value)}
-                    placeholder="500"
-                    className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 pl-7 outline-none font-mono font-bold focus:border-amber-500 text-m3-on-surface"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-bold text-m3-on-surface-variant flex justify-between">
-                  <span>Point Value in PHP</span>
-                  <span className="text-zinc-400 font-normal">Discount value per 1 Pt</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-zinc-400 font-bold">₱</span>
-                  <input
-                    type="number"
-                    required
-                    step="0.01"
-                    min="0.01"
-                    value={loyaltyPointValInput}
-                    onChange={(e) => setLoyaltyPointValInput(e.target.value)}
-                    placeholder="1.00"
-                    className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 pl-7 outline-none font-mono font-bold focus:border-amber-500 text-m3-on-surface"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-amber-500 hover:bg-amber-600 text-black py-2.5 rounded-xl font-extrabold flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-sm"
-              >
-                <Save className="h-4 w-4" />
-                <span>Save Loyalty Rules</span>
-              </button>
-
-              {loyaltySavedSuccess && (
-                <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[11px] font-bold rounded-lg text-center flex items-center justify-center gap-1">
-                  <Check className="h-3.5 w-3.5" />
-                  <span>Loyalty mechanics updated successfully!</span>
-                </div>
-              )}
-            </form>
-          </div>
-
-          {/* Active Mechanics Summary & Stats Banner */}
-          <div className="md:col-span-2 bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl space-y-4 shadow-sm flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between border-b border-m3-outline-variant/10 pb-3">
-                <div>
-                  <h3 className="font-bold text-sm text-m3-primary flex items-center gap-1.5">
-                    <Award className="h-4.5 w-4.5 text-amber-500" />
-                    <span>Member Loyalty Program Formula & Mechanics</span>
-                  </h3>
-                  <p className="text-[11px] text-zinc-400 mt-0.5">
-                    Configured mechanics apply automatically during POS sales checkout for corporate & retail members.
-                  </p>
-                </div>
-                <span className={`px-2.5 py-1 text-[10px] font-extrabold rounded-full font-mono uppercase ${
-                  config.enabled ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" : "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20"
-                }`}>
-                  {config.enabled ? "● ACTIVE PROGRAM" : "○ PAUSED"}
+              <div className="flex items-center justify-between border-b border-m3-outline-variant/10 pb-2">
+                <span className="font-extrabold text-xs text-amber-500 flex items-center gap-1.5">
+                  <Settings className="h-3.5 w-3.5" />
+                  <span>Loyalty Program Parameters</span>
                 </span>
+                <label className="font-bold text-m3-on-surface cursor-pointer flex items-center gap-1.5 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={loyaltyEnabled}
+                    onChange={(e) => setLoyaltyEnabled(e.target.checked)}
+                    className="h-3.5 w-3.5 accent-amber-500 cursor-pointer"
+                  />
+                  <span>Enable Program</span>
+                </label>
               </div>
 
-              <div className="grid grid-cols-3 gap-3 mt-4">
-                <div className="bg-m3-surface-lowest p-3 rounded-xl border border-m3-outline-variant/10">
-                  <span className="text-[10px] text-zinc-400 uppercase font-bold block">Earning Formula</span>
-                  <span className="text-sm font-extrabold text-amber-500 font-mono block mt-1">
-                    ₱{config.spendPerPoint.toLocaleString()} = 1 Pt
-                  </span>
-                  <span className="text-[9.5px] text-zinc-400 mt-0.5 block">
-                    Earn 1 Pt per ₱{config.spendPerPoint} spend
-                  </span>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-bold text-m3-on-surface-variant flex justify-between">
+                    <span>Spend Threshold (PHP)</span>
+                    <span className="text-zinc-400 text-[10px] font-normal">Spend to earn 1 point</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2 text-zinc-400 font-bold">₱</span>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      value={loyaltySpendInput}
+                      onChange={(e) => setLoyaltySpendInput(e.target.value)}
+                      placeholder="500"
+                      className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg py-1.5 pl-7 pr-2 outline-none font-mono font-bold focus:border-amber-500 text-m3-on-surface"
+                    />
+                  </div>
                 </div>
 
-                <div className="bg-m3-surface-lowest p-3 rounded-xl border border-m3-outline-variant/10">
-                  <span className="text-[10px] text-zinc-400 uppercase font-bold block">Redemption Value</span>
-                  <span className="text-sm font-extrabold text-emerald-500 font-mono block mt-1">
-                    1 Pt = ₱{config.pointValueInPhp.toFixed(2)}
-                  </span>
-                  <span className="text-[9.5px] text-zinc-400 mt-0.5 block">
-                    Direct PHP invoice discount
-                  </span>
-                </div>
-
-                <div className="bg-m3-surface-lowest p-3 rounded-xl border border-m3-outline-variant/10">
-                  <span className="text-[10px] text-zinc-400 uppercase font-bold block">Enrolled Members</span>
-                  <span className="text-sm font-extrabold text-m3-on-surface font-mono block mt-1">
-                    {members.length} Active Accounts
-                  </span>
-                  <span className="text-[9.5px] text-zinc-400 mt-0.5 block">
-                    Total: {members.reduce((acc, m) => acc + (m.points || 0), 0).toLocaleString()} Pts
-                  </span>
+                <div className="space-y-1">
+                  <label className="font-bold text-m3-on-surface-variant flex justify-between">
+                    <span>Point Value in PHP</span>
+                    <span className="text-zinc-400 text-[10px] font-normal">Discount value per 1 point</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2 text-zinc-400 font-bold">₱</span>
+                    <input
+                      type="number"
+                      required
+                      step="0.01"
+                      min="0.01"
+                      value={loyaltyPointValInput}
+                      onChange={(e) => setLoyaltyPointValInput(e.target.value)}
+                      placeholder="1.00"
+                      className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg py-1.5 pl-7 pr-2 outline-none font-mono font-bold focus:border-amber-500 text-m3-on-surface"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="p-3 bg-amber-500/5 border border-amber-500/15 rounded-xl text-[11px] leading-relaxed text-m3-on-surface-variant flex items-start gap-2 mt-4">
-              <Info className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-              <div>
-                <strong>How Member Points work:</strong> Points accumulate automatically at POS checkout whenever a member account is selected. Members can redeem points to deduct cash directly from their purchase total.
+              <div className="flex items-center justify-between pt-1">
+                {loyaltySavedSuccess ? (
+                  <span className="text-emerald-500 text-xs font-bold flex items-center gap-1">
+                    <Check className="h-3.5 w-3.5" /> Rules Updated Successfully!
+                  </span>
+                ) : <span />}
+
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
+                >
+                  <Save className="h-3.5 w-3.5" />
+                  <span>Save Loyalty Rules</span>
+                </button>
               </div>
-            </div>
-          </div>
+            </motion.form>
+          )}
         </div>
 
-        {/* Members Loyalty Roster & Points Management Table */}
-        <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl space-y-4 shadow-sm text-xs">
+        {/* Member Loyalty Roster Table */}
+        <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-2xl space-y-3 shadow-xs text-xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-m3-outline-variant/10 pb-3">
             <div>
               <h3 className="font-bold text-sm text-m3-primary flex items-center gap-1.5">
-                <Users className="h-4.5 w-4.5" />
+                <Users className="h-4 w-4" />
                 <span>Member Loyalty Points Roster</span>
               </h3>
               <p className="text-[11px] text-zinc-400 mt-0.5">
-                View accumulated reward points, monetary discount equivalence, and member account balances.
+                View accumulated reward points and manage balances.
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="flex bg-m3-surface-high border border-m3-outline-variant/30 px-2.5 py-1.5 rounded-lg items-center gap-2 w-64">
-                <Search className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
-                <input
-                  type="text"
-                  value={loyaltyMemberSearch}
-                  onChange={(e) => setLoyaltyMemberSearch(e.target.value)}
-                  placeholder="Search member name or phone..."
-                  className="w-full bg-transparent border-0 outline-none text-xs text-m3-on-surface"
-                />
-              </div>
+            <div className="flex bg-m3-surface-high border border-m3-outline-variant/30 px-2.5 py-1.5 rounded-xl items-center gap-2 w-full sm:w-64">
+              <Search className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
+              <input
+                type="text"
+                value={loyaltyMemberSearch}
+                onChange={(e) => setLoyaltyMemberSearch(e.target.value)}
+                placeholder="Search member name or phone..."
+                className="w-full bg-transparent border-0 outline-none text-xs text-m3-on-surface"
+              />
             </div>
           </div>
 
@@ -1365,11 +1374,10 @@ export default function AtposExtraModules({
             <table className="w-full text-left text-xs">
               <thead className="bg-m3-surface-high/50 font-bold border-b border-m3-outline-variant/15 text-m3-on-surface-variant">
                 <tr>
-                  <th className="p-3">Member Name</th>
-                  <th className="p-3">Contact Details</th>
+                  <th className="p-3">Member Profile</th>
+                  <th className="p-3">Contact</th>
                   <th className="p-3 text-right">Points Balance</th>
-                  <th className="p-3 text-right">Discount Value (PHP)</th>
-                  <th className="p-3 text-right">Credit Limit</th>
+                  <th className="p-3 text-right">Discount Value</th>
                   <th className="p-3 text-center">Status</th>
                   <th className="p-3 text-center">Action</th>
                 </tr>
@@ -1386,7 +1394,7 @@ export default function AtposExtraModules({
                   if (filtered.length === 0) {
                     return (
                       <tr>
-                        <td colSpan={7} className="p-8 text-center text-zinc-400 italic">
+                        <td colSpan={6} className="p-8 text-center text-zinc-400 italic">
                           No matching member profiles found.
                         </td>
                       </tr>
@@ -1400,7 +1408,7 @@ export default function AtposExtraModules({
                       <tr key={m.id} className="hover:bg-m3-primary/5 transition-colors">
                         <td className="p-3 font-semibold text-m3-on-surface">
                           <div className="flex items-center gap-2">
-                            <div className="h-7 w-7 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold text-xs">
+                            <div className="h-7 w-7 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold text-xs shrink-0">
                               {m.fullName.charAt(0)}
                             </div>
                             <div>
@@ -1410,7 +1418,7 @@ export default function AtposExtraModules({
                           </div>
                         </td>
                         <td className="p-3">
-                          <div className="text-m3-on-surface">{m.phone || "N/A"}</div>
+                          <div className="text-m3-on-surface font-medium">{m.phone || "N/A"}</div>
                           <div className="text-[10px] text-zinc-400">{m.email || "—"}</div>
                         </td>
                         <td className="p-3 text-right font-mono font-extrabold text-amber-500 text-sm">
@@ -1418,9 +1426,6 @@ export default function AtposExtraModules({
                         </td>
                         <td className="p-3 text-right font-mono font-bold text-emerald-500">
                           ₱{ptValue.toFixed(2)}
-                        </td>
-                        <td className="p-3 text-right font-mono text-zinc-400">
-                          ₱{m.creditLimit.toLocaleString()}
                         </td>
                         <td className="p-3 text-center">
                           <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
@@ -1438,7 +1443,7 @@ export default function AtposExtraModules({
                               setAdjustPointsReason("");
                               setShowAdjustPointsModal(true);
                             }}
-                            className="px-2.5 py-1 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary font-bold text-[10.5px] rounded-lg transition-colors cursor-pointer"
+                            className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 font-bold text-[10.5px] rounded-lg transition-colors cursor-pointer border border-amber-500/20"
                           >
                             Manage Points
                           </button>
@@ -3969,9 +3974,9 @@ export default function AtposExtraModules({
  const taxLabel = isPwd ? "PWD Dsc. 20%" : isSenior20 ? "Senior 20% Dsc." : isSenior5 ? "Senior 5% Special" : isSolo ? "Solo Parent Dsc." : isAthletes ? "Athletes Dsc." : "Regular Promo";
  const isVatExempt = isPwd || isSenior20 || isSenior5 || isSolo || isAthletes;
 
- const rowVatable = isVatExempt ? 0 : s.subtotal || 0;
- const rowVatExempt = isVatExempt ? s.subtotal || 0 : 0;
  const rowVat = isVatExempt ? 0 : s.vat || 0;
+ const rowVatable = isVatExempt ? 0 : (s.subtotal - rowVat) || 0;
+ const rowVatExempt = isVatExempt ? s.subtotal || 0 : 0;
  const rowDiscount = s.discount || (isVatExempt ? parseFloat((rowVatExempt * 0.2).toFixed(2)) : 0);
  const rowNet = parseFloat((rowVatable + rowVat + rowVatExempt - rowDiscount).toFixed(2));
 
@@ -4087,9 +4092,9 @@ export default function AtposExtraModules({
  isSolo ||
  isAthletes;
 
- const rowVatable = isVatExempt ? 0 : s.subtotal || 0;
- const rowVatExempt = isVatExempt ? s.subtotal || 0 : 0;
  const rowVat = isVatExempt ? 0 : s.vat || 0;
+ const rowVatable = isVatExempt ? 0 : (s.subtotal - rowVat) || 0;
+ const rowVatExempt = isVatExempt ? s.subtotal || 0 : 0;
  const rowDiscount =
  s.discount ||
  (isVatExempt
@@ -4346,8 +4351,13 @@ export default function AtposExtraModules({
               className="space-y-3.5"
             >
               <div className="space-y-1">
-                <label className="font-bold text-m3-on-surface-variant">
-                  Points Adjustment (+ to grant, - to deduct) *
+                <label className="font-bold text-m3-on-surface-variant flex justify-between">
+                  <span>Points Adjustment (+ grant, - deduct) *</span>
+                  {adjustPointsAmount && (
+                    <span className="font-mono text-xs text-amber-500 font-bold">
+                      Val: ₱{(Math.abs(parseInt(adjustPointsAmount) || 0) * (db.loyaltyConfig?.pointValueInPhp || 1.0)).toFixed(2)}
+                    </span>
+                  )}
                 </label>
                 <input
                   type="number"
@@ -4357,6 +4367,53 @@ export default function AtposExtraModules({
                   placeholder="e.g. 50 or -20"
                   className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none font-mono font-bold text-sm focus:border-amber-500 text-m3-on-surface"
                 />
+
+                {/* Quick Presets */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  <span className="text-[10px] text-zinc-400 font-bold uppercase w-full">Quick Presets:</span>
+                  <button
+                    type="button"
+                    onClick={() => { setAdjustPointsAmount("10"); setAdjustPointsReason("Loyalty Bonus Credit"); }}
+                    className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 font-mono font-bold text-[10px] rounded border border-emerald-500/20 cursor-pointer"
+                  >
+                    +10 Bonus
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAdjustPointsAmount("50"); setAdjustPointsReason("Promo Reward Bonus"); }}
+                    className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 font-mono font-bold text-[10px] rounded border border-emerald-500/20 cursor-pointer"
+                  >
+                    +50 Bonus
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAdjustPointsAmount("100"); setAdjustPointsReason("VIP Milestone Bonus"); }}
+                    className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 font-mono font-bold text-[10px] rounded border border-emerald-500/20 cursor-pointer"
+                  >
+                    +100 Bonus
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAdjustPointsAmount("-10"); setAdjustPointsReason("Direct Voucher Redemption"); }}
+                    className="px-2 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-mono font-bold text-[10px] rounded border border-rose-500/20 cursor-pointer"
+                  >
+                    -10 Redeem
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAdjustPointsAmount("-50"); setAdjustPointsReason("Store Discount Redemption"); }}
+                    className="px-2 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-mono font-bold text-[10px] rounded border border-rose-500/20 cursor-pointer"
+                  >
+                    -50 Redeem
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAdjustPointsAmount(`-${selectedLoyaltyMember.points || 0}`); setAdjustPointsReason("Full Balance Store Credit Redemption"); }}
+                    className="px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 font-mono font-bold text-[10px] rounded border border-amber-500/20 cursor-pointer"
+                  >
+                    Use All ({selectedLoyaltyMember.points || 0} Pts)
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-1">

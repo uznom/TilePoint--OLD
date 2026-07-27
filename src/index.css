@@ -1589,6 +1589,19 @@ html.accessibility-no-animation table tbody tr:hover td {
     margin-right: 1mm !important;
   }
 
+  /* Auto-cut line separator for thermal printers & multi-slip receipts */
+  .bir-receipt-cut-separator {
+    display: flex !important;
+    visibility: visible !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    margin: 8mm 0 !important;
+    padding: 3mm 0 !important;
+    border-top: 2px dashed #000000 !important;
+    border-bottom: 2px dashed #000000 !important;
+    text-align: center !important;
+  }
+
   /* Ensure all text inside the receipt prints as pure high-contrast black on white */
   .bir-receipt-container * {
     visibility: visible !important;

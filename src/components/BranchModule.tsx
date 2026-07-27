@@ -1019,10 +1019,6 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  </h4>
  )}
 
- <div className="text-[7.5px] text-zinc-600 font-extrabold uppercase tracking-wider">
- Branch ID: {selectedBranchForPreview?.id || inlineBranchId || "ETC_DIPOLOG"}
- </div>
-
  <div className="text-[7.5px] text-zinc-600 font-semibold mt-0.5 leading-tight">
  {selectedBranchForPreview?.address || "Sta. Filomena, Dipolog City"}
  </div>

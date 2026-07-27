@@ -43,6 +43,7 @@ import {
   UserPlus,
   Plus,
   Minus,
+  Scissors,
 } from "lucide-react";
 import { CalculatorModule } from "./CalculatorModule";
 import { ExpressiveTooltip } from "./ExpressiveTooltip";
@@ -156,6 +157,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  addAuditLog,
  currentUser,
  createDelivery,
+ deliveries,
  triggerSystemProcessing,
  branches,
  branchStock,
@@ -241,7 +243,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  const [newMemberName, setNewMemberName] = useState("");
  const [newMemberPhone, setNewMemberPhone] = useState("");
  const [newMemberEmail, setNewMemberEmail] = useState("");
- const [newMemberLimit, setNewMemberLimit] = useState("15000");
+ const [newMemberLimit, setNewMemberLimit] = useState("0");
  const [addMemberError, setAddMemberError] = useState("");
 
  const handleAddCorporateMember = (e?: React.FormEvent) => {
@@ -252,11 +254,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setAddMemberError("Please enter member full name or company name.");
  return;
  }
- if (!newMemberPhone.trim()) {
- setAddMemberError("Please enter contact phone number.");
- return;
- }
- const limitNum = Number(newMemberLimit);
+ const limitNum = newMemberLimit.trim() === "" ? 0 : Number(newMemberLimit);
  if (isNaN(limitNum) || limitNum < 0) {
  setAddMemberError("Credit limit must be a non-negative number.");
  return;
@@ -265,9 +263,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
  const newM: Member = {
  id: "M" + (rawMembers.length + 1) + "-" + Math.floor(Math.random() * 900 + 100),
  fullName: newMemberName.trim(),
- phone: newMemberPhone.trim(),
+ phone: newMemberPhone.trim() || "N/A",
  email: newMemberEmail.trim() || "none@specified.com",
- points: 10,
+ points: 1,
  creditLimit: limitNum,
  outstandingBalance: 0,
  status: "Active",
@@ -295,7 +293,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setNewMemberName("");
  setNewMemberPhone("");
  setNewMemberEmail("");
- setNewMemberLimit("15000");
+ setNewMemberLimit("0");
  setShowAddMemberModal(false);
  };
 
@@ -441,6 +439,20 @@ export const PosModule: React.FC<PosModuleProps> = ({
  if (!activeReceipt) return [];
  return saleItems.filter((item) => item.saleId === activeReceipt.id && !item.isDeleted);
  }, [activeReceipt, saleItems]);
+
+ const activeReceiptMember = React.useMemo(() => {
+ if (!activeReceipt || !activeReceipt.customerName) return null;
+ const nameTrimmed = activeReceipt.customerName.trim().toLowerCase();
+ if (!nameTrimmed || nameTrimmed === "walk-in customer" || nameTrimmed === "walk-in" || nameTrimmed === "walk in") return null;
+ return members.find((m) => m.fullName.trim().toLowerCase() === nameTrimmed) || null;
+ }, [activeReceipt, members]);
+
+ const [receiptViewMode, setReceiptViewMode] = useState<"unified" | "official" | "delivery">("unified");
+
+ const activeReceiptDelivery = React.useMemo(() => {
+ if (!activeReceipt) return null;
+ return (deliveries || []).find(d => d.saleId === activeReceipt.id || d.saleNumber === activeReceipt.saleNumber) || null;
+ }, [activeReceipt, deliveries]);
 
  // Fulfillment & Store Delivery system states
  const [showFulfillmentModal, setShowFulfillmentModal] = useState(false);
@@ -604,7 +616,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  discountAmount = parseFloat((subtotal * 0.1).toFixed(2)); // 10% Contractor affiliate discount
  }
 
- const grandTotal = parseFloat((subtotal + vat - discountAmount).toFixed(2));
+ const grandTotal = parseFloat((subtotal - discountAmount).toFixed(2));
 
  // Change computation effect
  useEffect(() => {
@@ -636,8 +648,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
  handleHold();
  } else if (e.key === "F4") {
  e.preventDefault();
+ try {
  const parkedDrawer = document.getElementById("parked-sales-drawer");
  parkedDrawer?.scrollIntoView({ behavior: "smooth" });
+ window.scrollTo(0, 0);
+ } catch (_) {}
  } else if (e.key === "F5") {
  e.preventDefault();
  setCustomerModalInput(customerName);
@@ -649,10 +664,24 @@ export const PosModule: React.FC<PosModuleProps> = ({
  } else if (e.key === "F7") {
  e.preventDefault();
  if (cart.length > 0) {
+ const tenderIdx = document.getElementById("cash-tendered-field") as HTMLInputElement | null;
+ const isTenderFocused = document.activeElement === tenderIdx;
+ const parsedTender = parseFloat(amountTendered || "0");
+ const isCashValid = paymentMethod === "Cash" && !isNaN(parsedTender) && parsedTender >= grandTotal;
+ const isNonCash = paymentMethod !== "Cash";
+
+ if (isTenderFocused || isCashValid || isNonCash) {
+ clientCheckout();
+ } else {
+ try {
  const checkSection = document.getElementById("checkout-action-panel");
  checkSection?.scrollIntoView({ behavior: "smooth" });
- const tenderIdx = document.getElementById("cash-tendered-field");
  tenderIdx?.focus();
+ window.scrollTo(0, 0);
+ } catch (_) {}
+ }
+ } else {
+ showToast("Your active cart is currently empty.");
  }
  } else if (e.key === "F8") {
  e.preventDefault();
@@ -1163,11 +1192,23 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  const handleSaveCustomerName = (e: React.FormEvent) => {
  e.preventDefault();
- setCustomerName(customerModalInput.trim() || "Walk-in Customer");
+ const inputName = customerModalInput.trim() || "Walk-in Customer";
+ setCustomerName(inputName);
  setShowCustomerModal(false);
- showToast(
- `Ticket assigned to "${customerModalInput || "Walk-in Customer"}".`,
- );
+
+ if (
+ inputName &&
+ inputName.toLowerCase() !== "walk-in customer" &&
+ inputName.toLowerCase() !== "walk-in" &&
+ !members.some((m) => m.fullName.toLowerCase() === inputName.toLowerCase())
+ ) {
+ setNewMemberName(inputName);
+ setAddMemberError("");
+ setShowAddMemberModal(true);
+ showToast(`Ticket assigned to "${inputName}". Complete setup to save member profile.`);
+ } else {
+ showToast(`Ticket assigned to "${inputName}".`);
+ }
  };
 
  const handleExportLedgerToExcel = () => {
@@ -1548,7 +1589,366 @@ export const PosModule: React.FC<PosModuleProps> = ({
  };
  }, [filteredSales]);
 
- const receiptBranch = activeReceipt
+  const renderThermalCutSeparator = (label: string = "AUTO-CUT • PAPER SEPARATION") => (
+    <div 
+      className="my-3 py-2 border-y-2 border-dashed border-gray-400 dark:border-gray-500 bg-gray-50 dark:bg-gray-800/40 rounded-lg text-center flex items-center justify-center gap-2 font-mono text-[8.5px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-300 print:bg-white print:text-black print:border-black bir-receipt-cut-separator"
+      style={{ pageBreakAfter: 'always', breakAfter: 'page' }}
+    >
+      <Scissors className="h-3.5 w-3.5 text-rose-500 print:text-black transform -rotate-90 animate-pulse shrink-0" />
+      <span>✂ {label} ✂</span>
+    </div>
+  );
+
+  const renderPosSalesReceipt = () => (
+    <div className="px-5 py-5 bg-m3-surface-lowest border border-dashed border-m3-outline-variant/40 rounded-2xl text-[11px] leading-relaxed space-y-3 select-text text-m3-on-surface text-left shadow-xs print:border-none print:shadow-none print:p-0">
+      <div className="text-center font-bold tracking-tight border-b border-dashed border-m3-outline-variant/30 pb-3 flex flex-col items-center justify-center space-y-1">
+        {receiptBranch?.storeLogo ? (
+          <div 
+            className="mb-1.5 w-auto flex items-center justify-center"
+            style={{ height: `${receiptBranch.logoSize || Number(localStorage.getItem('tilepoint_receipt_logo_size_v1') || '40')}px` }}
+          >
+            <img
+              src={receiptBranch.storeLogo}
+              alt={`${receiptBranch.name} Logo`}
+              className="h-full object-contain filter grayscale brightness-95 max-w-[150px]"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+        ) : (
+          <h4 className="text-xs font-black text-m3-primary tracking-widest font-mono uppercase mb-0.5">
+            {receiptBranch?.name || "EMMAN TILE CENTER"}
+          </h4>
+        )}
+        
+        <div className="text-[9px] text-m3-on-surface-variant font-semibold mt-0.5 leading-tight">
+          {receiptBranch?.address || "Sta.Filomena,DipologCity"}
+        </div>
+        
+        <div className="text-[8px] text-m3-on-surface-variant/80 mt-0.5 font-mono">
+          Contact: {receiptBranch?.phone || "0000"} • TIN {formatTin(receiptBranch?.tin) || "000 111 222"}
+        </div>
+
+        <div className="inline-block mt-1 bg-m3-primary/10 text-m3-primary border border-m3-primary/30 px-2.5 py-0.5 rounded font-mono font-black text-[9px] uppercase tracking-widest print:bg-black print:text-white">
+          OFFICIAL SALES RECEIPT
+        </div>
+      </div>
+
+      <div className="text-[10px] space-y-1.5 border-b border-dashed border-m3-outline-variant/30 pb-2 font-medium">
+        <div className="flex justify-between">
+          <span>Invoice Ref:</span>
+          <span className="font-mono font-bold text-m3-primary print:text-black">
+            {activeReceipt?.saleNumber}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span>Terminal Date:</span>
+          <span>
+            {(activeReceipt?.createdAt && !isNaN(new Date(activeReceipt.createdAt).getTime())) ? new Date(activeReceipt.createdAt).toLocaleString() : "N/A"}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span>Cashier Name:</span>
+          <span>{activeReceipt?.cashierName}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Buyer:</span>
+          <span className="font-bold">
+            {activeReceipt?.customerName}
+          </span>
+        </div>
+      </div>
+
+      <div className="space-y-1.5 font-mono text-[9px] border-b border-dashed border-m3-outline-variant/30 pb-2">
+        <div className="flex justify-between font-extrabold text-m3-on-surface-variant border-b border-dashed border-m3-outline-variant/20 pb-1">
+          <span>Item Details</span>
+          <span>Amount</span>
+        </div>
+
+        {receiptItems.length > 0 ? (
+          receiptItems.map((it, idx) => (
+            <div
+              key={idx}
+              className="text-m3-on-surface space-y-0.5 pt-1.5 pb-1.5 border-b border-dotted border-m3-outline-variant/10 last:border-0"
+            >
+              <div className="font-bold text-[9.5px] break-words">
+                {it.productName}
+              </div>
+              <div className="flex justify-between text-[8.5px] text-m3-on-surface-variant">
+                <span>
+                  ₱{it.unitPrice.toFixed(2)} x {it.quantity}
+                </span>
+                <span className="font-bold text-m3-on-surface">
+                  ₱{it.total.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="text-[9px] text-m3-on-surface-variant italic">
+            Hardware ledger invoice saved correctly.
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-1 text-[10px] border-b border-dashed border-m3-outline-variant/30 pb-2 font-mono">
+        <div className="flex justify-between text-m3-on-surface-variant">
+          <span>VATable Sales:</span>
+          <span>
+            ₱
+            {activeReceipt && activeReceipt.vat > 0
+              ? (activeReceipt.subtotal - activeReceipt.vat).toFixed(2)
+              : "0.00"}
+          </span>
+        </div>
+        <div className="flex justify-between text-m3-on-surface-variant">
+          <span>VAT-Exempt Sales:</span>
+          <span>
+            ₱
+            {activeReceipt && activeReceipt.vat === 0
+              ? activeReceipt.subtotal.toFixed(2)
+              : "0.00"}
+          </span>
+        </div>
+        <div className="flex justify-between text-m3-on-surface-variant">
+          <span>Zero-Rated Sales:</span>
+          <span>₱0.00</span>
+        </div>
+        <div className="flex justify-between text-m3-on-surface-variant">
+          <span>12% Output VAT:</span>
+          <span>₱{activeReceipt?.vat.toFixed(2) || "0.00"}</span>
+        </div>
+        {activeReceipt && activeReceipt.discount > 0 && (
+          <div className="flex justify-between text-m3-primary font-bold">
+            <span>BIR Discount Applied:</span>
+            <span>-₱{activeReceipt.discount.toFixed(2)}</span>
+          </div>
+        )}
+        <div className="flex justify-between font-black text-m3-on-surface text-xs pt-1 border-t border-dotted border-m3-outline-variant/20">
+          <span>GRAND TOTAL DUE:</span>
+          <span>₱{activeReceipt?.grandTotal.toFixed(2) || "0.00"}</span>
+        </div>
+      </div>
+
+      {(activeReceiptMember || (activeReceipt?.pointsRedeemed || 0) > 0 || (activeReceipt?.pointsEarned || 0) > 0) && (
+        <div className="space-y-1 text-[9.5px] border-b border-dashed border-m3-outline-variant/30 pb-2 font-mono text-m3-on-surface-variant">
+          <div className="font-extrabold text-[9px] text-amber-500 uppercase flex items-center justify-between">
+            <span>Customer Loyalty Points</span>
+            {activeReceiptMember && (
+              <span className="text-[8px] text-zinc-400 font-sans normal-case font-semibold">
+                {activeReceiptMember.fullName}
+              </span>
+            )}
+          </div>
+          {(activeReceipt?.pointsEarned || 0) > 0 && (
+            <div className="flex justify-between text-emerald-500 font-bold">
+              <span>Points Earned This Order:</span>
+              <span>+{activeReceipt?.pointsEarned} Pts</span>
+            </div>
+          )}
+          {(activeReceipt?.pointsRedeemed || 0) > 0 && (
+            <div className="flex justify-between text-rose-500 font-bold">
+              <span>Points Redeemed:</span>
+              <span>-{activeReceipt?.pointsRedeemed} Pts (-₱{((activeReceipt?.pointsRedeemed || 0) * (loyaltyConfig?.pointValueInPhp || 1.0)).toFixed(2)})</span>
+            </div>
+          )}
+          {activeReceiptMember && (
+            <div className="flex justify-between font-black text-amber-500 pt-0.5 border-t border-dotted border-amber-500/20">
+              <span>Available Points Balance:</span>
+              <span>{activeReceiptMember.points || 0} Pts</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="space-y-1 text-[10px] font-mono text-m3-on-surface-variant font-medium border-t border-dashed border-m3-outline-variant/30 pt-2">
+        <div className="flex justify-between items-center">
+          <span>Payment Method:</span>
+          <span className="text-m3-on-surface font-black uppercase bg-m3-primary/10 text-m3-primary px-2 py-0.5 rounded text-[9.5px]">
+            {activeReceipt?.paymentMethod || "CASH"}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span>Amount Tendered:</span>
+          <span className="text-m3-on-surface font-bold">
+            ₱{(activeReceipt?.amountTendered || activeReceipt?.grandTotal || 0).toFixed(2)}
+          </span>
+        </div>
+        {activeReceipt && (activeReceipt.changeAmount > 0 || activeReceipt.paymentMethod === "Cash") && (
+          <div className="flex justify-between font-extrabold">
+            <span>Change:</span>
+            <span className="text-emerald-500 font-bold">
+              ₱{(activeReceipt.changeAmount || 0).toFixed(2)}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {(receiptBranch?.receiptFacebook || receiptBranch?.receiptPromoText || receiptBranch?.receiptQrBase64) && (
+        <div className="border-t border-dashed border-m3-outline-variant/40 pt-3 mt-3 space-y-3.5">
+          {receiptBranch.receiptFacebook && (
+            <div className="text-center font-mono text-[8px] text-m3-on-surface-variant flex flex-col items-center justify-center space-y-0.5">
+              <span className="font-extrabold uppercase text-m3-primary text-[8.5px] tracking-wide">Follow us on Facebook</span>
+              <span className="font-bold text-m3-on-surface select-all">{receiptBranch.receiptFacebook}</span>
+            </div>
+          )}
+
+          {receiptBranch.receiptPromoText && (
+            <div className="text-center font-mono text-[8.5px] text-m3-on-surface-variant flex flex-col items-center justify-center space-y-0.5 px-2 bg-m3-surface-low/30 py-1 rounded">
+              <span className="font-extrabold uppercase text-amber-500 text-[8.5px] tracking-wide">Special Offer / Promo</span>
+              <p className="leading-snug text-center font-black text-m3-on-surface">{receiptBranch.receiptPromoText}</p>
+            </div>
+          )}
+
+          {receiptBranch.receiptQrBase64 && (
+            <div className="flex flex-col items-center justify-center space-y-1.5 pt-1">
+              <span className="text-[7.5px] uppercase font-mono font-extrabold text-m3-on-surface-variant tracking-wider">Scan to Answer Survey & Feedback</span>
+              <div className="h-24 w-24 border-2 border-black p-1 bg-white rounded flex items-center justify-center">
+                <img
+                  src={receiptBranch.receiptQrBase64}
+                  alt="Survey QR Code"
+                  className="h-full w-full object-contain filter grayscale"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="text-center font-mono text-[7px] text-m3-on-surface-variant/70 uppercase tracking-widest pt-3 border-t border-dotted border-m3-outline-variant/30 mt-3.5">
+        {receiptBranch?.receiptThankYou ? (
+          <span className="font-black text-m3-on-surface text-[8px] tracking-tight block mb-1 normal-case font-mono">
+            {receiptBranch.receiptThankYou}
+          </span>
+        ) : (
+          `Thank you for shopping at ${receiptBranch?.name || "Emman Tile Center"}!`
+        )}
+        <div className="mt-1 lowercase font-sans text-[7.5px] italic text-zinc-400">This serves as an official customer transaction acknowledgment.</div>
+      </div>
+    </div>
+  );
+
+   const renderPosDeliveryReceiptCopy = (copyType: "STORE COPY" | "CUSTOMER COPY") => (
+    <div key={copyType} className="border border-gray-300 rounded-lg p-3 bg-white text-black text-[11px] leading-relaxed space-y-2 shadow-xs text-left">
+      <div className="text-center pb-2 border-b-2 border-black space-y-1">
+        {receiptBranch?.storeLogo ? (
+          <div className="mb-1 flex items-center justify-center h-8">
+            <img
+              src={receiptBranch.storeLogo}
+              alt="Logo"
+              className="h-full object-contain filter grayscale"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+        ) : (
+          <h4 className="text-xs font-black tracking-wider uppercase font-mono text-black">
+            {receiptBranch?.name || "EMMAN TILE CENTER"}
+          </h4>
+        )}
+        <p className="text-[9px] font-semibold text-gray-700">
+          {receiptBranch?.address || "Sta. Filomena, Dipolog City"}
+        </p>
+        <p className="text-[8px] font-mono text-gray-600">
+          Contact: {receiptBranch?.phone || "0000"} | TIN: {receiptBranch?.tin || "000-000-000"}
+        </p>
+        <div className="flex items-center justify-between pt-1">
+          <span className="bg-black text-white px-2 py-0.5 rounded font-mono font-black text-[9px] uppercase tracking-widest">
+            DELIVERY RECEIPT
+          </span>
+          <span className="font-mono font-black text-[8.5px] uppercase tracking-wider px-2 py-0.5 bg-gray-200 text-gray-800 rounded border border-gray-400">
+            [{copyType}]
+          </span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 text-[9.5px] border-b border-dashed border-gray-400 pb-1.5 font-sans">
+        <div>
+          <span className="text-[7.5px] font-black uppercase text-gray-500 block">DR Ref / Invoice</span>
+          <span className="font-mono font-bold text-black">{activeReceipt.saleNumber}</span>
+        </div>
+        <div className="text-right">
+          <span className="text-[7.5px] font-black uppercase text-gray-500 block">Date & Time</span>
+          <span className="font-bold text-black">{new Date(activeReceipt.createdAt).toLocaleDateString()}</span>
+        </div>
+      </div>
+
+      <div className="bg-gray-50 p-2 rounded border border-gray-200 text-[9.5px] space-y-1">
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <span className="text-[7.5px] font-extrabold uppercase text-gray-500 block">Customer Name</span>
+            <span className="font-extrabold text-black uppercase">{activeReceipt.customerName || "Walk-in Customer"}</span>
+          </div>
+          <div>
+            <span className="text-[7.5px] font-extrabold uppercase text-gray-500 block">Contact</span>
+            <span className="font-mono font-bold text-black">{activeReceiptDelivery?.contactNumber || "N/A"}</span>
+          </div>
+        </div>
+        {activeReceiptDelivery && (
+          <div className="pt-1 border-t border-gray-200">
+            <span className="text-[7.5px] font-extrabold uppercase text-gray-500 block">Unloading Destination</span>
+            <span className="font-semibold text-gray-900 block">
+              {[activeReceiptDelivery.houseNo, activeReceiptDelivery.street, activeReceiptDelivery.barangay, activeReceiptDelivery.cityMunicipality].filter(Boolean).join(", ")}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Items */}
+      <div className="space-y-1">
+        <div className="text-[8px] font-black uppercase text-gray-700 flex justify-between border-b border-black pb-0.5">
+          <span>Deliverable Items</span>
+          <span>Checklist</span>
+        </div>
+        <table className="w-full text-left text-[9px]">
+          <thead>
+            <tr className="border-b border-gray-300 text-[7.5px] uppercase text-gray-600 font-bold">
+              <th className="py-0.5">Product</th>
+              <th className="py-0.5 text-right">Qty</th>
+              <th className="py-0.5 text-center pl-2">Chk</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 font-sans">
+            {receiptItems.map((it, idx) => (
+              <tr key={idx}>
+                <td className="py-0.5 font-bold text-black">{it.productName}</td>
+                <td className="py-0.5 text-right font-mono font-bold">{it.quantity} pcs</td>
+                <td className="py-0.5 text-center pl-2">
+                  <span className="inline-block h-2.5 w-2.5 border border-black rounded-xs"></span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Payment summary */}
+      <div className="bg-emerald-50 p-1.5 rounded border border-emerald-300 text-[9px] font-mono flex justify-between items-center">
+        <span className="font-bold text-emerald-900">Total: ₱{activeReceipt.grandTotal.toFixed(2)}</span>
+        <span className="text-emerald-800">Paid: ₱{(activeReceipt.amountTendered || activeReceipt.grandTotal).toFixed(2)}</span>
+        <span className="font-extrabold text-emerald-900">Change: ₱{(activeReceipt.changeAmount || 0).toFixed(2)}</span>
+      </div>
+
+      {/* Receiver Sign-Off */}
+      <div className="border-t-2 border-black pt-1.5 space-y-1.5">
+        <div className="bg-gray-100 p-1 rounded border border-gray-300 text-[7.5px] font-bold text-center text-gray-800">
+          DELIVERY CONFIRMATION: I acknowledge receipt of items in complete quantity and good condition.
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-center text-[7.5px] pt-1">
+          <div>
+            <div className="border-b border-black h-4"></div>
+            <span className="font-extrabold uppercase text-gray-800 block mt-0.5">Released By (Warehouse)</span>
+          </div>
+          <div>
+            <div className="border-b border-black h-4"></div>
+            <span className="font-extrabold uppercase text-black block mt-0.5">Received By (Signature)</span>
+            <span className="text-[7px] text-gray-600 block font-mono">Date/Time: ________________</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const receiptBranch = activeReceipt
  ? (branches?.find((b) => b.id === activeReceipt.branchId) || activeBranch)
  : activeBranch;
 
@@ -1760,14 +2160,26 @@ export const PosModule: React.FC<PosModuleProps> = ({
  { key: "F3", desc: "Hold Order Stash", action: () => handleHold(), bg: "hover:bg-amber-500/10 hover:border-amber-500/30 text-amber-600 dark:text-amber-400" },
  { key: "F5", desc: "Assign Customer Name", action: () => { setCustomerModalInput(customerName); setShowCustomerModal(true); }, bg: "hover:bg-m3-primary/10 hover:border-m3-primary/30 text-m3-primary" },
  { key: "F6", desc: "Apply Code/Discount", action: () => { setDiscountInput(""); setShowDiscountModal(true); }, bg: "hover:bg-teal-500/10 hover:border-teal-500/30 text-teal-600 dark:text-teal-400" },
- { key: "F7", desc: "Go to Pay Tender", action: () => {
+ { key: "F7", desc: "Pay / Settle Sale", action: () => {
  if (cart.length > 0) {
+ const tenderIdx = document.getElementById("cash-tendered-field") as HTMLInputElement | null;
+ const isTenderFocused = document.activeElement === tenderIdx;
+ const parsedTender = parseFloat(amountTendered || "0");
+ const isCashValid = paymentMethod === "Cash" && !isNaN(parsedTender) && parsedTender >= grandTotal;
+ const isNonCash = paymentMethod !== "Cash";
+
+ if (isTenderFocused || isCashValid || isNonCash) {
+ clientCheckout();
+ } else {
+ try {
  const checkSection = document.getElementById("checkout-action-panel");
  checkSection?.scrollIntoView({ behavior: "smooth" });
- const tenderIdx = document.getElementById("cash-tendered-field");
  tenderIdx?.focus();
+ window.scrollTo(0, 0);
+ } catch (_) {}
+ }
  } else {
- alert("Your active cart is currently empty.");
+ showToast("Your active cart is currently empty.");
  }
  }, bg: "hover:bg-emerald-500/10 hover:border-emerald-500/30 text-emerald-600 dark:text-emerald-400" },
  { key: "F8", desc: "Reprint Last Receipt", action: () => {
@@ -1922,43 +2334,88 @@ export const PosModule: React.FC<PosModuleProps> = ({
  onChange={(e) =>
  setCustomerName(e.target.value.slice(0, 100))
  }
+ onKeyDown={(e) => {
+ if (e.key === "Enter") {
+ const trimmed = customerName.trim();
+ if (
+ trimmed &&
+ trimmed.toLowerCase() !== "walk-in customer" &&
+ trimmed.toLowerCase() !== "walk-in" &&
+ !members.some((m) => m.fullName.toLowerCase() === trimmed.toLowerCase())
+ ) {
+ setNewMemberName(trimmed);
+ setAddMemberError("");
+ setShowAddMemberModal(true);
+ }
+ }
+ }}
  maxLength={100}
  placeholder="Manuel Santos / Walk-in"
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-bold"
  />
- {customerName.trim().length > 0 && (() => {
-   const matchedMembers = members.filter(
-     (m) =>
-       m.status === "Active" &&
-       m.fullName.toLowerCase() !== customerName.toLowerCase() &&
-       (m.fullName.toLowerCase().includes(customerName.toLowerCase()) ||
-        m.phone.includes(customerName) ||
-        m.email.toLowerCase().includes(customerName.toLowerCase()))
-   );
-   if (matchedMembers.length === 0) return null;
-   return (
-     <div className="absolute left-0 right-0 mt-1 bg-m3-surface-low border border-m3-outline-variant/35 rounded-xl shadow-lg z-30 max-h-32 overflow-y-auto divide-y divide-m3-outline-variant/10 text-xs font-sans">
-       <div className="p-1 text-[8.5px] font-bold uppercase tracking-wider text-m3-primary bg-m3-primary/5 px-2">
-         Matching Registered Members (Click to Select)
-       </div>
-       {matchedMembers.slice(0, 5).map((m) => (
-         <button
-           type="button"
-           key={m.id}
-           onClick={() => {
-             setCustomerName(m.fullName);
-           }}
-           className="w-full text-left px-2.5 py-1.5 hover:bg-m3-primary/10 text-[11px] font-bold text-m3-on-surface flex justify-between items-center transition-colors border-0 bg-transparent cursor-pointer"
-         >
-           <div>
-             <span>{m.fullName}</span>
-             <span className="text-[9px] text-zinc-400 font-normal block">{m.phone}</span>
-           </div>
-           <span className="text-[9px] bg-emerald-500/10 text-emerald-500 px-1 rounded">Select</span>
-         </button>
-       ))}
-     </div>
-   );
+ {customerName.trim().length > 0 &&
+ customerName.toLowerCase() !== "walk-in customer" &&
+ customerName.toLowerCase() !== "walk-in" &&
+ (() => {
+ const trimmed = customerName.trim();
+ const exactMatch = members.some((m) => m.fullName.toLowerCase() === trimmed.toLowerCase());
+ const matchedMembers = members.filter(
+ (m) =>
+ m.status === "Active" &&
+ m.fullName.toLowerCase() !== trimmed.toLowerCase() &&
+ (m.fullName.toLowerCase().includes(trimmed.toLowerCase()) ||
+ m.phone.includes(trimmed) ||
+ m.email.toLowerCase().includes(trimmed.toLowerCase()))
+ );
+
+ if (exactMatch && matchedMembers.length === 0) return null;
+
+ return (
+ <div className="absolute left-0 right-0 mt-1 bg-m3-surface-low border border-m3-outline-variant/35 rounded-xl shadow-lg z-30 max-h-48 overflow-y-auto divide-y divide-m3-outline-variant/10 text-xs font-sans">
+ {!exactMatch && (
+ <button
+ type="button"
+ onClick={() => {
+ setNewMemberName(trimmed);
+ setAddMemberError("");
+ setShowAddMemberModal(true);
+ }}
+ className="w-full text-left px-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 font-extrabold flex justify-between items-center transition-colors cursor-pointer border-0"
+ >
+ <span className="flex items-center gap-1.5 text-[11px]">
+ <UserPlus className="h-3.5 w-3.5" />
+ <span>{trimmed} - add as member?</span>
+ </span>
+ <span className="text-[9px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-black uppercase">
+ + Add
+ </span>
+ </button>
+ )}
+ {matchedMembers.length > 0 && (
+ <>
+ <div className="p-1 text-[8.5px] font-bold uppercase tracking-wider text-m3-primary bg-m3-primary/5 px-2">
+ Matching Registered Members (Click to Select)
+ </div>
+ {matchedMembers.slice(0, 5).map((m) => (
+ <button
+ type="button"
+ key={m.id}
+ onClick={() => {
+ setCustomerName(m.fullName);
+ }}
+ className="w-full text-left px-2.5 py-1.5 hover:bg-m3-primary/10 text-[11px] font-bold text-m3-on-surface flex justify-between items-center transition-colors border-0 bg-transparent cursor-pointer"
+ >
+ <div>
+ <span>{m.fullName}</span>
+ <span className="text-[9px] text-zinc-400 font-normal block">{m.phone}</span>
+ </div>
+ <span className="text-[9px] bg-emerald-500/10 text-emerald-500 px-1 rounded">Select</span>
+ </button>
+ ))}
+ </>
+ )}
+ </div>
+ );
  })()}
  </div>
  <div className="relative pl-0">
@@ -2290,7 +2747,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  ? "VAT-Exempt Sales"
  : "VATable Sales (Net)"}
  </span>
- <span className="font-mono">₱{subtotal.toFixed(2)}</span>
+ <span className="font-mono">₱{(subtotal - vat).toFixed(2)}</span>
  </div>
  <div className="flex justify-between text-xs font-bold text-zinc-400 mt-0.5">
  <span>
@@ -2535,101 +2992,66 @@ export const PosModule: React.FC<PosModuleProps> = ({
 											<div className="text-[10px] text-rose-500 font-bold bg-rose-500/10 p-1 px-2 rounded mt-1 border border-rose-500/20">
 												⚠️ Purchase exceeds available credit limit.
 											</div>
-										) : (
-											<div className="text-[10px] text-emerald-500 font-bold bg-emerald-500/10 p-1 px-2 rounded mt-1 border border-emerald-500/20 flex items-center gap-1">
-												✅ Account active for checkout.
-											</div>
-										)}
+										) : null}
 									</div>
 
-									{/* LOYALTY POINTS & REWARDS BOX */}
-									<div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-2.5 rounded-lg border border-amber-500/20 space-y-2">
-										<div className="flex items-center justify-between">
-											<span className="font-extrabold text-[11px] text-amber-500 flex items-center gap-1">
-												<Sparkles className="h-3.5 w-3.5" />
-												<span>Loyalty Points Rewards</span>
+									{/* COMPACT LOYALTY POINTS DISPLAY */}
+									<div className="bg-m3-surface-lowest p-2 rounded-lg border border-m3-outline-variant/20 space-y-1.5 text-xs">
+										<div className="flex items-center justify-between text-[11px]">
+											<span className="text-zinc-300 font-medium">
+												Available Points: <strong className="text-amber-500 font-mono">{matchingMember.points || 0}</strong>
+												{projectedEarnedPts > 0 && (
+													<span className="text-emerald-500 font-mono text-[10.5px] ml-1.5 font-bold">
+														(+{projectedEarnedPts} earned)
+													</span>
+												)}
 											</span>
-											<span className="text-[10px] font-mono text-zinc-400 font-bold">
-												Formula: ₱{spendPerPt.toLocaleString()} = 1 Pt
-											</span>
+											{(matchingMember.points || 0) > 0 && (
+												<span className="text-[10px] font-mono text-zinc-400">
+													(₱{((matchingMember.points || 0) * ptValPhp).toFixed(2)})
+												</span>
+											)}
 										</div>
 
-										<div className="grid grid-cols-2 gap-2 text-[11px]">
-											<div className="bg-m3-surface-lowest/80 p-2 rounded-md border border-m3-outline-variant/10">
-												<span className="text-zinc-400 text-[10px] block font-medium">Current Balance:</span>
-												<span className="font-mono font-extrabold text-amber-500 text-xs">
-													⭐ {(matchingMember.points || 0)} Pts
-												</span>
-												<span className="text-[9px] text-zinc-400 block font-mono">
-													(Value: ₱{((matchingMember.points || 0) * ptValPhp).toFixed(2)})
-												</span>
-											</div>
-
-											<div className="bg-m3-surface-lowest/80 p-2 rounded-md border border-m3-outline-variant/10">
-												<span className="text-zinc-400 text-[10px] block font-medium">Earned This Order:</span>
-												<span className="font-mono font-extrabold text-emerald-500 text-xs">
-													+{projectedEarnedPts} Pts
-												</span>
-												<span className="text-[9px] text-zinc-400 block font-mono">
-													(Auto-credited upon checkout)
-												</span>
-											</div>
-										</div>
-
-										{/* Point Redemption Action Box */}
+										{/* Point Redemption Input */}
 										{(matchingMember.points || 0) > 0 && grandTotal > 0 && (
-											<div className="pt-1.5 border-t border-amber-500/15 space-y-1.5">
-												<div className="flex items-center justify-between">
-													<label className="text-[10px] font-bold text-m3-on-surface uppercase tracking-wide">
-														Redeem Points for Discount
-													</label>
-													{pointsToRedeem > 0 && (
-														<span className="text-[10px] font-mono font-extrabold text-emerald-500">
-															-₱{(pointsToRedeem * ptValPhp).toFixed(2)} Off
-														</span>
-													)}
-												</div>
-
-												<div className="flex items-center gap-1.5">
-													<input
-														type="number"
-														min="0"
-														max={Math.min(matchingMember.points || 0, Math.floor(grandTotal / ptValPhp))}
-														value={pointsToRedeem || ""}
-														onChange={(e) => {
-															const val = parseInt(e.target.value) || 0;
-															const maxAllowed = Math.min(matchingMember.points || 0, Math.floor(grandTotal / ptValPhp));
-															setPointsToRedeem(Math.max(0, Math.min(val, maxAllowed)));
-														}}
-														placeholder="Enter points to redeem"
-														className="w-full bg-m3-surface-lowest border border-m3-outline-variant/40 rounded-md px-2 py-1 text-xs font-mono font-bold text-m3-on-surface focus:outline-none focus:border-amber-500"
-													/>
+											<div className="flex items-center gap-1.5 pt-1 border-t border-m3-outline-variant/15">
+												<input
+													type="number"
+													min="0"
+													max={Math.min(matchingMember.points || 0, Math.floor(grandTotal / ptValPhp))}
+													value={pointsToRedeem || ""}
+													onChange={(e) => {
+														const val = parseInt(e.target.value) || 0;
+														const maxAllowed = Math.min(matchingMember.points || 0, Math.floor(grandTotal / ptValPhp));
+														setPointsToRedeem(Math.max(0, Math.min(val, maxAllowed)));
+													}}
+													placeholder="Enter points to redeem"
+													className="w-full bg-m3-surface-high border border-m3-outline-variant/30 rounded-md px-2 py-1 text-xs font-mono font-bold text-m3-on-surface focus:outline-none focus:border-amber-500"
+												/>
+												<button
+													type="button"
+													onClick={() => {
+														const maxAllowed = Math.min(matchingMember.points || 0, Math.floor(grandTotal / ptValPhp));
+														setPointsToRedeem(maxAllowed);
+													}}
+													className="px-2 py-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 text-[10px] font-extrabold rounded cursor-pointer whitespace-nowrap transition-colors"
+												>
+													Max
+												</button>
+												{pointsToRedeem > 0 && (
 													<button
 														type="button"
-														onClick={() => {
-															const maxAllowed = Math.min(matchingMember.points || 0, Math.floor(grandTotal / ptValPhp));
-															setPointsToRedeem(maxAllowed);
-														}}
-														className="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-500 text-[10px] font-extrabold rounded cursor-pointer whitespace-nowrap transition-colors"
+														onClick={() => setPointsToRedeem(0)}
+														className="px-2 py-1 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-[10px] font-bold rounded cursor-pointer transition-colors"
 													>
-														Max ({Math.min(matchingMember.points || 0, Math.floor(grandTotal / ptValPhp))})
+														Clear
 													</button>
-													{pointsToRedeem > 0 && (
-														<button
-															type="button"
-															onClick={() => setPointsToRedeem(0)}
-															className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold rounded cursor-pointer transition-colors"
-														>
-															Clear
-														</button>
-													)}
-												</div>
-
+												)}
 												{pointsToRedeem > 0 && (
-													<div className="text-[10px] font-mono font-bold text-emerald-500 bg-emerald-500/10 p-1.5 rounded border border-emerald-500/20 flex justify-between items-center">
-														<span>Discount Applied:</span>
-														<span>-₱{(pointsToRedeem * ptValPhp).toFixed(2)} | Net Payable: ₱{(Math.max(0, grandTotal - (pointsToRedeem * ptValPhp))).toFixed(2)}</span>
-													</div>
+													<span className="text-[10px] font-mono font-bold text-emerald-500 whitespace-nowrap">
+														-₱{(pointsToRedeem * ptValPhp).toFixed(2)}
+													</span>
 												)}
 											</div>
 										)}
@@ -2829,32 +3251,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </button>
  )}
  </div>
- </div>
-
- {/* Branch Pool Selector */}
- <div className="flex flex-col gap-1.5">
- <span className="text-[10px] text-zinc-400 font-black uppercase tracking-wider font-mono flex items-center gap-1.5">
- <span className="h-2 w-2 bg-[#10B981] rounded-full animate-pulse" />
- <span>Active Pool</span>
- </span>
- {currentUser?.role === 'Admin' ? (
- <select
- value={selectedPoolBranchId}
- onChange={(e) => setSelectedPoolBranchId(e.target.value)}
- className="w-full text-[11px] font-sans font-black bg-m3-surface border border-m3-outline-variant/40 focus:border-m3-primary px-3 py-2 rounded-xl text-m3-primary focus:outline-none uppercase tracking-wider transition-colors cursor-pointer shadow-sm"
- >
- <option value="All">All Pools (Corporate)</option>
- {branches.map((b) => (
- <option key={b.id} value={b.id}>
- {b.name}
- </option>
- ))}
- </select>
- ) : (
- <div className="w-full text-[11px] font-sans font-black bg-m3-surface/60 border border-m3-outline-variant/20 px-3 py-2 rounded-xl text-m3-on-surface uppercase tracking-wider">
- {branches.find(b => b.id === (currentUser?.branchAssignmentId || "B1"))?.name || 'N/A'}
- </div>
- )}
  </div>
 
  {/* Payment Filter */}
@@ -3543,6 +3939,60 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </p>
  </div>
 
+  {/* Receipt View Switcher Tabs */}
+  <div className="flex bg-m3-surface-lowest p-1 rounded-xl border border-m3-outline-variant/30 mb-3 bir-report-no-print text-center gap-1">
+    <button
+      type="button"
+      onClick={() => setReceiptViewMode("unified")}
+      className={`flex-1 py-1.5 px-2 text-[10px] font-extrabold uppercase rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
+        receiptViewMode === "unified"
+          ? "bg-m3-primary text-m3-on-primary shadow-xs"
+          : "text-m3-on-surface-variant hover:text-m3-on-surface"
+      }`}
+    >
+      <Scissors className="h-3 w-3" /> All (Auto-Cut)
+    </button>
+
+    <button
+      type="button"
+      onClick={() => setReceiptViewMode("official")}
+      className={`flex-1 py-1.5 px-2 text-[10px] font-extrabold uppercase rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
+        receiptViewMode === "official"
+          ? "bg-m3-primary text-m3-on-primary shadow-xs"
+          : "text-m3-on-surface-variant hover:text-m3-on-surface"
+      }`}
+    >
+      <FileText className="h-3 w-3" /> Sales Receipt
+    </button>
+
+    {activeReceiptDelivery && (
+      <button
+        type="button"
+        onClick={() => setReceiptViewMode("delivery")}
+        className={`flex-1 py-1.5 px-2 text-[10px] font-extrabold uppercase rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
+          receiptViewMode === "delivery"
+            ? "bg-m3-primary text-m3-on-primary shadow-xs"
+            : "text-m3-on-surface-variant hover:text-m3-on-surface"
+        }`}
+      >
+        <Truck className="h-3 w-3" /> Delivery Receipt
+      </button>
+    )}
+  </div>
+
+  {receiptViewMode === "delivery" ? (
+    <div className="space-y-3 my-2 select-text text-left max-h-[50vh] overflow-y-auto bir-receipt-container scrollbar-thin">
+      {renderPosDeliveryReceiptCopy("STORE COPY")}
+      <div className="relative flex py-1 items-center">
+        <div className="flex-grow border-t border-dashed border-gray-400"></div>
+        <span className="flex-shrink mx-2 text-gray-600 font-mono text-[8px] font-black uppercase bg-gray-100 px-2 py-0.5 rounded border border-gray-300">
+          ✂ CUT HERE • STORE COPY / CUSTOMER COPY ✂
+        </span>
+        <div className="flex-grow border-t border-dashed border-gray-400"></div>
+      </div>
+      {renderPosDeliveryReceiptCopy("CUSTOMER COPY")}
+    </div>
+  ) : (
  <motion.div
  initial={{ height: 0, opacity: 0 }}
  animate={{ height: "auto", opacity: 1 }}
@@ -3568,9 +4018,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </h4>
  )}
  
- <div className="text-[9px] text-m3-on-surface-variant font-extrabold font-mono uppercase tracking-wider">
- Branch ID: {receiptBranch?.id || "ETC_DIPOLOG MAIN"}
- </div>
+
  
  <div className="text-[9px] text-m3-on-surface-variant font-semibold mt-0.5 leading-tight">
  {receiptBranch?.address || "Sta.Filomena,DipologCity"}
@@ -3644,7 +4092,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <span>
  ₱
  {activeReceipt.vat > 0
- ? activeReceipt.subtotal.toFixed(2)
+ ? (activeReceipt.subtotal - activeReceipt.vat).toFixed(2)
  : "0.00"}
  </span>
  </div>
@@ -3677,28 +4125,58 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  </div>
 
- <div className="space-y-1 text-[10px] font-mono text-m3-on-surface-variant font-medium">
- <div className="flex justify-between">
- <span>Method:</span>
- <span className="text-m3-on-surface font-extrabold uppercase">
- {activeReceipt.paymentMethod}
+ {/* Loyalty Points Summary Section on Receipt */}
+ {(activeReceiptMember || (activeReceipt.pointsRedeemed || 0) > 0 || (activeReceipt.pointsEarned || 0) > 0) && (
+ <div className="space-y-1 text-[9.5px] border-b border-dashed border-m3-outline-variant/30 pb-2 font-mono text-m3-on-surface-variant">
+ <div className="font-extrabold text-[9px] text-amber-500 uppercase flex items-center justify-between">
+ <span>Customer Loyalty Points</span>
+ {activeReceiptMember && (
+ <span className="text-[8px] text-zinc-400 font-sans normal-case font-semibold">
+ {activeReceiptMember.fullName}
+ </span>
+ )}
+ </div>
+ {(activeReceipt.pointsEarned || 0) > 0 && (
+ <div className="flex justify-between text-emerald-500 font-bold">
+ <span>Points Earned This Order:</span>
+ <span>+{activeReceipt.pointsEarned} Pts</span>
+ </div>
+ )}
+ {(activeReceipt.pointsRedeemed || 0) > 0 && (
+ <div className="flex justify-between text-rose-500 font-bold">
+ <span>Points Redeemed:</span>
+ <span>-{activeReceipt.pointsRedeemed} Pts (-₱{((activeReceipt.pointsRedeemed || 0) * (loyaltyConfig?.pointValueInPhp || 1.0)).toFixed(2)})</span>
+ </div>
+ )}
+ {activeReceiptMember && (
+ <div className="flex justify-between font-black text-amber-500 pt-0.5 border-t border-dotted border-amber-500/20">
+ <span>Available Points Balance:</span>
+ <span>{activeReceiptMember.points || 0} Pts</span>
+ </div>
+ )}
+ </div>
+ )}
+
+ <div className="space-y-1 text-[10px] font-mono text-m3-on-surface-variant font-medium border-t border-dashed border-m3-outline-variant/30 pt-2">
+ <div className="flex justify-between items-center">
+ <span>Payment Method:</span>
+ <span className="text-m3-on-surface font-black uppercase bg-m3-primary/10 text-m3-primary px-2 py-0.5 rounded text-[9.5px]">
+ {activeReceipt.paymentMethod || "CASH"}
  </span>
  </div>
- {activeReceipt.paymentMethod === "Cash" && (
- <>
  <div className="flex justify-between">
- <span>Tendered:</span>
- <span className="text-m3-on-surface">
- ₱{activeReceipt.amountTendered.toFixed(2)}
+ <span>Amount Tendered:</span>
+ <span className="text-m3-on-surface font-bold">
+ ₱{(activeReceipt.amountTendered || activeReceipt.grandTotal).toFixed(2)}
  </span>
  </div>
- <div className="flex justify-between font-bold">
+ {(activeReceipt.changeAmount > 0 || activeReceipt.paymentMethod === "Cash") && (
+ <div className="flex justify-between font-extrabold">
  <span>Change:</span>
- <span className="text-m3-tertiary">
- ₱{activeReceipt.changeAmount.toFixed(2)}
+ <span className="text-emerald-500 font-bold">
+ ₱{(activeReceipt.changeAmount || 0).toFixed(2)}
  </span>
  </div>
- </>
  )}
  </div>
 
@@ -3746,25 +4224,41 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <div className="mt-1 lowercase font-sans text-[7.5px] italic text-zinc-400">This serves as an official customer transaction acknowledgment.</div>
  </div>
  </motion.div>
+  )}
 
  <div className="flex gap-2 mt-4.5 flex-shrink-0 bir-report-no-print">
  <button
  onClick={() => {
  window.print();
  addAuditLog(
- "POS_RECEIPT_PRINT",
- `Printed physical invoice ticket ${activeReceipt.saleNumber}`,
+ receiptViewMode === "delivery" ? "PRINT_DELIVERY_RECEIPT" : "POS_RECEIPT_PRINT",
+ `Printed ${receiptViewMode === "delivery" ? "delivery receipt" : "physical invoice ticket"} ${activeReceipt.saleNumber}`,
  "Sales",
  activeReceipt.id,
  );
  showToast("Sent printing signal to hardware terminal.");
  }}
- className="flex-1 py-2 text-xs font-bold rounded-full border border-m3-outline-variant hover:bg-m3-outline-variant/20 transition-colors flex items-center justify-center gap-1.5 cursor-pointer text-center"
+ className="flex-1 py-2 text-xs font-bold rounded-full border border-m3-outline-variant hover:bg-m3-outline-variant/20 transition-colors flex items-center justify-center gap-1.5 cursor-pointer text-center uppercase tracking-wider"
  >
- <Printer className="h-3.5 w-3.5" /> Print Receipt
+ <Printer className="h-3.5 w-3.5" /> Print {receiptViewMode === "delivery" ? "Delivery Receipt" : "Receipt"}
  </button>
+ {activeReceiptDelivery && receiptViewMode === "official" && (
  <button
- onClick={() => setShowReceiptModal(false)}
+ onClick={() => {
+ setReceiptViewMode("delivery");
+ setTimeout(() => window.print(), 100);
+ }}
+ className="py-2 px-3 text-xs font-bold rounded-full bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary border border-m3-primary/20 transition-colors flex items-center justify-center gap-1 cursor-pointer text-center font-mono uppercase"
+ title="Print Delivery Receipt"
+ >
+ <Truck className="h-3.5 w-3.5" /> DR
+ </button>
+ )}
+ <button
+ onClick={() => {
+ setShowReceiptModal(false);
+ setReceiptViewMode("official");
+ }}
  className="flex-1 m3-btn-primary py-2 text-xs shadow-sm cursor-pointer text-center"
  >
  Done
@@ -3837,11 +4331,30 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
        if (filteredModalMembers.length === 0) {
          return (
-           <p className="text-center p-3 text-m3-on-surface-variant text-[11px] font-medium italic">
-             {customerModalInput.trim()
-               ? `No corporate members found matching "${customerModalInput}".`
-               : "No registered corporate members found."}
-           </p>
+           <div className="p-3 text-center space-y-2">
+             <p className="text-m3-on-surface-variant text-[11px] font-medium italic">
+               {customerModalInput.trim()
+                 ? `No corporate members found matching "${customerModalInput}".`
+                 : "No registered corporate members found."}
+             </p>
+             {customerModalInput.trim() &&
+              customerModalInput.toLowerCase() !== "walk-in customer" &&
+              customerModalInput.toLowerCase() !== "walk-in" && (
+               <button
+                 type="button"
+                 onClick={() => {
+                   setNewMemberName(customerModalInput.trim());
+                   setAddMemberError("");
+                   setShowCustomerModal(false);
+                   setShowAddMemberModal(true);
+                 }}
+                 className="px-3 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 text-xs font-extrabold rounded-lg inline-flex items-center gap-1.5 cursor-pointer transition-colors border-0"
+               >
+                 <UserPlus className="h-3.5 w-3.5" />
+                 <span>Add "{customerModalInput.trim()}" as Member</span>
+               </button>
+             )}
+           </div>
          );
        }
 
@@ -4126,6 +4639,20 @@ export const PosModule: React.FC<PosModuleProps> = ({
  Customer: {pendingSaleForFulfillment.customerName}
  </p>
  </div>
+ </div>
+
+ {/* Customer Payment & Change summary for dispatched fulfillment */}
+ <div className="bg-m3-surface-lowest p-3 rounded-2xl border border-m3-outline-variant/20 space-y-1.5 text-xs font-mono">
+ <div className="flex justify-between items-center text-m3-on-surface-variant">
+ <span>Total Bill: <strong className="text-m3-on-surface">₱{(pendingSaleForFulfillment?.grandTotal || 0).toFixed(2)}</strong></span>
+ <span>Tendered ({pendingSaleForFulfillment?.paymentMethod || "Cash"}): <strong className="text-m3-on-surface">₱{(pendingSaleForFulfillment?.amountTendered || pendingSaleForFulfillment?.grandTotal || 0).toFixed(2)}</strong></span>
+ </div>
+ {(pendingSaleForFulfillment?.changeAmount || 0) > 0 && (
+ <div className="flex justify-between items-center pt-1.5 border-t border-dashed border-m3-outline-variant/20 font-extrabold text-emerald-400 bg-emerald-500/10 -mx-3 -mb-3 p-2.5 rounded-b-2xl">
+ <span className="uppercase text-[10px] tracking-wider font-sans">Customer Change Due:</span>
+ <span className="text-sm font-black text-emerald-300">₱{(pendingSaleForFulfillment?.changeAmount || 0).toFixed(2)}</span>
+ </div>
+ )}
  </div>
 
  <div className="space-y-1.5 pl-1">
@@ -4872,11 +5399,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <div className="grid grid-cols-2 gap-3">
  <div className="space-y-1">
  <label className="text-[10px] font-black text-m3-primary uppercase tracking-wider block">
- Contact Phone Number *
+ Contact Phone Number (Optional)
  </label>
  <input
  type="text"
- required
  value={newMemberPhone}
  onChange={(e) => setNewMemberPhone(e.target.value)}
  placeholder="0917-123-4567"
@@ -4886,7 +5412,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  <div className="space-y-1">
  <label className="text-[10px] font-black text-m3-primary uppercase tracking-wider block">
- Email Address
+ Email Address (Optional)
  </label>
  <input
  type="email"
@@ -4900,15 +5426,15 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  <div className="space-y-1">
  <label className="text-[10px] font-black text-m3-primary uppercase tracking-wider block">
- Credit Line Ceiling Limit (₱) *
+ Credit Line Ceiling Limit (₱) (Optional)
  </label>
  <input
  type="number"
- required
  min="0"
  step="500"
  value={newMemberLimit}
  onChange={(e) => setNewMemberLimit(e.target.value)}
+ placeholder="0"
  className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl px-3.5 py-2 text-xs font-mono font-extrabold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
  />
  <p className="text-[9.5px] text-zinc-400 italic">Maximum authorized credit allowed for deferred billing checkout</p>

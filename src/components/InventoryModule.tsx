@@ -695,6 +695,11 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
  // Manual Stock Adjustment state
  const [showAdjustModal, setShowAdjustModal] = useState(false);
+  // Stock Alert Diagnostics Modal state
+  const [showStockAlertsModal, setShowStockAlertsModal] = useState(false);
+  const [stockAlertModalFilter, setStockAlertModalFilter] = useState<'ALL' | 'LOW' | 'CRITICAL' | 'OUT_OF_STOCK'>('ALL');
+  const [stockAlertSearch, setStockAlertSearch] = useState('');
+  const [stockAlertCategory, setStockAlertCategory] = useState('All');
  const [adjustProductId, setAdjustProductId] = useState('');
  const [adjustProductName, setAdjustProductName] = useState('');
  const [adjustType, setAdjustType] = useState<'ADD' | 'SUB'>('ADD');
@@ -1085,6 +1090,79 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  const paginatedLedger = React.useMemo(() => {
    return filteredLedgerEntries.slice((ledgerPage - 1) * ledgerPerPage, ledgerPage * ledgerPerPage);
  }, [filteredLedgerEntries, ledgerPage, ledgerPerPage]);
+
+  // List of all products with stock alerts (Out of Stock, Critical, Low Stock) for current branch scope
+  const alertProductsList = React.useMemo(() => {
+    return branchProducts.map(p => {
+      const qty = getBranchStockQuantity(p, selectedViewBranchId, branchStock, branches);
+      const bsRec = getBranchStockRecord(p, selectedViewBranchId, branchStock, branches);
+      const threshold = selectedViewBranchId === 'consolidated'
+        ? p.minimumStock
+        : (bsRec?.lowStockThresholdOverride ?? p.minimumStock);
+
+      let alertType: 'OUT_OF_STOCK' | 'CRITICAL' | 'LOW' | 'NORMAL' = 'NORMAL';
+      if (qty === 0) alertType = 'OUT_OF_STOCK';
+      else if (qty <= threshold * 0.5) alertType = 'CRITICAL';
+      else if (qty <= threshold) alertType = 'LOW';
+
+      return {
+        product: p,
+        qty,
+        threshold,
+        alertType,
+        deficit: Math.max(0, threshold - qty)
+      };
+    }).filter(item => item.alertType !== 'NORMAL');
+  }, [branchProducts, selectedViewBranchId, branchStock, branches]);
+
+  // Filtered alert items inside modal based on tab filter, search, and category
+  const modalFilteredAlertItems = React.useMemo(() => {
+    return alertProductsList.filter(item => {
+      const matchFilter = 
+        stockAlertModalFilter === 'ALL' ||
+        (stockAlertModalFilter === 'OUT_OF_STOCK' && item.alertType === 'OUT_OF_STOCK') ||
+        (stockAlertModalFilter === 'CRITICAL' && item.alertType === 'CRITICAL') ||
+        (stockAlertModalFilter === 'LOW' && item.alertType === 'LOW');
+
+      const q = stockAlertSearch.trim().toLowerCase();
+      const matchSearch = !q || (
+        item.product.productName.toLowerCase().includes(q) ||
+        item.product.productCode.toLowerCase().includes(q) ||
+        item.product.sku.toLowerCase().includes(q) ||
+        (item.product.barcode && item.product.barcode.toLowerCase().includes(q)) ||
+        item.product.category.toLowerCase().includes(q) ||
+        item.product.brand.toLowerCase().includes(q)
+      );
+
+      const matchCategory = stockAlertCategory === 'All' || item.product.category === stockAlertCategory;
+
+      return matchFilter && matchSearch && matchCategory;
+    });
+  }, [alertProductsList, stockAlertModalFilter, stockAlertSearch, stockAlertCategory]);
+
+  // Bulk add all currently filtered alert items to PO Cart
+  const handleBulkQueueAlertsToPoCart = () => {
+    if (modalFilteredAlertItems.length === 0) {
+      showToast('No items in the current view to queue.');
+      return;
+    }
+    let updated = [...poCart];
+    let countAdded = 0;
+
+    modalFilteredAlertItems.forEach(item => {
+      const requiredQty = item.deficit > 0 ? Math.max(item.deficit, 50) : 50;
+      const idx = updated.findIndex(cartItem => cartItem.productId === item.product.id);
+      if (idx >= 0) {
+        updated[idx] = { ...updated[idx], quantity: updated[idx].quantity + requiredQty };
+      } else {
+        updated.push({ productId: item.product.id, quantity: requiredQty });
+      }
+      countAdded++;
+    });
+
+    syncPoCart(updated);
+    showToast(`Queued ${countAdded} alert item(s) to Procurement Restock Queue!`);
+  };
 
  // Calculate Key Inventory Performance Indicators (Dashboard Statistics)
  const stats = React.useMemo(() => {
@@ -6727,6 +6805,354 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <span className="leading-tight">{toastMessage}</span>
  </div>
  )}
- </div>
+ 
+  {/* STOCK ALERT DIAGNOSTICS & ACTION HUB MODAL */}
+  {showStockAlertsModal && (
+    <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-3 md:p-6 animate-fade-in">
+      <div 
+        className="absolute inset-0 bg-gray-950/80 backdrop-blur-md transition-opacity" 
+        onClick={() => setShowStockAlertsModal(false)} 
+      />
+      
+      <div className="relative w-full max-w-5xl max-h-[92vh] flex flex-col rounded-[32px] border border-m3-outline-variant/30 shadow-2xl bg-m3-surface-low text-m3-on-surface overflow-hidden z-30">
+        
+        {/* Modal Header */}
+        <div className="p-5 md:p-6 border-b border-m3-outline-variant/15 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-m3-surface-low">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-rose-500/10 text-rose-500 shrink-0 border border-rose-500/20">
+              <ShieldAlert className="h-6 w-6 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-black tracking-tight text-m3-on-surface uppercase font-sans">
+                  Stock Alert Diagnostics & Action Hub
+                </h2>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/15 text-rose-500 border border-rose-500/30">
+                  {alertProductsList.length} Total Warnings
+                </span>
+              </div>
+              <p className="text-xs text-m3-on-surface-variant font-medium mt-0.5">
+                Monitoring inventory deficits, critical reserves, and out-of-stock SKUs for <strong className="text-m3-primary">{selectedViewBranchId === 'consolidated' ? 'Consolidated All Branches' : (branches.find(b => b.id === selectedViewBranchId)?.name || selectedViewBranchId)}</strong>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-end sm:self-center">
+            <button
+              onClick={handleBulkQueueAlertsToPoCart}
+              disabled={modalFilteredAlertItems.length === 0}
+              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+              title="Add all currently displayed alert items to the procurement restock queue"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Queue All to PO Restock ({modalFilteredAlertItems.length})</span>
+            </button>
+            
+            <button 
+              type="button" 
+              onClick={() => setShowStockAlertsModal(false)} 
+              className="p-2 rounded-full hover:bg-m3-surface-variant/40 text-m3-on-surface-variant hover:text-m3-on-surface transition-all cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Modal Filter Tabs Bar */}
+        <div className="px-5 pt-4 pb-2 border-b border-m3-outline-variant/15 bg-m3-surface-low/80 flex flex-wrap items-center justify-between gap-3">
+          {/* Status Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            <button
+              onClick={() => setStockAlertModalFilter('ALL')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+                stockAlertModalFilter === 'ALL'
+                  ? 'bg-m3-primary text-white shadow-sm'
+                  : 'bg-m3-surface-variant/30 text-m3-on-surface-variant hover:bg-m3-surface-variant/60'
+              }`}
+            >
+              <span>All Alerts</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${stockAlertModalFilter === 'ALL' ? 'bg-white/20 text-white' : 'bg-m3-surface-variant/50'}`}>
+                {alertProductsList.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setStockAlertModalFilter('OUT_OF_STOCK')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+                stockAlertModalFilter === 'OUT_OF_STOCK'
+                  ? 'bg-red-600 text-white shadow-sm'
+                  : 'bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20'
+              }`}
+            >
+              <X className="h-3.5 w-3.5" />
+              <span>Out of Stock</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${stockAlertModalFilter === 'OUT_OF_STOCK' ? 'bg-white/20 text-white' : 'bg-red-500/20 text-red-500'}`}>
+                {stats.outOfStockCount}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setStockAlertModalFilter('CRITICAL')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+                stockAlertModalFilter === 'CRITICAL'
+                  ? 'bg-rose-600 text-white shadow-sm'
+                  : 'bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border border-rose-500/20'
+              }`}
+            >
+              <AlertCircle className="h-3.5 w-3.5" />
+              <span>Critical Warns</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${stockAlertModalFilter === 'CRITICAL' ? 'bg-white/20 text-white' : 'bg-rose-500/20 text-rose-500'}`}>
+                {stats.criticalStockCount}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setStockAlertModalFilter('LOW')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+                stockAlertModalFilter === 'LOW'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/20'
+              }`}
+            >
+              <AlertTriangle className="h-3.5 w-3.5" />
+              <span>Low Stock</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${stockAlertModalFilter === 'LOW' ? 'bg-white/20 text-white' : 'bg-amber-500/20 text-amber-500'}`}>
+                {stats.lowStockCount}
+              </span>
+            </button>
+          </div>
+
+          {/* Search & Category Inputs */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-m3-on-surface-variant" />
+              <input
+                type="text"
+                placeholder="Search alert items..."
+                value={stockAlertSearch}
+                onChange={e => setStockAlertSearch(e.target.value)}
+                className="w-full pl-9 pr-8 py-1.5 bg-m3-surface-lowest border border-m3-outline-variant/30 rounded-xl text-xs font-bold focus:outline-none focus:border-m3-primary"
+              />
+              {stockAlertSearch && (
+                <button
+                  onClick={() => setStockAlertSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-m3-on-surface-variant hover:text-m3-on-surface"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            <select
+              value={stockAlertCategory}
+              onChange={e => setStockAlertCategory(e.target.value)}
+              className="px-3 py-1.5 bg-m3-surface-lowest border border-m3-outline-variant/30 rounded-xl text-xs font-bold focus:outline-none focus:border-m3-primary"
+            >
+              <option value="All">All Categories</option>
+              {Array.from(new Set(products.map(p => p.category))).map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Modal Table Content Body */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-3">
+          {modalFilteredAlertItems.length > 0 ? (
+            <div className="overflow-x-auto rounded-2xl border border-m3-outline-variant/20 bg-m3-surface-lowest">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-m3-surface-low border-b border-m3-outline-variant/20 text-[10px] font-black uppercase text-m3-on-surface-variant tracking-wider">
+                    <th className="py-3 px-4">Product Code & Item</th>
+                    <th className="py-3 px-4">Category & Brand</th>
+                    <th className="py-3 px-4 text-center">Stock Level vs Minimum</th>
+                    <th className="py-3 px-4 text-center">Deficit</th>
+                    <th className="py-3 px-4 text-center">Alert Status</th>
+                    <th className="py-3 px-4 text-right">Quick Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-m3-outline-variant/10 font-sans">
+                  {modalFilteredAlertItems.map(({ product, qty, threshold, alertType, deficit }) => {
+                    const isPoInCart = poCart.some(c => c.productId === product.id);
+
+                    return (
+                      <tr key={product.id} className="hover:bg-m3-surface-variant/10 transition-colors">
+                        {/* Product Code & Name */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-3">
+                            {product.image ? (
+                              <img
+                                src={product.image}
+                                alt={product.productName}
+                                className="w-9 h-9 rounded-xl object-cover border border-m3-outline-variant/30 shrink-0"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : (
+                              <div className="w-9 h-9 rounded-xl bg-m3-primary/10 text-m3-primary flex items-center justify-center font-black text-xs shrink-0">
+                                {product.productCode.slice(0, 3)}
+                              </div>
+                            )}
+                            <div>
+                              <div className="font-extrabold text-m3-on-surface text-xs leading-tight">
+                                {product.productName}
+                              </div>
+                              <div className="font-mono text-[10px] text-m3-on-surface-variant mt-0.5 flex items-center gap-1.5">
+                                <span className="font-bold text-m3-primary">{product.productCode}</span>
+                                {product.sku && <span>• SKU: {product.sku}</span>}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Category & Brand */}
+                        <td className="py-3 px-4 text-m3-on-surface-variant">
+                          <span className="font-bold text-m3-on-surface block text-[11px]">{product.category}</span>
+                          <span className="text-[10px]">{product.brand || 'Generic'}</span>
+                        </td>
+
+                        {/* Stock Level & Progress Bar */}
+                        <td className="py-3 px-4 text-center min-w-[140px]">
+                          <div className="space-y-1 max-w-[160px] mx-auto">
+                            <div className="flex justify-between text-[11px] font-mono font-bold">
+                              <span className={qty === 0 ? 'text-red-500 font-extrabold' : qty <= threshold * 0.5 ? 'text-rose-500' : 'text-amber-500'}>
+                                {qty} {product.unit || 'pcs'}
+                              </span>
+                              <span className="text-m3-on-surface-variant text-[10px]">
+                                Min: {threshold}
+                              </span>
+                            </div>
+                            {/* Meter Bar */}
+                            <div className="w-full h-1.5 bg-m3-surface-variant/40 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full transition-all duration-500 rounded-full ${
+                                  qty === 0 
+                                    ? 'bg-red-600 w-0' 
+                                    : qty <= threshold * 0.5 
+                                      ? 'bg-rose-500' 
+                                      : 'bg-amber-500'
+                                }`} 
+                                style={{ width: `${Math.min(100, Math.max(5, (qty / (threshold || 1)) * 100))}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Deficit */}
+                        <td className="py-3 px-4 text-center font-mono font-bold text-xs text-rose-500">
+                          {deficit > 0 ? `-${deficit} ${product.unit || 'pcs'}` : '0'}
+                        </td>
+
+                        {/* Alert Status Badge */}
+                        <td className="py-3 px-4 text-center">
+                          {alertType === 'OUT_OF_STOCK' && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-500/15 text-red-500 border border-red-500/30">
+                              <X className="h-3 w-3" /> Out of Stock
+                            </span>
+                          )}
+                          {alertType === 'CRITICAL' && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/15 text-rose-500 border border-rose-500/30">
+                              <AlertCircle className="h-3 w-3" /> Critical Warn
+                            </span>
+                          )}
+                          {alertType === 'LOW' && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-500 border border-amber-500/30">
+                              <AlertTriangle className="h-3 w-3" /> Low Stock
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleQueueRestock(product.id)}
+                              className={`px-2.5 py-1.5 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer active:scale-95 ${
+                                isPoInCart
+                                  ? 'bg-emerald-500/20 text-emerald-600 border border-emerald-500/30'
+                                  : 'bg-m3-primary text-white hover:bg-m3-primary/90 shadow-2xs'
+                              }`}
+                              title="Add to PO Procurement Queue"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                              <span>{isPoInCart ? 'In PO Queue' : '+ PO Queue'}</span>
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                handleOpenAdjust(product);
+                                setShowStockAlertsModal(false);
+                              }}
+                              className="px-2.5 py-1.5 bg-m3-surface-variant/40 hover:bg-m3-surface-variant/70 text-m3-on-surface rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer"
+                              title="Adjust stock quantity"
+                            >
+                              <Sliders className="h-3.5 w-3.5" />
+                              <span>Adjust</span>
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                setTerm(product.productCode);
+                                setHighlightedProductId(product.id);
+                                changeActiveSubTab('catalog');
+                                setShowStockAlertsModal(false);
+                              }}
+                              className="p-1.5 text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/10 rounded-lg transition-all cursor-pointer"
+                              title="Locate in catalog table"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="py-12 px-4 text-center rounded-2xl border border-dashed border-m3-outline-variant/30 bg-m3-surface-lowest space-y-3">
+              <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-500 mx-auto flex items-center justify-center">
+                <Check className="h-6 w-6 stroke-[3]" />
+              </div>
+              <div className="max-w-md mx-auto space-y-1">
+                <h4 className="font-extrabold text-sm text-m3-on-surface uppercase tracking-wide">
+                  No Stock Alerts Found
+                </h4>
+                <p className="text-xs text-m3-on-surface-variant">
+                  {stockAlertSearch || stockAlertCategory !== 'All' 
+                    ? 'No stock alert items match your search and category filters.' 
+                    : 'All inventory items in this branch scope are healthy and above minimum thresholds!'}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Modal Footer */}
+        <div className="p-4 px-6 border-t border-m3-outline-variant/15 bg-m3-surface-low flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-4 text-m3-on-surface-variant font-mono">
+            <span>
+              Showing <strong className="text-m3-on-surface font-extrabold">{modalFilteredAlertItems.length}</strong> alert item(s)
+            </span>
+            <span className="hidden sm:inline">•</span>
+            <span className="hidden sm:inline">
+              Est. Restock Cost: <strong className="text-emerald-500 font-extrabold">
+                ₱{modalFilteredAlertItems.reduce((sum, item) => sum + (item.deficit * item.product.costPrice), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </strong>
+            </span>
+          </div>
+
+          <button
+            onClick={() => setShowStockAlertsModal(false)}
+            className="px-5 py-2 bg-m3-surface-variant/40 hover:bg-m3-surface-variant/70 text-m3-on-surface font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer w-full sm:w-auto text-center"
+          >
+            Close Diagnostics
+          </button>
+        </div>
+
+      </div>
+    </div>
+  )}
+  </div>
  );
 };
