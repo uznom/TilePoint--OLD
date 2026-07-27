@@ -15,6 +15,7 @@ export default defineConfig(() => {
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       hmr: process.env.DISABLE_HMR !== 'true',
+      allowedHosts: true as const,
       // Ignore database files and temporary files to prevent server/Vite reloads during checkout writes
       watch: {
         ignored: [

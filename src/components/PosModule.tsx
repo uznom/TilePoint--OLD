@@ -1948,6 +1948,18 @@ export const PosModule: React.FC<PosModuleProps> = ({
     </div>
   );
 
+  const renderCutSeparator = (label: string) => (
+    <div key={label} className="bir-receipt-cut-separator relative flex my-3 py-1.5 items-center justify-center text-center">
+      <div className="absolute inset-0 flex items-center" aria-hidden="true">
+        <div className="w-full border-t-2 border-dashed border-gray-400 dark:border-zinc-600 print:border-black" />
+      </div>
+      <div className="relative flex items-center gap-1.5 bg-gray-100 dark:bg-zinc-800 print:bg-white px-3 py-1 rounded-full border border-gray-300 dark:border-zinc-700 print:border-black shadow-xs font-mono text-[8.5px] font-black uppercase text-gray-700 dark:text-gray-300 print:text-black">
+        <Scissors className="h-3 w-3 text-amber-500 print:text-black shrink-0" />
+        <span>✂ AUTO-CUT • {label} ✂</span>
+      </div>
+    </div>
+  );
+
   const receiptBranch = activeReceipt
  ? (branches?.find((b) => b.id === activeReceipt.branchId) || activeBranch)
  : activeBranch;
@@ -3980,290 +3992,104 @@ export const PosModule: React.FC<PosModuleProps> = ({
     )}
   </div>
 
-  {receiptViewMode === "delivery" ? (
-    <div className="space-y-3 my-2 select-text text-left max-h-[50vh] overflow-y-auto bir-receipt-container scrollbar-thin">
-      {renderPosDeliveryReceiptCopy("STORE COPY")}
-      <div className="relative flex py-1 items-center">
-        <div className="flex-grow border-t border-dashed border-gray-400"></div>
-        <span className="flex-shrink mx-2 text-gray-600 font-mono text-[8px] font-black uppercase bg-gray-100 px-2 py-0.5 rounded border border-gray-300">
-          ✂ CUT HERE • STORE COPY / CUSTOMER COPY ✂
-        </span>
-        <div className="flex-grow border-t border-dashed border-gray-400"></div>
-      </div>
-      {renderPosDeliveryReceiptCopy("CUSTOMER COPY")}
-    </div>
-  ) : (
- <motion.div
- initial={{ height: 0, opacity: 0 }}
- animate={{ height: "auto", opacity: 1 }}
- transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
- className="px-5 py-5 bg-m3-surface-lowest border border-dashed border-m3-outline-variant/40 rounded-2xl text-[11px] leading-relaxed space-y-3 select-none text-m3-on-surface text-left max-h-[48vh] overflow-y-auto shadow-inner bir-receipt-container scrollbar-thin"
- >
- <div className="text-center font-bold tracking-tight border-b border-dashed border-m3-outline-variant/30 pb-3 flex flex-col items-center justify-center space-y-1">
- {receiptBranch?.storeLogo ? (
- <div 
- className="mb-1.5 w-auto flex items-center justify-center"
- style={{ height: `${receiptBranch.logoSize || Number(localStorage.getItem('tilepoint_receipt_logo_size_v1') || '40')}px` }}
- >
- <img
- src={receiptBranch.storeLogo}
- alt={`${receiptBranch.name} Logo`}
- className="h-full object-contain filter grayscale brightness-95 max-w-[150px]"
- referrerPolicy="no-referrer"
- />
- </div>
- ) : (
- <h4 className="text-xs font-black text-m3-primary tracking-widest font-mono uppercase mb-0.5">
- {receiptBranch?.name || "EMMAN TILE CENTER"}
- </h4>
- )}
- 
+  {/* Receipt Content Container */}
+  <div className="space-y-3 my-2 select-text text-left max-h-[50vh] overflow-y-auto bir-receipt-container scrollbar-thin p-1">
+    {receiptViewMode === "unified" && (
+      <>
+        {renderPosSalesReceipt()}
+        {activeReceiptDelivery && (
+          <>
+            {renderCutSeparator("SALES RECEIPT / DELIVERY RECEIPT (STORE COPY)")}
+            {renderPosDeliveryReceiptCopy("STORE COPY")}
+            {renderCutSeparator("STORE COPY / CUSTOMER COPY")}
+            {renderPosDeliveryReceiptCopy("CUSTOMER COPY")}
+          </>
+        )}
+      </>
+    )}
 
- 
- <div className="text-[9px] text-m3-on-surface-variant font-semibold mt-0.5 leading-tight">
- {receiptBranch?.address || "Sta.Filomena,DipologCity"}
- </div>
- 
- <div className="text-[8px] text-m3-on-surface-variant/80 mt-0.5 font-mono">
- Contact: {receiptBranch?.phone || "0000"} • TIN {formatTin(receiptBranch?.tin) || "000 111 222"}
- </div>
- </div>
+    {receiptViewMode === "official" && (
+      renderPosSalesReceipt()
+    )}
 
- <div className="text-[10px] space-y-1.5 border-b border-dashed border-m3-outline-variant/30 pb-2 font-medium">
- <div className="flex justify-between">
- <span>Invoice Ref:</span>
- <span className="font-mono font-bold text-m3-primary">
- {activeReceipt.saleNumber}
- </span>
- </div>
- <div className="flex justify-between">
- <span>Terminal Date:</span>
- <span>
- {(activeReceipt?.createdAt && !isNaN(new Date(activeReceipt.createdAt).getTime())) ? new Date(activeReceipt.createdAt).toLocaleString() : "N/A"}
- </span>
- </div>
- <div className="flex justify-between">
- <span>Cashier Name:</span>
- <span>{activeReceipt.cashierName}</span>
- </div>
- <div className="flex justify-between">
- <span>Buyer:</span>
- <span className="font-bold">
- {activeReceipt.customerName}
- </span>
- </div>
- </div>
+    {receiptViewMode === "delivery" && activeReceiptDelivery && (
+      <>
+        {renderPosDeliveryReceiptCopy("STORE COPY")}
+        {renderCutSeparator("STORE COPY / CUSTOMER COPY")}
+        {renderPosDeliveryReceiptCopy("CUSTOMER COPY")}
+      </>
+    )}
+  </div>
 
- <div className="space-y-1.5 font-mono text-[9px] border-b border-dashed border-m3-outline-variant/30 pb-2">
- <div className="flex justify-between font-extrabold text-m3-on-surface-variant border-b border-dashed border-m3-outline-variant/20 pb-1">
- <span>Item Details</span>
- <span>Amount</span>
- </div>
+  {/* Refactored Action Buttons */}
+  <div className="flex flex-col sm:flex-row gap-2 mt-4 flex-shrink-0 bir-report-no-print">
+    <button
+      type="button"
+      onClick={() => {
+        window.print();
+        const logType = receiptViewMode === "delivery" 
+          ? "PRINT_DELIVERY_RECEIPT" 
+          : receiptViewMode === "unified" 
+            ? "POS_UNIFIED_RECEIPT_PRINT" 
+            : "POS_RECEIPT_PRINT";
+        const logMsg = receiptViewMode === "delivery"
+          ? `Printed delivery receipt for ${activeReceipt.saleNumber}`
+          : receiptViewMode === "unified"
+            ? `Printed unified sales & delivery receipts (auto-cut) for ${activeReceipt.saleNumber}`
+            : `Printed sales receipt for ${activeReceipt.saleNumber}`;
+        
+        addAuditLog(logType, logMsg, "Sales", activeReceipt.id);
+        showToast("Sent printing signal to hardware terminal.");
+      }}
+      className="flex-1 py-2.5 px-3 text-xs font-black rounded-full bg-m3-primary text-m3-on-primary hover:brightness-110 shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center uppercase tracking-wider"
+    >
+      <Printer className="h-4 w-4" />
+      <span>
+        {receiptViewMode === "unified"
+          ? activeReceiptDelivery
+            ? "Print All (1-Click Auto-Cut)"
+            : "Print Receipt"
+          : receiptViewMode === "delivery"
+            ? "Print Delivery Receipt"
+            : "Print Sales Receipt"}
+      </span>
+    </button>
 
- {receiptItems.length > 0 ? (
- receiptItems.map((it, idx) => (
- <div
- key={idx}
- className="text-m3-on-surface space-y-0.5 pt-1.5 pb-1.5 border-b border-dotted border-m3-outline-variant/10 last:border-0"
- >
- <div className="font-bold text-[9.5px] break-words">
- {it.productName}
- </div>
- <div className="flex justify-between text-[8.5px] text-m3-on-surface-variant">
- <span>
- ₱{it.unitPrice.toFixed(2)} x {it.quantity}
- </span>
- <span className="font-bold text-m3-on-surface">
- ₱{it.total.toFixed(2)}
- </span>
- </div>
- </div>
- ))
- ) : (
- <p className="text-[9px] text-m3-on-surface-variant italic">
- Hardware ledger invoice saved correctly.
- </p>
- )}
- </div>
+    {activeReceiptDelivery && receiptViewMode !== "unified" && (
+      <button
+        type="button"
+        onClick={() => {
+          setReceiptViewMode("unified");
+          setTimeout(() => {
+            window.print();
+            addAuditLog(
+              "POS_UNIFIED_RECEIPT_PRINT",
+              `Printed unified sales & delivery receipts (auto-cut) for ${activeReceipt.saleNumber}`,
+              "Sales",
+              activeReceipt.id
+            );
+            showToast("Sent unified printing signal (Auto-Cut) to terminal.");
+          }, 120);
+        }}
+        className="py-2.5 px-3 text-xs font-bold rounded-full bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary border border-m3-primary/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center uppercase tracking-wider"
+        title="Print Sales + Delivery Receipts with Auto-Cut in 1 job"
+      >
+        <Scissors className="h-3.5 w-3.5" />
+        <span>Print All (Auto-Cut)</span>
+      </button>
+    )}
 
- <div className="space-y-1 text-[10px] border-b border-dashed border-m3-outline-variant/30 pb-2 font-mono">
- <div className="flex justify-between text-m3-on-surface-variant">
- <span>VATable Sales:</span>
- <span>
- ₱
- {activeReceipt.vat > 0
- ? (activeReceipt.subtotal - activeReceipt.vat).toFixed(2)
- : "0.00"}
- </span>
- </div>
- <div className="flex justify-between text-m3-on-surface-variant">
- <span>VAT-Exempt Sales:</span>
- <span>
- ₱
- {activeReceipt.vat === 0
- ? activeReceipt.subtotal.toFixed(2)
- : "0.00"}
- </span>
- </div>
- <div className="flex justify-between text-m3-on-surface-variant">
- <span>Zero-Rated Sales:</span>
- <span>₱0.00</span>
- </div>
- <div className="flex justify-between text-m3-on-surface-variant">
- <span>12% Output VAT:</span>
- <span>₱{activeReceipt.vat.toFixed(2)}</span>
- </div>
- {activeReceipt.discount > 0 && (
- <div className="flex justify-between text-m3-primary font-bold">
- <span>BIR Discount Applied:</span>
- <span>-₱{activeReceipt.discount.toFixed(2)}</span>
- </div>
- )}
- <div className="flex justify-between font-black text-m3-on-surface text-xs pt-1 border-t border-dotted border-m3-outline-variant/20">
- <span>GRAND TOTAL DUE:</span>
- <span>₱{activeReceipt.grandTotal.toFixed(2)}</span>
- </div>
- </div>
-
- {/* Loyalty Points Summary Section on Receipt */}
- {(activeReceiptMember || (activeReceipt.pointsRedeemed || 0) > 0 || (activeReceipt.pointsEarned || 0) > 0) && (
- <div className="space-y-1 text-[9.5px] border-b border-dashed border-m3-outline-variant/30 pb-2 font-mono text-m3-on-surface-variant">
- <div className="font-extrabold text-[9px] text-amber-500 uppercase flex items-center justify-between">
- <span>Customer Loyalty Points</span>
- {activeReceiptMember && (
- <span className="text-[8px] text-zinc-400 font-sans normal-case font-semibold">
- {activeReceiptMember.fullName}
- </span>
- )}
- </div>
- {(activeReceipt.pointsEarned || 0) > 0 && (
- <div className="flex justify-between text-emerald-500 font-bold">
- <span>Points Earned This Order:</span>
- <span>+{activeReceipt.pointsEarned} Pts</span>
- </div>
- )}
- {(activeReceipt.pointsRedeemed || 0) > 0 && (
- <div className="flex justify-between text-rose-500 font-bold">
- <span>Points Redeemed:</span>
- <span>-{activeReceipt.pointsRedeemed} Pts (-₱{((activeReceipt.pointsRedeemed || 0) * (loyaltyConfig?.pointValueInPhp || 1.0)).toFixed(2)})</span>
- </div>
- )}
- {activeReceiptMember && (
- <div className="flex justify-between font-black text-amber-500 pt-0.5 border-t border-dotted border-amber-500/20">
- <span>Available Points Balance:</span>
- <span>{activeReceiptMember.points || 0} Pts</span>
- </div>
- )}
- </div>
- )}
-
- <div className="space-y-1 text-[10px] font-mono text-m3-on-surface-variant font-medium border-t border-dashed border-m3-outline-variant/30 pt-2">
- <div className="flex justify-between items-center">
- <span>Payment Method:</span>
- <span className="text-m3-on-surface font-black uppercase bg-m3-primary/10 text-m3-primary px-2 py-0.5 rounded text-[9.5px]">
- {activeReceipt.paymentMethod || "CASH"}
- </span>
- </div>
- <div className="flex justify-between">
- <span>Amount Tendered:</span>
- <span className="text-m3-on-surface font-bold">
- ₱{(activeReceipt.amountTendered || activeReceipt.grandTotal).toFixed(2)}
- </span>
- </div>
- {(activeReceipt.changeAmount > 0 || activeReceipt.paymentMethod === "Cash") && (
- <div className="flex justify-between font-extrabold">
- <span>Change:</span>
- <span className="text-emerald-500 font-bold">
- ₱{(activeReceipt.changeAmount || 0).toFixed(2)}
- </span>
- </div>
- )}
- </div>
-
- {/* Receipt Custom Marketing, Promotion, and QR Engagement Section */}
- {(receiptBranch?.receiptFacebook || receiptBranch?.receiptPromoText || receiptBranch?.receiptQrBase64) && (
- <div className="border-t border-dashed border-m3-outline-variant/40 pt-3 mt-3 space-y-3.5">
- {receiptBranch.receiptFacebook && (
- <div className="text-center font-mono text-[8px] text-m3-on-surface-variant flex flex-col items-center justify-center space-y-0.5">
- <span className="font-extrabold uppercase text-m3-primary text-[8.5px] tracking-wide">Follow us on Facebook</span>
- <span className="font-bold text-m3-on-surface select-all">{receiptBranch.receiptFacebook}</span>
- </div>
- )}
-
- {receiptBranch.receiptPromoText && (
- <div className="text-center font-mono text-[8.5px] text-m3-on-surface-variant flex flex-col items-center justify-center space-y-0.5 px-2 bg-m3-surface-low/30 py-1 rounded">
- <span className="font-extrabold uppercase text-amber-500 text-[8.5px] tracking-wide">Special Offer / Promo</span>
- <p className="leading-snug text-center font-black text-m3-on-surface">{receiptBranch.receiptPromoText}</p>
- </div>
- )}
-
- {receiptBranch.receiptQrBase64 && (
- <div className="flex flex-col items-center justify-center space-y-1.5 pt-1">
- <span className="text-[7.5px] uppercase font-mono font-extrabold text-m3-on-surface-variant tracking-wider">Scan to Answer Survey & Feedback</span>
- <div className="h-24 w-24 border-2 border-black p-1 bg-white rounded flex items-center justify-center">
- <img
- src={receiptBranch.receiptQrBase64}
- alt="Survey QR Code"
- className="h-full w-full object-contain filter grayscale"
- referrerPolicy="no-referrer"
- />
- </div>
- </div>
- )}
- </div>
- )}
-
- <div className="text-center font-mono text-[7px] text-m3-on-surface-variant/70 uppercase tracking-widest pt-3 border-t border-dotted border-m3-outline-variant/30 mt-3.5">
- {receiptBranch?.receiptThankYou ? (
- <span className="font-black text-m3-on-surface text-[8px] tracking-tight block mb-1 normal-case font-mono">
- {receiptBranch.receiptThankYou}
- </span>
- ) : (
- `Thank you for shopping at ${receiptBranch?.name || "Emman Tile Center"}!`
- )}
- <div className="mt-1 lowercase font-sans text-[7.5px] italic text-zinc-400">This serves as an official customer transaction acknowledgment.</div>
- </div>
- </motion.div>
-  )}
-
- <div className="flex gap-2 mt-4.5 flex-shrink-0 bir-report-no-print">
- <button
- onClick={() => {
- window.print();
- addAuditLog(
- receiptViewMode === "delivery" ? "PRINT_DELIVERY_RECEIPT" : "POS_RECEIPT_PRINT",
- `Printed ${receiptViewMode === "delivery" ? "delivery receipt" : "physical invoice ticket"} ${activeReceipt.saleNumber}`,
- "Sales",
- activeReceipt.id,
- );
- showToast("Sent printing signal to hardware terminal.");
- }}
- className="flex-1 py-2 text-xs font-bold rounded-full border border-m3-outline-variant hover:bg-m3-outline-variant/20 transition-colors flex items-center justify-center gap-1.5 cursor-pointer text-center uppercase tracking-wider"
- >
- <Printer className="h-3.5 w-3.5" /> Print {receiptViewMode === "delivery" ? "Delivery Receipt" : "Receipt"}
- </button>
- {activeReceiptDelivery && receiptViewMode === "official" && (
- <button
- onClick={() => {
- setReceiptViewMode("delivery");
- setTimeout(() => window.print(), 100);
- }}
- className="py-2 px-3 text-xs font-bold rounded-full bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary border border-m3-primary/20 transition-colors flex items-center justify-center gap-1 cursor-pointer text-center font-mono uppercase"
- title="Print Delivery Receipt"
- >
- <Truck className="h-3.5 w-3.5" /> DR
- </button>
- )}
- <button
- onClick={() => {
- setShowReceiptModal(false);
- setReceiptViewMode("official");
- }}
- className="flex-1 m3-btn-primary py-2 text-xs shadow-sm cursor-pointer text-center"
- >
- Done
- </button>
- </div>
+    <button
+      type="button"
+      onClick={() => {
+        setShowReceiptModal(false);
+        setReceiptViewMode("unified");
+      }}
+      className="py-2.5 px-4 text-xs font-bold rounded-full border border-m3-outline-variant/50 hover:bg-m3-outline-variant/15 text-m3-on-surface transition-colors cursor-pointer text-center uppercase tracking-wider"
+    >
+      Done
+    </button>
+  </div>
  </motion.div>
  </div>
  )}

@@ -954,7 +954,7 @@ export const decryptString = (cipherStr: string, secretKey: string): string => {
  * with security checks and a dynamically generated or environment-managed fallback seed to avoid forging of security signatures.
  */
 export const getSecuritySecretKey = (): string => {
-  const envSecret = import.meta.env.VITE_SECURITY_SECRET;
+  const envSecret = typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_SECURITY_SECRET : undefined;
 
  // Validation wrapper checks:
  // 1. Must exist and not be empty
@@ -1020,11 +1020,24 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  children,
 }) => {
  const getAuthHeaders = (): Record<string, string> => {
+ let user = currentUser;
+ if (!user) {
  const userStr = sessionStorage.getItem("tp_current_user") || localStorage.getItem("tp_current_user");
- if (!userStr) return {};
+ if (userStr) {
  try {
- const user = JSON.parse(userStr);
+ user = JSON.parse(userStr);
+ } catch (_) {}
+ }
+ }
  if (!user || !user.id || !user.role) return {};
+
+ try {
+ if (!sessionStorage.getItem("tp_current_user") && !localStorage.getItem("tp_current_user")) {
+ sessionStorage.setItem("tp_current_user", JSON.stringify(user));
+ localStorage.setItem("tp_current_user", JSON.stringify(user));
+ }
+ } catch (_) {}
+
  const token = generateSessionToken(user);
  const activeSessionId = localStorage.getItem("tp_active_session_id") || sessionStorage.getItem("tp_active_session_id") || "unknown";
  return {
@@ -1032,9 +1045,6 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  "X-Session-Token": token,
  "X-Client-ID": activeSessionId,
  };
- } catch (e) {
- return {};
- }
  };
 
  const [isHydrating, setIsHydrating] = useState<boolean>(true);
@@ -1570,6 +1580,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  const logout = () => {
  setIsLoggedIn(false);
+ setCurrentUser(null);
  sessionStorage.setItem("tp_is_logged_in", "false");
  sessionStorage.removeItem("tp_current_user");
  localStorage.removeItem("tp_is_logged_in");
@@ -1580,6 +1591,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  sessionStorage.removeItem("tilepoint_active_tab");
  localStorage.removeItem("tp_active_session_id");
  sessionStorage.removeItem("tp_active_session_id");
+ localStorage.removeItem("tp_offline_queue");
+ sessionStorage.removeItem("tp_offline_queue");
+ setOfflineQueue([]);
 
  // Remove our session from activeSessions list so other client notices immediately
  if (activeSessionId) {
@@ -2519,6 +2533,16 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return updated;
  });
  await new Promise((r) => setTimeout(r, 150));
+ } else if (res && (res.status === 401 || res.status === 403)) {
+ console.warn(`[Offline Queue] Dropping un-retryable queued item due to HTTP status ${res.status}:`, item);
+ setOfflineQueue((currentQueue) => {
+ const updated = currentQueue.filter((q) => q.queueId !== item.queueId);
+ try {
+ localStorage.setItem("tp_offline_queue", JSON.stringify(updated));
+ } catch (_) {}
+ return updated;
+ });
+ break;
  } else {
  break;
  }

@@ -207,10 +207,17 @@ export async function encryptCredentialPacket(payload: object): Promise<SecureTr
 
  // Export AES key raw format and encrypt/embed to simulate asymmetric handshake
  const rawKeyBytes = await window.crypto.subtle.exportKey('raw', aesKey);
- const base64Key = btoa(String.fromCharCode(...new Uint8Array(rawKeyBytes)));
+ const uint8ToBase64 = (bytes: Uint8Array): string => {
+   let bin = '';
+   for (let i = 0; i < bytes.byteLength; i++) {
+     bin += String.fromCharCode(bytes[i]);
+   }
+   return btoa(bin);
+ };
 
- const base64Cipher = btoa(String.fromCharCode(...new Uint8Array(encryptedBuffer)));
- const base64Iv = btoa(String.fromCharCode(...iv));
+ const base64Key = uint8ToBase64(new Uint8Array(rawKeyBytes));
+ const base64Cipher = uint8ToBase64(new Uint8Array(encryptedBuffer));
+ const base64Iv = uint8ToBase64(new Uint8Array(iv));
 
  return {
  encryptedData: base64Cipher,
@@ -233,8 +240,17 @@ export async function decryptCredentialPacket(parcel: SecureTransmissionParcel):
  const { encryptedData, iv, sessionPublicKey } = parcel;
  if (!sessionPublicKey) throw new Error('Missing E2EE transmission key.');
 
+ const base64ToUint8 = (base64Str: string): Uint8Array => {
+   const bin = atob(base64Str);
+   const bytes = new Uint8Array(bin.length);
+   for (let i = 0; i < bin.length; i++) {
+     bytes[i] = bin.charCodeAt(i);
+   }
+   return bytes;
+ };
+
  // Import symmetric session key
- const rawKeyBytes = new Uint8Array([...atob(sessionPublicKey)].map(c => c.charCodeAt(0)));
+ const rawKeyBytes = base64ToUint8(sessionPublicKey);
  const aesKey = await window.crypto.subtle.importKey(
  'raw',
  rawKeyBytes,
@@ -243,8 +259,8 @@ export async function decryptCredentialPacket(parcel: SecureTransmissionParcel):
  ['decrypt']
  );
 
- const ciphertext = new Uint8Array([...atob(encryptedData)].map(c => c.charCodeAt(0)));
- const ivBytes = new Uint8Array([...atob(iv)].map(c => c.charCodeAt(0)));
+ const ciphertext = base64ToUint8(encryptedData);
+ const ivBytes = base64ToUint8(iv);
 
  const decryptedBuffer = await window.crypto.subtle.decrypt(
  { name: 'AES-GCM', iv: ivBytes },
@@ -303,17 +319,22 @@ export function detectSQLi(input: string): SQLiCheckResult {
  * GENERATE CRYPTOGRAPHICALLY SECURE SESSION TOKEN FOR USER IDENTITY
  * Signs the user profile and role with a shared secret to carry to server.
  */
-export function generateSessionToken(user: { id: string; username: string; role: string }): string {
+export function generateSessionToken(user: { id: string; username?: string; fullName?: string; role: string }): string {
   const payload = {
     id: user.id,
-    username: user.username,
+    username: user.username || user.fullName || "User",
     role: user.role,
     timestamp: Date.now()
   };
   const payloadJson = JSON.stringify(payload);
   const payloadBase64 = btoa(unescape(encodeURIComponent(payloadJson)));
   
-  let secret = import.meta.env.VITE_SECURITY_SECRET;
+  let secret: string | undefined;
+  if (typeof process !== "undefined" && process.env && process.env.VITE_SECURITY_SECRET) {
+    secret = process.env.VITE_SECURITY_SECRET;
+  } else if (typeof import.meta !== "undefined" && import.meta.env) {
+    secret = import.meta.env.VITE_SECURITY_SECRET;
+  }
   if (!secret || secret.trim() === "" || secret.length < 16) {
     secret = "tile_point_salt_retneC eliT nammE_secure_fallback";
   }
