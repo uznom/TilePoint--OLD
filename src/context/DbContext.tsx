@@ -4523,7 +4523,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     const subtotal = isNaN(Number(s.subtotal)) ? Number(s.grandTotal || 0) : Number(s.subtotal);
     const vat = isNaN(Number(s.vat)) ? 0 : Number(s.vat);
     const discount = isNaN(Number(s.discount)) ? 0 : Number(s.discount);
-    const grandTotal = isNaN(Number(s.grandTotal)) ? (subtotal - discount + vat) : Number(s.grandTotal);
+    const grandTotal = isNaN(Number(s.grandTotal)) ? (subtotal - discount) : Number(s.grandTotal);
     const amountTendered = isNaN(Number(s.amountTendered)) ? grandTotal : Number(s.amountTendered);
     const changeAmount = isNaN(Number(s.changeAmount)) ? 0 : Number(s.changeAmount);
 
@@ -7323,7 +7323,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  customVat !== undefined
  ? customVat
  : parseFloat((subtotal * 0.12).toFixed(2));
- const grandTotal = parseFloat((subtotal + vat - discountAmount).toFixed(2));
+ const grandTotal = parseFloat((subtotal - discountAmount).toFixed(2));
  const changeAmount =
  paymentMethod === "Cash"
  ? parseFloat((amountTendered - grandTotal).toFixed(2))

@@ -26,7 +26,8 @@ import {
  UserCheck,
  Signature,
  FileSignature,
- ShieldAlert
+ ShieldAlert,
+ Printer
 } from 'lucide-react';
 
 interface DeliveriesModuleProps {
@@ -36,12 +37,15 @@ interface DeliveriesModuleProps {
 export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) => {
  const {
  deliveries,
+ sales,
+ saleItems,
  updateDeliveryStatus,
  assignDeliveryPersonnel,
  completeDelivery,
  currentUser,
  branches,
- addAuditLog
+ addAuditLog,
+ createDelivery
  } = useDb();
 
  // Branch isolation state
@@ -85,6 +89,94 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  const triggerToast = (msg: string) => {
  setToastMessage(msg);
  setTimeout(() => setToastMessage(null), 3500);
+ };
+
+ // Manual & Auto POS Delivery Scheduling state
+ const [showSchedulePosModal, setShowSchedulePosModal] = useState(false);
+ const [selectedPosSaleId, setSelectedPosSaleId] = useState<string>('');
+ const [posDelivCustomerName, setPosDelivCustomerName] = useState('');
+ const [posDelivContact, setPosDelivContact] = useState('');
+ const [posDelivHouseNo, setPosDelivHouseNo] = useState('');
+ const [posDelivStreet, setPosDelivStreet] = useState('');
+ const [posDelivBarangay, setPosDelivBarangay] = useState('');
+ const [posDelivCity, setPosDelivCity] = useState('Dipolog City');
+ const [posDelivLandmark, setPosDelivLandmark] = useState('');
+ const [posDelivDate, setPosDelivDate] = useState(new Date().toISOString().split('T')[0]);
+ const [posDelivTime, setPosDelivTime] = useState('10:00 AM - 2:00 PM');
+ const [posDelivNotes, setPosDelivNotes] = useState('');
+
+ // Auto-sync POS Store Deliveries that were not previously scheduled
+ const syncMissingPosDeliveries = React.useCallback(() => {
+   let createdCount = 0;
+   sales.forEach((s) => {
+     const hasDeliveryNote = s.notes && (
+       s.notes.toLowerCase().includes('delivery') ||
+       s.notes.toLowerCase().includes('barangay') ||
+       s.notes.toLowerCase().includes('ship') ||
+       s.notes.includes('SYSTEM ASSIGNED STORE DELIVERY TRACE:')
+     );
+     const existing = deliveries.find((d) => d.saleId === s.id || d.saleNumber === s.saleNumber);
+     if (hasDeliveryNote && !existing) {
+       createDelivery({
+         saleId: s.id,
+         saleNumber: s.saleNumber,
+         customerName: s.customerName || 'Walk-in Customer',
+         contactNumber: 'N/A',
+         barangay: 'Central',
+         cityMunicipality: 'Dipolog City',
+         deliveryDate: new Date().toISOString().split('T')[0],
+         deliveryTime: '10:00 AM - 2:00 PM',
+         notes: s.notes,
+       });
+       createdCount++;
+     }
+   });
+   if (createdCount > 0) {
+     triggerToast("Auto-synced " + createdCount + " POS store delivery order(s) into Cargo Freight Scheduling.");
+   } else {
+     triggerToast("All store deliveries are already synced in Cargo Freight Scheduling.");
+   }
+ }, [sales, deliveries, createDelivery]);
+
+ // When selected POS sale changes in schedule modal
+ const handleSelectPosSale = (saleId: string) => {
+   setSelectedPosSaleId(saleId);
+   const sale = sales.find((s) => s.id === saleId);
+   if (sale) {
+     setPosDelivCustomerName(sale.customerName || 'Walk-in Customer');
+     setPosDelivNotes(sale.notes || '');
+   }
+ };
+
+ const handleSchedulePosDeliverySubmit = (e: React.FormEvent) => {
+   e.preventDefault();
+   const sale = sales.find((s) => s.id === selectedPosSaleId);
+   if (!sale) {
+     triggerToast('Please select a valid POS transaction order!');
+     return;
+   }
+   if (!posDelivBarangay.trim()) {
+     triggerToast('Barangay is strictly required for delivery location!');
+     return;
+   }
+   const dRecord = createDelivery({
+     saleId: sale.id,
+     saleNumber: sale.saleNumber,
+     customerName: posDelivCustomerName.trim() || sale.customerName || 'Walk-in Customer',
+     contactNumber: posDelivContact.trim() || 'N/A',
+     houseNo: posDelivHouseNo || undefined,
+     street: posDelivStreet || undefined,
+     barangay: posDelivBarangay.trim(),
+     cityMunicipality: posDelivCity.trim() || 'Dipolog City',
+     landmark: posDelivLandmark || undefined,
+     deliveryDate: posDelivDate,
+     deliveryTime: posDelivTime || undefined,
+     notes: posDelivNotes || undefined,
+   });
+   setShowSchedulePosModal(false);
+   setSelectedPosSaleId('');
+   setSelectedDeliveryId(dRecord.id);
+   triggerToast("Successfully scheduled Cargo Delivery " + dRecord.id + " for POS Invoice #" + sale.saleNumber);
  };
 
  // Pre-filter deliveries based on role and branch selection
@@ -154,6 +246,26 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  return deliveries.find(d => d.id === selectedDeliveryId) || null;
  }, [deliveries, selectedDeliveryId]);
 
+ const [showDeliveryReceiptModal, setShowDeliveryReceiptModal] = useState(false);
+
+ const activeDeliverySale = useMemo(() => {
+ if (!activeDelivery) return null;
+ return sales.find((s) => s.id === activeDelivery.saleId || s.saleNumber === activeDelivery.saleNumber) || null;
+ }, [sales, activeDelivery]);
+
+ const activeDeliveryItems = useMemo(() => {
+ if (!activeDelivery) return [];
+ const matchedSaleId = activeDeliverySale?.id || activeDelivery.saleId;
+ return saleItems.filter(
+ (item) => item.saleId === matchedSaleId && !item.isDeleted
+ );
+ }, [saleItems, activeDelivery, activeDeliverySale]);
+
+ const deliveryBranch = useMemo(() => {
+ if (!activeDelivery) return branches[0] || null;
+ return branches.find((b) => b.id === activeDelivery.branchId) || branches[0] || null;
+ }, [branches, activeDelivery]);
+
  // Lifecycle execution triggers
  const handlePackCargo = (id: string) => {
  updateDeliveryStatus(id, 'Packed', 'Items catalog packaged and prepared at logistics dispatch deck.');
@@ -204,6 +316,188 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  setFailReason('');
  triggerToast('Delivery flagged as Failed Shipment.');
  };
+
+  const renderDeliveryReceiptCopy = (copyType: "STORE COPY" | "CUSTOMER COPY") => (
+    <div key={copyType} className="border border-gray-300 rounded-lg p-4 bg-white text-black text-xs leading-relaxed space-y-3 shadow-xs">
+      {/* DR Header */}
+      <div className="text-center pb-2 border-b-2 border-black space-y-1">
+        {deliveryBranch?.storeLogo ? (
+          <div className="mb-1 flex items-center justify-center h-9">
+            <img
+              src={deliveryBranch.storeLogo}
+              alt="Logo"
+              className="h-full object-contain filter grayscale"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+        ) : (
+          <h2 className="text-sm font-black tracking-wider uppercase font-mono text-black">
+            {deliveryBranch?.name || "EMMAN TILE CENTER"}
+          </h2>
+        )}
+        <p className="text-[9.5px] font-semibold text-gray-700">
+          {deliveryBranch?.address || "Sta. Filomena, Dipolog City"}
+        </p>
+        <p className="text-[8.5px] font-mono text-gray-600">
+          Contact: {deliveryBranch?.phone || "0000"} | TIN: {deliveryBranch?.tin || "000-000-000"}
+        </p>
+        <div className="flex items-center justify-between pt-1">
+          <span className="bg-black text-white px-2.5 py-0.5 rounded font-mono font-black text-[10px] uppercase tracking-widest">
+            DELIVERY RECEIPT
+          </span>
+          <span className="font-mono font-black text-[9px] uppercase tracking-wider px-2 py-0.5 bg-gray-200 text-gray-800 rounded border border-gray-400">
+            [{copyType} - {copyType === "STORE COPY" ? "WAREHOUSE AUDIT FILE" : "CUSTOMER RECIPIENT COPY"}]
+          </span>
+        </div>
+      </div>
+
+      {/* Document & Customer Metadata */}
+      <div className="grid grid-cols-2 gap-2 text-[10px] border-b border-dashed border-gray-400 pb-2 font-sans">
+        <div>
+          <span className="text-[8px] font-black uppercase text-gray-500 block">DR Reference No.</span>
+          <span className="font-mono font-bold text-xs text-black">DR-{activeDelivery?.saleNumber}</span>
+          <span className="text-[8.5px] font-mono text-gray-500 block mt-0.5">Trace ID: {activeDelivery?.id}</span>
+        </div>
+        <div className="text-right">
+          <span className="text-[8px] font-black uppercase text-gray-500 block">Scheduled Date</span>
+          <span className="font-bold text-black">{activeDelivery?.deliveryDate || new Date().toLocaleDateString()}</span>
+          <span className="text-[8.5px] font-medium text-gray-600 block">{activeDelivery?.deliveryTime || "Standard Slot"}</span>
+        </div>
+      </div>
+
+      {/* Customer & Address */}
+      <div className="bg-gray-50 p-2 rounded border border-gray-200 text-[10px] space-y-1">
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <span className="text-[8px] font-extrabold uppercase text-gray-500 block">Customer Name</span>
+            <span className="font-extrabold text-black uppercase">{activeDelivery?.customerName}</span>
+          </div>
+          <div>
+            <span className="text-[8px] font-extrabold uppercase text-gray-500 block">Contact Number</span>
+            <span className="font-mono font-bold text-black">{activeDelivery?.contactNumber || "N/A"}</span>
+          </div>
+        </div>
+        <div className="pt-1 border-t border-gray-200">
+          <span className="text-[8px] font-extrabold uppercase text-gray-500 block">Unloading Address</span>
+          <span className="font-semibold text-gray-900 block">
+            {[activeDelivery?.houseNo, activeDelivery?.street, activeDelivery?.barangay, activeDelivery?.cityMunicipality].filter(Boolean).join(", ")}
+          </span>
+          {activeDelivery?.landmark && (
+            <span className="text-[8.5px] italic text-gray-600 block mt-0.5">
+              Landmark: {activeDelivery.landmark}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Carrier & Payment Summary */}
+      <div className="grid grid-cols-2 gap-2 text-[9px] font-mono">
+        <div className="bg-gray-100 p-1.5 rounded border border-gray-300">
+          <span className="text-[7.5px] uppercase text-gray-500 font-bold block">Logistics Personnel</span>
+          <span className="font-extrabold text-black block">Truck: {activeDelivery?.truck || "Unassigned"}</span>
+          <span className="text-gray-700 block">Driver: {activeDelivery?.driver || "Unassigned"}</span>
+          <span className="text-gray-600 block">Helpers: {activeDelivery?.helper || "N/A"}</span>
+        </div>
+
+        {activeDeliverySale && (
+          <div className="bg-emerald-50/90 p-1.5 rounded border border-emerald-300">
+            <span className="text-[7.5px] uppercase text-emerald-800 font-extrabold block">Bill & Payment Summary</span>
+            <div className="flex justify-between text-gray-800">
+              <span>Bill Total:</span>
+              <span className="font-bold">₱{(activeDeliverySale.grandTotal || 0).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-gray-800">
+              <span>Paid ({activeDeliverySale.paymentMethod || "Cash"}):</span>
+              <span className="font-bold">₱{(activeDeliverySale.amountTendered || activeDeliverySale.grandTotal || 0).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-emerald-800 font-extrabold pt-0.5 border-t border-emerald-300">
+              <span>Change Due:</span>
+              <span>₱{(activeDeliverySale.changeAmount || ((activeDeliverySale.amountTendered || 0) > (activeDeliverySale.grandTotal || 0) ? (activeDeliverySale.amountTendered || 0) - (activeDeliverySale.grandTotal || 0) : 0) || 0).toFixed(2)}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Items Table */}
+      <div className="space-y-1">
+        <div className="text-[8.5px] font-black uppercase tracking-wider text-gray-700 flex justify-between border-b-2 border-black pb-0.5">
+          <span>Items to be Delivered</span>
+          <span>Verification Checklist</span>
+        </div>
+
+        <table className="w-full text-left text-[9.5px] border-collapse">
+          <thead>
+            <tr className="border-b border-gray-300 text-[8px] uppercase text-gray-600 font-extrabold">
+              <th className="py-0.5 pr-1">#</th>
+              <th className="py-0.5">Description / Product</th>
+              <th className="py-0.5 text-right">Qty</th>
+              <th className="py-0.5 text-center pr-1 pl-2">Chk</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 font-sans">
+            {activeDeliveryItems.length > 0 ? (
+              activeDeliveryItems.map((item, idx) => (
+                <tr key={item.id || idx}>
+                  <td className="py-1 font-mono text-gray-500 pr-1">{idx + 1}</td>
+                  <td className="py-1 font-bold text-black">{item.productName}</td>
+                  <td className="py-1 text-right font-mono font-extrabold text-black">
+                    {item.quantity} pcs
+                  </td>
+                  <td className="py-1 text-center pl-2">
+                    <span className="inline-block h-3 w-3 border border-black rounded-xs"></span>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={4} className="py-1.5 text-center text-gray-500 italic text-[9px]">
+                  Store Order Ref: {activeDelivery?.saleNumber} (Full Order Scheduled)
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Cargo Handling Notes */}
+      {activeDelivery?.notes && (
+        <div className="text-[9px] border-t border-gray-300 pt-1 text-gray-700">
+          <strong className="uppercase text-[8px] text-gray-600 block">Handling Notes:</strong>
+          <p className="italic leading-snug">{activeDelivery.notes}</p>
+        </div>
+      )}
+
+      {/* Receiver Confirmation & Signature Section */}
+      <div className="border-t-2 border-black pt-2 mt-2 space-y-2">
+        <div className="bg-gray-100 p-1.5 rounded border border-gray-300 text-[8px] font-bold text-center text-gray-800 leading-tight">
+          DELIVERY CONFIRMATION: I hereby acknowledge receipt of the merchandise listed above in complete quantity, correct specifications, and good order & condition. Delivery Confirmed & Successful.
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 text-center text-[8px] font-sans pt-1">
+          <div className="space-y-4">
+            <div className="border-b border-black h-5"></div>
+            <span className="font-extrabold uppercase text-gray-800 block">Released By (Warehouse)</span>
+          </div>
+          <div className="space-y-4">
+            <div className="border-b border-black h-5"></div>
+            <span className="font-extrabold uppercase text-gray-800 block">Delivered By (Driver)</span>
+          </div>
+          <div className="space-y-1">
+            <div className="border-b border-black h-5"></div>
+            <span className="font-extrabold uppercase text-black block">Received By (Signature)</span>
+            <span className="text-[7.5px] text-gray-600 block font-mono">Printed Name: _________________</span>
+            <span className="text-[7.5px] text-gray-600 block font-mono">Date & Time: __________________</span>
+            <span className="text-[7.5px] text-gray-600 block font-mono">ID / Relation: _________________</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="text-center text-[7px] text-gray-500 font-mono pt-1 border-t border-dashed border-gray-300">
+        Official Delivery Receipt Docket • TilePoint Enterprise ERP System • [{copyType}]
+      </div>
+    </div>
+  );
+
 
  return (
  <div className="p-6 space-y-6 text-left h-full overflow-y-auto">
@@ -358,6 +652,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  <th className="py-3 px-4">Cargo Date</th>
  <th className="py-3 px-4 font-mono">Personnel</th>
  <th className="py-3 px-4 text-center">Fulfill Status</th>
+ <th className="py-3 px-4 text-center">Receipt</th>
  </tr>
  </thead>
 
@@ -429,6 +724,21 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  }`}>
  {d.status === 'Out For Delivery' ? 'IN TRANSIT' : d.status}
  </span>
+ </td>
+
+ <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+ <button
+ type="button"
+ onClick={() => {
+ setSelectedDeliveryId(d.id);
+ setShowDeliveryReceiptModal(true);
+ }}
+ title="Print Delivery Receipt"
+ className="p-1.5 rounded-xl bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary transition-colors cursor-pointer inline-flex items-center gap-1 text-[10px] font-bold border border-m3-primary/20"
+ >
+ <Printer className="h-3.5 w-3.5" />
+ <span className="hidden sm:inline font-mono uppercase">DR</span>
+ </button>
  </td>
  </tr>
  );
@@ -527,6 +837,16 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  </p>
  </div>
 
+ {/* Print Delivery Receipt Action Button */}
+ <button
+ type="button"
+ onClick={() => setShowDeliveryReceiptModal(true)}
+ className="w-full py-2 px-3 bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary font-black text-xs rounded-xl shadow-sm flex items-center justify-center gap-2 cursor-pointer transition-all uppercase tracking-wider"
+ >
+ <Printer className="h-4 w-4" />
+ <span>Print Delivery Receipt (DR)</span>
+ </button>
+
  {/* Physical Location details card */}
  <div className="space-y-2 text-left bg-m3-surface-lowest p-3 rounded-2xl border border-m3-outline-variant/15 text-[11px] leading-relaxed">
  <div className="flex items-start gap-2 text-m3-on-surface">
@@ -580,6 +900,22 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  </div>
 
  </div>
+
+ {/* Order Payment & Customer Change Details */}
+ {activeDeliverySale && (
+ <div className="bg-m3-surface-lowest p-3 rounded-2xl border border-m3-outline-variant/15 text-[11px] leading-relaxed text-left space-y-1 font-mono">
+ <div className="flex justify-between items-center text-zinc-400 font-medium text-[10px]">
+ <span>Bill Total: <strong className="text-m3-on-surface">₱{(activeDeliverySale.grandTotal || 0).toFixed(2)}</strong></span>
+ <span>Paid ({activeDeliverySale.paymentMethod || "Cash"}): <strong className="text-m3-on-surface">₱{(activeDeliverySale.amountTendered || activeDeliverySale.grandTotal || 0).toFixed(2)}</strong></span>
+ </div>
+ {((activeDeliverySale.changeAmount || 0) > 0 || (activeDeliverySale.amountTendered || 0) > (activeDeliverySale.grandTotal || 0)) && (
+ <div className="flex justify-between items-center pt-1.5 border-t border-dashed border-m3-outline-variant/15 font-black text-emerald-400 text-xs">
+ <span className="uppercase text-[9.5px] font-sans tracking-wider">Customer Change:</span>
+ <span className="text-sm font-black text-emerald-300">₱{(activeDeliverySale.changeAmount || ((activeDeliverySale.amountTendered || 0) > (activeDeliverySale.grandTotal || 0) ? (activeDeliverySale.amountTendered || 0) - (activeDeliverySale.grandTotal || 0) : 0) || 0).toFixed(2)}</span>
+ </div>
+ )}
+ </div>
+ )}
 
  {/* Cargo Assignee Information details */}
  <div className="bg-m3-surface-lowest p-3 rounded-2xl border border-m3-outline-variant/15 text-[11px] leading-relaxed text-left">
@@ -904,7 +1240,260 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
 
  </div>
 
+ {/* DELIVERY RECEIPT PRINT MODAL */}
+ {showDeliveryReceiptModal && activeDelivery && (
+ <div className="fixed inset-0 overflow-y-auto flex items-center justify-center z-50 p-4">
+ <div
+ className="fixed inset-0 bg-gray-950/75 backdrop-blur-sm bir-report-no-print"
+ onClick={() => setShowDeliveryReceiptModal(false)}
+ />
+ <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface flex flex-col justify-between shrink-0 my-auto">
+ 
+ <div className="flex items-center justify-between pb-3 border-b border-m3-outline-variant/20 bir-report-no-print">
+ <div className="flex items-center gap-2">
+ <div className="p-2 rounded-xl bg-m3-primary/10 text-m3-primary">
+ <Printer className="h-5 w-5" />
  </div>
- );
-};
+ <div>
+ <h3 className="text-sm font-black text-m3-on-surface uppercase">Delivery Receipt Document</h3>
+ <p className="text-[10px] text-zinc-500 font-medium">Ready for warehouse dispatch & customer sign-off</p>
+ </div>
+ </div>
+ <button
+ onClick={() => setShowDeliveryReceiptModal(false)}
+ className="p-1.5 rounded-full hover:bg-m3-outline-variant/20 text-m3-on-surface-variant cursor-pointer"
+ >
+ <X className="h-5 w-5" />
+ </button>
+ </div>
 
+ {/* PRINTABLE DOCKET CONTAINER WITH DUAL COPIES & RECEIVER SIGNATURE */}
+  <div className="space-y-4 my-4 select-text text-left bir-receipt-container">
+    {renderDeliveryReceiptCopy("STORE COPY")}
+
+    <div className="relative flex py-2 items-center">
+      <div className="flex-grow border-t-2 border-dashed border-gray-400"></div>
+      <span className="flex-shrink mx-4 text-gray-600 font-mono text-[9px] font-black uppercase tracking-wider bg-gray-100 px-3 py-1 rounded-full border border-gray-300 shadow-xs">
+        CUT HERE • STORE COPY ABOVE / CUSTOMER COPY BELOW
+      </span>
+      <div className="flex-grow border-t-2 border-dashed border-gray-400"></div>
+    </div>
+
+    {renderDeliveryReceiptCopy("CUSTOMER COPY")}
+  </div>
+
+  {/* Modal Action Footer */}
+  <div className="flex gap-2 mt-2 flex-shrink-0 bir-report-no-print">
+  <button
+  onClick={() => {
+  window.print();
+  addAuditLog("PRINT_DELIVERY_RECEIPT", `Printed Delivery Receipt for ${activeDelivery.saleNumber}`, "Deliveries", activeDelivery.id);
+  }}
+  className="flex-1 py-2.5 text-xs font-bold rounded-full bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm uppercase tracking-wider"
+  >
+  <Printer className="h-4 w-4" /> Print Delivery Receipt
+  </button>
+  <button
+  onClick={() => setShowDeliveryReceiptModal(false)}
+  className="px-5 py-2.5 text-xs font-bold rounded-full border border-m3-outline-variant hover:bg-m3-outline-variant/15 transition-colors cursor-pointer"
+  >
+  Close
+  </button>
+  </div>
+
+  </div>
+  </div>
+  )}
+
+  {/* SCHEDULE POS DELIVERY MODAL */}
+  {showSchedulePosModal && (
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+      <div
+        className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
+        onClick={() => setShowSchedulePosModal(false)}
+      />
+      <div className="relative w-full max-w-lg rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-3">
+          <div>
+            <h3 className="text-base font-black text-m3-on-surface uppercase flex items-center gap-2">
+              <Truck className="h-5 w-5 text-m3-primary" />
+              <span>Schedule Freight Delivery for POS Order</span>
+            </h3>
+            <p className="text-[11px] text-zinc-400 font-medium">
+              Select an existing POS transaction invoice to dispatch via Freight Cargo
+            </p>
+          </div>
+          <button
+            onClick={() => setShowSchedulePosModal(false)}
+            className="p-1 rounded-full hover:bg-m3-outline-variant/20 text-m3-on-surface-variant cursor-pointer"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSchedulePosDeliverySubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-black uppercase text-m3-on-surface-variant mb-1">
+              Select POS Order Invoice <span className="text-rose-500">*</span>
+            </label>
+            <select
+              value={selectedPosSaleId}
+              onChange={(e) => handleSelectPosSale(e.target.value)}
+              required
+              className="w-full bg-m3-surface-lowest text-xs text-m3-on-surface font-mono font-bold border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
+            >
+              <option value="">-- Choose POS Transaction Order --</option>
+              {sales.slice(0, 30).map((s) => (
+                <option key={s.id} value={s.id}>
+                  Ref: {s.saleNumber} | {s.customerName} | ₱{s.grandTotal.toFixed(2)} ({new Date(s.createdAt).toLocaleDateString()})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-black uppercase text-m3-on-surface-variant mb-1">
+                Recipient Customer Name
+              </label>
+              <input
+                type="text"
+                value={posDelivCustomerName}
+                onChange={(e) => setPosDelivCustomerName(e.target.value)}
+                placeholder="Full Name"
+                className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-black uppercase text-m3-on-surface-variant mb-1">
+                Contact Phone Number
+              </label>
+              <input
+                type="text"
+                value={posDelivContact}
+                onChange={(e) => setPosDelivContact(e.target.value)}
+                placeholder="0917-000-0000"
+                className="w-full bg-m3-surface-lowest text-xs font-mono font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-black uppercase text-m3-on-surface-variant mb-1">
+                House / Unit / Bldg No
+              </label>
+              <input
+                type="text"
+                value={posDelivHouseNo}
+                onChange={(e) => setPosDelivHouseNo(e.target.value)}
+                placeholder="Unit 102, BLK 4"
+                className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-black uppercase text-m3-on-surface-variant mb-1">
+                Street / Avenue / Zone
+              </label>
+              <input
+                type="text"
+                value={posDelivStreet}
+                onChange={(e) => setPosDelivStreet(e.target.value)}
+                placeholder="Rizal Avenue Ext"
+                className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-black uppercase text-m3-on-surface-variant mb-1">
+                Barangay Destination <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={posDelivBarangay}
+                onChange={(e) => setPosDelivBarangay(e.target.value)}
+                required
+                placeholder="Sta. Isabel / Turno / Central"
+                className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-black uppercase text-m3-on-surface-variant mb-1">
+                City / Municipality
+              </label>
+              <input
+                type="text"
+                value={posDelivCity}
+                onChange={(e) => setPosDelivCity(e.target.value)}
+                placeholder="Dipolog City"
+                className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-black uppercase text-m3-on-surface-variant mb-1">
+                Target Unloading Date
+              </label>
+              <input
+                type="date"
+                value={posDelivDate}
+                onChange={(e) => setPosDelivDate(e.target.value)}
+                className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-black uppercase text-m3-on-surface-variant mb-1">
+                Preferred Slot
+              </label>
+              <select
+                value={posDelivTime}
+                onChange={(e) => setPosDelivTime(e.target.value)}
+                className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
+              >
+                <option value="08:00 AM - 12:00 PM">Morning Slot (08:00 AM - 12:00 PM)</option>
+                <option value="10:00 AM - 02:00 PM">Midday Slot (10:00 AM - 02:00 PM)</option>
+                <option value="01:00 PM - 05:00 PM">Afternoon Slot (01:00 PM - 05:00 PM)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-black uppercase text-m3-on-surface-variant mb-1">
+              Landmark / Handling Remarks
+            </label>
+            <input
+              type="text"
+              value={posDelivLandmark}
+              onChange={(e) => setPosDelivLandmark(e.target.value)}
+              placeholder="Near Barangay Hall, Yellow gate"
+              className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
+            />
+          </div>
+
+          <div className="flex gap-2 pt-2 border-t border-m3-outline-variant/20">
+            <button
+              type="button"
+              onClick={() => setShowSchedulePosModal(false)}
+              className="flex-1 py-2.5 text-xs font-bold rounded-xl border border-m3-outline-variant/40 hover:bg-m3-outline-variant/15 transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 py-2.5 text-xs font-black rounded-xl bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary transition-colors cursor-pointer shadow-sm uppercase tracking-wider"
+            >
+              Confirm Cargo Schedule
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )}
+
+  </div>
+  );
+};
