@@ -13,6 +13,8 @@ import { isProductInBranch, getBranchStockQuantity, getBranchStockRecord, slugif
 import { Product, UserRole, TransferType, TransferStatus } from '../types/db';
 import { HoldToConfirmButton } from './HoldToConfirmButton';
 import { useResponsivePageSize, useTableAutoPageSize, TablePagination } from './TablePagination';
+import { createSearchIndex, searchIndex } from '../utils/searchIndex';
+import { useVirtualList } from '../hooks/useVirtualList';
 import {
  Plus,
  Edit2,
@@ -434,9 +436,12 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
         }
       });
 
+      // Build fast Map lookup to avoid O(N*M) linear search across 2000+ products
+      const productMap = new Map(products.map(p => [p.id, p]));
+
       // Update names, codes, quantities, and live status for all existing batches from products catalog
       return updatedList.map(b => {
-        const liveProd = products.find(p => p.id === b.productId);
+        const liveProd = productMap.get(b.productId);
         const liveStatus = computeLiveBatchStatus(b.expiryDate);
         return {
           ...b,
@@ -990,21 +995,22 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  }, [size, boxQuantity, category]);
 
  // Catalog Filtration
- const filteredProducts = React.useMemo(() => {
- return branchProducts.filter(p => {
- const matchSearch =
- p.productName.toLowerCase().includes(term.toLowerCase()) ||
- p.productCode.toLowerCase().includes(term.toLowerCase()) ||
- p.barcode.toLowerCase().includes(term.toLowerCase()) ||
- p.sku.toLowerCase().includes(term.toLowerCase()) ||
- p.brand.toLowerCase().includes(term.toLowerCase()) ||
- (p.designName && p.designName.toLowerCase().includes(term.toLowerCase()));
+	// Pre-indexed search index for catalog products
+	const productSearchIndex = React.useMemo(() => {
+		return createSearchIndex(branchProducts, p =>
+			`${p.productName} ${p.productCode} ${p.barcode || ''} ${p.sku || ''} ${p.brand || ''} ${p.designName || ''} ${p.category || ''}`
+		);
+	}, [branchProducts]);
 
+	const filteredProducts = React.useMemo(() => {
+ const searchMatches = searchIndex(productSearchIndex, term);
+ return searchMatches.filter(p => {
  const matchCategory = categoryFilter === 'All' || p.category === categoryFilter;
+ if (!matchCategory) return false;
 
- // Stock Status evaluations based on selected branch/consolidated view mode
+ if (statusFilter === 'All') return true;
+
  const qty = getBranchStockQuantity(p, selectedViewBranchId, branchStock, branches);
-
  const bsRec = getBranchStockRecord(p, selectedViewBranchId, branchStock, branches);
  const threshold = selectedViewBranchId === 'consolidated'
  ? p.minimumStock
@@ -1019,16 +1025,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  currentStatus = 'Low Stock';
  }
 
- const matchStatus =
- statusFilter === 'All' ||
- (statusFilter === 'In Stock' && currentStatus === 'In Stock') ||
- (statusFilter === 'Low Stock' && currentStatus === 'Low Stock') ||
- (statusFilter === 'Critical' && currentStatus === 'Critical') ||
- (statusFilter === 'Out of Stock' && currentStatus === 'Out of Stock');
-
- return matchSearch && matchCategory && matchStatus;
+ return statusFilter === currentStatus;
  });
- }, [branchProducts, branchStock, term, categoryFilter, statusFilter, selectedViewBranchId]);
+ }, [productSearchIndex, branchStock, term, categoryFilter, statusFilter, selectedViewBranchId]);
 
  const totalProdPages = Math.ceil(filteredProducts.length / prodsPerPage) || 1;
 
@@ -1040,6 +1039,17 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  const paginatedProducts = React.useMemo(() => {
  return filteredProducts.slice((prodPage - 1) * prodsPerPage, prodPage * prodsPerPage);
  }, [filteredProducts, prodPage, prodsPerPage]);
+
+ const {
+ containerRef: catalogVirtualRef,
+ handleScroll: handleCatalogVirtualScroll,
+ visibleIndices: visibleCatalogIndices,
+ paddingTop: catalogPaddingTop,
+ paddingBottom: catalogPaddingBottom
+ } = useVirtualList({
+ itemCount: paginatedProducts.length,
+ itemHeight: 52
+ });
 
  const handleToggleSelectAll = () => {
  if (!allowedToModify) {
@@ -3023,7 +3033,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
  {/* Database Catalog Table List */}
  <div className="m3-card shadow-sm p-0 overflow-hidden snap-start scroll-mt-20">
- <div ref={catalogTableContainerRef} className="overflow-auto scrollbar-thin scrollbar-thumb-m3-outline-variant min-h-[280px]">
+ <div ref={(node) => { (catalogTableContainerRef as any).current = node; (catalogVirtualRef as any).current = node; }} onScroll={handleCatalogVirtualScroll} className="overflow-auto scrollbar-thin scrollbar-thumb-m3-outline-variant min-h-[280px]">
  <table className={`w-full text-left border-collapse table-auto text-xs transition-all ${isCompactColumns ? 'min-w-[700px]' : 'min-w-[1280px]'}`}>
  <thead>
  <tr className="border-b border-m3-outline-variant/20 bg-m3-surface/30 text-[10px] uppercase font-bold text-m3-on-surface-variant tracking-wider">
@@ -3060,7 +3070,15 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     </td>
   </tr>
 ) : (
-  paginatedProducts.map((p) => {
+  <>
+    {catalogPaddingTop > 0 && (
+      <tr style={{ height: catalogPaddingTop }}>
+        <td colSpan={isCompactColumns ? 8 : 14} className="p-0 border-0" />
+      </tr>
+    )}
+    {visibleCatalogIndices.map((idx) => {
+      const p = paginatedProducts[idx];
+      if (!p) return null;
  // Determine status indicators based on selected branch scope or consolidated HQ view
  const qty = getBranchStockQuantity(p, selectedViewBranchId, branchStock, branches);
 
@@ -3464,7 +3482,13 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   </AnimatePresence>
   </React.Fragment>
   );
-  })
+  })}
+  {catalogPaddingBottom > 0 && (
+    <tr style={{ height: catalogPaddingBottom }}>
+      <td colSpan={isCompactColumns ? 8 : 14} className="p-0 border-0" />
+    </tr>
+  )}
+  </>
   )}
 </tbody>
   </table>

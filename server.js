@@ -115,17 +115,42 @@ app.use((req, res, next) => {
 const DB_FILE_PATH = path.join(__dirname, 'server-db.json');
 
 // Helper to read database safely
+let memoryDbCache = null;
+let memoryDbHash = '';
+
+const computeDatabaseHash = (dbObj) => {
+  try {
+    const rawStr = JSON.stringify(dbObj, (key, value) => {
+      if (key === 'tp_db_snapshots' || key === 'tp_processed_delta_ids') return undefined;
+      return value;
+    });
+    return crypto.createHash('md5').update(rawStr).digest('hex');
+  } catch (err) {
+    return String(Date.now());
+  }
+};
+
 const readDatabase = () => {
   try {
     if (!fs.existsSync(DB_FILE_PATH)) {
       return {};
     }
     const data = fs.readFileSync(DB_FILE_PATH, 'utf-8');
-    return JSON.parse(data || '{}');
+    const parsed = JSON.parse(data || '{}');
+    memoryDbCache = parsed;
+    memoryDbHash = computeDatabaseHash(parsed);
+    return parsed;
   } catch (error) {
     console.error('[Shared DB Server] Error reading server-db.json:', error);
     return {};
   }
+};
+
+const getCachedDatabase = () => {
+  if (!memoryDbCache) {
+    readDatabase();
+  }
+  return { db: memoryDbCache || {}, hash: memoryDbHash || '' };
 };
 
 // Real-time clients array and notifier
@@ -160,6 +185,8 @@ setInterval(() => {
 // Helper to write database safely with atomic updates
 const writeDatabase = (data, senderClientId, eventType = 'db_update') => {
   try {
+    memoryDbCache = data;
+    memoryDbHash = computeDatabaseHash(data);
     const tempPath = `${DB_FILE_PATH}.tmp`;
     fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf-8');
     try {
@@ -172,7 +199,7 @@ const writeDatabase = (data, senderClientId, eventType = 'db_update') => {
       } catch (unlinkError) {}
     }
     // Broadcast real-time change to all active cashier/staff devices, skipping the sender
-    notifyClients(eventType, {}, senderClientId);
+    notifyClients(eventType, { hash: memoryDbHash }, senderClientId);
     return true;
   } catch (error) {
     console.error('[Shared DB Server] Error writing server-db.json:', error);
@@ -278,12 +305,25 @@ app.get('/api/db/events', (req, res) => {
 
 // API: Get entire shared database (optimally excluding heavy backup snapshots)
 app.get('/api/db', (req, res) => {
-  const db = readDatabase();
+  const { db, hash } = getCachedDatabase();
+  const clientHash = req.query.hash || req.headers['if-none-match'];
+
+  if (clientHash && clientHash === hash) {
+    return res.json({
+      success: true,
+      unchanged: true,
+      hash: hash,
+      timestamp: new Date().toISOString()
+    });
+  }
+
   const dbCopy = { ...db };
   delete dbCopy.tp_db_snapshots; // completely decouple backups to keep general sync lightweight
   delete dbCopy.tp_processed_delta_ids; // exclude server-only delta IDs to keep sync payload compact
   res.json({
     success: true,
+    unchanged: false,
+    hash: hash,
     timestamp: new Date().toISOString(),
     data: dbCopy
   });
