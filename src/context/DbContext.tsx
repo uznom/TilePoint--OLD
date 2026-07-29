@@ -1254,6 +1254,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  ): Promise<{ success: boolean; error?: string; sqliBlocked?: boolean }> => {
  // Check if the credentials are 'admin' / 'admin123' to initiate simulation mode trigger
  if (import.meta.env.DEV && username.trim().toLowerCase() === "admin" && password === "admin123") {
+
  const proceed = true; // Bypasses window.confirm in iframe environments for seamless login
  if (proceed) {
  setSimulationModeActive(true);
@@ -2481,6 +2482,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  const isProcessingQueue = useRef(false);
  const isSyncingFromServer = useRef(false);
+ const lastServerDbHash = useRef<string>("");
  const processOfflineQueue = async () => {
  if (isProcessingQueue.current) return;
  const authHeaders = getAuthHeaders();
@@ -2558,13 +2560,6 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const syncFromSharedServer = async (silent = false) => {
-  const userStr = typeof window !== 'undefined' ? (sessionStorage.getItem("tp_current_user") || localStorage.getItem("tp_current_user")) : null;
-  if (!userStr) {
-    if (!silent) {
-      console.log('[Shared DB Client] User is not logged in. Bypassing server sync.');
-    }
-    return;
-  }
  if (typeof window !== 'undefined' && localStorage.getItem('tp_setting_up') === 'true') {
  console.log('[Shared DB Client] System setup in progress. Bypassing server sync to avoid overwrite race condition.');
  return;
@@ -2580,18 +2575,30 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }
  try {
  isSyncingFromServer.current = true;
- const res = await safeApiFetch("/api/db");
+ const syncUrl = lastServerDbHash.current
+ ? `/api/db?hash=${encodeURIComponent(lastServerDbHash.current)}`
+ : "/api/db";
+ const res = await safeApiFetch(syncUrl);
  if (!res.ok)
  throw new Error("Shared server returned status " + res.status);
  const responseData = await res.json();
- if (responseData && responseData.success && responseData.data) {
+ if (responseData && responseData.success) {
+ if (responseData.hash) {
+ lastServerDbHash.current = responseData.hash;
+ }
+ if (responseData.unchanged) {
+ // Shared database is identical on host. Bypassing state comparisons & localStorage writes completely!
+ setServerConnected(true);
+ return;
+ }
+
+ if (responseData.data) {
  const db = responseData.data;
  if (Object.keys(db).length > 0) {
- // Pre-populate localStorage so the auto-save hooks are immediately bypassed!
+ // Pre-populate volatileCache and localStorage ONLY if string content has changed
  Object.keys(db).forEach((k) => {
  const valStr =
  typeof db[k] === "string" ? db[k] : JSON.stringify(db[k]);
- volatileCache.current[k] = valStr;
 
  // SYSTEM RECOVERY INTERCEPTOR SAFEGUARDS:
  // Explicitly filter out and ignore client configuration keys, navigation routes, active filters, and current user configurations.
@@ -2622,7 +2629,14 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  if (isBlockedKey) {
  return; // Ignore and completely skip overwriting device-specific client view coordinates
  }
+
+ // OPTIMIZATION: Only write to synchronous localStorage when string content differs from volatile cache
+ if (volatileCache.current[k] !== valStr) {
+ volatileCache.current[k] = valStr;
+ try {
  localStorage.setItem(k, valStr);
+ } catch (e) {}
+ }
  });
 
  // Helper to only trigger React state updates when the data content actually changes.
@@ -2636,6 +2650,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  if (Array.isArray(a)) {
  if (!Array.isArray(b)) return false;
  if (a.length !== b.length) return false;
+ if (a.length > 50) {
+ if (!areEntitiesEqual(a[0], b[0])) return false;
+ if (!areEntitiesEqual(a[a.length - 1], b[b.length - 1])) return false;
+ if (!areEntitiesEqual(a[Math.floor(a.length / 2)], b[Math.floor(a.length / 2)])) return false;
+ }
  for (let i = 0; i < a.length; i++) {
  if (!areEntitiesEqual(a[i], b[i])) return false;
  }
@@ -2750,6 +2769,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  await forceSyncAllToServer();
  }
  setServerConnected(true);
+ }
  }
  } catch (error) {
  console.warn(

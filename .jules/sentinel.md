@@ -10,3 +10,4 @@
 **Vulnerability:** A hardcoded credentials backdoor (`admin` / `admin123`) to trigger simulation mode was left unguarded in `src/context/DbContext.tsx`, exposing production applications to unauthorized access.
 **Learning:** Development and testing backdoors (like simulation modes) must be strictly fenced with build-time environment checks (e.g., `import.meta.env.DEV` in Vite) so that bundlers like ESBuild strip the logic completely during production builds via dead-code elimination.
 **Prevention:** Always wrap simulation, testing, or debugging logic with explicit environment checks to guarantee their removal in production bundles.
+
