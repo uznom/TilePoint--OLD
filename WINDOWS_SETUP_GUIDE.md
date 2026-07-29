@@ -26,7 +26,11 @@ This document provides a comprehensive, step-by-step guide for installing, confi
 8. [Enterprise Nginx Reverse Proxy Setup (Optional)](#-8-enterprise-nginx-reverse-proxy-setup-optional)
 9. [Comprehensive Step-by-Step Troubleshooting Guide](#-9-comprehensive-step-by-step-troubleshooting-guide)
    - [Troubleshooting EADDRINUSE (Port 3000 Busy)](#troubleshooting-eaddrinuse-port-3000-busy)
+   - [Troubleshooting WebSocket server error: Port 24678 is already in use](#troubleshooting-websocket-server-error-port-24678-is-already-in-use)
+   - [Troubleshooting "Not Secure" / Running in HTTP Mode](#troubleshooting-not-secure--running-in-http-mode)
    - [Troubleshooting ERR_SSL_PROTOCOL_ERROR](#troubleshooting-err_ssl_protocol_error)
+   - [Troubleshooting Rollup failed to resolve import "xlsx"](#troubleshooting-rollup-failed-to-resolve-import-xlsx)
+   - [Troubleshooting Vite / esbuild Transform Errors (e.g. Unexpected "export")](#troubleshooting-vite--esbuild-transform-errors-eg-unexpected-export)
    - [Troubleshooting "Server unable to commit configuration records"](#troubleshooting-server-unable-to-commit-configuration-records)
    - [Troubleshooting PowerShell Execution Policy Restrictions](#troubleshooting-powershell-execution-policy-restrictions)
    - [Troubleshooting Mobile Devices Unable to Connect](#troubleshooting-mobile-devices-unable-to-connect)
@@ -40,6 +44,7 @@ TilePoint operates as a resilient, full-stack POS and ERP platform designed for 
 - **Central Node (`server.js`)**: Runs on Express.js on **Port 3000**.
 - **Shared Storage (`server-db.json`)**: Local JSON file storage with atomic temp-file writing and MD5 hash caching for zero data loss during power outages.
 - **Real-Time Synchronizer**: Server-Sent Events (SSE) broadcasting live updates (`/api/db/events`) across all connected cashier and store terminals.
+- **Reporting Engine & Excel Export**: Client-side reporting with multi-sheet `.xlsx` workbook generation (`xlsx`) for inventory reports, sales summaries, and transmittals.
 - **Security & Shielding**: Anti-crawler middleware shielding API endpoints, HMAC SHA-256 session token verification, and role-based access control (Admin, Manager, Cashier).
 - **HTTPS SSL Support**: Auto-detects `key.pem` and `cert.pem` in the root directory to run in secure HTTPS mode required for mobile camera barcode and receipt scanning.
 
@@ -66,7 +71,7 @@ TilePoint includes a fully automated installer batch file (`setup-tilepoint.bat`
 3. If prompted by Windows User Account Control (UAC), click **Yes**.
 4. The automated script will perform these actions sequentially:
    - ✅ Verify and auto-install Git and Node.js LTS via `winget` if missing.
-   - ✅ Execute `npm install` for project dependencies.
+   - ✅ Execute `npm install` for project dependencies (including `express`, `xlsx`, `lucide-react`, etc.).
    - ✅ Detect your primary local IPv4 address (excluding WSL, Docker, and VirtualBox interfaces).
    - ✅ Create `.env` from `.env.example` with auto-generated security secrets and local IP binding.
    - ✅ Download `mkcert.exe` and generate trusted SSL certificates (`key.pem`, `cert.pem`) for `localhost` and your local IP.
@@ -110,7 +115,7 @@ If you prefer to install and configure each component manually, follow this sequ
    ```cmd
    cd C:\path\to\TilePoint
    ```
-2. Run `npm install` to download required packages (`express`, `vite`, `dotenv`, `react`, `lucide-react`, etc.):
+2. Run `npm install` to download required packages (`express`, `vite`, `dotenv`, `react`, `xlsx`, `lucide-react`, etc.):
    ```cmd
    npm install
    ```
@@ -182,10 +187,14 @@ New-NetFirewallRule -DisplayName "TilePoint Server Port 3000" -Direction Inbound
 
 ### Step 2.6: Build Production Client Assets
 
-Compile the React / Vite frontend into static production bundle files in the `dist/` directory:
-```cmd
-npm run build
-```
+1. Check for any TypeScript syntax or type issues:
+   ```cmd
+   npm run lint
+   ```
+2. Compile the React / Vite frontend into static production bundle files in the `dist/` directory:
+   ```cmd
+   npm run build
+   ```
 *(Verify that the `dist` folder is created and contains `index.html` and assets).*
 
 ---
@@ -396,6 +405,146 @@ If you prefer using Nginx for Windows as an enterprise reverse proxy instead of 
 
 ---
 
+### Troubleshooting WebSocket server error: Port 24678 is already in use
+
+**Symptom**: Console or terminal displays: `WebSocket server error: Port 24678 is already in use` when running `npm run dev` or `node server.js`.
+
+**Cause**:
+1. **Multiple Dev Server Instances**: Port 24678 is Vite's default Hot Module Replacement (HMR) WebSocket port. Another `node.exe` or `vite` process is already running in a different terminal, background window, or via PM2.
+2. **Running in Dev Mode without NODE_ENV=production**: When `server.js` runs in development mode (`NODE_ENV !== 'production'`), it mounts Vite's dev server middleware which attempts to open HMR on port 24678.
+
+**Step-by-Step Fix**:
+
+1. **Option A — Kill Orphaned Node Processes (Quickest)**:
+   Open Command Prompt (CMD) as Administrator and run:
+   ```cmd
+   taskkill /IM node.exe /F
+   ```
+   Or locate and terminate the specific process holding port 24678:
+   ```cmd
+   netstat -ano | findstr :24678
+   taskkill /PID <PID_NUMBER> /F
+   ```
+
+2. **Option B — Run in Production Mode (Recommended for Store Terminals)**:
+   If deploying for store/cashier usage, compile production static assets and run in `production` mode so Vite HMR is disabled:
+   ```cmd
+   npm run build
+   ```
+   *In Command Prompt (CMD):*
+   ```cmd
+   set NODE_ENV=production && node server.js
+   ```
+   *In PowerShell:*
+   ```powershell
+   $env:NODE_ENV="production"; node server.js
+   ```
+   *In PM2:*
+   ```cmd
+   pm2 start server.js --name "tilepoint-hq-server" --env production
+   ```
+
+---
+
+### Troubleshooting "Not Secure" / Running in HTTP Mode
+
+**Symptom**: Opening `https://192.168.1.11:3000` or `https://localhost:3000` shows a **"Not Secure"** / **"Your connection is not private"** warning badge in Chrome, Edge, or Safari.
+
+#### Why does this happen on `192.168.1.11`?
+1. **Local IP Certificates are Self-Signed**: Official public Certificate Authorities (like Let's Encrypt or DigiCert) cannot issue public SSL certificates for local private IP addresses like `192.168.1.11`.
+2. **Browser Trust Policy**: Chrome, Edge, and Safari only show a green padlock for certificates issued by a known trusted CA. Self-signed certificates created via OpenSSL without a trusted Root CA trigger the "Not Secure" badge.
+3. **Is the connection encrypted?**: **YES!** All traffic between devices and the host PC is 100% encrypted over TLS/HTTPS regardless of the "Not Secure" badge.
+4. **Why HTTPS is required**: Modern browsers strictly mandate HTTPS for camera barcode scanning (`getUserMedia`) and secure POS sessions.
+
+---
+
+### 🛡️ How to Generate a Trusted SSL Certificate & Remove "Not Secure"
+
+To get a **green padlock / "Connection is secure"** on all phones, tablets, and cashier PCs without any warning messages, follow these steps using `mkcert` (a tool specifically made to generate trusted local SSL certificates).
+
+#### Phase 1: Generate Trusted SSL Certificate on Host PC
+
+1. **Install `mkcert` via `winget` or PowerShell (Administrator)**:
+   ```cmd
+   winget install FiloSottile.mkcert
+   ```
+   *Or download `mkcert.exe` directly from https://github.com/FiloSottile/mkcert/releases and place it in your project folder.*
+
+2. **Install Local Root CA on Host PC**:
+   Open CMD or PowerShell as **Administrator** in the TilePoint directory and run:
+   ```cmd
+   mkcert -install
+   ```
+   *(This creates a local Root Certificate Authority and automatically installs it into the Windows Trusted Root Store).*
+
+3. **Generate Certificates for your LAN IP and Localhost**:
+   Replace `192.168.1.11` with your actual PC IP address:
+   ```cmd
+   mkcert -key-file key.pem -cert-file cert.pem localhost 127.0.0.1 192.168.1.11 ::1
+   ```
+   *(This replaces `key.pem` and `cert.pem` in your project folder with certificates signed by your new local Root CA).*
+
+4. **Restart TilePoint Server**:
+   ```cmd
+   pm2 restart tilepoint-hq-server
+   ```
+
+---
+
+#### Phase 2: Install Root CA on Client Devices (Removes "Not Secure" Badge)
+
+To make phones, tablets, and other PCs trust your server without warning, you simply copy and install the `rootCA.pem` file created in Phase 1 onto each device once.
+
+##### 📍 Finding your `rootCA.pem` file:
+Run this command in CMD on the host PC to find the exact location of `rootCA.pem`:
+```cmd
+mkcert -CAROOT
+```
+*(Typical path: `C:\Users\YourUsername\AppData\Local\mkcert\rootCA.pem`)*.
+
+---
+
+##### 💻 On Windows Cashier PCs:
+1. Copy `rootCA.pem` to the cashier PC.
+2. Double-click `rootCA.pem` -> click **Install Certificate...**
+3. Select **Local Machine** -> click Next.
+4. Select **Place all certificates in the following store** -> click **Browse...**
+5. Choose **Trusted Root Certification Authorities** -> click OK -> click Next -> click **Finish**.
+6. Open `https://192.168.1.11:3000` in Chrome/Edge — it will now show a **green padlock**!
+
+---
+
+##### 📱 On Apple iPhones & iPads (iOS / iPadOS):
+1. Send `rootCA.pem` to your iPhone/iPad via AirDrop, Email, or download it from a local file share.
+2. Open **Settings** on iOS -> tap **Profile Downloaded** near the top.
+3. Tap **Install** in the top-right corner -> enter your iPhone Passcode -> tap **Install** -> tap **Done**.
+4. **Critical Step (Enable Full Trust)**:
+   - Go to **Settings** -> **General** -> **About** -> **Certificate Trust Settings** (at the bottom).
+   - Under *"Enable full trust for root certificates"*, find **mkcert development CA**.
+   - Toggle the switch to **ON (Green)** -> tap **Continue**.
+5. Open `https://192.168.1.11:3000` in Safari or Chrome on iOS — **"Not Secure" is completely gone** and camera barcode scanning works instantly!
+
+---
+
+##### 🤖 On Android Phones & Tablets:
+1. Copy `rootCA.pem` to the Android device storage or download via Google Drive/email.
+2. Open Android **Settings** -> go to **Security & Privacy** (or Security).
+3. Scroll down to **More Security Settings** -> tap **Encryption & Credentials**.
+4. Tap **Install a certificate** -> choose **CA certificate**.
+5. Tap **Install anyway** if prompted with a security warning.
+6. Browse to and select `rootCA.pem`.
+7. Enter a name (e.g. `TilePoint Root CA`) -> tap **OK**.
+8. Refresh `https://192.168.1.11:3000` in Chrome for Android — the connection will now show as **100% Secure**!
+
+---
+
+#### Quick Fallback (Bypass Warning without Installing Root CA):
+If you do not want to install `rootCA.pem` on staff phones, you can simply tap through the browser warning once:
+- **Chrome / Edge**: Click **Advanced** -> tap **Proceed to 192.168.1.11 (unsafe)**.
+- **Safari**: Tap **Show Details** -> tap **visit this website** -> confirm with Passcode.
+
+---
+
 ### Troubleshooting ERR_SSL_PROTOCOL_ERROR
 
 **Symptom**: Browser displays `ERR_SSL_PROTOCOL_ERROR` or PM2 logs report `ERR_OSSL_UNSUPPORTED` / `nested asn1 error`.
@@ -417,6 +566,40 @@ If you prefer using Nginx for Windows as an enterprise reverse proxy instead of 
    ```cmd
    pm2 restart tilepoint-hq-server
    ```
+
+---
+
+### Troubleshooting Rollup failed to resolve import "xlsx"
+
+**Symptom**: Executing `npm run build` fails with: `Rollup failed to resolve import "xlsx" from "src/lib/excelExportHelper.ts"`.
+
+**Cause**: The `xlsx` package is missing or not present in `node_modules`.
+
+**Step-by-Step Fix**:
+1. Run `npm install` or explicitly install the `xlsx` package:
+   ```cmd
+   npm install xlsx
+   ```
+2. Re-run `npm run build` to verify the production bundle builds without errors:
+   ```cmd
+   npm run build
+   ```
+
+---
+
+### Troubleshooting Vite / esbuild Transform Errors (e.g. Unexpected "export")
+
+**Symptom**: Build fails with `[vite:esbuild] Transform failed with 1 error: ERROR: Unexpected "export"` in React context files or components.
+
+**Cause**: A missing or extra brace `}`, dangling syntax, or invalid export placement in a TypeScript source file.
+
+**Step-by-Step Fix**:
+1. Run the linter / TypeScript type checker to quickly pinpoint the syntax error line:
+   ```cmd
+   npm run lint
+   ```
+2. Open the file reported in the error message (e.g., `src/context/DbContext.tsx`), inspect the syntax around the line number, and ensure all functions, objects, and export statements are properly formatted and enclosed.
+3. Re-run `npm run build` to confirm the fix.
 
 ---
 
@@ -452,18 +635,52 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 
 ---
 
-### Troubleshooting Mobile Devices Unable to Connect
+### Troubleshooting Mobile Devices Unable to Connect ("Site Unreachable")
 
-**Symptom**: Staff phones/tablets show `ERR_CONNECTION_TIMED_OUT` or `Cannot reach server`.
+**Symptom**: Staff phones or tablets show `ERR_CONNECTION_TIMED_OUT`, `ERR_CONNECTION_REFUSED`, `This site can’t be reached`, or `Server Unreachable` when attempting to access `https://192.168.1.11:3000`.
 
-**Step-by-Step Fix**:
-1. **Network Check**: Verify phone and host PC are connected to the **exact same Wi-Fi SSID** (ensure phone isn't on mobile 4G/5G data or guest network isolation).
-2. **IP Check**: Verify host PC local IP hasn't changed by running `ipconfig` in CMD.
-3. **Firewall Rule Check**: Run this PowerShell command as Administrator on the host PC:
-   ```powershell
-   New-NetFirewallRule -DisplayName "TilePoint Server Port 3000" -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow
-   ```
-4. **URL Check**: Ensure the mobile browser uses `https://` prefix with port `3000` (e.g. `https://192.168.1.38:3000`).
+**Step-by-Step Diagnostic Checklist**:
+
+1. **Verify `server.js` is Active and Listening on `0.0.0.0:3000`**:
+   - On the host PC, open CMD and check if the server is running:
+     ```cmd
+     netstat -ano | findstr :3000
+     ```
+   - If nothing appears, start the server:
+     ```cmd
+     pm2 start server.js --name "tilepoint-hq-server"
+     ```
+   - Test locally on the host PC browser: `https://localhost:3000` or `https://192.168.1.11:3000`. If it works on the host PC but not on the phone, proceed to step 2.
+
+2. **Check Windows Network Profile (Change from Public to Private)**:
+   - Windows Firewall silently blocks ALL inbound phone connections if your Wi-Fi is set to **Public Network**.
+   - Go to Windows **Settings** -> **Network & internet** -> **Wi-Fi** (or **Ethernet**).
+   - Select your connected network and change Network profile type to **Private network**.
+
+3. **Allow Port 3000 Through Windows Defender Firewall**:
+   - Open PowerShell as **Administrator** on the host PC and run this command:
+     ```powershell
+     New-NetFirewallRule -DisplayName "TilePoint Port 3000" -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow
+     ```
+   - If using 3rd-party antivirus/firewall software (e.g. Kaspersky, Norton, McAfee, ESET, Bitdefender), temporarily disable its Network Shield/Firewall or add an inbound rule for TCP Port 3000.
+
+4. **Verify Correct IPv4 Address on Host PC (Avoid Virtual IPs)**:
+   - Run `ipconfig` in CMD on the host PC.
+   - Look specifically for **Wireless LAN adapter Wi-Fi** or **Ethernet adapter**.
+   - Make sure you are using the actual physical LAN IP (e.g., `192.168.1.11`), NOT a virtual adapter IP from WSL, Docker, Hyper-V, VMware, or VirtualBox (e.g., `172.x.x.x` or `192.168.56.x`).
+
+5. **Turn Off Phone Cellular Data & VPNs**:
+   - **Cellular Data**: Turn off 4G/5G/LTE on the phone so traffic routes solely through Wi-Fi.
+   - **VPN Services**: Disable active VPNs (ExpressVPN, NordVPN, Cloudflare WARP) on both the phone and host PC, as VPNs redirect traffic away from the local subnet.
+
+6. **Check Router AP / Client Isolation**:
+   - If the phone and PC are both on Wi-Fi but cannot see each other, log into your Wi-Fi router admin page (e.g., `192.168.1.1`).
+   - Check if **AP Isolation**, **Client Isolation**, or **Guest Network Isolation** is enabled. Turn it **OFF** so Wi-Fi devices can communicate locally.
+
+7. **Ensure `https://` Protocol is Included**:
+   - Modern phone browsers will default to searching Google if you type `192.168.1.11:3000` without `https://`.
+   - Type the full URL into the address bar: `https://192.168.1.11:3000`
+   - Tap **Advanced** -> **Proceed to 192.168.1.11 (unsafe)** when the SSL warning appears.
 
 ---
 
@@ -476,6 +693,8 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 | **View Real-Time Logs** | `pm2 logs tilepoint-hq-server` | CMD / PowerShell |
 | **Restart Server** | `pm2 restart tilepoint-hq-server` | CMD / PowerShell |
 | **Stop Server** | `pm2 stop tilepoint-hq-server` | CMD / PowerShell |
+| **Install Dependencies** | `npm install` | Project Root Directory |
+| **Verify Code & Types** | `npm run lint` | Project Root Directory |
 | **Rebuild Client Bundle** | `npm run build` | Project Root Directory |
 | **Check Port 3000 Usage** | `netstat -ano \| findstr :3000` | CMD / PowerShell |
 | **Kill Process on Port 3000**| `taskkill /PID <PID> /F` | CMD (Run as Admin) |
@@ -483,4 +702,5 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 | **Generate SSL Certs** | `.\generate-certs.ps1` | PowerShell |
 
 ---
+
 *TilePoint Enterprise POS & Shared Database System — Deployment Documentation*

@@ -133,7 +133,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  setShowModal(true);
  };
 
- const handleSubmit = (e: React.FormEvent) => {
+ const handleSubmit = async (e: React.FormEvent) => {
  e.preventDefault();
 
  const isUserManager = currentUser?.role === UserRole.MANAGER;
@@ -182,7 +182,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  updateUser(editingId, payload);
  showToast(`Updated profile details for ${fullName}.`);
  } else {
- createUser({ ...payload, isNew: true });
+ await createUser({ ...payload, isNew: true });
  showToast(`Registered and enlisted ${fullName} successfully.`);
  }
 

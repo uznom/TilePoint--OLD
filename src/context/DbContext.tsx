@@ -4231,7 +4231,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  });
  }
  });
- localStorage.setItem("tp_users", JSON.stringify(next));
+ saveToStorageWithDebounce("tp_users", next, true);
  return next;
  });
  }
@@ -4630,7 +4630,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  });
  }
  });
- localStorage.setItem("tp_users", JSON.stringify(next));
+ saveToStorageWithDebounce("tp_users", next, true);
  return next;
  });
  }
@@ -6055,73 +6055,83 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  // USERS
- const createUser = (
- userFields: Omit<User, "id" | "createdAt" | "updatedAt">,
- ) => {
- const newUser: User = {
- ...userFields,
- username: sanitizeInputText(userFields.username),
- fullName: sanitizeInputText(userFields.fullName),
- role: sanitizeInputText(userFields.role) as any,
- branchAssignmentId: sanitizeInputText(userFields.branchAssignmentId),
- id: `U-${Date.now()}`,
- isNew: userFields.isNew !== undefined ? userFields.isNew : true,
- createdAt: new Date().toISOString(),
- updatedAt: new Date().toISOString(),
- };
- setUsers((prev) => {
- const next = [...prev, newUser];
- localStorage.setItem("tp_users", JSON.stringify(next));
- return next;
- });
- addAuditLog(
- "USER_CREATE",
- `Created user account for ${newUser.fullName} (${newUser.role})`,
- "Users",
- newUser.id,
- );
- };
+  const createUser = async (
+    userFields: Omit<User, "id" | "createdAt" | "updatedAt">,
+  ) => {
+    let passwordHash = userFields.passwordHash;
+    if (!passwordHash) {
+      const salt = (userFields.username || "user") + "_salt_tok";
+      const hashedVal = await createSaltedHash("tilepoint", salt, 2500);
+      passwordHash = formatHashToken(salt, hashedVal, 2500);
+    }
 
- const updateUser = (id: string, updates: Partial<User>) => {
- setUsers((prev) =>
- prev.map((u) =>
- u.id === id
- ? { ...u, ...updates, updatedAt: new Date().toISOString() }
- : u,
- ),
- );
- addAuditLog(
- "USER_UPDATE",
- `Updated user account details for user ID ${id}`,
- "Users",
- id,
- );
- };
+    const newUser: User = {
+      ...userFields,
+      username: sanitizeInputText(userFields.username),
+      fullName: sanitizeInputText(userFields.fullName),
+      role: sanitizeInputText(userFields.role) as any,
+      branchAssignmentId: sanitizeInputText(userFields.branchAssignmentId),
+      passwordHash,
+      id: `U-${Date.now()}`,
+      isNew: userFields.isNew !== undefined ? userFields.isNew : true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setUsers((prev) => {
+      const next = [...prev, newUser];
+      saveToStorageWithDebounce("tp_users", next, true);
+      return next;
+    });
+    addAuditLog(
+      "USER_CREATE",
+      `Created user account for ${newUser.fullName} (${newUser.role})`,
+      "Users",
+      newUser.id,
+    );
+  };
 
- const resetPassword = (id: string) => {
- const target = users.find((u) => u.id === id);
- if (target) {
- const runReset = async () => {
- const salt = target.username + "_salt_tok";
- const hashedVal = await createSaltedHash("tilepoint", salt, 2500);
- const formattedToken = formatHashToken(salt, hashedVal, 2500);
- setUsers((prev) => {
- const updated = prev.map((u) =>
- u.id === id ? { ...u, passwordHash: formattedToken } : u,
- );
- localStorage.setItem("tp_users", JSON.stringify(updated));
- return updated;
- });
- addAuditLog(
- "USER_RESET_PASSWORD",
- `Reset password for user ${target.fullName} to default (tilepoint)`,
- "Users",
- id,
- );
- };
- runReset();
- }
- };
+  const updateUser = (id: string, updates: Partial<User>) => {
+    setUsers((prev) => {
+      const next = prev.map((u) =>
+        u.id === id
+          ? { ...u, ...updates, updatedAt: new Date().toISOString() }
+          : u,
+      );
+      saveToStorageWithDebounce("tp_users", next, true);
+      return next;
+    });
+    addAuditLog(
+      "USER_UPDATE",
+      `Updated user account details for user ID ${id}`,
+      "Users",
+      id,
+    );
+  };
+
+  const resetPassword = (id: string) => {
+    const target = users.find((u) => u.id === id);
+    if (target) {
+      const runReset = async () => {
+        const salt = target.username + "_salt_tok";
+        const hashedVal = await createSaltedHash("tilepoint", salt, 2500);
+        const formattedToken = formatHashToken(salt, hashedVal, 2500);
+        setUsers((prev) => {
+          const updated = prev.map((u) =>
+            u.id === id ? { ...u, passwordHash: formattedToken } : u,
+          );
+          saveToStorageWithDebounce("tp_users", updated, true);
+          return updated;
+        });
+        addAuditLog(
+          "USER_RESET_PASSWORD",
+          `Reset password for user ${target.fullName} to default (tilepoint)`,
+          "Users",
+          id,
+        );
+      };
+      runReset();
+    }
+  };
 
  // BRANCHES
  const createBranch = (
