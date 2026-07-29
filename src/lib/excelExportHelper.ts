@@ -1,3 +1,4 @@
+import * as XLSX from 'xlsx';
 import { saveFileToBackup } from './fileBackupHelper';
 
 export interface SheetData {
@@ -16,7 +17,6 @@ export async function exportToXLSX(
   category: 'Inventory_Exports' | 'Sales_Reports' | 'Transmittals' | 'Database_Backups' = 'Inventory_Exports'
 ): Promise<{ success: boolean; path: string }> {
   try {
-    const XLSX = await import('xlsx');
     const wb = XLSX.utils.book_new();
 
     sheets.forEach(({ sheetName, data, headers }) => {

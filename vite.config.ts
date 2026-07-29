@@ -30,10 +30,7 @@ export default defineConfig(() => {
       include: ['xlsx']
     },
     build: {
-      chunkSizeWarningLimit: 3000,
-      rollupOptions: {
-        external: ['xlsx']
-      }
+      chunkSizeWarningLimit: 3000
     }
   };
 });

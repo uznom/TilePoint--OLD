@@ -443,21 +443,25 @@ app.post('/api/db/delta', async (req, res) => {
     const payload = delta.payload || {};
     const key = payload.key;
 
+    const userRoleLower = (user.role || '').toLowerCase();
+    const isRoleAdminOrManager = userRoleLower === 'admin' || userRoleLower === 'manager';
+    const isRoleAdmin = userRoleLower === 'admin';
+
     // Check specific table RBAC
     if (key === 'tp_users') {
-      if (user.role !== 'Admin') {
-        return res.status(403).json({ success: false, error: 'Forbidden: Role-Management updates are strictly restricted to system administrators.' });
+      if (!isRoleAdminOrManager) {
+        return res.status(403).json({ success: false, error: 'Forbidden: Personnel management updates are restricted to system administrators and managers.' });
       }
     } else if (key === 'atpos_v2_expenses') {
-      if (user.role !== 'Admin' && user.role !== 'Manager') {
+      if (!isRoleAdminOrManager) {
         return res.status(403).json({ success: false, error: 'Forbidden: Expenses management is restricted to Administrators and Managers.' });
       }
     } else if (['tp_branches', 'tp_products', 'tp_suppliers', 'tp_brands', 'tp_purchase_orders', 'tp_po_items'].includes(key)) {
-      if (user.role !== 'Admin' && user.role !== 'Manager') {
+      if (!isRoleAdminOrManager) {
         return res.status(403).json({ success: false, error: 'Forbidden: Central resource configuration is restricted to Admin/Manager accounts.' });
       }
     } else if (key === 'tp_db_snapshots') {
-      if (user.role !== 'Admin') {
+      if (!isRoleAdmin) {
         return res.status(403).json({ success: false, error: 'Forbidden: Database backups/restore is restricted to Admins.' });
       }
     }
@@ -686,21 +690,25 @@ app.post('/api/db', async (req, res) => {
       return res.status(401).json({ success: false, error: 'Unauthorized: Valid session token or identity header required.' });
     }
 
+    const userRoleLower = (user.role || '').toLowerCase();
+    const isRoleAdminOrManager = userRoleLower === 'admin' || userRoleLower === 'manager';
+    const isRoleAdmin = userRoleLower === 'admin';
+
     // Check specific table RBAC
     if (key === 'tp_users') {
-      if (user.role !== 'Admin') {
-        return res.status(403).json({ success: false, error: 'Forbidden: Role-Management updates are strictly restricted to system administrators.' });
+      if (!isRoleAdminOrManager) {
+        return res.status(403).json({ success: false, error: 'Forbidden: Personnel management updates are restricted to system administrators and managers.' });
       }
     } else if (key === 'atpos_v2_expenses') {
-      if (user.role !== 'Admin' && user.role !== 'Manager') {
+      if (!isRoleAdminOrManager) {
         return res.status(403).json({ success: false, error: 'Forbidden: Expenses management is restricted to Administrators and Managers.' });
       }
     } else if (['tp_branches', 'tp_products', 'tp_suppliers', 'tp_brands', 'tp_purchase_orders', 'tp_po_items'].includes(key)) {
-      if (user.role !== 'Admin' && user.role !== 'Manager') {
+      if (!isRoleAdminOrManager) {
         return res.status(403).json({ success: false, error: 'Forbidden: Central resource configuration is restricted to Admin/Manager accounts.' });
       }
     } else if (key === 'tp_db_snapshots') {
-      if (user.role !== 'Admin') {
+      if (!isRoleAdmin) {
         return res.status(403).json({ success: false, error: 'Forbidden: Database backups/restore is restricted to Admins.' });
       }
     }
