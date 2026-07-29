@@ -18,7 +18,7 @@ export function getBranchStockRecord(
   branchStock: InventoryLocationStock[] | undefined | null,
   branches: Branch[] | undefined | null
 ): InventoryLocationStock | undefined {
-  if (!p || !p.id || !targetBranchId || targetBranchId === 'consolidated') {
+  if (!p || !p.id || !targetBranchId || targetBranchId === 'consolidated' || targetBranchId === 'all') {
     return undefined;
   }
 
@@ -69,7 +69,7 @@ export function getBranchStockQuantity(
   branches: Branch[] | undefined | null
 ): number {
   if (!p) return 0;
-  if (!targetBranchId || targetBranchId === 'consolidated') {
+  if (!targetBranchId || targetBranchId === 'consolidated' || targetBranchId === 'all') {
     return p.stockQuantity ?? 0;
   }
 
@@ -110,7 +110,7 @@ export function isProductInBranch(
 ): boolean {
   if (!p) return false;
   // If no branch filter or consolidated view selected, show all products
-  if (!targetBranchId || targetBranchId === 'consolidated') {
+  if (!targetBranchId || targetBranchId === 'consolidated' || targetBranchId === 'all') {
     return true;
   }
 
