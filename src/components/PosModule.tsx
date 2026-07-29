@@ -2273,12 +2273,24 @@ export const PosModule: React.FC<PosModuleProps> = ({
  )}
  </h3>
  <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[10px] font-black uppercase tracking-wide">
-<div className="flex items-center gap-1.5 bg-m3-surface border border-m3-outline-variant/30 px-2.5 py-1 rounded-full text-[10px] font-bold text-m3-on-surface shadow-xs">
+<div className="flex items-center gap-1.5 bg-m3-surface border border-m3-outline-variant/30 px-2 py-0.5 rounded-full text-[10px] font-bold text-m3-on-surface shadow-xs">
   <Building2 className="h-3.5 w-3.5 text-m3-primary shrink-0" />
-  <span className="text-zinc-400 font-medium">Branch:</span>
-  <span className="font-black text-m3-primary uppercase">
-    {branches.find(b => b.id === (currentUser?.branchAssignmentId || activePosBranchId))?.name || currentUser?.branchAssignmentId || activePosBranchId}
-  </span>
+  <span className="text-zinc-400 font-medium">Branch Pool:</span>
+  <select
+    value={activePosBranchId}
+    onChange={(e) => setActivePosBranchId(e.target.value)}
+    className="bg-transparent text-m3-primary font-black uppercase text-[10px] focus:outline-none cursor-pointer pr-1"
+    title="Switch POS Branch Inventory Pool"
+  >
+    <option value="consolidated" className="bg-m3-surface text-m3-on-surface font-bold">
+      🌐 Consolidated / Central Host Catalog (377 items)
+    </option>
+    {branches.filter(b => !b.isDeleted).map((b) => (
+      <option key={b.id} value={b.id} className="bg-m3-surface text-m3-on-surface font-bold">
+        📍 {b.name} ({b.id})
+      </option>
+    ))}
+  </select>
 </div>
 <span className="text-zinc-500">•</span>
  <button

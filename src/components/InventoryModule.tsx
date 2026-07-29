@@ -282,7 +282,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  const isAdminUser = (currentUser?.role as any) === 'Admin' || (currentUser?.role as any) === UserRole.ADMIN;
 
  const [selectedViewBranchId, setSelectedViewBranchId] = useState<string>(
-   isAdminUser ? 'consolidated' : (currentUser?.branchAssignmentId || 'B1')
+   'consolidated'
  );
 
  useEffect(() => {
@@ -291,7 +291,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
      setSelectedViewBranchId('consolidated');
    } else {
      const bId = currentUser?.branchAssignmentId || 'B1';
-     setSelectedViewBranchId(bId);
+     
      setBatchFormBranchId(bId);
      setSelectedPoolBranchId(bId);
      setTransferSource(bId);
@@ -299,9 +299,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
    }
  }, [currentUser?.id, currentUser?.role, currentUser?.branchAssignmentId]);
 
- const activeBranchId = isAdminUser 
-   ? selectedViewBranchId 
-   : (currentUser?.branchAssignmentId || 'B1');
+ const activeBranchId = selectedViewBranchId;
 
  // Strict branch isolation filter: products list filtered by active branchAssignmentId / scope
  const branchProducts = React.useMemo(() => {
@@ -625,17 +623,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  useEffect(() => {
    if (currentUser) {
      const assignedBranch = currentUser.branchAssignmentId || 'B1';
-     if (currentUser.role !== 'Admin') {
-       if (selectedViewBranchId !== assignedBranch) {
-         setSelectedViewBranchId(assignedBranch);
-       }
-       if (selectedPoolBranchId !== assignedBranch) {
-         setSelectedPoolBranchId(assignedBranch);
-       }
-       if (transferSource !== assignedBranch) {
-         setTransferSource(assignedBranch);
-       }
-     }
+     // Non-admin branch view lock removed to allow viewing consolidated catalog stock
    }
  }, [currentUser, selectedViewBranchId, selectedPoolBranchId, transferSource]);
 
@@ -2936,22 +2924,16 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  {/* Branch view select / consolidated */}
  <div className="flex items-center gap-1.5 bg-m3-surface-lowest border border-emerald-500/30 px-3 py-1.5 rounded-xl shadow-sm">
  <span className="text-[9px] uppercase font-black tracking-widest text-emerald-600 font-mono">Branch:</span>
- {isAdminUser ? (
  <select
- value={selectedViewBranchId}
- onChange={e => setSelectedViewBranchId(e.target.value)}
- className="bg-transparent text-xs text-emerald-500 focus:outline-none cursor-pointer transition-colors font-extrabold outline-none"
- >
- <option value="consolidated">HQ Consolidated (HQ Master)</option>
- {branches.filter(b => !b.isDeleted).map((b) => (
- <option key={b.id} value={b.id}>{b.name.replace('Emman Tile Center ', 'Branch: ')}</option>
- ))}
- </select>
- ) : (
- <span className="text-xs text-emerald-500 font-extrabold">
- {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
- </span>
- )}
+  value={selectedViewBranchId}
+  onChange={e => setSelectedViewBranchId(e.target.value)}
+  className="bg-transparent text-xs text-emerald-500 focus:outline-none cursor-pointer transition-colors font-extrabold outline-none"
+  >
+  <option value="consolidated">HQ Consolidated (HQ Master)</option>
+  {branches.filter(b => !b.isDeleted).map((b) => (
+  <option key={b.id} value={b.id}>{b.name.replace("Emman Tile Center ", "Branch: ")}</option>
+  ))}
+  </select>
  </div>
 
  {/* Category select */}
