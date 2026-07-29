@@ -26,6 +26,9 @@ export default defineConfig(() => {
         ]
       },
     },
+    optimizeDeps: {
+      include: ['xlsx']
+    },
     build: {
       chunkSizeWarningLimit: 3000
     }

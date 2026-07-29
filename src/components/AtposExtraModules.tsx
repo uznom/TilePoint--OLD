@@ -705,7 +705,7 @@ export default function AtposExtraModules({
  value={newMemberPhone}
  onChange={(e) => setNewMemberPhone(e.target.value)}
  type="tel"
- placeholder="0917-000-0000"
+ placeholder="Phone number"
  className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary"
  />
  </div>
@@ -954,7 +954,7 @@ export default function AtposExtraModules({
  required
  value={paymentAmount}
  onChange={(e) => setPaymentAmount(e.target.value)}
- placeholder="e.g. 5000"
+ placeholder="Amount"
  className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none font-mono focus:border-m3-primary"
  max={selectedMember.outstandingBalance}
  />
@@ -1526,7 +1526,7 @@ export default function AtposExtraModules({
  value={customCategory}
  onChange={(e) => setCustomCategory(e.target.value)}
  type="text"
- placeholder="e.g. Courier Logistics, Security services"
+ placeholder="Custom classification"
  className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary"
  />
  </div>
@@ -1964,7 +1964,7 @@ export default function AtposExtraModules({
  value={retSaleId}
  onChange={(e) => setRetSaleId(e.target.value)}
  type="text"
- placeholder="e.g. S-7011"
+ placeholder="Receipt ID"
  className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 font-bold outline-none focus:border-m3-primary"
  />
  </div>
@@ -2074,7 +2074,7 @@ export default function AtposExtraModules({
  </div>
  </div>
 
- <div className="bg-m3-surface-low border border-m3-outline-variant/15 rounded-2xl overflow-hidden shadow-sm snap-start scroll-mt-20">
+ <div className="bg-m3-surface-low border border-m3-outline-variant/15 rounded-2xl overflow-hidden shadow-sm">
  <div className="overflow-auto scrollbar-thin scrollbar-thumb-m3-outline-variant h-[58vh] md:h-[64vh] lg:h-[68vh] min-h-[380px]">
  <table className="w-full text-left font-sans text-xs">
  <thead className="bg-m3-surface-high/50 font-bold border-b border-m3-outline-variant/15">
@@ -2314,7 +2314,7 @@ export default function AtposExtraModules({
  poNumber: string;
  poId: string;
  status: string;
- type: "Simulated PO" | "Purchase Order" | "Recurring Bill";
+ type: "Projected PO" | "Purchase Order" | "Recurring Bill";
  frequency?: string;
  }
 
@@ -2338,7 +2338,7 @@ export default function AtposExtraModules({
  poNumber: `PO-${calendarYear}${monthStr}${dayStr}-0${idx + 1}`,
  poId: `SIM-${idx + 1}-${calendarYear}-${monthStr}`,
  status: "Approved",
- type: "Simulated PO",
+ type: "Projected PO",
  });
  });
 
@@ -2745,7 +2745,7 @@ export default function AtposExtraModules({
  type="text"
  value={billTitle}
  onChange={(e) => setBillTitle(e.target.value)}
- placeholder="e.g. Warehouse Lightings Meralco"
+ placeholder="Account Title"
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded-lg p-2.5 outline-none font-semibold focus:border-m3-primary text-m3-on-surface"
  />
  </div>
@@ -2906,8 +2906,8 @@ export default function AtposExtraModules({
  const itemTypeLabel =
  item.type === "Recurring Bill"
  ? `${item.frequency || "Monthly"} Bill`
- : item.type === "Simulated PO"
- ? "Simulated PO"
+ : (item.type as string) === "Projected PO" || (item.type as string) === "Simulated PO"
+ ? "Projected PO"
  : "Purchase Order";
 
  return (
@@ -3377,7 +3377,7 @@ export default function AtposExtraModules({
  type="text"
  value={partialChequeNumber}
  onChange={(e) => setPartialChequeNumber(e.target.value)}
- placeholder="e.g. CHQ-990812-A"
+ placeholder="Cheque Number"
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded p-1.5 text-[10px] outline-none text-m3-on-surface font-mono focus:border-m3-primary"
  />
  </div>
@@ -3389,7 +3389,7 @@ export default function AtposExtraModules({
  type="text"
  value={partialPaymentNotes}
  onChange={(e) => setPartialPaymentNotes(e.target.value)}
- placeholder="e.g. Partial remittance"
+ placeholder="Remarks / Notes"
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded p-1.5 text-[10px] outline-none text-m3-on-surface focus:border-m3-primary"
  />
  </div>
@@ -3625,12 +3625,7 @@ export default function AtposExtraModules({
           Philippine BIR Tax compliance books. Select a book to audit X/Z readings, VAT, PWD, Senior, and Solo Parent discounts.
         </p>
       </div>
-      <div className="flex items-center gap-1.5">
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-mono font-bold">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping mr-1" />
-          BIR Compliant v2.0
-        </span>
-      </div>
+
     </div>
     
     <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-m3-outline-variant/20 -mx-1 px-1">
@@ -4364,7 +4359,7 @@ export default function AtposExtraModules({
                   required
                   value={adjustPointsAmount}
                   onChange={(e) => setAdjustPointsAmount(e.target.value)}
-                  placeholder="e.g. 50 or -20"
+                  placeholder="Points amount"
                   className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none font-mono font-bold text-sm focus:border-amber-500 text-m3-on-surface"
                 />
 
@@ -4424,7 +4419,7 @@ export default function AtposExtraModules({
                   type="text"
                   value={adjustPointsReason}
                   onChange={(e) => setAdjustPointsReason(e.target.value)}
-                  placeholder="e.g. Birthday bonus / Promotion reward"
+                  placeholder="Reason / Note"
                   className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none text-xs focus:border-amber-500 text-m3-on-surface"
                 />
               </div>

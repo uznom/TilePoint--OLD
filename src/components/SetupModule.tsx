@@ -475,7 +475,7 @@ export const SetupModule: React.FC = () => {
  type="text"
  value={fullName}
  onChange={(e) => setFullName(e.target.value)}
- placeholder="e.g. Erica Manaban"
+ placeholder="Full name"
  className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-sans"
  />
  </div>
@@ -489,7 +489,7 @@ export const SetupModule: React.FC = () => {
  type="text"
  value={username}
  onChange={(e) => setUsername(e.target.value)}
- placeholder="e.g. erica_admin"
+ placeholder="Username / ID"
  className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-mono"
  />
  </div>
@@ -501,7 +501,7 @@ export const SetupModule: React.FC = () => {
  type="email"
  value={email}
  onChange={(e) => setEmail(e.target.value)}
- placeholder="e.g. mail@example.com"
+ placeholder="Email address"
  className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-sans"
  />
  </div>
@@ -577,7 +577,7 @@ export const SetupModule: React.FC = () => {
  type="text"
  value={branchId}
  onChange={(e) => setBranchId(e.target.value)}
- placeholder="e.g. B1, ETC_DIPOLOG, ETC_MAIN"
+ placeholder="Branch ID (e.g. B1)"
  className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-mono"
  />
  <p className="text-[9px] text-zinc-500 dark:text-zinc-400 pl-0.5">
@@ -593,7 +593,7 @@ export const SetupModule: React.FC = () => {
  type="text"
  value={branchName}
  onChange={(e) => setBranchName(e.target.value)}
- placeholder="e.g. Emman Tile Center Main HQ"
+ placeholder="Branch Name"
  className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors"
  />
  </div>
@@ -606,7 +606,7 @@ export const SetupModule: React.FC = () => {
  type="text"
  value={branchAddress}
  onChange={(e) => setBranchAddress(e.target.value)}
- placeholder="Street, City, Province, Postal Code"
+ placeholder="Street, City, Province"
  className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors"
  />
  </div>
@@ -619,7 +619,7 @@ export const SetupModule: React.FC = () => {
  type="text"
  value={branchPhone}
  onChange={(e) => setBranchPhone(e.target.value)}
- placeholder="Mobile or Landline coordinate"
+ placeholder="Phone number"
  className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-mono"
  />
  </div>

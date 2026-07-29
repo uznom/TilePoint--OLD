@@ -716,15 +716,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  checkoutSale(
  selectedItems,
  randomCustomer,
- 'Simulated via Admin Live Monitoring Oversight Console',
+ 'Admin Live Monitoring Oversight Console',
  0,
  randomPayment as any,
  randomPayment === 'Cash' ? Math.ceil(grandTotal / 500) * 500 : grandTotal
  );
- showToastMsg(`Simulated Sale Completed! Customer: ${randomCustomer} • Total: ₱${grandTotal.toLocaleString()}`, 'success');
+ showToastMsg(`Sale Completed! Customer: ${randomCustomer} • Total: ₱${grandTotal.toLocaleString()}`, 'success');
  } catch (err) {
- console.error("Simulation failure", err);
- showToastMsg('Simulation dispatch failed', 'error');
+ console.error("Dispatch failure", err);
+ showToastMsg('Dispatch failed', 'error');
  }
  }}
  className="px-3.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded-xl text-xs font-black uppercase tracking-wider border border-emerald-500/30 active:scale-95 transition-all flex items-center gap-1 cursor-pointer shadow-sm"
@@ -1094,7 +1094,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  if (list.length === 0) {
  return (
  <div className="text-center py-10 text-[10px] text-zinc-500 font-mono">
- No cashier checkouts completed today. Simulated transactions will populate this board instantly.
+ No cashier checkouts completed today. Live transactions will populate this board instantly.
  </div>
  );
  }
@@ -2538,7 +2538,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  
  <div className="grid grid-cols-3 gap-3 mt-2 text-center font-mono">
  <div className="p-2.5 rounded-xl bg-zinc-900 border border-m3-outline-variant/15">
- <span className="text-[9px] text-zinc-400 block uppercase">Simulated Status:</span>
+ <span className="text-[9px] text-zinc-400 block uppercase">Record Type:</span>
  <span className="text-[11px] font-black text-white mt-1 block">
  {monthlyChartData[selectedForecastMonth].isPredicted ? "ESTIMATION" : "HISTORIC"}
  </span>
@@ -3246,54 +3246,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <p className="text-[10.5px] text-zinc-400 mt-4 pl-1 font-mono italic">
  *Automated inventory algorithm monitors slow stock sales profiles over 90 days to release dynamic pull out proposals.
  </p>
- </div>
-
- {/* Global Security Audit Stream */}
- <div className="m3-card shadow-sm animate-fade-in">
- <div className="flex items-center justify-between mb-4">
- <div>
- <h3 className="text-base font-extrabold text-m3-primary flex items-center gap-2">
- <ShieldCheck className="h-5 w-5 text-m3-primary" /> Global Enterprise Security Audit Stream
- </h3>
- <p className="text-xs text-m3-on-surface-variant">Live audit ledger tracking voided sales, manager code approvals and system activities</p>
- </div>
- </div>
-
- <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
- {auditLogs.slice(0, 12).map((log, idx) => {
- const actionText = log.action || log.actionCode || '';
- const isDanger = actionText.includes('VOID') || actionText.includes('DELETE') || actionText.includes('REJECT');
- const isSuccess = actionText.includes('APPROVE') || actionText.includes('RECEIVE') || actionText.includes('SUCCESS');
- const isInfo = actionText.includes('LOGIN') || actionText.includes('CREATE') || actionText.includes('UPDATE');
- 
- return (
- <div key={idx} className="flex justify-between items-start text-xs border-b border-m3-outline-variant/10 pb-2.5 last:border-0 last:pb-0 hover:bg-m3-surface-low rounded p-1 transition-colors">
- <div className="space-y-1 pr-4">
- <span className={`text-[9.5px] uppercase tracking-wider font-bold inline-block px-2.5 py-0.5 rounded font-mono border ${
- isDanger 
- ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' 
- : isSuccess 
- ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
- : 'bg-m3-primary/10 text-m3-primary border-m3-primary/20'
- }`}>
- {log.action || log.actionCode || 'SYSTEM'}
- </span>
- <span className="text-m3-on-surface font-medium block leading-snug">{log.description}</span>
- <span className="text-[10px] text-zinc-400 block font-mono pl-1">
- <span className="hidden sm:inline">Target Record: {log.tableAffected} ({log.recordId || 'Global'}) • </span>Operator: @{log.username}
- </span>
- </div>
- <div className="text-right text-[10.5px] text-zinc-400 font-mono shrink-0 ml-4">
- {new Date(log.timestamp).toLocaleTimeString()}
- </div>
- </div>
- );
- })}
-
- {auditLogs.length === 0 && (
- <div className="text-center py-6 text-xs text-m3-on-surface-variant">No system operations tracked yet.</div>
- )}
- </div>
  </div>
 
  </div>

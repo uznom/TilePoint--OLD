@@ -773,7 +773,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  type="text"
  value={inlineTin}
  onChange={e => setInlineTin(formatTin(e.target.value))}
- placeholder="e.g. 123-456-789-000"
+ placeholder="000-000-000-000"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono"
  />
  </div>
@@ -788,7 +788,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  type="text"
  value={inlineFacebook}
  onChange={e => setInlineFacebook(e.target.value)}
- placeholder="e.g. facebook.com/emmantilecenter"
+ placeholder="Facebook handle"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans"
  />
  </div>
@@ -801,7 +801,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  type="text"
  value={inlineThankYou}
  onChange={e => setInlineThankYou(e.target.value)}
- placeholder="e.g. Thank you, come again!"
+ placeholder="Thank you message"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans"
  />
  </div>
@@ -814,7 +814,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  <textarea
  value={inlinePromoText}
  onChange={e => setInlinePromoText(e.target.value)}
- placeholder="e.g. Bring this receipt on your next visit to get 5% off select porcelain tile orders!"
+ placeholder="Promotional message"
  rows={2}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans resize-none"
  />
@@ -1340,13 +1340,13 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  required
  value={customBranchId}
  onChange={e => setCustomBranchId(e.target.value)}
- placeholder="e.g. ETC_DIPOLOG MAIN, CHT_SINDANGAN"
+ placeholder="Branch ID (e.g. B1)"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono"
  />
  <p className="text-[9px] text-m3-on-surface-variant italic pl-1">
  {isEditMode 
  ? "Changing this ID will cascade update all linked employees, stock levels, shifts, sales, and transaction records."
- : "Leave empty to auto-generate or customize (e.g., ETC_DIPOLOG MAIN)"
+ : "Leave empty to auto-generate or customize"
  }
  </p>
  </div>
@@ -1358,7 +1358,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  required
  value={name}
  onChange={e => setName(e.target.value)}
- placeholder="TilePoint Silay branch"
+ placeholder="Branch Name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
  />
  </div>
@@ -1370,7 +1370,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  required
  value={address}
  onChange={e => setAddress(e.target.value)}
- placeholder="Rizal St, Silay, Negros Occidental"
+ placeholder="Street, City, Province"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
  />
  </div>
@@ -1382,7 +1382,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  required
  value={phone}
  onChange={e => setPhone(e.target.value)}
- placeholder="0917-123-4567"
+ placeholder="Phone number"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
  />
  </div>
@@ -1393,7 +1393,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  type="text"
  value={tin}
  onChange={e => setTin(formatTin(e.target.value))}
- placeholder="e.g. 123-456-789-000"
+ placeholder="000-000-000-000"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
  />
  </div>

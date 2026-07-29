@@ -90,60 +90,7 @@ const HARD_LOCKED_KEYS = [
 if (typeof window !== "undefined" && window.localStorage && !(window.localStorage.setItem as any).__isInterceptor) {
  const originalSetItem = window.localStorage.setItem;
  const newSetItem = function (this: Storage, key: string, value: string) {
- // Role-based data isolation protection
- let isEmployee = false;
- try {
- const userStr = window.localStorage.getItem("tp_current_user");
- if (userStr) {
- const user = JSON.parse(userStr);
- if (user && (user.role === "Staff" || user.role === "Cashier")) {
- isEmployee = true;
- }
- }
- } catch (_) {}
-
- const centralDbKeys = [
- "tp_sales",
- "tp_products",
- "tp_branch_stock",
- "tp_audit_logs",
- "tp_users",
- "tp_branches",
- "tp_suppliers",
- "tp_brands",
- "tp_purchase_orders",
- "tp_po_items",
- "tp_transmittals",
- "tp_shifts",
- "tp_sales",
- "tp_sale_items",
- "tp_movements",
- "tp_stock_transfers",
- "tp_ledger_entries",
- "tp_branch_sales_reports",
- "tp_deliveries",
- "tp_damage_logs",
- "atpos_v2_custom_bills",
- "atpos_v2_members_list",
- "atpos_v2_expenses",
- "atpos_v2_returns",
- "atpos_v2_calendar_notes",
- "atpos_v2_calendar_day_memos",
- "tp_db_snapshots"
- ];
-
- const allowedKeys = [
- "tp_current_user",
- "tp_is_logged_in",
- "tp_session_token",
- "tp_active_session_id",
- "tp_active_sessions"
- ];
-
- if (isEmployee && centralDbKeys.includes(key) && !allowedKeys.includes(key)) {
- console.warn(`[System Guard] Role isolation block: Bypassed disk storage write for central DB key "${key}" under employee role.`);
- return;
- }
+ // All roles are allowed to write to storage with QuotaExceeded self-healing protection
 
  try {
  originalSetItem.call(window.localStorage, key, value);
@@ -1252,45 +1199,15 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  username: string,
  password: string,
  ): Promise<{ success: boolean; error?: string; sqliBlocked?: boolean }> => {
- // Check if the credentials are 'admin' / 'admin123' to initiate simulation mode trigger
- if (username.trim().toLowerCase() === "admin" && password === "admin123") {
- const proceed = true; // Bypasses window.confirm in iframe environments for seamless login
- if (proceed) {
- setSimulationModeActive(true);
- localStorage.setItem("tp_simulation_mode_active", "true");
- localStorage.setItem("tilepoint_company_name_v1", "tilepoint");
- setIsConfigured(true);
- localStorage.setItem("tp_is_configured", "true");
-
+ // Ensure default admin user exists if users list is empty
+ if (users.length === 0 && username.trim().toLowerCase() === "admin" && password === "admin123") {
  const adminSalt = "admin_salt";
  const adminHash = await createSaltedHash("admin123", adminSalt, 2500);
  const adminToken = formatHashToken(adminSalt, adminHash, 2500);
-
- const managerSalt = "manager_salt";
- const managerHash = await createSaltedHash(
- "tilepoint",
- managerSalt,
- 2500,
- );
- const managerToken = formatHashToken(managerSalt, managerHash, 2500);
-
- const cashierSalt = "cashier_salt";
- const cashierHash = await createSaltedHash(
- "tilepoint",
- cashierSalt,
- 2500,
- );
- const cashierToken = formatHashToken(cashierSalt, cashierHash, 2500);
-
- const staffSalt = "staff_salt";
- const staffHash = await createSaltedHash("tilepoint", staffSalt, 2500);
- const staffToken = formatHashToken(staffSalt, staffHash, 2500);
-
- const simUsersList: User[] = [
- {
+ const defaultAdmin: User = {
  id: "sim_admin",
- avatarInitials: "AD",
- fullName: "Simulated Admin",
+ avatarInitials: "EA",
+ fullName: "Erica Manaban",
  username: "admin",
  email: "admin@tilepoint.com",
  role: UserRole.ADMIN,
@@ -1300,142 +1217,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  passwordHash: adminToken,
  createdAt: new Date().toISOString(),
  updatedAt: new Date().toISOString(),
- },
- {
- id: "sim_manager",
- avatarInitials: "MN",
- fullName: "Simulated Manager",
- username: "manager",
- email: "manager@tilepoint.com",
- role: UserRole.MANAGER,
- branchAssignmentId: "B1",
- status: "Active",
- managerPin: "1111",
- passwordHash: managerToken,
- createdAt: new Date().toISOString(),
- updatedAt: new Date().toISOString(),
- },
- {
- id: "sim_cashier",
- avatarInitials: "CS",
- fullName: "Simulated Cashier",
- username: "cashier",
- email: "cashier@tilepoint.com",
- role: UserRole.CASHIER,
- branchAssignmentId: "B1",
- status: "Active",
- passwordHash: cashierToken,
- createdAt: new Date().toISOString(),
- updatedAt: new Date().toISOString(),
- },
- {
- id: "sim_staff",
- avatarInitials: "ST",
- fullName: "Simulated Staff",
- username: "staff",
- email: "staff@tilepoint.com",
- role: UserRole.STAFF,
- branchAssignmentId: "B1",
- status: "Active",
- passwordHash: staffToken,
- createdAt: new Date().toISOString(),
- updatedAt: new Date().toISOString(),
- },
- ];
-
- // Filter out existing simulated usernames
- const cleanUsers = users.filter(
- (u) =>
- !["admin", "manager", "cashier", "staff"].includes(
- u.username.toLowerCase(),
- ),
- );
- const nextUsers = [...cleanUsers, ...simUsersList];
- setUsers(nextUsers);
- localStorage.setItem("tp_users", JSON.stringify(nextUsers));
-
- // Create main branch if not exists
- const mainBranchExists = branches.some((b) => b.id === "B1");
- if (!mainBranchExists) {
- const defaultBranch: Branch = {
- id: "B1",
- name: "tilepoint",
- manager: "Simulated Admin",
- address: "Simulation Headquarters",
- phone: "0999-999-9999",
- monthlySales: 0,
- staffCount: 4,
- activeCashiers: 1,
- createdAt: new Date().toISOString(),
- updatedAt: new Date().toISOString(),
- isDeleted: false,
  };
- const nextBranches = [...branches, defaultBranch];
- setBranches(nextBranches);
- localStorage.setItem("tp_branches", JSON.stringify(nextBranches));
- } else {
- const nextBranches = branches.map((b) =>
- b.id === "B1" ? { ...b, name: "tilepoint" } : b,
- );
- setBranches(nextBranches);
- localStorage.setItem("tp_branches", JSON.stringify(nextBranches));
- }
-
- setFailedAttempts(0);
- setLockoutUntil(0);
- setRateLimitTimeLeft(0);
- setCurrentUser(simUsersList[0]);
- setIsLoggedIn(true);
- sessionStorage.setItem("tp_is_logged_in", "true");
- sessionStorage.setItem(
- "tp_current_user",
- JSON.stringify(simUsersList[0]),
- );
- localStorage.setItem("tp_is_logged_in", "true");
- localStorage.setItem(
- "tp_current_user",
- JSON.stringify(simUsersList[0]),
- );
-
- // Register concurrent-safe unique session state
- const newSessionId =
- "SESS_" + Math.random().toString(36).substring(2, 11).toUpperCase();
- setActiveSessionId(newSessionId);
- localStorage.setItem("tp_active_session_id", newSessionId);
- sessionStorage.setItem("tp_active_session_id", newSessionId);
-
- const nowStr = new Date().toISOString();
- const cleanSessions = activeSessions.filter(
- (s) => s.userId !== simUsersList[0].id,
- );
- const updatedSessions = [
- ...cleanSessions,
- {
- id: newSessionId,
- userId: simUsersList[0].id,
- username: simUsersList[0].username,
- fullName: simUsersList[0].fullName,
- role: simUsersList[0].role,
- branchId: simUsersList[0].branchAssignmentId || "B1",
- branchName: localStorage.getItem("tilepoint_company_name_v1") || "ETC_DIPOLOG MAIN",
- lastActive: nowStr,
- userAgent: navigator.userAgent,
- },
- ];
- setActiveSessions(updatedSessions);
- saveToStorageWithDebounce("tp_active_sessions", updatedSessions, true);
-
- addAuditLog(
- "USER_LOGIN",
- `Simulation Mode Activated: Store set to 'tilepoint'. Seeding completed. Session ID: ${newSessionId}`,
- "Users",
- "sim_admin",
- );
-
- return { success: true };
- } else {
- return { success: false, error: "Simulation mode request rejected." };
- }
+ setUsers([defaultAdmin]);
+ localStorage.setItem("tp_users", JSON.stringify([defaultAdmin]));
  }
 
  // 1. Check for SQL Injection (SQLi)
@@ -2681,12 +2465,35 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }
  };
 
+ const mergeCollections = (a: any[], b: any[]): any[] => {
+ if (!Array.isArray(a) || a.length === 0) return Array.isArray(b) ? b : [];
+ if (!Array.isArray(b) || b.length === 0) return a;
+ const map = new Map<string, any>();
+ a.forEach(item => {
+ if (item && (item.id || item.username)) {
+ map.set(String(item.id || item.username).toLowerCase(), item);
+ }
+ });
+ b.forEach(item => {
+ if (item && (item.id || item.username)) {
+ const key = String(item.id || item.username).toLowerCase();
+ const existing = map.get(key);
+ if (existing) {
+ map.set(key, { ...existing, ...item });
+ } else {
+ map.set(key, item);
+ }
+ }
+ });
+ return Array.from(map.values());
+ };
+
  // Now safely update all React states dynamically only when content changes!
- if (db["tp_users"]) updateIfChanged(users, db["tp_users"], setUsers);
- if (db["tp_branches"]) updateIfChanged(branches, db["tp_branches"], setBranches);
- if (db["tp_suppliers"]) updateIfChanged(suppliers, db["tp_suppliers"], setSuppliers);
- if (db["tp_brands"]) updateIfChanged(brands, db["tp_brands"], setBrands);
- if (db["tp_products"]) updateIfChanged(products, db["tp_products"], setProducts);
+ if (db["tp_users"]) updateIfChanged(users, mergeCollections(users, db["tp_users"]), setUsers);
+ if (db["tp_branches"]) updateIfChanged(branches, mergeCollections(branches, db["tp_branches"]), setBranches);
+ if (db["tp_suppliers"]) updateIfChanged(suppliers, mergeCollections(suppliers, db["tp_suppliers"]), setSuppliers);
+ if (db["tp_brands"]) updateIfChanged(brands, mergeCollections(brands, db["tp_brands"]), setBrands);
+ if (db["tp_products"]) updateIfChanged(products, mergeCollections(products, db["tp_products"]), setProducts);
  if (db["tp_purchase_orders"])
  updateIfChanged(purchaseOrders, db["tp_purchase_orders"], setPurchaseOrders);
  if (db["tp_po_items"]) updateIfChanged(poItems, db["tp_po_items"], setPoItems);
@@ -3378,6 +3185,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  const transactionalKeys = [
  "tp_products",
+ "tp_users",
+ "tp_branches",
+ "tp_suppliers",
+ "tp_brands",
  "tp_branch_stock",
  "tp_sales",
  "tp_sale_items",
@@ -3385,7 +3196,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  "tp_audit_logs",
  "tp_ledger_entries",
  "atpos_v2_expenses",
-  "tp_shifts"
+ "tp_shifts"
  ];
 
  let deltas: any[] = [];
@@ -5486,8 +5297,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const simUsersList: User[] = [
  {
  id: "sim_admin",
- avatarInitials: "AD",
- fullName: "Simulated Admin",
+ avatarInitials: "EA",
+ fullName: "Erica Manaban",
  username: "admin",
  email: "admin@tilepoint.com",
  role: UserRole.ADMIN,
@@ -5501,8 +5312,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  },
  {
  id: "sim_manager",
- avatarInitials: "MN",
- fullName: "Simulated Manager",
+ avatarInitials: "JD",
+ fullName: "Juan Dela Cruz",
  username: "manager",
  email: "manager@tilepoint.com",
  role: UserRole.MANAGER,
@@ -5517,7 +5328,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  {
  id: "sim_cashier",
  avatarInitials: "CS",
- fullName: "Simulated Cashier",
+ fullName: "Carla Santos",
  username: "cashier",
  email: "cashier@tilepoint.com",
  role: UserRole.CASHIER,
@@ -5530,8 +5341,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  },
  {
  id: "sim_staff",
- avatarInitials: "ST",
- fullName: "Simulated Staff",
+ avatarInitials: "TG",
+ fullName: "Tomas Gomez",
  username: "staff",
  email: "staff@tilepoint.com",
  role: UserRole.STAFF,
@@ -5548,8 +5359,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  {
  id: "B1",
  name: "tilepoint",
- manager: "Simulated Admin",
- address: "Simulation Headquarters",
+ manager: "Erica Manaban",
+ address: "Main Headquarters, Dipolog City",
  phone: "0999-999-9999",
  monthlySales: 24150,
  staffCount: 4,
@@ -5871,7 +5682,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  shiftId: "SHIFT-001",
  branchId: "B1",
  cashierId: "sim_cashier",
- cashierName: "Simulated Cashier",
+ cashierName: "Carla Santos",
  customerName: "Juan Dela Cruz",
  subtotal: 16741.07,
  vat: 2008.93,
@@ -5889,7 +5700,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  shiftId: "SHIFT-001",
  branchId: "B1",
  cashierId: "sim_cashier",
- cashierName: "Simulated Cashier",
+ cashierName: "Carla Santos",
  customerName: "Maria Santos",
  subtotal: 4821.43,
  vat: 578.57,
@@ -6007,7 +5818,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  supplierId: "S1",
  branchId: "B1",
  status: "Completed",
- requestedBy: "Simulated Manager",
+ requestedBy: "Juan Dela Cruz",
  date: tMinus(4),
  notes: "Intake stock order for Carrara launch",
  createdAt: tMinus(4),
@@ -6104,7 +5915,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  {
  id: "SHIFT-001",
  cashierId: "sim_cashier",
- cashierName: "Simulated Cashier",
+ cashierName: "Carla Santos",
  branchId: "B1",
  status: "CLOSED",
  startCash: 5000,

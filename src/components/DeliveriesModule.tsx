@@ -1038,7 +1038,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  <input
  type="text"
  required
- placeholder="e.g. ABC 1234 / ISUZU-6W"
+ placeholder="Truck plate / Model"
  value={assignTruck}
  onChange={(e) => setAssignTruck(e.target.value)}
  className="w-full bg-m3-surface border border-m3-outline-variant/50 px-2.5 py-1.5 rounded-lg text-xs leading-none text-m3-on-surface focus:outline-none focus:border-m3-primary font-mono uppercase"
@@ -1050,7 +1050,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  <input
  type="text"
  required
- placeholder="e.g. Juan De La Cruz"
+ placeholder="Driver name"
  value={assignDriver}
  onChange={(e) => setAssignDriver(e.target.value)}
  className="w-full bg-m3-surface border border-m3-outline-variant/50 px-2.5 py-1.5 rounded-lg text-xs leading-none text-m3-on-surface focus:outline-none focus:border-m3-primary font-bold"
@@ -1061,7 +1061,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  <label className="text-[9.5px] font-black text-zinc-500 uppercase tracking-wider block">Helper Assistant (Optional)</label>
  <input
  type="text"
- placeholder="e.g. Santi Santos / Cargo boy"
+ placeholder="Helper name"
  value={assignHelper}
  onChange={(e) => setAssignHelper(e.target.value)}
  className="w-full bg-m3-surface border border-m3-outline-variant/50 px-2.5 py-1.5 rounded-lg text-xs leading-none text-m3-on-surface focus:outline-none focus:border-m3-primary"
@@ -1130,7 +1130,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  <label className="text-[9.5px] font-black text-zinc-500 uppercase tracking-wider block">Receiver Person Name</label>
  <input
  type="text"
- placeholder="Customer Name or authorize representative"
+ placeholder="Receiver name"
  value={receiverName}
  onChange={(e) => setReceiverName(e.target.value)}
  className="w-full bg-m3-surface border border-m3-outline-variant/50 px-2.5 py-1.5 rounded-lg text-xs leading-none text-m3-on-surface focus:outline-none focus:border-m3-primary font-bold"
@@ -1141,7 +1141,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  <label className="text-[9.5px] font-black text-zinc-500 uppercase tracking-wider block">Signature Log Hash / Initial</label>
  <input
  type="text"
- placeholder="e.g. ACK-SIGN-01"
+ placeholder="Signature code"
  value={signatureText}
  onChange={(e) => setSignatureText(e.target.value)}
  className="w-full bg-m3-surface border border-m3-outline-variant/50 px-2.5 py-1.5 rounded-lg text-xs leading-none text-m3-on-surface focus:outline-none focus:border-m3-primary font-mono italic"
@@ -1199,7 +1199,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  <textarea
  rows={3}
  required
- placeholder="e.g. Customer out of town, red gate locked. Called phone multiple times no receipt response."
+ placeholder="Reason for delivery failure..."
  value={failReason}
  onChange={(e) => setFailReason(e.target.value)}
  className="w-full bg-m3-surface border border-rose-500/20 px-2.5 py-1.5 rounded-lg text-xs text-m3-on-surface focus:outline-none focus:border-rose-500 font-semibold"
@@ -1372,7 +1372,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
                 type="text"
                 value={posDelivContact}
                 onChange={(e) => setPosDelivContact(e.target.value)}
-                placeholder="0917-000-0000"
+                placeholder="Phone number"
                 className="w-full bg-m3-surface-lowest text-xs font-mono font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
               />
             </div>
@@ -1387,7 +1387,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
                 type="text"
                 value={posDelivHouseNo}
                 onChange={(e) => setPosDelivHouseNo(e.target.value)}
-                placeholder="Unit 102, BLK 4"
+                placeholder="House / Unit / Bldg No"
                 className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
               />
             </div>
@@ -1399,7 +1399,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
                 type="text"
                 value={posDelivStreet}
                 onChange={(e) => setPosDelivStreet(e.target.value)}
-                placeholder="Rizal Avenue Ext"
+                placeholder="Street / Avenue"
                 className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
               />
             </div>
@@ -1415,7 +1415,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
                 value={posDelivBarangay}
                 onChange={(e) => setPosDelivBarangay(e.target.value)}
                 required
-                placeholder="Sta. Isabel / Turno / Central"
+                placeholder="Barangay"
                 className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
               />
             </div>
@@ -1427,7 +1427,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
                 type="text"
                 value={posDelivCity}
                 onChange={(e) => setPosDelivCity(e.target.value)}
-                placeholder="Dipolog City"
+                placeholder="City / Municipality"
                 className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
               />
             </div>
@@ -1469,7 +1469,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
               type="text"
               value={posDelivLandmark}
               onChange={(e) => setPosDelivLandmark(e.target.value)}
-              placeholder="Near Barangay Hall, Yellow gate"
+              placeholder="Landmark or special instructions"
               className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
             />
           </div>
