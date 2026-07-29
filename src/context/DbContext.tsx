@@ -1200,7 +1200,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  password: string,
  ): Promise<{ success: boolean; error?: string; sqliBlocked?: boolean }> => {
  // Ensure default admin user exists if users list is empty
- if (users.length === 0 && username.trim().toLowerCase() === "admin" && password === "admin123") {
+    if (import.meta.env.DEV && users.length === 0 && username.trim().toLowerCase() === "admin" && password === "admin123") {
  const adminSalt = "admin_salt";
  const adminHash = await createSaltedHash("admin123", adminSalt, 2500);
  const adminToken = formatHashToken(adminSalt, adminHash, 2500);
