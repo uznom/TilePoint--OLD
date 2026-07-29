@@ -79,19 +79,31 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  }, 4000);
  };
 
- const isUserAdmin = currentUser.role === UserRole.ADMIN;
- const userBranchId = currentUser.branchAssignmentId || "B1";
+  const isUserAdmin =
+    currentUser?.role === UserRole.ADMIN ||
+    (currentUser?.role as any) === "Admin";
 
- // Filter users list based on role
- const allowedUsers = users.filter(u => isUserAdmin || u.branchAssignmentId === userBranchId);
+  const isUserAdminOrManager =
+    isUserAdmin ||
+    currentUser?.role === UserRole.MANAGER ||
+    (currentUser?.role as any) === "Manager";
 
- // Filter activeSessions based on role
- const allowedActiveSessions = activeSessions.filter(session => {
-  if (isUserAdmin) return true;
-  const sessionUser = users.find(u => u.username === session.username);
-  return sessionUser && sessionUser.branchAssignmentId === userBranchId;
- });
+  const userBranchId = currentUser?.branchAssignmentId || "B1";
 
+  // Filter users list based on role
+  const allowedUsers = users.filter((u) => {
+    if (isUserAdminOrManager) return true;
+    const userB = u.branchAssignmentId || "B1";
+    const myB = userBranchId || "B1";
+    return userB === myB || (userB === "main" && myB === "B1") || (userB === "B1" && myB === "main");
+  });
+
+  // Filter activeSessions based on role
+  const allowedActiveSessions = activeSessions.filter((session) => {
+    if (isUserAdminOrManager) return true;
+    const sessionUser = users.find((u) => u.username === session.username);
+    return sessionUser && (sessionUser.branchAssignmentId === userBranchId || !sessionUser.branchAssignmentId);
+  });
  const getBranchName = (id: string | null) => {
  if (!id || id === "B1" || id === "main") {
  const stored = localStorage.getItem("tilepoint_company_name_v1");
