@@ -1199,17 +1199,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  username: string,
  password: string,
  ): Promise<{ success: boolean; error?: string; sqliBlocked?: boolean }> => {
- // Check if the credentials are 'admin' / 'admin123' to initiate simulation mode trigger
- if (import.meta.env.DEV && username.trim().toLowerCase() === "admin" && password === "admin123") {
-
- const proceed = true; // Bypasses window.confirm in iframe environments for seamless login
- if (proceed) {
- setSimulationModeActive(true);
- localStorage.setItem("tp_simulation_mode_active", "true");
- localStorage.setItem("tilepoint_company_name_v1", "tilepoint");
- setIsConfigured(true);
- localStorage.setItem("tp_is_configured", "true");
-
+ // Ensure default admin user exists if users list is empty
+ if (users.length === 0 && username.trim().toLowerCase() === "admin" && password === "admin123") {
  const adminSalt = "admin_salt";
  const adminHash = await createSaltedHash("admin123", adminSalt, 2500);
  const adminToken = formatHashToken(adminSalt, adminHash, 2500);
