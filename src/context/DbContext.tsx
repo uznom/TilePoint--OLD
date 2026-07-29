@@ -2495,20 +2495,20 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  if (db["tp_brands"]) updateIfChanged(brands, mergeCollections(brands, db["tp_brands"]), setBrands);
  if (db["tp_products"]) updateIfChanged(products, mergeCollections(products, db["tp_products"]), setProducts);
  if (db["tp_purchase_orders"])
- updateIfChanged(purchaseOrders, db["tp_purchase_orders"], setPurchaseOrders);
- if (db["tp_po_items"]) updateIfChanged(poItems, db["tp_po_items"], setPoItems);
- if (db["tp_transmittals"]) updateIfChanged(transmittals, db["tp_transmittals"], setTransmittals);
- if (db["tp_shifts"]) updateIfChanged(shifts, db["tp_shifts"], setShifts);
- if (db["tp_sales"]) updateIfChanged(sales, db["tp_sales"], setSales);
- if (db["tp_sale_items"]) updateIfChanged(saleItems, db["tp_sale_items"], setSaleItems);
- if (db["tp_movements"]) updateIfChanged(movements, db["tp_movements"], setMovements);
- if (db["tp_audit_logs"]) updateIfChanged(auditLogs, db["tp_audit_logs"], setAuditLogs);
+ updateIfChanged(purchaseOrders, mergeCollections(purchaseOrders, db["tp_purchase_orders"]), setPurchaseOrders);
+ if (db["tp_po_items"]) updateIfChanged(poItems, mergeCollections(poItems, db["tp_po_items"]), setPoItems);
+ if (db["tp_transmittals"]) updateIfChanged(transmittals, mergeCollections(transmittals, db["tp_transmittals"]), setTransmittals);
+ if (db["tp_shifts"]) updateIfChanged(shifts, mergeCollections(shifts, db["tp_shifts"]), setShifts);
+ if (db["tp_sales"]) updateIfChanged(sales, mergeCollections(sales, db["tp_sales"]), setSales);
+ if (db["tp_sale_items"]) updateIfChanged(saleItems, mergeCollections(saleItems, db["tp_sale_items"]), setSaleItems);
+ if (db["tp_movements"]) updateIfChanged(movements, mergeCollections(movements, db["tp_movements"]), setMovements);
+ if (db["tp_audit_logs"]) updateIfChanged(auditLogs, mergeCollections(auditLogs, db["tp_audit_logs"]), setAuditLogs);
  if (db["tp_parked_sales"]) updateIfChanged(parkedSales, db["tp_parked_sales"], setParkedSales);
  if (db["tp_stock_transfers"])
- updateIfChanged(stockTransfers, db["tp_stock_transfers"], setStockTransfers);
- if (db["tp_branch_stock"]) updateIfChanged(branchStock, db["tp_branch_stock"], setBranchStock);
+ updateIfChanged(stockTransfers, mergeCollections(stockTransfers, db["tp_stock_transfers"]), setStockTransfers);
+ if (db["tp_branch_stock"]) updateIfChanged(branchStock, mergeCollections(branchStock, db["tp_branch_stock"]), setBranchStock);
  if (db["tp_ledger_entries"])
- updateIfChanged(ledgerEntries, db["tp_ledger_entries"], setLedgerEntries);
+ updateIfChanged(ledgerEntries, mergeCollections(ledgerEntries, db["tp_ledger_entries"]), setLedgerEntries);
  if (db["tp_branch_sales_reports"])
  updateIfChanged(branchSalesReports, db["tp_branch_sales_reports"], setBranchSalesReports);
  if (db["tp_deliveries"]) updateIfChanged(deliveries, db["tp_deliveries"], setDeliveries);
@@ -3181,7 +3181,6 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }
 
  const previousVolatileCached = volatileCache.current[key];
- volatileCache.current[key] = dataStr;
 
  const transactionalKeys = [
  "tp_products",
@@ -3209,6 +3208,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  console.error("[Delta Sync] Failed to compute deltas:", err);
  }
  }
+
+ volatileCache.current[key] = dataStr;
 
  const writeToServer = async () => {
   const authHeaders = getAuthHeaders();
@@ -3252,7 +3253,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }
  setServerConnected(true);
  processOfflineQueue();
- } else if (!transactionalKeys.includes(key)) {
+ } else {
  const res = await safeApiFetch("/api/db", {
  method: "POST",
  headers: {
@@ -3294,48 +3295,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }
  };
 
- // --- STAFF DEVICE ISOLATION GUARD ---
- const isEmployee = currentUser && (
- (currentUser.role as any) === UserRole.STAFF ||
- (currentUser.role as any) === UserRole.CASHIER ||
- (currentUser.role as any) === "Staff" ||
- (currentUser.role as any) === "Cashier" ||
- (currentUser.role as any) === "staff" ||
- (currentUser.role as any) === "cashier"
- );
-
- if (isEmployee) {
- const essentialSessionKeys = [
- "tp_current_user",
- "tp_is_logged_in",
- "tp_session_token",
- "tp_active_session_id",
- "tp_active_sessions",
- "tp_parked_sales"
- ];
-
- if (!essentialSessionKeys.includes(key)) {
- // Under employee isolation guard: if there are no deltas for a transactional key,
- // or if it's a non-transactional key (which employees cannot modify), do NOT trigger any write to the server.
- const isTransactional = transactionalKeys.includes(key);
- if (!isTransactional || deltas.length === 0) {
- console.log(`[Staff Device Isolation] Intercepted storage saving for key "${key}" under staff session. Bypassing writeToServer as no local changes were detected.`);
- return;
- }
-
- console.log(`[Staff Device Isolation] Intercepted storage saving for key "${key}" under staff session. Running volatile-only central DB synchronization for ${deltas.length} deltas.`);
- // Intercept the write completely. Data will stay in active memory (RAM) but will NEVER touch the local device hard drive.
- writeQueue.current = writeQueue.current
- .then(async () => {
- await writeToServer();
- })
- .catch((err) => {
- console.error(`[Staff Device Isolation] Volatile central queue sync failed for key "${key}":`, err);
- });
- return;
- }
- }
- // --- END OF GUARD ---
+ // --- STAFF DEVICE ISOLATION REMOVED FOR REALTIME SYNC ---
 
  if (bypassDebounce || debounceDelay === 0) {
  queueAtomicWrite(key, dataStr, writeToServer);
@@ -6079,8 +6039,24 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     };
     setUsers((prev) => {
       const next = [...prev, newUser];
+      safeLocalStorageSetItem("tp_users", JSON.stringify(next));
       saveToStorageWithDebounce("tp_users", next, true);
       return next;
+    });
+
+    safeApiFetch("/api/db/delta", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify({
+        id: `delta-add-tp_users-${newUser.id}-${Date.now()}`,
+        type: "APPEND_ROW",
+        payload: { key: "tp_users", row: newUser },
+      }),
+    }).catch((err) => {
+      console.warn("[User Sync] Direct delta push failed:", err);
     });
     addAuditLog(
       "USER_CREATE",
@@ -6092,12 +6068,27 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const updateUser = (id: string, updates: Partial<User>) => {
     setUsers((prev) => {
-      const next = prev.map((u) =>
-        u.id === id
-          ? { ...u, ...updates, updatedAt: new Date().toISOString() }
-          : u,
-      );
+      let updatedUser: User | null = null;
+      const next = prev.map((u) => {
+        if (u.id === id) {
+          updatedUser = { ...u, ...updates, updatedAt: new Date().toISOString() };
+          return updatedUser;
+        }
+        return u;
+      });
+      safeLocalStorageSetItem("tp_users", JSON.stringify(next));
       saveToStorageWithDebounce("tp_users", next, true);
+      if (updatedUser) {
+        safeApiFetch("/api/db/delta", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+          body: JSON.stringify({
+            id: `delta-update-tp_users-${id}-${Date.now()}`,
+            type: "UPDATE_ROW",
+            payload: { key: "tp_users", row: updatedUser },
+          }),
+        }).catch((e) => console.warn("[User Sync] Direct update failed:", e));
+      }
       return next;
     });
     addAuditLog(
@@ -6116,10 +6107,27 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         const hashedVal = await createSaltedHash("tilepoint", salt, 2500);
         const formattedToken = formatHashToken(salt, hashedVal, 2500);
         setUsers((prev) => {
-          const updated = prev.map((u) =>
-            u.id === id ? { ...u, passwordHash: formattedToken } : u,
-          );
+          let updatedUser: User | null = null;
+          const updated = prev.map((u) => {
+            if (u.id === id) {
+              updatedUser = { ...u, passwordHash: formattedToken, updatedAt: new Date().toISOString() };
+              return updatedUser;
+            }
+            return u;
+          });
+          safeLocalStorageSetItem("tp_users", JSON.stringify(updated));
           saveToStorageWithDebounce("tp_users", updated, true);
+          if (updatedUser) {
+            safeApiFetch("/api/db/delta", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+              body: JSON.stringify({
+                id: `delta-reset-tp_users-${id}-${Date.now()}`,
+                type: "UPDATE_ROW",
+                payload: { key: "tp_users", row: updatedUser },
+              }),
+            }).catch((e) => console.warn("[Password Reset Sync] Direct push failed:", e));
+          }
           return updated;
         });
         addAuditLog(

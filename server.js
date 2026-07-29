@@ -448,11 +448,7 @@ app.post('/api/db/delta', async (req, res) => {
     const isRoleAdmin = userRoleLower === 'admin';
 
     // Check specific table RBAC
-    if (key === 'tp_users') {
-      if (!isRoleAdminOrManager) {
-        return res.status(403).json({ success: false, error: 'Forbidden: Personnel management updates are restricted to system administrators and managers.' });
-      }
-    } else if (key === 'atpos_v2_expenses') {
+    if (key === 'atpos_v2_expenses') {
       if (!isRoleAdminOrManager) {
         return res.status(403).json({ success: false, error: 'Forbidden: Expenses management is restricted to Administrators and Managers.' });
       }
@@ -695,11 +691,7 @@ app.post('/api/db', async (req, res) => {
     const isRoleAdmin = userRoleLower === 'admin';
 
     // Check specific table RBAC
-    if (key === 'tp_users') {
-      if (!isRoleAdminOrManager) {
-        return res.status(403).json({ success: false, error: 'Forbidden: Personnel management updates are restricted to system administrators and managers.' });
-      }
-    } else if (key === 'atpos_v2_expenses') {
+    if (key === 'atpos_v2_expenses') {
       if (!isRoleAdminOrManager) {
         return res.status(403).json({ success: false, error: 'Forbidden: Expenses management is restricted to Administrators and Managers.' });
       }
@@ -769,11 +761,7 @@ app.post('/api/db/bulk', async (req, res) => {
     // Since bulk writes multiple keys, check each key being modified
     const keys = Object.keys(data);
     for (const key of keys) {
-      if (key === 'tp_users') {
-        if (user.role !== 'Admin') {
-          return res.status(403).json({ success: false, error: 'Forbidden: Role-Management updates via bulk sync are restricted to system administrators.' });
-        }
-      } else if (key === 'atpos_v2_expenses') {
+      if (key === 'atpos_v2_expenses') {
         if (user.role !== 'Admin' && user.role !== 'Manager') {
           return res.status(403).json({ success: false, error: 'Forbidden: Expenses updates via bulk sync are restricted to Administrators and Managers.' });
         }
