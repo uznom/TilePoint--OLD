@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useDb, DbSnapshot } from '../context/DbContext';
+import { exportMasterDatabaseToXLSX } from '../lib/excelExportHelper';
 import { UserRole } from '../types/db';
 import { ActionButton } from './ActionButton';
 import {
@@ -46,7 +47,8 @@ import {
  CheckCircle,
  Play,
  HardDrive,
- ShieldCheck
+ ShieldCheck,
+ FileSpreadsheet
 } from 'lucide-react';
 import { 
  generateThemeFromSeed, 
@@ -369,6 +371,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  const [importText, setImportText] = useState('');
  const [backupActionStatus, setBackupActionStatus] = useState<string | null>(null);
  const [isExportingFullDb, setIsExportingFullDb] = useState(false);
+ const [isExportingXlsx, setIsExportingXlsx] = useState(false);
  const [isSeedingMasterLogs, setIsSeedingMasterLogs] = useState(false);
  const [isExportingForensic, setIsExportingForensic] = useState(false);
  const [rulesAlert, setRulesAlert] = useState<string | null>(null);
@@ -1493,39 +1496,87 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
 
  <div className="h-px bg-m3-outline-variant/15" />
 
- {/* Developer Profile Card */}
- <div className="m3-card bg-m3-surface-low border border-m3-outline-variant/15 p-5 sm:p-6 rounded-2xl shadow-sm relative overflow-hidden flex flex-col md:flex-row items-start md:items-center gap-5 sm:gap-6">
+ {/* Developer Profiles Grid */}
+ <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+ {/* Developer Profile Card 1: Erica Manaban */}
+ <div className="m3-card bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl shadow-sm relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
+ {/* Left side: CSS aesthetic ring avatar */}
+ <div className="relative h-20 w-20 shrink-0 flex items-center justify-center bg-m3-surface/30 rounded-2xl border border-m3-outline-variant/10 overflow-hidden shadow-inner self-center sm:self-start md:self-center">
+ <div className="absolute -top-6 -left-6 h-20 w-20 rounded-full border border-amber-500/15 bg-amber-500/5" />
+ <div className="absolute -bottom-4 -right-4 h-16 w-16 rounded-full border border-amber-500/10 bg-amber-500/5" />
+ <div className="absolute h-14 w-14 rounded-full border border-amber-500/20 bg-amber-500/5 animate-pulse" />
+ <div className="relative z-10 h-10 w-10 rounded-xl bg-[#0b0f19] border border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.15)] flex items-center justify-center font-mono text-xs text-amber-400 font-black">
+ <span>EM</span>
+ </div>
+ </div>
+
+ {/* Right side: Developer Info */}
+ <div className="flex-1 space-y-2 font-sans w-full">
+ <div>
+ <div className="flex items-center justify-between gap-2">
+ <span className="text-[9px] sm:text-[10px] font-mono font-black uppercase text-zinc-400 tracking-widest block leading-3">
+ Co-Owner &amp; Managing Director
+ </span>
+ <span className="text-[8.5px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase font-black tracking-wider shadow-sm select-none">
+ Verified Director
+ </span>
+ </div>
  
- {/* Left side: Pure CSS aesthetic terminal/ring representation inspired by the mockup */}
- <div className="relative h-24 w-24 shrink-0 flex items-center justify-center bg-m3-surface/30 rounded-2xl border border-m3-outline-variant/10 overflow-hidden shadow-inner self-center sm:self-start md:self-center">
- {/* Decorative concentric translucent rings */}
+ <h4 className="text-base font-black text-white uppercase tracking-wider font-sans mt-1 leading-tight">
+ Erica Manaban
+ </h4>
+ 
+ <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-m3-on-surface-variant text-[10.5px] mt-1.5">
+ <div className="flex items-center gap-1.5">
+ <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+ <span className="font-semibold text-zinc-300">Dipolog City, Philippines</span>
+ </div>
+ <div className="flex items-center gap-1.5 text-amber-400/90 font-bold">
+ <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+ <span className="font-mono text-[10px]">TilePoint Enterprise</span>
+ </div>
+ </div>
+ </div>
+
+ <div className="h-px bg-m3-outline-variant/10 !my-1.5" />
+
+ <div className="text-[11px] text-m3-on-surface-variant leading-relaxed">
+ <p className="text-zinc-200 border-l-2 border-amber-500/60 pl-2.5 font-medium italic">
+ Erica leads system governance, operational workflows, and software quality to ensure TilePoint ERP delivers maximum reliability.
+ </p>
+ </div>
+ </div>
+ </div>
+
+ {/* Developer Profile Card 2: Mark Jefferson Monares */}
+ <div className="m3-card bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl shadow-sm relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
+ {/* Left side: CSS aesthetic ring avatar */}
+ <div className="relative h-20 w-20 shrink-0 flex items-center justify-center bg-m3-surface/30 rounded-2xl border border-m3-outline-variant/10 overflow-hidden shadow-inner self-center sm:self-start md:self-center">
  <div className="absolute -top-6 -left-6 h-20 w-20 rounded-full border border-m3-primary/15 bg-m3-primary/5" />
  <div className="absolute -bottom-4 -right-4 h-16 w-16 rounded-full border border-m3-primary/10 bg-m3-primary/5" />
  <div className="absolute h-14 w-14 rounded-full border border-m3-primary/20 bg-m3-primary/5 animate-pulse" />
- 
- {/* Interactive-looking terminal display box */}
- <div className="relative z-10 h-11 w-11 rounded-xl bg-[#0b0f19] border border-m3-primary/40 shadow-[0_0_12px_rgba(28,100,242,0.15)] flex items-center justify-center font-mono text-xs text-m3-primary font-black">
+ <div className="relative z-10 h-10 w-10 rounded-xl bg-[#0b0f19] border border-m3-primary/40 shadow-[0_0_12px_rgba(28,100,242,0.15)] flex items-center justify-center font-mono text-xs text-m3-primary font-black">
  <span>&gt;_</span>
  </div>
  </div>
 
- {/* Right side: Clean stack hierarchy */}
- <div className="flex-1 space-y-3 font-sans w-full">
+ {/* Right side: Developer Info */}
+ <div className="flex-1 space-y-2 font-sans w-full">
  <div>
  <div className="flex items-center justify-between gap-2">
  <span className="text-[9px] sm:text-[10px] font-mono font-black uppercase text-zinc-400 tracking-widest block leading-3">
- Senior Systems Architect &amp; Creator
+ Co-Owner &amp; Senior Systems Architect
  </span>
  <span className="text-[8.5px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 uppercase font-black tracking-wider shadow-sm select-none">
  Verified Architect
  </span>
  </div>
  
- <h4 className="text-base sm:text-lg font-black text-white uppercase tracking-wider font-sans mt-1.5 leading-tight">
+ <h4 className="text-base font-black text-white uppercase tracking-wider font-sans mt-1 leading-tight">
  Mark Jefferson Monares
  </h4>
  
- <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-m3-on-surface-variant text-[10.5px] mt-2">
+ <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-m3-on-surface-variant text-[10.5px] mt-1.5">
  <div className="flex items-center gap-1.5">
  <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0" />
  <span className="font-semibold text-zinc-300">Dipolog City, Philippines</span>
@@ -1542,12 +1593,13 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  </div>
  </div>
 
- <div className="h-px bg-m3-outline-variant/10 !my-2" />
+ <div className="h-px bg-m3-outline-variant/10 !my-1.5" />
 
- <div className="text-[11px] sm:text-xs text-m3-on-surface-variant leading-relaxed">
+ <div className="text-[11px] text-m3-on-surface-variant leading-relaxed">
  <p className="text-zinc-200 border-l-2 border-m3-primary/60 pl-2.5 font-medium italic">
  Mark Jefferson builds streamlined systems that are both technically disciplined and exceptionally practical.
  </p>
+ </div>
  </div>
  </div>
  </div>
@@ -2521,6 +2573,27 @@ startxref
  >
  Export Full DB as JSON
  </ActionButton>
+
+ <ActionButton
+ variant="secondary"
+ disabled={isExportingXlsx}
+ isLoading={isExportingXlsx}
+ onClick={async () => {
+   setIsExportingXlsx(true);
+   try {
+     const res = await exportMasterDatabaseToXLSX(db);
+     setBackupActionStatus(`Success: Exported Master DB Excel (.XLSX) workbook to ${res.path}`);
+   } catch (err) {
+     setBackupActionStatus(`Error exporting XLSX workbook`);
+   } finally {
+     setIsExportingXlsx(false);
+     setTimeout(() => setBackupActionStatus(null), 3000);
+   }
+ }}
+ icon={<FileSpreadsheet className="h-3.5 w-3.5 text-teal-500" />}
+ >
+ Export Master DB as XLSX
+ </ActionButton>
  
  <label className="flex-1 bg-zinc-800 text-zinc-300 hover:bg-zinc-750 text-[9.5px] font-bold uppercase tracking-wider py-2 rounded-lg cursor-pointer transition-all text-center flex items-center justify-center gap-2 border border-zinc-700 font-sans shadow-sm select-none">
  <Upload className="h-3.5 w-3.5 text-m3-primary" />
@@ -2603,7 +2676,7 @@ startxref
  value={activeFolderHandle ? `[Native Sync Folder]: ${activeFolderHandle.name}` : deviceBackupPath}
  onChange={(e) => setDeviceBackupPath(e.target.value)}
  disabled={!!activeFolderHandle}
- placeholder="e.g. C:/TilePoint_Backups/ or /sdcard/TilePoint/"
+ placeholder="Directory path"
  className="flex-1 px-3 py-2 text-xs rounded-lg bg-m3-surface border border-m3-outline-variant/20 focus:border-m3-primary outline-none text-white font-mono disabled:opacity-75 disabled:text-emerald-400 disabled:font-bold"
  />
  {isFsaSupported && (
@@ -2652,7 +2725,7 @@ startxref
  type="text"
  value={filenamePattern}
  onChange={(e) => setFilenamePattern(e.target.value)}
- placeholder="e.g. tilepoint_full_backup"
+ placeholder="Filename prefix"
  className="w-full px-3 py-2 text-xs rounded-lg bg-m3-surface border border-m3-outline-variant/20 focus:border-m3-primary outline-none text-white font-mono"
  />
  <p className="text-[8.5px] text-zinc-500 italic">

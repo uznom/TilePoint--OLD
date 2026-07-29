@@ -1439,7 +1439,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  type="text"
  value={notes}
  onChange={(e) => setNotes(e.target.value)}
- placeholder="e.g. Verified by supervisor Diaz"
+ placeholder="Summary memo notes"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
  />
  </div>

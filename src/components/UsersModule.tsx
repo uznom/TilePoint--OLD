@@ -590,7 +590,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  required
  value={fullName}
  onChange={e => setFullName(e.target.value)}
- placeholder="Carla Reyes"
+ placeholder="Enter full name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
  />
  </div>
@@ -602,7 +602,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  required
  value={username}
  onChange={e => setUsername(e.target.value)}
- placeholder="carla_cashier"
+ placeholder="Enter username"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
  />
  </div>
@@ -614,7 +614,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  required
  value={email}
  onChange={e => setEmail(e.target.value)}
- placeholder="carla@tilepoint.com"
+ placeholder="Enter email address"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
  />
  </div>
@@ -641,7 +641,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  maxLength={6}
  value={managerPin}
  onChange={e => setManagerPin(e.target.value.replace(/\D/g, ''))}
- placeholder="e.g. 9988"
+ placeholder="Enter 4-6 digit PIN"
  className="w-full bg-m3-surface-lowest border-b-2 border-amber-550 focus:border-amber-500 px-3 py-2 text-xs text-m3-on-surface font-semibold focus:outline-none transition-colors rounded-t-md font-mono"
  />
  <span className="text-[9px] text-zinc-400 pl-1 block">A 4-to-6 digit passcode (e.g. 9988 or 4321) distinct from terminal account password.</span>

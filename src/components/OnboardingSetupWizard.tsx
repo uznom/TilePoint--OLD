@@ -756,7 +756,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono block">Product Name / Design</label>
  <input
  type="text"
- placeholder="e.g. Carrara White Porcelain"
+ placeholder="Product name"
  value={newProdName}
  onChange={e => setNewProdName(e.target.value)}
  className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl px-3 py-1.5 text-xs focus:outline-none text-slate-200 transition-colors"
@@ -767,7 +767,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono block">Product System Code</label>
  <input
  type="text"
- placeholder="e.g. C-MAR-60"
+ placeholder="Product system code"
  value={newProdCode}
  onChange={e => setNewProdCode(e.target.value)}
  className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl px-3 py-1.5 text-xs focus:outline-none text-slate-200 transition-colors bg-transparent"
@@ -903,7 +903,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  }}
  required
  className="w-full bg-slate-950 border border-slate-800 focus:border-m3-primary rounded-xl px-3 py-2 focus:outline-none text-slate-200 transition-colors"
- placeholder="e.g. Maria Clara"
+ placeholder="Manager name"
  />
  </div>
 
@@ -919,7 +919,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  }}
  required
  className="w-full bg-slate-950 border border-slate-800 focus:border-m3-primary rounded-xl px-3 py-2 focus:outline-none text-slate-200 transition-colors"
- placeholder="e.g. +63 920 123 4567"
+ placeholder="Phone number"
  />
  </div>
 
@@ -935,7 +935,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  }}
  required
  className="w-full bg-slate-950 border border-slate-800 focus:border-m3-primary rounded-xl px-3 py-2 focus:outline-none text-slate-200 transition-colors"
- placeholder="e.g. Rizal Ave, Central District, Dipolog Main Branch"
+ placeholder="Street, District, City"
  />
  </div>
 

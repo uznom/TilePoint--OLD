@@ -6,6 +6,7 @@
 import React, { useState, useMemo } from 'react';
 import { useDb, encryptString, decryptString, getSecuritySecretKey, preprocessAndVerifyClipboardText, isStrictInboundReportSchema, unwrapInboundPayload } from '../context/DbContext';
 import { saveFileToBackup } from '../lib/fileBackupHelper';
+import { exportSalesTransmittalToXLSX } from '../lib/excelExportHelper';
 import { UserRole, BranchSalesReport, Sale, SaleItem } from '../types/db';
 import { ActionButton } from './ActionButton';
 import {
@@ -32,7 +33,8 @@ import {
   Share2,
   Copy,
   Printer,
-  Mail
+  Mail,
+  FileSpreadsheet
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -1768,12 +1770,20 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  <button
  type="button"
  disabled={!isAuthorizedToExport}
- onClick={() => handleExportCSV('selected', true)}
- className="py-2.5 bg-m3-surface-lowest hover:bg-m3-surface border border-m3-outline-variant/20 hover:border-m3-primary/30 text-m3-on-surface hover:text-m3-primary dark:hover:text-m3-primary rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans"
- title="Export Selected Transmitted Report as Microsoft Excel CSV spreadsheet sheet"
+ onClick={async () => {
+   if (!selectedReport) return;
+   const res = await exportSalesTransmittalToXLSX(selectedReport, currentUser);
+   if (res.success) {
+     triggerToast(`Successfully exported Excel workbook (.XLSX) sales report!`, 'success');
+   } else {
+     triggerToast('Failed to export Excel workbook.', 'error');
+   }
+ }}
+ className="py-2.5 bg-m3-surface-lowest hover:bg-m3-surface border border-teal-500/30 hover:border-teal-500/60 text-teal-600 dark:text-teal-400 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-zinc-500 disabled:border-transparent font-sans shadow-sm"
+ title="Export Selected Transmitted Report as Microsoft Excel (.XLSX) Workbook"
  >
- <span className="text-[8px] uppercase font-bold text-zinc-500 font-mono block">Excel</span>
- <span>Spreadsheet</span>
+ <FileSpreadsheet className="h-3.5 w-3.5 text-teal-500" />
+ <span>Excel (.XLSX)</span>
  </button>
 
  <button

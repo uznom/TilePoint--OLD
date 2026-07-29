@@ -141,7 +141,7 @@ export const LoginModule: React.FC = () => {
  <input
  type="text"
  disabled={isRateLimited || isSubmitting}
- placeholder="e.g. erica_admin"
+ placeholder="Enter username"
  value={username}
  onChange={(e) => setUsername(e.target.value)}
  className="w-full pl-10 pr-4 py-3 rounded-xl border border-m3-outline-variant/65 cursor-text disabled:opacity-50 disabled:bg-m3-surface-container bg-m3-surface text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary/50 text-sm font-semibold transition-all"

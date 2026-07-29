@@ -2380,7 +2380,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  }
  }}
  maxLength={100}
- placeholder="Manuel Santos / Walk-in"
+ placeholder="Customer Name / Walk-in"
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-bold"
  />
  {customerName.trim().length > 0 &&
@@ -2459,7 +2459,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setCustomerNotes(e.target.value.slice(0, 100))
  }
  maxLength={100}
- placeholder="e.g. Master Bedroom Toilet tiles, Travertine Matt"
+ placeholder="Project note or description"
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-bold"
  />
  </div>
@@ -2495,7 +2495,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  onChange={(e) =>
  setBarcodeSearchTerm(e.target.value)
  }
- placeholder="Type product name, SKU, or custom design... (e.g. BLD01, SLVR-40, hit Enter)"
+ placeholder="Type product name, SKU, or custom design and press Enter..."
  className="w-full bg-m3-surface-lowest text-xs text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary/50 border border-m3-outline-variant/30 px-3.5 py-1.5 pr-12 rounded-xl placeholder-zinc-500 font-bold"
  />
  {barcodeSearchTerm && (
@@ -3340,7 +3340,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  </div>
 
- <div className="flex-1 min-h-0 flex flex-col rounded-xl border border-m3-outline-variant/20 shadow-inner bg-m3-surface overflow-hidden snap-start scroll-mt-20">
+ <div className="flex-1 min-h-0 flex flex-col rounded-xl border border-m3-outline-variant/20 shadow-inner bg-m3-surface overflow-hidden">
  <div ref={salesVirtualRef} onScroll={handleSalesVirtualScroll} className="overflow-auto scrollbar-thin scrollbar-thumb-m3-outline-variant h-[58vh] md:h-[64vh] lg:h-[68vh] min-h-[380px]">
  <table className="w-full text-left border-collapse table-auto text-xs min-w-[1000px] font-sans">
  <thead>
@@ -3382,7 +3382,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  if (!s) return null;
  return (
  <tr
- key={idx}
+ key={s.id || vIdx}
  onClick={() => setSelectedSaleDetail(s)}
  className={`hover:bg-m3-surface-low/90 hover:text-white cursor-pointer transition-colors font-bold ${s.isDeleted ? "bg-red-500/5 text-zinc-500 line-through decoration-rose-500" : ""}`}
  title="Click to view full transaction invoice ledger details"
@@ -3448,7 +3448,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </td>
  </tr>
   );
-  })}`
+  })}
   
   {salesPaddingBottom > 0 && (
   <tr style={{ height: salesPaddingBottom }}>
@@ -4172,7 +4172,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  type="text"
  value={customerModalInput}
  onChange={(e) => setCustomerModalInput(e.target.value)}
- placeholder="e.g. Architect Manuel Santos"
+ placeholder="Full Name"
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold"
  />
  </div>
@@ -4340,7 +4340,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  required
  value={approverUsername}
  onChange={(e) => setApproverUsername(e.target.value)}
- placeholder="e.g. tomas_mgr, juan_mgr, or erica_admin"
+ placeholder="Authorize username"
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold"
  />
  </div>
@@ -4606,7 +4606,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  required
  value={deliveryCustomerName}
  onChange={(e) => setDeliveryCustomerName(e.target.value)}
- placeholder="e.g. Architect Manuel Santos"
+ placeholder="Recipient name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold"
  />
  </div>
@@ -4620,7 +4620,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  required
  value={deliveryContact}
  onChange={(e) => setDeliveryContact(e.target.value)}
- placeholder="e.g. 0917-555-1234"
+ placeholder="Phone number"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold"
  />
  </div>
@@ -4633,7 +4633,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  type="text"
  value={deliveryHouseNo}
  onChange={(e) => setDeliveryHouseNo(e.target.value)}
- placeholder="e.g. Blk 12 Lot 14, 2nd Floor"
+ placeholder="House No. / Building / Suite"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
  />
  </div>
@@ -4646,7 +4646,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  type="text"
  value={deliveryStreet}
  onChange={(e) => setDeliveryStreet(e.target.value)}
- placeholder="e.g. Sampaguita Street, Camella"
+ placeholder="Street / Subdivision"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
  />
  </div>
@@ -4660,7 +4660,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  required
  value={deliveryBarangay}
  onChange={(e) => setDeliveryBarangay(e.target.value)}
- placeholder="e.g. Mandalagan"
+ placeholder="Barangay"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold"
  />
  </div>
@@ -4674,7 +4674,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  required
  value={deliveryCity}
  onChange={(e) => setDeliveryCity(e.target.value)}
- placeholder="e.g. Bacolod City"
+ placeholder="City / Municipality"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold"
  />
  </div>
@@ -4687,7 +4687,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  type="text"
  value={deliveryLandmark}
  onChange={(e) => setDeliveryLandmark(e.target.value)}
- placeholder="e.g. Near Shell gas station, red gate"
+ placeholder="Landmarks or special delivery instructions"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
  />
  </div>
@@ -4713,7 +4713,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  type="text"
  value={deliveryTime}
  onChange={(e) => setDeliveryTime(e.target.value)}
- placeholder="e.g. 10:00 AM - 2:00 PM"
+ placeholder="Arrival window (e.g. 10:00 AM - 2:00 PM)"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
  />
  </div>
@@ -4727,7 +4727,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  rows={2}
  value={deliveryNotes}
  onChange={(e) => setDeliveryNotes(e.target.value)}
- placeholder="e.g. Heavy tiles, require helpers to haul on 2nd Floor."
+ placeholder="Special instructions or notes"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
  />
  </div>
@@ -5253,7 +5253,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  required
  value={newMemberName}
  onChange={(e) => setNewMemberName(e.target.value)}
- placeholder="e.g. Acme Builders Corp / Juan Dela Cruz"
+ placeholder="Full Name / Company"
  className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl px-3.5 py-2 text-xs font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
  />
  </div>
@@ -5267,7 +5267,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  type="text"
  value={newMemberPhone}
  onChange={(e) => setNewMemberPhone(e.target.value)}
- placeholder="0917-123-4567"
+ placeholder="Phone number"
  className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl px-3.5 py-2 text-xs font-mono font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
  />
  </div>
@@ -5280,7 +5280,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  type="email"
  value={newMemberEmail}
  onChange={(e) => setNewMemberEmail(e.target.value)}
- placeholder="billing@company.com"
+ placeholder="Email address"
  className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl px-3.5 py-2 text-xs font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
  />
  </div>

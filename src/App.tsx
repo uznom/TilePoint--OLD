@@ -402,6 +402,107 @@ function AppContent() {
  }
  }
  }, [activeTab, isSidebarMinimized, wasSidebarExpandedBeforeCheckout]);
+  // Auto-minimize the sidebar when a large modal or dialog is open in the DOM
+  const [isModalActive, setIsModalActive] = useState(false);
+  const wasSidebarExpandedBeforeModal = useRef(false);
+  const isSidebarMinimizedRef = useRef(isSidebarMinimized);
+
+  useEffect(() => {
+    isSidebarMinimizedRef.current = isSidebarMinimized;
+  }, [isSidebarMinimized]);
+
+  useEffect(() => {
+    const checkForModal = () => {
+      const elements = document.querySelectorAll(
+        '.fixed, [role="dialog"], [data-modal="true"], [id*="modal"], [class*="modal"], [class*="dialog"], [class*="backdrop"]'
+      );
+      let foundModal = false;
+
+      for (let i = 0; i < elements.length; i++) {
+        const el = elements[i] as HTMLElement;
+        if (el.offsetWidth === 0 && el.offsetHeight === 0) continue;
+        if (
+          el.id === "sidebar-nav" ||
+          el.id === "mobile-sidebar" ||
+          el.closest("#sidebar-nav") ||
+          el.closest("aside")
+        ) {
+          continue;
+        }
+
+        // Ignore small toast notifications, bottom alerts, floating action buttons
+        if (
+          el.classList.contains("animate-bounce") ||
+          el.classList.contains("animate-slide-left") ||
+          el.querySelector(".animate-bounce")
+        ) {
+          continue;
+        }
+
+        const rect = el.getBoundingClientRect();
+        // Ignore small toast popups (< 300px width AND < 150px height)
+        if (rect.width < 300 && rect.height < 150) continue;
+
+        // Ignore pure dropdown backdrops or tooltips without modal content
+        if (el.childElementCount === 0 && !el.getAttribute("role") && !el.classList.contains("fixed")) {
+          continue;
+        }
+
+        const isFixedCover =
+          (el.classList.contains("fixed") || el.classList.contains("absolute")) &&
+          (el.classList.contains("inset-0") || rect.width > 300) &&
+          rect.height > 200;
+
+        const hasModalCard = el.querySelector(
+          '[role="dialog"], form, table, input, textarea, button, [class*="max-w-"], [class*="rounded-"], [class*="bg-"]'
+        );
+        const isDialogRole = el.getAttribute("role") === "dialog";
+        const isModalDataAttr = el.getAttribute("data-modal") === "true";
+
+        if (isFixedCover || isDialogRole || isModalDataAttr || hasModalCard) {
+          const style = window.getComputedStyle(el);
+          if (style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0") {
+            foundModal = true;
+            break;
+          }
+        }
+      }
+
+      setIsModalActive((prev) => (prev !== foundModal ? foundModal : prev));
+    };
+
+    checkForModal();
+
+    const observer = new MutationObserver(() => {
+      checkForModal();
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class", "style", "role", "data-modal"],
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isModalActive) {
+      if (!isSidebarMinimizedRef.current) {
+        wasSidebarExpandedBeforeModal.current = true;
+        setIsSidebarMinimized(true);
+      }
+    } else {
+      if (wasSidebarExpandedBeforeModal.current) {
+        setIsSidebarMinimized(false);
+        wasSidebarExpandedBeforeModal.current = false;
+      }
+    }
+  }, [isModalActive]);
+
  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
  // ATPOS v2 Collapsible Folder States
@@ -2112,7 +2213,7 @@ function AppContent() {
   className={`flex-1 relative flex flex-col text-m3-on-surface transition-all duration-300 overflow-x-hidden min-h-0 ${
    activeTab === "pos" || activeTab === "ledger"
     ? "p-4 md:p-5 overflow-hidden h-full max-h-full"
-    : "p-4 md:p-6 pb-26 md:pb-6 overflow-y-auto snap-y snap-proximity scroll-smooth"
+    : "p-4 md:p-6 pb-26 md:pb-6 overflow-y-auto scroll-smooth"
   } ${isCompactColumns || !isInventoryCategory ? "compact-fit" : ""}`}
  >
  {/* Elegant Collapsible Horizontal Sub-menu Navigation Pill Bar with Dynamic RBAC */}
@@ -2877,7 +2978,7 @@ function AppContent() {
  onChange={(e) =>
  setManualSnapshotName(e.target.value)
  }
- placeholder="e.g. Pre-Audit Bulk Load Snapshot..."
+ placeholder="Snapshot label"
  className="flex-1 bg-m3-surface-lowest text-xs text-m3-on-surface border border-m3-outline-variant/30 px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-m3-primary/40 placeholder-zinc-500 font-bold"
  />
  <button

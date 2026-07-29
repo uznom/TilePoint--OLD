@@ -7,6 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useDb } from '../context/DbContext';
 import { saveFileToBackup } from '../lib/fileBackupHelper';
+import { exportInventoryCatalogToXLSX, exportStockAlertsToXLSX } from '../lib/excelExportHelper';
 import { runPreflightValidation, PreflightReport } from '../lib/preflightValidator';
 import { PreflightReportCard } from './PreflightReportCard';
 import { isProductInBranch, getBranchStockQuantity, getBranchStockRecord, slugifyBranchStr } from '../lib/branchUtils';
@@ -51,7 +52,8 @@ import {
  Database,
  Copy,
  MapPin,
- ShieldAlert
+ ShieldAlert,
+ FileSpreadsheet
 } from 'lucide-react';
 
 interface InventoryModuleProps {
@@ -2822,11 +2824,18 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  </div>
 
  {/* Low Stock Alerts */}
- <div className={`p-4 rounded-3xl border flex items-center gap-3.5 relative shadow-sm overflow-hidden shrink-0 ${
+ <div 
+ onClick={() => {
+ setStockAlertModalFilter('LOW');
+ setShowStockAlertsModal(true);
+ }}
+ className={`p-4 rounded-3xl border flex items-center gap-3.5 relative shadow-sm overflow-hidden shrink-0 cursor-pointer hover:border-amber-500/50 hover:shadow-md transition-all active:scale-95 ${
  stats.lowStockCount > 0 
  ? 'bg-amber-500/5 border-amber-500/25' 
  : 'bg-m3-surface-low border-m3-outline-variant/30'
- }`}>
+ }`}
+ title="Click to view all Low Stock items in Stock Alert Diagnostics Modal"
+ >
  <div className={`p-3 rounded-2xl ${
  stats.lowStockCount > 0 
  ? 'bg-amber-500/15 text-amber-500 animate-pulse' 
@@ -2841,11 +2850,18 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  </div>
 
  {/* Critical Stock Alerts */}
- <div className={`p-4 rounded-3xl border flex items-center gap-3.5 relative shadow-sm overflow-hidden shrink-0 ${
+ <div 
+ onClick={() => {
+ setStockAlertModalFilter('CRITICAL');
+ setShowStockAlertsModal(true);
+ }}
+ className={`p-4 rounded-3xl border flex items-center gap-3.5 relative shadow-sm overflow-hidden shrink-0 cursor-pointer hover:border-rose-500/50 hover:shadow-md transition-all active:scale-95 ${
  stats.criticalStockCount > 0 
  ? 'bg-rose-500/5 border-rose-500/20' 
  : 'bg-m3-surface-low border-m3-outline-variant/30'
- }`}>
+ }`}
+ title="Click to view all Critical Stock items in Stock Alert Diagnostics Modal"
+ >
  <div className={`p-3 rounded-2xl ${
  stats.criticalStockCount > 0 
  ? 'bg-rose-500/15 text-rose-500 animate-bounce' 
@@ -2860,11 +2876,18 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  </div>
 
  {/* Out of Stock Alerts */}
- <div className={`p-4 rounded-3xl border col-span-2 lg:col-span-1 flex items-center gap-3.5 relative shadow-sm overflow-hidden shrink-0 ${
+ <div 
+ onClick={() => {
+ setStockAlertModalFilter('OUT_OF_STOCK');
+ setShowStockAlertsModal(true);
+ }}
+ className={`p-4 rounded-3xl border col-span-2 lg:col-span-1 flex items-center gap-3.5 relative shadow-sm overflow-hidden shrink-0 cursor-pointer hover:border-red-600/50 hover:shadow-md transition-all active:scale-95 ${
  stats.outOfStockCount > 0 
  ? 'bg-red-600/5 border-red-600/20' 
  : 'bg-m3-surface-low border-m3-outline-variant/30'
- }`}>
+ }`}
+ title="Click to view all Out of Stock items in Stock Alert Diagnostics Modal"
+ >
  <div className="p-3 rounded-2xl bg-zinc-500/10 text-zinc-400">
  <X className="h-5 w-5 font-black" />
  </div>
@@ -3032,7 +3055,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  )}
 
  {/* Database Catalog Table List */}
- <div className="m3-card shadow-sm p-0 overflow-hidden snap-start scroll-mt-20">
+ <div className="m3-card shadow-sm p-0 overflow-hidden">
  <div ref={(node) => { (catalogTableContainerRef as any).current = node; (catalogVirtualRef as any).current = node; }} onScroll={handleCatalogVirtualScroll} className="overflow-auto scrollbar-thin scrollbar-thumb-m3-outline-variant min-h-[280px]">
  <table className={`w-full text-left border-collapse table-auto text-xs transition-all ${isCompactColumns ? 'min-w-[700px]' : 'min-w-[1280px]'}`}>
  <thead>
@@ -4573,6 +4596,32 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
               </button>
             </div>
           </div>
+
+          {/* XLSX Admin Multi-Sheet Workbook Export Card */}
+          <div className="bg-m3-surface p-6 rounded-2xl border border-emerald-500/30 space-y-4 flex flex-col justify-between shadow-sm relative overflow-hidden">
+            <div className="space-y-2">
+              <h3 className="text-sm font-black text-m3-on-surface uppercase tracking-wider flex items-center gap-2">
+                <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+                <span>Export Admin Excel Workbook (.XLSX)</span>
+              </h3>
+              <p className="text-xs text-m3-on-surface-variant leading-relaxed">
+                Generate a formatted multi-sheet Microsoft Excel workbook containing complete catalog items, supplier rosters, and branch store configurations.
+              </p>
+            </div>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  const res = await exportInventoryCatalogToXLSX(products, branches, suppliers);
+                  showToast(`Master Admin Inventory exported to Excel (.XLSX) workbook!`);
+                }}
+                className="w-full py-3 px-4 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-black text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-between shadow-md active:scale-98"
+              >
+                <span className="flex items-center gap-2"><Download className="h-4 w-4" /> Export Multi-Sheet .XLSX</span>
+                <span className="text-[10px] font-mono bg-white/20 px-2 py-0.5 rounded-full">Excel .XLSX</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -4941,7 +4990,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <input
  type="text"
  required
- placeholder="e.g. B-260716X"
+ placeholder="Batch / Lot number"
  value={batchFormNo}
  onChange={e => setBatchFormNo(e.target.value)}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 focus:border-m3-primary px-3 py-2 text-xs focus:outline-none rounded-xl font-bold font-mono text-m3-on-surface"
@@ -5069,7 +5118,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  required
  value={quickSupName}
  onChange={e => setQuickSupName(e.target.value)}
- placeholder="e.g. Asia Pacific Ceramics Inc."
+ placeholder="Supplier company name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold"
  />
  </div>
@@ -5081,7 +5130,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="text"
  value={quickSupContact}
  onChange={e => setQuickSupContact(e.target.value)}
- placeholder="e.g. Matthew Lim"
+ placeholder="Contact agent name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
  />
  </div>
@@ -5092,7 +5141,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="text"
  value={quickSupPhone}
  onChange={e => setQuickSupPhone(e.target.value)}
- placeholder="e.g. +63 2 8111 2222"
+ placeholder="Phone number"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono"
  />
  </div>
@@ -5104,7 +5153,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="email"
  value={quickSupEmail}
  onChange={e => setQuickSupEmail(e.target.value)}
- placeholder="e.g. contact@asiapacific.ph"
+ placeholder="Corporate email address"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
  />
  </div>
@@ -5115,7 +5164,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="text"
  value={quickSupAddress}
  onChange={e => setQuickSupAddress(e.target.value)}
- placeholder="e.g. 15th Flr, Pacific Star Bldg, Makati City"
+ placeholder="Street, City, Province"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
  />
  </div>
@@ -5221,7 +5270,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  required
  value={brand}
  onChange={e => setBrand(e.target.value)}
- placeholder="e.g. Mariwasa Siam"
+ placeholder="Brand name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold"
  />
  </div>
@@ -5232,7 +5281,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="text"
  value={designName}
  onChange={e => setDesignName(e.target.value)}
- placeholder="e.g. Travertine Matte"
+ placeholder="Tile design name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold"
  />
  </div>
@@ -5244,7 +5293,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  required
  value={productName}
  onChange={e => setProductName(e.target.value)}
- placeholder="e.g. Carrara White Porcelain Floor Tile"
+ placeholder="Product full descriptive name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans font-black text-sm"
  />
  </div>
@@ -5278,7 +5327,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  required
  value={size}
  onChange={e => setSize(e.target.value)}
- placeholder="e.g. 60x60 cm"
+ placeholder="Dimensions (e.g. 60x60 cm)"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold font-mono"
  />
  </div>
@@ -5370,7 +5419,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  required={isRegisteringNewSupplier}
  value={newSupplierName}
  onChange={e => setNewSupplierName(e.target.value)}
- placeholder="e.g. Asia Pacific Ceramics Inc."
+ placeholder="Supplier company name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-2 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold"
  />
  </div>
@@ -5381,7 +5430,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="text"
  value={newSupplierContact}
  onChange={e => setNewSupplierContact(e.target.value)}
- placeholder="e.g. Matthew Lim"
+ placeholder="Contact agent name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-2 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
  />
  </div>
@@ -5394,7 +5443,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="text"
  value={newSupplierPhone}
  onChange={e => setNewSupplierPhone(e.target.value)}
- placeholder="e.g. +63 2 8111 2222"
+ placeholder="Phone number"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-2 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono"
  />
  </div>
@@ -5405,7 +5454,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="email"
  value={newSupplierEmail}
  onChange={e => setNewSupplierEmail(e.target.value)}
- placeholder="e.g. contact@asiapacific.ph"
+ placeholder="Corporate email address"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-2 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
  />
  </div>
@@ -5417,7 +5466,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="text"
  value={newSupplierAddress}
  onChange={e => setNewSupplierAddress(e.target.value)}
- placeholder="e.g. 15th Flr, Pacific Star Bldg, Makati City"
+ placeholder="Street, City, Province"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-2 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
  />
  </div>
@@ -5615,7 +5664,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="text"
  value={origin}
  onChange={e => setOrigin(e.target.value)}
- placeholder="e.g. Main Cebu Yard, China Lot B-12, Local Consignment Importer"
+ placeholder="Acquired from / Stock source"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans font-bold"
  />
  </div>
@@ -5718,7 +5767,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  rows={3}
  value={adjustReason}
  onChange={e => setAdjustReason(e.target.value)}
- placeholder="e.g. Audit variance, broken box count, tile sample pull..."
+ placeholder="Adjustment reason / notes"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans italic"
  />
  </div>
@@ -5847,7 +5896,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <input
  type="text"
  required
- placeholder="e.g. TKT-YRD-2092"
+ placeholder="Reference Code / Ticket ID"
  value={manualLedgerRefNo}
  onChange={e => setManualLedgerRefNo(e.target.value)}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/35 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-xl font-mono font-bold"
@@ -6338,7 +6387,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  setPendingBranches(updated);
  }}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/55 focus:border-m3-primary p-2.5 focus:outline-none text-m3-on-surface transition-colors rounded-t font-sans font-bold"
- placeholder="e.g. Emman Tile Center"
+ placeholder="Branch / Store Name"
  required
  />
  </div>
@@ -6356,7 +6405,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  setPendingBranches(updated);
  }}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/55 focus:border-m3-primary p-2.5 focus:outline-none text-m3-on-surface transition-colors rounded-t font-sans"
- placeholder="e.g. Maria Clara"
+ placeholder="Manager Name"
  required
  />
  </div>
@@ -6374,7 +6423,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  setPendingBranches(updated);
  }}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/55 focus:border-m3-primary p-2.5 focus:outline-none text-m3-on-surface transition-colors rounded-t font-sans"
- placeholder="e.g. +63 920 123 4567"
+ placeholder="Phone number"
  required
  />
  </div>
@@ -6392,7 +6441,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  setPendingBranches(updated);
  }}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/55 focus:border-m3-primary p-2.5 focus:outline-none text-m3-on-surface transition-colors rounded-t font-sans"
- placeholder="e.g. Rizal Highway, Dipolog City, Zamboanga del Norte"
+ placeholder="Full workplace dispatch address"
  required
  />
  </div>
@@ -6644,7 +6693,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  rows={2}
  value={transferReasonInput}
  onChange={e => setTransferReasonInput(e.target.value)}
- placeholder="e.g., showroom display replenishment, customer pre-purchase balance delivery..."
+ placeholder="Justification remarks / transfer motivation"
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/20 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-sans"
  />
  </div>
@@ -6862,6 +6911,20 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-center">
+            <button
+              onClick={async () => {
+                const branchLabel = selectedViewBranchId === 'consolidated' ? 'Consolidated' : (branches.find(b => b.id === selectedViewBranchId)?.name || selectedViewBranchId);
+                await exportStockAlertsToXLSX(modalFilteredAlertItems, branchLabel);
+                showToast(`Exported ${modalFilteredAlertItems.length} stock alert items to Excel (.XLSX)!`);
+              }}
+              disabled={modalFilteredAlertItems.length === 0}
+              className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+              title="Export displayed stock alert items to Microsoft Excel (.XLSX)"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              <span>Export XLSX</span>
+            </button>
+
             <button
               onClick={handleBulkQueueAlertsToPoCart}
               disabled={modalFilteredAlertItems.length === 0}

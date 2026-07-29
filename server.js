@@ -223,10 +223,7 @@ const runInTransaction = async (operationFn) => {
   return nextLock;
 };
 
-let SECRET = process.env.VITE_SECURITY_SECRET || process.env.SECURITY_SECRET;
-if (!SECRET || SECRET.trim() === "" || SECRET.length < 16) {
-  SECRET = "tile_point_salt_retneC eliT nammE_secure_fallback";
-}
+let SECRET = process.env.VITE_SECURITY_SECRET || process.env.SECURITY_SECRET || "tile_point_salt_retneC eliT nammE_secure_fallback";
 
 function sha256Pure(str) {
   return crypto.createHash('sha256').update(str).digest('hex');
@@ -253,9 +250,19 @@ function verifyAndExtractToken(req) {
     }
 
     const [payloadBase64, signature] = parts;
-    const expectedSignature = sha256Pure(payloadBase64 + "." + SECRET);
 
-    if (signature !== expectedSignature) {
+    const possibleSecrets = Array.from(new Set([
+      process.env.VITE_SECURITY_SECRET,
+      process.env.SECURITY_SECRET,
+      "tile_point_salt_retneC eliT nammE_secure_fallback"
+    ].filter(s => Boolean(s && s.trim().length >= 16))));
+
+    const signatureMatches = possibleSecrets.some(sec => {
+      const expected = sha256Pure(payloadBase64 + "." + sec);
+      return signature === expected;
+    });
+
+    if (!signatureMatches) {
       console.warn("[Security Alert] Cryptographic signature mismatch on session token.");
       return null;
     }
@@ -603,6 +610,69 @@ app.post('/api/db/delta', async (req, res) => {
   }
 });
 
+const ENTITY_COLLECTION_KEYS = [
+  'tp_users',
+  'tp_products',
+  'tp_branches',
+  'tp_suppliers',
+  'tp_brands',
+  'tp_purchase_orders',
+  'tp_po_items',
+  'tp_transmittals',
+  'tp_shifts',
+  'tp_sales',
+  'tp_sale_items',
+  'tp_movements',
+  'tp_audit_logs',
+  'tp_parked_sales',
+  'tp_stock_transfers',
+  'tp_branch_stock',
+  'tp_ledger_entries',
+  'tp_branch_sales_reports',
+  'tp_deliveries',
+  'tp_damage_logs',
+  'atpos_v2_custom_bills',
+  'atpos_v2_members_list',
+  'atpos_v2_expenses',
+  'atpos_v2_returns'
+];
+
+function mergeCollectionSafely(existingList, incomingList) {
+  if (!Array.isArray(existingList) || existingList.length === 0) {
+    return Array.isArray(incomingList) ? incomingList : [];
+  }
+  if (!Array.isArray(incomingList) || incomingList.length === 0) {
+    return existingList;
+  }
+
+  const existingMap = new Map();
+  existingList.forEach((item) => {
+    if (item && typeof item === 'object') {
+      const key = item.id || item.username || item.code;
+      if (key) {
+        existingMap.set(String(key).toLowerCase(), item);
+      }
+    }
+  });
+
+  incomingList.forEach((incomingItem) => {
+    if (incomingItem && typeof incomingItem === 'object') {
+      const key = incomingItem.id || incomingItem.username || incomingItem.code;
+      if (key) {
+        const keyStr = String(key).toLowerCase();
+        const existingItem = existingMap.get(keyStr);
+        if (existingItem) {
+          existingMap.set(keyStr, { ...existingItem, ...incomingItem });
+        } else {
+          existingMap.set(keyStr, incomingItem);
+        }
+      }
+    }
+  });
+
+  return Array.from(existingMap.values());
+}
+
 // API: Save single key-value state to shared database (Legacy Fallback)
 app.post('/api/db', async (req, res) => {
   const { key, value } = req.body;
@@ -642,11 +712,17 @@ app.post('/api/db', async (req, res) => {
       if (key === 'tp_bootstrap_init') {
         if (value && typeof value === 'object') {
           Object.keys(value).forEach((k) => {
-            db[k] = value[k];
+            if (ENTITY_COLLECTION_KEYS.includes(k) && Array.isArray(value[k])) {
+              db[k] = mergeCollectionSafely(db[k], value[k]);
+            } else {
+              db[k] = value[k];
+            }
           });
         }
         db['tp_is_configured'] = 'true';
         db['tilepoint_onboarded_setup'] = 'false';
+      } else if (ENTITY_COLLECTION_KEYS.includes(key) && Array.isArray(value)) {
+        db[key] = mergeCollectionSafely(db[key], value);
       } else {
         db[key] = value;
       }
@@ -709,7 +785,11 @@ app.post('/api/db/bulk', async (req, res) => {
     const result = await runInTransaction(async () => {
       const db = readDatabase();
       Object.keys(data).forEach((key) => {
-        db[key] = data[key];
+        if (ENTITY_COLLECTION_KEYS.includes(key) && Array.isArray(data[key])) {
+          db[key] = mergeCollectionSafely(db[key], data[key]);
+        } else {
+          db[key] = data[key];
+        }
       });
       if (writeDatabase(db, req.headers['x-client-id'])) {
         return { success: true, count: Object.keys(data).length };

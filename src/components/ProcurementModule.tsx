@@ -1192,7 +1192,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </div>
  )}
 
- <div className="m3-card shadow-sm p-0 overflow-hidden snap-start scroll-mt-20">
+ <div className="m3-card shadow-sm p-0 overflow-hidden">
  <div className="overflow-auto scrollbar-thin scrollbar-thumb-m3-outline-variant h-[58vh] md:h-[64vh] lg:h-[68vh] min-h-[380px]">
  <table className="w-full text-left border-collapse table-auto text-xs min-w-[1000px] font-sans">
  <thead>
@@ -2482,7 +2482,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  required
  value={manualProdName}
  onChange={(e) => setManualProdName(e.target.value)}
- placeholder="e.g. Premium Fujian Polished Tile"
+ placeholder="Product name"
  className="w-full bg-m3-surface border-b border-amber-500/30 px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 rounded-t-lg font-sans font-bold"
  />
  </div>
@@ -2527,7 +2527,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  type="text"
  value={manualSize}
  onChange={(e) => setManualSize(e.target.value)}
- placeholder="e.g. 60x60 cm"
+ placeholder="Dimensions (e.g. 60x60 cm)"
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-bold font-mono"
  />
  </div>
@@ -2578,7 +2578,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  type="text"
  value={manualOrigin}
  onChange={(e) => setManualOrigin(e.target.value)}
- placeholder="e.g. Imported Batch lot / Local plant"
+ placeholder="Manufacturing origin"
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-sans font-bold"
  />
  </div>
@@ -2690,7 +2690,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  type="text"
  value={poNotes}
  onChange={(e) => setPoNotes(e.target.value)}
- placeholder="e.g. Critical stock refilling"
+ placeholder="Procurement notes"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
  />
  </div>
@@ -2705,7 +2705,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  type="text"
  value={templateNameInput}
  onChange={(e) => setTemplateNameInput(e.target.value)}
- placeholder="e.g. Weekly Restock - Supplier A"
+ placeholder="Template name"
  className="w-full bg-m3-surface border border-m3-outline-variant px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-lg font-medium"
  />
  </div>
@@ -3069,7 +3069,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  type="text"
  value={supName}
  onChange={(e) => setSupName(e.target.value)}
- placeholder="e.g. Republic Cement Corp."
+ placeholder="Supplier company name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-bold"
  />
  </div>
@@ -3082,7 +3082,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  type="text"
  value={supContactPerson}
  onChange={(e) => setSupContactPerson(e.target.value)}
- placeholder="e.g. Engr. Juan Dela Cruz"
+ placeholder="Contact agent name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg"
  />
  </div>
@@ -3096,7 +3096,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  type="text"
  value={supPhone}
  onChange={(e) => setSupPhone(e.target.value)}
- placeholder="e.g. +63 917 888 1234"
+ placeholder="Phone number"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-mono"
  />
  </div>
@@ -3109,7 +3109,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  type="email"
  value={supEmail}
  onChange={(e) => setSupEmail(e.target.value)}
- placeholder="e.g. sales@republiccement.com"
+ placeholder="Corporate email address"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg"
  />
  </div>
@@ -3122,7 +3122,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  <textarea
  value={supAddress}
  onChange={(e) => setSupAddress(e.target.value)}
- placeholder="e.g. Sector 4, Boulevard Parkway, Dipolog City"
+ placeholder="Street, City, Province"
  rows={2}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg resize-none"
  />
@@ -3229,7 +3229,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  type="text"
  value={brandName}
  onChange={(e) => setBrandName(e.target.value)}
- placeholder="e.g. Mariwasa, ROYU, Matimco"
+ placeholder="Brand name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-bold"
  />
  {!editingBrandId && unmappedBrands.length > 0 && (
@@ -3283,7 +3283,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  <textarea
  value={brandDescription}
  onChange={(e) => setBrandDescription(e.target.value)}
- placeholder="e.g. Premium decorative tiles..."
+ placeholder="Description / Notes"
  rows={2}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg resize-none"
  />

@@ -1003,7 +1003,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  type="text"
  value={customerName}
  onChange={e => setCustomerName(e.target.value)}
- placeholder="e.g. Maria Clara / Walk-in bathroom client"
+ placeholder="Customer Name / Walk-in"
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/40 px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary rounded-t-lg font-bold"
  />
  </div>
@@ -1013,7 +1013,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <textarea
  value={orderNotes}
  onChange={e => setOrderNotes(e.target.value)}
- placeholder="e.g. Customer will make final adjustments at cashier counter, wants delivery quote..."
+ placeholder="Floor assistant notes or remarks"
  rows={2}
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/40 px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary rounded-t-lg font-normal resize-none"
  />
