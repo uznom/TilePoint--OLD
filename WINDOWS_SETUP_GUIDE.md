@@ -1,462 +1,486 @@
-# TilePoint Enterprise - Windows Deployment Guide
+# TilePoint Enterprise - Complete Windows Setup & Deployment Guide
 
-This guide describes how to run and manage the **TilePoint Shared Database Server** with **HTTPS (SSL)** on a standard Windows 10 or 11 laptop.
-
----
-
-## 🚀 1-Click Automated Installation (RECOMMENDED)
-We have built a single, fully-automated utility that sets up everything for you. It installs dependencies, creates your `.env` configuration file, detects your local IP address, generates correct SSL certificates, configures your Windows Firewall, and boots PM2 cleanly in the background.
-
-To run it:
-1. Locate **`setup-tilepoint.bat`** in your project folder.
-2. Double-click it or run it from a standard command window.
-3. If prompted by Windows User Account Control (UAC) to configure the firewall, click **Yes** or **Allow**.
-4. Once completed, you are fully deployed and ready to go!
+This document provides a comprehensive, step-by-step guide for installing, configuring, running, and troubleshooting the **TilePoint Shared Database Server & POS System** on Windows 10 and Windows 11.
 
 ---
 
-## 🛠️ Step 1: Install Dependencies
-To run the server locally, ensure you have these installed on your Windows laptop:
-1. **Node.js (LTS version)**: [Download Node.js](https://nodejs.org/)
-2. **Git for Windows (Git Bash)**: [Download Git](https://git-scm.com/) (highly recommended as it installs native OpenSSL command line utilities).
+## 📖 Table of Contents
+1. [System Overview & Architecture](#-1-system-overview--architecture)
+2. [Prerequisites & System Requirements](#-2-prerequisites--system-requirements)
+3. [Option 1: 1-Click Automated Installation (Recommended)](#-3-option-1-1-click-automated-installation-recommended)
+4. [Option 2: Step-by-Step Manual Installation Guide](#-4-option-2-step-by-step-manual-installation-guide)
+   - [Step 2.1: Install Node.js & Git for Windows](#step-21-install-nodejs--git-for-windows)
+   - [Step 2.2: Install Node Dependencies](#step-22-install-node-dependencies)
+   - [Step 2.3: Configure Environment Variables (.env)](#step-23-configure-environment-variables-env)
+   - [Step 2.4: Generate SSL Certificates for Local HTTPS](#step-24-generate-ssl-certificates-for-local-https)
+   - [Step 2.5: Configure Windows Defender Firewall for Port 3000](#step-25-configure-windows-defender-firewall-for-port-3000)
+   - [Step 2.6: Build Production Client Assets](#step-26-build-production-client-assets)
+   - [Step 2.7: Launch and Manage Server under PM2](#step-27-launch-and-manage-server-under-pm2)
+5. [Connecting Mobile Cashier Terminals & Staff Devices](#-5-connecting-mobile-cashier-terminals--staff-devices)
+6. [Preventing Disconnections: Static IP & Router DHCP Setup](#-6-preventing-disconnections-static-ip--router-dhcp-setup)
+   - [Method A: Router DHCP IP Reservation (Recommended)](#method-a-router-dhcp-ip-reservation-recommended)
+   - [Method B: Windows Static IP Assignment](#method-b-windows-static-ip-assignment)
+7. [Achieving Trusted HTTPS (Zero Security Warnings)](#-7-achieving-trusted-https-zero-security-warnings)
+   - [Method A: Local Trusted CA with mkcert](#method-a-local-trusted-ca-with-mkcert)
+   - [Method B: Global Enterprise Domain via Cloudflare Tunnels](#method-b-global-enterprise-domain-via-cloudflare-tunnels)
+8. [Enterprise Nginx Reverse Proxy Setup (Optional)](#-8-enterprise-nginx-reverse-proxy-setup-optional)
+9. [Comprehensive Step-by-Step Troubleshooting Guide](#-9-comprehensive-step-by-step-troubleshooting-guide)
+   - [Troubleshooting EADDRINUSE (Port 3000 Busy)](#troubleshooting-eaddrinuse-port-3000-busy)
+   - [Troubleshooting ERR_SSL_PROTOCOL_ERROR](#troubleshooting-err_ssl_protocol_error)
+   - [Troubleshooting "Server unable to commit configuration records"](#troubleshooting-server-unable-to-commit-configuration-records)
+   - [Troubleshooting PowerShell Execution Policy Restrictions](#troubleshooting-powershell-execution-policy-restrictions)
+   - [Troubleshooting Mobile Devices Unable to Connect](#troubleshooting-mobile-devices-unable-to-connect)
+10. [Useful Operational Commands Reference](#-10-useful-operational-commands-reference)
 
 ---
 
-## 🔒 Step 2: Generate SSL Certificates for Windows
-We have included automated scripts to generate certificates on Windows.
+## 🏗️ 1. System Overview & Architecture
 
-### Method A: Native PowerShell (No OpenSSL or Git required)
-If you don't have Git Bash or OpenSSL installed, you can generate them natively using Windows PowerShell:
-1. Open **PowerShell** in your project folder (`C:\Users\USER\Documents\GitHub\TilePoint`).
-2. Run this command to **unblock** the script first (required on Windows for downloaded scripts):
-   ```powershell
-   Unblock-File .\generate-certs.ps1
+TilePoint operates as a resilient, full-stack POS and ERP platform designed for hardware and tile retail stores:
+- **Central Node (`server.js`)**: Runs on Express.js on **Port 3000**.
+- **Shared Storage (`server-db.json`)**: Local JSON file storage with atomic temp-file writing and MD5 hash caching for zero data loss during power outages.
+- **Real-Time Synchronizer**: Server-Sent Events (SSE) broadcasting live updates (`/api/db/events`) across all connected cashier and store terminals.
+- **Security & Shielding**: Anti-crawler middleware shielding API endpoints, HMAC SHA-256 session token verification, and role-based access control (Admin, Manager, Cashier).
+- **HTTPS SSL Support**: Auto-detects `key.pem` and `cert.pem` in the root directory to run in secure HTTPS mode required for mobile camera barcode and receipt scanning.
+
+---
+
+## 💻 2. Prerequisites & System Requirements
+
+Before deploying TilePoint, ensure your Windows machine meets these minimum requirements:
+- **Operating System**: Windows 10 (64-bit) or Windows 11 (64-bit).
+- **Node.js**: Version 18.0.0 or higher (LTS v20+ recommended).
+- **Git for Windows**: Version 2.40+ (includes OpenSSL CLI tools).
+- **User Permissions**: Administrator access (required for Firewall configuration, global PM2 installation, and SSL CA store registration).
+- **Local Network**: Wi-Fi or Ethernet router connecting the host Windows PC and cashier tablets/phones on the same local network subnet.
+
+---
+
+## 🚀 3. Option 1: 1-Click Automated Installation (Recommended)
+
+TilePoint includes a fully automated installer batch file (`setup-tilepoint.bat`) that handles all dependencies, environment setup, local IP detection, certificate generation, firewall rules, asset compilation, and background server startup in one click.
+
+### Step-by-Step 1-Click Execution:
+1. Open your project folder (`C:\path\to\TilePoint`).
+2. Right-click **`setup-tilepoint.bat`** and select **Run as Administrator**.
+3. If prompted by Windows User Account Control (UAC), click **Yes**.
+4. The automated script will perform these actions sequentially:
+   - ✅ Verify and auto-install Git and Node.js LTS via `winget` if missing.
+   - ✅ Execute `npm install` for project dependencies.
+   - ✅ Detect your primary local IPv4 address (excluding WSL, Docker, and VirtualBox interfaces).
+   - ✅ Create `.env` from `.env.example` with auto-generated security secrets and local IP binding.
+   - ✅ Download `mkcert.exe` and generate trusted SSL certificates (`key.pem`, `cert.pem`) for `localhost` and your local IP.
+   - ✅ Add an Inbound Firewall Rule in Windows Defender for TCP Port 3000.
+   - ✅ Compile production client bundle (`npm run build`).
+   - ✅ Install and launch the server under PM2 process manager as `tilepoint-hq-server`.
+   - ✅ Open your default browser to `https://<YOUR_LOCAL_IP>:3000`.
+
+---
+
+## 🛠️ 4. Option 2: Step-by-Step Manual Installation Guide
+
+If you prefer to install and configure each component manually, follow this sequential step-by-step guide.
+
+---
+
+### Step 2.1: Install Node.js & Git for Windows
+
+1. **Install Node.js**:
+   - Download the LTS installer from [https://nodejs.org/](https://nodejs.org/).
+   - Run the `.msi` setup and ensure **"Add to PATH"** is checked.
+   - Verify installation in Command Prompt:
+     ```cmd
+     node -v
+     npm -v
+     ```
+
+2. **Install Git for Windows**:
+   - Download Git from [https://git-scm.com/](https://git-scm.com/).
+   - Complete standard installation (this installs native OpenSSL command line utilities).
+   - Verify installation in Command Prompt:
+     ```cmd
+     git --version
+     ```
+
+---
+
+### Step 2.2: Install Node Dependencies
+
+1. Open **Command Prompt** or **PowerShell** in the root directory of TilePoint:
+   ```cmd
+   cd C:\path\to\TilePoint
    ```
-3. Run the script:
-   ```powershell
-   .\generate-certs.ps1
+2. Run `npm install` to download required packages (`express`, `vite`, `dotenv`, `react`, `lucide-react`, etc.):
+   ```cmd
+   npm install
    ```
-   *(If you still get an execution policy block, run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` and then run `.\generate-certs.ps1` again).*
-4. This will create `key.pem` and `cert.pem` directly in your folder!
 
-### Method A.1: Copy & Paste Single PowerShell Command (Fastest & Guaranteed)
-If Windows still blocks the script file, you can copy, paste, and run this single-line script block directly in **PowerShell**. It doesn't load a file, so it **always bypasses security restrictions**:
+---
+
+### Step 2.3: Configure Environment Variables (.env)
+
+1. Check if a `.env` file exists in the root folder.
+2. If not, copy `.env.example` to create `.env`:
+   ```cmd
+   copy .env.example .env
+   ```
+3. Open `.env` in Notepad or VS Code and set the values:
+   ```env
+   # Cryptographic secret for signing offline branch sessions (Minimum 16 characters)
+   VITE_SECURITY_SECRET="TilePointEnterpriseSecPass2026!"
+
+   # Optional Google AI Studio key for local receipt auditing and AI assistant features
+   GEMINI_API_KEY=""
+
+   # Bound server address (Replace with your actual local IP)
+   APP_URL="https://192.168.1.38:3000"
+   ```
+
+---
+
+### Step 2.4: Generate SSL Certificates for Local HTTPS
+
+Node.js requires `key.pem` and `cert.pem` in the root folder to boot in HTTPS mode. Choose one of the methods below:
+
+#### Method A: Automated Batch Script (OpenSSL via Git)
+Double-click **`generate-certs.bat`** in the project folder. It will locate OpenSSL from Git and create `key.pem` and `cert.pem`.
+
+#### Method B: Native PowerShell Script (No OpenSSL Required)
+If OpenSSL is not installed, run our native PowerShell generator:
 ```powershell
-$cert = New-SelfSignedCertificate -DnsName "localhost" -CertStoreLocation "Cert:\CurrentUser\My" -FriendlyName "TilePoint Local HTTPS" -NotAfter (Get-Date).AddDays(365); [System.IO.File]::WriteAllText("cert.pem", ("-----BEGIN CERTIFICATE-----`r`n" + [Convert]::ToBase64String($cert.Export([Security.Cryptography.X509Certificates.X509ContentType]::Cert), "InsertLineBreaks") + "`r`n-----END CERTIFICATE-----")); [System.IO.File]::WriteAllText("key.pem", ("-----BEGIN PRIVATE KEY-----`r`n" + [Convert]::ToBase64String($cert.Export([Security.Cryptography.X509Certificates.X509ContentType]::Pkcs12), "InsertLineBreaks") + "`r`n-----END PRIVATE KEY-----")); $store = New-Object Security.Cryptography.X509Certificates.X509Store "My", "CurrentUser"; $store.Open("ReadWrite"); $store.Remove($cert); $store.Close(); Write-Host "Successfully generated key.pem and cert.pem!" -ForegroundColor Green
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+.\generate-certs.ps1
 ```
 
-### Method B: Use the 1-Click Batch File
-1. Double-click the file named `generate-certs.bat` in your project folder.
-2. It will locate OpenSSL (from your Git installation) and automatically create:
-   - `key.pem`
-   - `cert.pem`
-
-### Method C: Generate manually using Git Bash
-If you prefer Git Bash, open it inside the project root folder and run:
+#### Method C: Manual Git Bash Command
+Open **Git Bash** in the project root folder and execute:
 ```bash
 openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -sha256 -days 365 -nodes -subj "/CN=localhost"
 ```
 
-*Once these two files (`key.pem` and `cert.pem`) exist in your server directory, the Node server will **automatically boot in secure HTTPS mode**.*
+---
+
+### Step 2.5: Configure Windows Defender Firewall for Port 3000
+
+By default, Windows Defender Firewall blocks incoming connections from mobile phones and cashier tablets. You must allow inbound traffic on TCP Port 3000.
+
+#### Fast PowerShell Command (Run as Administrator):
+```powershell
+New-NetFirewallRule -DisplayName "TilePoint Server Port 3000" -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow
+```
+
+#### Manual Control Panel Method:
+1. Press `Win + R`, type `wf.msc` and press Enter (*Windows Defender Firewall with Advanced Security*).
+2. Click **Inbound Rules** in the left sidebar, then click **New Rule...** on the right.
+3. Choose **Port** -> click Next.
+4. Choose **TCP** and type `3000` under **Specific local ports** -> click Next.
+5. Choose **Allow the connection** -> click Next.
+6. Ensure **Domain**, **Private**, and **Public** are checked -> click Next.
+7. Name the rule `TilePoint Server Port 3000` and click **Finish**.
 
 ---
 
-## ⚡ Troubleshooting EADDRINUSE (Address already in use 3000)
-If your log says `Error: listen EADDRINUSE: address already in use 0.0.0.0:3000`, it means **another process is already using port 3000** (likely an old Node/PM2 instance or a stale server).
+### Step 2.6: Build Production Client Assets
 
-### How to fix it:
-1. **Find what is running on Port 3000**:
-   Open **Command Prompt** (CMD) or PowerShell and run:
+Compile the React / Vite frontend into static production bundle files in the `dist/` directory:
+```cmd
+npm run build
+```
+*(Verify that the `dist` folder is created and contains `index.html` and assets).*
+
+---
+
+### Step 2.7: Launch and Manage Server under PM2
+
+PM2 keeps your server running 24/7 in the background and restarts it automatically if the laptop reboots.
+
+1. **Install PM2 globally**:
+   ```cmd
+   npm install -g pm2
+   ```
+
+2. **Install Windows Startup Service**:
+   ```cmd
+   npm install -g pm2-windows-startup
+   pm2-startup install
+   ```
+
+3. **Start TilePoint Server**:
+   ```cmd
+   pm2 start server.js --name "tilepoint-hq-server"
+   ```
+
+4. **Save PM2 process list to Windows Registry**:
+   ```cmd
+   pm2 save
+   ```
+
+5. **Verify server status**:
+   ```cmd
+   pm2 status
+   ```
+
+---
+
+## 📱 5. Connecting Mobile Cashier Terminals & Staff Devices
+
+Once the server is running under PM2 on your Windows host laptop, staff tablets and mobile phones can connect:
+
+1. Connect the staff device to the **same Wi-Fi router** as the Windows host PC.
+2. Find the host PC's local IP address by running `ipconfig` in CMD on the host PC (e.g. `192.168.1.38`).
+3. On the staff phone or tablet, open Google Chrome, Safari, or Microsoft Edge and enter:
+   ```
+   https://192.168.1.38:3000
+   ```
+4. **Handling Self-Signed SSL Warning**:
+   Because the server uses a local self-signed certificate, the mobile browser will display a *"Your connection is not private"* warning on first load:
+   - Tap **Advanced** (or *Show Details*).
+   - Tap **Proceed to 192.168.1.38 (unsafe)**.
+5. The TilePoint POS terminal interface will load and sync with the central database.
+
+---
+
+## 🔒 6. Preventing Disconnections: Static IP & Router DHCP Setup
+
+### The Problem: DHCP IP Address Rotation
+Wi-Fi routers dynamically change IP addresses whenever devices reconnect or the router restarts. If your Windows host PC changes IP from `192.168.1.38` to `192.168.1.45`, cashier tablets will immediately lose connection.
+
+To prevent this, pin your host PC's IP address permanently using one of the two methods below.
+
+---
+
+### Method A: Router DHCP IP Reservation (Recommended)
+
+This tells your Wi-Fi router to always assign the same IP address to your PC's hardware address (MAC address).
+
+1. Find your host PC's MAC address in Command Prompt:
+   ```cmd
+   getmac /v /fo list
+   ```
+   Copy the **Physical Address** for your active Wi-Fi or Ethernet adapter (e.g. `9C-B6-D0-11-22-33`).
+2. Access your router's admin panel in a web browser (usually `http://192.168.1.1` or `http://192.168.0.1`).
+3. Navigate to **DHCP Server** -> **Address Reservation** (or *Static Leases* / *IP & MAC Binding*).
+4. Enter your MAC address and assign a fixed local IP (e.g. `192.168.1.150`).
+5. Save changes and reboot the router.
+
+---
+
+### Method B: Windows Static IP Assignment
+
+Configure static IP directly within Windows:
+
+#### PowerShell Method (Run as Administrator):
+```powershell
+$adapter = Get-NetAdapter | Where-Object { $_.Status -eq "Up" } | Select-Object -First 1
+$ipConfig = Get-NetIPAddress -InterfaceIndex $adapter.InterfaceIndex -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike "169.*" } | Select-Object -First 1
+$gateway = (Get-NetRoute -DestinationPrefix "0.0.0.0/0" -InterfaceIndex $adapter.InterfaceIndex).NextHop | Select-Object -First 1
+
+New-NetIPAddress -InterfaceIndex $adapter.InterfaceIndex -IPAddress $ipConfig.IPAddress -PrefixLength 24 -DefaultGateway $gateway -Confirm:$false
+Set-DnsClientServerAddress -InterfaceIndex $adapter.InterfaceIndex -ServerAddresses ("8.8.8.8", "8.8.4.4")
+```
+
+#### Manual Control Panel Method:
+1. Press `Win + R`, type `ncpa.cpl` and press Enter.
+2. Right-click your active Network Adapter -> click **Properties**.
+3. Double-click **Internet Protocol Version 4 (TCP/IPv4)**.
+4. Select **Use the following IP address**:
+   - **IP Address**: `192.168.1.150`
+   - **Subnet Mask**: `255.255.255.0`
+   - **Default Gateway**: `192.168.1.1` (Your router IP)
+5. Select **Use the following DNS server addresses**:
+   - **Preferred DNS**: `8.8.8.8`
+   - **Alternate DNS**: `8.8.4.4`
+6. Click **OK** and apply.
+
+---
+
+## 🔐 7. Achieving Trusted HTTPS (Zero Security Warnings)
+
+If you want to eliminate the browser *"Not Secure"* warning on cashier devices, choose one of these solutions:
+
+---
+
+### Method A: Local Trusted CA with mkcert
+
+`mkcert` creates a local Certificate Authority (CA) and registers it directly into the Windows System Trust Store.
+
+1. **Download mkcert**:
+   - `setup-tilepoint.bat` automatically downloads `mkcert.exe` into your folder.
+   - Alternatively, install via Chocolatey: `choco install mkcert`
+2. **Install Local CA to Windows Store**:
+   Open PowerShell as Administrator in the project directory and run:
+   ```powershell
+   .\mkcert.exe -install
+   ```
+3. **Generate Trusted Certificates**:
+   ```powershell
+   .\mkcert.exe -key-file key.pem -cert-file cert.pem localhost 127.0.0.1 192.168.1.150
+   ```
+   *(Replace `192.168.1.150` with your actual static IP).*
+4. **Restart PM2 server**:
+   ```cmd
+   pm2 restart tilepoint-hq-server
+   ```
+5. **Clear Browser Cache / Restart Browser**:
+   Restart Chrome or Edge (`chrome://restart`). The connection will show a green security lock on the host PC!
+
+---
+
+### Method B: Global Enterprise Domain via Cloudflare Tunnels
+
+This assigns your local Windows server a globally trusted, official domain name (e.g. `https://pos.yourstore.com`) with automatic SSL management by Cloudflare.
+
+1. Create a free account at [Cloudflare.com](https://www.cloudflare.com) and add your custom domain.
+2. In Cloudflare Dashboard, go to **Zero Trust** -> **Networks** -> **Tunnels** -> **Create a Tunnel**.
+3. Name your tunnel `tilepoint-hq` and download the Windows connector installer (`cloudflared`).
+4. Install `cloudflared` on your host PC as a Windows background service.
+5. In Cloudflare Dashboard, route your chosen subdomain (e.g. `pos.yourstore.com`) to local HTTP service:
+   - **Service Type**: `HTTP`
+   - **URL**: `localhost:3000`
+6. **Result**: Your staff can access the POS anywhere in the world securely over `https://pos.yourstore.com` with zero browser warnings and no port-forwarding required.
+
+---
+
+## 🌐 8. Enterprise Nginx Reverse Proxy Setup (Optional)
+
+If you prefer using Nginx for Windows as an enterprise reverse proxy instead of Express directly terminating SSL:
+
+1. Download Nginx for Windows from [https://nginx.org/en/download.html](https://nginx.org/en/download.html) and extract to `C:\nginx`.
+2. Locate `nginx.conf.example` in the TilePoint root directory.
+3. Copy `nginx.conf.example` into `C:\nginx\conf\nginx.conf`.
+4. Update certificate file paths in `nginx.conf`:
+   ```nginx
+   ssl_certificate     C:/path/to/TilePoint/cert.pem;
+   ssl_certificate_key C:/path/to/TilePoint/key.pem;
+   ```
+5. Start Nginx from Command Prompt:
+   ```cmd
+   cd C:\nginx
+   start nginx
+   ```
+   *(To stop Nginx: `nginx -s stop` | To reload: `nginx -s reload`)*.
+
+---
+
+## ❓ 9. Comprehensive Step-by-Step Troubleshooting Guide
+
+---
+
+### Troubleshooting EADDRINUSE (Port 3000 Busy)
+
+**Symptom**: Server logs show `Error: listen EADDRINUSE: address already in use 0.0.0.0:3000` or `server.js` fails to start.
+
+**Cause**: Another application or orphaned Node process is running on Port 3000.
+
+**Step-by-Step Fix**:
+1. Open Command Prompt (CMD) as Administrator.
+2. Find the process occupying Port 3000:
    ```cmd
    netstat -ano | findstr :3000
    ```
-   Based on your output, you found that process **`2528`** is listening on Port 3000:
-   ```
-   TCP    0.0.0.0:3000           0.0.0.0:0              LISTENING       2528
-   ```
-
-2. **Kill the running process**:
-   Kill process **`2528`** to instantly free up port 3000. In Command Prompt or PowerShell, run:
+   *Example output:*
+   `TCP    0.0.0.0:3000           0.0.0.0:0              LISTENING       4812`
+3. Identify the PID number at the far right (e.g. `4812`).
+4. Force terminate the process:
    ```cmd
-   taskkill /PID 2528 /F
+   taskkill /PID 4812 /F
    ```
-
-3. **Kill PM2 duplicates (Optional but recommended)**:
-   Sometimes PM2 keeps restarting the broken server in a loop. Stop all active PM2 tasks:
+5. Stop any lingering PM2 tasks:
    ```cmd
    pm2 kill
    ```
-
-4. **Restart the secure server**:
-   After port 3000 is free and your `.pem` files are generated, restart the PM2 instance:
+6. Restart the TilePoint server:
    ```cmd
    pm2 start server.js --name "tilepoint-hq-server"
    ```
 
 ---
 
-## 🔒 Troubleshooting ERR_SSL_PROTOCOL_ERROR (Invalid Response)
-If you try to go to `https://192.168.1.38:3000` and get an **`ERR_SSL_PROTOCOL_ERROR`** or if PM2 logs show **`ERR_OSSL_UNSUPPORTED` / `nested asn1 error` / `wrong tag`**, it means your generated certificates are corrupted or encoded with an invalid format (like a raw PKCS#12 binary disguised as a PEM file).
+### Troubleshooting ERR_SSL_PROTOCOL_ERROR
 
-Node.js expects a clean, decrypted **PKCS#8 Private Key** inside `key.pem`.
+**Symptom**: Browser displays `ERR_SSL_PROTOCOL_ERROR` or PM2 logs report `ERR_OSSL_UNSUPPORTED` / `nested asn1 error`.
 
-### How to resolve it:
+**Cause**: `key.pem` or `cert.pem` files are corrupted, empty, or incorrectly formatted as PKCS#12 instead of PKCS#8 PEM.
 
-#### Option A: Quick Bypass (Run in HTTP mode)
-If you do not want to set up SSL certificates right now, you can simply delete the invalid certificate files:
-1. Delete `key.pem` and `cert.pem` from your project folder.
-2. Restart PM2:
+**Step-by-Step Fix**:
+1. Stop the server:
    ```cmd
-   pm2 restart tilepoint-hq-server
+   pm2 stop tilepoint-hq-server
    ```
-3. Access the site via plain HTTP:
-   ```
-   http://192.168.1.38:3000
-   ```
-*(Note: Some advanced browser features like camera access for receipt scanning might be restricted on non-localhost HTTP connections. If you plan to use mobile camera scanning, follow Option B instead).*
-
-#### Option B: Active SSL Mode (Recommended & Fully Compliant)
-We have included a built-in PowerShell script that generates **100% correct PKCS#8 keys** natively without any errors.
-
-1. **Delete any corrupted certificate files first**:
-   Make sure you delete any existing `key.pem` and `cert.pem` from your project root.
-
-2. **Run our native PowerShell script**:
-   Open **PowerShell as Administrator**, navigate to your project directory, and run:
+2. Delete `key.pem` and `cert.pem` from the project root directory.
+3. Re-generate valid certificate files using PowerShell:
    ```powershell
    Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
    .\generate-certs.ps1
    ```
-   *(This will run our native generator script, which exports the correct decrypted PKCS#8 key block. It will output a green success message once completed).*
-
-3. **Alternative (Git Bash OpenSSL Method)**:
-   If you have Git for Windows installed, you can also just double-click **`generate-certs.bat`** to generate the certificates using Git's built-in OpenSSL.
-
-4. **Restart your PM2 server** to load the clean files:
-   ```cmd
-   pm2 restart tilepoint-hq-server
-   ```
-
-5. Now, open your browser and navigate to:
-   ```
-   https://192.168.1.38:3000
-   ```
-   Click **Advanced -> Proceed to 192.168.1.38 (unsafe)** when the browser shows its standard local certificate warning.
-
----
-
-## ⚙️ Setting Up Environment Variables (.env) on Windows
-### Do I need to configure `.env`?
-* **For offline operations (Standalone/Local only)**: No, you do not *need* it. The system has smart offline fallbacks that automatically generate secure keys and mock endpoints if the variables are empty.
-* **For production, security, and AI integrations**: **Yes, it is highly recommended!**
-
-### How to configure your `.env` file:
-1. In your project root folder, locate the `.env.example` file.
-2. Duplicate it and rename the copy to **`.env`** (make sure your explorer doesn't accidentally save it as `.env.txt`).
-3. Open `.env` in Notepad or VS Code and update these lines:
-   * **`VITE_SECURITY_SECRET`**: Replace this with a random secure password of at least 16 characters. This is used to cryptographically sign your offline branch data packets.
-     ```env
-     VITE_SECURITY_SECRET="EmmanTilePointSecPass2026!"
-     ```
-   * **`GEMINI_API_KEY`**: If you want to use the optional local AI features (such as receipt categorization, AI help hub, or automated inventory audit reviews), get a key from Google AI Studio and enter it here:
-     ```env
-     GEMINI_API_KEY="AIzaSy..."
-     ```
-   * **`APP_URL`**: Set this to your local address to point back to your laptop:
-     ```env
-     APP_URL="https://192.168.1.38:3000"
-     ```
-4. Restart your PM2 server to apply the `.env` settings:
+4. Restart PM2:
    ```cmd
    pm2 restart tilepoint-hq-server
    ```
 
 ---
 
-## 🚀 Step 3: Run with PM2 on Windows
-PM2 is a production process manager that keeps your application running 24/7.
+### Troubleshooting "Server unable to commit configuration records"
 
-### 1. Install PM2 globally
-Open **Command Prompt (CMD)** or **PowerShell** as **Administrator** and run:
-```cmd
-npm install -g pm2
-```
+**Symptom**: Saving store settings, admin credentials, or branch records in the UI fails with a red error notice.
 
-### 2. Startup PM2 on Windows Boot (Automatic Service)
-Unlike Linux, PM2 on Windows requires a wrapper to restart automatically when your Windows laptop restarts.
-Install the Windows-specific startup daemon:
-```cmd
-npm install -g pm2-windows-startup
-pm2-startup install
-```
+**Cause**: The web browser cannot reach the backend server on Port 3000 because `server.js` is offline, blocked by firewall, or the browser hasn't accepted the SSL certificate exception.
 
-### 3. Start TilePoint Server under PM2
-Run this command from your project root folder:
-```cmd
-pm2 start server.js --name "tilepoint-hq-server"
-```
-
-### 4. Save the process list to Windows registry
-To make sure PM2 recovers the server after a Windows restart or system update:
-```cmd
-pm2 save
-```
-
-### Useful PM2 Commands:
-* **Check Status**: `pm2 status`
-* **Real-time Logs**: `pm2 logs tilepoint-hq-server`
-* **Restart Server**: `pm2 restart tilepoint-hq-server`
-* **Stop Server**: `pm2 stop tilepoint-hq-server`
-
----
-
-## 🌐 Step 4: Option 2 - Nginx on Windows (Enterprise Reverse Proxy)
-If you prefer running a dedicated reverse proxy (Nginx) on Windows rather than letting Node handle SSL directly:
-
-1. **Download Nginx for Windows**: [Download Nginx](https://nginx.org/en/download.html) (choose the stable `.zip` package).
-2. Unzip Nginx (e.g., to `C:\nginx`).
-3. Copy the configuration template we generated in your project root named `nginx.conf.example`.
-4. Open `C:\nginx\conf\nginx.conf` and replace its content with the contents of your `nginx.conf.example`.
-5. Update path directions to your SSL files in the Nginx config:
-   ```nginx
-   ssl_certificate     C:/your-project-path/cert.pem;
-   ssl_certificate_key C:/your-project-path/key.pem;
-   ```
-6. Start Nginx on Windows via Command Prompt:
+**Step-by-Step Fix**:
+1. Check PM2 server status:
    ```cmd
-   cd C:\nginx
-   start nginx
+   pm2 status
    ```
-   *(To stop Nginx, use `nginx -s stop`)*
+   If status is `stopped` or `errored`, check error logs: `pm2 logs tilepoint-hq-server`.
+2. Test backend accessibility directly in browser:
+   Open `https://localhost:3000/api/db` in your browser.
+3. Ensure you click **Advanced -> Proceed to localhost (unsafe)** if prompted by the SSL warning screen.
+4. Verify firewall status: Ensure Inbound TCP Rule for Port 3000 is active in Windows Firewall.
 
 ---
 
-## 📶 Step 5: Connecting Mobile Devices (Staff POS) & Configuring Windows 11 Firewall
-If you want tablet or phone screens to connect securely over local Wi-Fi:
-1. Make sure your Windows laptop and mobile devices are connected to the **same Wi-Fi router**.
-2. Find your laptop's Local IP address. In **Command Prompt**, run:
-   ```cmd
-   ipconfig
-   ```
-   Look for the **IPv4 Address** (typically `192.168.1.XX` or `10.0.0.XX`).
-3. **⚠️ Configure Windows 11 Defender Firewall (CRITICAL STEP)**:
-   By default, Windows 11 blocks incoming network connections on port `3000` from external devices. You must explicitly allow port `3000` through the firewall to let staff tablets connect:
-   * **The Quick PowerShell Method (Recommended)**:
-     Open **PowerShell as Administrator** and run this single command:
-     ```powershell
-     New-NetFirewallRule -DisplayName "TilePoint Server Port 3000" -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow
-     ```
-   * **The Manual Control Panel Method**:
-     1. Press the Windows Key, search for **"Windows Defender Firewall with Advanced Security"** and open it.
-     2. Click **Inbound Rules** in the left sidebar, then click **New Rule...** in the right sidebar.
-     3. Select **Port** and click Next.
-     4. Select **TCP** and enter `3000` in **Specific local ports**, then click Next.
-     5. Select **Allow the connection** and click Next.
-     6. Keep Domain, Private, and Public checked, and click Next.
-     7. Name the rule `TilePoint Port 3000` and click **Finish**.
-4. On your mobile devices, open the browser and navigate to:
-   ```
-   https://192.168.1.XX:3000
-   ```
-5. **Note about Self-Signed Certificates**: Because this is a local self-signed certificate, your browser will show a "Your connection is not private" warning on first load. Simply click **"Advanced"** and select **"Proceed to Local IP (unsafe)"** to connect securely.
+### Troubleshooting PowerShell Execution Policy Restrictions
 
----
+**Symptom**: Running `.ps1` scripts gives: `generate-certs.ps1 cannot be loaded because running scripts is disabled on this system`.
 
-## 🔒 Step 6: How to get "True" Trusted HTTPS (No Browser Warnings)
-
-A **"True" HTTPS** connection requires a certificate signed by a globally trusted Certificate Authority (CA). Local self-signed certificates are encrypted but show browser warnings because your browser doesn't recognize your laptop as a verified CA. 
-
-To run with a **100% genuine, green-lock secure HTTPS** (no warning prompts on your laptop or mobile phones), choose one of the two industry-standard methods below:
-
-### 🌟 Option A: Cloudflare Tunnels (Easiest & Most Professional)
-This is the modern enterprise best practice. It assigns your local server a real, trusted domain name (e.g., `https://pos.emmantilecenter.com`) with automatic SSL management by Cloudflare.
-* **Pros**: 100% verified HTTPS on all laptops, tablets, and phones anywhere; zero router/port-forwarding setup; completely secure.
-* **Cost**: **Free** (requires owning any custom domain name, which costs ~$5–$10/year).
-
-#### Setup steps:
-1. Create a free account at [Cloudflare](https://www.cloudflare.com/) and connect your domain.
-2. Go to your Cloudflare Dashboard -> **Zero Trust** -> **Networks** -> **Tunnels** and click **Create a Tunnel**.
-3. Name it `tilepoint-hq` and download the **Cloudflare Tunnel Windows installer** (`cloudflared`).
-4. Install it on your Windows laptop as a continuous background service (Cloudflare provides the exact command during setup).
-5. In your Cloudflare dashboard, route your subdomain (e.g., `pos.emmantilecenter.com`) to the local service:
-   * **Service Type**: `HTTP`
-   * **URL**: `localhost:3000` *(Cloudflare handles the SSL encryption for you on their network!)*
-6. **No local cert files needed!** Cloudflare takes care of the green secure SSL lock automatically. Your team can access it anywhere in the world securely.
-
----
-
-### 💻 Option B: mkcert (True local HTTPS for Laptop only)
-If you do not have a domain or internet access, you can force Windows and Chrome to fully trust your local server using **`mkcert`**. This creates a custom Local Certificate Authority on your laptop and registers it into the Windows system registry.
-
-#### Setup steps:
-1. **Install Chocolatey** (the Windows package manager) if you don't have it. Open PowerShell as Administrator and run:
-   ```powershell
-   Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-   ```
-2. **Install mkcert** via PowerShell:
-   ```powershell
-   choco install mkcert
-   ```
-3. **Install the Local CA** into your Windows Trusted Root Store:
-   ```powershell
-   mkcert -install
-   ```
-   *(Accept the prompt confirming you want to install the certificate).*
-4. **Generate trusted local certificates** in your project folder:
-   ```powershell
-   mkcert localhost 127.0.0.1 ::1 192.168.1.38
-   ```
-   *(Replace `192.168.1.38` with your actual laptop local IP address).*
-5. This creates two files:
-   - `localhost+3.pem` (Your Cert)
-   - `localhost+3-key.pem` (Your Private Key)
-6. **Rename these files** to `cert.pem` and `key.pem` in your project folder.
-7. Restart your server. **Chrome will now show a fully valid, green-locked connection with zero security warnings on your laptop!**
-
----
-
-### ⚠️ Why is my browser STILL saying "Not secure" after using mkcert?
-
-If you followed the `mkcert` steps but still see a **"Not Secure"** warning or a red certificate warning line, here is the exact checklist to solve it instantly:
-
-#### 1. Did you restart your browser?
-Browsers (especially Google Chrome and Edge) read the Windows Trusted Root Certification authorities when they startup.
-* **Solution**: Close all your browser windows entirely, or type `chrome://restart` in your address bar and press Enter. This forces Chrome to reload the Windows Trust Registry and recognize your custom CA.
-
-#### 2. Are you using Firefox?
-Unlike Chrome and Edge, Firefox does **not** look at the Windows Certificate Store by default; it uses its own built-in store.
-* **Solution**: In your PowerShell window, run:
-  ```powershell
-  mkcert -install
-  ```
-  This command will automatically inject the certificate authority into Firefox's certificate database as well (Firefox must be closed during this). Alternatively, you can open Firefox -> **Settings** -> **Privacy & Security** -> search for "Certificates" -> click **View Certificates** -> **Authorities** -> **Import**, and import `C:\Users\USER\AppData\Local\mkcert\rootCA.pem`.
-
-#### 3. Are you checking from a mobile phone, tablet, or another computer?
-`mkcert` works by installing a **Local CA** onto **your Windows laptop's registry**.
-* **Your laptop** now trusts the certificate completely (hence the green lock).
-* **Your mobile phone or other computers** do not have your laptop's Local CA installed, so they will still show "Not secure"!
-* **Solution**:
-  * **Option A**: Use **Cloudflare Tunnels (Step 6 Option A)**. This is highly recommended because it gives you a globally trusted HTTPS link (`https://yourname.cloudflare.com`) that works on **all mobile devices and laptops** without installing anything on them.
-  * **Option B**: If you want a mobile device to trust it locally, you must email the file `C:\Users\USER\AppData\Local\mkcert\rootCA.pem` to your mobile phone, open it on your phone, and install/trust it in your iOS or Android Settings as a Trusted Root Profile.
-
-#### 4. Did your laptop's local IP address change?
-If you generated the certificate using `192.168.1.38` but your Wi-Fi router assigned your laptop a new IP address (e.g. `192.168.1.42`), the browser will flag a **"Common Name Mismatch"** warning because the IP doesn't match the SSL certificate.
-* **Solution**: Check your current local IP using `ipconfig` in Command Prompt, then re-generate the cert files with the correct IP address:
-  ```powershell
-  mkcert localhost 127.0.0.1 ::1 YOUR_NEW_IP_HERE
-  ```
-  Rename them to `cert.pem` and `key.pem`, copy them to your folder, and restart PM2 (`pm2 restart tilepoint-hq-server`).
-
----
-
-### 🖥️ Why am I seeing "The server was unable to commit configuration records" during Step 3 (Verification)?
-
-This error occurs when the front-end application in your web browser tries to contact the backend database server (`server.js` running on Port 3000) to save your admin credentials and branch records, but the request fails or is blocked. 
-
-Follow these steps to diagnose and fix this instantly:
-
-#### 1. Is `server.js` actually running?
-If the background process failed to start or crashed, the browser cannot save your records.
-* **How to Check**: Open Command Prompt (CMD) or PowerShell and run:
-  ```cmd
-  pm2 status
-  ```
-* **If PM2 shows `tilepoint-hq-server` as `stopped`, `errored`, or isn't listed**:
-  * Run the server manually in a visible window to see any error messages:
-    ```cmd
-    node server.js
-    ```
-  * Keep this terminal window open! If it shows `Server running on port 3000`, go back to your browser and click "Start Bootstrap Installation" again.
-
-#### 2. Is Port 3000 already in use by another application?
-If you have another program (or a previously crashed instance of Node or VS Code) using Port 3000, `server.js` will crash immediately with `EADDRINUSE`.
-* **How to Check & Kill the blocker**:
-  1. Open Command Prompt (CMD) and run:
-     ```cmd
-     netstat -ano | findstr :3000
-     ```
-  2. If any lines show up, copy the number at the very end of the line (this is the Process ID / PID, e.g. `12450`).
-  3. Force kill that process:
-     ```cmd
-     taskkill /F /PID 12450
-     ```
-     *(Replace `12450` with your actual PID number).*
-  4. Now, re-run `setup-tilepoint.bat` or start `node server.js` manually.
-
-#### 3. Have you accepted the self-signed HTTPS certificate warning?
-If you are accessing the app over HTTPS (e.g. `https://localhost:3000`), the browser will initially block outgoing backend requests until you explicitly permit connection to the self-signed CA.
-* **Solution**: Ensure you click **"Advanced"** -> **"Proceed to localhost (unsafe)"** or **"Proceed to IP Address (unsafe)"** on the initial warning screen. Alternatively, follow **Step 6 Option B** to fully trust the CA using `mkcert` so warnings are never shown.
-
----
-
-## 📶 Step 7: Fixing IP Changes & Configuring Static IP (DHCP Setup)
-
-### ⚠️ The Problem: DHCP IP Address Rotation
-By default, your home/store Wi-Fi router uses **DHCP (Dynamic Host Configuration Protocol)**. This means it dynamically rents IP addresses to your server laptop and staff mobile devices. 
-* If your laptop restarts, or if the router reboots, the router may assign your laptop a **different IP address** (e.g., changing from `192.168.1.38` to `192.168.1.45`).
-* If this happens, **all cashier tablets will instantly lose connection**, because they are still looking for the old IP address.
-
-To prevent this, you **MUST** ensure your server laptop always keeps the same local IP address. You can do this using one of two methods:
-
----
-
-### 🌟 Method A: DHCP Reservation on Your Router (RECOMMENDED)
-This is the most stable and professional method. It tells your local Wi-Fi router to always reserve and assign the exact same IP address to your server laptop whenever it connects.
-
-#### Step-by-Step Router Setup:
-1. Find your server laptop's **MAC Address** (physical hardware identifier) and current IP.
-   * Open **Command Prompt** (CMD) and run:
-     ```cmd
-     getmac /v /fo list
-     ```
-   * Look for the active network adapter (usually `"Wi-Fi"` or `"Ethernet"`) and copy the **Physical Address** (e.g., `9C-B6-D0-11-22-33`).
-2. Log into your Wi-Fi Router's Admin Panel.
-   * Open your browser and go to your router's gateway address (usually `http://192.168.1.1`, `http://192.168.0.1`, or check the sticker underneath your router).
-   * Enter the router's admin username and password.
-3. Locate the **DHCP Server / LAN / Static IP Lease** settings.
-   * Look for tabs named **"DHCP Server"**, **"Address Reservation"**, **"Static DHCP"**, or **"IP & MAC Binding"**.
-4. Add a new reservation:
-   * **MAC Address**: Enter your server laptop's Physical Address (e.g., `9C:B6:D0:11:22:33`).
-   * **Reserved IP Address**: Enter the local IP you want to pin (e.g., `192.168.1.150` — *choose a high number outside the normal pool to avoid conflicts*).
-5. Click **Save / Apply** and restart the router. 
-*Now, your router will lock that IP address to your server forever. It will never change!*
-
----
-
-### 💻 Method B: Setting a Static IP inside Windows (Alternative)
-If you do not have administrative access to your Wi-Fi router, you can configure Windows to request the exact same IP address directly from the computer settings.
-
-#### Option 1: The Fast PowerShell Command (Administrator)
-Open **PowerShell as Administrator** and run this single script to pin your current network settings as permanent static credentials:
+**Step-by-Step Fix**:
+Unblock the script for the current process session:
 ```powershell
-# 1. Capture active interface details
-$adapter = Get-NetAdapter | Where-Object { $_.Status -eq "Up" } | Select-Object -First 1
-$ipConfig = Get-NetIPAddress -InterfaceIndex $adapter.InterfaceIndex -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike "169.*" } | Select-Object -First 1
-$gateway = (Get-NetRoute -DestinationPrefix "0.0.0.0/0" -InterfaceIndex $adapter.InterfaceIndex).NextHop | Select-Object -First 1
-
-# 2. Assign static IP, default subnet, gateway, and primary DNS (Google DNS)
-New-NetIPAddress -InterfaceIndex $adapter.InterfaceIndex -IPAddress $ipConfig.IPAddress -PrefixLength 24 -DefaultGateway $gateway -Confirm:$false
-Set-DnsClientServerAddress -InterfaceIndex $adapter.InterfaceIndex -ServerAddresses ("8.8.8.8", "8.8.4.4")
-
-Write-Host "Static IP configured successfully for: $($ipConfig.IPAddress)" -ForegroundColor Green
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+.\generate-certs.ps1
 ```
-
-#### Option 2: The Manual Windows Control Panel Method
-1. Press `Win + R`, type **`ncpa.cpl`** and press Enter (this opens Network Connections).
-2. Right-click your active connection (**Wi-Fi** or **Ethernet**) and select **Properties**.
-3. Double-click **Internet Protocol Version 4 (TCP/IPv4)** in the list.
-4. Select **"Use the following IP address"**:
-   * **IP Address**: Enter your desired IP (e.g., `192.168.1.150`).
-   * **Subnet Mask**: Usually fills in automatically as `255.255.255.0`.
-   * **Default Gateway**: Enter your router's IP (usually `192.168.1.1`).
-5. Select **"Use the following DNS server addresses"**:
-   * **Preferred DNS server**: `8.8.8.8` (Google Public DNS)
-   * **Alternate DNS server**: `8.8.4.4`
-6. Check **"Validate settings upon exit"** and click **OK**.
 
 ---
 
-### 🔄 After Locking Your IP Address:
-1. Re-run `setup-tilepoint.bat`. The installer will automatically detect your locked IP address, rewrite your `.env` config with the static IP, and generate matching SSL files.
-2. Share the new static URL (e.g. `https://192.168.1.150:3000`) with your cashiers and staffs. They will never lose access again!
+### Troubleshooting Mobile Devices Unable to Connect
 
+**Symptom**: Staff phones/tablets show `ERR_CONNECTION_TIMED_OUT` or `Cannot reach server`.
+
+**Step-by-Step Fix**:
+1. **Network Check**: Verify phone and host PC are connected to the **exact same Wi-Fi SSID** (ensure phone isn't on mobile 4G/5G data or guest network isolation).
+2. **IP Check**: Verify host PC local IP hasn't changed by running `ipconfig` in CMD.
+3. **Firewall Rule Check**: Run this PowerShell command as Administrator on the host PC:
+   ```powershell
+   New-NetFirewallRule -DisplayName "TilePoint Server Port 3000" -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow
+   ```
+4. **URL Check**: Ensure the mobile browser uses `https://` prefix with port `3000` (e.g. `https://192.168.1.38:3000`).
+
+---
+
+## 🛠️ 10. Useful Operational Commands Reference
+
+| Operation | Command | Execution Context |
+| :--- | :--- | :--- |
+| **Run 1-Click Installer** | `setup-tilepoint.bat` | Windows CMD (Run as Admin) |
+| **Check PM2 Status** | `pm2 status` | CMD / PowerShell |
+| **View Real-Time Logs** | `pm2 logs tilepoint-hq-server` | CMD / PowerShell |
+| **Restart Server** | `pm2 restart tilepoint-hq-server` | CMD / PowerShell |
+| **Stop Server** | `pm2 stop tilepoint-hq-server` | CMD / PowerShell |
+| **Rebuild Client Bundle** | `npm run build` | Project Root Directory |
+| **Check Port 3000 Usage** | `netstat -ano \| findstr :3000` | CMD / PowerShell |
+| **Kill Process on Port 3000**| `taskkill /PID <PID> /F` | CMD (Run as Admin) |
+| **Check Local IP Address** | `ipconfig` | CMD / PowerShell |
+| **Generate SSL Certs** | `.\generate-certs.ps1` | PowerShell |
+
+---
+*TilePoint Enterprise POS & Shared Database System — Deployment Documentation*

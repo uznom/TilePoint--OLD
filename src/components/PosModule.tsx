@@ -10,6 +10,8 @@ import { Product, Sale, SaleItem, UserRole, Member } from "../types/db";
 import { verifyPasswordWithToken } from "../lib/crypto";
 import { saveFileToBackup } from "../lib/fileBackupHelper";
 import { isProductInBranch, getBranchStockQuantity } from "../lib/branchUtils";
+import { createSearchIndex, searchIndex } from "../utils/searchIndex";
+import { useVirtualList } from "../hooks/useVirtualList";
 import {
  ShoppingCart,
  Trash2,
@@ -577,21 +579,26 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  // Map products
  const userBranchId = activePosBranchId;
- const filteredProducts = products.filter((p) => {
+
+ // Pre-indexed search index for POS product catalog
+ const posSearchIndex = React.useMemo(() => {
+ return createSearchIndex(products, (p) =>
+ `${p.productName} ${p.productCode} ${p.barcode || ''} ${p.sku || ''} ${p.designName || ''} ${p.category || ''}`
+ );
+ }, [products]);
+
+ const filteredProducts = React.useMemo(() => {
+ const activeProducts = posSearchIndex.filter((entry) => {
+ const p = entry.item;
  if (p.isDeleted) return false;
- if (!isProductInBranch(p, userBranchId, branchStock, branches)) {
- return false;
- }
- const matchCat =
- selectedCategory === "All" || p.category === selectedCategory;
- const matchSearch =
- p.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
- p.productCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
- p.barcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
- p.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
- p.designName.toLowerCase().includes(searchTerm.toLowerCase());
- return matchCat && matchSearch;
+ return isProductInBranch(p, userBranchId, branchStock, branches);
  });
+
+ const matches = searchIndex(activeProducts, searchTerm);
+ return matches.filter(
+ (p) => selectedCategory === "All" || p.category === selectedCategory
+ );
+ }, [posSearchIndex, searchTerm, selectedCategory, userBranchId, branchStock, branches]);
 
  // Dynamic Surcharges, VAT (12%), and Discounts compliant with Philippine and contractor standards
  const subtotal = cart.reduce((acc, item) => {
@@ -1572,6 +1579,17 @@ export const PosModule: React.FC<PosModuleProps> = ({
  salesPage * SALES_PER_PAGE,
  );
  }, [filteredSales, salesPage]);
+
+ const {
+ containerRef: salesVirtualRef,
+ handleScroll: handleSalesVirtualScroll,
+ visibleIndices: visibleSalesIndices,
+ paddingTop: salesPaddingTop,
+ paddingBottom: salesPaddingBottom
+ } = useVirtualList({
+ itemCount: paginatedSales.length,
+ itemHeight: 48
+ });
 
  const ledgerStats = React.useMemo(() => {
  const activeSales = filteredSales.filter(s => !s.isDeleted);
@@ -3323,7 +3341,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
 
  <div className="flex-1 min-h-0 flex flex-col rounded-xl border border-m3-outline-variant/20 shadow-inner bg-m3-surface overflow-hidden snap-start scroll-mt-20">
- <div className="overflow-auto scrollbar-thin scrollbar-thumb-m3-outline-variant h-[58vh] md:h-[64vh] lg:h-[68vh] min-h-[380px]">
+ <div ref={salesVirtualRef} onScroll={handleSalesVirtualScroll} className="overflow-auto scrollbar-thin scrollbar-thumb-m3-outline-variant h-[58vh] md:h-[64vh] lg:h-[68vh] min-h-[380px]">
  <table className="w-full text-left border-collapse table-auto text-xs min-w-[1000px] font-sans">
  <thead>
  <tr className="border-b border-m3-outline-variant/30 bg-m3-surface/30 text-[9px] uppercase font-black text-zinc-400 tracking-wider">
@@ -3341,7 +3359,28 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </tr>
  </thead>
  <tbody className="divide-y divide-m3-outline-variant/10 font-mono text-[11px] text-zinc-300">
- {paginatedSales.map((s, idx) => (
+ {filteredSales.length === 0 ? (
+ <tr>
+ <td
+ colSpan={9}
+ className="py-12 text-center text-zinc-400 font-sans font-bold"
+ >
+ {ledgerSearchQuery
+ ? `No matching sales invoice ledgers found for "${ledgerSearchQuery}".`
+ : "No matching sales invoice ledgers recorded today."}
+ </td>
+ </tr>
+ ) : (
+ <>
+ {salesPaddingTop > 0 && (
+ <tr style={{ height: salesPaddingTop }}>
+ <td colSpan={9} className="p-0 border-0" />
+ </tr>
+ )}
+ {visibleSalesIndices.map((vIdx) => {
+ const s = paginatedSales[vIdx];
+ if (!s) return null;
+ return (
  <tr
  key={idx}
  onClick={() => setSelectedSaleDetail(s)}
@@ -3408,19 +3447,16 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  </td>
  </tr>
- ))}
- {filteredSales.length === 0 && (
- <tr>
- <td
- colSpan={9}
- className="py-12 text-center text-zinc-400 font-sans font-bold"
- >
- {ledgerSearchQuery
- ? `No matching sales invoice ledgers found for "${ledgerSearchQuery}".`
- : "No matching sales invoice ledgers recorded today."}
- </td>
- </tr>
- )}
+  );
+  })}`
+  
+  {salesPaddingBottom > 0 && (
+  <tr style={{ height: salesPaddingBottom }}>
+  <td colSpan={9} className="p-0 border-0" />
+  </tr>
+  )}
+  </>
+  )}
  </tbody>
  </table>
  </div>
