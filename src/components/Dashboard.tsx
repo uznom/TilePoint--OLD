@@ -165,23 +165,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
  // Today's Sales
  const todayStr = new Date().toISOString().slice(0, 10);
- const todaySalesItems = filteredSales.filter(s => s.createdAt.startsWith(todayStr) && !s.isDeleted);
+ const todaySalesItems = filteredSales.filter(s => s.createdAt && typeof s.createdAt === 'string' && s.createdAt.startsWith(todayStr) && !s.isDeleted);
  const computedTodaySales = todaySalesItems.reduce((acc, curr) => acc + curr.grandTotal, 0);
 
  // Weekly Sales
  const sevenDaysAgo = new Date();
  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
- const weeklySalesItems = filteredSales.filter(s => new Date(s.createdAt) >= sevenDaysAgo && !s.isDeleted);
+ const weeklySalesItems = filteredSales.filter(s => s.createdAt && !isNaN(new Date(s.createdAt).getTime()) && new Date(s.createdAt) >= sevenDaysAgo && !s.isDeleted);
  const computedWeeklySales = weeklySalesItems.reduce((acc, curr) => acc + curr.grandTotal, 0);
 
  // Monthly Revenue (current month)
  const currentMonthStr = new Date().toISOString().slice(0, 7);
- const monthlySalesItems = filteredSales.filter(s => s.createdAt.startsWith(currentMonthStr) && !s.isDeleted);
+ const monthlySalesItems = filteredSales.filter(s => s.createdAt && typeof s.createdAt === 'string' && s.createdAt.startsWith(currentMonthStr) && !s.isDeleted);
  const computedMonthlyRevenue = monthlySalesItems.reduce((acc, curr) => acc + curr.grandTotal, 0);
 
  // Corporate aggregate metric calculation (All branches, regardless of assignment)
- const corporateTodaySales = sales.filter(s => s.createdAt.startsWith(todayStr) && !s.isDeleted).reduce((acc, s) => acc + s.grandTotal, 0);
- const corporateMonthlyRevenue = sales.filter(s => s.createdAt.startsWith(currentMonthStr) && !s.isDeleted).reduce((acc, s) => acc + s.grandTotal, 0);
+ const corporateTodaySales = sales.filter(s => s.createdAt && typeof s.createdAt === 'string' && s.createdAt.startsWith(todayStr) && !s.isDeleted).reduce((acc, s) => acc + s.grandTotal, 0);
+ const corporateMonthlyRevenue = sales.filter(s => s.createdAt && typeof s.createdAt === 'string' && s.createdAt.startsWith(currentMonthStr) && !s.isDeleted).reduce((acc, s) => acc + s.grandTotal, 0);
  const activeBranchesCount = branches.filter(b => !b.isDeleted).length;
 
  // Inventory value computed dynamically based on cost basis and selected branch
@@ -230,7 +230,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  targetDate.setDate(today.getDate() - (adjustedCurrentDayIdx - idx));
  const targetDateStr = targetDate.toISOString().slice(0, 10);
 
- const daySales = filteredSales.filter(s => s.createdAt.startsWith(targetDateStr) && !s.isDeleted);
+ const daySales = filteredSales.filter(s => s.createdAt && typeof s.createdAt === 'string' && s.createdAt.startsWith(targetDateStr) && !s.isDeleted);
  
  let liveValue = 0;
  if (weeklyMetric === 'revenue') {
@@ -255,7 +255,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  
  let list = months.map((month, idx) => {
  const monthPrefix = `2026-${String(idx + 1).padStart(2, '0')}`;
- const monthSales = filteredSales.filter(s => s.createdAt.startsWith(monthPrefix) && !s.isDeleted);
+ const monthSales = filteredSales.filter(s => s.createdAt && typeof s.createdAt === 'string' && s.createdAt.startsWith(monthPrefix) && !s.isDeleted);
  const computedRev = monthSales.reduce((sum, s) => sum + s.grandTotal, 0);
 
  return { 
@@ -1858,7 +1858,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <span className="font-extrabold text-m3-primary">{getBranchName(t.toBranchId)}</span>
  </div>
 
- {t.items.map((it, itemIdx) => (
+ {(t.items || []).map((it, itemIdx) => (
  <div key={itemIdx} className="text-xs text-zinc-400 font-mono">
  Cargo: <span className="font-extrabold text-zinc-300">{it.productName}</span> — <span className="text-m3-primary font-black py-0.5 px-2 bg-m3-primary/10 rounded">{it.quantity} boxes</span>
  </div>
@@ -3106,7 +3106,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </div>
  </div>
  <div className="text-right">
- <div className="text-xs font-bold font-mono text-m3-tertiary">₱{sale.grandTotal.toFixed(2)}</div>
+ <div className="text-xs font-bold font-mono text-m3-tertiary">₱{(Number(sale.grandTotal) || 0).toFixed(2)}</div>
  <span className="text-[9px] bg-m3-tertiary-container text-m3-on-tertiary-container border border-m3-outline-variant/20 px-2 py-0.5 rounded-full font-bold">
  {sale.paymentMethod}
  </span>

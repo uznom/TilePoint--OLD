@@ -43,6 +43,8 @@ import { IdleScreen } from "./components/IdleScreen";
 import { PwaInstallPrompt } from "./components/PwaInstallPrompt";
 import { DamageRegisterModule } from "./components/DamageRegisterModule";
 import { MobilePcOnlyBlocker } from "./components/MobilePcOnlyBlocker";
+import { ConfirmationModal } from "./components/ConfirmationModal";
+import { QuickModuleSwitcherModal } from "./components/QuickModuleSwitcherModal";
 
 import {
  generateThemeFromSeed,
@@ -94,6 +96,228 @@ import {
  Smartphone,
  Clock,
 } from "lucide-react";
+
+// Flat list of All Submodules for global routing, role-mapping and mobile navigation anchors
+const menuItems = [
+ {
+ id: "tutorials",
+ name: "Operational Walkthrough",
+ icon: BookOpen,
+ roles: [
+ UserRole.ADMIN,
+ UserRole.MANAGER,
+ UserRole.CASHIER,
+ UserRole.STAFF,
+ ],
+ },
+ {
+ id: "dashboard",
+ name: "Branch Dashboard",
+ icon: LayoutDashboard,
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
+ },
+ {
+ id: "profit-analytics",
+ name: "P&L Accounting Desk",
+ icon: DollarSign,
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
+ },
+ {
+ id: "pos",
+ name: "ERP OS Checkout Mode",
+ icon: ShoppingCart,
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+ },
+ {
+ id: "shift",
+ name: "Shift drawer",
+ icon: LockKeyhole,
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER],
+ },
+ {
+ id: "calculator",
+ name: "Tile Coverage Calc",
+ icon: Calculator,
+ roles: [
+ UserRole.ADMIN,
+ UserRole.MANAGER,
+ UserRole.CASHIER,
+ UserRole.STAFF,
+ ],
+ },
+ {
+ id: "branches",
+ name: "Branches Profile",
+ icon: Building2,
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
+ },
+ {
+ id: "users",
+ name: "Employee Directory",
+ icon: UsersIcon,
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
+ },
+ {
+ id: "system-settings",
+ name: "System Settings",
+ icon: Sliders,
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
+ },
+
+ // ATPOS v2 Submodules
+ {
+ id: "inventory-stocks",
+ name: "Catalog Stock Ledger",
+ icon: Layers,
+ roles: [
+ UserRole.ADMIN,
+ UserRole.MANAGER,
+ UserRole.CASHIER,
+ UserRole.STAFF,
+ ],
+ },
+ {
+ id: "inventory-adjustments",
+ name: "Adjustments Logs",
+ icon: Layers,
+ roles: [
+ UserRole.ADMIN,
+ UserRole.MANAGER,
+ UserRole.CASHIER,
+ UserRole.STAFF,
+ ],
+ },
+ {
+ id: "inventory-transfer",
+ name: "Stock Transfers",
+ icon: Send,
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+ },
+ {
+ id: "inventory-logistics",
+ name: "Logistics Ledger & Heatmap",
+ icon: Layers,
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+ },
+ {
+ id: "inventory-import",
+ name: "Migration & Import/Export Tool",
+ icon: Layers,
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
+ },
+ {
+ id: "inventory-damage",
+ name: "Broken & BOA Register",
+ icon: AlertTriangle,
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+ },
+ {
+ id: "inventory-expiry",
+ name: "Shelf-Life & Expiry Calendar",
+ icon: Clock,
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+ },
+ {
+ id: "inventory-branch-prices",
+ name: "Branch MSRP & SRP Suggestions",
+ icon: DollarSign,
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
+ },
+
+ {
+ id: "adjustments-void",
+ name: "Search Voided Sales",
+ icon: History,
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+ },
+ {
+ id: "adjustments-return",
+ name: "Search Returned Products",
+ icon: RefreshCw,
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+ },
+
+ {
+ id: "members-manage",
+ name: "Manage Members",
+ icon: UsersIcon,
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+ },
+ {
+ id: "members-receivables",
+ name: "Account Receivables",
+ icon: UsersIcon,
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
+ },
+ {
+ id: "members-loyalty",
+ name: "Member Loyalty Points",
+ icon: Sparkles,
+ roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+ },
+
+ {
+ id: "expenses-add",
+ name: "Add Expenses",
+ icon: DollarSign,
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
+ },
+ {
+ id: "expenses-search",
+ name: "Search Expenses",
+ icon: DollarSign,
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
+ },
+
+ {
+ id: "suppliers-manage",
+ name: "Manage Suppliers",
+ icon: Building2,
+ roles: [UserRole.ADMIN],
+ },
+ {
+ id: "suppliers-credits",
+ name: "Active Credits",
+ icon: Building2,
+ roles: [UserRole.ADMIN],
+ },
+ {
+ id: "suppliers-calendar",
+ name: "Payment Calendar",
+ icon: CalendarDays,
+ roles: [UserRole.ADMIN],
+ },
+
+ {
+ id: "bir-xz",
+ name: "Search X&Z Reading",
+ icon: FileText,
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
+ },
+ {
+ id: "bir-summary",
+ name: "BIR Summary Report",
+ icon: FileText,
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
+ },
+ {
+ id: "reconciliation-transmission",
+ name: "Reconciliation & Transmission",
+ icon: RefreshCw,
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
+ },
+ {
+ id: "deliveries-panel",
+ name: "Delivery Center",
+ icon: Truck,
+ roles: [
+ UserRole.ADMIN,
+ UserRole.MANAGER,
+ UserRole.CASHIER,
+ UserRole.STAFF,
+ ],
+ },
+];
 
 function AppContent() {
  const {
@@ -169,6 +393,8 @@ function AppContent() {
  }
  return "dashboard";
  });
+
+ const [confirmRestoreSnap, setConfirmRestoreSnap] = useState<DbSnapshot | null>(null);
 
  const [previousTab, setPreviousTab] = useState("dashboard");
  const [selectedBranchId, setSelectedBranchId] = useState<string>("all");
@@ -267,8 +493,11 @@ function AppContent() {
  ? initialSavedTabRef.current
  : localStorage.getItem("tilepoint_active_tab");
  if (savedTab && savedTab !== "none") {
+ const savedItem = menuItems.find((m) => m.id === savedTab);
+ if (savedItem && savedItem.roles.includes(currentUser.role)) {
  setActiveTab(savedTab);
  return;
+ }
  }
  const isFirstTime =
  typeof window !== "undefined" &&
@@ -287,7 +516,7 @@ function AppContent() {
  setActiveTab("inventory-stocks");
  }
  }
- }, [isLoggedIn, currentUser?.id]);
+ }, [isLoggedIn, currentUser?.id, currentUser?.role]);
  const [isSidebarMinimized, setIsSidebarMinimized] = useState(() => {
  const saved = localStorage.getItem("tilepoint_sidebar_minimized");
  return saved === "true";
@@ -685,6 +914,7 @@ function AppContent() {
  useState(false);
  const [showSetupWizard, setShowSetupWizard] = useState(false);
  const [showPosExitConfirmModal, setShowPosExitConfirmModal] = useState(false);
+ const [showQuickSwitcherModal, setShowQuickSwitcherModal] = useState(false);
  const [pendingTabId, setPendingTabId] = useState<string | null>(null);
 
 
@@ -792,6 +1022,77 @@ function AppContent() {
  }, 4000);
  };
 
+ const proceedWithTabChange = (tabId: string) => {
+ if (disableAnimations || lowPerformanceMode) {
+ setActiveTab(tabId);
+ setIsTabChanging(false);
+ setPercentProgress(0);
+ return;
+ }
+
+ setIsTabChanging(true);
+ setPercentProgress(15);
+
+ // Simulate progression loader
+ const interval = setInterval(() => {
+ setPercentProgress((prev) => {
+ if (prev >= 90) {
+ clearInterval(interval);
+ return 90;
+ }
+ return prev + 18;
+ });
+ }, 60);
+
+ setTimeout(() => {
+ clearInterval(interval);
+ setPercentProgress(100);
+ setActiveTab(tabId);
+ setTimeout(() => {
+ setIsTabChanging(false);
+ setPercentProgress(0);
+ }, 100);
+ }, 400);
+ };
+
+ // Tab change simulator timer with active linear progress
+ const changeTab = (tabId: string) => {
+ if (tabId === activeTab) return;
+
+ // Safety role clearance checker
+ const targetItem = menuItems.find((item) => item.id === tabId);
+ if (targetItem && currentUser && !targetItem.roles.includes(currentUser.role)) {
+ return;
+ }
+
+ // INTERCEPT ACTIVE ERP OS CHECKOUT EXIT: If we are in 'pos' and there is an active checkout (cart contains items), auto-hold/park the current order and clear the cart.
+ if (activeTab === "pos") {
+ const activeCartRaw = localStorage.getItem("tp_active_cart");
+ if (activeCartRaw) {
+ try {
+ const parsedCart = JSON.parse(activeCartRaw);
+ if (Array.isArray(parsedCart) && parsedCart.length > 0) {
+ const customerName = localStorage.getItem("tp_active_customer_name") || "Walk-in Customer";
+ const customerNotes = localStorage.getItem("tp_active_customer_notes") || "";
+ // Auto hold current order!
+ holdSale(parsedCart, customerName, customerNotes);
+ 
+ // Clear current cart so that POS is closed & reset
+ localStorage.setItem("tp_active_cart", JSON.stringify([]));
+ localStorage.setItem("tp_active_customer_name", "Walk-in Customer");
+ localStorage.setItem("tp_active_customer_notes", "");
+ 
+ showToast("Active transaction automatically held in safe hold registers.");
+ }
+ } catch (_) {
+ // ignore
+ }
+ }
+ }
+
+ proceedWithTabChange(tabId);
+ };
+
 
  useEffect(() => {
  const handleStorageFailure = (e: Event) => {
@@ -812,6 +1113,55 @@ function AppContent() {
  useEffect(() => {
  setShowImmersiveControls(true);
  }, [activeTab]);
+
+ // Global Keyboard Shortcut Listener for Cashiers & Managers (Ctrl+1..0 module switcher & Ctrl+K palette)
+ useEffect(() => {
+ const handleGlobalKeyboardShortcuts = (e: KeyboardEvent) => {
+ // Do not block F12 or browser DevTools
+ if (e.key === "F12") return;
+
+ const isModifier = e.ctrlKey || e.metaKey || e.altKey;
+
+ // Toggle Command Palette Quick Switcher Modal: Ctrl+K / Cmd+K / Ctrl+/ / Alt+/
+ if (isModifier && (e.key.toLowerCase() === "k" || e.key === "/")) {
+ e.preventDefault();
+ setShowQuickSwitcherModal((prev) => !prev);
+ return;
+ }
+
+ // Module Jump Map for Ctrl+1 through Ctrl+9 and Ctrl+0
+ const numberShortcutMap: { [key: string]: { id: string; label: string } } = {
+ "1": { id: "dashboard", label: "Branch Dashboard" },
+ "2": { id: "pos", label: "ERP POS Checkout Mode" },
+ "3": { id: "inventory-stocks", label: "Catalog Stock Ledger" },
+ "4": { id: "procurement-po", label: "Procurement & PO" },
+ "5": { id: "reconciliation-transmission", label: "Reconciliation & Transmission" },
+ "6": { id: "shift", label: "Shift Drawer & Cash Register" },
+ "7": { id: "deliveries-panel", label: "Cargo Delivery Center" },
+ "8": { id: "calculator", label: "Tile Coverage Calculator" },
+ "9": { id: "profit-analytics", label: "P&L Accounting Desk" },
+ "0": { id: "tutorials", label: "Operational Walkthrough" },
+ };
+
+ if (isModifier && numberShortcutMap[e.key]) {
+ e.preventDefault();
+ const target = numberShortcutMap[e.key];
+ 
+ // Verify RBAC permissions for the logged in user
+ const masterItem = menuItems.find((m) => m.id === target.id);
+ if (masterItem && currentUser && !masterItem.roles.includes(currentUser.role)) {
+ showToast(`Shortcut [Ctrl+${e.key}]: Access restricted for ${currentUser.role} role.`);
+ return;
+ }
+
+ changeTab(target.id);
+ showToast(`Switched to ${target.label} [Ctrl+${e.key}]`);
+ }
+ };
+
+ window.addEventListener("keydown", handleGlobalKeyboardShortcuts);
+ return () => window.removeEventListener("keydown", handleGlobalKeyboardShortcuts);
+ }, [currentUser?.role, activeTab]);
 
  const handleUpdatePassword = async (e: React.FormEvent) => {
  e.preventDefault();
@@ -1090,79 +1440,8 @@ function AppContent() {
  );
  }
 
- // Tab change simulator timer with active linear progress
- const changeTab = (tabId: string) => {
- if (tabId === activeTab) return;
-
- // Safety role clearance checker
- const targetItem = menuItems.find((item) => item.id === tabId);
- if (targetItem && !targetItem.roles.includes(currentUser.role)) {
- return;
- }
-
- // INTERCEPT ACTIVE ERP OS CHECKOUT EXIT: If we are in 'pos' and there is an active checkout (cart contains items), auto-hold/park the current order and clear the cart.
- if (activeTab === "pos") {
- const activeCartRaw = localStorage.getItem("tp_active_cart");
- if (activeCartRaw) {
- try {
- const parsedCart = JSON.parse(activeCartRaw);
- if (Array.isArray(parsedCart) && parsedCart.length > 0) {
- const customerName = localStorage.getItem("tp_active_customer_name") || "Walk-in Customer";
- const customerNotes = localStorage.getItem("tp_active_customer_notes") || "";
- // Auto hold current order!
- holdSale(parsedCart, customerName, customerNotes);
- 
- // Clear current cart so that POS is closed & reset
- localStorage.setItem("tp_active_cart", JSON.stringify([]));
- localStorage.setItem("tp_active_customer_name", "Walk-in Customer");
- localStorage.setItem("tp_active_customer_notes", "");
- 
- showToast("Active transaction automatically held in safe hold registers.");
- }
- } catch (_) {
- // ignore
- }
- }
- }
-
- proceedWithTabChange(tabId);
- };
-
- const proceedWithTabChange = (tabId: string) => {
- if (disableAnimations || lowPerformanceMode) {
- setActiveTab(tabId);
- setIsTabChanging(false);
- setPercentProgress(0);
- return;
- }
-
- setIsTabChanging(true);
- setPercentProgress(15);
-
- // Simulate progression loader
- const interval = setInterval(() => {
- setPercentProgress((prev) => {
- if (prev >= 90) {
- clearInterval(interval);
- return 90;
- }
- return prev + 18;
- });
- }, 60);
-
- setTimeout(() => {
- clearInterval(interval);
- setPercentProgress(100);
- setActiveTab(tabId);
- setTimeout(() => {
- setIsTabChanging(false);
- setPercentProgress(0);
- }, 100);
- }, 400);
- };
-
  // Flat list of All Submodules for global routing, role-mapping and mobile navigation anchors
- const menuItems = [
+ const _unusedMenuItems = [
  {
  id: "tutorials",
  name: "Operational Walkthrough",
@@ -1178,13 +1457,13 @@ function AppContent() {
  id: "dashboard",
  name: "Branch Dashboard",
  icon: LayoutDashboard,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
  },
  {
  id: "profit-analytics",
  name: "P&L Accounting Desk",
  icon: DollarSign,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
  },
  {
  id: "pos",
@@ -1267,7 +1546,7 @@ function AppContent() {
  id: "inventory-import",
  name: "Migration & Import/Export Tool",
  icon: Layers,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
  },
  {
  id: "inventory-damage",
@@ -1285,7 +1564,7 @@ function AppContent() {
  id: "inventory-branch-prices",
  name: "Branch MSRP & SRP Suggestions",
  icon: DollarSign,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
  },
 
  {
@@ -1311,7 +1590,7 @@ function AppContent() {
  id: "members-receivables",
  name: "Account Receivables",
  icon: UsersIcon,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
  },
  {
  id: "members-loyalty",
@@ -1324,13 +1603,13 @@ function AppContent() {
  id: "expenses-add",
  name: "Add Expenses",
  icon: DollarSign,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
  },
  {
  id: "expenses-search",
  name: "Search Expenses",
  icon: DollarSign,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
  },
 
  {
@@ -1356,13 +1635,13 @@ function AppContent() {
  id: "bir-xz",
  name: "Search X&Z Reading",
  icon: FileText,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
  },
  {
  id: "bir-summary",
  name: "BIR Summary Report",
  icon: FileText,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+ roles: [UserRole.ADMIN, UserRole.MANAGER],
  },
  {
  id: "reconciliation-transmission",
@@ -1889,9 +2168,11 @@ function AppContent() {
  className={`flex items-center ${isSidebarMinimized ? "justify-center mb-1" : "justify-between pl-2 mb-1"}`}
  >
  {!isSidebarMinimized && (
- <span className="text-[10px] font-black tracking-widest text-m3-on-surface-variant uppercase font-mono animate-fade-in truncate">
+ <div className="flex items-center gap-1.5 animate-fade-in truncate">
+ <span className="text-[10px] font-black tracking-widest text-m3-on-surface-variant uppercase font-mono">
  Modules
  </span>
+ </div>
  )}
  <button
  onClick={() => setIsSidebarMinimized(!isSidebarMinimized)}
@@ -3100,34 +3381,7 @@ function AppContent() {
  <div className="flex items-center gap-1.5">
  <button
  type="button"
- onClick={async () => {
- const ok = confirm(
- `CRITICAL CONTEXT DISPATCH CONFLICT!\n\nAre you sure you want to restore all tables to the state in snap "${snap.name}"?\nThis replaces current data in local browser storage.`,
- );
- if (ok) {
- await triggerSystemProcessing(
- `Restoring Database State: ${snap.name}...`,
- 1800,
- "db",
- undefined,
- "Shutting down write engines, swapping table pointers, and updating local indices...",
- );
- const success = await restoreDbSnapshot(snap.id);
- if (success) {
- showToast(
- `Snapshot ${snap.id} restored successfully! Reloading UI...`,
- );
- setTimeout(
- () => window.location.reload(),
- 250,
- );
- } else {
- showToast(
- "Corruption Error: Snapshot load failure!",
- );
- }
- }
- }}
+ onClick={() => setConfirmRestoreSnap(snap)}
  className="px-3 py-1.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary text-[10px] font-black cursor-pointer uppercase tracking-wider rounded-lg transition-colors"
  title="Overwrite current state with backup snapshot font"
  >
@@ -3627,6 +3881,15 @@ function AppContent() {
 
 
 
+ {/* QUICK MODULE SWITCHER & KEYBOARD SHORTCUT COMMAND PALETTE */}
+ <QuickModuleSwitcherModal
+ isOpen={showQuickSwitcherModal}
+ onClose={() => setShowQuickSwitcherModal(false)}
+ currentUser={currentUser}
+ activeTab={activeTab}
+ onSelectTab={(tabId) => changeTab(tabId)}
+ />
+
  {/* GLOBAL SYSTEM PROCESSING OVERLAY */}
  <SystemLoadingOverlay />
 
@@ -3640,6 +3903,43 @@ function AppContent() {
  {showSetupWizard && (
  <OnboardingSetupWizard onClose={() => setShowSetupWizard(false)} />
  )}
+
+ {/* Restore Snapshot Confirmation Modal */}
+ <ConfirmationModal
+ isOpen={!!confirmRestoreSnap}
+ title="Restore Database Snapshot"
+ alertType="danger"
+ confirmText="Yes, Restore Snapshot"
+ cancelText="Cancel"
+ message={`Are you sure you want to restore all tables to the state in snap "${confirmRestoreSnap?.name || ''}"? This replaces current data in local storage.`}
+ onConfirm={async () => {
+ if (!confirmRestoreSnap) return;
+ const snap = confirmRestoreSnap;
+ setConfirmRestoreSnap(null);
+ await triggerSystemProcessing(
+ `Restoring Database State: ${snap.name}...`,
+ 1800,
+ "db",
+ undefined,
+ "Shutting down write engines, swapping table pointers, and updating local indices...",
+ );
+ const success = await restoreDbSnapshot(snap.id);
+ if (success) {
+ showToast(
+ `Snapshot ${snap.id} restored successfully! Reloading UI...`,
+ );
+ setTimeout(
+ () => window.location.reload(),
+ 250,
+ );
+ } else {
+ showToast(
+ "Corruption Error: Snapshot load failure!",
+ );
+ }
+ }}
+ onCancel={() => setConfirmRestoreSnap(null)}
+ />
  </div>
  </MotionConfig>
  );

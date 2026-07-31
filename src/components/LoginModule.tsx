@@ -104,25 +104,6 @@ export const LoginModule: React.FC = () => {
    <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-m3-primary/5 rounded-full blur-[120px] pointer-events-none" />
    <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-m3-primary/5 rounded-full blur-[120px] pointer-events-none" />
 
-   {/* Top Server Status Indicator */}
-   <div className="absolute top-4 right-4 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-m3-surface-low border border-m3-outline-variant/30 text-[11px] font-bold shadow-sm">
-    {serverConnected ? (
-     <>
-      <span className="relative flex h-2 w-2">
-       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-       <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-      </span>
-      <Wifi className="h-3.5 w-3.5 text-emerald-500" />
-      <span className="text-emerald-500">Central Sync Live</span>
-     </>
-    ) : (
-     <>
-      <Database className="h-3.5 w-3.5 text-amber-500" />
-      <span className="text-amber-500">Local Cache Mode</span>
-     </>
-    )}
-   </div>
-
    {/* Main card box Container */}
    <div className="w-full max-w-xl flex flex-col gap-6 items-center relative z-10 my-auto text-center">
   
@@ -186,14 +167,7 @@ export const LoginModule: React.FC = () => {
       <form onSubmit={handleManualSubmit} className="flex flex-col gap-4">
        {/* Username Input */}
        <div className="flex flex-col gap-1 text-left">
-        <div className="flex items-center justify-between">
-         <label className="text-xs font-extrabold text-m3-on-surface-variant uppercase tracking-widest pl-1">Employee ID / Username</label>
-         {matchedUser && (
-          <span className="text-[10px] font-bold text-m3-primary flex items-center gap-1">
-           <UserCheck className="h-3 w-3" /> Account Verified
-          </span>
-         )}
-        </div>
+        <label className="text-xs font-extrabold text-m3-on-surface-variant uppercase tracking-widest pl-1">Employee ID / Username</label>
         <div className="relative">
          <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-m3-on-surface-variant/70 pointer-events-none z-10" />
          <input
@@ -205,23 +179,6 @@ export const LoginModule: React.FC = () => {
           className="w-full pl-10 pr-4 py-3 rounded-xl border border-m3-outline-variant/65 cursor-text disabled:opacity-50 disabled:bg-m3-surface-container bg-m3-surface text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary/50 text-sm font-semibold transition-all"
          />
         </div>
-
-        {/* Matched User Helper Badge */}
-        {matchedUser && (
-         <div className="mt-1 flex items-center justify-between px-2 py-1.5 rounded-lg bg-m3-surface-lowest border border-m3-outline-variant/30 text-xs">
-          <span className="font-bold text-m3-on-surface">{matchedUser.fullName}</span>
-          {(() => {
-           const badge = getRoleBadge(matchedUser.role);
-           const BadgeIcon = badge.icon;
-           return (
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border flex items-center gap-1 ${badge.color}`}>
-             <BadgeIcon className="h-3 w-3" />
-             {badge.label}
-            </span>
-           );
-          })()}
-         </div>
-        )}
        </div>
 
        {/* Password Input */}

@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { ConfirmationModal } from "./ConfirmationModal";
 import {
  Users,
   Building2,
@@ -86,6 +87,8 @@ export default function AtposExtraModules({
  sales,
  auditLogs,
  } = db;
+
+ const [confirmZReadingModal, setConfirmZReadingModal] = useState(false);
 
  // Form states - Member
  const [newMemberName, setNewMemberName] = useState("");
@@ -260,7 +263,7 @@ export default function AtposExtraModules({
 
  db.addAuditLog(
  "MEMBER_REGISTER",
- `Registered member ${m.fullName} with credit ceiling of ₱${m.creditLimit.toLocaleString()}`,
+ `Registered member ${m.fullName} with credit ceiling of ₱${(Number(m?.creditLimit) || 0).toLocaleString()}`,
  "Members",
  m.id,
  JSON.stringify(m),
@@ -284,7 +287,7 @@ export default function AtposExtraModules({
  }
  if (payNum > selectedMember.outstandingBalance) {
  alert(
- `Payment amount cannot exceed the outstanding balance of ₱${selectedMember.outstandingBalance.toLocaleString()}`,
+ `Payment amount cannot exceed the outstanding balance of ₱${(Number(selectedMember?.outstandingBalance) || 0).toLocaleString()}`,
  );
  return;
  }
@@ -849,10 +852,10 @@ export default function AtposExtraModules({
  {m.points} pts
  </td>
  <td className="p-3 text-right font-mono">
- ₱{m.creditLimit.toLocaleString("en-US")}
+ ₱{(Number(m?.creditLimit) || 0).toLocaleString("en-US")}
  </td>
  <td className="p-3 text-right font-mono text-rose-500 font-extrabold">
- ₱{m.outstandingBalance.toLocaleString("en-US")}
+ ₱{(Number(m?.outstandingBalance) || 0).toLocaleString("en-US")}
  </td>
  </tr>
  ));
@@ -909,11 +912,11 @@ export default function AtposExtraModules({
  <div>
  <span>{m.fullName}</span>
  <span className="text-[10px] block text-zinc-400">
- Limit: ₱{m.creditLimit.toLocaleString()}
+ Limit: ₱{(Number(m?.creditLimit) || 0).toLocaleString()}
  </span>
  </div>
  <span className="text-rose-500 font-mono">
- ₱{m.outstandingBalance.toLocaleString()}
+ ₱{(Number(m?.outstandingBalance) || 0).toLocaleString()}
  </span>
  </button>
  ));
@@ -940,7 +943,7 @@ export default function AtposExtraModules({
  Balance Due
  </span>
  <span className="text-sm font-black text-rose-500">
- ₱{selectedMember.outstandingBalance.toLocaleString()}
+ ₱{(Number(selectedMember?.outstandingBalance) || 0).toLocaleString()}
  </span>
  </div>
  </div>
@@ -1203,16 +1206,18 @@ export default function AtposExtraModules({
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowLoyaltySettings(!showLoyaltySettings)}
-                className="px-3 py-1.5 bg-m3-surface-high hover:bg-m3-surface-highest text-m3-on-surface text-xs font-bold rounded-xl border border-m3-outline-variant/30 flex items-center gap-1.5 cursor-pointer transition-colors"
-              >
-                <Settings className="h-3.5 w-3.5 text-amber-500" />
-                <span>{showLoyaltySettings ? "Close Rules Settings" : "⚙️ Edit Loyalty Rules"}</span>
-              </button>
-            </div>
+            {(db.currentUser?.role === UserRole.ADMIN || db.currentUser?.role === UserRole.MANAGER) && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowLoyaltySettings(!showLoyaltySettings)}
+                  className="px-3 py-1.5 bg-m3-surface-high hover:bg-m3-surface-highest text-m3-on-surface text-xs font-bold rounded-xl border border-m3-outline-variant/30 flex items-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <Settings className="h-3.5 w-3.5 text-amber-500" />
+                  <span>{showLoyaltySettings ? "Close Rules Settings" : "⚙️ Edit Loyalty Rules"}</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Quick Metrics Bar */}
@@ -2216,7 +2221,7 @@ export default function AtposExtraModules({
  </div>
  <div className="flex justify-between text-[10px] text-zinc-400 font-mono">
  <span>
- Allocated Limit: ₱{creditLimit.toLocaleString()}
+ Allocated Limit: ₱{(Number(creditLimit) || 0).toLocaleString()}
  </span>
  <span>
  {Math.round((outstanding / creditLimit) * 100)}%
@@ -3845,23 +3850,7 @@ export default function AtposExtraModules({
  </div>
  <button
  onClick={() => {
- if (
- confirm(
- "Generating Z-Reading locks cashier drawers for the calendar cycle. Proceed?",
- )
- ) {
- setPrintReceiptData({
- title: "BIR CUMULATIVE Z-READING",
- receiptNo:
- "Z-" + Math.floor(Math.random() * 89999 + 10000),
- customer: "EMMAN TILE MAIN HQ",
- date: new Date().toLocaleString(),
- prevBalance: 5420910.0,
- paid: totalSalesFromDay,
- newBalance: 5420910.0 + totalSalesFromDay,
- pointsGained: 0,
- });
- }
+ setConfirmZReadingModal(true);
  }}
  className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-white rounded-xl font-bold transition flex items-center justify-center gap-1.5 cursor-pointer text-xs border-0"
  >
@@ -4443,6 +4432,29 @@ export default function AtposExtraModules({
           </div>
         </div>
       )}
+      {/* Z-Reading Generation Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmZReadingModal}
+        title="Generate Cumulative Z-Reading"
+        alertType="warning"
+        confirmText="Proceed & Lock Drawers"
+        cancelText="Cancel"
+        message="Generating a Z-Reading concludes all working shifts for the calendar day, commits locked fiscal audit counts, and locks cashier drawers for the calendar cycle. Proceed?"
+        onConfirm={() => {
+          setPrintReceiptData({
+            title: "BIR CUMULATIVE Z-READING",
+            receiptNo: "Z-" + Math.floor(Math.random() * 89999 + 10000),
+            customer: "EMMAN TILE MAIN HQ",
+            date: new Date().toLocaleString(),
+            prevBalance: 5420910.0,
+            paid: totalSalesFromDay,
+            newBalance: 5420910.0 + totalSalesFromDay,
+            pointsGained: 0,
+          });
+          setConfirmZReadingModal(false);
+        }}
+        onCancel={() => setConfirmZReadingModal(false)}
+      />
     </div>
   );
 }

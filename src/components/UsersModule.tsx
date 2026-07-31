@@ -90,13 +90,21 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
 
   const userBranchId = currentUser?.branchAssignmentId || "B1";
 
-  // Filter users list based on role
-  const allowedUsers = users.filter((u) => {
-    if (isUserAdminOrManager) return true;
-    const userB = u.branchAssignmentId || "B1";
-    const myB = userBranchId || "B1";
-    return userB === myB || (userB === "main" && myB === "B1") || (userB === "B1" && myB === "main");
-  });
+  // Filter users list based on role and sort newest / newly enlisted users first
+  const allowedUsers = [...users]
+    .filter((u) => {
+      if (isUserAdminOrManager) return true;
+      const userB = u.branchAssignmentId || "B1";
+      const myB = userBranchId || "B1";
+      return userB === myB || (userB === "main" && myB === "B1") || (userB === "B1" && myB === "main");
+    })
+    .sort((a, b) => {
+      if (a.isNew && !b.isNew) return -1;
+      if (!a.isNew && b.isNew) return 1;
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    });
 
   // Filter activeSessions based on role
   const allowedActiveSessions = activeSessions.filter((session) => {
@@ -123,7 +131,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  setUsername('');
  setEmail('');
  setRole(UserRole.CASHIER);
- setBranchAssignmentId(isUserAdmin ? 'B1' : userBranchId);
+ setBranchAssignmentId(userBranchId || branches[0]?.id || 'B1');
  setStatus('Active');
  setManagerPin('');
 
@@ -196,6 +204,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  } else {
  await createUser({ ...payload, isNew: true });
  showToast(`Registered and enlisted ${fullName} successfully.`);
+ setCurrentPage(1);
  }
 
  setShowModal(false);

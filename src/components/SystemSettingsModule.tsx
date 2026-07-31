@@ -871,7 +871,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  </p>
  
  {/* Historical retention warning banner */}
- <div className="mt-3 p-3 rounded-xl border border-amber-500/15 bg-amber-500/5 text-[10px] text-zinc-300 leading-normal font-sans">
+ <div className="mt-3 mb-4 p-3 rounded-xl border border-amber-500/15 bg-amber-500/5 text-[10px] text-zinc-300 leading-normal font-sans">
  <strong className="text-amber-400 uppercase tracking-wider block mb-0.5">️ Historical Audit Notice (Retention Safeguard)</strong>
  To preserve last year's records and historical tax logs for compliance, managers and administrators are required to save a device snapshot in their user-defined directory folder (configured in the <span className="font-extrabold text-amber-500">Database & Backups</span> settings panel) before launching any system reset operations.
  </div>

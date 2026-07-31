@@ -1,6 +1,6 @@
 # TilePoint Enterprise - Complete Windows Setup & Deployment Guide
 
-This document provides a comprehensive, step-by-step guide for installing, configuring, running, and troubleshooting the **TilePoint Shared Database Server & POS System** on Windows 10 and Windows 11.
+This document provides a comprehensive, step-by-step guide for installing, configuring, running, maintaining, and troubleshooting the **TilePoint Shared Database Server & POS System** on Windows 10 and Windows 11.
 
 ---
 
@@ -13,49 +13,59 @@ This document provides a comprehensive, step-by-step guide for installing, confi
    - [Step 2.2: Install Node Dependencies](#step-22-install-node-dependencies)
    - [Step 2.3: Configure Environment Variables (.env)](#step-23-configure-environment-variables-env)
    - [Step 2.4: Generate SSL Certificates for Local HTTPS](#step-24-generate-ssl-certificates-for-local-https)
-   - [Step 2.5: Configure Windows Defender Firewall for Port 3000](#step-25-configure-windows-defender-firewall-for-port-3000)
-   - [Step 2.6: Build Production Client Assets](#step-26-build-production-client-assets)
-   - [Step 2.7: Launch and Manage Server under PM2](#step-27-launch-and-manage-server-under-pm2)
-5. [Connecting Mobile Cashier Terminals & Staff Devices](#-5-connecting-mobile-cashier-terminals--staff-devices)
-6. [Preventing Disconnections: Static IP & Router DHCP Setup](#-6-preventing-disconnections-static-ip--router-dhcp-setup)
+   - [Step 2.5: Configure MySQL Database (Optional Dedicated SQL Server)](#step-25-configure-mysql-database-optional-dedicated-sql-server)
+   - [Step 2.6: Configure Windows Defender Firewall for Ports 3000 & 3306](#step-26-configure-windows-defender-firewall-for-ports-3000--3306)
+   - [Step 2.7: Build Production Client Assets](#step-27-build-production-client-assets)
+   - [Step 2.8: Launch and Manage Server under PM2](#step-28-launch-and-manage-server-under-pm2)
+5. [Database Management, Migration & Resetting to Setup Wizard State](#-5-database-management-migration--resetting-to-setup-wizard-state)
+   - [Wiping Database & Returning to Setup Wizard Installer](#wiping-database--returning-to-setup-wizard-installer)
+   - [Migrating Data between JSON / AlaSQL and MySQL](#migrating-data-between-json--alasql-and-mysql)
+6. [Connecting Mobile Cashier Terminals & Staff Devices](#-6-connecting-mobile-cashier-terminals--staff-devices)
+7. [Preventing Disconnections: Static IP & Router DHCP Setup](#-7-preventing-disconnections-static-ip--router-dhcp-setup)
    - [Method A: Router DHCP IP Reservation (Recommended)](#method-a-router-dhcp-ip-reservation-recommended)
    - [Method B: Windows Static IP Assignment](#method-b-windows-static-ip-assignment)
-7. [Achieving Trusted HTTPS (Zero Security Warnings)](#-7-achieving-trusted-https-zero-security-warnings)
+8. [Achieving Trusted HTTPS (Zero Security Warnings)](#-8-achieving-trusted-https-zero-security-warnings)
    - [Method A: Local Trusted CA with mkcert](#method-a-local-trusted-ca-with-mkcert)
    - [Method B: Global Enterprise Domain via Cloudflare Tunnels](#method-b-global-enterprise-domain-via-cloudflare-tunnels)
-8. [Enterprise Nginx Reverse Proxy Setup (Optional)](#-8-enterprise-nginx-reverse-proxy-setup-optional)
-9. [Comprehensive Step-by-Step Troubleshooting Guide](#-9-comprehensive-step-by-step-troubleshooting-guide)
-   - [Troubleshooting EADDRINUSE (Port 3000 Busy)](#troubleshooting-eaddrinuse-port-3000-busy)
-   - [Troubleshooting WebSocket server error: Port 24678 is already in use](#troubleshooting-websocket-server-error-port-24678-is-already-in-use)
-   - [Troubleshooting "Not Secure" / Running in HTTP Mode](#troubleshooting-not-secure--running-in-http-mode)
-   - [Troubleshooting ERR_SSL_PROTOCOL_ERROR](#troubleshooting-err_ssl_protocol_error)
-   - [Troubleshooting Rollup failed to resolve import "xlsx"](#troubleshooting-rollup-failed-to-resolve-import-xlsx)
-   - [Troubleshooting Vite / esbuild Transform Errors (e.g. Unexpected "export")](#troubleshooting-vite--esbuild-transform-errors-eg-unexpected-export)
-   - [Troubleshooting "Server unable to commit configuration records"](#troubleshooting-server-unable-to-commit-configuration-records)
-   - [Troubleshooting PowerShell Execution Policy Restrictions](#troubleshooting-powershell-execution-policy-restrictions)
-   - [Troubleshooting Mobile Devices Unable to Connect](#troubleshooting-mobile-devices-unable-to-connect)
-10. [Useful Operational Commands Reference](#-10-useful-operational-commands-reference)
+9. [Enterprise Nginx Reverse Proxy Setup (Optional)](#-9-enterprise-nginx-reverse-proxy-setup-optional)
+10. [Comprehensive Step-by-Step Troubleshooting Guide](#-10-comprehensive-step-by-step-troubleshooting-guide)
+    - [Troubleshooting EADDRINUSE (Port 3000 or 3306 Busy)](#troubleshooting-eaddrinuse-port-3000-or-3306-busy)
+    - [Troubleshooting WebSocket server error: Port 24678 is already in use](#troubleshooting-websocket-server-error-port-24678-is-already-in-use)
+    - [Troubleshooting MySQL Connection Errors (ER_ACCESS_DENIED_ERROR / ECONNREFUSED)](#troubleshooting-mysql-connection-errors-er_access_denied_error--econnrefused)
+    - [Troubleshooting "Not Secure" / Running in HTTP Mode](#troubleshooting-not-secure--running-in-http-mode)
+    - [Troubleshooting ERR_SSL_PROTOCOL_ERROR](#troubleshooting-err_ssl_protocol_error)
+    - [Troubleshooting Rollup failed to resolve import "xlsx"](#troubleshooting-rollup-failed-to-resolve-import-xlsx)
+    - [Troubleshooting Vite / esbuild Transform Errors](#troubleshooting-vite--esbuild-transform-errors)
+    - [Troubleshooting "Server unable to commit configuration records"](#troubleshooting-server-unable-to-commit-configuration-records)
+    - [Troubleshooting PowerShell Execution Policy Restrictions](#troubleshooting-powershell-execution-policy-restrictions)
+    - [Troubleshooting Mobile Devices Unable to Connect](#troubleshooting-mobile-devices-unable-to-connect)
+11. [Useful Operational Commands Reference](#-11-useful-operational-commands-reference)
 
 ---
 
 ## 🏗️ 1. System Overview & Architecture
 
-TilePoint operates as a resilient, full-stack POS and ERP platform designed for hardware and tile retail stores:
-- **Central Node (`server.js`)**: Runs on Express.js on **Port 3000**.
-- **Shared Storage (`server-db.json`)**: Local JSON file storage with atomic temp-file writing and MD5 hash caching for zero data loss during power outages.
-- **Real-Time Synchronizer**: Server-Sent Events (SSE) broadcasting live updates (`/api/db/events`) across all connected cashier and store terminals.
-- **Reporting Engine & Excel Export**: Client-side reporting with multi-sheet `.xlsx` workbook generation (`xlsx`) for inventory reports, sales summaries, and transmittals.
-- **Security & Shielding**: Anti-crawler middleware shielding API endpoints, HMAC SHA-256 session token verification, and role-based access control (Admin, Manager, Cashier).
-- **HTTPS SSL Support**: Auto-detects `key.pem` and `cert.pem` in the root directory to run in secure HTTPS mode required for mobile camera barcode and receipt scanning.
+TilePoint operates as a resilient, enterprise full-stack POS and ERP platform designed for hardware and tile retail stores:
+
+- **Central Server Node (`server.js`)**: Express.js server running on **Port 3000** with native HTTPS termination.
+- **Dual Relational Database Engine**:
+  - **Primary Engine**: MySQL 8.0+ Connection Pool (`mysql2/promise`) connecting to a local or remote MySQL Server on Port 3306.
+  - **Embedded SQL Engine**: Integrated **AlaSQL** relational SQL engine with 28 fully MySQL-compatible table schemas (`CREATE TABLE IF NOT EXISTS`) and atomic JSON snapshot persistence (`db.json`) for zero-config offline standalone operation when MySQL is not present or offline.
+- **Real-Time Synchronizer**: Dual real-time push via **Socket.io** (`db_pulse_update`) and **Server-Sent Events (SSE)** (`/api/db/events`) broadcasting live updates across all cashier and inventory terminals.
+- **Reporting Engine & Excel Export**: Multi-sheet `.xlsx` workbook generation (`xlsx`) for inventory stock cards, sales summaries, and transmittals.
+- **Security & Shielding**: Anti-crawler middleware shielding API endpoints, HMAC SHA-256 session verification, AES local signature hashing, and role-based access control (Admin, Manager, Cashier).
+- **HTTPS SSL Support**: Auto-detects `key.pem` and `cert.pem` in the root directory to run in secure HTTPS mode required for mobile camera barcode scanning (`getUserMedia`) and hardware receipt printing.
 
 ---
 
 ## 💻 2. Prerequisites & System Requirements
 
 Before deploying TilePoint, ensure your Windows machine meets these minimum requirements:
+
 - **Operating System**: Windows 10 (64-bit) or Windows 11 (64-bit).
 - **Node.js**: Version 18.0.0 or higher (LTS v20+ recommended).
 - **Git for Windows**: Version 2.40+ (includes OpenSSL CLI tools).
+- **(Optional) MySQL Server**: Version 8.0 or MariaDB 10.5+ (if using a dedicated standalone MySQL database server).
 - **User Permissions**: Administrator access (required for Firewall configuration, global PM2 installation, and SSL CA store registration).
 - **Local Network**: Wi-Fi or Ethernet router connecting the host Windows PC and cashier tablets/phones on the same local network subnet.
 
@@ -63,7 +73,7 @@ Before deploying TilePoint, ensure your Windows machine meets these minimum requ
 
 ## 🚀 3. Option 1: 1-Click Automated Installation (Recommended)
 
-TilePoint includes a fully automated installer batch file (`setup-tilepoint.bat`) that handles all dependencies, environment setup, local IP detection, certificate generation, firewall rules, asset compilation, and background server startup in one click.
+TilePoint includes a fully automated installer batch file (**`setup-tilepoint.bat`**) that handles all dependencies, environment setup, local IP detection, certificate generation, firewall rules, asset compilation, and background server startup in one click.
 
 ### Step-by-Step 1-Click Execution:
 1. Open your project folder (`C:\path\to\TilePoint`).
@@ -71,7 +81,7 @@ TilePoint includes a fully automated installer batch file (`setup-tilepoint.bat`
 3. If prompted by Windows User Account Control (UAC), click **Yes**.
 4. The automated script will perform these actions sequentially:
    - ✅ Verify and auto-install Git and Node.js LTS via `winget` if missing.
-   - ✅ Execute `npm install` for project dependencies (including `express`, `xlsx`, `lucide-react`, etc.).
+   - ✅ Execute `npm install` for project dependencies (including `express`, `alasql`, `mysql2`, `xlsx`, `lucide-react`, etc.).
    - ✅ Detect your primary local IPv4 address (excluding WSL, Docker, and VirtualBox interfaces).
    - ✅ Create `.env` from `.env.example` with auto-generated security secrets and local IP binding.
    - ✅ Download `mkcert.exe` and generate trusted SSL certificates (`key.pem`, `cert.pem`) for `localhost` and your local IP.
@@ -115,7 +125,7 @@ If you prefer to install and configure each component manually, follow this sequ
    ```cmd
    cd C:\path\to\TilePoint
    ```
-2. Run `npm install` to download required packages (`express`, `vite`, `dotenv`, `react`, `xlsx`, `lucide-react`, etc.):
+2. Run `npm install` to download required packages (`express`, `alasql`, `mysql2`, `vite`, `dotenv`, `react`, `xlsx`, `lucide-react`, etc.):
    ```cmd
    npm install
    ```
@@ -129,16 +139,24 @@ If you prefer to install and configure each component manually, follow this sequ
    ```cmd
    copy .env.example .env
    ```
-3. Open `.env` in Notepad or VS Code and set the values:
+3. Open `.env` in Notepad or VS Code and configure the parameters:
    ```env
-   # Cryptographic secret for signing offline branch sessions (Minimum 16 characters)
+   # Cryptographic secrets for signing offline branch sessions (Minimum 16 characters)
    VITE_SECURITY_SECRET="TilePointEnterpriseSecPass2026!"
+   SECURITY_SECRET="TilePointEnterpriseSecPass2026!"
 
-   # Optional Google AI Studio key for local receipt auditing and AI assistant features
-   GEMINI_API_KEY=""
+   # Optional Dedicated MySQL Server Configuration
+   MYSQL_HOST="localhost"
+   MYSQL_PORT=3306
+   MYSQL_USER="root"
+   MYSQL_PASSWORD=""
+   MYSQL_DATABASE="tilepoint_db"
 
    # Bound server address (Replace with your actual local IP)
    APP_URL="https://192.168.1.38:3000"
+
+   # Optional Google AI Studio key for receipt auditing and AI features
+   GEMINI_API_KEY=""
    ```
 
 ---
@@ -165,27 +183,46 @@ openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -sha256 -days 3
 
 ---
 
-### Step 2.5: Configure Windows Defender Firewall for Port 3000
+### Step 2.5: Configure MySQL Database (Optional Dedicated SQL Server)
 
-By default, Windows Defender Firewall blocks incoming connections from mobile phones and cashier tablets. You must allow inbound traffic on TCP Port 3000.
+If you are using a dedicated MySQL 8.0+ server instead of the built-in embedded AlaSQL engine:
+
+1. Log into your MySQL Command Line or MySQL Workbench:
+   ```sql
+   CREATE DATABASE IF NOT EXISTS tilepoint_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   ```
+2. Import the database schema from `schema.sql`:
+   ```cmd
+   mysql -u root -p tilepoint_db < schema.sql
+   ```
+3. Update `.env` with your MySQL credentials (`MYSQL_HOST`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`).
+
+*Note: If MySQL is not configured or goes offline, TilePoint automatically seamlessly uses its embedded AlaSQL engine without crashing!*
+
+---
+
+### Step 2.6: Configure Windows Defender Firewall for Ports 3000 & 3306
+
+By default, Windows Defender Firewall blocks incoming connections from mobile phones and cashier tablets. You must allow inbound traffic on TCP Port 3000 (and Port 3306 if accessing MySQL from remote PCs).
 
 #### Fast PowerShell Command (Run as Administrator):
 ```powershell
 New-NetFirewallRule -DisplayName "TilePoint Server Port 3000" -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow
+New-NetFirewallRule -DisplayName "TilePoint MySQL Port 3306" -Direction Inbound -LocalPort 3306 -Protocol TCP -Action Allow
 ```
 
 #### Manual Control Panel Method:
 1. Press `Win + R`, type `wf.msc` and press Enter (*Windows Defender Firewall with Advanced Security*).
 2. Click **Inbound Rules** in the left sidebar, then click **New Rule...** on the right.
 3. Choose **Port** -> click Next.
-4. Choose **TCP** and type `3000` under **Specific local ports** -> click Next.
+4. Choose **TCP** and type `3000, 3306` under **Specific local ports** -> click Next.
 5. Choose **Allow the connection** -> click Next.
 6. Ensure **Domain**, **Private**, and **Public** are checked -> click Next.
-7. Name the rule `TilePoint Server Port 3000` and click **Finish**.
+7. Name the rule `TilePoint Server Ports 3000 & 3306` and click **Finish**.
 
 ---
 
-### Step 2.6: Build Production Client Assets
+### Step 2.7: Build Production Client Assets
 
 1. Check for any TypeScript syntax or type issues:
    ```cmd
@@ -199,7 +236,7 @@ New-NetFirewallRule -DisplayName "TilePoint Server Port 3000" -Direction Inbound
 
 ---
 
-### Step 2.7: Launch and Manage Server under PM2
+### Step 2.8: Launch and Manage Server under PM2
 
 PM2 keeps your server running 24/7 in the background and restarts it automatically if the laptop reboots.
 
@@ -231,7 +268,45 @@ PM2 keeps your server running 24/7 in the background and restarts it automatical
 
 ---
 
-## 📱 5. Connecting Mobile Cashier Terminals & Staff Devices
+## 🧹 5. Database Management, Migration & Resetting to Setup Wizard State
+
+### Wiping Database & Returning to Setup Wizard Installer
+
+If you need to perform a complete system reset, flush all data, or return TilePoint to its fresh **Setup Wizard (Installer)** state:
+
+#### Method A: Admin Settings UI
+1. Navigate to **System Settings** -> **Database Operations**.
+2. Click **Truncate Entire System Database (Clean Slate)**.
+3. Confirm the security prompt. The system will reset `tp_is_configured` to `false` and automatically redirect to the **Setup & Installer Wizard**.
+
+#### Method B: Command Line API Truncate Call
+Execute this curl / fetch command to reset the database to a clean slate state:
+```cmd
+node -e "fetch('http://127.0.0.1:3000/api/db/truncate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'all' }) }).then(r => r.json()).then(console.log);"
+```
+
+#### Method C: Reset Transactions Only (Preserve Store Setup & Users)
+To clear sales, shifts, purchase orders, and audit logs while preserving store setup, branches, and user accounts:
+```cmd
+node -e "fetch('http://127.0.0.1:3000/api/db/truncate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'transactions' }) }).then(r => r.json()).then(console.log);"
+```
+
+---
+
+### Migrating Data between JSON / AlaSQL and MySQL
+
+TilePoint includes an automated migration utility (`scripts/migrateJsonToMysql.js`) to migrate offline JSON/AlaSQL snapshots directly into a live MySQL server:
+
+1. Ensure MySQL is configured in `.env`.
+2. Execute the migration script in Command Prompt:
+   ```cmd
+   node scripts/migrateJsonToMysql.js
+   ```
+3. The utility will automatically create all missing MySQL tables, insert all historical branch, inventory, customer, and sales records, and verify data integrity.
+
+---
+
+## 📱 6. Connecting Mobile Cashier Terminals & Staff Devices
 
 Once the server is running under PM2 on your Windows host laptop, staff tablets and mobile phones can connect:
 
@@ -249,7 +324,7 @@ Once the server is running under PM2 on your Windows host laptop, staff tablets 
 
 ---
 
-## 🔒 6. Preventing Disconnections: Static IP & Router DHCP Setup
+## 🔒 7. Preventing Disconnections: Static IP & Router DHCP Setup
 
 ### The Problem: DHCP IP Address Rotation
 Wi-Fi routers dynamically change IP addresses whenever devices reconnect or the router restarts. If your Windows host PC changes IP from `192.168.1.38` to `192.168.1.45`, cashier tablets will immediately lose connection.
@@ -303,7 +378,7 @@ Set-DnsClientServerAddress -InterfaceIndex $adapter.InterfaceIndex -ServerAddres
 
 ---
 
-## 🔐 7. Achieving Trusted HTTPS (Zero Security Warnings)
+## 🔐 8. Achieving Trusted HTTPS (Zero Security Warnings)
 
 If you want to eliminate the browser *"Not Secure"* warning on cashier devices, choose one of these solutions:
 
@@ -350,7 +425,7 @@ This assigns your local Windows server a globally trusted, official domain name 
 
 ---
 
-## 🌐 8. Enterprise Nginx Reverse Proxy Setup (Optional)
+## 🌐 9. Enterprise Nginx Reverse Proxy Setup (Optional)
 
 If you prefer using Nginx for Windows as an enterprise reverse proxy instead of Express directly terminating SSL:
 
@@ -371,15 +446,15 @@ If you prefer using Nginx for Windows as an enterprise reverse proxy instead of 
 
 ---
 
-## ❓ 9. Comprehensive Step-by-Step Troubleshooting Guide
+## ❓ 10. Comprehensive Step-by-Step Troubleshooting Guide
 
 ---
 
-### Troubleshooting EADDRINUSE (Port 3000 Busy)
+### Troubleshooting EADDRINUSE (Port 3000 or 3306 Busy)
 
 **Symptom**: Server logs show `Error: listen EADDRINUSE: address already in use 0.0.0.0:3000` or `server.js` fails to start.
 
-**Cause**: Another application or orphaned Node process is running on Port 3000.
+**Cause**: Another application or orphaned Node process is running on Port 3000 (or Port 3306).
 
 **Step-by-Step Fix**:
 1. Open Command Prompt (CMD) as Administrator.
@@ -410,7 +485,7 @@ If you prefer using Nginx for Windows as an enterprise reverse proxy instead of 
 **Symptom**: Console or terminal displays: `WebSocket server error: Port 24678 is already in use` when running `npm run dev` or `node server.js`.
 
 **Cause**:
-1. **Multiple Dev Server Instances**: Port 24678 is Vite's default Hot Module Replacement (HMR) WebSocket port. Another `node.exe` or `vite` process is already running in a different terminal, background window, or via PM2.
+1. **Multiple Dev Server Instances**: Port 24678 is Vite's default Hot Module Replacement (HMR) WebSocket port. Another `node.exe` or `vite` process is already running in a different terminal or background window.
 2. **Running in Dev Mode without NODE_ENV=production**: When `server.js` runs in development mode (`NODE_ENV !== 'production'`), it mounts Vite's dev server middleware which attempts to open HMR on port 24678.
 
 **Step-by-Step Fix**:
@@ -420,14 +495,8 @@ If you prefer using Nginx for Windows as an enterprise reverse proxy instead of 
    ```cmd
    taskkill /IM node.exe /F
    ```
-   Or locate and terminate the specific process holding port 24678:
-   ```cmd
-   netstat -ano | findstr :24678
-   taskkill /PID <PID_NUMBER> /F
-   ```
-
 2. **Option B — Run in Production Mode (Recommended for Store Terminals)**:
-   If deploying for store/cashier usage, compile production static assets and run in `production` mode so Vite HMR is disabled:
+   Compile production static assets and run in `production` mode so Vite HMR is disabled:
    ```cmd
    npm run build
    ```
@@ -435,14 +504,24 @@ If you prefer using Nginx for Windows as an enterprise reverse proxy instead of 
    ```cmd
    set NODE_ENV=production && node server.js
    ```
-   *In PowerShell:*
-   ```powershell
-   $env:NODE_ENV="production"; node server.js
-   ```
    *In PM2:*
    ```cmd
    pm2 start server.js --name "tilepoint-hq-server" --env production
    ```
+
+---
+
+### Troubleshooting MySQL Connection Errors (ER_ACCESS_DENIED_ERROR / ECONNREFUSED)
+
+**Symptom**: Server output shows `[Database] MySQL connection lost (ECONNREFUSED). Running on AlaSQL embedded MySQL Engine.` or authentication failure.
+
+**Cause**: MySQL service is not running on Port 3306 or `.env` credentials do not match MySQL root/user password.
+
+**Step-by-Step Fix**:
+1. Check if MySQL service is running in Windows Services:
+   - Press `Win + R`, type `services.msc`, locate **MySQL** or **MySQL80**, and click **Start**.
+2. Verify credentials in `.env` (`MYSQL_HOST`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`).
+3. If MySQL is unavailable, TilePoint will automatically safely operate using its embedded **AlaSQL** relational engine without data loss.
 
 ---
 
@@ -460,7 +539,7 @@ If you prefer using Nginx for Windows as an enterprise reverse proxy instead of 
 
 ### 🛡️ How to Generate a Trusted SSL Certificate & Remove "Not Secure"
 
-To get a **green padlock / "Connection is secure"** on all phones, tablets, and cashier PCs without any warning messages, follow these steps using `mkcert` (a tool specifically made to generate trusted local SSL certificates).
+To get a **green padlock / "Connection is secure"** on all phones, tablets, and cashier PCs without any warning messages, follow these steps using `mkcert`:
 
 #### Phase 1: Generate Trusted SSL Certificate on Host PC
 
@@ -468,8 +547,6 @@ To get a **green padlock / "Connection is secure"** on all phones, tablets, and 
    ```cmd
    winget install FiloSottile.mkcert
    ```
-   *Or download `mkcert.exe` directly from https://github.com/FiloSottile/mkcert/releases and place it in your project folder.*
-
 2. **Install Local Root CA on Host PC**:
    Open CMD or PowerShell as **Administrator** in the TilePoint directory and run:
    ```cmd
@@ -482,7 +559,6 @@ To get a **green padlock / "Connection is secure"** on all phones, tablets, and 
    ```cmd
    mkcert -key-file key.pem -cert-file cert.pem localhost 127.0.0.1 192.168.1.11 ::1
    ```
-   *(This replaces `key.pem` and `cert.pem` in your project folder with certificates signed by your new local Root CA).*
 
 4. **Restart TilePoint Server**:
    ```cmd
@@ -493,16 +569,14 @@ To get a **green padlock / "Connection is secure"** on all phones, tablets, and 
 
 #### Phase 2: Install Root CA on Client Devices (Removes "Not Secure" Badge)
 
-To make phones, tablets, and other PCs trust your server without warning, you simply copy and install the `rootCA.pem` file created in Phase 1 onto each device once.
+Copy and install the `rootCA.pem` file created in Phase 1 onto each device once.
 
 ##### 📍 Finding your `rootCA.pem` file:
-Run this command in CMD on the host PC to find the exact location of `rootCA.pem`:
+Run this command in CMD on the host PC:
 ```cmd
 mkcert -CAROOT
 ```
 *(Typical path: `C:\Users\YourUsername\AppData\Local\mkcert\rootCA.pem`)*.
-
----
 
 ##### 💻 On Windows Cashier PCs:
 1. Copy `rootCA.pem` to the cashier PC.
@@ -510,124 +584,77 @@ mkcert -CAROOT
 3. Select **Local Machine** -> click Next.
 4. Select **Place all certificates in the following store** -> click **Browse...**
 5. Choose **Trusted Root Certification Authorities** -> click OK -> click Next -> click **Finish**.
-6. Open `https://192.168.1.11:3000` in Chrome/Edge — it will now show a **green padlock**!
-
----
 
 ##### 📱 On Apple iPhones & iPads (iOS / iPadOS):
-1. Send `rootCA.pem` to your iPhone/iPad via AirDrop, Email, or download it from a local file share.
-2. Open **Settings** on iOS -> tap **Profile Downloaded** near the top.
-3. Tap **Install** in the top-right corner -> enter your iPhone Passcode -> tap **Install** -> tap **Done**.
-4. **Critical Step (Enable Full Trust)**:
-   - Go to **Settings** -> **General** -> **About** -> **Certificate Trust Settings** (at the bottom).
-   - Under *"Enable full trust for root certificates"*, find **mkcert development CA**.
-   - Toggle the switch to **ON (Green)** -> tap **Continue**.
-5. Open `https://192.168.1.11:3000` in Safari or Chrome on iOS — **"Not Secure" is completely gone** and camera barcode scanning works instantly!
-
----
+1. Send `rootCA.pem` to your iPhone/iPad via AirDrop or local download.
+2. Open **Settings** -> tap **Profile Downloaded** -> tap **Install**.
+3. Go to **Settings** -> **General** -> **About** -> **Certificate Trust Settings**.
+4. Enable full trust for **mkcert development CA**.
 
 ##### 🤖 On Android Phones & Tablets:
-1. Copy `rootCA.pem` to the Android device storage or download via Google Drive/email.
-2. Open Android **Settings** -> go to **Security & Privacy** (or Security).
-3. Scroll down to **More Security Settings** -> tap **Encryption & Credentials**.
-4. Tap **Install a certificate** -> choose **CA certificate**.
-5. Tap **Install anyway** if prompted with a security warning.
-6. Browse to and select `rootCA.pem`.
-7. Enter a name (e.g. `TilePoint Root CA`) -> tap **OK**.
-8. Refresh `https://192.168.1.11:3000` in Chrome for Android — the connection will now show as **100% Secure**!
-
----
-
-#### Quick Fallback (Bypass Warning without Installing Root CA):
-If you do not want to install `rootCA.pem` on staff phones, you can simply tap through the browser warning once:
-- **Chrome / Edge**: Click **Advanced** -> tap **Proceed to 192.168.1.11 (unsafe)**.
-- **Safari**: Tap **Show Details** -> tap **visit this website** -> confirm with Passcode.
+1. Copy `rootCA.pem` to Android storage.
+2. Open Android **Settings** -> **Security & Privacy** -> **More Security Settings** -> **Encryption & Credentials**.
+3. Tap **Install a certificate** -> choose **CA certificate** -> select `rootCA.pem`.
 
 ---
 
 ### Troubleshooting ERR_SSL_PROTOCOL_ERROR
 
-**Symptom**: Browser displays `ERR_SSL_PROTOCOL_ERROR` or PM2 logs report `ERR_OSSL_UNSUPPORTED` / `nested asn1 error`.
-
-**Cause**: `key.pem` or `cert.pem` files are corrupted, empty, or incorrectly formatted as PKCS#12 instead of PKCS#8 PEM.
+**Symptom**: Browser displays `ERR_SSL_PROTOCOL_ERROR` or PM2 logs report `ERR_OSSL_UNSUPPORTED`.
 
 **Step-by-Step Fix**:
-1. Stop the server:
-   ```cmd
-   pm2 stop tilepoint-hq-server
-   ```
+1. Stop the server: `pm2 stop tilepoint-hq-server`
 2. Delete `key.pem` and `cert.pem` from the project root directory.
-3. Re-generate valid certificate files using PowerShell:
+3. Re-generate certificate files using PowerShell:
    ```powershell
    Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
    .\generate-certs.ps1
    ```
-4. Restart PM2:
-   ```cmd
-   pm2 restart tilepoint-hq-server
-   ```
+4. Restart PM2: `pm2 restart tilepoint-hq-server`
 
 ---
 
 ### Troubleshooting Rollup failed to resolve import "xlsx"
 
-**Symptom**: Executing `npm run build` fails with: `Rollup failed to resolve import "xlsx" from "src/lib/excelExportHelper.ts"`.
-
-**Cause**: The `xlsx` package is missing or not present in `node_modules`.
+**Symptom**: Executing `npm run build` fails with: `Rollup failed to resolve import "xlsx"`.
 
 **Step-by-Step Fix**:
-1. Run `npm install` or explicitly install the `xlsx` package:
+1. Install `xlsx` package:
    ```cmd
    npm install xlsx
    ```
-2. Re-run `npm run build` to verify the production bundle builds without errors:
-   ```cmd
-   npm run build
-   ```
+2. Re-run `npm run build`.
 
 ---
 
-### Troubleshooting Vite / esbuild Transform Errors (e.g. Unexpected "export")
+### Troubleshooting Vite / esbuild Transform Errors
 
-**Symptom**: Build fails with `[vite:esbuild] Transform failed with 1 error: ERROR: Unexpected "export"` in React context files or components.
-
-**Cause**: A missing or extra brace `}`, dangling syntax, or invalid export placement in a TypeScript source file.
+**Symptom**: Build fails with `[vite:esbuild] Transform failed with 1 error`.
 
 **Step-by-Step Fix**:
-1. Run the linter / TypeScript type checker to quickly pinpoint the syntax error line:
-   ```cmd
-   npm run lint
-   ```
-2. Open the file reported in the error message (e.g., `src/context/DbContext.tsx`), inspect the syntax around the line number, and ensure all functions, objects, and export statements are properly formatted and enclosed.
-3. Re-run `npm run build` to confirm the fix.
+1. Run `npm run lint` to identify syntax errors.
+2. Fix missing brackets or exports in the flagged source file.
+3. Re-run `npm run build`.
 
 ---
 
 ### Troubleshooting "Server unable to commit configuration records"
 
-**Symptom**: Saving store settings, admin credentials, or branch records in the UI fails with a red error notice.
-
-**Cause**: The web browser cannot reach the backend server on Port 3000 because `server.js` is offline, blocked by firewall, or the browser hasn't accepted the SSL certificate exception.
+**Symptom**: Saving store settings or admin credentials in the UI displays an error notice.
 
 **Step-by-Step Fix**:
-1. Check PM2 server status:
-   ```cmd
-   pm2 status
-   ```
-   If status is `stopped` or `errored`, check error logs: `pm2 logs tilepoint-hq-server`.
-2. Test backend accessibility directly in browser:
-   Open `https://localhost:3000/api/db` in your browser.
-3. Ensure you click **Advanced -> Proceed to localhost (unsafe)** if prompted by the SSL warning screen.
-4. Verify firewall status: Ensure Inbound TCP Rule for Port 3000 is active in Windows Firewall.
+1. Check PM2 server status: `pm2 status`.
+2. Test backend accessibility directly in browser: Open `https://localhost:3000/api/db`.
+3. Accept the browser SSL certificate exception if prompted.
+4. Ensure Firewall rule for TCP Port 3000 is active.
 
 ---
 
 ### Troubleshooting PowerShell Execution Policy Restrictions
 
-**Symptom**: Running `.ps1` scripts gives: `generate-certs.ps1 cannot be loaded because running scripts is disabled on this system`.
+**Symptom**: Running `.ps1` scripts gives: `generate-certs.ps1 cannot be loaded because running scripts is disabled`.
 
 **Step-by-Step Fix**:
-Unblock the script for the current process session:
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 .\generate-certs.ps1
@@ -637,54 +664,19 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 
 ### Troubleshooting Mobile Devices Unable to Connect ("Site Unreachable")
 
-**Symptom**: Staff phones or tablets show `ERR_CONNECTION_TIMED_OUT`, `ERR_CONNECTION_REFUSED`, `This site can’t be reached`, or `Server Unreachable` when attempting to access `https://192.168.1.11:3000`.
+**Symptom**: Staff phones or tablets show `ERR_CONNECTION_TIMED_OUT` or `Server Unreachable`.
 
 **Step-by-Step Diagnostic Checklist**:
-
-1. **Verify `server.js` is Active and Listening on `0.0.0.0:3000`**:
-   - On the host PC, open CMD and check if the server is running:
-     ```cmd
-     netstat -ano | findstr :3000
-     ```
-   - If nothing appears, start the server:
-     ```cmd
-     pm2 start server.js --name "tilepoint-hq-server"
-     ```
-   - Test locally on the host PC browser: `https://localhost:3000` or `https://192.168.1.11:3000`. If it works on the host PC but not on the phone, proceed to step 2.
-
-2. **Check Windows Network Profile (Change from Public to Private)**:
-   - Windows Firewall silently blocks ALL inbound phone connections if your Wi-Fi is set to **Public Network**.
-   - Go to Windows **Settings** -> **Network & internet** -> **Wi-Fi** (or **Ethernet**).
-   - Select your connected network and change Network profile type to **Private network**.
-
-3. **Allow Port 3000 Through Windows Defender Firewall**:
-   - Open PowerShell as **Administrator** on the host PC and run this command:
-     ```powershell
-     New-NetFirewallRule -DisplayName "TilePoint Port 3000" -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow
-     ```
-   - If using 3rd-party antivirus/firewall software (e.g. Kaspersky, Norton, McAfee, ESET, Bitdefender), temporarily disable its Network Shield/Firewall or add an inbound rule for TCP Port 3000.
-
-4. **Verify Correct IPv4 Address on Host PC (Avoid Virtual IPs)**:
-   - Run `ipconfig` in CMD on the host PC.
-   - Look specifically for **Wireless LAN adapter Wi-Fi** or **Ethernet adapter**.
-   - Make sure you are using the actual physical LAN IP (e.g., `192.168.1.11`), NOT a virtual adapter IP from WSL, Docker, Hyper-V, VMware, or VirtualBox (e.g., `172.x.x.x` or `192.168.56.x`).
-
-5. **Turn Off Phone Cellular Data & VPNs**:
-   - **Cellular Data**: Turn off 4G/5G/LTE on the phone so traffic routes solely through Wi-Fi.
-   - **VPN Services**: Disable active VPNs (ExpressVPN, NordVPN, Cloudflare WARP) on both the phone and host PC, as VPNs redirect traffic away from the local subnet.
-
-6. **Check Router AP / Client Isolation**:
-   - If the phone and PC are both on Wi-Fi but cannot see each other, log into your Wi-Fi router admin page (e.g., `192.168.1.1`).
-   - Check if **AP Isolation**, **Client Isolation**, or **Guest Network Isolation** is enabled. Turn it **OFF** so Wi-Fi devices can communicate locally.
-
-7. **Ensure `https://` Protocol is Included**:
-   - Modern phone browsers will default to searching Google if you type `192.168.1.11:3000` without `https://`.
-   - Type the full URL into the address bar: `https://192.168.1.11:3000`
-   - Tap **Advanced** -> **Proceed to 192.168.1.11 (unsafe)** when the SSL warning appears.
+1. **Verify Server is Listening**: `netstat -ano | findstr :3000`
+2. **Check Windows Network Profile**: Change network profile from **Public** to **Private** in Windows Settings.
+3. **Allow Port 3000 Firewall Rule**: Run `New-NetFirewallRule -DisplayName "TilePoint Port 3000" -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow` in PowerShell as Admin.
+4. **Verify Host IP**: Use physical Wi-Fi/Ethernet IPv4 address, not virtual WSL or Docker IPs.
+5. **Disable VPN & Cellular Data**: Turn off cellular data on phones and active VPNs.
+6. **Disable Router AP Isolation**: Turn off AP/Client Isolation in Wi-Fi router settings.
 
 ---
 
-## 🛠️ 10. Useful Operational Commands Reference
+## 🛠️ 11. Useful Operational Commands Reference
 
 | Operation | Command | Execution Context |
 | :--- | :--- | :--- |
@@ -696,6 +688,8 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 | **Install Dependencies** | `npm install` | Project Root Directory |
 | **Verify Code & Types** | `npm run lint` | Project Root Directory |
 | **Rebuild Client Bundle** | `npm run build` | Project Root Directory |
+| **Migrate Data to MySQL** | `node scripts/migrateJsonToMysql.js` | Project Root Directory |
+| **Reset Database (Clean Slate)** | `node -e "fetch('http://127.0.0.1:3000/api/db/truncate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'all' }) }).then(r=>r.json()).then(console.log);"` | CMD / PowerShell |
 | **Check Port 3000 Usage** | `netstat -ano \| findstr :3000` | CMD / PowerShell |
 | **Kill Process on Port 3000**| `taskkill /PID <PID> /F` | CMD (Run as Admin) |
 | **Check Local IP Address** | `ipconfig` | CMD / PowerShell |

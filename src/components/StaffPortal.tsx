@@ -653,8 +653,12 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  </div>
 
  <div className="flex justify-between items-center font-bold text-[11px] pb-1">
- <span className="text-zinc-450">Box Packing factor:</span>
- <span className="text-m3-on-surface font-extrabold font-mono">{scannedProduct.boxQuantity} tiles / box</span>
+ <span className="text-zinc-450">Packing Factor:</span>
+ <span className="text-m3-on-surface font-extrabold font-mono">
+ {scannedProduct.category?.toLowerCase().includes('tile')
+ ? `${scannedProduct.boxQuantity || 1} tiles / box`
+ : `${scannedProduct.boxQuantity || 1} ${scannedProduct.unit || 'pcs'} / pack`}
+ </span>
  </div>
  </div>
 

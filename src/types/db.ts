@@ -243,6 +243,7 @@ export interface Sale {
  isDeleted: boolean; // true if invoice has been voided via supervisor PIN
  deletedAt?: string;
  createdAt: string;
+ updatedAt?: string;
  idempotencyKey?: string;
  discountType?: string;
  pointsEarned?: number;

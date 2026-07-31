@@ -1345,7 +1345,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
               <option value="">-- Choose POS Transaction Order --</option>
               {sales.slice(0, 30).map((s) => (
                 <option key={s.id} value={s.id}>
-                  Ref: {s.saleNumber} | {s.customerName} | ₱{s.grandTotal.toFixed(2)} ({new Date(s.createdAt).toLocaleDateString()})
+                  Ref: {s.saleNumber} | {s.customerName} | ₱{(Number(s.grandTotal) || 0).toFixed(2)} ({s.createdAt && !isNaN(new Date(s.createdAt).getTime()) ? new Date(s.createdAt).toLocaleDateString() : 'N/A'})
                 </option>
               ))}
             </select>

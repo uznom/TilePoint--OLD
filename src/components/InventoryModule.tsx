@@ -13,10 +13,12 @@ import { PreflightReportCard } from './PreflightReportCard';
 import { isProductInBranch, getBranchStockQuantity, getBranchStockRecord, slugifyBranchStr } from '../lib/branchUtils';
 import { Product, UserRole, TransferType, TransferStatus } from '../types/db';
 import { HoldToConfirmButton } from './HoldToConfirmButton';
+import { ConfirmationModal } from './ConfirmationModal';
 import { useResponsivePageSize, useTableAutoPageSize, TablePagination } from './TablePagination';
 import { createSearchIndex, searchIndex } from '../utils/searchIndex';
 import { useVirtualList } from '../hooks/useVirtualList';
 import {
+ ArrowUpDown,
  Plus,
  Edit2,
  Trash2,
@@ -32,7 +34,6 @@ import {
  Activity,
  FileText,
  Sliders,
- QrCode,
  Barcode,
  Image as ImageIcon,
  Camera,
@@ -53,8 +54,10 @@ import {
  Copy,
  MapPin,
  ShieldAlert,
- FileSpreadsheet
+ FileSpreadsheet,
+ RefreshCw
 } from 'lucide-react';
+import { StyledBarcode, generateEan13Barcode, generateCode128SvgHtml } from '../utils/barcodeGenerator';
 
 interface InventoryModuleProps {
  darkMode: boolean;
@@ -77,84 +80,6 @@ export interface BatchExpiration {
  status: "Good" | "Expiring Soon" | "Expired";
  remarks?: string;
 }
-
-// Visual Barcode Component utilizing custom styled SVG lines for absolute accuracy
-const StyledBarcode: React.FC<{ code: string }> = ({ code }) => {
- const totalBars = 32;
- const bars = [];
- let seed = 0;
- for (let i = 0; i < code.length; i++) seed += code.charCodeAt(i);
- 
- for (let i = 0; i < totalBars; i++) {
- const isDark = (seed + i * 7) % 3 !== 0;
- const widthClass = (seed + i * 13) % 4 === 0 ? 'w-1.5' : 'w-0.5';
- bars.push(
- <div 
- key={i} 
- className={`${isDark ? 'bg-zinc-900 dark:bg-zinc-100' : 'bg-transparent'} ${widthClass} h-12 shrink-0`} 
- />
- );
- }
- return (
- <div className="flex flex-col items-center gap-1.5 p-3 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200/50 dark:border-zinc-700/50">
- <div className="flex items-center justify-center overflow-hidden w-full max-w-[200px] h-12">
- {bars}
- </div>
- <span className="font-mono text-[10px] tracking-widest text-zinc-500 dark:text-zinc-400 font-extrabold uppercase select-all">{code}</span>
- </div>
- );
-};
-
-// Visual Block QR Code Component using an algorithmic pixel check pattern
-const StyledQrCode: React.FC<{ code: string }> = ({ code }) => {
- const size = 11;
- const grid = [];
- let seed = 0;
- for (let i = 0; i < code.length; i++) seed += code.charCodeAt(i);
-
- for (let r = 0; r < size; r++) {
- const cols = [];
- for (let c = 0; c < size; c++) {
- // Corners finders (distinct square layout of QR code standards)
- const isFinder = 
- (r < 3 && c < 3) || 
- (r < 3 && c >= size - 3) || 
- (r >= size - 3 && c < 3);
- 
- const isCornerFill = 
- isFinder && 
- (r === 0 || r === 2 || c === 0 || c === 2 || (r === size - 1 || r === size - 3 || c === size - 1 || c === size - 3));
-
- let active = false;
- if (isFinder) {
- active = isCornerFill;
- } else {
- active = (seed + r * 17 + c * 31) % 3 === 0;
- }
-
- cols.push(
- <div 
- key={c} 
- className={`w-3 h-3 ${active ? 'bg-zinc-950' : 'bg-transparent'}`} 
- />
- );
- }
- grid.push(
- <div key={r} className="flex shrink-0">
- {cols}
- </div>
- );
- }
-
- return (
- <div className="flex flex-col items-center gap-1.5 p-3.5 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200/50 dark:border-zinc-700/50">
- <div className="p-1 bg-white inline-block border border-zinc-200/20 shadow-sm rounded-md overflow-hidden shrink-0">
- {grid}
- </div>
- <span className="font-mono text-[9px] tracking-wider text-zinc-400 font-bold uppercase truncate max-w-[150px]">{code}</span>
- </div>
- );
-};
 
 export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, initialSubTab, hideTabHeader, isCompactGlobal, onSubTabChange }) => {
  const {
@@ -523,45 +448,54 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     setShowAddBatchModal(false);
   };
 
+  const [confirmResetBatchesModal, setConfirmResetBatchesModal] = useState(false);
+  const [confirmDeleteBatchId, setConfirmDeleteBatchId] = useState<string | null>(null);
+
+  const handleExecuteResetSimulationBatches = () => {
+    localStorage.removeItem("tp_batch_expirations");
+    const expiryTrackedProds = branchProducts.filter(p => p.hasExpiration || p.expirationDate);
+    const freshBatches: BatchExpiration[] = expiryTrackedProds.map(prod => {
+      const expDate = prod.expirationDate || new Date(Date.now() + 180 * 86400000).toISOString().split('T')[0];
+      const mfgDate = new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0];
+      return {
+        id: `batch-${prod.id}`,
+        productId: prod.id,
+        productName: prod.productName,
+        productCode: prod.productCode,
+        batchNumber: `B-${prod.productCode.replace(/[^A-Z0-9]/gi, '')}-${expDate.replace(/-/g, '').slice(2)}`,
+        quantity: prod.stockQuantity || 25,
+        manufactureDate: mfgDate,
+        expiryDate: expDate,
+        branchId: prod.origin || 'B1',
+        status: computeLiveBatchStatus(expDate),
+        remarks: `Catalog dynamic batch for ${prod.productName}`
+      };
+    });
+    setBatches(freshBatches);
+    showToast("Chemical batch log entries synchronized directly with live inventory catalog!");
+    setConfirmResetBatchesModal(false);
+  };
+
   const handleResetSimulationBatches = () => {
-    if (window.confirm("Purge legacy simulation data and synchronize chemical batches directly with live catalog products?")) {
-      localStorage.removeItem("tp_batch_expirations");
-      const expiryTrackedProds = branchProducts.filter(p => p.hasExpiration || p.expirationDate);
-      const freshBatches: BatchExpiration[] = expiryTrackedProds.map(prod => {
-        const expDate = prod.expirationDate || new Date(Date.now() + 180 * 86400000).toISOString().split('T')[0];
-        const mfgDate = new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0];
-        return {
-          id: `batch-${prod.id}`,
-          productId: prod.id,
-          productName: prod.productName,
-          productCode: prod.productCode,
-          batchNumber: `B-${prod.productCode.replace(/[^A-Z0-9]/gi, '')}-${expDate.replace(/-/g, '').slice(2)}`,
-          quantity: prod.stockQuantity || 25,
-          manufactureDate: mfgDate,
-          expiryDate: expDate,
-          branchId: prod.origin || 'B1',
-          status: computeLiveBatchStatus(expDate),
-          remarks: `Catalog dynamic batch for ${prod.productName}`
-        };
-      });
-      setBatches(freshBatches);
-      showToast("Chemical batch log entries synchronized directly with live inventory catalog!");
-    }
+    setConfirmResetBatchesModal(true);
+  };
+
+  const handleExecuteRemoveBatch = () => {
+    if (!confirmDeleteBatchId) return;
+    setBatches(prev => prev.filter(b => b.id !== confirmDeleteBatchId));
+    showToast("Batch record removed from ERP shelf-life database.");
+    setConfirmDeleteBatchId(null);
   };
 
   const handleRemoveBatch = (id: string) => {
-    const target = batches.find(b => b.id === id);
-    if (!target) return;
-    if (window.confirm(`Are you sure you want to delete Chemical Batch #${target.batchNumber} (${target.productName})? This action cannot be undone.`)) {
-      setBatches(prev => prev.filter(b => b.id !== id));
-      showToast("Batch record removed from ERP shelf-life database.");
-    }
+    setConfirmDeleteBatchId(id);
   };
 
  // Search & Filters
  const [term, setTerm] = useState('');
  const [categoryFilter, setCategoryFilter] = useState('All');
  const [statusFilter, setStatusFilter] = useState('All');
+ const [sortBy, setSortBy] = useState<'default' | 'qty-desc' | 'qty-asc' | 'alpha-asc' | 'alpha-desc'>('default');
  
  const [showPortabilityHubModal, setShowPortabilityHubModal] = useState<boolean>(false);
 
@@ -601,7 +535,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
    // Reset prodPage when filters change
   useEffect(() => {
     setProdPage(1);
-  }, [term, categoryFilter, statusFilter]);
+  }, [term, categoryFilter, statusFilter, sortBy]);
 
   // Reset ledgerPage when sub-tab changes
   useEffect(() => {
@@ -649,19 +583,20 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  const [designName, setDesignName] = useState('');
  const [productName, setProductName] = useState('');
  const [category, setCategory] = useState('Ceramic Tiles');
+ const [isCustomCategoryInput, setIsCustomCategoryInput] = useState(false);
  const [brand, setBrand] = useState('');
  const [supplierId, setSupplierId] = useState('');
  const [unit, setUnit] = useState('Box');
- const [size, setSize] = useState('60x60 cm');
- const [boxQuantity, setBoxQuantity] = useState<number>(4);
- const [coveragePerBox, setCoveragePerBox] = useState<number>(1.44);
+ const [size, setSize] = useState('');
+ const [boxQuantity, setBoxQuantity] = useState<number>(1);
+ const [coveragePerBox, setCoveragePerBox] = useState<number>(0);
  const [productImage, setProductImage] = useState<string>('');
- const [costPrice, setCostPrice] = useState<number>(300);
- const [sellingPrice, setSellingPrice] = useState<number>(450);
- const [markupPercent, setMarkupPercent] = useState<number>(50);
+ const [costPrice, setCostPrice] = useState<number>(0);
+ const [sellingPrice, setSellingPrice] = useState<number>(0);
+ const [markupPercent, setMarkupPercent] = useState<number>(0);
  const [taxType, setTaxType] = useState<string>('12% VAT');
- const [stockQuantity, setStockQuantity] = useState<number>(100);
- const [minimumStock, setMinimumStock] = useState<number>(25);
+ const [stockQuantity, setStockQuantity] = useState<number>(0);
+ const [minimumStock, setMinimumStock] = useState<number>(0);
  const [origin, setOrigin] = useState('');
 
  const handleCostPriceChange = (val: number) => {
@@ -930,8 +865,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  showToast(`Smart Redistribution Route Initiated: Approved transmittal pending dispatch.`);
  };
 
- // Categories list
- const categories = [
+ // Standard default categories and dynamic catalog category list
+ const DEFAULT_CATEGORIES = React.useMemo(() => [
  'Ceramic Tiles',
  'Porcelain Tiles',
  'Vitrified Tiles',
@@ -961,7 +896,18 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  'Tile Adhesives',
  'Grouts',
  'Doors & Windows'
- ];
+ ], []);
+
+ const categories = React.useMemo(() => {
+ const set = new Set<string>();
+ DEFAULT_CATEGORIES.forEach(c => set.add(c));
+ products.forEach(p => {
+ if (p.category && p.category.trim() !== '') {
+ set.add(p.category.trim());
+ }
+ });
+ return Array.from(set).sort();
+ }, [products, DEFAULT_CATEGORIES]);
 
  const allowedToModify = currentUser.role === UserRole.MANAGER || currentUser.role === UserRole.ADMIN;
  const allowedToImport = currentUser.role === UserRole.ADMIN;
@@ -994,7 +940,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
 	const filteredProducts = React.useMemo(() => {
  const searchMatches = searchIndex(productSearchIndex, term);
- return searchMatches.filter(p => {
+ const filtered = searchMatches.filter(p => {
  const matchCategory = categoryFilter === 'All' || p.category === categoryFilter;
  if (!matchCategory) return false;
 
@@ -1017,7 +963,30 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
  return statusFilter === currentStatus;
  });
- }, [productSearchIndex, branchStock, term, categoryFilter, statusFilter, selectedViewBranchId]);
+
+ if (sortBy === 'qty-desc') {
+ return [...filtered].sort((a, b) => {
+ const qtyA = getBranchStockQuantity(a, selectedViewBranchId, branchStock, branches);
+ const qtyB = getBranchStockQuantity(b, selectedViewBranchId, branchStock, branches);
+ return qtyB - qtyA;
+ });
+ }
+ if (sortBy === 'qty-asc') {
+ return [...filtered].sort((a, b) => {
+ const qtyA = getBranchStockQuantity(a, selectedViewBranchId, branchStock, branches);
+ const qtyB = getBranchStockQuantity(b, selectedViewBranchId, branchStock, branches);
+ return qtyA - qtyB;
+ });
+ }
+ if (sortBy === 'alpha-asc') {
+ return [...filtered].sort((a, b) => a.productName.localeCompare(b.productName));
+ }
+ if (sortBy === 'alpha-desc') {
+ return [...filtered].sort((a, b) => b.productName.localeCompare(a.productName));
+ }
+
+ return filtered;
+ }, [productSearchIndex, branchStock, branches, term, categoryFilter, statusFilter, selectedViewBranchId, sortBy]);
 
  const totalProdPages = Math.ceil(filteredProducts.length / prodsPerPage) || 1;
 
@@ -1280,23 +1249,24 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  const handleOpenAdd = () => {
  setProductCode(`TL-PR-${Date.now().toString().slice(-4)}`);
  setSku(`SKU-TPL-${Math.floor(Math.random()*10000)}`);
- setBarcode(`480${Math.floor(1000000000 + Math.random()*9000000000)}`);
+ setBarcode(generateEan13Barcode());
  setDesignName('');
  setProductName('');
  setCategory('Ceramic Tiles');
+ setIsCustomCategoryInput(false);
  setBrand('');
  setSupplierId(suppliers[0]?.id || 'S1');
  setUnit('Box');
- setSize('60x60 cm');
- setBoxQuantity(4);
- setCoveragePerBox(1.44);
+ setSize('');
+ setBoxQuantity(1);
+ setCoveragePerBox(0);
  setProductImage('');
- setCostPrice(300);
- setSellingPrice(450);
- setMarkupPercent(50);
+ setCostPrice(0);
+ setSellingPrice(0);
+ setMarkupPercent(0);
  setTaxType('12% VAT');
- setStockQuantity(50);
- setMinimumStock(20);
+ setStockQuantity(0);
+ setMinimumStock(0);
  const initBranch = currentUser?.role === UserRole.ADMIN 
    ? (selectedViewBranchId === 'consolidated' ? 'B1' : selectedViewBranchId)
    : (currentUser?.branchAssignmentId || 'B1');
@@ -1332,10 +1302,11 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  setEditingId(p.id);
  setProductCode(p.productCode);
  setSku(p.sku);
- setBarcode(p.barcode);
+ setBarcode(p.barcode || generateEan13Barcode());
  setDesignName(p.designName || '');
  setProductName(p.productName);
  setCategory(p.category);
+ setIsCustomCategoryInput(!categories.includes(p.category));
  setBrand(p.brand);
  setSupplierId(p.supplierId);
  setUnit(p.unit);
@@ -1554,6 +1525,14 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  if (!codesProduct) return;
  setPrintingCode(true);
 
+ const isTile = (codesProduct.category || '').toLowerCase().includes('tile');
+ const dimLabel = isTile ? 'DIMENSION' : 'SPEC/SIZE';
+ const dimVal = codesProduct.size || (isTile ? 'N/A' : 'Standard');
+ const qtyLabel = isTile ? 'BOX QTY' : 'PACK QTY';
+ const qtyVal = isTile
+ ? `${codesProduct.boxQuantity || 1} tiles/box`
+ : `${codesProduct.boxQuantity || 1} ${codesProduct.unit || 'pcs'}`;
+
  const printHtmlContents = `
  <html>
  <head>
@@ -1658,29 +1637,6 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  letter-spacing: 1.5px;
  font-weight: bold;
  }
- .qr-section {
- width: 38px;
- height: 38px;
- border: 1px solid #777;
- display: flex;
- align-items: center;
- justify-content: center;
- flex-shrink: 0;
- padding: 1px;
- }
- .qr-box {
- display: grid;
- grid-template-columns: repeat(15, 1fr);
- width: 34px;
- height: 34px;
- }
- .qr-pixel {
- width: 100%;
- height: 100%;
- }
- .qr-pixel.black {
- background: #000000;
- }
  </style>
  </head>
  <body>
@@ -1694,36 +1650,18 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  
  <div class="meta-grid">
  <div class="meta-item">SKU: <strong>${codesProduct.sku}</strong></div>
- <div class="meta-item">DIMENSION: <strong>${codesProduct.size || '60x60 cm'}</strong></div>
+ <div class="meta-item">${dimLabel}: <strong>${dimVal}</strong></div>
  <div class="meta-item">CODE: <strong>${codesProduct.productCode}</strong></div>
- <div class="meta-item">BOX QTY: <strong>${codesProduct.boxQuantity || 4} pcs</strong></div>
+ <div class="meta-item">${qtyLabel}: <strong>${qtyVal}</strong></div>
  </div>
  </div>
 
  <div class="codes-area">
  <div class="barcode-section">
- <div class="barcode-lines">
- ${Array.from({ length: 42 }).map((_, i) => {
- const isThick = (i % 3 === 0 || i % 7 === 0);
- const isVisible = (i % 5 !== 0 && i % 13 !== 0);
- return isVisible ? `<div class="line" style="width: ${isThick ? '2px' : '1px'}"></div>` : `<div style="width: 1px"></div>`;
- }).join('')}
+ <div style="width: 100%; max-width: 180px; height: 34px;">
+ ${generateCode128SvgHtml(codesProduct.barcode, 34)}
  </div>
  <div class="barcode-text">${codesProduct.barcode}</div>
- </div>
- 
- <div class="qr-section">
- <div class="qr-box">
- ${Array.from({ length: 225 }).map((_, i) => {
- const x = i % 15;
- const y = Math.floor(i / 15);
- const isCorner = (x < 4 && y < 4) || (x > 10 && y < 4) || (x < 4 && y > 10);
- const isBorderMatch = isCorner && (x === 0 || x === 3 || y === 0 || y === 3 || x === 11 || x === 14 || y === 11 || y === 14);
- const isRandom = (Math.sin(i * 1.5) > 0.1);
- const isBlack = isBorderMatch || (isCorner && x !== 1 && x !== 2 && y !== 1 && y !== 2 && x !== 12 && x !== 13 && y !== 12 && y !== 13) || (!isCorner && isRandom);
- return `<div class="qr-pixel ${isBlack ? 'black' : ''}"></div>`;
- }).join('')}
- </div>
  </div>
  </div>
 
@@ -1911,29 +1849,6 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  letter-spacing: 1.5px;
  font-weight: bold;
  }
- .qr-section {
- width: 38px;
- height: 38px;
- border: 1px solid #777;
- display: flex;
- align-items: center;
- justify-content: center;
- flex-shrink: 0;
- padding: 1px;
- }
- .qr-box {
- display: grid;
- grid-template-columns: repeat(15, 1fr);
- width: 34px;
- height: 34px;
- }
- .qr-pixel {
- width: 100%;
- height: 100%;
- }
- .qr-pixel.black {
- background: #000000;
- }
  </style>
  </head>
  <body>
@@ -1949,36 +1864,18 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  
  <div class="meta-grid">
  <div class="meta-item">SKU: <strong>${pItem.sku}</strong></div>
- <div class="meta-item">DIMENSION: <strong>${pItem.size || '60x60 cm'}</strong></div>
+ <div class="meta-item">${(pItem.category || '').toLowerCase().includes('tile') ? 'DIMENSION' : 'SPEC/SIZE'}: <strong>${pItem.size || ((pItem.category || '').toLowerCase().includes('tile') ? 'N/A' : 'Standard')}</strong></div>
  <div class="meta-item">CODE: <strong>${pItem.productCode}</strong></div>
- <div class="meta-item">BOX QTY: <strong>${pItem.boxQuantity || 4} pcs</strong></div>
+ <div class="meta-item">${(pItem.category || '').toLowerCase().includes('tile') ? 'BOX QTY' : 'PACK QTY'}: <strong>${(pItem.category || '').toLowerCase().includes('tile') ? (pItem.boxQuantity || 1) + ' tiles/box' : (pItem.boxQuantity || 1) + ' ' + (pItem.unit || 'pcs')}</strong></div>
  </div>
  </div>
 
  <div class="codes-area">
  <div class="barcode-section">
- <div class="barcode-lines">
- ${Array.from({ length: 42 }).map((_, i) => {
- const isThick = (i % 3 === 0 || i % 7 === 0);
- const isVisible = (i % 5 !== 0 && i % 13 !== 0);
- return isVisible ? `<div class="line" style="width: ${isThick ? '2px' : '1px'}"></div>` : `<div style="width: 1px"></div>`;
- }).join('')}
+ <div style="width: 100%; max-width: 180px; height: 34px;">
+ ${generateCode128SvgHtml(pItem.barcode, 34)}
  </div>
  <div class="barcode-text">${pItem.barcode}</div>
- </div>
- 
- <div class="qr-section">
- <div class="qr-box">
- ${Array.from({ length: 225 }).map((_, i) => {
- const x = i % 15;
- const y = Math.floor(i / 15);
- const isCorner = (x < 4 && y < 4) || (x > 10 && y < 4) || (x < 4 && y > 10);
- const isBorderMatch = isCorner && (x === 0 || x === 3 || y === 0 || y === 3 || x === 11 || x === 14 || y === 11 || y === 14);
- const isRandom = (Math.sin(i * 1.5) > 0.1);
- const isBlack = isBorderMatch || (isCorner && x !== 1 && x !== 2 && y !== 1 && y !== 2 && x !== 12 && x !== 13 && y !== 12 && y !== 13) || (!isCorner && isRandom);
- return `<div class="qr-pixel ${isBlack ? 'black' : ''}"></div>`;
- }).join('')}
- </div>
  </div>
  </div>
  </div>
@@ -2944,10 +2841,13 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  onChange={e => setCategoryFilter(e.target.value)}
  className="bg-transparent text-xs text-m3-on-surface focus:outline-none cursor-pointer transition-colors font-semibold outline-none"
  >
- <option value="All">All Categories</option>
- {categories.slice(0, 16).map((cat, i) => (
- <option key={i} value={cat}>{cat}</option>
- ))}
+ <option value="All">All Categories ({products.length})</option>
+ {categories.map((cat, i) => {
+ const count = products.filter(p => p.category === cat).length;
+ return (
+ <option key={i} value={cat}>{cat} {count > 0 ? `(${count})` : ''}</option>
+ );
+ })}
  </select>
  </div>
 
@@ -2964,6 +2864,23 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <option value="Low Stock">● Low Stock</option>
  <option value="Critical">● Critical Stock</option>
  <option value="Out of Stock">● Out of Stock</option>
+ </select>
+ </div>
+
+ {/* Sort select */}
+ <div className="flex items-center gap-1.5 bg-m3-surface-lowest border border-m3-outline-variant/25 px-3 py-1.5 rounded-xl shadow-sm">
+ <ArrowUpDown className="h-3.5 w-3.5 text-m3-primary" />
+ <span className="text-[9px] uppercase font-black tracking-widest text-m3-on-surface-variant font-mono">Sort By:</span>
+ <select
+ value={sortBy}
+ onChange={e => setSortBy(e.target.value as any)}
+ className="bg-transparent text-xs text-m3-on-surface focus:outline-none cursor-pointer transition-colors font-semibold outline-none"
+ >
+ <option value="default">Default Order</option>
+ <option value="qty-desc">Stock Quantity (High → Low)</option>
+ <option value="qty-asc">Stock Quantity (Low → High)</option>
+ <option value="alpha-asc">Alphabetical (A → Z)</option>
+ <option value="alpha-desc">Alphabetical (Z → A)</option>
  </select>
  </div>
 
@@ -3166,7 +3083,6 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  {!isCompactColumns && (
  <td className="py-3.5 px-4 font-mono text-[10px] text-zinc-500 select-all">
  <div>BC: {p.barcode}</div>
- <div>QR: {p.qrCode}</div>
  </td>
  )}
 
@@ -3294,9 +3210,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <button
  onClick={() => handleOpenCodesModal(p)}
  className="p-1.5 text-zinc-500 hover:text-m3-primary hover:bg-m3-outline-variant/15 transition-all rounded-full cursor-pointer shrink-0"
- title="View / Print Barcodes & QR Codes"
+ title="View / Print Barcode Label"
  >
- <QrCode className="h-4 w-4" />
+ <Barcode className="h-4 w-4" />
  </button>
 
  <button
@@ -5222,27 +5138,73 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  </div>
 
  <div className="space-y-1 relative">
- <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Barcode Sequence ID</label>
+ <div className="flex items-center justify-between pl-1">
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest select-none">
+ Barcode Sequence ID
+ </label>
+ <button
+ type="button"
+ onClick={() => {
+ const newBc = generateEan13Barcode();
+ setBarcode(newBc);
+ showToast(`Generated fresh EAN-13 barcode: ${newBc}`);
+ }}
+ className="text-[9px] font-mono font-black uppercase text-m3-primary hover:underline flex items-center gap-1 cursor-pointer"
+ title="Generate fresh valid 13-digit EAN-13 barcode"
+ >
+ <RefreshCw className="h-2.5 w-2.5" />
+ <span>Auto-Generate</span>
+ </button>
+ </div>
  <input
  type="text"
  required
  value={barcode}
  onChange={e => setBarcode(e.target.value)}
+ placeholder="e.g. 4801122334455"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
  />
  </div>
 
  <div className="space-y-1 relative">
- <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Category Classification</label>
- <select
+ <div className="flex items-center justify-between pl-1">
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest select-none">Category Classification</label>
+ <button
+ type="button"
+ onClick={() => setIsCustomCategoryInput(!isCustomCategoryInput)}
+ className="text-[9px] font-mono font-black uppercase text-m3-primary hover:underline cursor-pointer"
+ >
+ {isCustomCategoryInput ? "← Select List" : "+ Custom Category"}
+ </button>
+ </div>
+ {isCustomCategoryInput ? (
+ <input
+ type="text"
+ required
  value={category}
  onChange={e => setCategory(e.target.value)}
+ placeholder="e.g. Electrical Tools, Solar Modules"
+ className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold"
+ />
+ ) : (
+ <select
+ value={category}
+ onChange={e => {
+ if (e.target.value === '__CUSTOM__') {
+ setIsCustomCategoryInput(true);
+ setCategory('');
+ } else {
+ setCategory(e.target.value);
+ }
+ }}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md cursor-pointer font-bold"
  >
  {categories.map((cat, i) => (
  <option key={i} value={cat}>{cat}</option>
  ))}
+ <option value="__CUSTOM__">+ Add Custom New Category...</option>
  </select>
+ )}
  </div>
 
  <div className="space-y-1 relative">
@@ -5315,7 +5277,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  </div>
 
  <div className="space-y-1 relative">
- <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Tiles Per Box</label>
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">
+ {category.toLowerCase().includes('tile') ? 'Tiles Per Box' : 'Pack / Box Quantity'}
+ </label>
  <input
  type="number"
  required
@@ -5926,7 +5890,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  
  <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-2.5 text-left">
  <h3 className="text-sm font-black text-m3-primary uppercase tracking-wide flex items-center gap-1.5">
- <QrCode className="h-5 w-5" /> Code & Barcode Terminal Label
+ <Barcode className="h-5 w-5" /> Barcode Terminal Label
  </h3>
  <button type="button" onClick={() => setShowCodesModal(false)} className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full">
  <X className="h-4.5 w-4.5" />
@@ -5977,28 +5941,29 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <span className="font-bold text-white text-[11px] block truncate">{codesProduct.productCode}</span>
  </div>
 
+ {(() => {
+ const isTile = (codesProduct.category || '').toLowerCase().includes('tile');
+ const u = codesProduct.unit || 'pcs';
+ return (
  <div className="bg-m3-surface-low p-2 rounded-xl border border-m3-outline-variant/10">
- <span className="block text-[8px] uppercase tracking-wider text-zinc-500 font-extrabold font-sans mb-0.5">Box Quantity</span>
- <span className="font-bold text-white text-[11px] block truncate">{codesProduct.boxQuantity} Tiles</span>
+ <span className="block text-[8px] uppercase tracking-wider text-zinc-500 font-extrabold font-sans mb-0.5">
+ {isTile ? 'Box Quantity' : 'Packaging Factor'}
+ </span>
+ <span className="font-bold text-white text-[11px] block truncate">
+ {isTile ? `${codesProduct.boxQuantity || 1} Tiles / Box` : `${codesProduct.boxQuantity || 1} ${u}`}
+ </span>
  </div>
+ );
+ })()}
  </div>
  </div>
 
- {/* Visual barcode and QR layout */}
- <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
- <div className="space-y-1.5 flex flex-col items-center">
+ {/* Visual barcode layout */}
+ <div className="flex flex-col items-center justify-center space-y-1.5 py-1">
  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-1">
  <Barcode className="h-3.5 w-3.5 text-m3-primary" /> Barcode label
  </span>
  <StyledBarcode code={codesProduct.barcode} />
- </div>
-
- <div className="space-y-1.5 flex flex-col items-center">
- <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-1 animate-scale-up">
- <QrCode className="h-3.5 w-3.5 text-m3-primary" /> QR Label Tag
- </span>
- <StyledQrCode code={codesProduct.qrCode} />
- </div>
  </div>
 
  {/* Print action buttons */}
@@ -6013,28 +5978,16 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <span>{printingCode ? 'Smart Spooling...' : 'Print Scannable Label'}</span>
  </button>
 
- <div className="flex gap-2">
  <button
  type="button"
  onClick={() => {
  navigator.clipboard.writeText(codesProduct.barcode);
  showToast(`Barcode ${codesProduct.barcode} copied to clipboard!`);
  }}
- className="flex-1 text-center text-[10px] font-black uppercase tracking-wider py-2 bg-m3-surface-lowest hover:bg-m3-outline-variant/10 text-m3-primary rounded-xl transition-all border border-m3-outline-variant/10"
+ className="w-full text-center text-[10px] font-black uppercase tracking-wider py-2 bg-m3-surface-lowest hover:bg-m3-outline-variant/10 text-m3-primary rounded-xl transition-all border border-m3-outline-variant/10"
  >
  Copy Barcode Raw
  </button>
- <button
- type="button"
- onClick={() => {
- navigator.clipboard.writeText(codesProduct.qrCode);
- showToast(`QR URL payload copied!`);
- }}
- className="flex-1 text-center text-[10px] font-black uppercase tracking-wider py-2 bg-m3-surface-lowest hover:bg-m3-outline-variant/10 text-zinc-300 rounded-xl transition-all border border-m3-outline-variant/10"
- >
- Copy QR Data
- </button>
- </div>
 
  <div className="text-[9px] text-zinc-500 font-medium leading-normal bg-m3-surface-lowest p-2 rounded-xl border border-m3-outline-variant/10 mt-1">
  Compatible with Zebra, Brother, & standard web spoolers. If popup blockers or safe sandboxed environments are detected, an automatic nested context fallback activates instantly.
@@ -7222,6 +7175,30 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
       </div>
     </div>
   )}
+
+  {/* Reset/Synchronize Chemical Batches Confirmation Modal */}
+  <ConfirmationModal
+    isOpen={confirmResetBatchesModal}
+    title="Synchronize Chemical Batches"
+    alertType="warning"
+    confirmText="Purge & Synchronize"
+    cancelText="Cancel"
+    message="Are you sure you want to purge legacy simulation data and synchronize chemical batches directly with live catalog products?"
+    onConfirm={handleExecuteResetSimulationBatches}
+    onCancel={() => setConfirmResetBatchesModal(false)}
+  />
+
+  {/* Delete Chemical Batch Confirmation Modal */}
+  <ConfirmationModal
+    isOpen={!!confirmDeleteBatchId}
+    title="Delete Chemical Batch"
+    alertType="danger"
+    confirmText="Delete Batch"
+    cancelText="Cancel"
+    message={`Are you sure you want to delete Chemical Batch #${batches.find(b => b.id === confirmDeleteBatchId)?.batchNumber || ''}? This action cannot be undone.`}
+    onConfirm={handleExecuteRemoveBatch}
+    onCancel={() => setConfirmDeleteBatchId(null)}
+  />
   </div>
  );
 };
