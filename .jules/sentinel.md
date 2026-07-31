@@ -6,3 +6,7 @@
 **Vulnerability:** A critical HMAC signing secret (`TILEPOINT_SECURE_PERIMETER_HMAC_SECRET_2026`) was hardcoded in both the frontend (`src/lib/crypto.ts`) and backend (`server.js`), allowing potential session token forgery if source code is exposed.
 **Learning:** In applications with shared logic or symmetry between client and server (like session signing), removing hardcoded secrets requires careful orchestration. The secret must be provided via environment variables (like `dotenv` for Node and `import.meta.env` for Vite), AND any fallback mechanisms must be identical on both ends. Otherwise, cryptographic mismatches occur.
 **Prevention:** Use environment variables for secrets, ensure symmetric fallback logic when defaults are necessary, and add TypeScript definitions for Vite env variables to prevent compilation issues.
+## 2024-05-24 - Hardcoded Admin Backdoor
+**Vulnerability:** A hardcoded default admin credential (`admin`/`admin123`) was present in `src/context/DbContext.tsx` to initialize the database when empty.
+**Learning:** The backdoor was likely added for local development convenience but was not explicitly disabled for production, exposing a significant risk (CWE-798).
+**Prevention:** Always guard development-only backdoors or mock data initializations with environment checks like `import.meta.env.DEV` to ensure they are stripped during production builds via dead-code elimination.
