@@ -9,6 +9,7 @@ import { saveFileToBackup } from '../lib/fileBackupHelper';
 import { exportSalesTransmittalToXLSX } from '../lib/excelExportHelper';
 import { UserRole, BranchSalesReport, Sale, SaleItem } from '../types/db';
 import { ActionButton } from './ActionButton';
+import { ConfirmationModal } from './ConfirmationModal';
 import {
   Send,
   Download,
@@ -185,6 +186,8 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  const [selectedBranchId, setSelectedBranchId] = useState(() => {
  return currentUser.branchAssignmentId || 'B1';
  });
+
+ const [rollbackTargetSnap, setRollbackTargetSnap] = useState<{ id: string; num: number } | null>(null);
 
  // State for manual JSON copy/paste or file selection
  const [showJsonImport, setShowJsonImport] = useState(false);
@@ -523,13 +526,14 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
 
  // Get current active branch metadata
  const currentBranchMeta = useMemo(() => {
- const id = currentUser.role === UserRole.ADMIN ? selectedBranchId : (currentUser.branchAssignmentId || 'B1');
- return branches.find(b => b.id === id) || branches[0];
+ const id = currentUser?.role === UserRole.ADMIN ? selectedBranchId : (currentUser?.branchAssignmentId || 'B1');
+ const found = (branches || []).find(b => b.id === id) || (branches || [])[0];
+ return found || { id: id || 'B1', name: 'Main Branch', manager: '', address: '', phone: '' };
  }, [branches, currentUser, selectedBranchId]);
 
  // Aggregate stats of untransmitted local sales for the selected date on active branch
  const compiledLocalSalesData = useMemo(() => {
-  const targetBranchId = currentBranchMeta.id;
+  const targetBranchId = currentBranchMeta?.id || 'B1';
   const localSales = sales.filter(s => {
   if (s.isDeleted) return false;
   if (s.branchId !== targetBranchId) return false;
@@ -1140,10 +1144,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                       </div>
                       <button
                         onClick={() => {
-                          if (confirm(`Are you sure you want to revert the system database to state #${rollbackSnapshots.length - i}? Current pending imports will be rolled back.`)) {
-                            performRollbackToSnapshot(snap.id);
-                            triggerToast("Database successfully rolled back to selected snapshot state.", "success");
-                          }
+                          setRollbackTargetSnap({ id: snap.id, num: rollbackSnapshots.length - i });
                         }}
                         className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-[10px] font-bold uppercase tracking-wider transition border border-rose-500/20 active:scale-95 cursor-pointer"
                       >
@@ -2848,6 +2849,24 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  </div>
  )}
  </AnimatePresence>
+
+ {/* Database Snapshot Rollback Confirmation Modal */}
+ <ConfirmationModal
+ isOpen={!!rollbackTargetSnap}
+ title="Confirm Snapshot Rollback"
+ alertType="danger"
+ confirmText="Rollback Database"
+ cancelText="Cancel"
+ message={`Are you sure you want to revert the system database to state #${rollbackTargetSnap?.num}? All recent uncommitted records and pending imports will be rolled back.`}
+ onConfirm={() => {
+ if (rollbackTargetSnap) {
+ performRollbackToSnapshot(rollbackTargetSnap.id);
+ triggerToast("Database successfully rolled back to selected snapshot state.", "success");
+ setRollbackTargetSnap(null);
+ }
+ }}
+ onCancel={() => setRollbackTargetSnap(null)}
+ />
  </div>
  );
 

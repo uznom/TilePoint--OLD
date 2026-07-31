@@ -24,7 +24,7 @@ export const ReconciliationTransmissionModule: React.FC<ReconciliationTransmissi
   const [activeSubTab, setActiveSubTab] = useState<"reconciliation" | "transmission" | "import">("reconciliation");
 
   // Determine available tabs based on user role
-  const isAdmin = currentUser.role === UserRole.ADMIN;
+  const isAdmin = currentUser?.role === UserRole.ADMIN;
 
   return (
     <div className="w-full text-m3-on-surface space-y-6 animate-fade-in font-sans pb-12 text-left">
@@ -72,7 +72,7 @@ export const ReconciliationTransmissionModule: React.FC<ReconciliationTransmissi
 
         <div className="ml-auto hidden md:flex items-center gap-2 px-4 py-1 border border-m3-outline-variant/15 rounded-lg bg-m3-surface-lowest/40 font-mono text-[9px] uppercase tracking-wider text-m3-on-surface-variant select-none">
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-          <span>{currentUser.role} Workspace</span>
+          <span>{currentUser?.role || "User"} Workspace</span>
         </div>
       </div>
 

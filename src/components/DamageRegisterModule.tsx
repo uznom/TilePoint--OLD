@@ -9,6 +9,7 @@ import { DamageLog, DamageCategory, DamageActionTaken, UserRole, Product } from 
 import { isProductInBranch } from '../lib/branchUtils';
 import { motion, AnimatePresence } from 'motion/react';
 import { useResponsivePageSize, TablePagination } from './TablePagination';
+import { ConfirmationModal } from './ConfirmationModal';
 import {
  AlertTriangle,
  Plus,
@@ -51,6 +52,8 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  } = useDb();
 
  const [searchTerm, setSearchTerm] = useState('');
+ const [confirmTargetId, setConfirmTargetId] = useState<string | null>(null);
+ const [alertMessage, setAlertMessage] = useState<string | null>(null);
  const [categoryFilter, setCategoryFilter] = useState<string>('All');
  const [branchFilter, setBranchFilter] = useState<string>(
     (currentUser?.role as any) === 'Admin' || (currentUser?.role as any) === UserRole.ADMIN ? 'All' : (currentUser?.branchAssignmentId || '')
@@ -89,8 +92,8 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  // Search/Filter for product in creation form
  const [productSearch, setProductSearch] = useState('');
 
- const activeBranchMeta = branches.find(b => b.id === selectedBranchId) || branches[0];
- const selectedProductMeta = products.find(p => p.id === selectedProductId);
+ const activeBranchMeta = (branches || []).find(b => b.id === selectedBranchId) || (branches || [])[0] || { id: selectedBranchId || 'B1', name: 'Main Branch' };
+ const selectedProductMeta = (products || []).find(p => p.id === selectedProductId);
 
  // Filtered Products for the selection panel
  const filteredProductsSelect = products.filter(p => {
@@ -103,20 +106,24 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  const handleSubmit = (e: React.FormEvent) => {
  e.preventDefault();
  if (!selectedProductId) {
- alert("Please select a product SKU first.");
+ setAlertMessage("Please select a product SKU first.");
  return;
  }
  if (!selectedBranchId) {
- alert("Please assign a branch for this entry.");
+ setAlertMessage("Please assign a branch for this entry.");
  return;
  }
  if (quantity <= 0) {
- alert("Please input a valid quantity of broken material.");
+ setAlertMessage("Please input a valid quantity of broken material.");
  return;
  }
 
- const prod = products.find(p => p.id === selectedProductId)!;
- const branchMeta = branches.find(b => b.id === selectedBranchId)!;
+ const prod = products.find(p => p.id === selectedProductId);
+ if (!prod) {
+ setAlertMessage("Selected product SKU not found.");
+ return;
+ }
+ const branchMeta = branches.find(b => b.id === selectedBranchId) || activeBranchMeta;
 
  createDamageLog({
  productId: selectedProductId,
@@ -650,12 +657,10 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <button
  onClick={() => {
  if (isRowClearingBlocked()) {
- alert(`Action Restricted: Cannot delete damage log records because the register is currently holding: ${getRowClearingBlockedReason()}`);
+ setAlertMessage(`Action Restricted: Cannot delete damage log records because the register is currently holding: ${getRowClearingBlockedReason()}`);
  return;
  }
- if (confirm("Are you sure you want to soft-delete this damage log entry?")) {
- deleteDamageLog(log.id);
- }
+ setConfirmTargetId(log.id);
  }}
  className="p-1 hover:bg-red-500/10 text-red-500 rounded transition border-0 cursor-pointer bg-transparent disabled:opacity-40"
  title={isRowClearingBlocked() ? `Deactivated: register is holding ${getRowClearingBlockedReason()}` : "Soft-delete damage log"}
@@ -700,10 +705,36 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  </div>
  </div>
 
- </div>
+  {/* Delete Confirmation Modal */}
+  <ConfirmationModal
+    isOpen={!!confirmTargetId}
+    title="Confirm Soft-Delete"
+    alertType="danger"
+    confirmText="Yes, Soft-Delete"
+    cancelText="Cancel"
+    message="Are you sure you want to soft-delete this damage log entry? The record will be archived for audit compliance and can be restored by system administrators."
+    onConfirm={() => {
+      if (confirmTargetId) {
+        deleteDamageLog(confirmTargetId);
+        setConfirmTargetId(null);
+      }
+    }}
+    onCancel={() => setConfirmTargetId(null)}
+  />
 
- </div>
-
- </div>
- );
+  {/* Restriction Alert Modal */}
+  <ConfirmationModal
+    isOpen={!!alertMessage}
+    title="Action Restricted"
+    alertType="warning"
+    confirmText="Understand"
+    cancelText="Close"
+    message={alertMessage || ''}
+    onConfirm={() => setAlertMessage(null)}
+    onCancel={() => setAlertMessage(null)}
+  />
+  </div>
+  </div>
+  </div>
+  );
 };

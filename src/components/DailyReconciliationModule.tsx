@@ -57,7 +57,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
 
   // Local active branch when compiling (only admins/HQ can toggle this; branch personnel are locked)
   const [selectedBranchId, setSelectedBranchId] = useState(() => {
-    return currentUser.branchAssignmentId || "B1";
+    return currentUser?.branchAssignmentId || "B1";
   });
 
   // Expand states for detailed tables
@@ -93,57 +93,75 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
     setTimeout(() => setToast(null), 4000);
   };
 
-  // Get current branch metadata
+  // Get current branch metadata with fallback
   const currentBranchMeta = useMemo(() => {
-    const id = currentUser.role === UserRole.ADMIN ? selectedBranchId : (currentUser.branchAssignmentId || "B1");
-    return branches.find((b) => b.id === id) || branches[0];
+    const id = currentUser?.role === UserRole.ADMIN ? selectedBranchId : (currentUser?.branchAssignmentId || "B1");
+    const found = (branches || []).find((b) => b?.id === id) || (branches || [])[0];
+    return found || {
+      id: id || "B1",
+      name: "Main Branch",
+      manager: "",
+      address: "",
+      phone: "",
+      monthlySales: 0,
+      staffCount: 0,
+      activeCashiers: 0,
+    };
   }, [branches, currentUser, selectedBranchId]);
 
   // Reconciliation Key for local storage
-  const reconciliationKey = `${currentBranchMeta.id}_${reportingDate}`;
+  const reconciliationKey = `${currentBranchMeta?.id || "B1"}_${reportingDate}`;
   const isReconciled = !!reconciledDays[reconciliationKey];
   const reconciliationInfo = reconciledDays[reconciliationKey];
 
   // Compile calculations
   const stats = useMemo(() => {
-    const targetBranchId = currentBranchMeta.id;
+    const targetBranchId = currentBranchMeta?.id || "B1";
+
+    const allSales = sales || [];
+    const allSaleItems = saleItems || [];
+    const allProducts = products || [];
+    const allExpenses = expenses || [];
 
     // Filter non-voided sales for this branch and date
-    const localSales = sales.filter((s) => {
-      if (s.isDeleted) return false;
+    const localSales = allSales.filter((s) => {
+      if (!s || s.isDeleted) return false;
       if (s.branchId !== targetBranchId) return false;
-      return s.createdAt.split("T")[0] === reportingDate;
+      return s.createdAt && s.createdAt.split("T")[0] === reportingDate;
     });
 
-    const localSaleItems = saleItems.filter((item) => {
-      const parentSale = sales.find((s) => s.id === item.saleId);
+    const localSaleItems = allSaleItems.filter((item) => {
+      if (!item) return false;
+      const parentSale = allSales.find((s) => s && s.id === item.saleId);
       return (
         parentSale &&
         parentSale.branchId === targetBranchId &&
         !parentSale.isDeleted &&
+        parentSale.createdAt &&
         parentSale.createdAt.split("T")[0] === reportingDate
       );
     });
 
     // Compute revenue, discounts, vat
-    const totalRevenue = localSales.reduce((acc, s) => acc + s.grandTotal, 0);
-    const totalSubtotal = localSales.reduce((acc, s) => acc + s.subtotal, 0);
-    const totalVat = localSales.reduce((acc, s) => acc + s.vat, 0);
-    const totalDiscount = localSales.reduce((acc, s) => acc + s.discount, 0);
+    const totalRevenue = localSales.reduce((acc, s) => acc + (s.grandTotal || 0), 0);
+    const totalSubtotal = localSales.reduce((acc, s) => acc + (s.subtotal || 0), 0);
+    const totalVat = localSales.reduce((acc, s) => acc + (s.vat || 0), 0);
+    const totalDiscount = localSales.reduce((acc, s) => acc + (s.discount || 0), 0);
 
     // Compute COGS
     let totalCogs = 0;
     const saleItemCogsMap: Record<string, { cogs: number; items: any[] }> = {};
 
     localSales.forEach((s) => {
+      if (!s) return;
       let saleCogs = 0;
-      const itemsForSale = localSaleItems.filter((item) => item.saleId === s.id);
+      const itemsForSale = localSaleItems.filter((item) => item && item.saleId === s.id);
 
       itemsForSale.forEach((item) => {
-        const prod = products.find((p) => p.id === item.productId);
+        const prod = allProducts.find((p) => p && p.id === item.productId);
         // Fallback to 60% of unitPrice if costPrice is 0 or missing
-        const unitCost = prod && prod.costPrice > 0 ? prod.costPrice : item.unitPrice * 0.6;
-        const itemCogs = unitCost * item.quantity;
+        const unitCost = prod && prod.costPrice > 0 ? prod.costPrice : (item.unitPrice || 0) * 0.6;
+        const itemCogs = unitCost * (item.quantity || 0);
         saleCogs += itemCogs;
         totalCogs += itemCogs;
       });
@@ -155,13 +173,13 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
     });
 
     // Expenses for the branch on selected date
-    const branchExpenses = expenses.filter((e) => {
-      if (e.isDeleted) return false;
+    const branchExpenses = allExpenses.filter((e) => {
+      if (!e || e.isDeleted) return false;
       if (e.branchId !== targetBranchId) return false;
-      return e.dateTime.split("T")[0] === reportingDate;
+      return e.dateTime && e.dateTime.split("T")[0] === reportingDate;
     });
 
-    const totalExpenses = branchExpenses.reduce((acc, e) => acc + e.amount, 0);
+    const totalExpenses = branchExpenses.reduce((acc, e) => acc + (e.amount || 0), 0);
 
     const grossProfit = totalRevenue - totalCogs;
     const netProfit = grossProfit - totalExpenses;
@@ -201,7 +219,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
 
     const payload = {
       verifiedAt: new Date().toISOString(),
-      verifiedBy: `${currentUser.fullName} (${currentUser.role})`,
+      verifiedBy: `${currentUser?.fullName || "User"} (${currentUser?.role || "Staff"})`,
     };
 
     const updated = {
@@ -214,7 +232,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
 
     addAuditLog(
       "DAILY_RECONCILIATION_CERTIFIED",
-      `Manager Certified daily reconciliation for ${currentBranchMeta.name} on ${reportingDate}. Revenue: ₱${stats.revenue.toLocaleString()}, COGS: ₱${stats.cogs.toLocaleString()}, Expenses: ₱${stats.totalExpenses.toLocaleString()}, Net Profit: ₱${stats.netProfit.toLocaleString()}`,
+      `Manager Certified daily reconciliation for ${currentBranchMeta?.name || "Branch"} on ${reportingDate}. Revenue: ₱${stats.revenue.toLocaleString()}, COGS: ₱${stats.cogs.toLocaleString()}, Expenses: ₱${stats.totalExpenses.toLocaleString()}, Net Profit: ₱${stats.netProfit.toLocaleString()}`,
       "DailyReconciliation",
       reconciliationKey
     );
@@ -228,14 +246,14 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
 
     const reportPayload = {
       version: "1.2-reconciled",
-      branchId: currentBranchMeta.id,
-      branchName: currentBranchMeta.name,
+      branchId: currentBranchMeta?.id || "B1",
+      branchName: currentBranchMeta?.name || "Main Branch",
       reportingDate,
       compiledAt: new Date().toISOString(),
-      compiledBy: currentUser.fullName,
-      compiledByRole: currentUser.role,
+      compiledBy: currentUser?.fullName || "User",
+      compiledByRole: currentUser?.role || "Staff",
       reconciliationStatus: "Certified Reconciled",
-      certifiedBy: reconciliationInfo?.verifiedBy || currentUser.fullName,
+      certifiedBy: reconciliationInfo?.verifiedBy || currentUser?.fullName || "User",
       certifiedAt: reconciliationInfo?.verifiedAt || new Date().toISOString(),
       financials: {
         totalReceipts: stats.count,
@@ -252,7 +270,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
         id: s.id,
         saleNumber: s.saleNumber,
         shiftId: s.shiftId || "SHIFT-1",
-        branchId: s.branchId || currentBranchMeta.id,
+        branchId: s.branchId || currentBranchMeta?.id || "B1",
         cashierId: s.cashierId || "U1",
         cashierName: s.cashierName || "Cashier",
         customerName: s.customerName || "Walk-in Customer",
@@ -282,14 +300,14 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
       
       const fileContent = JSON.stringify({
         integritySign: "TILEPOINT_SECURE_RECONCILED_LEDGER_V1",
-        checksum: btoa(reportingDate + currentBranchMeta.id + stats.revenue),
-        signedBy: currentUser.fullName,
-        branchId: currentBranchMeta.id,
+        checksum: btoa(reportingDate + (currentBranchMeta?.id || "B1") + stats.revenue),
+        signedBy: currentUser?.fullName || "User",
+        branchId: currentBranchMeta?.id || "B1",
         date: reportingDate,
         payload: encryptedData
       }, null, 2);
 
-      const filename = `RECONCILED_SALES_${currentBranchMeta.id}_${reportingDate}.json`;
+      const filename = `RECONCILED_SALES_${currentBranchMeta?.id || "B1"}_${reportingDate}.json`;
       
       saveFileToBackup(fileContent, filename, "Sales_Reports").then((res) => {
         triggerToast(`Signed JSON Reconciled packet saved successfully to: ${res.path || filename}!`, "success");
@@ -342,14 +360,14 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
 
     const reportPayload = {
       version: "1.2-reconciled",
-      branchId: currentBranchMeta.id,
-      branchName: currentBranchMeta.name,
+      branchId: currentBranchMeta?.id || "B1",
+      branchName: currentBranchMeta?.name || "Main Branch",
       reportingDate,
       compiledAt: new Date().toISOString(),
-      compiledBy: currentUser.fullName,
-      compiledByRole: currentUser.role,
+      compiledBy: currentUser?.fullName || "User",
+      compiledByRole: currentUser?.role || "Staff",
       reconciliationStatus: "Certified Reconciled",
-      certifiedBy: reconciliationInfo?.verifiedBy || currentUser.fullName,
+      certifiedBy: reconciliationInfo?.verifiedBy || currentUser?.fullName || "User",
       certifiedAt: reconciliationInfo?.verifiedAt || new Date().toISOString(),
       financials: {
         totalReceipts: stats.count,
@@ -366,7 +384,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
         id: s.id,
         saleNumber: s.saleNumber,
         shiftId: s.shiftId || "SHIFT-1",
-        branchId: s.branchId || currentBranchMeta.id,
+        branchId: s.branchId || currentBranchMeta?.id || "B1",
         cashierId: s.cashierId || "U1",
         cashierName: s.cashierName || "Cashier",
         customerName: s.customerName || "Walk-in Customer",
@@ -396,9 +414,9 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
       
       return JSON.stringify({
         integritySign: "TILEPOINT_SECURE_RECONCILED_LEDGER_V1",
-        checksum: btoa(reportingDate + currentBranchMeta.id + stats.revenue),
-        signedBy: currentUser.fullName,
-        branchId: currentBranchMeta.id,
+        checksum: btoa(reportingDate + (currentBranchMeta?.id || "B1") + stats.revenue),
+        signedBy: currentUser?.fullName || "User",
+        branchId: currentBranchMeta?.id || "B1",
         date: reportingDate,
         payload: encryptedData
       }, null, 2);
@@ -448,7 +466,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
 
         {/* Date & Branch Selectors */}
         <div className="flex flex-col sm:flex-row items-stretch gap-3 self-start md:self-auto shrink-0">
-          {currentUser.role === UserRole.ADMIN && (
+          {currentUser?.role === UserRole.ADMIN && (
             <div className="space-y-1">
               <label className="text-[9px] font-bold text-m3-on-surface-variant uppercase tracking-widest block font-mono">
                 Selected Branch
@@ -459,7 +477,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                   onChange={(e) => setSelectedBranchId(e.target.value)}
                   className="w-full sm:w-44 px-3.5 py-2.5 bg-m3-surface-lowest border border-m3-outline-variant/20 rounded-xl text-xs font-bold uppercase tracking-wider text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary appearance-none cursor-pointer pr-8 bg-white dark:bg-[#131A22] text-[#101828] dark:text-[#F8FAFC]"
                 >
-                  {branches.map((b) => (
+                  {(branches || []).map((b) => (
                     <option key={b.id} value={b.id} className="bg-white dark:bg-[#131A22] text-[#101828] dark:text-[#F8FAFC] font-sans font-medium">
                       {b.name}
                     </option>
@@ -834,9 +852,9 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                   setTimeout(() => {
                     try {
                       const mailtoUrl = `mailto:?subject=${encodeURIComponent(
-                        `TilePoint Reconciled Sales Report - ${currentBranchMeta.name} (${reportingDate})`
+                        `TilePoint Reconciled Sales Report - ${currentBranchMeta?.name || "Branch"} (${reportingDate})`
                       )}&body=${encodeURIComponent(
-                        `Dear Admin,\n\nHere is the certified, reconciled sales and operational expenses report for ${currentBranchMeta.name} on ${reportingDate}.\n\nPlease copy and paste the encrypted payload below directly into the HQ import panel:\n\n${sharePayloadText}\n\nKind regards,\n${currentUser.fullName}\nTilePoint Store Manager`
+                        `Dear Admin,\n\nHere is the certified, reconciled sales and operational expenses report for ${currentBranchMeta?.name || "Branch"} on ${reportingDate}.\n\nPlease copy and paste the encrypted payload below directly into the HQ import panel:\n\n${sharePayloadText}\n\nKind regards,\n${currentUser?.fullName || "User"}\nTilePoint Store Manager`
                       )}`;
                       window.location.href = mailtoUrl;
                     } catch (err) {

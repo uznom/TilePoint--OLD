@@ -709,7 +709,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  <div className="space-y-0.5 text-center">
  <span className="text-[9px] uppercase tracking-widest font-bold text-m3-on-surface-variant/70">Sales (MO)</span>
  <div className="text-xs font-black font-mono text-m3-tertiary flex items-center justify-center gap-0.5">
- <TrendingUp className="h-3.5 w-3.5" /> ₱{((sales ? sales.filter(s => s.branchId === b.id && s.createdAt.startsWith(new Date().toISOString().slice(0, 7)) && !s.isDeleted).reduce((sum, s) => sum + s.grandTotal, 0) : 0) || b.monthlySales || 0).toLocaleString(undefined, { notation: 'compact' })}
+ <TrendingUp className="h-3.5 w-3.5" /> ₱{((sales ? sales.filter(s => s.branchId === b.id && s.createdAt && typeof s.createdAt === 'string' && s.createdAt.startsWith(new Date().toISOString().slice(0, 7)) && !s.isDeleted).reduce((sum, s) => sum + s.grandTotal, 0) : 0) || b.monthlySales || 0).toLocaleString(undefined, { notation: 'compact' })}
  </div>
  </div>
  </div>

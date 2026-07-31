@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useDb } from "../context/DbContext";
+import { generateEan13Barcode } from "../utils/barcodeGenerator";
 import { PurchaseOrder, UserRole } from "../types/db";
 import { useResponsivePageSize, TablePagination } from "./TablePagination";
 import {
@@ -202,6 +203,47 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  .map((p) => p.brand.trim())
  )
  ).sort((a, b) => a.localeCompare(b));
+ }, [products]);
+
+ const dynamicCategories = React.useMemo(() => {
+ const defaultCats = [
+ 'Ceramic Tiles',
+ 'Porcelain Tiles',
+ 'Vitrified Tiles',
+ 'Floor Tiles',
+ 'Wall Tiles',
+ 'Mosaic Tiles',
+ 'Decorative Tiles',
+ 'Bathroom Tiles',
+ 'Kitchen Tiles',
+ 'Cement',
+ 'Sand & Gravel',
+ 'Steel Bars',
+ 'Pipes',
+ 'Fittings',
+ 'Faucets',
+ 'Valves',
+ 'Wires',
+ 'Switches',
+ 'Outlets',
+ 'Breakers',
+ 'Paints',
+ 'Primers',
+ 'Sealants',
+ 'Hand Tools',
+ 'Power Tools',
+ 'Fasteners',
+ 'Tile Adhesives',
+ 'Grouts',
+ 'Doors & Windows'
+ ];
+ const set = new Set<string>(defaultCats);
+ products.forEach(p => {
+ if (p.category && p.category.trim() !== '') {
+ set.add(p.category.trim());
+ }
+ });
+ return Array.from(set).sort((a, b) => a.localeCompare(b));
  }, [products]);
 
  // Find unique brands that have NO active brand mapping in brands
@@ -418,10 +460,10 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  const [manualProdName, setManualProdName] = useState("");
  const [manualCategory, setManualCategory] = useState("Ceramic Tiles");
  const [manualBrand, setManualBrand] = useState("");
- const [manualSize, setManualSize] = useState("60x60 cm");
- const [manualCostPrice, setManualCostPrice] = useState("300");
- const [manualSellingPrice, setManualSellingPrice] = useState("450");
- const [manualQtyRequested, setManualQtyRequested] = useState("100");
+ const [manualSize, setManualSize] = useState("");
+ const [manualCostPrice, setManualCostPrice] = useState("");
+ const [manualSellingPrice, setManualSellingPrice] = useState("");
+ const [manualQtyRequested, setManualQtyRequested] = useState("1");
  const [manualOrigin, setManualOrigin] = useState("");
 
  // Receiving state
@@ -749,7 +791,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
 
  const generatedCode = `TL-PR-M${Date.now().toString().slice(-4)}`;
  const generatedSku = `SKU-TPL-M${Math.floor(Math.random() * 10000)}`;
- const generatedBarcode = `480${Math.floor(1000000000 + Math.random() * 9000000000)}`;
+ const generatedBarcode = generateEan13Barcode();
 
  const newProdPayload = {
  productCode: generatedCode,
@@ -786,9 +828,9 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
 
  setManualProdName("");
  setManualBrand("");
- setManualCostPrice("300");
- setManualSellingPrice("450");
- setManualQtyRequested("100");
+ setManualCostPrice("");
+ setManualSellingPrice("");
+ setManualQtyRequested("1");
  setManualOrigin("");
  setShowManualItemForm(false);
  showToast(
@@ -2496,14 +2538,9 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  onChange={(e) => setManualCategory(e.target.value)}
  className="w-full bg-m3-surface border-b-2 border-amber-500/30 px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 rounded-t-lg font-sans font-bold cursor-pointer"
  >
- <option value="Ceramic Tiles">Ceramic Tiles</option>
- <option value="Porcelain Tiles">Porcelain Tiles</option>
- <option value="Wall Tiles">Wall Tiles</option>
- <option value="Premium Accents">Premium Accents</option>
- <option value="Grout &amp; Adhesives">
- Grout &amp; Adhesives
- </option>
- <option value="Tools">Tools</option>
+ {dynamicCategories.map((cat) => (
+ <option key={cat} value={cat}>{cat}</option>
+ ))}
  </select>
  </div>
 

@@ -203,15 +203,18 @@ export const PosModule: React.FC<PosModuleProps> = ({
   const members = branchFilteredMembers;
 
  const getBranchPrice = (p: Product) => {
- const branchStockItem = branchStock.find(
- (bs) =>
- bs.productId === p.id && bs.branchId === currentUser?.branchAssignmentId,
- );
- return branchStockItem &&
- branchStockItem.sellingPriceOverride !== undefined &&
- branchStockItem.sellingPriceOverride > 0
- ? branchStockItem.sellingPriceOverride
- : p.sellingPrice;
+  if (!p) return 0;
+  const branchStockItem = branchStock.find(
+    (bs) =>
+      bs.productId === p.id && bs.branchId === currentUser?.branchAssignmentId,
+  );
+  const price = branchStockItem &&
+  branchStockItem.sellingPriceOverride !== undefined &&
+  branchStockItem.sellingPriceOverride !== null &&
+  branchStockItem.sellingPriceOverride > 0
+  ? branchStockItem.sellingPriceOverride
+  : (p.sellingPrice || 0);
+  return Number(price) || 0;
  };
 
  // Active cashier shift states
@@ -283,7 +286,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  addAuditLog(
  "MEMBER_REGISTER",
- `Registered member ${newM.fullName} with credit ceiling of ₱${newM.creditLimit.toLocaleString()} via Corporate Member Credit Desk`,
+ `Registered member ${newM.fullName} with credit ceiling of ₱${(Number(newM.creditLimit) || 0).toLocaleString()} via Corporate Member Credit Desk`,
  "Members",
  newM.id,
  JSON.stringify(newM)
@@ -808,9 +811,14 @@ export const PosModule: React.FC<PosModuleProps> = ({
  showToast("Transaction parked inside safe hold registers.");
  };
 
- const handleResume = (parkedId: string) => {
+ const handleResume = async (parkedId: string) => {
  const record = parkedSales.find((p) => p.id === parkedId);
  if (!record) return;
+
+ // Recache inventory state from server before resuming
+ try {
+ await syncFromSharedServer(true);
+ } catch (_) {}
 
  // Save current ongoing order if there are items in the cart
  const ongoingCart = [...cart];
@@ -821,7 +829,22 @@ export const PosModule: React.FC<PosModuleProps> = ({
  holdSale(ongoingCart, ongoingCustomerName, ongoingCustomerNotes);
  }
 
- setCart(record.items);
+ // Refreshes stock quantity on resumed cart items from latest products list
+ const refreshedItems = record.items.map((item) => {
+ const freshProd = rawProducts.find((p) => p.id === item.product.id);
+ const freshStock = freshProd
+ ? getBranchStockQuantity(freshProd, activePosBranchId, branchStock, branches)
+ : (item.product.stockQuantity ?? 0);
+ return {
+ ...item,
+ product: {
+ ...(freshProd || item.product),
+ stockQuantity: freshStock,
+ },
+ };
+ });
+
+ setCart(refreshedItems);
  setCustomerName(record.customerName);
  setCustomerNotes(record.notes);
 
@@ -830,9 +853,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setMobilePosTab("basket");
 
  if (ongoingCart.length > 0) {
- showToast(`Current order auto-held. Resumed staged order for ${record.customerName || "Walk-in"}.`);
+ showToast(`Current order auto-held. Resumed staged order for ${record.customerName || "Walk-in"}. Inventory recached.`);
  } else {
- showToast(`Resumed staged order for ${record.customerName || "Walk-in"}.`);
+ showToast(`Resumed staged order for ${record.customerName || "Walk-in"}. Inventory recached.`);
  }
  };
 
@@ -1033,6 +1056,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  handleCancelSale();
  showToast("Payment Completed. Please assign receipt fulfillment.");
+ syncFromSharedServer(true).catch(() => {});
  } catch (e: any) {
  showToast("Checkout Error: " + e?.message);
  } finally {
@@ -1241,10 +1265,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
  const totalGrand = filteredSales.reduce((acc, s) => acc + s.grandTotal, 0);
 
  csv += `"AGGREGATE SUMS STATISTICS"\n`;
- csv += `"Total Base Subtotal","PHP ${totalSubtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}"\n`;
- csv += `"Total Applied Discounts","PHP ${totalDiscount.toLocaleString(undefined, { minimumFractionDigits: 2 })}"\n`;
- csv += `"Total VAT Covered (12%)","PHP ${totalVat.toLocaleString(undefined, { minimumFractionDigits: 2 })}"\n`;
- csv += `"TOTAL REVENUE SETTLED","PHP ${totalGrand.toLocaleString(undefined, { minimumFractionDigits: 2 })}"\n\n`;
+ csv += `"Total Base Subtotal","PHP ${(Number(totalSubtotal) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}"\n`;
+ csv += `"Total Applied Discounts","PHP ${(Number(totalDiscount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}"\n`;
+ csv += `"Total VAT Covered (12%)","PHP ${(Number(totalVat) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}"\n`;
+ csv += `"TOTAL REVENUE SETTLED","PHP ${(Number(totalGrand) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}"\n\n`;
 
  // Detailed Table headers
  csv += `"Invoice Number","Date Settled","Branch Pool","Cashier Operator","Customer Profile","Payment Mode","Subtotal","Discount","VAT Amount","Grand Total Paid"\n`;
@@ -1262,10 +1286,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
  s.cashierName,
  customer,
  s.paymentMethod,
- s.subtotal.toFixed(2),
- s.discount.toFixed(2),
- s.vat.toFixed(2),
- s.grandTotal.toFixed(2),
+ (Number(s.subtotal) || 0).toFixed(2),
+ (Number(s.discount) || 0).toFixed(2),
+ (Number(s.vat) || 0).toFixed(2),
+ (Number(s.grandTotal) || 0).toFixed(2),
  ];
 
  csv += row.map((val) => `"${val.replace(/"/g, '""')}"`).join(",") + "\n";
@@ -1693,10 +1717,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
               </div>
               <div className="flex justify-between text-[8.5px] text-m3-on-surface-variant">
                 <span>
-                  ₱{it.unitPrice.toFixed(2)} x {it.quantity}
+                  ₱{(Number(it.unitPrice) || 0).toFixed(2)} x {it.quantity}
                 </span>
                 <span className="font-bold text-m3-on-surface">
-                  ₱{it.total.toFixed(2)}
+                  ₱{(Number(it.total) || 0).toFixed(2)}
                 </span>
               </div>
             </div>
@@ -1713,8 +1737,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
           <span>VATable Sales:</span>
           <span>
             ₱
-            {activeReceipt && activeReceipt.vat > 0
-              ? (activeReceipt.subtotal - activeReceipt.vat).toFixed(2)
+            {activeReceipt && (Number(activeReceipt.vat) || 0) > 0
+              ? ((Number(activeReceipt.subtotal) || 0) - (Number(activeReceipt.vat) || 0)).toFixed(2)
               : "0.00"}
           </span>
         </div>
@@ -1722,8 +1746,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
           <span>VAT-Exempt Sales:</span>
           <span>
             ₱
-            {activeReceipt && activeReceipt.vat === 0
-              ? activeReceipt.subtotal.toFixed(2)
+            {activeReceipt && (Number(activeReceipt.vat) || 0) === 0
+              ? (Number(activeReceipt.subtotal) || 0).toFixed(2)
               : "0.00"}
           </span>
         </div>
@@ -1733,17 +1757,17 @@ export const PosModule: React.FC<PosModuleProps> = ({
         </div>
         <div className="flex justify-between text-m3-on-surface-variant">
           <span>12% Output VAT:</span>
-          <span>₱{activeReceipt?.vat.toFixed(2) || "0.00"}</span>
+          <span>₱{(Number(activeReceipt?.vat) || 0).toFixed(2)}</span>
         </div>
-        {activeReceipt && activeReceipt.discount > 0 && (
+        {activeReceipt && (Number(activeReceipt.discount) || 0) > 0 && (
           <div className="flex justify-between text-m3-primary font-bold">
             <span>BIR Discount Applied:</span>
-            <span>-₱{activeReceipt.discount.toFixed(2)}</span>
+            <span>-₱{(Number(activeReceipt.discount) || 0).toFixed(2)}</span>
           </div>
         )}
         <div className="flex justify-between font-black text-m3-on-surface text-xs pt-1 border-t border-dotted border-m3-outline-variant/20">
           <span>GRAND TOTAL DUE:</span>
-          <span>₱{activeReceipt?.grandTotal.toFixed(2) || "0.00"}</span>
+          <span>₱{(Number(activeReceipt?.grandTotal) || 0).toFixed(2)}</span>
         </div>
       </div>
 
@@ -1941,9 +1965,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
       {/* Payment summary */}
       <div className="bg-emerald-50 p-1.5 rounded border border-emerald-300 text-[9px] font-mono flex justify-between items-center">
-        <span className="font-bold text-emerald-900">Total: ₱{activeReceipt.grandTotal.toFixed(2)}</span>
-        <span className="text-emerald-800">Paid: ₱{(activeReceipt.amountTendered || activeReceipt.grandTotal).toFixed(2)}</span>
-        <span className="font-extrabold text-emerald-900">Change: ₱{(activeReceipt.changeAmount || 0).toFixed(2)}</span>
+        <span className="font-bold text-emerald-900">Total: ₱{(Number(activeReceipt.grandTotal) || 0).toFixed(2)}</span>
+        <span className="text-emerald-800">Paid: ₱{(Number(activeReceipt.amountTendered || activeReceipt.grandTotal) || 0).toFixed(2)}</span>
+        <span className="font-extrabold text-emerald-900">Change: ₱{(Number(activeReceipt.changeAmount) || 0).toFixed(2)}</span>
       </div>
 
       {/* Receiver Sign-Off */}
@@ -2273,26 +2297,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  )}
  </h3>
  <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[10px] font-black uppercase tracking-wide">
-<div className="flex items-center gap-1.5 bg-m3-surface border border-m3-outline-variant/30 px-2 py-0.5 rounded-full text-[10px] font-bold text-m3-on-surface shadow-xs">
-  <Building2 className="h-3.5 w-3.5 text-m3-primary shrink-0" />
-  <span className="text-zinc-400 font-medium">Branch Pool:</span>
-  <select
-    value={activePosBranchId}
-    onChange={(e) => setActivePosBranchId(e.target.value)}
-    className="bg-transparent text-m3-primary font-black uppercase text-[10px] focus:outline-none cursor-pointer pr-1"
-    title="Switch POS Branch Inventory Pool"
-  >
-    <option value="consolidated" className="bg-m3-surface text-m3-on-surface font-bold">
-      🌐 Consolidated / Central Host Catalog (377 items)
-    </option>
-    {branches.filter(b => !b.isDeleted).map((b) => (
-      <option key={b.id} value={b.id} className="bg-m3-surface text-m3-on-surface font-bold">
-        📍 {b.name} ({b.id})
-      </option>
-    ))}
-  </select>
-</div>
-<span className="text-zinc-500">•</span>
  <button
  type="button"
  onClick={() => setShowTileCalculatorModal(true)}
@@ -2586,7 +2590,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  <div className="text-right font-black text-emerald-600 dark:text-emerald-400 text-xs">
  ₱
- {getBranchPrice(p).toLocaleString(
+ {(Number(getBranchPrice(p)) || 0).toLocaleString(
  undefined,
  { minimumFractionDigits: 2 },
  )}
@@ -2633,15 +2637,15 @@ export const PosModule: React.FC<PosModuleProps> = ({
  {item.overridePrice !== undefined ? (
  <>
  <span className="text-zinc-500 line-through">
- ₱{getBranchPrice(item.product).toFixed(2)}
+ ₱{(Number(getBranchPrice(item.product)) || 0).toFixed(2)}
  </span>
  <span className="text-emerald-500 font-extrabold bg-emerald-500/10 px-1 rounded">
- ₱{item.overridePrice.toFixed(2)}
+ ₱{(Number(item.overridePrice) || 0).toFixed(2)}
  </span>
  </>
  ) : (
  <span className="text-zinc-300">
- ₱{getBranchPrice(item.product).toFixed(2)}
+ ₱{(Number(getBranchPrice(item.product)) || 0).toFixed(2)}
  </span>
  )}
  <span>/{item.product.unit}</span>
@@ -2739,10 +2743,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <span className="text-xs font-black font-mono min-w-[80px] text-right text-m3-on-surface">
  ₱
  {(
- (item.overridePrice !== undefined
+ (Number(item.overridePrice !== undefined && item.overridePrice !== null
  ? item.overridePrice
- : getBranchPrice(item.product)) *
- item.quantity
+ : getBranchPrice(item.product)) * (item.quantity || 1)) || 0
  ).toLocaleString(undefined, {
  minimumFractionDigits: 2,
  })}
@@ -2815,7 +2818,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </span>
  <span className="font-mono text-m3-primary text-lg font-extrabold">
  ₱
- {grandTotal.toLocaleString(undefined, {
+ {(Number(grandTotal) || 0).toLocaleString(undefined, {
  minimumFractionDigits: 2,
  })}
  </span>
@@ -3011,16 +3014,16 @@ export const PosModule: React.FC<PosModuleProps> = ({
 											<>
 												<div className="flex justify-between items-center text-[11px]">
 													<span className="text-zinc-500 dark:text-zinc-400">Credit Limit:</span>
-													<span className="font-mono font-bold text-m3-on-surface">₱{matchingMember.creditLimit.toLocaleString()}</span>
+													<span className="font-mono font-bold text-m3-on-surface">₱{(Number(matchingMember.creditLimit) || 0).toLocaleString()}</span>
 												</div>
 												<div className="flex justify-between items-center text-[11px]">
 													<span className="text-zinc-500 dark:text-zinc-400">Outstanding Debt:</span>
-													<span className="font-mono font-bold text-amber-500">₱{matchingMember.outstandingBalance.toLocaleString()}</span>
+													<span className="font-mono font-bold text-amber-500">₱{(Number(matchingMember.outstandingBalance) || 0).toLocaleString()}</span>
 												</div>
 												<div className="border-t border-m3-outline-variant/10 my-1 pt-1 flex justify-between items-center">
 													<span className="font-bold text-zinc-500 dark:text-zinc-400">Available Credit:</span>
-													<span className={`font-mono font-black ${matchingMember.creditLimit - matchingMember.outstandingBalance >= grandTotal ? 'text-emerald-500' : 'text-rose-500'}`}>
-														₱{(matchingMember.creditLimit - matchingMember.outstandingBalance).toLocaleString()}
+													<span className={`font-mono font-black ${(Number(matchingMember.creditLimit) || 0) - (Number(matchingMember.outstandingBalance) || 0) >= grandTotal ? 'text-emerald-500' : 'text-rose-500'}`}>
+														₱{((Number(matchingMember.creditLimit) || 0) - (Number(matchingMember.outstandingBalance) || 0)).toLocaleString()}
 													</span>
 												</div>
 											</>
@@ -3115,7 +3118,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 												className="w-full text-left p-1.5 px-2 hover:bg-m3-primary/10 rounded text-[11px] font-bold text-m3-on-surface flex justify-between items-center cursor-pointer border-0 bg-transparent transition-colors"
 											>
 												<span>{m.fullName}</span>
-												<span className="font-mono text-[10px] text-amber-500">⭐ {m.points || 0} pts | Ceiling: ₱{m.creditLimit.toLocaleString()}</span>
+												<span className="font-mono text-[10px] text-amber-500">⭐ {m.points || 0} pts | Ceiling: ₱{(Number(m?.creditLimit) || 0).toLocaleString()}</span>
 											</button>
 										))}
 										{members.filter(m => m.status === "Active").length === 0 && (
@@ -3220,7 +3223,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <span className="text-[10px] text-zinc-400 font-black uppercase tracking-wider font-mono">Net Settled Revenue</span>
  <div className="mt-2 flex items-baseline gap-1">
  <span className="text-lg font-black text-emerald-500 font-mono">
- ₱{ledgerStats.netRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+ ₱{(Number(ledgerStats?.netRevenue) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
  </span>
  </div>
  <span className="text-[9px] text-zinc-500 font-bold font-sans mt-1">Excludes voided invoices</span>
@@ -3241,7 +3244,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <span className="text-[10px] text-rose-500 font-black uppercase tracking-wider font-mono">Discounts Deducted</span>
  <div className="mt-2 flex items-baseline gap-1">
  <span className="text-lg font-black text-rose-500 font-mono">
- ₱{ledgerStats.totalDiscount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+ ₱{(Number(ledgerStats?.totalDiscount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
  </span>
  </div>
  <span className="text-[9px] text-zinc-500 font-bold font-sans mt-1">Promotional markdowns</span>
@@ -3412,16 +3415,16 @@ export const PosModule: React.FC<PosModuleProps> = ({
  {s.customerName}
  </td>
  <td className="py-3 px-4 text-right text-zinc-400">
- ₱{s.subtotal.toFixed(2)}
+ ₱{(Number(s.subtotal) || 0).toFixed(2)}
  </td>
  <td className="py-3 px-4 text-right text-zinc-400">
- ₱{s.vat.toFixed(2)}
+ ₱{(Number(s.vat) || 0).toFixed(2)}
  </td>
  <td className="py-3 px-4 text-right text-rose-500">
- -₱{s.discount.toFixed(2)}
+ -₱{(Number(s.discount) || 0).toFixed(2)}
  </td>
  <td className="py-3 px-4 text-right text-m3-primary font-extrabold">
- ₱{s.grandTotal.toFixed(2)}
+ ₱{(Number(s.grandTotal) || 0).toFixed(2)}
  </td>
  <td className="py-3 px-4 text-center uppercase text-[9.5px]">
  {s.isDeleted ? (
@@ -3588,7 +3591,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <span>Previous Close Balance:</span>
  <span className="font-mono font-black text-xs text-m3-on-surface">
  ₱
- {previouslyClosedShift.cashCount.toLocaleString(
+ {(Number(previouslyClosedShift?.cashCount) || 0).toLocaleString(
  undefined,
  { minimumFractionDigits: 2 },
  )}
@@ -3614,10 +3617,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
  type="button"
  onClick={() => {
  setStartCashInput(
- previouslyClosedShift.cashCount.toString(),
+ (Number(previouslyClosedShift?.cashCount) || 0).toString(),
  );
  showToast(
- `Loaded previous shift balance of ₱${previouslyClosedShift.cashCount.toFixed(2)}`,
+ `Loaded previous shift balance of ₱${(Number(previouslyClosedShift?.cashCount) || 0).toFixed(2)}`,
  );
  }}
  className="w-full py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl font-bold transition-all text-center text-[10px]"
@@ -3723,7 +3726,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <span className="text-m3-on-surface-variant">Starting Cash:</span>
  <span className="font-mono font-bold text-m3-on-surface">
  ₱
- {activeShift.startCash.toLocaleString(undefined, {
+ {(Number(activeShift?.startCash) || 0).toLocaleString(undefined, {
  minimumFractionDigits: 2,
  })}
  </span>
@@ -3734,7 +3737,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </span>
  <span className="font-mono font-bold text-m3-on-surface">
  ₱
- {stats.netTotal.toLocaleString(undefined, {
+ {(Number(stats?.netTotal) || 0).toLocaleString(undefined, {
  minimumFractionDigits: 2,
  })}
  </span>
@@ -3745,7 +3748,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </span>
  <span className="font-mono text-m3-primary">
  ₱
- {expectedCash.toLocaleString(undefined, {
+ {(Number(expectedCash) || 0).toLocaleString(undefined, {
  minimumFractionDigits: 2,
  })}
  </span>
@@ -3784,7 +3787,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  }`}
  >
  {variance > 0 ? "+" : ""}₱
- {variance.toLocaleString(undefined, {
+ {(Number(variance) || 0).toLocaleString(undefined, {
  minimumFractionDigits: 2,
  })}
  </span>
@@ -4820,7 +4823,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <div className="text-zinc-400">
  Settled Amount:{" "}
  <span className="text-m3-on-surface font-mono font-bold">
- ₱{pinTargetSale.grandTotal.toFixed(2)}
+ ₱{(Number(pinTargetSale.grandTotal) || 0).toFixed(2)}
  </span>
  </div>
  </div>
@@ -5002,7 +5005,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </td>
  <td className="py-2 px-3 text-right">
  ₱
- {item.unitPrice.toLocaleString(undefined, {
+ {(Number(item.unitPrice) || 0).toLocaleString(undefined, {
  minimumFractionDigits: 2,
  maximumFractionDigits: 2,
  })}
@@ -5012,7 +5015,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </td>
  <td className="py-2 px-3 text-right text-m3-primary font-bold">
  ₱
- {item.total.toLocaleString(undefined, {
+ {(Number(item.total) || 0).toLocaleString(undefined, {
  minimumFractionDigits: 2,
  maximumFractionDigits: 2,
  })}
@@ -5040,7 +5043,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <div className="flex justify-between">
  <span className="text-zinc-400 font-sans">Subtotal Sale:</span>
  <span className="font-bold">
- ₱{selectedSaleDetail.subtotal.toFixed(2)}
+ ₱{(Number(selectedSaleDetail.subtotal) || 0).toFixed(2)}
  </span>
  </div>
  <div className="flex justify-between">
@@ -5048,7 +5051,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  VAT Included (12%):
  </span>
  <span className="font-bold text-zinc-300">
- ₱{selectedSaleDetail.vat.toFixed(2)}
+ ₱{(Number(selectedSaleDetail.vat) || 0).toFixed(2)}
  </span>
  </div>
  <div className="flex justify-between">
@@ -5056,22 +5059,22 @@ export const PosModule: React.FC<PosModuleProps> = ({
  Discount Deductions:
  </span>
  <span className="font-bold text-rose-500">
- -₱{selectedSaleDetail.discount.toFixed(2)}
+ -₱{(Number(selectedSaleDetail.discount) || 0).toFixed(2)}
  </span>
  </div>
  <div className="flex justify-between border-t border-m3-outline-variant/10 pt-1.5 text-xs text-m3-primary font-bold">
  <span className="font-sans">Grand Total:</span>
  <span className="text-sm font-extrabold text-[#10B981]">
- ₱{selectedSaleDetail.grandTotal.toFixed(2)}
+ ₱{(Number(selectedSaleDetail.grandTotal) || 0).toFixed(2)}
  </span>
  </div>
  <div className="flex justify-between text-[10px] text-zinc-500 pt-1">
  <span className="font-sans">Amount Tendered:</span>
- <span>₱{selectedSaleDetail.amountTendered.toFixed(2)}</span>
+ <span>₱{(Number(selectedSaleDetail.amountTendered) || 0).toFixed(2)}</span>
  </div>
  <div className="flex justify-between text-[10px] text-zinc-500">
  <span className="font-sans">Change Settled:</span>
- <span>₱{selectedSaleDetail.changeAmount.toFixed(2)}</span>
+ <span>₱{(Number(selectedSaleDetail.changeAmount) || 0).toFixed(2)}</span>
  </div>
  </div>
 

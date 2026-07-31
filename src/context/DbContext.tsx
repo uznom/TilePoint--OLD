@@ -10,6 +10,7 @@ import React, {
  useEffect,
  useRef,
  useMemo,
+ useCallback,
 } from "react";
 import {
  createSaltedHash,
@@ -21,7 +22,9 @@ import {
  generateSessionToken,
 } from "../lib/crypto";
 import { saveFileToBackup } from "../lib/fileBackupHelper";
+import { generateEan13Barcode } from "../utils/barcodeGenerator";
 import { isProductInBranch, slugifyBranchStr } from "../lib/branchUtils";
+import { sqliteDatabaseService } from "../services/sqliteDatabaseService";
 import {
  User,
  UserRole,
@@ -585,6 +588,18 @@ interface DbContextType {
  ) => void;
  updateStockTransferStatus: (id: string, status: TransferStatus) => void;
 
+ // Optimistic Inventory & Stock Revalidation
+ getInventory: (productId: string, targetBranchId?: string) => {
+ stockQuantity: number;
+ branchQuantity: number;
+ isOptimistic: boolean;
+ };
+ getBranchStockQuantity: (productId: string, targetBranchId?: string) => number;
+ getProductStockCount: (productId: string) => number;
+ revalidateStockCounts: (
+ affectedItems?: { productId: string; branchId?: string; quantityDelta?: number }[]
+ ) => Promise<void>;
+
  // Helper Stats & Filter views
  stats: SummaryStats;
  addAuditLog: (
@@ -712,7 +727,7 @@ interface DbContextType {
  isHydrating: boolean;
  isSystemHydrating: boolean;
  serverConnected: boolean;
- syncFromSharedServer: () => Promise<void>;
+ syncFromSharedServer: (silent?: boolean) => Promise<void>;
  lowPerformanceMode: boolean;
  setLowPerformanceMode: (val: boolean) => void;
  activeSessions: ActiveSession[];
@@ -1571,97 +1586,50 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }, [isLoggedIn, currentUser]);
 
  const [branches, setBranches] = useState<Branch[]>(() => {
- const isSetup =
- typeof window !== "undefined" &&
- localStorage.getItem("tilepoint_onboarded_setup") === "true";
- return safeParse<Branch[]>("tp_branches", isSetup ? SEED_BRANCHES : []);
+ return safeParse<Branch[]>("tp_branches", SEED_BRANCHES);
  });
 
  const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
- const isSetup =
- typeof window !== "undefined" &&
- localStorage.getItem("tilepoint_onboarded_setup") === "true";
- if (!isSetup) return [];
  return safeParse<Supplier[]>("tp_suppliers", SEED_SUPPLIERS);
  });
 
  const [brands, setBrands] = useState<Brand[]>(() => {
- const isSetup =
- typeof window !== "undefined" &&
- localStorage.getItem("tilepoint_onboarded_setup") === "true";
- if (!isSetup) return [];
  return safeParse<Brand[]>("tp_brands", SEED_BRANDS);
  });
 
  const [products, setProducts] = useState<Product[]>(() => {
- const isSetup =
- typeof window !== "undefined" &&
- localStorage.getItem("tilepoint_onboarded_setup") === "true";
- if (!isSetup) return [];
  return safeParse<Product[]>("tp_products", SEED_PRODUCTS);
  });
 
  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(() => {
- const isSetup =
- typeof window !== "undefined" &&
- localStorage.getItem("tilepoint_onboarded_setup") === "true";
- if (!isSetup) return [];
  return safeParse<PurchaseOrder[]>("tp_purchase_orders", SEED_POS);
  });
 
  const [poItems, setPoItems] = useState<PurchaseOrderItem[]>(() => {
- const isSetup =
- typeof window !== "undefined" &&
- localStorage.getItem("tilepoint_onboarded_setup") === "true";
- if (!isSetup) return [];
  return safeParse<PurchaseOrderItem[]>("tp_po_items", SEED_PO_ITEMS);
  });
 
  const [transmittals, setTransmittals] = useState<Transmittal[]>(() => {
- const isSetup =
- typeof window !== "undefined" &&
- localStorage.getItem("tilepoint_onboarded_setup") === "true";
- if (!isSetup) return [];
  return safeParse<Transmittal[]>("tp_transmittals", SEED_TRANSMITTALS);
  });
 
  const [shifts, setShifts] = useState<Shift[]>(() => {
- const isSetup =
- typeof window !== "undefined" &&
- localStorage.getItem("tilepoint_onboarded_setup") === "true";
- if (!isSetup) return [];
  return safeParse<Shift[]>("tp_shifts", SEED_SHIFTS);
  });
 
  const [sales, setSales] = useState<Sale[]>(() => {
- const isSetup =
- typeof window !== "undefined" &&
- localStorage.getItem("tilepoint_onboarded_setup") === "true";
- if (!isSetup) return [];
  return safeParse<Sale[]>("tp_sales", SEED_SALES);
  });
 
  const [saleItems, setSaleItems] = useState<SaleItem[]>(() => {
- const isSetup =
- typeof window !== "undefined" &&
- localStorage.getItem("tilepoint_onboarded_setup") === "true";
- if (!isSetup) return [];
  return safeParse<SaleItem[]>("tp_sale_items", SEED_SALE_ITEMS);
  });
 
  const [movements, setMovements] = useState<InventoryMovement[]>(() => {
- const isSetup =
- typeof window !== "undefined" &&
- localStorage.getItem("tilepoint_onboarded_setup") === "true";
- if (!isSetup) return [];
  return safeParse<InventoryMovement[]>("tp_movements", SEED_MOVEMENTS);
  });
 
  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
- const isSetup =
- typeof window !== "undefined" &&
- localStorage.getItem("tilepoint_onboarded_setup") === "true";
- if (!isSetup) return [];
  return safeParse<AuditLog[]>("tp_audit_logs", SEED_AUDIT_LOGS);
  });
 
@@ -2347,6 +2315,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  console.log('[Shared DB Client] System setup in progress. Bypassing server sync to avoid overwrite race condition.');
  return;
  }
+ try {
+ await writeQueue.current;
+ } catch (_) {}
  if (!silent) {
  setSyncStatus((prev) => {
  const next = { ...prev };
@@ -2392,7 +2363,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  k === "tp_session_token" ||
  k === "tp_active_session_id" ||
  k === "tp_active_tab" ||
- (k === "tp_is_configured" && localStorage.getItem("tp_is_configured") === "true") || // prevent downgrade of configured status
+ (k === "tp_is_configured" && localStorage.getItem("tp_is_configured") === "true" && valStr !== '"false"' && valStr !== 'false') || // prevent accidental downgrade unless server explicitly sends false
  lowerKey.includes("active_tab") ||
  lowerKey.includes("active_filter") ||
  lowerKey.includes("navigation") ||
@@ -2468,24 +2439,94 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const mergeCollections = (a: any[], b: any[]): any[] => {
  if (!Array.isArray(a) || a.length === 0) return Array.isArray(b) ? b : [];
  if (!Array.isArray(b) || b.length === 0) return a;
+
+ const getItemKey = (item: any): string | null => {
+ if (!item || typeof item !== "object") return null;
+ if (item.id) return String(item.id).toLowerCase();
+ if (item.branchId && item.productId)
+ return `${String(item.branchId).toLowerCase()}_${String(item.productId).toLowerCase()}`;
+ if (item.username) return String(item.username).toLowerCase();
+ if (item.code) return String(item.code).toLowerCase();
+ return null;
+ };
+
  const map = new Map<string, any>();
- a.forEach(item => {
- if (item && (item.id || item.username)) {
- map.set(String(item.id || item.username).toLowerCase(), item);
- }
- });
- b.forEach(item => {
- if (item && (item.id || item.username)) {
- const key = String(item.id || item.username).toLowerCase();
- const existing = map.get(key);
- if (existing) {
- map.set(key, { ...existing, ...item });
- } else {
+ a.forEach((item) => {
+ const key = getItemKey(item);
+ if (key) {
  map.set(key, item);
+ if (item.username) {
+ map.set(`user:${String(item.username).toLowerCase()}`, item);
  }
  }
  });
- return Array.from(map.values());
+
+ b.forEach((item) => {
+ const key = getItemKey(item);
+ if (key) {
+ const unameKey = item.username ? `user:${String(item.username).toLowerCase()}` : null;
+ const existing = map.get(key) || (unameKey ? map.get(unameKey) : null);
+ let merged = item;
+ if (existing) {
+ const exVer = Number(existing.version) || 0;
+ const inVer = Number(item.version) || 0;
+ const exTime = existing.updatedAt || existing.timestamp || existing.createdAt;
+ const inTime = item.updatedAt || item.timestamp || item.createdAt;
+ const exMs = exTime ? new Date(exTime).getTime() : 0;
+ const inMs = inTime ? new Date(inTime).getTime() : 0;
+
+ let keepExisting = false;
+ if (exVer > inVer) {
+ keepExisting = true;
+ } else if (inVer > exVer) {
+ keepExisting = false;
+ } else {
+ keepExisting = exMs >= inMs;
+ }
+
+ // Check optimistic stock cache protection to prevent stock jump anomaly
+ const optBsKey = item.branchId && item.productId ? `bs:${item.branchId}:${item.productId}` : null;
+ const optProdKey = !item.branchId && item.id ? `prod:${item.id}` : null;
+ const optBs = optBsKey ? optimisticStockCacheRef.current.get(optBsKey) : null;
+ const optProd = optProdKey ? optimisticStockCacheRef.current.get(optProdKey) : null;
+ const activeOpt = optBs || optProd;
+
+ if (activeOpt && Date.now() - activeOpt.lastSaleCommitTime < 60000) {
+ keepExisting = true;
+ }
+
+ if (keepExisting) {
+ // Local client state (a) is equal or newer -> preserve local state!
+ merged = { ...item, ...existing };
+ if (activeOpt && optBs) {
+ merged.quantity = activeOpt.quantity;
+ if (activeOpt.version) merged.version = Math.max(merged.version || 0, activeOpt.version);
+ } else if (activeOpt && optProd) {
+ merged.stockQuantity = activeOpt.quantity;
+ if (activeOpt.version) merged.version = Math.max(merged.version || 0, activeOpt.version);
+ }
+ } else {
+ // Server state (b) is strictly newer -> apply server state!
+ merged = { ...existing, ...item };
+ }
+ }
+ map.set(key, merged);
+ if (unameKey) map.set(unameKey, merged);
+ }
+ });
+
+ const result: any[] = [];
+ const seen = new Set<string>();
+ map.forEach((item, key) => {
+ if (!key.startsWith("user:") && item) {
+ const itemKey = getItemKey(item);
+ if (itemKey && !seen.has(itemKey)) {
+ seen.add(itemKey);
+ result.push(item);
+ }
+ }
+ });
+ return result;
  };
 
  // Now safely update all React states dynamically only when content changes!
@@ -2560,10 +2601,13 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  if (db["tp_is_configured"] !== undefined) {
  const serverConfigured = db["tp_is_configured"] === "true" || db["tp_is_configured"] === true;
- const locallyConfigured = localStorage.getItem("tp_is_configured") === "true";
- const targetConfigured = serverConfigured || locallyConfigured;
- if (isConfigured !== targetConfigured) {
- setIsConfigured(targetConfigured);
+ if (!serverConfigured) {
+ localStorage.setItem("tp_is_configured", "false");
+ localStorage.setItem("tilepoint_onboarded_setup", "false");
+ setIsConfigured(false);
+ } else {
+ localStorage.setItem("tp_is_configured", "true");
+ setIsConfigured(true);
  }
  }
  } else {
@@ -2895,8 +2939,36 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const timeoutRefs = useRef<Record<string, any>>({});
  const volatileCache = useRef<Record<string, string>>({});
 
+ interface OptimisticStockEntry {
+ productId: string;
+ branchId?: string;
+ quantity: number;
+ version: number;
+ updatedAt: string;
+ lastSaleCommitTime: number;
+ }
+
+ const optimisticStockCacheRef = useRef<Map<string, OptimisticStockEntry>>(new Map());
+
  // Concurrency & Race Management: Strict sequential execution write queue
  const writeQueue = useRef<Promise<any>>(Promise.resolve());
+ const stockTransactionLock = useRef<Promise<any>>(Promise.resolve());
+
+ const runStockTransaction = async <T,>(fn: () => Promise<T> | T): Promise<T> => {
+ let resolveLock: () => void;
+ const nextLock = new Promise<void>((res) => {
+ resolveLock = res;
+ });
+ const previousLock = stockTransactionLock.current;
+ stockTransactionLock.current = previousLock.then(() => nextLock);
+
+ try {
+ await previousLock;
+ return await fn();
+ } finally {
+ resolveLock!();
+ }
+ };
 
  const safeLocalStorageSetItem = (key: string, dataStr: string): boolean => {
  try {
@@ -3690,7 +3762,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }, [brands]);
 
  useEffect(() => {
- saveToStorageWithDebounce("tp_products", products);
+ saveToStorageWithDebounce("tp_products", products, true);
  }, [products]);
 
  useEffect(() => {
@@ -3706,27 +3778,27 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }, [transmittals]);
 
  useEffect(() => {
- saveToStorageWithDebounce("tp_shifts", shifts);
+ saveToStorageWithDebounce("tp_shifts", shifts, true);
  }, [shifts]);
 
  useEffect(() => {
- saveToStorageWithDebounce("tp_sales", sales);
+ saveToStorageWithDebounce("tp_sales", sales, true);
  }, [sales]);
 
  useEffect(() => {
- saveToStorageWithDebounce("tp_sale_items", saleItems);
+ saveToStorageWithDebounce("tp_sale_items", saleItems, true);
  }, [saleItems]);
 
  useEffect(() => {
- saveToStorageWithDebounce("tp_movements", movements);
+ saveToStorageWithDebounce("tp_movements", movements, true);
  }, [movements]);
 
  useEffect(() => {
- saveToStorageWithDebounce("tp_audit_logs", auditLogs);
+ saveToStorageWithDebounce("tp_audit_logs", auditLogs, true);
  }, [auditLogs]);
 
  useEffect(() => {
- saveToStorageWithDebounce("tp_parked_sales", parkedSales);
+ saveToStorageWithDebounce("tp_parked_sales", parkedSales, true);
  }, [parkedSales]);
 
  useEffect(() => {
@@ -3734,11 +3806,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }, [stockTransfers]);
 
  useEffect(() => {
- saveToStorageWithDebounce("tp_branch_stock", branchStock);
+ saveToStorageWithDebounce("tp_branch_stock", branchStock, true);
  }, [branchStock]);
 
  useEffect(() => {
- saveToStorageWithDebounce("tp_ledger_entries", ledgerEntries);
+ saveToStorageWithDebounce("tp_ledger_entries", ledgerEntries, true);
  }, [ledgerEntries]);
 
  useEffect(() => {
@@ -3870,7 +3942,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  if (idx !== -1) {
  const updated = [...stockList];
  const nextQty = Math.max(0, updated[idx].quantity + changeValue);
- updated[idx] = { ...updated[idx], quantity: nextQty };
+ updated[idx] = {
+ ...updated[idx],
+ quantity: nextQty,
+ version: (updated[idx].version || 0) + 1,
+ updatedAt: new Date().toISOString(),
+ };
  return updated;
  } else {
  const nextQty = Math.max(0, changeValue);
@@ -3881,6 +3958,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  branchId: entry.branchId,
  productId: entry.productId,
  quantity: nextQty,
+ version: 1,
+ updatedAt: new Date().toISOString(),
  },
  ];
  }
@@ -3892,6 +3971,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return {
  ...p,
  stockQuantity: Math.max(0, p.stockQuantity + changeValue),
+ version: (p.version || 0) + 1,
  updatedAt: new Date().toISOString(),
  updatedBy: currentUser.fullName,
  };
@@ -6680,7 +6760,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  imported.forEach((p, i) => {
  const barcode =
- sanitizeInputText(p.barcode) || `BAR-${Date.now()}-${i}`;
+ sanitizeInputText(p.barcode) || generateEan13Barcode();
  const productCode =
  sanitizeInputText(p.productCode) ||
  barcode ||
@@ -6866,7 +6946,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  const sanitized = uniqueImported.map((p, i) => {
  const barcode =
- sanitizeInputText(p.barcode) || `BAR-${Date.now()}-${i}`;
+ sanitizeInputText(p.barcode) || generateEan13Barcode();
  const productCode =
  sanitizeInputText(p.productCode) ||
  barcode ||
@@ -7127,6 +7207,132 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return holdId;
  };
 
+ const getBranchStockQuantityContext = useCallback((productId: string, targetBranchId?: string): number => {
+ const bId = targetBranchId || currentUser?.branchAssignmentId || "B1";
+ const cacheKey = `bs:${bId}:${productId}`;
+ const cached = optimisticStockCacheRef.current.get(cacheKey);
+ const now = Date.now();
+ if (cached && (now - cached.lastSaleCommitTime < 60000)) {
+ return cached.quantity;
+ }
+ const bsRecord = branchStock.find((bs) => bs.productId === productId && bs.branchId === bId);
+ if (bsRecord) return bsRecord.quantity;
+ const prod = products.find((p) => p.id === productId);
+ return prod ? prod.stockQuantity : 0;
+ }, [branchStock, products, currentUser?.branchAssignmentId]);
+
+ const getProductStockCountContext = useCallback((productId: string): number => {
+ const cacheKey = `prod:${productId}`;
+ const cached = optimisticStockCacheRef.current.get(cacheKey);
+ const now = Date.now();
+ if (cached && (now - cached.lastSaleCommitTime < 60000)) {
+ return cached.quantity;
+ }
+ const prod = products.find((p) => p.id === productId);
+ return prod ? prod.stockQuantity : 0;
+ }, [products]);
+
+ const getInventoryContext = useCallback((productId: string, targetBranchId?: string) => {
+ const bId = targetBranchId || currentUser?.branchAssignmentId || "B1";
+ const bsKey = `bs:${bId}:${productId}`;
+ const prodKey = `prod:${productId}`;
+ const bsCached = optimisticStockCacheRef.current.get(bsKey);
+ const prodCached = optimisticStockCacheRef.current.get(prodKey);
+ const now = Date.now();
+
+ const isBsOptimistic = !!(bsCached && (now - bsCached.lastSaleCommitTime < 60000));
+ const isProdOptimistic = !!(prodCached && (now - prodCached.lastSaleCommitTime < 60000));
+
+ const branchQty = isBsOptimistic ? bsCached!.quantity : getBranchStockQuantityContext(productId, bId);
+ const stockQuantity = isProdOptimistic ? prodCached!.quantity : getProductStockCountContext(productId);
+
+ return {
+ stockQuantity,
+ branchQuantity: branchQty,
+ isOptimistic: isBsOptimistic || isProdOptimistic
+ };
+ }, [currentUser?.branchAssignmentId, getBranchStockQuantityContext, getProductStockCountContext]);
+
+ const revalidateStockCounts = async (
+ affectedItems?: { productId: string; branchId?: string; quantityDelta?: number }[]
+ ) => {
+ console.log("[Inventory Cache] Force-revalidating stock counts post-sale commit...", affectedItems);
+ const now = Date.now();
+ const nowIso = new Date().toISOString();
+ const userBranchId = currentUser?.branchAssignmentId || "B1";
+
+ if (affectedItems && affectedItems.length > 0) {
+ affectedItems.forEach(({ productId, branchId: bId, quantityDelta }) => {
+ const targetBranchId = bId || userBranchId;
+
+ // 1. Update Branch Stock in cache & state
+ setBranchStock((prevList) => {
+ const nextList = [...prevList];
+ const matchIdx = nextList.findIndex((bs) => bs.productId === productId && bs.branchId === targetBranchId);
+ if (matchIdx !== -1) {
+ const currentQty = nextList[matchIdx].quantity;
+ const newQty = quantityDelta !== undefined ? Math.max(0, currentQty + quantityDelta) : currentQty;
+ const newVer = (nextList[matchIdx].version || 0) + 1;
+ nextList[matchIdx] = {
+ ...nextList[matchIdx],
+ quantity: newQty,
+ version: newVer,
+ updatedAt: nowIso,
+ };
+ optimisticStockCacheRef.current.set(`bs:${targetBranchId}:${productId}`, {
+ productId,
+ branchId: targetBranchId,
+ quantity: newQty,
+ version: newVer,
+ updatedAt: nowIso,
+ lastSaleCommitTime: now,
+ });
+ }
+ return nextList;
+ });
+
+ // 2. Update Product catalog stock in cache & state
+ setProducts((prev) => {
+ const updated = [...prev];
+ const prodIdx = updated.findIndex((p) => p.id === productId);
+ if (prodIdx !== -1) {
+ const currentQty = updated[prodIdx].stockQuantity;
+ const newQty = quantityDelta !== undefined ? Math.max(0, currentQty + quantityDelta) : currentQty;
+ const newVer = (updated[prodIdx].version || 0) + 1;
+ updated[prodIdx] = {
+ ...updated[prodIdx],
+ stockQuantity: newQty,
+ version: newVer,
+ updatedAt: nowIso,
+ };
+ optimisticStockCacheRef.current.set(`prod:${productId}`, {
+ productId,
+ quantity: newQty,
+ version: newVer,
+ updatedAt: nowIso,
+ lastSaleCommitTime: now,
+ });
+ }
+ return updated;
+ });
+ });
+ }
+
+ // Force immediate push to server so server receives the post-sale stock counts right away
+ try {
+ await forceSyncAllToServer();
+ } catch (err) {
+ console.warn("[Stock Revalidation] Error pushing stock updates to server:", err);
+ }
+
+ // Immediately trigger server sync to confirm state while preserving optimistic values
+ try {
+ await syncFromSharedServer(true);
+ } catch (err) {
+ console.warn("[Stock Revalidation] Error re-fetching server state:", err);
+ }
+ };
+
  const checkoutSale = (
  cartItems: { product: Product; quantity: number }[],
  customerName: string,
@@ -7270,6 +7476,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  changeAmount: changeAmount > 0 ? changeAmount : 0,
  notes,
  createdAt: new Date().toISOString(),
+ updatedAt: new Date().toISOString(),
  isDeleted: false,
  idempotencyKey,
  pointsEarned,
@@ -7312,6 +7519,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  // Update branchStock for local branch
  setBranchStock((prevList) => {
  const nextList = [...prevList];
+ const nowIso = new Date().toISOString();
  cartItems.forEach((item) => {
  const matchIdx = nextList.findIndex(
  (bs) =>
@@ -7320,7 +7528,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  if (matchIdx !== -1) {
  nextList[matchIdx] = {
  ...nextList[matchIdx],
+ id: nextList[matchIdx].id || `${userBranchId}_${item.product.id}`,
  quantity: Math.max(0, nextList[matchIdx].quantity - item.quantity),
+ version: (nextList[matchIdx].version || 0) + 1,
+ updatedAt: nowIso,
  };
  } else {
  nextList.push({
@@ -7328,6 +7539,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  branchId: userBranchId,
  productId: item.product.id,
  quantity: Math.max(0, (item.product.stockQuantity ?? 0) - item.quantity),
+ version: 1,
+ updatedAt: nowIso,
  });
  }
  });
@@ -7346,6 +7559,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  0,
  updated[prodIdx].stockQuantity - item.quantity,
  ),
+ version: (updated[prodIdx].version || 0) + 1,
  updatedAt: new Date().toISOString(),
  };
  }
@@ -7408,6 +7622,92 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  "Sales",
  saleId,
  );
+
+ sqliteDatabaseService.saveSaleLog({
+   id: newSale.id,
+   saleNumber: newSale.saleNumber,
+   branchId: newSale.branchId,
+   cashierId: newSale.cashierId,
+   cashierName: newSale.cashierName,
+   shiftId: newSale.shiftId,
+   customerName: newSale.customerName,
+   subtotal: newSale.subtotal,
+   taxAmount: newSale.vat,
+   discountTotal: newSale.discount,
+   grandTotal: newSale.grandTotal,
+   paymentMethod: newSale.paymentMethod,
+   paymentStatus: 'PAID',
+   items: newSaleItems.map(item => ({
+     id: item.id,
+     saleId: item.saleId,
+     productId: item.productId,
+     productName: item.productName,
+     quantity: item.quantity,
+     unitPrice: item.unitPrice,
+     subtotal: item.total
+   })),
+   createdAt: newSale.createdAt,
+   updatedAt: newSale.updatedAt
+ }).catch(err => console.warn('[DbContext] sqliteDatabaseService.saveSaleLog notice:', err));
+
+ sqliteDatabaseService.logAuditTrail({
+   action: 'POS_CHECKOUT',
+   category: 'Sales',
+   details: `Completed sale invoice ${saleNum}. Amount: ₱${grandTotal.toFixed(2)}`,
+   performerId: currentUser?.id || 'SYSTEM',
+   performerName: currentUser?.fullName || 'System',
+   branchId: userBranchId,
+   entityId: saleId,
+   entityType: 'SALE',
+   createdAt: new Date().toISOString()
+ }).catch(() => {});
+
+ // Populate optimistic stock cache immediately for all cart items post-sale commit
+ const now = Date.now();
+ const nowIso = new Date().toISOString();
+ cartItems.forEach((item) => {
+ const bsRecord = branchStock.find(
+ (bs) => bs.productId === item.product.id && bs.branchId === userBranchId,
+ );
+ const prodRecord = products.find((p) => p.id === item.product.id);
+
+ const currentBsQty = bsRecord ? bsRecord.quantity : (item.product.stockQuantity ?? 0);
+ const newBsQty = Math.max(0, currentBsQty - item.quantity);
+ const bsVersion = ((bsRecord as any)?.version || 0) + 1;
+
+ const currentProdQty = prodRecord ? prodRecord.stockQuantity : (item.product.stockQuantity ?? 0);
+ const newProdQty = Math.max(0, currentProdQty - item.quantity);
+ const prodVersion = ((prodRecord as any)?.version || 0) + 1;
+
+ optimisticStockCacheRef.current.set(`bs:${userBranchId}:${item.product.id}`, {
+ productId: item.product.id,
+ branchId: userBranchId,
+ quantity: newBsQty,
+ version: bsVersion,
+ updatedAt: nowIso,
+ lastSaleCommitTime: now,
+ });
+
+ optimisticStockCacheRef.current.set(`prod:${item.product.id}`, {
+ productId: item.product.id,
+ quantity: newProdQty,
+ version: prodVersion,
+ updatedAt: nowIso,
+ lastSaleCommitTime: now,
+ });
+ });
+
+ // Force-revalidate stock counts immediately after sale event commits to prevent stock jump anomaly
+ const affectedItems = cartItems.map((item) => ({
+ productId: item.product.id,
+ branchId: userBranchId,
+ quantityDelta: 0,
+ }));
+
+ revalidateStockCounts(affectedItems).catch((err) => {
+ console.warn("[POS Checkout] Immediate stock revalidation background failure:", err);
+ });
+
  return newSale;
  };
 
@@ -7446,6 +7746,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  updated[prodIdx] = {
  ...updated[prodIdx],
  stockQuantity: updated[prodIdx].stockQuantity + item.quantity,
+ version: (updated[prodIdx].version || 0) + 1,
  updatedAt: new Date().toISOString(),
  };
  }
@@ -7483,6 +7784,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  nextList[matchIdx] = {
  ...nextList[matchIdx],
  quantity: nextList[matchIdx].quantity + item.quantity,
+ version: (nextList[matchIdx].version || 0) + 1,
  updatedAt: new Date().toISOString(),
  };
  } else {
@@ -7491,6 +7793,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  branchId: targetSale.branchId,
  productId: item.productId,
  quantity: item.quantity,
+ version: 1,
  updatedAt: new Date().toISOString(),
  });
  }
@@ -7552,7 +7855,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  addAuditLog(
  "POS_VOID_SALE",
- `VOIDED transaction invoice ${targetSale.saleNumber}. Restored ${itemsToRestore.length} products to inventory. Refund Amount: ₱${targetSale.grandTotal.toFixed(2)}`,
+ `VOIDED transaction invoice ${targetSale.saleNumber}. Restored ${itemsToRestore.length} products to inventory. Refund Amount: ₱${(Number(targetSale.grandTotal) || 0).toFixed(2)}`,
  "Sales",
  saleId,
  );
@@ -8005,7 +8308,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  ) {
  setBranchStock((bStock) => {
  const updatedStock = [...bStock];
- t.items.forEach((item) => {
+ (t.items || []).forEach((item) => {
  const idx = updatedStock.findIndex(
  (bs) =>
  bs.productId === item.productId &&
@@ -8015,12 +8318,17 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  if (idx !== -1) {
  const bs = updatedStock[idx];
  const nextQty = Math.max(0, bs.quantity - deductionQty);
- updatedStock[idx] = { ...bs, quantity: nextQty };
+ updatedStock[idx] = {
+ ...bs,
+ quantity: nextQty,
+ version: (bs.version || 0) + 1,
+ updatedAt: new Date().toISOString(),
+ };
  if (t.fromBranchId === "B1") {
  setProducts((prods) =>
  prods.map((prod) =>
  prod.id === bs.productId
- ? { ...prod, stockQuantity: nextQty }
+ ? { ...prod, stockQuantity: nextQty, version: (prod.version || 0) + 1, updatedAt: new Date().toISOString() }
  : prod,
  ),
  );
@@ -8031,13 +8339,15 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  branchId: t.fromBranchId,
  productId: item.productId,
  quantity: 0,
+ version: 1,
+ updatedAt: new Date().toISOString(),
  };
  updatedStock.push(newBs);
  if (t.fromBranchId === "B1") {
  setProducts((prods) =>
  prods.map((prod) =>
  prod.id === item.productId
- ? { ...prod, stockQuantity: 0 }
+ ? { ...prod, stockQuantity: 0, version: (prod.version || 0) + 1, updatedAt: new Date().toISOString() }
  : prod,
  ),
  );
@@ -8048,7 +8358,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  });
 
  // Record Ledger / Movements for dispatch
- t.items.forEach((item) => {
+ (t.items || []).forEach((item) => {
  const ledgerId = `L-TR-DISP-${id}-${item.productId}`;
  const entry: LedgerEntry = {
  id: ledgerId,
@@ -8086,7 +8396,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  if (status === "Received") {
  setBranchStock((bStock) => {
  const updatedStock = [...bStock];
- t.items.forEach((item) => {
+ (t.items || []).forEach((item) => {
  const idx = updatedStock.findIndex(
  (bs) =>
  bs.productId === item.productId &&
@@ -8096,7 +8406,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  if (idx !== -1) {
  const bs = updatedStock[idx];
  const nextQty = bs.quantity + additionQty;
- updatedStock[idx] = { ...bs, quantity: nextQty };
+ updatedStock[idx] = {
+ ...bs,
+ quantity: nextQty,
+ version: (bs.version || 0) + 1,
+ updatedAt: new Date().toISOString(),
+ };
  if (t.toBranchId === "B1") {
  setProducts((prods) =>
  prods.map((prod) =>
@@ -8113,13 +8428,15 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  branchId: t.toBranchId,
  productId: item.productId,
  quantity: nextQty,
+ version: 1,
+ updatedAt: new Date().toISOString(),
  };
  updatedStock.push(newBs);
  if (t.toBranchId === "B1") {
  setProducts((prods) =>
  prods.map((prod) =>
  prod.id === item.productId
- ? { ...prod, stockQuantity: nextQty }
+ ? { ...prod, stockQuantity: nextQty, version: (prod.version || 0) + 1, updatedAt: new Date().toISOString() }
  : prod,
  ),
  );
@@ -8130,7 +8447,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  });
 
  // Record Ledger / Movements for receipt
- t.items.forEach((item) => {
+ (t.items || []).forEach((item) => {
  const ledgerId = `L-TR-REC-${id}-${item.productId}`;
  const entry: LedgerEntry = {
  id: ledgerId,
@@ -8367,7 +8684,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  // Sales sums
  const todayStr = new Date().toISOString().slice(0, 10);
  const todaySalesItems = sales.filter(
- (s) => s.createdAt.startsWith(todayStr) && !s.isDeleted,
+ (s) => s.createdAt && typeof s.createdAt === "string" && s.createdAt.startsWith(todayStr) && !s.isDeleted,
  );
  const todaySales = todaySalesItems.reduce(
  (acc, curr) => acc + curr.grandTotal,
@@ -8378,7 +8695,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const sevenDaysAgo = new Date();
  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
  const weeklySalesItems = sales.filter(
- (s) => new Date(s.createdAt) >= sevenDaysAgo && !s.isDeleted,
+ (s) => s.createdAt && !isNaN(new Date(s.createdAt).getTime()) && new Date(s.createdAt) >= sevenDaysAgo && !s.isDeleted,
  );
  const weeklySales = weeklySalesItems.reduce(
  (acc, curr) => acc + curr.grandTotal,
@@ -8388,7 +8705,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  // Monthly revenue
  const currentMonthStr = new Date().toISOString().slice(0, 7); // YYYY-MM
  const monthlySalesItems = sales.filter(
- (s) => s.createdAt.startsWith(currentMonthStr) && !s.isDeleted,
+ (s) => s.createdAt && typeof s.createdAt === "string" && s.createdAt.startsWith(currentMonthStr) && !s.isDeleted,
  );
  const monthlyRevenue = monthlySalesItems.reduce(
  (acc, curr) => acc + curr.grandTotal,
@@ -8567,6 +8884,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  clearServerErrorState,
  invalidateLocalCache,
  safeApiFetch,
+ getInventory: getInventoryContext,
+ getBranchStockQuantity: getBranchStockQuantityContext,
+ getProductStockCount: getProductStockCountContext,
+ revalidateStockCounts,
  }}
  >
  {children}

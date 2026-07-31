@@ -1,5 +1,6 @@
 import { Branch, Product } from '../types/db';
 import { verifyAndUnwrapBackup } from './fileBackupHelper';
+import { generateEan13Barcode } from '../utils/barcodeGenerator';
 
 export interface PreflightBranchMatch {
   branchIdOrName: string;
@@ -261,7 +262,7 @@ export async function runPreflightValidation(
             id: item.id || `P-IMPORT-${Date.now()}-${i}`,
             productName: item.productName || item.name,
             productCode: item.productCode || item.code || item.barcode,
-            barcode: item.barcode,
+            barcode: item.barcode || generateEan13Barcode(),
             category: item.category,
             brand: item.brand,
             costPrice: item.pricing?.costPrice ?? item.costPrice ?? 0,
