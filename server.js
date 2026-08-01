@@ -957,13 +957,14 @@ async function getSalesWithItemsLookups(filters = {}) {
   // AlaSQL fallback
   try {
     let query = 'SELECT * FROM sales WHERE isDeleted = ' + (isDeleted ? '1' : '0');
-    if (branchId) query += ` AND branchId = '${branchId}'`;
-    if (shiftId) query += ` AND shiftId = '${shiftId}'`;
-    if (cashierId) query += ` AND cashierId = '${cashierId}'`;
-    if (saleNumber) query += ` AND saleNumber = '${saleNumber}'`;
+    let params = [];
+    if (branchId) { query += ' AND branchId = ?'; params.push(branchId); }
+    if (shiftId) { query += ' AND shiftId = ?'; params.push(shiftId); }
+    if (cashierId) { query += ' AND cashierId = ?'; params.push(cashierId); }
+    if (saleNumber) { query += ' AND saleNumber = ?'; params.push(saleNumber); }
     query += ' ORDER BY createdAt DESC';
 
-    let sales = alasql(query) || [];
+    let sales = alasql(query, params) || [];
     if (startDate) sales = sales.filter(s => new Date(s.createdAt) >= new Date(startDate));
     if (endDate) sales = sales.filter(s => new Date(s.createdAt) <= new Date(endDate));
 
@@ -1077,7 +1078,7 @@ async function getInventoryAndBranchStockLookups(filters = {}) {
 
     let branchStocks = [];
     if (branchId) {
-      branchStocks = alasql(`SELECT * FROM branch_stock WHERE branchId = '${branchId}'`) || [];
+      branchStocks = alasql('SELECT * FROM branch_stock WHERE branchId = ?', [branchId]) || [];
     }
     const bsMap = new Map(branchStocks.map(bs => [bs.productId, bs]));
 
@@ -1157,13 +1158,14 @@ async function getInventoryMovementsLookups(filters = {}) {
   // AlaSQL fallback
   try {
     let query = 'SELECT * FROM inventory_movements WHERE isDeleted = 0';
-    if (productId) query += ` AND productId = '${productId}'`;
-    if (sourceBranchId) query += ` AND sourceBranchId = '${sourceBranchId}'`;
-    if (destinationBranchId) query += ` AND destinationBranchId = '${destinationBranchId}'`;
-    if (userId) query += ` AND userId = '${userId}'`;
+    let params = [];
+    if (productId) { query += ' AND productId = ?'; params.push(productId); }
+    if (sourceBranchId) { query += ' AND sourceBranchId = ?'; params.push(sourceBranchId); }
+    if (destinationBranchId) { query += ' AND destinationBranchId = ?'; params.push(destinationBranchId); }
+    if (userId) { query += ' AND userId = ?'; params.push(userId); }
     query += ' ORDER BY timestamp DESC';
 
-    let movements = alasql(query) || [];
+    let movements = alasql(query, params) || [];
     if (startDate) movements = movements.filter(m => new Date(m.timestamp) >= new Date(startDate));
     if (endDate) movements = movements.filter(m => new Date(m.timestamp) <= new Date(endDate));
 
@@ -1201,7 +1203,7 @@ async function getShiftSalesSummaryLookups(shiftId) {
 
   // AlaSQL fallback
   try {
-    const sales = alasql(`SELECT * FROM sales WHERE shiftId = '${shiftId}' AND isDeleted = 0`) || [];
+    const sales = alasql('SELECT * FROM sales WHERE shiftId = ? AND isDeleted = 0', [shiftId]) || [];
     const summary = sales.reduce((acc, s) => {
       acc.totalSalesCount++;
       acc.totalSubtotal += Number(s.subtotal) || 0;
