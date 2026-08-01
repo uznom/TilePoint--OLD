@@ -1271,10 +1271,19 @@ export const PosModule: React.FC<PosModuleProps> = ({
  csv += `"Total Records Exported:","${filteredSales.length} Transactions"\n\n`;
 
  // Statistics section
- const totalSubtotal = filteredSales.reduce((acc, s) => acc + s.subtotal, 0);
- const totalDiscount = filteredSales.reduce((acc, s) => acc + s.discount, 0);
- const totalVat = filteredSales.reduce((acc, s) => acc + s.vat, 0);
- const totalGrand = filteredSales.reduce((acc, s) => acc + s.grandTotal, 0);
+ // ⚡ Bolt Optimization: Combined 4 separate array.reduce calls into a single O(N) pass to compute CSV statistics, reducing iterations across the dataset.
+ const {
+   totalSubtotal,
+   totalDiscount,
+   totalVat,
+   totalGrand
+ } = filteredSales.reduce((acc, s) => {
+   acc.totalSubtotal += s.subtotal;
+   acc.totalDiscount += s.discount;
+   acc.totalVat += s.vat;
+   acc.totalGrand += s.grandTotal;
+   return acc;
+ }, { totalSubtotal: 0, totalDiscount: 0, totalVat: 0, totalGrand: 0 });
 
  csv += `"AGGREGATE SUMS STATISTICS"\n`;
  csv += `"Total Base Subtotal","PHP ${(Number(totalSubtotal) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}"\n`;
@@ -1628,19 +1637,26 @@ export const PosModule: React.FC<PosModuleProps> = ({
  });
 
  const ledgerStats = React.useMemo(() => {
- const activeSales = filteredSales.filter(s => !s.isDeleted);
- const voidedSales = filteredSales.filter(s => s.isDeleted);
- const netRevenue = activeSales.reduce((acc, s) => acc + s.grandTotal, 0);
- const totalDiscount = activeSales.reduce((acc, s) => acc + s.discount, 0);
- const totalVat = activeSales.reduce((acc, s) => acc + s.vat, 0);
- return {
- activeCount: activeSales.length,
- voidedCount: voidedSales.length,
- netRevenue,
- totalDiscount,
- totalVat,
- totalCount: filteredSales.length
- };
+ // ⚡ Bolt Optimization: Combined 2 filter and 3 reduce operations into a single O(N) array pass, significantly improving ledger stats calculation performance on large datasets.
+ return filteredSales.reduce((acc, s) => {
+ if (s.isDeleted) {
+ acc.voidedCount++;
+ } else {
+ acc.activeCount++;
+ acc.netRevenue += s.grandTotal;
+ acc.totalDiscount += s.discount;
+ acc.totalVat += s.vat;
+ }
+ acc.totalCount++;
+ return acc;
+ }, {
+ activeCount: 0,
+ voidedCount: 0,
+ netRevenue: 0,
+ totalDiscount: 0,
+ totalVat: 0,
+ totalCount: 0
+ });
  }, [filteredSales]);
 
   const renderThermalCutSeparator = (label: string = "AUTO-CUT • PAPER SEPARATION") => (
