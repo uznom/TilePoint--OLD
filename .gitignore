@@ -19,3 +19,11 @@ cert.pem
 .vite/
 .vscode/
 .idea/
+
+# Local & SQLite Runtime Database Files
+*.db
+*.db-shm
+*.db-wal
+db.json
+server-db.json
+

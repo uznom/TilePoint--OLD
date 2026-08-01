@@ -497,12 +497,19 @@ interface DbContextType {
  customerName: string,
  notes: string,
  ) => string; // returns hold ID
+ resumeParkedSale: (
+ parkedId: string,
+ cashierName?: string,
+ ) => { success: boolean; record?: any; error?: string };
  parkedSales: {
  id: string;
  customerName: string;
  notes: string;
  items: { product: Product; quantity: number }[];
  timestamp: string;
+ heldBy?: string;
+ heldByBranchId?: string;
+ status?: string;
  }[];
  setParkedSales: React.Dispatch<
  React.SetStateAction<
@@ -512,6 +519,9 @@ interface DbContextType {
  notes: string;
  items: { product: Product; quantity: number }[];
  timestamp: string;
+ heldBy?: string;
+ heldByBranchId?: string;
+ status?: string;
  }[]
  >
  >;
@@ -955,26 +965,31 @@ const getCreatedAt = (item: any): number => {
  return 0;
 };
 
-const mergeParkedSales = (local: any[], remote: any[]): any[] => {
+const mergeParkedSales = (local: any[], remote: any[], deletedSet?: Set<string>): any[] => {
  if (!Array.isArray(local)) local = [];
  if (!Array.isArray(remote)) remote = [];
  
- const merged = [...remote];
- const remoteIds = new Set(remote.map(item => item.id));
- 
- local.forEach(localItem => {
- if (localItem && localItem.id && !remoteIds.has(localItem.id)) {
- const createdAt = getCreatedAt(localItem);
- const ageMs = Date.now() - createdAt;
- 
- // If it was created within the last 30 seconds, keep/merge it to prevent race conditions during upload
- if (createdAt > 0 && ageMs < 30000) {
- merged.push(localItem);
+ const map = new Map<string, any>();
+ remote.forEach((item) => {
+ if (item && item.id && (!deletedSet || !deletedSet.has(item.id))) {
+ map.set(item.id, item);
+ }
+ });
+ local.forEach((localItem) => {
+ if (localItem && localItem.id && (!deletedSet || !deletedSet.has(localItem.id))) {
+ if (!map.has(localItem.id)) {
+ map.set(localItem.id, localItem);
+ } else {
+ const remoteItem = map.get(localItem.id);
+ const localTs = localItem.createdAt || getCreatedAt(localItem) || 0;
+ const remoteTs = remoteItem?.createdAt || getCreatedAt(remoteItem) || 0;
+ if (localTs > remoteTs) {
+ map.set(localItem.id, localItem);
+ }
  }
  }
  });
- 
- return merged;
+ return Array.from(map.values());
 };
 
 
@@ -1176,11 +1191,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const handleFailedLogin = () => {
  const nextAttempts = failedAttempts + 1;
  setFailedAttempts(nextAttempts);
- if (nextAttempts >= 3) {
- const lockDuration = 30 * 1000; // 30 sec lockout
+ if (nextAttempts >= 20) {
+ const lockDuration = 5 * 1000; // 5 sec lockout
  const until = Date.now() + lockDuration;
  setLockoutUntil(until);
- setRateLimitTimeLeft(30);
+ setRateLimitTimeLeft(5);
  addAuditLog(
  "SECURITY_LIMIT",
  `Brute Force Rate Limiter triggered! Blocked address login attempts for 30 seconds.`,
@@ -1197,17 +1212,13 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const terminateSession = (sessionId: string) => {
- setActiveSessions((prev) => {
- const updated = prev.filter((s) => s.id !== sessionId);
- saveToStorageWithDebounce("tp_active_sessions", updated, true);
+ setActiveSessions((prev) => prev.filter((s) => s.id !== sessionId));
  addAuditLog(
  "SESSION_TERMINATED",
  `Administrative force logout executed for session ${sessionId}`,
  "Users",
  sessionId,
  );
- return updated;
- });
  };
 
  const login = async (
@@ -1272,8 +1283,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  (u) => u.username.trim().toLowerCase() === username.trim().toLowerCase(),
  );
  if (!targetUser) {
- // Simulate slow verification to prevent timing attacks
- await new Promise((r) => setTimeout(r, 600));
+ // Fast local verification
+ await new Promise((r) => setTimeout(r, 50));
  handleFailedLogin();
  return {
  success: false,
@@ -1396,11 +1407,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  // Remove our session from activeSessions list so other client notices immediately
  if (activeSessionId) {
- setActiveSessions((prev) => {
- const updated = prev.filter((s) => s.id !== activeSessionId);
- saveToStorageWithDebounce("tp_active_sessions", updated, true);
- return updated;
- });
+ setActiveSessions((prev) => prev.filter((s) => s.id !== activeSessionId));
  }
 
  if (currentUser) {
@@ -1463,59 +1470,81 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }
 
-  try {
- const res = await fetch(input, mergedInit);
+  let retries = 0;
+  const maxRetries = 3;
 
- if (!res.ok) {
- const statusCode = res.status;
- let errMsg = `Server returned HTTP Status Code ${statusCode}`;
- try {
- const errData = await res.clone().json();
- if (errData && errData.error) {
- errMsg = `${errData.error}: ${errData.message || errMsg}`;
- }
- } catch (_) {}
+  while (true) {
+    try {
+      const res = await fetch(input, mergedInit);
 
- console.error(`[API Interceptor] Detected error response [${statusCode}]: ${errMsg}`);
+      if (!res.ok) {
+        const statusCode = res.status;
 
- if (statusCode === 401) {
- const userStr = sessionStorage.getItem("tp_current_user") || localStorage.getItem("tp_current_user");
- if (userStr) {
- console.warn("[API Interceptor] 401 Unauthorized received. Clearing session and redirecting to login.");
- logout();
- setApiErrorState({
- statusCode: 401,
- message: "Your session has expired. Please sign in again to verify your corporate identity.",
- });
- }
- } else if (statusCode === 403) {
- console.warn("[API Interceptor] 403 Forbidden received. Restricting workspace access.");
- setApiErrorState({
- statusCode: 403,
- message: "Access Denied: You do not have the required clearances or security credentials to perform this system action.",
- });
- } else if (statusCode === 429) {
- console.warn("[API Interceptor] 429 Too Many Requests received. Initiating protective security cool-down.");
- setApiErrorState({
- statusCode: 429,
- message: "Rate Limit Exceeded: Excessive validation requests detected. Protective cooling-down is active.",
- retryAfter: 15,
- });
- }
+        // Auto-retry transient 502/503/504 server startup issues
+        if ((statusCode === 502 || statusCode === 503 || statusCode === 504) && retries < maxRetries) {
+          retries++;
+          await new Promise((r) => setTimeout(r, 300 * Math.pow(2, retries)));
+          continue;
+        }
 
- return res;
- }
+        let errMsg = `Server returned HTTP Status Code ${statusCode}`;
+        try {
+          const errData = await res.clone().json();
+          if (errData && errData.error) {
+            errMsg = `${errData.error}: ${errData.message || errMsg}`;
+          }
+        } catch (_) {}
 
- if (apiErrorState && apiErrorState.statusCode !== 429 && apiErrorState.statusCode !== 401) {
- setApiErrorState(null);
- }
+        if ([401, 403, 404, 429, 502, 503, 504].includes(statusCode)) {
+          console.warn(`[API Interceptor] Handled status response [${statusCode}]: ${errMsg}`);
+        } else {
+          console.error(`[API Interceptor] Detected error response [${statusCode}]: ${errMsg}`);
+        }
 
- return res;
- } catch (err: any) {
- console.warn(`[API Interceptor] Connection network failure targeting: ${input}`, err);
- setServerConnected(false);
- throw err;
- }
+        if (statusCode === 401) {
+          const userStr = sessionStorage.getItem("tp_current_user") || localStorage.getItem("tp_current_user");
+          if (userStr) {
+            console.warn("[API Interceptor] 401 Unauthorized received. Clearing session and redirecting to login.");
+            logout();
+            setApiErrorState({
+              statusCode: 401,
+              message: "Your session has expired. Please sign in again to verify your corporate identity.",
+            });
+          }
+        } else if (statusCode === 403) {
+          console.warn("[API Interceptor] 403 Forbidden received. Restricting workspace access.");
+          setApiErrorState({
+            statusCode: 403,
+            message: "Access Denied: You do not have the required clearances or security credentials to perform this system action.",
+          });
+        } else if (statusCode === 429) {
+          console.warn("[API Interceptor] 429 Too Many Requests received. Initiating protective security cool-down.");
+          setApiErrorState({
+            statusCode: 429,
+            message: "Rate Limit Exceeded: Excessive validation requests detected. Protective cooling-down is active.",
+            retryAfter: 15,
+          });
+        }
+
+        return res;
+      }
+
+      if (apiErrorState && apiErrorState.statusCode !== 429 && apiErrorState.statusCode !== 401) {
+        setApiErrorState(null);
+      }
+
+      return res;
+    } catch (err: any) {
+      if (retries < maxRetries) {
+        retries++;
+        await new Promise((r) => setTimeout(r, 300 * Math.pow(2, retries)));
+        continue;
+      }
+      console.warn(`[API Interceptor] Connection network failure targeting: ${input}`, err);
+      setServerConnected(false);
+      throw err;
+    }
+  }
  };
 
  useEffect(() => {
@@ -1654,7 +1683,79 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  >("tp_parked_sales", []);
  });
 
- const deletedParkedSaleIds = useRef<Set<string>>(new Set());
+ const deletedParkedSaleIds = useRef<Set<string>>((() => {
+ try {
+ const stored = sessionStorage.getItem("tp_deleted_parked_ids");
+ if (stored) {
+ const parsed = JSON.parse(stored);
+ if (Array.isArray(parsed)) return new Set(parsed);
+ }
+ } catch (_) {}
+ return new Set();
+ })());
+
+ const activeResumingIdsRef = useRef<Set<string>>(new Set());
+
+ const recordDeletedParkedSaleId = (id: string) => {
+ if (!id) return;
+ deletedParkedSaleIds.current.add(id);
+ try {
+ sessionStorage.setItem("tp_deleted_parked_ids", JSON.stringify(Array.from(deletedParkedSaleIds.current)));
+ 
+ const sharedStr = localStorage.getItem("tp_shared_deleted_parked_ids");
+ let sharedSet = new Set<string>();
+ if (sharedStr) {
+ try {
+ const arr = JSON.parse(sharedStr);
+ if (Array.isArray(arr)) sharedSet = new Set(arr);
+ } catch (_) {}
+ }
+ sharedSet.add(id);
+ localStorage.setItem("tp_shared_deleted_parked_ids", JSON.stringify(Array.from(sharedSet)));
+ } catch (_) {}
+
+ setTimeout(() => {
+ deletedParkedSaleIds.current.delete(id);
+ try {
+ sessionStorage.setItem("tp_deleted_parked_ids", JSON.stringify(Array.from(deletedParkedSaleIds.current)));
+ } catch (_) {}
+ }, 300000); // 5 minutes
+ };
+
+ useEffect(() => {
+ const handleStorageChange = (e: StorageEvent) => {
+ if (e.key === "tp_shared_deleted_parked_ids" && e.newValue) {
+ try {
+ const ids: string[] = JSON.parse(e.newValue);
+ if (Array.isArray(ids)) {
+ let hasNew = false;
+ ids.forEach((id) => {
+ if (!deletedParkedSaleIds.current.has(id)) {
+ deletedParkedSaleIds.current.add(id);
+ hasNew = true;
+ }
+ });
+ if (hasNew) {
+ rawSetParkedSales((prev) => prev.filter((p) => p && p.id && !deletedParkedSaleIds.current.has(p.id)));
+ }
+ }
+ } catch (_) {}
+ } else if (e.key === "tp_parked_sales" && e.newValue) {
+ try {
+ const freshParked = JSON.parse(e.newValue);
+ if (Array.isArray(freshParked)) {
+ rawSetParkedSales(() => {
+ const filtered = freshParked.filter((p) => p && p.id && !deletedParkedSaleIds.current.has(p.id));
+ return filtered;
+ });
+ }
+ } catch (_) {}
+ }
+ };
+
+ window.addEventListener("storage", handleStorageChange);
+ return () => window.removeEventListener("storage", handleStorageChange);
+ }, []);
 
  const setParkedSales = (updater: any) => {
  let nextValue: any;
@@ -1666,18 +1767,14 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const nextIds = new Set(next.map(item => item?.id).filter(Boolean));
  prev.forEach(item => {
  if (item && item.id && !nextIds.has(item.id)) {
- deletedParkedSaleIds.current.add(item.id);
- // Automatically clean up from tracked deleted set after 5 minutes
- setTimeout(() => {
- deletedParkedSaleIds.current.delete(item.id);
- }, 300000);
+ recordDeletedParkedSaleId(item.id);
  }
  });
  }
 
  // Protect local un-synced hold sales from being wiped out by server-side pull
  if (isSyncingFromServer.current && Array.isArray(next)) {
- next = mergeParkedSales(prev, next);
+ next = mergeParkedSales(prev, next, deletedParkedSaleIds.current);
  }
  
  // Always filter out deleted parked sales to prevent race-condition merge-backs
@@ -1685,17 +1782,16 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  next = next.filter(item => item && item.id && !deletedParkedSaleIds.current.has(item.id));
  }
  
- localStorage.setItem("tp_parked_sales", JSON.stringify(next));
+ try {
+ safeLocalStorageSetItem("tp_parked_sales", JSON.stringify(next));
+ } catch (_) {}
  nextValue = next;
  return next;
  });
 
- // Run debounced/atomic storage update out of the render loop to remain pure
- setTimeout(() => {
- if (nextValue !== undefined) {
+ if (!isSyncingFromServer.current && nextValue !== undefined) {
  saveToStorageWithDebounce("tp_parked_sales", nextValue, true);
  }
- }, 0);
  };
 
  const [syncStatus, setSyncStatus] = useState<Record<string, "Live" | "Syncing">>({});
@@ -1919,7 +2015,6 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }
  }
 
- saveToStorageWithDebounce("tp_active_sessions", updatedSessions, true);
  return updatedSessions;
  });
  }, 8000);
@@ -1994,11 +2089,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  if (p.isDeleted) return;
 
  const productBranchStocks = stockIndex.get(p.id) || [];
- const activeProductBranchStocks = productBranchStocks.filter((bs) =>
- activeBranchIds.has(bs.branchId)
- );
-
- const totalBranchQty = activeProductBranchStocks.reduce(
+ const totalBranchQty = productBranchStocks.reduce(
  (sum, bs) => sum + bs.quantity,
  0,
  );
@@ -2040,7 +2131,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  // DB Tuning debouncer settings & stats
  const [debounceDelay, setDebounceDelay] = useState<number>(() => {
  const cached = localStorage.getItem("tp_debounce_delay");
- return cached !== null ? Number(cached) : 500;
+ return cached !== null ? Number(cached) : 0;
  });
 
  const [dbSyncStatus, setDbSyncStatus] = useState<"idle" | "queued" | "syncing">("idle");
@@ -2049,6 +2140,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const cached = localStorage.getItem("tp_write_stats_prevented");
  return cached !== null ? Number(cached) : 0;
  });
+ const writeStatsCountRef = useRef<number>(writeStatsCount);
 
  const [dbSnapshots, setDbSnapshots] = useState<DbSnapshot[]>(() => {
  const cached = localStorage.getItem("tp_db_snapshots");
@@ -2208,6 +2300,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  const [offlineQueue, setOfflineQueue] = useState<any[]>(() => {
  try {
+ const txQ = localStorage.getItem("tp_transaction_sync_queue");
+ if (txQ) return JSON.parse(txQ);
  const q = localStorage.getItem("tp_offline_queue");
  return q ? JSON.parse(q) : [];
  } catch (_) {
@@ -2215,7 +2309,38 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }
  });
 
+ const enqueueTransaction = (txPkg: any) => {
+ const itemToEnqueue = {
+ queueId: `qtx-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+ id: txPkg.id || `tx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+ type: txPkg.type || "ATOMIC_TRANSACTION",
+ txType: txPkg.txType || "POS_OPERATION",
+ timestamp: txPkg.timestamp || Date.now(),
+ retries: 0,
+ status: "pending",
+ payload: txPkg.payload || {}
+ };
+
+ setOfflineQueue((prev) => {
+ const filtered = prev.filter((item) => item.id !== itemToEnqueue.id);
+ const updated = [...filtered, itemToEnqueue];
+ try {
+ localStorage.setItem("tp_transaction_sync_queue", JSON.stringify(updated));
+ localStorage.setItem("tp_offline_queue", JSON.stringify(updated));
+ } catch (_) {}
+ return updated;
+ });
+
+ setTimeout(() => {
+ processTransactionSyncQueue();
+ }, 50);
+ };
+
  const enqueueOfflineRequest = (op: any) => {
+ if (op && (op.type === "ATOMIC_TRANSACTION" || op.txType)) {
+ enqueueTransaction(op);
+ return;
+ }
  setOfflineQueue((prev) => {
  let filtered = prev;
  if (op.isLegacy) {
@@ -2225,40 +2350,56 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }
  const updated = [...filtered, { ...op, queueId: `q-${Date.now()}-${Math.random()}` }];
  try {
+ localStorage.setItem("tp_transaction_sync_queue", JSON.stringify(updated));
  localStorage.setItem("tp_offline_queue", JSON.stringify(updated));
  } catch (_) {}
  return updated;
  });
+
+ setTimeout(() => {
+ processTransactionSyncQueue();
+ }, 50);
  };
 
  const isProcessingQueue = useRef(false);
  const isSyncingFromServer = useRef(false);
  const lastServerDbHash = useRef<string>("");
- const processOfflineQueue = async () => {
+
+ const processTransactionSyncQueue = async () => {
  if (isProcessingQueue.current) return;
  const authHeaders = getAuthHeaders();
  if (!authHeaders.Authorization) {
- console.log("[Offline Queue] Skipping queue processing since user is logged out.");
+ console.log("[Tx Queue] Skipping transaction queue processing since user is logged out.");
  return;
  }
+
  let queue: any[] = [];
  try {
- const q = localStorage.getItem("tp_offline_queue");
- queue = q ? JSON.parse(q) : [];
+ const txQ = localStorage.getItem("tp_transaction_sync_queue");
+ const legacyQ = localStorage.getItem("tp_offline_queue");
+ queue = txQ ? JSON.parse(txQ) : (legacyQ ? JSON.parse(legacyQ) : []);
  } catch (_) {
  return;
  }
+
  if (queue.length === 0) return;
 
  isProcessingQueue.current = true;
- console.log(
- `[Offline Queue] Processing ${queue.length} pending queued requests sequentially...`,
- );
+ console.log(`[Tx Queue] Sequentially processing ${queue.length} pending atomic transaction packages...`);
 
  for (const item of queue) {
  try {
  let res;
- if (item.type) {
+ if (item.type === "ATOMIC_TRANSACTION") {
+ res = await safeApiFetch("/api/db/transaction", {
+ method: "POST",
+ headers: {
+ "Content-Type": "application/json",
+ ...getAuthHeaders(),
+ },
+ body: JSON.stringify(item),
+ });
+ } else if (item.type) {
  res = await safeApiFetch("/api/db/delta", {
  method: "POST",
  headers: {
@@ -2277,38 +2418,49 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  body: JSON.stringify({ key: item.key, value: item.value }),
  });
  }
+
  if (res && res.ok) {
  setOfflineQueue((currentQueue) => {
  const updated = currentQueue.filter((q) => q.queueId !== item.queueId);
  try {
+ localStorage.setItem("tp_transaction_sync_queue", JSON.stringify(updated));
  localStorage.setItem("tp_offline_queue", JSON.stringify(updated));
  } catch (_) {}
  return updated;
  });
- await new Promise((r) => setTimeout(r, 150));
+ await new Promise((r) => setTimeout(r, 100));
  } else if (res && (res.status === 401 || res.status === 403)) {
- console.warn(`[Offline Queue] Dropping un-retryable queued item due to HTTP status ${res.status}:`, item);
+ console.warn(`[Tx Queue] Dropping un-retryable item due to HTTP status ${res.status}:`, item);
  setOfflineQueue((currentQueue) => {
  const updated = currentQueue.filter((q) => q.queueId !== item.queueId);
  try {
+ localStorage.setItem("tp_transaction_sync_queue", JSON.stringify(updated));
  localStorage.setItem("tp_offline_queue", JSON.stringify(updated));
  } catch (_) {}
  return updated;
  });
  break;
  } else {
+ console.warn(`[Tx Queue] Transient server response status ${res ? res.status : 'offline'}. Will retry transaction ${item.id} later.`);
+ setOfflineQueue((currentQueue) => {
+ const updated = currentQueue.map((q) => q.queueId === item.queueId ? { ...q, retries: (q.retries || 0) + 1, status: "failed" } : q);
+ try {
+ localStorage.setItem("tp_transaction_sync_queue", JSON.stringify(updated));
+ localStorage.setItem("tp_offline_queue", JSON.stringify(updated));
+ } catch (_) {}
+ return updated;
+ });
  break;
  }
  } catch (err) {
- console.warn(
- "[Offline Queue] Connection failed during sequential dequeue:",
- err,
- );
+ console.warn("[Tx Queue] Connection failed during sequential transaction dequeueing:", err);
  break;
  }
  }
  isProcessingQueue.current = false;
  };
+
+ const processOfflineQueue = processTransactionSyncQueue;
 
  const syncFromSharedServer = async (silent = false) => {
  if (typeof window !== 'undefined' && localStorage.getItem('tp_setting_up') === 'true') {
@@ -2350,7 +2502,39 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const db = responseData.data;
  if (Object.keys(db).length > 0) {
  // Pre-populate volatileCache and localStorage ONLY if string content has changed
- Object.keys(db).forEach((k) => {
+        const collectionKeys = [
+          "tp_users",
+          "tp_branches",
+          "tp_suppliers",
+          "tp_brands",
+          "tp_products",
+          "tp_purchase_orders",
+          "tp_po_items",
+          "tp_transmittals",
+          "tp_shifts",
+          "tp_sales",
+          "tp_sale_items",
+          "tp_movements",
+          "tp_audit_logs",
+          "tp_parked_sales",
+          "tp_stock_transfers",
+          "tp_branch_stock",
+          "tp_ledger_entries",
+          "tp_branch_sales_reports",
+          "tp_deliveries",
+          "tp_damage_logs",
+          "atpos_v2_custom_bills",
+          "atpos_v2_members_list",
+          "atpos_v2_expenses",
+          "atpos_v2_returns",
+          "atpos_v2_calendar_notes",
+          "atpos_v2_calendar_day_memos"
+        ];
+
+        Object.keys(db).forEach((k) => {
+          if (collectionKeys.includes(k)) {
+            return; // Skip raw pre-populate for database collections. They are safely merged and persisted below by processCollection.
+          }
  const valStr =
  typeof db[k] === "string" ? db[k] : JSON.stringify(db[k]);
 
@@ -2442,9 +2626,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  const getItemKey = (item: any): string | null => {
  if (!item || typeof item !== "object") return null;
- if (item.id) return String(item.id).toLowerCase();
  if (item.branchId && item.productId)
  return `${String(item.branchId).toLowerCase()}_${String(item.productId).toLowerCase()}`;
+ if (item.id) return String(item.id).toLowerCase();
  if (item.username) return String(item.username).toLowerCase();
  if (item.code) return String(item.code).toLowerCase();
  return null;
@@ -2480,8 +2664,13 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  keepExisting = true;
  } else if (inVer > exVer) {
  keepExisting = false;
+ } else if (exMs > inMs) {
+ keepExisting = true;
+ } else if (inMs > exMs) {
+ keepExisting = false;
  } else {
- keepExisting = exMs >= inMs;
+ // When version and timestamps are equal or missing, server payload (b) from central host is authoritative!
+ keepExisting = false;
  }
 
  // Check optimistic stock cache protection to prevent stock jump anomaly
@@ -2530,43 +2719,80 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  // Now safely update all React states dynamically only when content changes!
- if (db["tp_users"]) updateIfChanged(users, mergeCollections(users, db["tp_users"]), setUsers);
- if (db["tp_branches"]) updateIfChanged(branches, mergeCollections(branches, db["tp_branches"]), setBranches);
- if (db["tp_suppliers"]) updateIfChanged(suppliers, mergeCollections(suppliers, db["tp_suppliers"]), setSuppliers);
- if (db["tp_brands"]) updateIfChanged(brands, mergeCollections(brands, db["tp_brands"]), setBrands);
- if (db["tp_products"]) updateIfChanged(products, mergeCollections(products, db["tp_products"]), setProducts);
- if (db["tp_purchase_orders"])
- updateIfChanged(purchaseOrders, mergeCollections(purchaseOrders, db["tp_purchase_orders"]), setPurchaseOrders);
- if (db["tp_po_items"]) updateIfChanged(poItems, mergeCollections(poItems, db["tp_po_items"]), setPoItems);
- if (db["tp_transmittals"]) updateIfChanged(transmittals, mergeCollections(transmittals, db["tp_transmittals"]), setTransmittals);
- if (db["tp_shifts"]) updateIfChanged(shifts, mergeCollections(shifts, db["tp_shifts"]), setShifts);
- if (db["tp_sales"]) updateIfChanged(sales, mergeCollections(sales, db["tp_sales"]), setSales);
- if (db["tp_sale_items"]) updateIfChanged(saleItems, mergeCollections(saleItems, db["tp_sale_items"]), setSaleItems);
- if (db["tp_movements"]) updateIfChanged(movements, mergeCollections(movements, db["tp_movements"]), setMovements);
- if (db["tp_audit_logs"]) updateIfChanged(auditLogs, mergeCollections(auditLogs, db["tp_audit_logs"]), setAuditLogs);
- if (db["tp_parked_sales"]) updateIfChanged(parkedSales, db["tp_parked_sales"], setParkedSales);
- if (db["tp_stock_transfers"])
- updateIfChanged(stockTransfers, mergeCollections(stockTransfers, db["tp_stock_transfers"]), setStockTransfers);
- if (db["tp_branch_stock"]) updateIfChanged(branchStock, mergeCollections(branchStock, db["tp_branch_stock"]), setBranchStock);
- if (db["tp_ledger_entries"])
- updateIfChanged(ledgerEntries, mergeCollections(ledgerEntries, db["tp_ledger_entries"]), setLedgerEntries);
- if (db["tp_branch_sales_reports"])
- updateIfChanged(branchSalesReports, db["tp_branch_sales_reports"], setBranchSalesReports);
- if (db["tp_deliveries"]) updateIfChanged(deliveries, db["tp_deliveries"], setDeliveries);
- if (db["tp_damage_logs"]) updateIfChanged(damageLogs, db["tp_damage_logs"], setDamageLogs);
- if (db["atpos_v2_custom_bills"])
- updateIfChanged(customBills, db["atpos_v2_custom_bills"], setCustomBills);
- if (db["atpos_v2_members_list"])
- updateIfChanged(members, db["atpos_v2_members_list"], setMembers);
- if (db["atpos_v2_expenses"])
- updateIfChanged(expenses, db["atpos_v2_expenses"], setExpenses);
- if (db["atpos_v2_returns"])
- updateIfChanged(productReturns, db["atpos_v2_returns"], setProductReturns);
- if (db["atpos_v2_calendar_notes"] !== undefined)
- updateIfChanged(calendarNotes, db["atpos_v2_calendar_notes"], setCalendarNotes);
- if (db["atpos_v2_calendar_day_memos"] !== undefined)
- updateIfChanged(dayMemos, db["atpos_v2_calendar_day_memos"], setDayMemos);
- if (db["tp_active_sessions"]) {
+        const processCollection = (
+          key: string,
+          currentState: any[],
+          setter: (val: any) => void
+        ) => {
+          if (db[key] !== undefined) {
+            const rawServer = typeof db[key] === "string" ? safeParse(db[key], []) : db[key];
+            const serverArr = Array.isArray(rawServer) ? rawServer : [];
+
+            // Fallback to local storage if current React state happens to be unpopulated
+            const localStored = safeParse<any[]>(key, []);
+            const localArr = (Array.isArray(currentState) && currentState.length > 0)
+              ? currentState
+              : (Array.isArray(localStored) ? localStored : []);
+
+            const merged = key === "tp_parked_sales"
+ ? mergeParkedSales(localArr, serverArr, deletedParkedSaleIds.current)
+ : mergeCollections(localArr, serverArr);
+
+            // Safely update volatile cache & localStorage with merged result (prioritizing non-empty imported datasets)
+            const mergedStr = JSON.stringify(merged);
+            if (volatileCache.current[key] !== mergedStr) {
+              volatileCache.current[key] = mergedStr;
+              try {
+                localStorage.setItem(key, mergedStr);
+              } catch (e) {}
+            }
+
+            // Update React state if different from current state
+            if (!areEntitiesEqual(currentState, merged)) {
+              setter(merged);
+            }
+
+            // Safeguard: If local client has a non-empty imported dataset but server returned an empty array,
+            // trigger a sync to push the non-empty local dataset to the server.
+            if (merged.length > serverArr.length || (localArr.length > 0 && serverArr.length === 0 && merged.length > 0)) {
+              console.log(`[Sync Guard] Local dataset for "${key}" is non-empty (${merged.length} items) while server was empty. Queueing server write...`);
+              setTimeout(() => {
+                saveToStorageWithDebounce(key, merged, true);
+              }, 500);
+            }
+          }
+        };
+
+        processCollection("tp_users", users, setUsers);
+        processCollection("tp_branches", branches, setBranches);
+        processCollection("tp_suppliers", suppliers, setSuppliers);
+        processCollection("tp_brands", brands, setBrands);
+        processCollection("tp_products", products, setProducts);
+        processCollection("tp_purchase_orders", purchaseOrders, setPurchaseOrders);
+        processCollection("tp_po_items", poItems, setPoItems);
+        processCollection("tp_transmittals", transmittals, setTransmittals);
+        processCollection("tp_shifts", shifts, setShifts);
+        processCollection("tp_sales", sales, setSales);
+        processCollection("tp_sale_items", saleItems, setSaleItems);
+        processCollection("tp_movements", movements, setMovements);
+        processCollection("tp_audit_logs", auditLogs, setAuditLogs);
+        processCollection("tp_parked_sales", parkedSales, setParkedSales);
+        processCollection("tp_stock_transfers", stockTransfers, setStockTransfers);
+        processCollection("tp_branch_stock", branchStock, setBranchStock);
+        processCollection("tp_ledger_entries", ledgerEntries, setLedgerEntries);
+        processCollection("tp_branch_sales_reports", branchSalesReports, setBranchSalesReports);
+        processCollection("tp_deliveries", deliveries, setDeliveries);
+        processCollection("tp_damage_logs", damageLogs, setDamageLogs);
+        processCollection("atpos_v2_custom_bills", customBills, setCustomBills);
+        processCollection("atpos_v2_members_list", members, setMembers);
+        processCollection("atpos_v2_expenses", expenses, setExpenses);
+        processCollection("atpos_v2_returns", productReturns, setProductReturns);
+        if (db["atpos_v2_calendar_notes"] !== undefined)
+          updateIfChanged(calendarNotes, db["atpos_v2_calendar_notes"], setCalendarNotes);
+        if (db["atpos_v2_calendar_day_memos"] !== undefined)
+          updateIfChanged(dayMemos, db["atpos_v2_calendar_day_memos"], setDayMemos);
+
+        if (db["tp_active_sessions"]) {
  const parsedSessions =
  typeof db["tp_active_sessions"] === "string"
  ? JSON.parse(db["tp_active_sessions"])
@@ -2653,7 +2879,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
- const currentSyncDelay = useRef<number>(15000);
+ const currentSyncDelay = useRef<number>(3000);
  const isSseConnected = useRef<boolean>(false);
 
  const scheduleNextSync = (delayMs: number) => {
@@ -3300,15 +3526,19 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const isSilentWrite = key === "tp_active_sessions";
  if (!isSilentWrite) {
  setSyncStatus((prev) => {
+ let changed = false;
  const next = { ...prev };
  Object.keys(next).forEach((k) => {
+ if (next[k] !== "Syncing") {
  next[k] = "Syncing";
+ changed = true;
+ }
  });
- return next;
+ return changed ? next : prev;
  });
  }
  try {
- if (transactionalKeys.includes(key) && deltas.length > 0) {
+ if (transactionalKeys.includes(key) && deltas.length > 0 && deltas.length <= 15) {
  console.log(`[Delta Sync] Sending ${deltas.length} transactional deltas sequentially for key "${key}"...`);
  for (const delta of deltas) {
  const res = await safeApiFetch("/api/db/delta", {
@@ -3323,7 +3553,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  throw new Error(`Server returned status ${res.status} for delta ${delta.id}`);
  }
  }
- setServerConnected(true);
+ setServerConnected((prev) => (prev !== true ? true : prev));
  processOfflineQueue();
  } else {
  const res = await safeApiFetch("/api/db", {
@@ -3337,7 +3567,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  if (!res.ok) {
  throw new Error("Server returned unsuccessful status " + res.status);
  }
- setServerConnected(true);
+ setServerConnected((prev) => (prev !== true ? true : prev));
  processOfflineQueue();
  }
  } catch (e) {
@@ -3345,7 +3575,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  `[Shared DB Client] Write failed for "${key}". Enqueuing payload for offline recovery:`,
  e,
  );
- setServerConnected(false);
+ setServerConnected((prev) => (prev !== false ? false : prev));
 
  if (transactionalKeys.includes(key) && deltas.length > 0) {
  deltas.forEach((delta) => {
@@ -3357,11 +3587,15 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  } finally {
  if (!isSilentWrite) {
  setSyncStatus((prev) => {
+ let changed = false;
  const next = { ...prev };
  Object.keys(next).forEach((k) => {
+ if (next[k] !== "Live") {
  next[k] = "Live";
+ changed = true;
+ }
  });
- return next;
+ return changed ? next : prev;
  });
  }
  }
@@ -3371,19 +3605,16 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  if (bypassDebounce || debounceDelay === 0) {
  queueAtomicWrite(key, dataStr, writeToServer);
- setDbSyncStatus("syncing");
- setTimeout(() => setDbSyncStatus("idle"), 150);
+ setDbSyncStatus((prev) => (prev !== "syncing" ? "syncing" : prev));
+ setTimeout(() => setDbSyncStatus((prev) => (prev !== "idle" ? "idle" : prev)), 150);
  return;
  }
 
  // Capture every prevented write attempt to demonstrate DB strain reduction
- setWriteStatsCount((prev) => {
- const updated = prev + 1;
- localStorage.setItem("tp_write_stats_prevented", String(updated));
- return updated;
- });
+ writeStatsCountRef.current = (writeStatsCountRef.current || 0) + 1;
+ localStorage.setItem("tp_write_stats_prevented", String(writeStatsCountRef.current));
 
- setDbSyncStatus("queued");
+ setDbSyncStatus((prev) => (prev !== "queued" ? "queued" : prev));
 
  if (timeoutRefs.current[key]) {
  clearTimeout(timeoutRefs.current[key]);
@@ -3395,8 +3626,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  const pendingKeys = Object.keys(timeoutRefs.current);
  if (pendingKeys.length === 0) {
- setDbSyncStatus("syncing");
- setTimeout(() => setDbSyncStatus("idle"), 300);
+ setDbSyncStatus((prev) => (prev !== "syncing" ? "syncing" : prev));
+ setTimeout(() => setDbSyncStatus((prev) => (prev !== "idle" ? "idle" : prev)), 300);
  }
  }, debounceDelay);
  };
@@ -3750,6 +3981,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }, [users]);
 
  useEffect(() => {
+ saveToStorageWithDebounce("tp_active_sessions", activeSessions, true);
+ }, [activeSessions]);
+
+ useEffect(() => {
  saveToStorageWithDebounce("tp_branches", branches);
  }, [branches]);
 
@@ -3993,6 +4228,48 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  username: currentUser.username,
  };
  setMovements((prev) => [newMove, ...prev]);
+
+ const targetBs = branchStock.find((bs) => bs.productId === entry.productId && bs.branchId === entry.branchId);
+ const curBsQty = targetBs ? targetBs.quantity : 0;
+ const newBsQty = Math.max(0, curBsQty + changeValue);
+
+ const curProdQty = prod.stockQuantity ?? 0;
+ const newProdQty = Math.max(0, curProdQty + changeValue);
+
+ enqueueTransaction({
+ id: `tx-ledger-${newLedgerId}`,
+ type: "ATOMIC_TRANSACTION",
+ txType: "INVENTORY_ADJUSTMENT",
+ timestamp: Date.now(),
+ payload: {
+ ledgerEntries: [newEntry],
+ movements: [newMove],
+ branchStockUpdates: [{
+ id: targetBs ? targetBs.id : `${entry.branchId}_${entry.productId}`,
+ branchId: entry.branchId,
+ productId: entry.productId,
+ quantity: newBsQty,
+ version: ((targetBs as any)?.version || 0) + 1,
+ updatedAt: new Date().toISOString(),
+ }],
+ productUpdates: [{
+ id: entry.productId,
+ stockQuantity: newProdQty,
+ version: ((prod as any)?.version || 0) + 1,
+ updatedAt: new Date().toISOString(),
+ }],
+ auditLogs: [{
+ id: `AUD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+ actionCode: "LEDGER_INSERT",
+ description: `Manual catalog double-entry ledger update: ${entry.movementType} mode, quantity delta: ${changeValue} for tile SKU ${prod.productCode} at Branch ${entry.branchId}`,
+ module: "Products",
+ userId: currentUser?.id || "SYSTEM",
+ userName: currentUser?.username || "system",
+ branchId: entry.branchId,
+ timestamp: new Date().toISOString(),
+ }],
+ },
+ });
 
  addAuditLog(
  "LEDGER_INSERT",
@@ -4271,7 +4548,6 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  });
  }
  });
- saveToStorageWithDebounce("tp_users", next, true);
  return next;
  });
  }
@@ -4437,7 +4713,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       amountTendered,
       changeAmount,
       notes: s.notes ? String(s.notes).trim() : undefined,
-      isDeleted: !!s.isDeleted,
+      isDeleted: s.isDeleted === true || s.isDeleted === 1 || s.isDeleted === "true" || s.isDeleted === "1",
       createdAt: String(s.createdAt || new Date().toISOString()).trim(),
     });
   }
@@ -4465,7 +4741,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         quantity,
         unitPrice,
         total,
-        isDeleted: item.isDeleted !== undefined ? !!item.isDeleted : undefined,
+        isDeleted: item.isDeleted !== undefined ? (item.isDeleted === true || item.isDeleted === 1 || item.isDeleted === "true" || item.isDeleted === "1") : undefined,
       });
     }
   }
@@ -4670,7 +4946,6 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  });
  }
  });
- saveToStorageWithDebounce("tp_users", next, true);
  return next;
  });
  }
@@ -5274,6 +5549,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  localStorage.removeItem("tp_products");
  localStorage.removeItem("tp_suppliers");
  localStorage.removeItem("tp_branch_stock");
+ localStorage.removeItem("tp_active_cart");
+ localStorage.removeItem("tp_active_customer_name");
+ localStorage.removeItem("tp_parked_sales");
+ localStorage.setItem("tp_is_configured", "false");
+ localStorage.setItem("tilepoint_onboarded_setup", "false");
  } else {
  // Mode 'transactions' (keep products and suppliers but clear stocks to 0)
  const clearedBranchStock = branchStock.map((bs) => ({
@@ -5299,11 +5579,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  setAuditLogs([truncateLog]);
 
  // Clean up active sessions list on reset/truncate to keep the system pristine and remove all session seeds
- setActiveSessions((prev) => {
- const updated = prev.filter((s) => s.id === activeSessionId);
- saveToStorageWithDebounce("tp_active_sessions", updated, true);
- return updated;
- });
+ setActiveSessions((prev) => prev.filter((s) => s.id === activeSessionId));
  setSimulationModeActive(false);
  localStorage.removeItem("tp_simulation_mode_active");
  };
@@ -6117,12 +6393,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    setUsers((prev) => {
-      const next = [...prev, newUser];
-      safeLocalStorageSetItem("tp_users", JSON.stringify(next));
-      saveToStorageWithDebounce("tp_users", next, true);
-      return next;
-    });
+    setUsers((prev) => [...prev, newUser]);
 
     safeApiFetch("/api/db/delta", {
       method: "POST",
@@ -6147,30 +6418,27 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const updateUser = (id: string, updates: Partial<User>) => {
+    let updatedUser: User | null = null;
     setUsers((prev) => {
-      let updatedUser: User | null = null;
-      const next = prev.map((u) => {
+      return prev.map((u) => {
         if (u.id === id) {
           updatedUser = { ...u, ...updates, updatedAt: new Date().toISOString() };
           return updatedUser;
         }
         return u;
       });
-      safeLocalStorageSetItem("tp_users", JSON.stringify(next));
-      saveToStorageWithDebounce("tp_users", next, true);
-      if (updatedUser) {
-        safeApiFetch("/api/db/delta", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-          body: JSON.stringify({
-            id: `delta-update-tp_users-${id}-${Date.now()}`,
-            type: "UPDATE_ROW",
-            payload: { key: "tp_users", row: updatedUser },
-          }),
-        }).catch((e) => console.warn("[User Sync] Direct update failed:", e));
-      }
-      return next;
     });
+    if (updatedUser) {
+      safeApiFetch("/api/db/delta", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({
+          id: `delta-update-tp_users-${id}-${Date.now()}`,
+          type: "UPDATE_ROW",
+          payload: { key: "tp_users", row: updatedUser },
+        }),
+      }).catch((e) => console.warn("[User Sync] Direct update failed:", e));
+    }
     addAuditLog(
       "USER_UPDATE",
       `Updated user account details for user ID ${id}`,
@@ -6186,30 +6454,27 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         const salt = target.username + "_salt_tok";
         const hashedVal = await createSaltedHash("tilepoint", salt, 2500);
         const formattedToken = formatHashToken(salt, hashedVal, 2500);
+        let updatedUser: User | null = null;
         setUsers((prev) => {
-          let updatedUser: User | null = null;
-          const updated = prev.map((u) => {
+          return prev.map((u) => {
             if (u.id === id) {
               updatedUser = { ...u, passwordHash: formattedToken, updatedAt: new Date().toISOString() };
               return updatedUser;
             }
             return u;
           });
-          safeLocalStorageSetItem("tp_users", JSON.stringify(updated));
-          saveToStorageWithDebounce("tp_users", updated, true);
-          if (updatedUser) {
-            safeApiFetch("/api/db/delta", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-              body: JSON.stringify({
-                id: `delta-reset-tp_users-${id}-${Date.now()}`,
-                type: "UPDATE_ROW",
-                payload: { key: "tp_users", row: updatedUser },
-              }),
-            }).catch((e) => console.warn("[Password Reset Sync] Direct push failed:", e));
-          }
-          return updated;
         });
+        if (updatedUser) {
+          safeApiFetch("/api/db/delta", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+            body: JSON.stringify({
+              id: `delta-reset-tp_users-${id}-${Date.now()}`,
+              type: "UPDATE_ROW",
+              payload: { key: "tp_users", row: updatedUser },
+            }),
+          }).catch((e) => console.warn("[Password Reset Sync] Direct push failed:", e));
+        }
         addAuditLog(
           "USER_RESET_PASSWORD",
           `Reset password for user ${target.fullName} to default (tilepoint)`,
@@ -7018,73 +7283,75 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  createdAt: p.createdAt || new Date().toISOString(),
  updatedAt: new Date().toISOString(),
- isDeleted: !!p.isDeleted,
+ isDeleted: Boolean(p.isDeleted),
  hasExpiration: p.hasExpiration !== undefined ? !!p.hasExpiration : (p.expirationDate ? true : false),
  expirationDate: p.expirationDate ? p.expirationDate : undefined,
  };
  });
 
- setProducts((prev) => {
- // Upsert by productCode
- const currentCodes = prev.reduce(
- (acc, current) => {
- acc[current.productCode] = current;
- return acc;
- },
- {} as Record<string, Product>,
- );
+  // Compute new products state synchronously
+  const currentCodes = products.reduce(
+    (acc, current) => {
+      acc[current.productCode] = current;
+      return acc;
+    },
+    {} as Record<string, Product>,
+  );
 
- sanitized.forEach((item) => {
- currentCodes[item.productCode] = item;
- });
+  sanitized.forEach((item) => {
+    currentCodes[item.productCode] = item;
+  });
 
- return Object.values(currentCodes);
- });
+  const nextProducts = Object.values(currentCodes);
+  setProducts(nextProducts);
 
- // Synchronize newly imported products with branch stock
- setBranchStock((prevStock) => {
- const updated = [...prevStock];
- sanitized.forEach((item) => {
- if (item.stockQuantity > 0) {
- let targetBranchId = currentUser.branchAssignmentId || "B1";
- if (item.origin) {
- const cleanedOrigin = item.origin.toLowerCase().trim();
- if (branchMapping && branchMapping[cleanedOrigin]) {
- targetBranchId = branchMapping[cleanedOrigin];
- } else {
- const matchedB = branches.find(
- (b) =>
- !b.isDeleted &&
- (b.id.toLowerCase().trim() === cleanedOrigin ||
- (b.branchCode && b.branchCode.toLowerCase().trim() === cleanedOrigin) ||
- b.name.toLowerCase().trim() === cleanedOrigin)
- );
- if (matchedB) {
- targetBranchId = matchedB.id;
- }
- }
- }
- const existingIdx = updated.findIndex(
- (bs) =>
- bs.productId === item.id && bs.branchId === targetBranchId,
- );
- if (existingIdx !== -1) {
- updated[existingIdx] = {
- ...updated[existingIdx],
- quantity: item.stockQuantity,
- };
- } else {
- updated.push({
- id: `${targetBranchId}_${item.id}`,
- branchId: targetBranchId,
- productId: item.id,
- quantity: item.stockQuantity,
- });
- }
- }
- });
- return updated;
- });
+  // Synchronize newly imported products with branch stock
+  const nextBranchStock = [...branchStock];
+  const nowIso = new Date().toISOString();
+  sanitized.forEach((item) => {
+    if (item.stockQuantity > 0) {
+      let targetBranchId = currentUser.branchAssignmentId || "B1";
+      if (item.origin) {
+        const cleanedOrigin = item.origin.toLowerCase().trim();
+        if (branchMapping && branchMapping[cleanedOrigin]) {
+          targetBranchId = branchMapping[cleanedOrigin];
+        } else {
+          const matchedB = branches.find(
+            (b) =>
+              !b.isDeleted &&
+              (b.id.toLowerCase().trim() === cleanedOrigin ||
+              (b.branchCode && b.branchCode.toLowerCase().trim() === cleanedOrigin) ||
+              b.name.toLowerCase().trim() === cleanedOrigin)
+          );
+          if (matchedB) {
+            targetBranchId = matchedB.id;
+          }
+        }
+      }
+      const existingIdx = nextBranchStock.findIndex(
+        (bs) =>
+          bs.productId === item.id && bs.branchId === targetBranchId,
+      );
+      if (existingIdx !== -1) {
+        nextBranchStock[existingIdx] = {
+          ...nextBranchStock[existingIdx],
+          quantity: item.stockQuantity,
+          updatedAt: nowIso,
+          version: (Number(nextBranchStock[existingIdx].version) || 0) + 1,
+        };
+      } else {
+        nextBranchStock.push({
+          id: `${targetBranchId}_${item.id}`,
+          branchId: targetBranchId,
+          productId: item.id,
+          quantity: item.stockQuantity,
+          updatedAt: nowIso,
+          version: 1,
+        });
+      }
+    }
+  });
+  setBranchStock(nextBranchStock);
 
  // Automatically parse and log imported damages into the Materials Breakage Registry (tp_damage_logs)
  const importedDamageLogs: DamageLog[] = [];
@@ -7176,6 +7443,38 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  "Products",
  "BULK",
  );
+
+  // Synchronously write to local storage & volatile cache so immediate reads are accurate
+  safeLocalStorageSetItem("tp_products", JSON.stringify(nextProducts));
+  volatileCache.current["tp_products"] = JSON.stringify(nextProducts);
+
+  safeLocalStorageSetItem("tp_branch_stock", JSON.stringify(nextBranchStock));
+  volatileCache.current["tp_branch_stock"] = JSON.stringify(nextBranchStock);
+
+  const currentDamage = JSON.parse(localStorage.getItem("tp_damage_logs") || "[]");
+
+  // Directly flush full dataset arrays to server API
+  (async () => {
+    try {
+      await safeApiFetch("/api/db/bulk", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({
+          data: {
+            tp_products: nextProducts,
+            tp_branch_stock: nextBranchStock,
+            tp_damage_logs: currentDamage,
+          },
+        }),
+      });
+      console.log("[Bulk Import Sync] Successfully flushed imported products to central server.");
+    } catch (err) {
+      console.warn("[Bulk Import Sync] Failed to post bulk sync to server:", err);
+    }
+  })();
  return { success: true, count: sanitized.length };
  } catch (e: any) {
  return {
@@ -7202,16 +7501,78 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  items: cartItems,
  timestamp: new Date().toLocaleTimeString(),
  createdAt: Date.now(), // High-precision timestamp for merge safety
+ heldBy: currentUser?.fullName || currentUser?.username || "Yard Staff",
+ heldByBranchId: currentUser?.branchAssignmentId || "B1",
+ status: "active",
  },
  ]);
  addAuditLog(
  "POS_PARK_SALE",
- `Held order for customer ${customerName || "Walk-in"} (Hold ID: ${holdId})`,
+ `Held order for customer ${customerName || "Walk-in"} (Hold ID: ${holdId}) by ${currentUser?.fullName || "Staff"}`,
  "Sales",
  holdId,
  );
  return holdId;
  };
+
+ const resumeParkedSale = useCallback(
+ (
+ parkedId: string,
+ cashierName?: string,
+ ): { success: boolean; record?: any; error?: string } => {
+ if (!parkedId) {
+ return { success: false, error: "Invalid staged order ID." };
+ }
+
+ if (
+ activeResumingIdsRef.current.has(parkedId) ||
+ deletedParkedSaleIds.current.has(parkedId)
+ ) {
+ return {
+ success: false,
+ error: `Staged order (${parkedId}) has already been resumed on another register/session to prevent double records.`,
+ };
+ }
+
+ activeResumingIdsRef.current.add(parkedId);
+
+ const targetRecord = parkedSales.find((p) => p && p.id === parkedId);
+
+ if (!targetRecord) {
+ activeResumingIdsRef.current.delete(parkedId);
+ return {
+ success: false,
+ error: `Staged order (${parkedId}) is no longer in the queue. It may have already been resumed or cleared on another register.`,
+ };
+ }
+
+ recordDeletedParkedSaleId(parkedId);
+
+ setParkedSales((prev: any[]) => prev.filter((p) => p && p.id !== parkedId));
+
+ try {
+ localStorage.setItem("tp_last_resumed_hold_id", `${parkedId}_${Date.now()}`);
+ window.dispatchEvent(new Event("storage"));
+ } catch (_) {}
+
+ addAuditLog(
+ "POS_RESUME_PARK_SALE",
+ `Resumed held transaction ${parkedId} for ${targetRecord.customerName || "Walk-in"} by Cashier ${cashierName || currentUser?.fullName || "System"}`,
+ "Sales",
+ parkedId,
+ );
+
+ setTimeout(() => {
+ activeResumingIdsRef.current.delete(parkedId);
+ }, 10000);
+
+ return {
+ success: true,
+ record: targetRecord,
+ };
+ },
+ [parkedSales, currentUser?.fullName, addAuditLog],
+ );
 
  const getBranchStockQuantityContext = useCallback((productId: string, targetBranchId?: string): number => {
  const bId = targetBranchId || currentUser?.branchAssignmentId || "B1";
@@ -7413,11 +7774,20 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  ? parseFloat((amountTendered - grandTotal).toFixed(2))
  : 0.0;
 
-  const matchingMember = members.find(
-    (m) => m.fullName.toLowerCase() === (customerName || "").toLowerCase()
-  );
+  const isWalkInCustomer =
+    !customerName ||
+    customerName.trim().toLowerCase() === "walk-in customer" ||
+    customerName.trim().toLowerCase() === "walk-in" ||
+    customerName.trim().toLowerCase() === "walk-in buyer" ||
+    customerName.trim().toLowerCase().startsWith("walk-in");
 
-  const pointsEarned = (loyaltyConfig.enabled && loyaltyConfig.spendPerPoint > 0 && grandTotal > 0)
+  const matchingMember = !isWalkInCustomer
+    ? members.find(
+        (m) => m.fullName.toLowerCase() === (customerName || "").toLowerCase()
+      )
+    : undefined;
+
+  const pointsEarned = (!isWalkInCustomer && loyaltyConfig.enabled && loyaltyConfig.spendPerPoint > 0 && grandTotal > 0)
     ? Math.floor(grandTotal / loyaltyConfig.spendPerPoint) * loyaltyConfig.pointsPerSpend
     : 0;
   const ptsRedeemed = pointsRedeemed || 0;
@@ -7593,7 +7963,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  setShifts((prev) =>
  prev.map((s) => {
  if (s.id === activeShift.id) {
- const newSalesTotal = s.shiftSalesTotal + subtotal;
+ const newSalesTotal = s.shiftSalesTotal + grandTotal;
  const newVatTotal = s.shiftVatTotal + vat;
  const newDiscountTotal = s.shiftDiscountTotal + discountAmount;
  return {
@@ -7628,6 +7998,69 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  "Sales",
  saleId,
  );
+
+ const affectedBranchStockUpdates = cartItems.map((item) => {
+ const bsRecord = branchStock.find((bs) => bs.productId === item.product.id && bs.branchId === userBranchId);
+ const currentBsQty = bsRecord ? bsRecord.quantity : (item.product.stockQuantity ?? 0);
+ const newBsQty = Math.max(0, currentBsQty - item.quantity);
+ return {
+ id: bsRecord ? bsRecord.id : `${userBranchId}_${item.product.id}`,
+ branchId: userBranchId,
+ productId: item.product.id,
+ quantity: newBsQty,
+ version: ((bsRecord as any)?.version || 0) + 1,
+ updatedAt: new Date().toISOString(),
+ };
+ });
+
+ const affectedProductUpdates = cartItems.map((item) => {
+ const prodRecord = products.find((p) => p.id === item.product.id);
+ const currentProdQty = prodRecord ? prodRecord.stockQuantity : (item.product.stockQuantity ?? 0);
+ const newProdQty = Math.max(0, currentProdQty - item.quantity);
+ return {
+ id: item.product.id,
+ stockQuantity: newProdQty,
+ version: ((prodRecord as any)?.version || 0) + 1,
+ updatedAt: new Date().toISOString(),
+ };
+ });
+
+ enqueueTransaction({
+ id: `tx-checkout-${saleId}`,
+ type: "ATOMIC_TRANSACTION",
+ txType: "POS_CHECKOUT",
+ timestamp: Date.now(),
+ payload: {
+ sales: [newSale],
+ saleItems: newSaleItems,
+ movements: newMovements,
+ auditLogs: [{
+ id: `AUD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+ actionCode: "POS_CHECKOUT",
+ description: `Completed sale invoice ${saleNum}. Amount: ₱${grandTotal.toFixed(2)}`,
+ module: "Sales",
+ userId: currentUser?.id || "SYSTEM",
+ userName: currentUser?.fullName || "System Automated",
+ branchId: userBranchId,
+ timestamp: new Date().toISOString(),
+ }],
+ branchStockUpdates: affectedBranchStockUpdates,
+ productUpdates: affectedProductUpdates,
+ shifts: activeShift ? [{
+ ...activeShift,
+ shiftSalesCount: activeShift.shiftSalesCount + 1,
+ shiftSalesTotal: activeShift.shiftSalesTotal + grandTotal,
+ shiftVatTotal: activeShift.shiftVatTotal + vat,
+ shiftDiscountTotal: activeShift.shiftDiscountTotal + discountAmount,
+ }] : [],
+ members: matchingMember ? [{
+ ...matchingMember,
+ outstandingBalance: paymentMethod === "Member Credit" ? parseFloat((matchingMember.outstandingBalance + grandTotal).toFixed(2)) : matchingMember.outstandingBalance,
+ points: Math.max(0, (matchingMember.points || 0) + pointsEarned - ptsRedeemed),
+ }] : [],
+ removeParkedSaleId: (idempotencyKey && idempotencyKey.startsWith("HLD-")) ? idempotencyKey : null,
+ },
+ });
 
  sqliteDatabaseService.saveSaleLog({
    id: newSale.id,
@@ -7819,7 +8252,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return {
  ...s,
  shiftSalesCount: Math.max(0, s.shiftSalesCount - 1),
- shiftSalesTotal: Math.max(0, s.shiftSalesTotal - voidedSubtotal),
+ shiftSalesTotal: Math.max(0, s.shiftSalesTotal - targetSale.grandTotal),
  shiftVatTotal: Math.max(0, s.shiftVatTotal - voidedVat),
  shiftDiscountTotal: Math.max(
  0,
@@ -7858,6 +8291,36 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       )
     );
   }
+
+ enqueueTransaction({
+ id: `tx-void-${saleId}`,
+ type: "ATOMIC_TRANSACTION",
+ txType: "POS_VOID_SALE",
+ timestamp: Date.now(),
+ payload: {
+ sales: [{
+ ...targetSale,
+ isDeleted: true,
+ deletedAt: new Date().toISOString(),
+ }],
+ saleItems: itemsToRestore.map((item) => ({
+ ...item,
+ isDeleted: true,
+ deletedAt: new Date().toISOString(),
+ })),
+ movements: newMovements,
+ auditLogs: [{
+ id: `AUD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+ actionCode: "POS_VOID_SALE",
+ description: `VOIDED transaction invoice ${targetSale.saleNumber}. Restored ${itemsToRestore.length} products to inventory. Refund Amount: ₱${(Number(targetSale.grandTotal) || 0).toFixed(2)}`,
+ module: "Sales",
+ userId: currentUser?.id || "SYSTEM",
+ userName: currentUser?.fullName || "System",
+ branchId: targetSale.branchId,
+ timestamp: new Date().toISOString(),
+ }],
+ },
+ });
 
  addAuditLog(
  "POS_VOID_SALE",
@@ -8798,6 +9261,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  deleteDamageLog,
  importProducts,
  holdSale,
+ resumeParkedSale,
  parkedSales,
  setParkedSales,
  loyaltyConfig,

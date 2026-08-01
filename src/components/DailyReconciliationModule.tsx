@@ -459,9 +459,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
           <h2 className="text-xl font-black text-m3-on-surface uppercase tracking-wider mt-1.5">
             Daily Sales Reconciliation Desk
           </h2>
-          <p className="text-xs text-m3-on-surface-variant mt-1 max-w-2xl leading-relaxed">
-            Verify your daily branch ledger's gross receipts, Cost of Goods Sold (COGS), and operating expenses physically. Certify the daily figures and download a secure signed JSON file for offline central HQ submission.
-          </p>
+          
         </div>
 
         {/* Date & Branch Selectors */}

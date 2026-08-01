@@ -62,9 +62,36 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
   } = useDb();
 
   const primaryBranchId = localStorage.getItem("tilepoint_primary_branch_id") || "B1";
-  const isUserAdmin = currentUser?.role === UserRole.ADMIN;
-  const isUserManager = currentUser?.role === UserRole.MANAGER || (currentUser?.role as string) === 'Manager';
+  const isBranchDeleted = (b: Branch) => {
+    if (!b) return true;
+    const val = (b as any).isDeleted;
+    return val === true || val === 1 || val === "true" || val === "1";
+  };
+
+  const isUserAdmin = currentUser?.role === UserRole.ADMIN || String(currentUser?.role).toLowerCase() === 'admin';
+  const isUserManager = currentUser?.role === UserRole.MANAGER || String(currentUser?.role).toLowerCase() === 'manager';
   const isUserAdminOrManager = isUserAdmin || isUserManager;
+
+  const isCorporateWideUser =
+    !currentUser?.branchAssignmentId ||
+    currentUser.branchAssignmentId === 'consolidated' ||
+    currentUser.branchAssignmentId === 'ALL' ||
+    currentUser.branchAssignmentId === 'all' ||
+    currentUser.branchAssignmentId === '' ||
+    isUserAdmin ||
+    isUserManager;
+
+  const userBranchId = currentUser?.branchAssignmentId || primaryBranchId;
+
+  const activeBranches = branches.filter((b) => !isBranchDeleted(b));
+
+  const visibleBranches = activeBranches.filter(
+    (b) =>
+      isCorporateWideUser ||
+      b.id === userBranchId ||
+      b.id === primaryBranchId ||
+      activeBranches.length === 1
+  );
 
   const getDynamicBranchManager = (branchId: string) => {
     const assigned = users.filter(u => u.branchAssignmentId === branchId && u.status === 'Active');
@@ -135,7 +162,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  const [inlineStoreLogo, setInlineStoreLogo] = useState('');
  const [inlineLogoSize, setInlineLogoSize] = useState(40);
 
- const activeBranchesForReceipt = branches.filter(b => !b.isDeleted && (isUserAdmin || b.id === currentUser?.branchAssignmentId));
+ const activeBranchesForReceipt = visibleBranches;
  const selectedBranchForPreview = branches.find(b => b.id === inlineBranchId);
  useEffect(() => {
  if (activeBranchesForReceipt.length > 0) {
@@ -472,8 +499,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  {/* Grid displays of branches */}
  <div className="space-y-4">
  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
- {branches
- .filter(b => !b.isDeleted && (isUserAdmin || b.id === currentUser?.branchAssignmentId))
+ {visibleBranches
  .slice((branchPage - 1) * branchPageSize, branchPage * branchPageSize)
  .map((b) => {
  const branchEmployees = users.filter(u => u.branchAssignmentId === b.id);
@@ -717,14 +743,14 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  );
  })}
 
- {branches.filter(b => !b.isDeleted && (isUserAdmin || b.id === currentUser?.branchAssignmentId)).length === 0 && (
+ {visibleBranches.length === 0 && (
  <div className="col-span-full py-12 text-center text-m3-on-surface-variant font-medium">No corporate branches logged. Use the launch button above.</div>
  )}
  </div>
 
  <TablePagination
  currentPage={branchPage}
- totalItems={branches.filter(b => !b.isDeleted && (isUserAdmin || b.id === currentUser?.branchAssignmentId)).length}
+ totalItems={visibleBranches.length}
  pageSize={branchPageSize}
  onPageChange={setBranchPage}
  itemName="branches"

@@ -910,7 +910,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  }, [products, DEFAULT_CATEGORIES]);
 
  const allowedToModify = currentUser.role === UserRole.MANAGER || currentUser.role === UserRole.ADMIN;
- const allowedToImport = currentUser.role === UserRole.ADMIN;
+ const allowedToImport = currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER;
 
  // Auto-coverage calculator effect based on tile dimensions & box contents
  useEffect(() => {
@@ -3191,13 +3191,13 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  {/* Financial unit cost */}
  {!isCompactColumns && canSeeFinancialCostsAndSources && (
  <td className="py-3.5 px-4 text-right font-mono font-bold text-m3-on-surface">
- ₱{p.costPrice.toFixed(2)}
+ ₱{(Number(p.costPrice) || 0).toFixed(2)}
  </td>
  )}
 
  {/* Retail selling price */}
  <td className="py-3.5 px-4 text-right font-mono font-extrabold text-m3-primary">
- ₱{p.sellingPrice.toFixed(2)}
+ ₱{(Number(p.sellingPrice) || 0).toFixed(2)}
  </td>
 
  {/* Current physical warehouse qty */}
@@ -3340,12 +3340,12 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  {canSeeFinancialCostsAndSources && (
  <div>
  <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Unit Cost</span>
- <span className="text-zinc-500 font-mono text-xs">₱{p.costPrice.toFixed(2)}</span>
+ <span className="text-zinc-500 font-mono text-xs">₱{(Number(p.costPrice) || 0).toFixed(2)}</span>
  </div>
  )}
  <div>
  <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Selling Retail</span>
- <span className="text-m3-primary font-mono text-xs font-extrabold">₱{p.sellingPrice.toFixed(2)}</span>
+ <span className="text-m3-primary font-mono text-xs font-extrabold">₱{(Number(p.sellingPrice) || 0).toFixed(2)}</span>
  </div>
  <div>
  <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Markup %</span>
@@ -4591,7 +4591,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                     {p.category}
                   </td>
                   <td className="py-3 px-4 text-right font-mono font-bold text-m3-on-surface">
-                    ₱{p.sellingPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    ₱{(Number(p.sellingPrice) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </td>
                   {branches.filter(b => !b.isDeleted && (isAdminUser || b.id === activeBranchId)).map(b => {
                     const bsRec = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id);
@@ -4600,7 +4600,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                     return (
                       <td key={b.id} className="py-3 px-4 text-center font-mono font-bold">
                         <span className="px-2.5 py-1 rounded-lg bg-m3-surface-low border border-m3-outline-variant/25 text-m3-primary">
-                          ₱{overridePrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          ₱{(Number(overridePrice) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </span>
                       </td>
                     );
@@ -7203,7 +7203,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
             <span className="hidden sm:inline">•</span>
             <span className="hidden sm:inline">
               Est. Restock Cost: <strong className="text-emerald-500 font-extrabold">
-                ₱{modalFilteredAlertItems.reduce((sum, item) => sum + (item.deficit * item.product.costPrice), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ₱{modalFilteredAlertItems.reduce((sum, item) => sum + (item.deficit * (Number(item.product.costPrice) || 0)), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </strong>
             </span>
           </div>

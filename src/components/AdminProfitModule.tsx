@@ -509,7 +509,7 @@ export function AdminProfitModule({
  </div>
  <div>
  <h3 className="text-sm font-black uppercase tracking-wider text-m3-on-surface dark:text-zinc-100">Consolidated Profitability Model</h3>
- <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">Real-time financial flows across all active branches</p>
+ 
  </div>
  </div>
  <div className="flex items-center gap-2">
@@ -1025,7 +1025,7 @@ export function AdminProfitModule({
           </div>
 
           <div className="mt-8">
-            <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium block">Consolidated Retained Earnings</span>
+            
             <h2 className="text-2xl lg:text-3xl font-black font-mono tracking-tight mt-1 text-zinc-800 dark:text-zinc-100">
               {metrics.netProfit >= 0 ? "₱" + metrics.netProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-₱" + Math.abs(metrics.netProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </h2>
@@ -1068,17 +1068,7 @@ export function AdminProfitModule({
  </div>
  <div>
  <h5 className="text-[11px] font-bold uppercase tracking-wider text-m3-on-surface dark:text-zinc-300">Operational Health Commentary</h5>
- <p className="text-[11px] text-zinc-600 dark:text-zinc-400 mt-1 leading-relaxed">
- {metrics.netMarginPercent > 25 ? (
- <span><strong>Outstanding Enterprise Velocity!</strong> Your active showrooms are maintaining healthy pricing leverage with a net margin of <strong className="text-emerald-500">{metrics.netMarginPercent.toFixed(1)}%</strong>. Operating overhead and material landing expenses are excellently regulated. Perfect baseline for stock scaling.</span>
- ) : metrics.netMarginPercent >= 15 ? (
- <span><strong>Optimal Operational Balance.</strong> The enterprise is performing within healthy guidelines with a net margin of <strong className="text-emerald-500">{metrics.netMarginPercent.toFixed(1)}%</strong>. Keep auditing local branch outlays and utility bills to preserve this trajectory.</span>
- ) : metrics.netMarginPercent >= 0 ? (
- <span><strong>Sub-optimal Operational Efficiencies.</strong> Net margin of <strong className="text-amber-500">{metrics.netMarginPercent.toFixed(1)}%</strong> indicates that utility expenses, supplier billing schedules, or local logistics overhead are absorbing a heavy portion of revenue. Auditing logistics routes and reducing regional discounts is advised.</span>
- ) : (
- <span><strong>Critical Warning: Deficit Trajectory.</strong> The active showroom portfolio is operating at a net loss of <strong className="text-rose-500">₱{Math.abs(metrics.netProfit).toLocaleString()} ({metrics.netMarginPercent.toFixed(1)}%)</strong>. Immediate measures should be taken to audit material voids, cashier cash drawer shortages, and inventory shrinkage values to halt margin leakage.</span>
- )}
- </p>
+ 
  </div>
  </div>
  </div>
@@ -1105,7 +1095,7 @@ export function AdminProfitModule({
  <h3 className="text-xs font-black text-m3-primary flex items-center gap-2 uppercase tracking-wider">
  <Building className="h-4.5 w-4.5 text-m3-primary" /> Branch Profitability Comparison
  </h3>
- <p className="text-[11px] text-zinc-400 dark:text-zinc-300">Real-time profitability leaderboard of enterprise nodes</p>
+ 
  </div>
    <button
     onClick={() => setSelectedBranchId("all")}
@@ -1216,7 +1206,7 @@ export function AdminProfitModule({
  <Sliders className="h-4.5 w-4.5 text-m3-primary" />
  <div>
  <h4 className="text-xs font-black uppercase tracking-wider text-m3-on-surface">Landing Cost Multipliers</h4>
- <p className="text-[10px] text-zinc-500 dark:text-zinc-400">Adjust wholesale overhead per showroom branch</p>
+ 
  </div>
  </div>
 
@@ -1261,7 +1251,7 @@ export function AdminProfitModule({
  </div>
  ) : (
  <div className="flex items-center justify-between pt-1">
- <p className="text-[9.5px] text-zinc-500 dark:text-zinc-400">Includes wholesale freight, logistics and taxes</p>
+ 
  <button
  onClick={() => {
  setEditingBranchId(b.id);
@@ -1296,7 +1286,7 @@ export function AdminProfitModule({
  <Plus className="h-4.5 w-4.5 text-m3-primary" />
  <div>
  <h4 className="text-xs font-black uppercase tracking-wider text-m3-on-surface">Record Branch Expenses</h4>
- <p className="text-[10px] text-zinc-400 dark:text-zinc-350">Log utility billing or cargo freight outlays</p>
+ 
  </div>
  </div>
 

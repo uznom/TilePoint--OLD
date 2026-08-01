@@ -141,13 +141,28 @@ export const PwaInstallPrompt: React.FC = () => {
 
  const handleInstallClick = async () => {
  if (!deferredPrompt) {
- // Fallback instruction for manual installation guide
- alert("To install: Tap the menu button in your browser address bar and select 'Install App' or 'Add to Home Screen'.");
+ const isWindows = /windows/i.test(navigator.userAgent);
+ const isAndroid = /android/i.test(navigator.userAgent);
+
+ if (isWindows) {
+ alert(
+ "To install TilePoint on Windows:\n\n1. Look at your browser address bar at top right.\n2. Click the 'Install TilePoint' icon (or open menu ⋮ / ⋯ > 'Apps' > 'Install TilePoint').\n3. Click 'Install' to pin TilePoint to your Windows Start Menu and Taskbar!"
+ );
+ } else if (isAndroid) {
+ alert(
+ "To install TilePoint on Android:\n\n1. Tap the menu button (⋮) at top right of your browser.\n2. Select 'Install app' or 'Add to Home screen'.\n3. Confirm by tapping 'Add' or 'Install'."
+ );
+ } else {
+ alert(
+ "To install TilePoint PWA:\n\n• On Desktop (Chrome/Edge): Click the Install icon in your address bar or menu (⋮) > 'Install TilePoint'.\n• On Mobile: Tap browser menu (⋮) > 'Add to Home screen'."
+ );
+ }
  return;
  }
 
+ try {
  // Show native browser install prompt
- deferredPrompt.prompt();
+ await deferredPrompt.prompt();
 
  // Await user option outcome
  const { outcome } = await deferredPrompt.userChoice;
@@ -163,9 +178,11 @@ export const PwaInstallPrompt: React.FC = () => {
  // Safe fallback
  }
  }
- 
- // Clear deferred prompt reference
+ } catch (err) {
+ console.warn('[PWA Install Prompt Error]:', err);
+ } finally {
  setDeferredPrompt(null);
+ }
  };
 
  if (isDisabled || isInstalled || isStandalone) {

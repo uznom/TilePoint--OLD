@@ -1236,7 +1236,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
             <div className="text-2xl font-black text-m3-on-surface font-mono">
               {branchSalesReports.length} <span className="text-xs font-normal text-zinc-400">total</span>
             </div>
-            <p className="text-[10px] text-zinc-400 font-sans">Central HQ verified store ledgers</p>
+            
           </div>
 
           <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-2xl p-4.5 space-y-2 shadow-xs text-left">
@@ -1247,7 +1247,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
             <div className="text-2xl font-black text-emerald-400 font-mono">
               {branchSalesReports.filter(r => !!r.securitySignature).length} <span className="text-xs font-normal text-zinc-400">signed</span>
             </div>
-            <p className="text-[10px] text-emerald-400/80 font-sans">Digitally signed & replay-protected</p>
+            
           </div>
 
           <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-2xl p-4.5 space-y-2 shadow-xs text-left">
@@ -1258,7 +1258,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
             <div className="text-2xl font-black text-m3-on-surface font-mono">
               {branches.length} <span className="text-xs font-normal text-zinc-400">stores</span>
             </div>
-            <p className="text-[10px] text-zinc-400 font-sans">Active retail branch outlets</p>
+            
           </div>
 
           <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-2xl p-4.5 space-y-2 shadow-xs text-left">
@@ -1269,7 +1269,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
             <div className="text-2xl font-black text-m3-primary font-mono truncate">
               ₱{branchSalesReports.reduce((acc, r) => acc + (r.totalSalesAmount || 0), 0).toLocaleString()}
             </div>
-            <p className="text-[10px] text-zinc-400 font-sans">Sum total of verified store revenue</p>
+            
           </div>
         </div>
 
@@ -1431,7 +1431,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  <FileText className="h-4 w-4 text-emerald-400" />
  Headquarters Sales Audit registry
  </h3>
- <p className="text-[10.5px] text-zinc-400">Review transmitted daily branch aggregates for double-entry checking.</p>
+ 
  </div>
 
  {/* Status tally badge */}
@@ -1580,7 +1580,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  <ShieldAlert className="h-4 w-4 text-rose-500" />
  Anti-Replay Signature Registry (Immutable)
  </h3>
- <p className="text-[10.5px] text-zinc-400">Immutable ledger of processed payload and transmission signatures. Duplicate entries are rejected instantly.</p>
+ 
  </div>
  <span className="px-3 py-1 rounded-full text-[9px] font-mono tracking-widest bg-rose-500/10 text-rose-400 font-extrabold uppercase border border-rose-500/20">
  {usedNoncesList.length} INDEXED
@@ -1998,7 +1998,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
     <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 font-mono">
      Hourly Sales Heatmap Analysis
     </h4>
-    <p className="text-[10.5px] text-zinc-400 mt-0.5">Chronological sales distribution across the 24-hour cycle.</p>
+    
    </div>
 
    <div className="grid grid-cols-6 sm:grid-cols-12 gap-2">
@@ -2499,7 +2499,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                 </div>
                 <div>
                   <div className="text-xs font-bold text-m3-on-surface mb-0.5">Copy JSON String</div>
-                  <p className="text-[10px] text-m3-on-surface-variant">Copies code to paste anywhere</p>
+                  
                 </div>
               </button>
 
@@ -2514,7 +2514,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                 </div>
                 <div>
                   <div className="text-xs font-bold text-m3-on-surface mb-0.5">Download JSON File</div>
-                  <p className="text-[10px] text-m3-on-surface-variant">Re-saves JSON packet file directly</p>
+                  
                 </div>
               </button>
 
@@ -2538,7 +2538,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                 </div>
                 <div>
                   <div className="text-xs font-bold text-m3-on-surface mb-0.5">Share via Messenger</div>
-                  <p className="text-[10px] text-m3-on-surface-variant">Copies code & loads messenger chat</p>
+                  
                 </div>
               </button>
 
@@ -2563,7 +2563,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                 </div>
                 <div>
                   <div className="text-xs font-bold text-m3-on-surface mb-0.5">Email Sales Packet</div>
-                  <p className="text-[10px] text-m3-on-surface-variant">Launches default system mail app</p>
+                  
                 </div>
               </button>
             </div>

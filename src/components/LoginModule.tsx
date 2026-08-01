@@ -136,7 +136,7 @@ export const LoginModule: React.FC = () => {
        <h3 className="text-xl font-extrabold text-m3-on-surface flex items-center gap-2">
         <Lock className="h-5 w-5 text-m3-primary" /> Key Verification
        </h3>
-       <p className="text-xs text-m3-on-surface-variant mt-1 font-medium font-sans">Please enter your company assigned login identity.</p>
+       
       </div>
 
       {errorMsg && (
@@ -158,9 +158,18 @@ export const LoginModule: React.FC = () => {
        <div className="mb-5 p-4 rounded-xl bg-red-500/15 text-red-500 border border-red-500/30 text-xs font-extrabold text-center flex flex-col justify-center items-center gap-2">
         <ShieldAlert className="h-6 w-6 animate-bounce" />
         <span>SECURITY LOCK ACTIVE: Excessive failed validation tokens.</span>
-        <span className="text-[10px] uppercase font-mono block px-2.5 py-1 bg-red-500/10 rounded-full text-red-500 border border-red-500/20">
-         Cooldown locks: {rateLimitTimeLeft}s remaining
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] uppercase font-mono block px-2.5 py-1 bg-red-500/10 rounded-full text-red-500 border border-red-500/20">
+           Cooldown locks: {rateLimitTimeLeft}s remaining
+          </span>
+          <button
+            type="button"
+            onClick={resetLockout}
+            className="text-[10px] uppercase font-bold px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-full transition-colors cursor-pointer"
+          >
+            Reset Lockout
+          </button>
+        </div>
        </div>
       )}
 

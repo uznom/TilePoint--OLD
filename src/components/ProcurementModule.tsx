@@ -983,15 +983,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  ? "Manufacturer Brands Directory"
  : "Automated PO Consolidation Desk"}
  </h3>
- <p className="text-xs text-m3-on-surface-variant/80 mt-0.5">
- {activeSubTab === "po"
- ? "Procurement pipelines & delivery tracking"
- : activeSubTab === "suppliers"
- ? "Corporate manufacturer broker profiles database"
- : activeSubTab === "brands"
- ? "Configure manufacturer-to-supplier mappings"
- : "Pre-restock compilation worksheets & bulk compiler"}
- </p>
+ 
  </div>
 
  {allowedToModify && (
@@ -1920,7 +1912,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </div>
  </div>
  <span className="text-[10px] bg-m3-primary/15 text-m3-primary px-2 py-0.5 rounded-full font-mono">
- ₱{p.costPrice.toFixed(2)}
+ ₱{(Number(p.costPrice) || 0).toFixed(2)}
  </span>
  </div>
  ));
@@ -2692,7 +2684,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  {getProductName(item.productId)}
  </h5>
  <span className="text-[10px] text-m3-on-surface-variant font-mono">
- Supplier Unit Cost: ₱{item.costPrice.toFixed(2)}
+ Supplier Unit Cost: ₱{(Number(item.costPrice) || 0).toFixed(2)}
  </span>
  </div>
 
@@ -3591,7 +3583,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </td>
  <td className="py-2.5 px-3 text-right font-mono">
  {currencySymbol}
- {item.costPrice.toLocaleString(undefined, {
+ {(Number(item.costPrice) || 0).toLocaleString(undefined, {
  minimumFractionDigits: 2,
  maximumFractionDigits: 2,
  })}
@@ -3838,7 +3830,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  })()}
  </td>
  <td className="py-2 px-3 text-right font-mono">
- ₱{item.costPrice.toLocaleString()}
+ ₱{(Number(item.costPrice) || 0).toLocaleString()}
  </td>
  <td className="py-2 px-3 text-center font-mono font-bold">
  {item.quantityRequested}
@@ -4039,10 +4031,10 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </span>
  </td>
  <td className="py-2 px-3 text-right font-mono text-amber-600 dark:text-amber-400 font-bold">
- ₱{p.costPrice.toLocaleString()}
+ ₱{(Number(p.costPrice) || 0).toLocaleString()}
  </td>
  <td className="py-2 px-3 text-right font-mono text-emerald-600 dark:text-emerald-400 font-bold">
- ₱{p.sellingPrice.toLocaleString()}
+ ₱{(Number(p.sellingPrice) || 0).toLocaleString()}
  </td>
  <td className="py-2 px-3 text-center font-mono font-bold">
  <span
