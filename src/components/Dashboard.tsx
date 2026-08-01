@@ -619,9 +619,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
  <div>
  <h2 className="text-2xl font-black mt-2 tracking-tight text-m3-primary">Enterprise Business Dashboard</h2>
- <p className="text-xs text-m3-on-surface-variant leading-relaxed mt-1 max-w-xl">
- Oversight terminal for <span className="font-bold text-m3-primary">Erica Manaban</span>. Admin clearing processes are live. Inter-branch stock redistribution triggers, purchase approvals, and company-wide sales analytics are consolidated.
- </p>
+ 
  </div>
  
  <div className="flex flex-col sm:flex-row gap-3 shrink-0 items-stretch sm:items-end md:items-center w-full md:w-auto">
@@ -675,9 +673,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <h3 className="text-base font-black text-m3-on-surface uppercase tracking-wide flex items-center gap-2">
  <Sparkles className="h-5 w-5 text-emerald-600 dark:text-emerald-400" /> Live Daily Sales Oversight Terminal
  </h3>
- <p className="text-[11px] text-m3-on-surface-variant font-mono mt-0.5">
- Real-time transaction tracking, cashier clearing queues, and multi-browser printed ledgers
- </p>
  </div>
  </div>
 
@@ -1640,7 +1635,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <TrendingUp className="h-5 w-5 text-m3-primary animate-pulse" />
  <span>Best-Selling Products Analyzer</span>
  </h3>
- <p className="text-xs text-m3-on-surface-variant mt-0.5">Top performing stock across transaction registers</p>
+ 
  </div>
  
  {/* Sorting & Filter Options for Best Sellers */}
@@ -1937,7 +1932,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <h3 className="text-sm font-extrabold text-m3-primary uppercase tracking-wider flex items-center gap-2 mb-1">
  <Layers className="h-4.5 w-4.5 text-m3-primary" /> Active Inventory Health
  </h3>
- <p className="text-xs text-m3-on-surface-variant mb-4">Click cards to drill down into product levels</p>
+ 
 
  <div className="grid grid-cols-2 gap-2.5">
  
@@ -2109,7 +2104,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </div>
  <div className="text-[10.5px] text-zinc-400 flex items-center justify-between font-mono">
  <span>SKU: {p.sku}</span>
- <span className="text-m3-primary font-bold">Price: ₱{p.sellingPrice.toLocaleString()}</span>
+ <span className="text-m3-primary font-bold">Price: ₱{(Number(p.sellingPrice) || 0).toLocaleString()}</span>
  </div>
  </div>
 
@@ -2573,7 +2568,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <h3 className="text-base font-extrabold tracking-tight text-m3-primary flex items-center gap-1.5">
  <History className="h-5 w-5 text-m3-primary" /> Inventory Aging & Redistribution Suggestion Feed
  </h3>
- <p className="text-xs text-m3-on-surface-variant font-mono">Slow-moving tiles candidates targeted for reallocation</p>
+ 
  </div>
  <span className="text-[10px] bg-m3-primary/10 text-m3-primary border border-m3-primary/20 px-2.5 py-0.5 rounded-full font-bold">
  Prevent Dead Stock
@@ -2642,7 +2637,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <h3 className="text-sm font-extrabold text-m3-on-primary-container uppercase tracking-wider flex items-center gap-1.5 mb-1 bg-m3-primary-container p-3 rounded-t-2xl -mx-6 -mt-6">
  <ClipboardList className="h-4.5 w-4.5 text-m3-on-primary-container" /> Supply Procurement Pipeline
  </h3>
- <p className="text-xs text-m3-on-surface-variant mt-4 mb-4">Manufacturer connections & incoming inventory purchase ledgers</p>
+ 
 
  <div className="grid grid-cols-2 gap-3 mt-2">
  <div className="p-3 rounded-xl bg-m3-surface-low border border-m3-outline-variant/30 text-left font-mono">
@@ -2687,7 +2682,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <h3 className="text-base font-extrabold text-m3-primary flex items-center gap-2">
  <ShieldCheck className="h-5 w-5 text-m3-primary" /> Global Enterprise Security Audit Stream
  </h3>
- <p className="text-xs text-m3-on-surface-variant">Live audit ledger tracking voided sales, manager code approvals and system activities</p>
+ 
  </div>
  </div>
 
@@ -2844,7 +2839,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <div>
  <span className="text-[11px] font-bold uppercase tracking-widest text-m3-on-surface-variant/75">Total Products</span>
  <div className="text-3xl font-black mt-1.5 tracking-tight text-m3-primary">{stats.totalProducts}</div>
- <div className="text-[10px] text-m3-on-surface-variant/80 mt-1 font-mono">{stats.totalCategories} Categories</div>
+ 
  </div>
  <div className="p-3 rounded-2xl bg-m3-primary/10 text-m3-primary m3-shape-asymmetric shrink-0">
  <Package className="h-6 w-6" />
@@ -2873,7 +2868,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <div className="text-2xl font-black mt-1.5 tracking-tight text-m3-primary">
  ₱{stats.monthlyRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
  </div>
- <div className="text-[10px] text-m3-on-surface-variant/80 mt-1">Target ₱2.0M • Local hub</div>
+ 
  </div>
  <div className="p-3 rounded-2xl bg-m3-secondary-container text-m3-on-secondary-container m3-shape-asymmetric shrink-0">
  <TrendingUp className="h-6 w-6" />
@@ -2905,7 +2900,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <div className="flex items-center justify-between mb-4">
  <div>
  <h3 className="text-sm font-semibold tracking-tight text-m3-primary">Weekly Sales Trend</h3>
- <p className="text-xs text-m3-on-surface-variant">Sales count value per day (PHP)</p>
+ 
  </div>
  <span className="bg-m3-primary-container text-m3-on-primary-container font-mono px-3 py-1 rounded-full text-[11px] font-bold border border-m3-outline-variant/30">
  ₱{stats.weeklySales.toLocaleString(undefined, { maximumFractionDigits: 0 })} Total
@@ -2952,7 +2947,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <div className="flex items-center justify-between mb-4">
  <div>
  <h3 className="text-sm font-semibold tracking-tight text-m3-primary">6-Month Revenue Progress</h3>
- <p className="text-xs text-m3-on-surface-variant">Local branch aggregate progression (PHP)</p>
+ 
  </div>
  <span className="text-xs font-bold text-m3-tertiary flex items-center gap-1 bg-m3-tertiary-container text-m3-on-tertiary-container px-3 py-1.5 rounded-full border border-m3-outline-variant/20">
  <TrendingUp className="h-3 w-3" /> Up 14.5% vs Q1
@@ -3055,7 +3050,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <h3 className="text-sm font-bold tracking-tight text-m3-primary flex items-center gap-2 mb-1">
  <Layers className="h-4 w-4" /> Item Category Diversity
  </h3>
- <p className="text-xs text-m3-on-surface-variant mb-4">Leading local stock classifications</p>
+ 
 
  <div className="space-y-3.5">
  {topCategories.map((cat, idx) => {
@@ -3092,7 +3087,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <h3 className="text-sm font-bold tracking-tight text-m3-primary flex items-center gap-2 mb-1">
  <ShoppingCart className="h-4 w-4" /> Recent Branch sales
  </h3>
- <p className="text-xs text-m3-on-surface-variant mb-4">Latest checkout invoices saved</p>
+ 
 
  <div className="space-y-3">
  {filteredSales.slice(0, 4).map((sale, idx) => (
@@ -3134,7 +3129,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <h3 className="text-sm font-bold tracking-tight text-m3-primary flex items-center gap-2 mb-1">
  <ClipboardList className="h-4 w-4" /> Procurement pipeline
  </h3>
- <p className="text-xs text-m3-on-surface-variant mb-4">Local purchase orders pending delivery</p>
+ 
 
  <div className="space-y-3">
  {pendingOrders.slice(0, 4).map((po, idx) => (

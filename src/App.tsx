@@ -517,19 +517,28 @@ function AppContent() {
  }
  }
  }, [isLoggedIn, currentUser?.id, currentUser?.role]);
- const [isSidebarMinimized, setIsSidebarMinimized] = useState(() => {
- const saved = localStorage.getItem("tilepoint_sidebar_minimized");
- return saved === "true";
+ const [isSidebarExpanded, setIsSidebarExpanded] = useState(() => {
+ return localStorage.getItem("tilepoint_sidebar_expanded") !== "false";
  });
+
+ const isSidebarMinimized = !isSidebarExpanded;
+ const setIsSidebarMinimized = (val?: any) => {
+ if (typeof val === "boolean") {
+ setIsSidebarExpanded(!val);
+ } else {
+ setIsSidebarExpanded((prev) => !prev);
+ }
+ };
  const [isTabChanging, setIsTabChanging] = useState(false);
  const [percentProgress, setPercentProgress] = useState(0);
 
  useEffect(() => {
+ localStorage.setItem("tilepoint_sidebar_expanded", String(isSidebarExpanded));
  localStorage.setItem(
  "tilepoint_sidebar_minimized",
  String(isSidebarMinimized),
  );
- }, [isSidebarMinimized]);
+ }, [isSidebarExpanded, isSidebarMinimized]);
 
  const [followSystemTheme, setFollowSystemTheme] = useState(() => {
  const saved = localStorage.getItem("tilepoint_follow_system_theme");
@@ -1301,77 +1310,6 @@ function AppContent() {
  }
  }, [darkMode]);
 
- // Global High-Performance Cursor Tracker for Glowing Card hover effects
- useEffect(() => {
- const handleMouseMove = (e: MouseEvent) => {
- // Bypassed instantly when backdrop and UI blurs or animations are disabled
- if (
- document.documentElement.classList.contains("accessibility-no-blur") ||
- document.documentElement.classList.contains(
- "accessibility-no-animation",
- )
- ) {
- return;
- }
-
- const target = e.target as HTMLElement;
- // Resolve up the DOM tree to locate any active hover target card
- const card = target.closest(
- ".m3-card, .android-glass-card, .glowing-card",
- ) as HTMLElement | null;
-
- if (card) {
- const rect = card.getBoundingClientRect();
- const x = e.clientX - rect.left;
- const y = e.clientY - rect.top;
-
- // Apply updated layout coordinates directly to DOM to bypass costly React re-renders
- card.style.setProperty("--mouse-x", `${x}px`);
- card.style.setProperty("--mouse-y", `${y}px`);
- card.style.setProperty("--glow-opacity", "1");
- }
- };
-
- const handleMouseOver = (e: MouseEvent) => {
- if (
- document.documentElement.classList.contains("accessibility-no-blur") ||
- document.documentElement.classList.contains(
- "accessibility-no-animation",
- )
- ) {
- const cards = document.querySelectorAll(
- ".m3-card, .android-glass-card, .glowing-card",
- );
- cards.forEach((el) => {
- (el as HTMLElement).style.setProperty("--glow-opacity", "0");
- });
- return;
- }
-
- const target = e.target as HTMLElement;
- const card = target.closest(
- ".m3-card, .android-glass-card, .glowing-card",
- ) as HTMLElement | null;
- if (!card) {
- // Safe reset coordinates and remove active glowing spotlight opacity on exit
- const cards = document.querySelectorAll(
- ".m3-card, .android-glass-card, .glowing-card",
- );
- cards.forEach((el) => {
- (el as HTMLElement).style.setProperty("--glow-opacity", "0");
- });
- }
- };
-
- document.addEventListener("mousemove", handleMouseMove, { passive: true });
- document.addEventListener("mouseover", handleMouseOver, { passive: true });
-
- return () => {
- document.removeEventListener("mousemove", handleMouseMove);
- document.removeEventListener("mouseover", handleMouseOver);
- };
- }, []);
-
  if (isHydrating || isSystemHydrating) {
  return (
  <div className="fixed inset-0 bg-zinc-950 flex flex-col items-center justify-center p-6 z-[9999] select-none text-center">
@@ -1885,10 +1823,12 @@ function AppContent() {
 
  {/* HEADER SECTION with custom horizontal glowing accent bar & ambient overlay tint */}
  <header
- className={`py-4 px-6 border-b border-m3-outline-variant/15 flex justify-between items-center z-[35] android-glass-header shadow-sm bg-m3-surface/75 dark:bg-m3-surface-low/80 backdrop-blur-md transition-all duration-300 overflow-visible md:hidden ${
+ className={`py-4 px-6 border-b border-m3-outline-variant/15 flex justify-between items-center android-glass-header shadow-sm bg-m3-surface/75 dark:bg-m3-surface-low/80 backdrop-blur-md transition-all duration-300 overflow-visible md:hidden ${
+ isAccountDropdownOpen ? "z-[9999]" : "z-[35]"
+ } ${
  activeTab === "pos"
- ? `sticky top-0 z-[35] md:fixed md:top-0 md:left-0 md:right-0 md:transform ${showImmersiveControls ? "md:translate-y-0 md:opacity-100 md:shadow-xl" : "md:-translate-y-full md:opacity-0 md:pointer-events-none"}`
- : "sticky top-0 z-[35]"
+ ? `sticky top-0 md:fixed md:top-0 md:left-0 md:right-0 md:transform ${showImmersiveControls ? "md:translate-y-0 md:opacity-100 md:shadow-xl" : "md:-translate-y-full md:opacity-0 md:pointer-events-none"}`
+ : "sticky top-0"
  }`}
  >
  {/* Subtle header brand overlay reflecting user custom color choice */}
@@ -1986,7 +1926,7 @@ function AppContent() {
  <>
  {/* Backdrop overlay for dismissing dropdown on click-away */}
  <div
- className="fixed inset-0 z-40 bg-transparent"
+ className="fixed inset-0 z-[9998] bg-transparent"
  onClick={() => setIsAccountDropdownOpen(false)}
  />
  <motion.div
@@ -1995,7 +1935,7 @@ function AppContent() {
  animate={{ opacity: 1, scale: 1, y: 0 }}
  exit={{ opacity: 0, scale: 0.95, y: -8 }}
  transition={{ duration: 0.15, ease: "easeOut" }}
- className="absolute right-0 mt-2 w-56 rounded-2xl bg-m3-surface-low border border-m3-outline-variant/40 text-m3-on-surface shadow-2xl z-50 p-2 space-y-1.5 font-sans"
+ className="absolute right-0 mt-2 w-56 rounded-2xl bg-m3-surface-low border border-m3-outline-variant/40 text-m3-on-surface shadow-2xl z-[9999] p-2 space-y-1.5 font-sans"
  >
  <div className="px-3 py-2 border-b border-m3-outline-variant/15 bg-m3-surface-high/10 rounded-xl flex items-center justify-between">
  <div className="min-w-0 flex-1 pr-2">
@@ -2114,18 +2054,28 @@ function AppContent() {
  )}
 
  {/* SIDEBAR NAVIGATION: Desktop (Unified with Brand Header & Profile) */}
- <aside
- className={`border-r border-m3-outline-variant/15 select-none android-glass-sidebar py-5 px-3.5 transition-all duration-300 ease-in-out sticky top-0 z-40 ${
- isSidebarHidden
- ? "w-0 !p-0 overflow-hidden border-none pointer-events-none hidden"
- : `hidden md:flex md:flex-col md:justify-between h-screen ${isSidebarMinimized ? "w-20 !px-2" : "w-72"}`
+ <motion.aside
+ initial={false}
+ animate={{
+ width: isSidebarHidden ? 0 : isSidebarExpanded ? 288 : 80,
+ }}
+ transition={{
+ type: "spring",
+ stiffness: 340,
+ damping: 28,
+ mass: 0.8,
+ }}
+ className={`border-r border-m3-outline-variant/15 select-none android-glass-sidebar py-5 px-3 sticky top-0 flex flex-col justify-between h-screen transition-all ${
+ isSidebarProfileDropdownOpen ? "z-[9999] overflow-visible" : "z-40 overflow-hidden"
+ } ${
+ isSidebarHidden ? "hidden" : "hidden md:flex"
  }`}
  >
  {/* TOP SECTION: Brand Logo, Name and Branch assignment */}
- <div className="flex flex-col gap-4">
+ <div className="flex flex-col gap-4 min-w-0">
  {/* Brand Logo & Name */}
  <div
- className={`flex items-center gap-3 ${isSidebarMinimized ? "justify-center" : "pl-2"}`}
+ className={`flex items-center gap-3 ${isSidebarExpanded ? "pl-2" : "justify-center"}`}
  >
  <img
  src="/icon.svg"
@@ -2133,28 +2083,42 @@ function AppContent() {
  className="h-9 w-9 rounded-xl shrink-0 shadow-sm"
  referrerPolicy="no-referrer"
  />
- {!isSidebarMinimized && (
- <div className="animate-fade-in truncate">
+ <AnimatePresence initial={false}>
+ {isSidebarExpanded && (
+ <motion.div
+ initial={{ opacity: 0, x: -10 }}
+ animate={{ opacity: 1, x: 0 }}
+ exit={{ opacity: 0, x: -10 }}
+ transition={{ duration: 0.18, ease: [0.05, 0.7, 0.1, 1.0] }}
+ className="truncate min-w-0"
+ >
  <h1 className="text-sm font-black tracking-wide leading-none uppercase font-sans text-m3-primary">
  TilePoint
  </h1>
  <span className="text-[8px] text-m3-on-surface-variant font-bold block uppercase mt-1 tracking-widest leading-none">
  HQ ERP OS
  </span>
- </div>
+ </motion.div>
  )}
+ </AnimatePresence>
  </div>
 
  {/* Branch Assignment tag badge */}
- {!isSidebarMinimized ? (
- <div className="px-1.5 animate-fade-in">
+ {isSidebarExpanded ? (
+ <motion.div
+ initial={{ opacity: 0, scale: 0.95 }}
+ animate={{ opacity: 1, scale: 1 }}
+ exit={{ opacity: 0, scale: 0.95 }}
+ transition={{ duration: 0.18, ease: [0.05, 0.7, 0.1, 1.0] }}
+ className="px-1"
+ >
  <div className="w-full text-center px-3 py-1.5 rounded-xl text-[9px] font-extrabold uppercase bg-m3-secondary-container text-m3-on-secondary-container border border-m3-outline-variant/35 tracking-wider truncate">
  {getBranchName(currentUser.branchAssignmentId)}
  </div>
- </div>
+ </motion.div>
  ) : (
  <div
- className="flex justify-center"
+ className="flex justify-center py-1"
  title={getBranchName(currentUser.branchAssignmentId)}
  >
  <span className="h-2.5 w-2.5 rounded-full bg-m3-primary animate-pulse" />
@@ -2163,28 +2127,35 @@ function AppContent() {
 
  <div className="h-px bg-m3-outline-variant/10" />
 
- {/* Modules Label and Minimize/Maximize toggle handle */}
+ {/* Modules Label and Toggle Expand indicator */}
  <div
- className={`flex items-center ${isSidebarMinimized ? "justify-center mb-1" : "justify-between pl-2 mb-1"}`}
+ className={`flex items-center ${isSidebarExpanded ? "justify-between pl-2 mb-1" : "justify-center mb-1"}`}
  >
- {!isSidebarMinimized && (
- <div className="flex items-center gap-1.5 animate-fade-in truncate">
+ <AnimatePresence initial={false}>
+ {isSidebarExpanded && (
+ <motion.div
+ initial={{ opacity: 0, x: -8 }}
+ animate={{ opacity: 1, x: 0 }}
+ exit={{ opacity: 0, x: -8 }}
+ transition={{ duration: 0.18, ease: [0.05, 0.7, 0.1, 1.0] }}
+ className="flex items-center gap-1.5 truncate"
+ >
  <span className="text-[10px] font-black tracking-widest text-m3-on-surface-variant uppercase font-mono">
  Modules
  </span>
- </div>
+ </motion.div>
  )}
+ </AnimatePresence>
  <button
- onClick={() => setIsSidebarMinimized(!isSidebarMinimized)}
- className={`p-1.5 hover:bg-m3-primary/15 hover:text-m3-primary text-m3-on-surface-variant rounded-xl cursor-pointer transition-all duration-200 ${
- isSidebarMinimized ? "hover:scale-110" : ""
+ type="button"
+ onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
+ className={`p-1.5 text-m3-on-surface-variant rounded-xl opacity-80 hover:opacity-100 hover:bg-m3-outline-variant/10 transition-all duration-200 cursor-pointer ${
+ !isSidebarExpanded ? "scale-105 text-m3-primary" : ""
  }`}
- title={
- isSidebarMinimized ? "Maximize Sidebar" : "Minimize Sidebar"
- }
+ title={isSidebarExpanded ? "Collapse Sidebar" : "Expand Sidebar"}
  >
  <ChevronLeft
- className={`h-4 w-4 transition-transform duration-300 ${isSidebarMinimized ? "rotate-180" : ""}`}
+ className={`h-4 w-4 transition-transform duration-300 ${!isSidebarExpanded ? "rotate-180" : ""}`}
  />
  </button>
  </div>
@@ -2244,63 +2215,51 @@ function AppContent() {
    authorizedSubItems.some((sub) => activeTab === sub.id) ||
    activeTab === category.id;
 
-   if (isSidebarMinimized) {
    return (
    <button
    key={category.id}
    onClick={() => {
-   const firstSub =
-   authorizedSubItems[0]?.id || category.id;
+   const firstSub = authorizedSubItems[0]?.id || category.id;
    changeTab(firstSub);
    }}
-   className={`flex items-center justify-center w-11 h-11 rounded-xl mx-auto relative group transition-all duration-200 cursor-pointer ${
+   className={`w-full flex items-center ${
+   isSidebarExpanded ? "justify-between px-3.5 py-2.5" : "justify-center h-11"
+   } rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer relative group ${
    hasActiveSubItem
-   ? "bg-m3-primary/15 text-m3-primary border border-m3-primary/30 shadow-sm"
-   : "hover:bg-m3-primary/10 text-m3-on-surface-variant"
+   ? "bg-m3-primary text-m3-on-primary shadow-md shadow-m3-primary/10 font-black"
+   : "hover:bg-m3-primary/10 text-m3-on-surface-variant hover:text-m3-primary"
    }`}
    >
-   <div className="relative">
-    <CategoryIcon className="h-4.5 w-4.5 shrink-0" />
-    {((category.id === "sale" && showSaleRedDot) ||
-      (category.id === "deliveries" && showDeliveriesRedDot) ||
-      (category.id === "inventory" && showInventoryRedDot)) && (
-      <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-rose-500 border border-m3-surface" />
-    )}
+   <div className="flex items-center gap-3 min-w-0">
+   <div className="relative shrink-0 flex items-center justify-center">
+   <CategoryIcon
+   className={`h-4.5 w-4.5 ${hasActiveSubItem ? "text-m3-on-primary" : "text-m3-on-surface-variant"}`}
+   />
+   {((category.id === "sale" && showSaleRedDot) ||
+   (category.id === "deliveries" && showDeliveriesRedDot) ||
+   (category.id === "inventory" && showInventoryRedDot)) && (
+   <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-rose-500 border border-m3-surface" />
+   )}
    </div>
+   <AnimatePresence initial={false}>
+   {isSidebarExpanded && (
+   <motion.span
+   initial={{ opacity: 0, x: -8 }}
+   animate={{ opacity: 1, x: 0 }}
+   exit={{ opacity: 0, x: -8 }}
+   transition={{ duration: 0.18, ease: [0.05, 0.7, 0.1, 1.0] }}
+   className="truncate font-bold text-xs"
+   >
+   {category.name}
+   </motion.span>
+   )}
+   </AnimatePresence>
+   </div>
+   {!isSidebarExpanded && (
    <div className="absolute left-14 scale-0 group-hover:scale-100 transition-all duration-200 origin-left bg-m3-on-surface text-m3-surface text-[10px] font-extrabold px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none border border-m3-outline-variant/30">
    {category.name}
    </div>
-   </button>
-   );
-   }
-
-   return (
-   <button
-   key={category.id}
-   onClick={() => {
-   const firstSub =
-   authorizedSubItems[0]?.id || category.id;
-   changeTab(firstSub);
-   }}
-   className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
-   hasActiveSubItem
-   ? "bg-m3-primary text-m3-on-primary shadow-md shadow-m3-primary/10 font-black"
-   : "hover:bg-m3-primary/5 text-m3-on-surface-variant hover:text-m3-primary"
-   }`}
-   >
-   <div className="flex items-center gap-3">
-   <CategoryIcon
-   className={`h-4.5 w-4.5 shrink-0 ${hasActiveSubItem ? "text-m3-on-primary" : "text-m3-on-surface-variant"}`}
-   />
-   <span className="relative">
-    {category.name}
-    {((category.id === "sale" && showSaleRedDot) ||
-      (category.id === "deliveries" && showDeliveriesRedDot) ||
-      (category.id === "inventory" && showInventoryRedDot)) && (
-      <span className="absolute -top-1 -right-3 h-2 w-2 rounded-full bg-rose-500 border border-m3-surface" />
-    )}
-   </span>
-   </div>
+   )}
    </button>
    );
    })}
@@ -2319,7 +2278,7 @@ function AppContent() {
  setIsSidebarProfileDropdownOpen(!isSidebarProfileDropdownOpen)
  }
  className={`w-full flex items-center gap-2.5 p-2 rounded-xl border border-m3-outline-variant/40 hover:bg-m3-primary/5 transition-all cursor-pointer text-left focus:outline-none bg-m3-surface-low select-none active:scale-[0.98] ${
- isSidebarMinimized ? "justify-center" : ""
+ isSidebarExpanded ? "" : "justify-center"
  }`}
  >
  <div className="h-8.5 w-8.5 rounded-xl bg-m3-primary font-black text-xs items-center justify-center flex text-m3-on-primary shadow-sm m3-shape-asymmetric relative overflow-hidden shrink-0">
@@ -2351,18 +2310,26 @@ function AppContent() {
  })()}
  </div>
 
- {!isSidebarMinimized && (
- <div className="flex-1 min-w-0 animate-fade-in">
+ <AnimatePresence initial={false}>
+ {isSidebarExpanded && (
+ <motion.div
+ initial={{ opacity: 0, x: -8 }}
+ animate={{ opacity: 1, x: 0 }}
+ exit={{ opacity: 0, x: -8 }}
+ transition={{ duration: 0.18, ease: [0.05, 0.7, 0.1, 1.0] }}
+ className="flex-1 min-w-0"
+ >
  <div className="text-[11px] font-extrabold leading-none text-m3-on-surface truncate">
  {currentUser.fullName}
  </div>
  <span className="text-[8.5px] text-m3-on-surface-variant font-mono capitalize leading-none font-bold block mt-1 truncate">
  {currentUser.role} Account
  </span>
- </div>
+ </motion.div>
  )}
+ </AnimatePresence>
 
- {!isSidebarMinimized && (
+ {isSidebarExpanded && (
  <ChevronDown
  className={`h-3.5 w-3.5 text-m3-on-surface-variant transition-transform duration-200 shrink-0 ${isSidebarProfileDropdownOpen ? "rotate-180" : ""}`}
  />
@@ -2374,7 +2341,7 @@ function AppContent() {
  {isSidebarProfileDropdownOpen && (
  <>
  <div
- className="fixed inset-0 z-40 bg-transparent"
+ className="fixed inset-0 z-[9998] bg-transparent"
  onClick={() => setIsSidebarProfileDropdownOpen(false)}
  />
  <motion.div
@@ -2383,7 +2350,7 @@ function AppContent() {
  animate={{ opacity: 1, scale: 1, y: 0 }}
  exit={{ opacity: 0, scale: 0.95, y: 8 }}
  transition={{ duration: 0.15, ease: "easeOut" }}
- className={`absolute bottom-full mb-2 w-56 rounded-2xl bg-m3-surface-low border border-m3-outline-variant/40 text-m3-on-surface shadow-2xl z-50 p-2 space-y-1.5 font-sans ${
+ className={`absolute bottom-full mb-2 w-56 rounded-2xl bg-m3-surface-low border border-m3-outline-variant/40 text-m3-on-surface shadow-2xl z-[9999] p-2 space-y-1.5 font-sans ${
  isSidebarMinimized ? "left-0" : "left-0 right-0"
  }`}
  >
@@ -2487,7 +2454,7 @@ function AppContent() {
  )}
  </AnimatePresence>
  </div>
- </aside>
+ </motion.aside>
 
  {/* FIXED: ENFORCED RIGID VIEWPORT CONTAINER HEIGHT LIMITS ON COMPONENT MAIN MOUNT */}
  <main
@@ -2921,7 +2888,7 @@ function AppContent() {
 
  {/* CONFIRMATORY DIALOG: Logout verification check trigger */}
  {showLogoutConfirmModal && (
- <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
+ <div className="fixed inset-0 bg-transparent flex items-center justify-center z-[99999] p-4 animate-fade-in">
  <div
  className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
  onClick={() => setShowLogoutConfirmModal(false)}
@@ -3650,7 +3617,7 @@ function AppContent() {
 
  {/* MODAL: Account Settings Password update form (Cashiers can ONLY change password) */}
  {showAccountSettingsModal && (
- <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
+ <div className="fixed inset-0 bg-transparent flex items-center justify-center z-[99999] p-4 animate-fade-in">
  <div
  className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
  onClick={() => {

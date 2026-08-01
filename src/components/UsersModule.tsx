@@ -280,7 +280,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  <div className="flex justify-between items-center bg-m3-surface-low/95 backdrop-blur-md p-4 rounded-[20px] border border-m3-outline-variant/20 sticky top-0 z-20 shadow-md">
  <div>
  <h3 className="text-xs font-black tracking-widest text-m3-primary uppercase font-mono">Staff Administration Panel</h3>
- <p className="text-xs text-m3-on-surface-variant/80 mt-0.5">Role-Based Access Control list (RBAC)</p>
+ 
  </div>
 
  {(isUserAdmin || currentUser?.role === UserRole.MANAGER) && subTab === 'employees' && (

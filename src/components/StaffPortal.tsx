@@ -476,7 +476,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  >
  <div>
  <div className="text-xs text-m3-on-surface font-extrabold truncate">{p.productName}</div>
- <div className="text-[10px] text-zinc-400 font-mono font-medium">SKU: {p.sku} • ₱{p.sellingPrice.toFixed(2)}</div>
+ <div className="text-[10px] text-zinc-400 font-mono font-medium">SKU: {p.sku} • ₱{(Number(p.sellingPrice) || 0).toFixed(2)}</div>
  </div>
  <ChevronRight className="h-4 w-4 text-emerald-500" />
  </button>
@@ -610,7 +610,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <div className="bg-m3-surface border border-m3-outline-variant/20 rounded-2xl p-3 text-center space-y-1">
  <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 block select-none">Selling price / Unit</span>
  <div className="text-lg font-black text-m3-tertiary font-mono">
- ₱{scannedProduct.sellingPrice.toFixed(2)}
+ ₱{(Number(scannedProduct.sellingPrice) || 0).toFixed(2)}
  </div>
  <span className="text-[10px] text-zinc-400 font-bold font-medium">per {scannedProduct.unit}</span>
  </div>
@@ -943,7 +943,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <div className="min-w-0 flex-1">
  <h4 className="text-xs font-extrabold text-m3-on-surface truncate">{item.product.productName}</h4>
  <div className="text-[9px] text-zinc-400 font-mono mt-0.5 uppercase">
- SKU: {item.product.sku} • ₱{item.product.sellingPrice.toFixed(2)}
+ SKU: {item.product.sku} • ₱{(Number(item.product.sellingPrice) || 0).toFixed(2)}
  </div>
  </div>
 

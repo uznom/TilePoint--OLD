@@ -373,7 +373,7 @@ export function ProfitAnalytics({
  </div>
  <div>
  <h4 className="text-sm font-black text-m3-on-surface uppercase tracking-wide">P&L Financial Timeline</h4>
- <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">Consolidated trend matrix over dynamic calendar boundaries</p>
+ 
  </div>
  </div>
 
@@ -484,7 +484,7 @@ export function ProfitAnalytics({
  <div className="text-xl font-black text-emerald-500 mt-1 font-mono">
  ₱{totals.revenue.toLocaleString()}
  </div>
- <span className="text-[9px] text-zinc-500 dark:text-zinc-400 mt-0.5 block font-medium">Gross funds collected</span>
+ 
  </div>
  <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-xl">
  <DollarSign className="h-5 w-5" />
@@ -498,7 +498,7 @@ export function ProfitAnalytics({
  <div className="text-xl font-black text-amber-500 mt-1 font-mono">
  ₱{totals.cogs.toLocaleString()}
  </div>
- <span className="text-[9px] text-zinc-500 dark:text-zinc-400 mt-0.5 block font-medium">Landing & wholesale cost</span>
+ 
  </div>
  <div className="p-2.5 bg-amber-500/10 text-amber-500 rounded-xl">
  <Layers className="h-5 w-5" />
@@ -512,7 +512,7 @@ export function ProfitAnalytics({
  <div className="text-xl font-black text-rose-500 mt-1 font-mono">
  ₱{totals.expenses.toLocaleString()}
  </div>
- <span className="text-[9px] text-zinc-500 dark:text-zinc-400 mt-0.5 block font-medium">Expenses, shortages, voids</span>
+ 
  </div>
  <div className="p-2.5 bg-rose-500/10 text-rose-500 rounded-xl">
  <Building className="h-5 w-5" />
@@ -708,7 +708,7 @@ export function ProfitAnalytics({
  <div className="mt-4 pt-3.5 border-t border-m3-outline-variant/15 flex flex-wrap gap-4 items-center justify-between text-[10.5px] text-zinc-600 dark:text-zinc-400 font-sans font-medium">
  <div className="flex items-center gap-1.5 font-bold text-zinc-700 dark:text-zinc-300">
  <Sparkles className="h-4 w-4 text-emerald-500" />
- <span>Operational Guidance: Retain net margins above <strong className="text-emerald-600 dark:text-emerald-400 font-black">20%</strong> for optimal showroom growth.</span>
+ 
  </div>
  <div className="flex items-center gap-1.5 font-mono text-[9px] font-extrabold bg-zinc-100 dark:bg-m3-surface-high/30 px-2 py-1 rounded-lg border border-m3-outline-variant/15 text-zinc-600 dark:text-zinc-400">
  <span>STABLE LEDGER LOCK</span>

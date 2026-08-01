@@ -332,7 +332,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  <Ruler className="h-5 w-5 text-m3-primary" />
  <div>
  <h4 className="text-xs font-black uppercase tracking-wider text-m3-on-surface dark:text-zinc-100">Dimensional Inputs</h4>
- <p className="text-[10.5px] text-m3-on-surface-variant dark:text-zinc-400 font-medium">Define showroom room measurements</p>
+ 
  </div>
  </div>
 

@@ -70,7 +70,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
 
  // Stats computed
  const shiftStats = activeShift ? getShiftReportStats(activeShift) : null;
- const expectedEndCash = activeShift && shiftStats ? activeShift.startCash + shiftStats.netTotal : 0;
+ const expectedEndCash = activeShift && shiftStats ? activeShift.startCash + shiftStats.cashSalesTotal : 0;
 
  const handleOpenLocalShift = (e: React.FormEvent) => {
  e.preventDefault();
@@ -363,7 +363,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
  <div className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl space-y-4 text-xs font-mono select-none bg-m3-surface-low text-m3-on-surface bir-receipt-container">
  <div className="text-center pb-2.5 border-b border-dashed border-m3-outline-variant/30">
  <h4 className="font-extrabold text-sm uppercase tracking-widest text-m3-primary">X Report (Terminal Audit Only)</h4>
- <p className="text-[10px] text-m3-on-surface-variant mt-0.5 font-semibold">Mid-Shift Cash Drawer Snapshot</p>
+ 
  </div>
 
  <div className="space-y-1.5 leading-relaxed text-m3-on-surface-variant">
@@ -438,7 +438,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
  <div className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl space-y-4 text-xs font-mono select-none bg-m3-surface-low text-m3-on-surface bir-receipt-container">
  <div className="text-center pb-2.5 border-b border-dashed border-m3-outline-variant/30">
  <h4 className="font-extrabold text-sm uppercase tracking-widest text-m3-tertiary">Z Report (Terminal Seal)</h4>
- <p className="text-[10px] text-m3-on-surface-variant mt-0.5 font-bold">Closes Active Drawer & Shifts Records</p>
+ 
  </div>
 
  <div className="space-y-1.5 leading-relaxed text-m3-on-surface-variant">

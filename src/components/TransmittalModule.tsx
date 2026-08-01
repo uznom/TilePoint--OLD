@@ -781,7 +781,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </td>
  <td className="py-1.5 text-center font-mono text-teal-500 font-bold print:text-black">
  {item.sellingPriceOverride ? (
- `₱${item.sellingPriceOverride.toFixed(2)}`
+ `₱${(Number(item.sellingPriceOverride) || 0).toFixed(2)}`
  ) : (
  <span className="text-zinc-500 italic">None</span>
  )}
@@ -1045,7 +1045,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </td>
  <td className="py-1.5 text-center font-mono text-teal-500 font-bold print:text-black">
  {item.sellingPriceOverride
- ? `₱${item.sellingPriceOverride.toFixed(2)}`
+ ? `₱${(Number(item.sellingPriceOverride) || 0).toFixed(2)}`
  : "None"}
  </td>
  <td className="py-1.5 text-right font-mono font-black text-emerald-500 print:text-black">

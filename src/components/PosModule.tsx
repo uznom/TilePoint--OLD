@@ -151,6 +151,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  checkoutSale,
  voidSale,
  holdSale,
+ resumeParkedSale,
  parkedSales,
  setParkedSales,
  sales,
@@ -238,6 +239,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
  const [closeShiftCashInput, setCloseShiftCashInput] = useState("");
  const [showTileCalculatorModal, setShowTileCalculatorModal] = useState(false);
+ const [resumingParkedId, setResumingParkedId] = useState<string | null>(null);
 
  // Add Member Modal states for Corporate Member Credit Desk
  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
@@ -811,14 +813,23 @@ export const PosModule: React.FC<PosModuleProps> = ({
  showToast("Transaction parked inside safe hold registers.");
  };
 
- const handleResume = async (parkedId: string) => {
- const record = parkedSales.find((p) => p.id === parkedId);
- if (!record) return;
+ const handleResume = (parkedId: string) => {
+ if (resumingParkedId === parkedId) return;
+ setResumingParkedId(parkedId);
 
- // Recache inventory state from server before resuming
- try {
- await syncFromSharedServer(true);
- } catch (_) {}
+ const res = resumeParkedSale(parkedId, currentUser?.fullName || currentUser?.username || "Cashier");
+
+ if (!res.success) {
+ showToast(res.error || "⚠️ This transaction was already resumed on another register.");
+ setResumingParkedId(null);
+ return;
+ }
+
+ const record = res.record;
+ if (!record) {
+ setResumingParkedId(null);
+ return;
+ }
 
  // Save current ongoing order if there are items in the cart
  const ongoingCart = [...cart];
@@ -830,7 +841,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  }
 
  // Refreshes stock quantity on resumed cart items from latest products list
- const refreshedItems = record.items.map((item) => {
+ const refreshedItems = (record.items || []).map((item: any) => {
  const freshProd = rawProducts.find((p) => p.id === item.product.id);
  const freshStock = freshProd
  ? getBranchStockQuantity(freshProd, activePosBranchId, branchStock, branches)
@@ -845,18 +856,19 @@ export const PosModule: React.FC<PosModuleProps> = ({
  });
 
  setCart(refreshedItems);
- setCustomerName(record.customerName);
- setCustomerNotes(record.notes);
-
- // Remove from parked
- setParkedSales((prev) => prev.filter((p) => p.id !== parkedId));
+ setCustomerName(record.customerName || "");
+ setCustomerNotes(record.notes || "");
  setMobilePosTab("basket");
 
  if (ongoingCart.length > 0) {
- showToast(`Current order auto-held. Resumed staged order for ${record.customerName || "Walk-in"}. Inventory recached.`);
+ showToast(`Current order auto-held. Resumed staged order for ${record.customerName || "Walk-in"}. Locked to this register to prevent double records.`);
  } else {
- showToast(`Resumed staged order for ${record.customerName || "Walk-in"}. Inventory recached.`);
+ showToast(`Resumed staged order for ${record.customerName || "Walk-in"}. Locked to this register to prevent double records.`);
  }
+
+ setTimeout(() => {
+ setResumingParkedId(null);
+ }, 500);
  };
 
  const checkDiscountApprovalRequired = (type: string, numericVal: number) => {
@@ -2137,22 +2149,33 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[600px] lg:max-h-none scrollbar-thin">
  {parkedSales.length > 0 ? (
  <div className="flex flex-col gap-3">
- {parkedSales.map((park, idx) => (
+ {parkedSales.map((park) => {
+ const isCurrentResuming = resumingParkedId === park.id;
+ return (
  <div
- key={idx}
- onClick={() => handleResume(park.id)}
- className="p-3.5 bg-m3-surface border border-m3-outline-variant/35 hover:border-m3-primary rounded-2xl flex flex-col justify-between shadow-sm cursor-pointer transition-all group relative overflow-hidden text-left gap-2"
+ key={park.id}
+ onClick={() => !isCurrentResuming && handleResume(park.id)}
+ className={`p-3.5 bg-m3-surface border border-m3-outline-variant/35 hover:border-m3-primary rounded-2xl flex flex-col justify-between shadow-sm cursor-pointer transition-all group relative overflow-hidden text-left gap-2 ${
+ isCurrentResuming ? "opacity-60 pointer-events-none" : ""
+ }`}
  >
  <div className="absolute top-0 bottom-0 left-0 w-1 bg-m3-primary" />
  <div>
+ <div className="flex items-center justify-between gap-1">
  <div className="text-xs font-extrabold text-m3-on-surface leading-snug group-hover:text-m3-primary transition-colors">
  {park.customerName}
+ </div>
+ {park.heldBy && (
+ <span className="text-[9px] font-bold px-1.5 py-0.5 bg-m3-primary/10 text-m3-primary rounded border border-m3-primary/20">
+ {park.heldBy}
+ </span>
+ )}
  </div>
  <p className="text-[10px] text-zinc-400 mt-1 flex items-center gap-1 font-mono font-bold">
  <span>{park.timestamp}</span>
  <span>•</span>
  <span className="text-m3-primary">
- {park.items.length} tile sets
+ {park.items?.length || 0} tile sets
  </span>
  </p>
  {park.notes && (
@@ -2164,12 +2187,14 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  <button
  type="button"
- className="w-full py-1.5 text-[9.5px] font-black uppercase tracking-widest bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 transition-colors rounded-xl flex items-center justify-center gap-1 cursor-pointer shadow-sm mt-1"
+ disabled={isCurrentResuming}
+ className="w-full py-1.5 text-[9.5px] font-black uppercase tracking-widest bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 transition-colors rounded-xl flex items-center justify-center gap-1 cursor-pointer shadow-sm mt-1 disabled:opacity-50"
  >
- Resume Staged Order &rarr;
+ {isCurrentResuming ? "Claiming Order..." : "Resume Staged Order \u2192"}
  </button>
  </div>
- ))}
+ );
+ })}
  </div>
  ) : (
  <div className="py-10 px-4 text-center text-xs text-zinc-400 font-bold border border-dashed border-m3-outline-variant/20 rounded-2xl bg-m3-surface-lowest flex flex-col items-center justify-center gap-2 min-h-[180px] h-full">
@@ -2968,14 +2993,15 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  )}
 
-				{(paymentMethod === "Member Credit" || members.some(m => m.fullName.toLowerCase() === customerName.toLowerCase())) && (() => {
-					const matchingMember = members.find(
+				{(paymentMethod === "Member Credit" || (customerName && !customerName.toLowerCase().startsWith("walk-in") && members.some(m => m.fullName.toLowerCase() === customerName.toLowerCase()))) && (() => {
+					const isWalkInName = !customerName || customerName.trim().toLowerCase().startsWith("walk-in");
+					const matchingMember = !isWalkInName ? members.find(
 						(m) => m.fullName.toLowerCase() === customerName.toLowerCase()
-					);
+					) : undefined;
 					const spendPerPt = loyaltyConfig?.spendPerPoint || 500;
 					const ptValPhp = loyaltyConfig?.pointValueInPhp || 1.0;
 					const netAmountForPts = Math.max(0, grandTotal - (pointsToRedeem * ptValPhp));
-					const projectedEarnedPts = (loyaltyConfig?.enabled && spendPerPt > 0 && netAmountForPts > 0)
+					const projectedEarnedPts = (!isWalkInName && loyaltyConfig?.enabled && spendPerPt > 0 && netAmountForPts > 0)
 						? Math.floor(netAmountForPts / spendPerPt) * (loyaltyConfig?.pointsPerSpend || 1)
 						: 0;
 
@@ -5239,7 +5265,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  <div className="text-left">
  <h3 className="text-sm font-extrabold text-m3-on-surface">Add Corporate Member Account</h3>
- <p className="text-[10px] text-zinc-500 dark:text-zinc-400">Register new member profile & configure credit ceiling</p>
+ 
  </div>
  </div>
  <button
@@ -5314,7 +5340,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  placeholder="0"
  className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl px-3.5 py-2 text-xs font-mono font-extrabold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
  />
- <p className="text-[9.5px] text-zinc-400 italic">Maximum authorized credit allowed for deferred billing checkout</p>
+ 
  </div>
 
  <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-3 mt-4">
@@ -5363,7 +5389,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  <div className="text-left">
  <h3 className="text-sm font-extrabold text-m3-on-surface">Member Loyalty Program Mechanics</h3>
- <p className="text-[10px] text-zinc-400">Configure point earning rates & redemption value</p>
+ 
  </div>
  </div>
  <button
@@ -5418,7 +5444,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl pl-7 pr-3 py-2 text-xs font-mono font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
  />
  </div>
- <p className="text-[9.5px] text-zinc-400 italic">Example: Enter 500 so buying ₱500 worth of tiles earns 1 point (e.g. ₱1,500 purchase = 3 points).</p>
+ 
  </div>
 
  <div className="space-y-1">
@@ -5438,7 +5464,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl pl-7 pr-3 py-2 text-xs font-mono font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
  />
  </div>
- <p className="text-[9.5px] text-zinc-400 italic">Example: Enter 1.00 so 1 point deducts ₱1.00 from the bill.</p>
+ 
  </div>
 
  <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-3 mt-4">

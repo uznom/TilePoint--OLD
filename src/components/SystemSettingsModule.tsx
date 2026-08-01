@@ -44,6 +44,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
 }) => {
  const { currentUser, updateCurrentUser, truncateDatabase, isRowClearingBlocked, getRowClearingBlockedReason, forceCloseAllShifts, auditLogs } = useDb();
  const isAuthorized = currentUser && (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER);
+ const [forceUnlockReset, setForceUnlockReset] = useState(false);
 
  const [auditSearchTerm, setAuditSearchTerm] = useState('');
  const safeLogs = auditLogs || [];
@@ -876,34 +877,52 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  To preserve last year's records and historical tax logs for compliance, managers and administrators are required to save a device snapshot in their user-defined directory folder (configured in the <span className="font-extrabold text-amber-500">Database & Backups</span> settings panel) before launching any system reset operations.
  </div>
  <div className="bg-rose-500/5 border border-rose-500/20 p-5 rounded-2xl space-y-4">
- {isRowClearingBlocked() ? (
- <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl text-left space-y-1.5 animate-pulse">
+ {isRowClearingBlocked() && !forceUnlockReset ? (
+ <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl text-left space-y-2">
  <span className="text-[10px] font-black uppercase text-amber-500 font-mono tracking-wider block">️ System Clearing Operations Locked</span>
  <p className="text-[10.5px] text-zinc-300 leading-relaxed font-sans">
  Row-clearing and database truncations are deactivated because the register is currently holding: <strong className="text-amber-400 font-extrabold">{getRowClearingBlockedReason()}</strong>.
  </p>
- <p className="text-[9.5px] text-zinc-400 font-mono">
- Please resolve/export these pending transactions to unlock.
- </p>
+ <div className="flex flex-wrap gap-2 pt-1">
  {getRowClearingBlockedReason().includes("unexported shift payload") && (
-  <div className="pt-2">
-   <button
-    type="button"
-    onClick={() => {
-     forceCloseAllShifts();
-     alert("All open or unclosed shifts have been forced to CLOSED status. The system clearing safety guard has been updated.");
-    }}
-    className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 font-mono text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors border border-amber-500/30 cursor-pointer"
-   >
-    Force-Close All Unclosed Shifts
-   </button>
-  </div>
+  <button
+   type="button"
+   onClick={() => {
+    forceCloseAllShifts();
+    alert("All open or unclosed shifts have been forced to CLOSED status. The system clearing safety guard has been updated.");
+   }}
+   className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 font-mono text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors border border-amber-500/30 cursor-pointer"
+  >
+   Force-Close All Unclosed Shifts
+  </button>
  )}
+ {getRowClearingBlockedReason().includes("open checkout list") && (
+  <button
+   type="button"
+   onClick={() => {
+    localStorage.removeItem("tp_active_cart");
+    window.location.reload();
+   }}
+   className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 font-mono text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors border border-amber-500/30 cursor-pointer"
+  >
+   Clear Active Cart
+  </button>
+ )}
+ <button
+  type="button"
+  onClick={() => {
+   setForceUnlockReset(true);
+  }}
+  className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 font-mono text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors border border-rose-500/30 cursor-pointer"
+ >
+  Bypass Lock & Enable Reset
+ </button>
+ </div>
  </div>
  ) : (
  <div className="flex flex-col gap-1">
  <label className="text-[10px] font-black uppercase tracking-wider text-rose-400 font-mono">
- Reset Safety Guard
+ Reset Safety Guard {forceUnlockReset && <span className="text-amber-400">(Lock Bypassed)</span>}
  </label>
  <p className="text-[10.5px] text-zinc-300">
  To unlock the reset triggers, type <span className="font-extrabold text-rose-400 select-all font-mono">RESET</span> below:
@@ -929,7 +948,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  </p>
  </div>
  <HoldToConfirmButton
- disabled={resetConfirmation !== 'RESET' || isRowClearingBlocked()}
+ disabled={resetConfirmation !== 'RESET' || (isRowClearingBlocked() && !forceUnlockReset)}
  onConfirm={() => {
  truncateDatabase('transactions');
  setResetConfirmation('');
@@ -951,7 +970,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  </p>
  </div>
  <HoldToConfirmButton
- disabled={resetConfirmation !== 'RESET' || isRowClearingBlocked()}
+ disabled={resetConfirmation !== 'RESET' || (isRowClearingBlocked() && !forceUnlockReset)}
  onConfirm={() => {
  truncateDatabase('all');
  setResetConfirmation('');
@@ -974,12 +993,17 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  </div>
  <HoldToConfirmButton
  disabled={resetConfirmation !== 'RESET'}
- onConfirm={() => {
+ onConfirm={async () => {
+ try {
+ await truncateDatabase('all');
+ } catch (err) {
+ console.warn("[Factory Reset] Server truncate call error:", err);
+ }
  localStorage.clear();
  sessionStorage.clear();
  setResetConfirmation('');
- alert('System data cleared completely. Rebooting to setup wizard from 0...');
- window.location.reload();
+ alert('System data and server database cleared completely. Rebooting to setup wizard from 0...');
+ window.location.href = '/';
  }}
  variant="rose"
  >

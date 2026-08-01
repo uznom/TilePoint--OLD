@@ -2,6 +2,15 @@
   "short_name": "TilePoint",
   "name": "TilePoint - Branch Ledger & POS",
   "description": "Enterprise Progressive Web App for TilePoint showroom staff, branch managers, and warehouse dispatch.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#121214",
+  "theme_color": "#1c1b1f",
+  "prefer_related_applications": false,
+  "categories": ["business", "productivity", "utilities"],
   "icons": [
     {
       "src": "/icon.svg",
@@ -16,10 +25,20 @@
       "purpose": "maskable"
     }
   ],
-  "start_url": "/",
-  "background_color": "#121214",
-  "theme_color": "#1c1b1f",
-  "display": "standalone",
-  "orientation": "any",
-  "categories": ["business", "productivity", "utilities"]
+  "shortcuts": [
+    {
+      "name": "Point of Sale",
+      "short_name": "POS",
+      "description": "Launch TilePoint POS Module",
+      "url": "/?tab=pos",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Inventory Roster",
+      "short_name": "Inventory",
+      "description": "View Stock & Ledger",
+      "url": "/?tab=inventory-stocks",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    }
+  ]
 }
