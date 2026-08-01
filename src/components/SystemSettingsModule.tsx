@@ -286,8 +286,8 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  <h3 className="text-sm font-black uppercase font-mono tracking-wider text-m3-primary">
  System Settings & Configuration
  </h3>
- <p className="text-[10px] text-m3-on-surface-variant font-medium mt-0.5 font-mono">
- MANAGE ACCESSIBILITY, GRAPHICS PERFORMANCE, AND VISUAL PREFERENCES
+ <p className="text-xs text-m3-on-surface-variant font-medium mt-0.5 font-sans">
+ Manage accessibility, graphics performance, and visual preferences
  </p>
  </div>
  </div>
@@ -319,7 +319,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  <Shield className="h-5 w-5 shrink-0 mt-0.5" />
  <div>
  <p className="text-xs font-black uppercase tracking-wider">Restricted View-Only Mode</p>
- <p className="text-[11px] text-zinc-300 leading-normal mt-0.5 font-sans">
+ <p className="text-xs text-m3-on-surface leading-normal mt-0.5 font-sans font-medium">
  You do not possess the required administrator credentials to alter global system parameters. These features are read-only under role-based access control (RBAC).
  </p>
  </div>
@@ -389,9 +389,9 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  Operator: <span className="text-m3-primary font-bold">@{log.username || 'system'}</span>
  </span>
  </div>
- <div className="text-right text-[10.5px] text-zinc-400 font-mono shrink-0 ml-2">
+ <div className="text-right text-xs text-m3-on-surface-variant font-mono shrink-0 ml-2">
  {new Date(log.timestamp).toLocaleTimeString()}
- <span className="block text-[9px] text-zinc-500">{new Date(log.timestamp).toLocaleDateString()}</span>
+ <span className="block text-[10px] opacity-75">{new Date(log.timestamp).toLocaleDateString()}</span>
  </div>
  </div>
  );
@@ -440,11 +440,11 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  <Sliders className="h-5 w-5" />
  </div>
  <div className="space-y-1">
- <div className="text-[12px] font-black flex items-center gap-1.5 font-sans">
+ <div className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5 font-sans">
  <span>Follow System Theme State</span>
  {followSystemTheme && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
  </div>
- <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ <p className="text-xs text-m3-on-surface-variant leading-relaxed">
  Automatically matches the ERP interface theme with your operating system's light or dark mode preference.
  </p>
  </div>
@@ -470,11 +470,11 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  <Settings className="h-5 w-5" />
  </div>
  <div className="space-y-1">
- <div className="text-[12px] font-black flex items-center gap-1.5 font-sans">
+ <div className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5 font-sans">
  <span>Manual Workspace Dark Theme</span>
  {darkMode && !followSystemTheme && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
  </div>
- <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ <p className="text-xs text-m3-on-surface-variant leading-relaxed">
  Override automatic theme matching and force high-contrast dark mode display across all corporate modules.
  </p>
  </div>
@@ -495,11 +495,11 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  <Eye className="h-5 w-5" />
  </div>
  <div className="space-y-1">
- <div className="text-[12px] font-black flex items-center gap-1.5 font-sans">
+ <div className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5 font-sans">
  <span>Turn Off Backdrop & UI Blurs</span>
  {disableBlurs && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
  </div>
- <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ <p className="text-xs text-m3-on-surface-variant leading-relaxed">
  Removes frosted glass translucent backdrops and heavy gradient blur filters to improve visual clarity and rendering performance.
  </p>
  </div>
@@ -519,11 +519,11 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  <Sparkles className="h-5 w-5" />
  </div>
  <div className="space-y-1">
- <div className="text-[12px] font-black flex items-center gap-1.5 font-sans">
+ <div className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5 font-sans">
  <span>Remove Animations & Effects</span>
  {disableAnimations && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
  </div>
- <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ <p className="text-xs text-m3-on-surface-variant leading-relaxed">
  Bypasses interface slide-in motion, tab page fade effects, and interactive scaling physics for instant navigation.
  </p>
  </div>
@@ -543,11 +543,11 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  <Download className="h-5 w-5" />
  </div>
  <div className="space-y-1">
- <div className="text-[12px] font-black flex items-center gap-1.5 font-sans">
+ <div className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5 font-sans">
  <span>Turn Off Install Prompt</span>
  {disableInstallPrompt && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
  </div>
- <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ <p className="text-xs text-m3-on-surface-variant leading-relaxed">
  Prevents the floating Progress Web App (PWA) installation alert banner from displaying on your screen.
  </p>
  </div>
@@ -567,11 +567,11 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  <Clock className="h-5 w-5" />
  </div>
  <div className="space-y-1">
- <div className="text-[12px] font-black flex items-center gap-1.5 font-sans">
+ <div className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5 font-sans">
  <span>Turn Off Idle Clock Overlay</span>
  {disableIdleClock && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
  </div>
- <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ <p className="text-xs text-m3-on-surface-variant leading-relaxed">
  Disables the full-screen dynamic screensaver overlay that activates during periods of checkout and interface inactivity.
  </p>
  </div>
@@ -664,11 +664,11 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  <CaseSensitive className="h-4.5 w-4.5" />
  </div>
  <div className="space-y-1">
- <div className="text-[12px] font-black flex items-center gap-1.5 font-sans">
+ <div className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5 font-sans">
  <span>Dyslexic-Friendly Typography</span>
  {dyslexicFont && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
  </div>
- <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ <p className="text-xs text-m3-on-surface-variant leading-relaxed">
  Applies Comic Neue & slab spacing alignments globally, optimizing font tracking, line height, and stroke curves for dyslexic readability.
  </p>
  </div>
@@ -688,11 +688,11 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  <Layers className="h-4.5 w-4.5" />
  </div>
  <div className="space-y-1">
- <div className="text-[12px] font-black flex items-center gap-1.5 font-sans">
+ <div className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5 font-sans">
  <span>Maximize Text Contrast</span>
  {maximizeTextContrast && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
  </div>
- <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ <p className="text-xs text-m3-on-surface-variant leading-relaxed">
  Adds a high-visibility background frame around body texts and description strings to ensure outstanding readability against gradients and custom hues.
  </p>
  </div>
@@ -712,11 +712,11 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  <Keyboard className="h-4.5 w-4.5" />
  </div>
  <div className="space-y-1">
- <div className="text-[12px] font-black flex items-center gap-1.5 font-sans">
+ <div className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5 font-sans">
  <span>Highlight Keyboard Focus Outlines</span>
  {enhancedOutlines && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
  </div>
- <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ <p className="text-xs text-m3-on-surface-variant leading-relaxed">
  Forces thick orange safety outlines around focused checkout inputs and catalog layout buttons when navigating via the TAB key.
  </p>
  </div>

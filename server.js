@@ -298,17 +298,28 @@ function createSqliteIndexesForTable(tableName) {
 function ensureSqliteTable(tableName) {
   if (!sqliteDb || !tableName) return;
   try {
-    const columns = (typeof TABLE_COLUMNS === 'object' && TABLE_COLUMNS[tableName]) ? TABLE_COLUMNS[tableName] : ['id'];
-    const colDefs = columns.map(c => c === 'id' ? '`id` TEXT PRIMARY KEY' : `\`${c}\` TEXT`).join(', ');
+    const rawCols = (typeof TABLE_COLUMNS === 'object' && TABLE_COLUMNS[tableName]) ? TABLE_COLUMNS[tableName] : ['id'];
+    const uniqueCols = [];
+    const seenColNames = new Set();
+    for (const c of rawCols) {
+      const lower = c.toLowerCase();
+      if (!seenColNames.has(lower)) {
+        seenColNames.add(lower);
+        uniqueCols.push(c);
+      }
+    }
+
+    const colDefs = uniqueCols.map(c => c === 'id' ? '`id` TEXT PRIMARY KEY' : `\`${c}\` TEXT`).join(', ');
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS \`${tableName}\` (${colDefs})`);
 
     const tableInfo = sqliteDb.prepare(`PRAGMA table_info(\`${tableName}\`)`).all();
-    const existingCols = new Set(tableInfo.map(col => col.name));
+    const existingCols = new Set(tableInfo.map(col => col.name.toLowerCase()));
 
-    for (const col of columns) {
-      if (!existingCols.has(col)) {
+    for (const col of uniqueCols) {
+      if (!existingCols.has(col.toLowerCase())) {
         try {
           sqliteDb.exec(`ALTER TABLE \`${tableName}\` ADD COLUMN \`${col}\` TEXT`);
+          existingCols.add(col.toLowerCase());
         } catch (alterErr) {}
       }
     }
@@ -2174,7 +2185,10 @@ if (process.env.NODE_ENV !== 'production') {
   console.log('[Shared DB Server] Running in DEVELOPMENT mode with Vite middleware...');
   const { createServer: createViteServer } = await import('vite');
   const vite = await createViteServer({
-    server: { middlewareMode: true },
+    server: {
+      middlewareMode: true,
+      hmr: process.env.DISABLE_HMR !== 'true'
+    },
     appType: 'spa'
   });
   app.use(vite.middlewares);

@@ -18,8 +18,10 @@ This document provides a comprehensive, step-by-step guide for installing, confi
    - [Step 2.7: Build Production Client Assets](#step-27-build-production-client-assets)
    - [Step 2.8: Launch and Manage Server under PM2](#step-28-launch-and-manage-server-under-pm2)
 5. [Database Management, Migration & Resetting to Setup Wizard State](#-5-database-management-migration--resetting-to-setup-wizard-state)
-   - [Wiping Database & Returning to Setup Wizard Installer](#wiping-database--returning-to-setup-wizard-installer)
-   - [Migrating Data between JSON / AlaSQL and MySQL](#migrating-data-between-json--alasql-and-mysql)
+   - [5.1 better-sqlite3 Database Architecture & File Layout](#-51-better-sqlite3-database-architecture--file-layout)
+   - [5.2 better-sqlite3 Diagnostic & Verification Protocol (Testing If Working)](#-52-better-sqlite3-diagnostic--verification-protocol-testing-if-working)
+   - [5.3 Wiping Database & Returning to Setup Wizard Installer](#-53-wiping-database--returning-to-setup-wizard-installer)
+   - [5.4 Migrating Data between JSON / AlaSQL, SQLite, and MySQL](#-54-migrating-data-between-json--alasql-sqlite-and-mysql)
 6. [Connecting Mobile Cashier Terminals & Staff Devices](#-6-connecting-mobile-cashier-terminals--staff-devices)
 7. [Preventing Disconnections: Static IP & Router DHCP Setup](#-7-preventing-disconnections-static-ip--router-dhcp-setup)
    - [Method A: Router DHCP IP Reservation (Recommended)](#method-a-router-dhcp-ip-reservation-recommended)
@@ -31,6 +33,12 @@ This document provides a comprehensive, step-by-step guide for installing, confi
 10. [Comprehensive Step-by-Step Troubleshooting Guide](#-10-comprehensive-step-by-step-troubleshooting-guide)
     - [Troubleshooting EADDRINUSE (Port 3000 or 3306 Busy)](#troubleshooting-eaddrinuse-port-3000-or-3306-busy)
     - [Troubleshooting WebSocket server error: Port 24678 is already in use](#troubleshooting-websocket-server-error-port-24678-is-already-in-use)
+    - [Troubleshooting better-sqlite3 Native Binary Missing (better_sqlite3.node)](#troubleshooting-better-sqlite3-native-binary-missing-better_sqlite3node)
+    - [Troubleshooting NODE_MODULE_VERSION Mismatch & Node.js ABI Errors](#troubleshooting-node_module_version-mismatch--nodejs-abi-errors)
+    - [Troubleshooting node-gyp & Windows Visual C++ Build Tools Compilation Failures](#troubleshooting-node-gyp--windows-visual-c-build-tools-compilation-failures)
+    - [Troubleshooting SQLite Database Locked (SQLITE_BUSY / Concurrent Locks)](#troubleshooting-sqlite-database-locked-sqlite_busy--concurrent-locks)
+    - [Troubleshooting SQLite Permission Denied (SQLITE_CANTOPEN / Windows Access Rights)](#troubleshooting-sqlite-permission-denied-sqlite_cantopen--windows-access-rights)
+    - [Troubleshooting Corrupted SQLite Database (SQLITE_CORRUPT) & Emergency Recovery](#troubleshooting-corrupted-sqlite-database-sqlite_corrupt--emergency-recovery)
     - [Troubleshooting MySQL Connection Errors (ER_ACCESS_DENIED_ERROR / ECONNREFUSED)](#troubleshooting-mysql-connection-errors-er_access_denied_error--econnrefused)
     - [Troubleshooting "Not Secure" / Running in HTTP Mode](#troubleshooting-not-secure--running-in-http-mode)
     - [Troubleshooting ERR_SSL_PROTOCOL_ERROR](#troubleshooting-err_ssl_protocol_error)
@@ -48,9 +56,10 @@ This document provides a comprehensive, step-by-step guide for installing, confi
 TilePoint operates as a resilient, enterprise full-stack POS and ERP platform designed for hardware and tile retail stores:
 
 - **Central Server Node (`server.js`)**: Express.js server running on **Port 3000** with native HTTPS termination.
-- **Dual Relational Database Engine**:
-  - **Primary Engine**: MySQL 8.0+ Connection Pool (`mysql2/promise`) connecting to a local or remote MySQL Server on Port 3306.
-  - **Embedded SQL Engine**: Integrated **AlaSQL** relational SQL engine with 28 fully MySQL-compatible table schemas (`CREATE TABLE IF NOT EXISTS`) and atomic JSON snapshot persistence (`db.json`) for zero-config offline standalone operation when MySQL is not present or offline.
+- **Triple-Tier Relational Database Engine Architecture**:
+  - **Primary Local Engine**: **`better-sqlite3` High-Performance Native SQLite Engine** writing to `tilepoint_sqlite.db` with WAL (Write-Ahead Logging) mode (`journal_mode = WAL`), indexed queries, and single-file ACID transactional safety.
+  - **In-Memory Query Engine**: Integrated **AlaSQL** relational SQL engine with 28 fully MySQL-compatible table schemas (`CREATE TABLE IF NOT EXISTS`) and atomic JSON snapshot persistence (`server-db.json`) for zero-config offline standalone operations.
+  - **Enterprise Cloud/Remote Pool**: Optional **MySQL 8.0+** Connection Pool (`mysql2/promise`) connecting to a dedicated MySQL Server on Port 3306 for multi-branch corporate synchronization.
 - **Real-Time Synchronizer**: Dual real-time push via **Socket.io** (`db_pulse_update`) and **Server-Sent Events (SSE)** (`/api/db/events`) broadcasting live updates across all cashier and inventory terminals.
 - **Reporting Engine & Excel Export**: Multi-sheet `.xlsx` workbook generation (`xlsx`) for inventory stock cards, sales summaries, and transmittals.
 - **Security & Shielding**: Anti-crawler middleware shielding API endpoints, HMAC SHA-256 session verification, AES local signature hashing, and role-based access control (Admin, Manager, Cashier).
@@ -121,14 +130,17 @@ If you prefer to install and configure each component manually, follow this sequ
 
 ### Step 2.2: Install Node Dependencies
 
-1. Open **Command Prompt** or **PowerShell** in the root directory of TilePoint:
+1. Open **Command Prompt** or **PowerShell** as **Administrator** in the root directory of TilePoint:
    ```cmd
    cd C:\path\to\TilePoint
    ```
-2. Run `npm install` to download required packages (`express`, `alasql`, `mysql2`, `vite`, `dotenv`, `react`, `xlsx`, `lucide-react`, etc.):
+2. Run `npm install` to download required packages (`better-sqlite3`, `express`, `alasql`, `mysql2`, `vite`, `dotenv`, `react`, `xlsx`, `lucide-react`, etc.):
    ```cmd
    npm install
    ```
+
+> ⚠️ **Important Note on `better-sqlite3` Native Add-on for Windows**:
+> `better-sqlite3` is a high-performance native C++ Node.js add-on. `npm install` automatically downloads official precompiled binary wheels (`better_sqlite3.node`) for 64-bit Windows and Node LTS. If prebuilt binaries cannot be retrieved (e.g. strict corporate proxy, offline environment, or non-standard Node ABI), `npm` will attempt a native build using `node-gyp`. If building from source fails, see [Troubleshooting Visual C++ Build Tools](#troubleshooting-node-gyp--windows-visual-c-build-tools-compilation-failures).
 
 ---
 
@@ -270,7 +282,84 @@ PM2 keeps your server running 24/7 in the background and restarts it automatical
 
 ## 🧹 5. Database Management, Migration & Resetting to Setup Wizard State
 
-### Wiping Database & Returning to Setup Wizard Installer
+### 💾 5.1 `better-sqlite3` Database Architecture & File Layout
+
+TilePoint utilizes **`better-sqlite3`** as its high-speed local persistent database engine.
+
+- **Primary Database File**: `tilepoint_sqlite.db` in the project root folder.
+- **WAL Journaling Files**:
+  - `tilepoint_sqlite.db-wal` (Write-Ahead Log containing active uncommitted/committed transaction logs).
+  - `tilepoint_sqlite.db-shm` (Shared Memory index file for multi-threaded read/write synchronization).
+- **WAL Journaling Configuration**: `journal_mode = WAL` and `synchronous = NORMAL` are enabled automatically for concurrent performance without blocking read operations during receipt checkout.
+- **Self-Healing Table Schemas**: At server boot, `server.js` executes `ensureSqliteTable()` across all 28 relational tables to verify columns, append missing fields, and apply indexed lookups (`CREATE INDEX IF NOT EXISTS`).
+
+#### Backing Up the SQLite Database:
+1. Stop the PM2 server process: `pm2 stop tilepoint-hq-server`
+2. Copy `tilepoint_sqlite.db`, `tilepoint_sqlite.db-wal`, and `tilepoint_sqlite.db-shm` to your backup directory or USB drive:
+   ```cmd
+   copy tilepoint_sqlite.db C:\Backups\tilepoint_sqlite_%date:~-4,4%%date:~-10,2%%date:~-7,2%.db
+   ```
+3. Restart the server: `pm2 restart tilepoint-hq-server`
+
+---
+
+### 🧪 5.2 `better-sqlite3` Diagnostic & Verification Protocol (Testing If Working)
+
+To verify whether `better-sqlite3` is compiled properly, loaded without error, actively writing to disk, and handling queries in real-time, execute these 5 diagnostic tests:
+
+#### Test 1: Direct Node.js Native Add-on Load & Version Check
+Run this quick command in Command Prompt or PowerShell:
+```cmd
+node -e "import Database from 'better-sqlite3'; const db = new Database(':memory:'); console.log('✅ better-sqlite3 loaded! SQLite Version:', db.prepare('SELECT sqlite_version() AS v').get().v);"
+```
+*Expected Output:* `✅ better-sqlite3 loaded! SQLite Version: 3.x.x`  
+*(If this fails with `Could not locate the bindings file` or `NODE_MODULE_VERSION mismatch`, see Section 10 troubleshooting below).*
+
+#### Test 2: In-Memory Read/Write Transaction Test
+Execute a real atomic transaction test:
+```cmd
+node -e "import Database from 'better-sqlite3'; import fs from 'fs'; const db = new Database('test_diag.db'); db.exec('CREATE TABLE test (id INT, val TEXT)'); db.prepare('INSERT INTO test VALUES (?, ?)').run(1, 'TilePoint OK'); console.log('✅ SQLite Write/Read Test:', db.prepare('SELECT * FROM test').get()); db.close(); fs.unlinkSync('test_diag.db');"
+```
+*Expected Output:* `✅ SQLite Write/Read Test: { id: 1, val: 'TilePoint OK' }`
+
+#### Test 3: Check Server Boot Console Log Output
+Start server or inspect PM2 logs:
+```cmd
+pm2 logs tilepoint-hq-server --lines 50
+```
+Look for the startup log entry:
+```
+[Database Engine] better-sqlite3 Local Persistent SQLite Engine initialized successfully at: C:\...\TilePoint\tilepoint_sqlite.db
+```
+
+#### Test 4: Live HTTP/HTTPS API Status Endpoint Verification
+Query the live `/api/db/sqlite-status` endpoint in browser (`http://127.0.0.1:3000/api/db/sqlite-status`) or via Command Prompt:
+```cmd
+node -e "fetch('http://127.0.0.1:3000/api/db/sqlite-status').then(r => r.json()).then(console.log);"
+```
+*Expected JSON Response:*
+```json
+{
+  "success": true,
+  "engine": "better-sqlite3",
+  "dbPath": "C:\\path\\to\\TilePoint\\tilepoint_sqlite.db",
+  "sizeFormatted": "0.85 MB",
+  "totalTables": 29,
+  "totalRecords": 1420,
+  "journalMode": "WAL"
+}
+```
+
+#### Test 5: Verify Disk File & Journal Artifact Creation
+Check if `tilepoint_sqlite.db`, `tilepoint_sqlite.db-wal`, and `tilepoint_sqlite.db-shm` exist in the root directory:
+```cmd
+dir tilepoint_sqlite*
+```
+*If all files exist and size is > 0 KB, `better-sqlite3` is fully functional and actively persisting POS data.*
+
+---
+
+### 🔄 5.3 Wiping Database & Returning to Setup Wizard Installer
 
 If you need to perform a complete system reset, flush all data, or return TilePoint to its fresh **Setup Wizard (Installer)** state:
 
@@ -293,9 +382,9 @@ node -e "fetch('http://127.0.0.1:3000/api/db/truncate', { method: 'POST', header
 
 ---
 
-### Migrating Data between JSON / AlaSQL and MySQL
+### 🔀 5.4 Migrating Data between JSON / AlaSQL, SQLite, and MySQL
 
-TilePoint includes an automated migration utility (`scripts/migrateJsonToMysql.js`) to migrate offline JSON/AlaSQL snapshots directly into a live MySQL server:
+TilePoint includes automated sync endpoints and a migration utility (`scripts/migrateJsonToMysql.js`) to migrate offline JSON/AlaSQL snapshots into SQLite and live MySQL servers:
 
 1. Ensure MySQL is configured in `.env`.
 2. Execute the migration script in Command Prompt:
@@ -627,6 +716,163 @@ mkcert -CAROOT
 
 ---
 
+### 🔨 Troubleshooting `better-sqlite3` Native Binary Missing (`better_sqlite3.node`)
+
+**Symptom**: Server fails to start with:
+`Error: Could not locate the bindings file. Tried: ...\node_modules\better-sqlite3\build\Release\better_sqlite3.node`
+
+**Cause**: The compiled C++ binary add-on (`better_sqlite3.node`) was not generated or was moved during node_modules installation.
+
+**Step-by-Step Fix**:
+1. Open Command Prompt as Administrator in project root.
+2. Recompile `better-sqlite3` for your current Node.js runtime:
+   ```cmd
+   npm rebuild better-sqlite3
+   ```
+3. If `npm rebuild` does not solve it, force re-install without source build:
+   ```cmd
+   npm install better-sqlite3 --force --build-from-source=false
+   ```
+4. Restart server under PM2:
+   ```cmd
+   pm2 restart tilepoint-hq-server
+   ```
+
+---
+
+### ⚠️ Troubleshooting `NODE_MODULE_VERSION` Mismatch & Node.js ABI Errors
+
+**Symptom**: Server fails with:
+`Error: The module '\\?\C:\...\better_sqlite3.node' was compiled against a different Node.js version using NODE_MODULE_VERSION 108. This version of Node.js requires NODE_MODULE_VERSION 115.`
+
+**Cause**: Node.js was upgraded on the host PC (e.g., from Node v18 to Node v20) after `npm install` was performed.
+
+**Step-by-Step Fix**:
+1. Check your active Node.js version:
+   ```cmd
+   node -v
+   ```
+2. Delete the stale `better-sqlite3` build folder:
+   ```cmd
+   rd /s /q node_modules\better-sqlite3
+   ```
+3. Re-install and rebuild `better-sqlite3` for the active Node ABI:
+   ```cmd
+   npm install better-sqlite3
+   npm rebuild better-sqlite3
+   ```
+4. Confirm resolution using Test 1:
+   ```cmd
+   node -e "import Database from 'better-sqlite3'; const db = new Database(':memory:'); console.log('SQLite Version:', db.prepare('SELECT sqlite_version() AS v').get().v);"
+   ```
+
+---
+
+### 🏗️ Troubleshooting `node-gyp` & Windows Visual C++ Build Tools Compilation Failures
+
+**Symptom**: `npm install` or `npm rebuild` fails with errors such as:
+`gyp ERR! build error`, `MSB4019: The imported project ... was not found`, or `cl.exe not found`.
+
+**Cause**: `npm` attempted to compile `better-sqlite3` from source code because prebuilt binaries were not retrieved, but Windows lacks Visual Studio C++ compilers and Python.
+
+**Step-by-Step Fix**:
+
+#### Solution A — Force Prebuilt Binary Download (Fastest, No Compilers Needed):
+Ensure npm downloads pre-compiled Windows x64 binaries without attempting `node-gyp` source builds:
+```cmd
+npm install better-sqlite3 --prefer-online --build-from-source=false
+```
+
+#### Solution B — Install Visual Studio C++ Build Tools (Full Compilers):
+If prebuilt binaries are unavailable due to an offline network:
+1. Open PowerShell as Administrator and run:
+   ```powershell
+   winget install Microsoft.VisualStudio.2022.BuildTools
+   ```
+2. Open **Visual Studio Installer** -> select **Desktop development with C++** -> click Install.
+3. Install Python 3.x if missing: `winget install Python.Python.3.11`
+4. Re-run native rebuild:
+   ```cmd
+   npm rebuild better-sqlite3
+   ```
+
+---
+
+### 🔒 Troubleshooting SQLite Database Locked (`SQLITE_BUSY` / Concurrent Locks)
+
+**Symptom**: Server logs report `SqliteError: database is locked` or `SQLITE_BUSY`.
+
+**Cause**: An external application (e.g. DB Browser for SQLite, DBeaver, VS Code extension) or an orphaned `node.exe` background process holds an exclusive write lock on `tilepoint_sqlite.db`.
+
+**Step-by-Step Fix**:
+1. Close any database GUI applications viewing `tilepoint_sqlite.db`.
+2. Terminate all orphaned Node processes:
+   ```cmd
+   taskkill /IM node.exe /F
+   ```
+3. Verify that WAL mode is active (`journal_mode = WAL`) by inspecting `server.js` startup logs.
+4. Restart PM2 server:
+   ```cmd
+   pm2 start server.js --name "tilepoint-hq-server"
+   ```
+
+---
+
+### 🔑 Troubleshooting SQLite Permission Denied (`SQLITE_CANTOPEN` / Windows Access Rights)
+
+**Symptom**: Server logs show `SqliteError: unable to open database file` or `SQLITE_CANTOPEN`.
+
+**Cause**: Windows file permissions restrict write access to `tilepoint_sqlite.db` or its directory (e.g., project stored in `Program Files` or folder set to Read-Only).
+
+**Step-by-Step Fix**:
+1. Remove read-only attributes from the project directory:
+   ```cmd
+   attrib -r "C:\path\to\TilePoint\*" /s
+   ```
+2. Run Command Prompt / PowerShell as **Administrator**.
+3. Move project to a non-restricted folder (e.g. `C:\TilePoint` or `C:\Users\Public\TilePoint`).
+
+---
+
+### 💥 Troubleshooting Corrupted SQLite Database (`SQLITE_CORRUPT`) & Emergency Recovery
+
+**Symptom**: Server logs report `SqliteError: database disk image is malformed` or `SQLITE_CORRUPT`.
+
+**Cause**: Unscheduled PC shutdown or power loss while writes were active without proper WAL sync.
+
+**Step-by-Step Fix**:
+1. Stop the PM2 server process:
+   ```cmd
+   pm2 stop tilepoint-hq-server
+   ```
+2. Rename corrupted database files for backup:
+   ```cmd
+   ren tilepoint_sqlite.db tilepoint_sqlite_corrupt.db
+   ren tilepoint_sqlite.db-wal tilepoint_sqlite_corrupt.db-wal
+   ren tilepoint_sqlite.db-shm tilepoint_sqlite_corrupt.db-shm
+   ```
+3. Restart server under PM2:
+   ```cmd
+   pm2 start server.js --name "tilepoint-hq-server"
+   ```
+4. **Self-Healing Recovery**: `server.js` will automatically recreate a fresh `tilepoint_sqlite.db`, initialize all 28 table schemas, and auto-seed database records from `db.json`!
+
+---
+
+### 🛡️ Troubleshooting Multi-Tier Database Fallback (AlaSQL + JSON Engine)
+
+**Symptom**: What happens if `better-sqlite3` completely fails to load on a restricted PC?
+
+**Resilient Architecture**:
+TilePoint is designed with a **triple-redundant database architecture**:
+- **Tier 1 (Primary Engine)**: High-speed native **`better-sqlite3`** persistent database.
+- **Tier 2 (Zero-Config Fallback)**: In-memory **`AlaSQL`** relational SQL engine with 28 tables and atomic snapshot persistence (`db.json`).
+- **Tier 3 (Enterprise Cloud)**: Dedicated **`MySQL 8.0+`** pool (`mysql2/promise`).
+
+*If `better-sqlite3` fails, TilePoint automatically seamlessly operates on AlaSQL + `db.json` without crashing or interrupting cashier terminal checkouts!*
+
+---
+
 ### Troubleshooting Vite / esbuild Transform Errors
 
 **Symptom**: Build fails with `[vite:esbuild] Transform failed with 1 error`.
@@ -681,6 +927,9 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 | Operation | Command | Execution Context |
 | :--- | :--- | :--- |
 | **Run 1-Click Installer** | `setup-tilepoint.bat` | Windows CMD (Run as Admin) |
+| **Test `better-sqlite3` Binding** | `node -e "import Database from 'better-sqlite3'; const db = new Database(':memory:'); console.log('SQLite:', db.prepare('SELECT sqlite_version() AS v').get().v);"` | CMD / PowerShell |
+| **Rebuild `better-sqlite3` Native Add-on** | `npm rebuild better-sqlite3` | CMD / PowerShell |
+| **Check SQLite Health API** | `node -e "fetch('http://127.0.0.1:3000/api/db/sqlite-status').then(r=>r.json()).then(console.log);"` | CMD / PowerShell |
 | **Check PM2 Status** | `pm2 status` | CMD / PowerShell |
 | **View Real-Time Logs** | `pm2 logs tilepoint-hq-server` | CMD / PowerShell |
 | **Restart Server** | `pm2 restart tilepoint-hq-server` | CMD / PowerShell |

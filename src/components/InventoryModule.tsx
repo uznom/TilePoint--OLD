@@ -1373,6 +1373,27 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  return;
  }
 
+ if (!productCode.trim()) {
+ showToast('Validation Error: Product Core Code is required.');
+ return;
+ }
+ if (!sku.trim()) {
+ showToast('Validation Error: Warehouse SKU ID is required.');
+ return;
+ }
+ if (!productName.trim()) {
+ showToast('Validation Error: Product Full Descriptive Name is required.');
+ return;
+ }
+ if (!isRegisteringNewSupplier && !brand.trim()) {
+ showToast('Validation Error: Corporate Brand / Label is required.');
+ return;
+ }
+ if (hasExpiration && !expirationDate) {
+ showToast('Validation Error: Catalog Expiration Date is required when Shelf-Life Expiration is active.');
+ return;
+ }
+
  let finalSupplierId = supplierId;
 
  if (!isEditMode && isRegisteringNewSupplier) {
@@ -1391,17 +1412,19 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  finalSupplierId = newSup.id;
  }
 
+ const finalCategory = category.trim() || 'Ceramic Tiles';
+
  const payload = {
- productCode,
- sku,
- barcode,
- designName,
- productName,
- category,
- brand: isRegisteringNewSupplier ? newSupplierName.trim() : brand,
+ productCode: productCode.trim(),
+ sku: sku.trim(),
+ barcode: barcode.trim(),
+ designName: designName.trim() || 'Standard',
+ productName: productName.trim(),
+ category: finalCategory,
+ brand: isRegisteringNewSupplier ? newSupplierName.trim() : (brand.trim() || 'Generic'),
  supplierId: finalSupplierId,
- unit,
- size,
+ unit: unit.trim() || 'Box',
+ size: size.trim() || 'N/A',
  boxQuantity: Number(boxQuantity),
  coveragePerBox: Number(coveragePerBox),
  image: productImage,
@@ -5211,7 +5234,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Corporate Brand / Label</label>
  <input
  type="text"
- required
+ required={!isRegisteringNewSupplier}
  value={brand}
  onChange={e => setBrand(e.target.value)}
  placeholder="Brand name"
@@ -5268,7 +5291,6 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Dimensions</label>
  <input
  type="text"
- required
  value={size}
  onChange={e => setSize(e.target.value)}
  placeholder="Dimensions (e.g. 60x60 cm)"
@@ -5283,8 +5305,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <input
  type="number"
  required
- value={boxQuantity}
- onChange={e => setBoxQuantity(Number(e.target.value))}
+ value={boxQuantity || ''}
+ placeholder="1"
+ onChange={e => setBoxQuantity(e.target.value === '' ? 0 : Number(e.target.value))}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
  />
  </div>
@@ -5300,8 +5323,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="number"
  step="0.001"
  required
- value={coveragePerBox}
- onChange={e => setCoveragePerBox(Number(e.target.value))}
+ value={coveragePerBox === 0 ? '' : coveragePerBox}
+ placeholder="0.00"
+ onChange={e => setCoveragePerBox(e.target.value === '' ? 0 : Number(e.target.value))}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
  />
  </div>
@@ -5435,8 +5459,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="number"
  step="0.1"
  required
- value={costPrice}
- onChange={e => handleCostPriceChange(Number(e.target.value))}
+ value={costPrice === 0 ? '' : costPrice}
+ placeholder="0.00"
+ onChange={e => handleCostPriceChange(e.target.value === '' ? 0 : Number(e.target.value))}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
  />
  </div>
@@ -5447,8 +5472,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="number"
  step="0.1"
  required
- value={markupPercent}
- onChange={e => handleMarkupChange(Number(e.target.value))}
+ value={markupPercent === 0 ? '' : markupPercent}
+ placeholder="0"
+ onChange={e => handleMarkupChange(e.target.value === '' ? 0 : Number(e.target.value))}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
  />
  </div>
@@ -5459,8 +5485,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="number"
  step="0.1"
  required
- value={sellingPrice}
- onChange={e => handleSellingPriceChange(Number(e.target.value))}
+ value={sellingPrice === 0 ? '' : sellingPrice}
+ placeholder="0.00"
+ onChange={e => handleSellingPriceChange(e.target.value === '' ? 0 : Number(e.target.value))}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-black text-m3-primary"
  />
  </div>
@@ -5528,8 +5555,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <input
  type="number"
  required
- value={stockQuantity}
- onChange={e => setStockQuantity(Number(e.target.value))}
+ value={stockQuantity === 0 ? '' : stockQuantity}
+ placeholder="0"
+ onChange={e => setStockQuantity(e.target.value === '' ? 0 : Number(e.target.value))}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
  />
  </div>
@@ -5539,25 +5567,26 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <input
  type="number"
  required
- value={minimumStock}
- onChange={e => setMinimumStock(Number(e.target.value))}
+ value={minimumStock === 0 ? '' : minimumStock}
+ placeholder="0"
+ onChange={e => setMinimumStock(e.target.value === '' ? 0 : Number(e.target.value))}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
  />
  </div>
 
- <div className="space-y-1 relative pl-0 bg-m3-surface-lowest p-3 rounded-2xl border border-m3-outline-variant/30 flex flex-col justify-between">
+ <div className="space-y-1 relative pl-0 bg-m3-surface-lowest p-3.5 rounded-2xl border border-m3-outline-variant/30 flex flex-col justify-between">
  <div>
  <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none block">Shelf-Life Expiration</label>
- <span className="text-[9px] text-m3-on-surface-variant font-medium pl-1 select-none block mt-0.5 leading-snug">Requires expiration date?</span>
+ <span className="text-[10px] text-m3-on-surface-variant font-medium pl-1 select-none block mt-0.5 leading-snug">Requires expiration date?</span>
  </div>
  <div className="flex items-center gap-2 mt-2">
  <button
  type="button"
  onClick={() => setHasExpiration(true)}
- className={`flex-1 py-1.5 px-3 rounded-xl border text-[11px] font-bold transition-all text-center cursor-pointer ${
+ className={`flex-1 py-2 px-3 rounded-xl border text-[11px] font-extrabold transition-all text-center cursor-pointer ${
  hasExpiration 
- ? 'bg-amber-500/10 border-amber-500 text-amber-500 font-extrabold shadow-xs' 
- : 'bg-m3-surface-low border-m3-outline-variant/30 text-m3-on-surface-variant'
+ ? 'bg-amber-500/10 border-amber-500 text-amber-500 shadow-xs' 
+ : 'bg-m3-surface-low border-m3-outline-variant/30 text-m3-on-surface-variant hover:bg-m3-surface-high'
  }`}
  >
  Yes, Has Expiry
@@ -5565,10 +5594,10 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <button
  type="button"
  onClick={() => setHasExpiration(false)}
- className={`flex-1 py-1.5 px-3 rounded-xl border text-[11px] font-bold transition-all text-center cursor-pointer ${
+ className={`flex-1 py-2 px-3 rounded-xl border text-[11px] font-extrabold transition-all text-center cursor-pointer ${
  !hasExpiration 
- ? 'bg-m3-primary/10 border-m3-primary text-m3-primary font-extrabold shadow-xs' 
- : 'bg-m3-surface-low border-m3-outline-variant/30 text-m3-on-surface-variant'
+ ? 'bg-m3-primary/10 border-m3-primary text-m3-primary shadow-xs' 
+ : 'bg-m3-surface-low border-m3-outline-variant/30 text-m3-on-surface-variant hover:bg-m3-surface-high'
  }`}
  >
  No Expiry Date
@@ -5577,28 +5606,32 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  </div>
 
  {hasExpiration && (
- <div className="space-y-1 relative pl-0 md:col-span-3 bg-amber-500/5 p-4 rounded-2xl border border-amber-500/20 animate-fade-in mt-2 flex flex-col gap-2">
- <div className="flex items-center gap-1.5 text-amber-500">
+ <div className="space-y-2 relative pl-0 md:col-span-3 bg-amber-500/5 p-4 rounded-2xl border border-amber-500/20 animate-fade-in flex flex-col gap-2.5">
+ <div className="flex items-center gap-2 text-amber-500">
  <Clock className="h-4 w-4 text-amber-500 animate-pulse" />
  <span className="text-xs font-black uppercase tracking-wider">Specify Product Expiration Date</span>
  </div>
- <p className="text-[10px] text-m3-on-surface-variant leading-relaxed">
- Set the standard expiration date of this product catalog listing. The system will flag this item in the catalog table if it is expiring or expired.
+ <p className="text-[11px] text-m3-on-surface-variant leading-relaxed pl-0.5">
+ Set the standard catalog expiration date for this listing. The system will flag this item in inventory tables and sales invoices when approaching or past expiration.
  </p>
  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
  <div className="space-y-1">
- <label className="text-[9px] font-extrabold text-m3-on-surface-variant uppercase pl-0.5">Catalog Expiry Date *</label>
+ <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none block">Catalog Expiry Date *</label>
  <input
  type="date"
  required={hasExpiration}
  value={expirationDate}
  onChange={e => setExpirationDate(e.target.value)}
- className="w-full bg-white dark:bg-[#131A22] border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold cursor-pointer"
+ className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-amber-500 px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold cursor-pointer"
  />
  </div>
- <div className="bg-m3-surface-low/50 p-2.5 rounded-xl border border-m3-outline-variant/10 text-[10px] text-m3-on-surface-variant flex flex-col justify-center">
- <div className="font-bold text-amber-600 dark:text-amber-400">⚠️ Active Expiry Flagging</div>
- <div>Items with active expirations are automatically tracked and marked on sales invoices, and listed on the central Expiry Calendar.</div>
+ <div className="bg-m3-surface-lowest p-3 rounded-xl border border-amber-500/20 text-[11px] text-m3-on-surface-variant flex flex-col justify-center gap-0.5">
+ <div className="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+ <span>⚠️</span> Active Expiry Flagging
+ </div>
+ <div className="text-[10px] leading-relaxed text-m3-on-surface-variant/80">
+ Items with active expirations are automatically tracked and marked on sales invoices, stock transfer forms, and listed in the central Expiry Calendar.
+ </div>
  </div>
  </div>
  </div>
@@ -6835,9 +6868,11 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                 <h2 className="text-lg font-black tracking-tight text-m3-on-surface uppercase font-sans">
                   Stock Alert Diagnostics & Action Hub
                 </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/15 text-rose-500 border border-rose-500/30">
-                  {alertProductsList.length} Total Warnings
-                </span>
+                {alertProductsList.length > 0 && (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider bg-rose-500/15 text-rose-500 border border-rose-500/30">
+                    {alertProductsList.length} Total Warning{alertProductsList.length > 1 ? 's' : ''}
+                  </span>
+                )}
               </div>
               <p className="text-xs text-m3-on-surface-variant font-medium mt-0.5">
                 Monitoring inventory deficits, critical reserves, and out-of-stock SKUs for <strong className="text-m3-primary">{selectedViewBranchId === 'consolidated' ? 'Consolidated All Branches' : (branches.find(b => b.id === selectedViewBranchId)?.name || selectedViewBranchId)}</strong>
@@ -6944,37 +6979,46 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
             </button>
           </div>
 
-          {/* Search & Category Inputs */}
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative flex-1 sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-m3-on-surface-variant" />
-              <input
-                type="text"
-                placeholder="Search alert items..."
-                value={stockAlertSearch}
-                onChange={e => setStockAlertSearch(e.target.value)}
-                className="w-full pl-9 pr-8 py-1.5 bg-m3-surface-lowest border border-m3-outline-variant/30 rounded-xl text-xs font-bold focus:outline-none focus:border-m3-primary"
-              />
-              {stockAlertSearch && (
-                <button
-                  onClick={() => setStockAlertSearch('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-m3-on-surface-variant hover:text-m3-on-surface"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
+          {/* Search & Category Filter Controls */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+            <div className="flex items-center gap-1.5 flex-1 sm:w-64">
+              <span className="text-[11px] font-bold text-m3-on-surface-variant shrink-0 hidden md:inline">Search:</span>
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-m3-on-surface-variant" />
+                <input
+                  type="text"
+                  placeholder="Filter by code, item name, SKU..."
+                  value={stockAlertSearch}
+                  onChange={e => setStockAlertSearch(e.target.value)}
+                  className="w-full pl-8 pr-8 py-1.5 bg-m3-surface-lowest border border-m3-outline-variant/30 text-m3-on-surface rounded-xl text-xs font-bold focus:outline-none focus:border-m3-primary"
+                  title="Live search filter for alert items by tile code, product name, SKU, or brand"
+                />
+                {stockAlertSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setStockAlertSearch('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
 
-            <select
-              value={stockAlertCategory}
-              onChange={e => setStockAlertCategory(e.target.value)}
-              className="px-3 py-1.5 bg-m3-surface-lowest border border-m3-outline-variant/30 rounded-xl text-xs font-bold focus:outline-none focus:border-m3-primary"
-            >
-              <option value="All">All Categories</option>
-              {Array.from(new Set(products.map(p => p.category))).map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-bold text-m3-on-surface-variant shrink-0 hidden md:inline">Category:</span>
+              <select
+                value={stockAlertCategory}
+                onChange={e => setStockAlertCategory(e.target.value)}
+                className="px-3 py-1.5 bg-m3-surface-lowest border border-m3-outline-variant/30 text-m3-on-surface rounded-xl text-xs font-bold focus:outline-none focus:border-m3-primary cursor-pointer"
+                title="Filter stock alerts by category"
+              >
+                <option value="All">All Categories</option>
+                {Array.from(new Set(products.map(p => p.category))).map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
