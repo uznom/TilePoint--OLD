@@ -6538,11 +6538,17 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  setProducts((prev) => [...prev, newProd]);
 
  // Initial branchStock record
+ const targetBranch =
+ sanitizedFields.origin &&
+ branches.some((b) => b.id === sanitizedFields.origin)
+ ? sanitizedFields.origin
+ : currentUser.branchAssignmentId || "B1";
+
  setBranchStock((prev) => [
  ...prev,
  {
- id: `${currentUser.branchAssignmentId || "B1"}_${newId}`,
- branchId: currentUser.branchAssignmentId || "B1",
+ id: `${targetBranch}_${newId}`,
+ branchId: targetBranch,
  productId: newId,
  quantity: sanitizedFields.stockQuantity,
  version: 1,
@@ -6555,7 +6561,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  productId: newId,
  type: "IN",
  quantity: sanitizedFields.stockQuantity,
- destinationBranchId: currentUser.branchAssignmentId,
+ destinationBranchId: targetBranch,
  referenceId: "INITIAL_STOCK",
  notes: sanitizedFields.origin
  ? `Initial stock intake. Origin/Source: ${sanitizedFields.origin}`
