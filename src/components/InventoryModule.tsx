@@ -11,6 +11,7 @@ import { exportInventoryCatalogToXLSX, exportStockAlertsToXLSX } from '../lib/ex
 import { runPreflightValidation, PreflightReport } from '../lib/preflightValidator';
 import { PreflightReportCard } from './PreflightReportCard';
 import { isProductInBranch, getBranchStockQuantity, getBranchStockRecord, slugifyBranchStr } from '../lib/branchUtils';
+import { formatCurrency } from '../utils/formatters';
 import { Product, UserRole, TransferType, TransferStatus } from '../types/db';
 import { HoldToConfirmButton } from './HoldToConfirmButton';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -206,23 +207,24 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
  const isAdminUser = (currentUser?.role as any) === 'Admin' || (currentUser?.role as any) === UserRole.ADMIN;
 
- const [selectedViewBranchId, setSelectedViewBranchId] = useState<string>(
-   'consolidated'
- );
+  const [selectedViewBranchId, setSelectedViewBranchId] = useState<string>(() => {
+    const isUserAdmin = (currentUser?.role as any) === "Admin" || (currentUser?.role as any) === UserRole.ADMIN;
+    if (isUserAdmin) return "consolidated";
+    return currentUser?.branchAssignmentId || "B1";
+  });
 
- useEffect(() => {
-   const isNowAdmin = (currentUser?.role as any) === 'Admin' || (currentUser?.role as any) === UserRole.ADMIN;
-   if (isNowAdmin) {
-     setSelectedViewBranchId('consolidated');
-   } else {
-     const bId = currentUser?.branchAssignmentId || 'B1';
-     
-     setBatchFormBranchId(bId);
-     setSelectedPoolBranchId(bId);
-     setTransferSource(bId);
-     setManualLedgerBranchId(bId);
-   }
- }, [currentUser?.id, currentUser?.role, currentUser?.branchAssignmentId]);
+  useEffect(() => {
+    const isNowAdmin = (currentUser?.role as any) === "Admin" || (currentUser?.role as any) === UserRole.ADMIN;
+    if (!isNowAdmin) {
+      const bId = currentUser?.branchAssignmentId || "B1";
+      
+      setSelectedViewBranchId(bId);
+      setBatchFormBranchId(bId);
+      setSelectedPoolBranchId(bId);
+      setTransferSource(bId);
+      setManualLedgerBranchId(bId);
+    }
+  }, [currentUser?.id, currentUser?.role, currentUser?.branchAssignmentId]);
 
  const activeBranchId = selectedViewBranchId;
 
@@ -2849,9 +2851,11 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   onChange={e => setSelectedViewBranchId(e.target.value)}
   className="bg-transparent text-xs text-emerald-500 focus:outline-none cursor-pointer transition-colors font-extrabold outline-none"
   >
-  <option value="consolidated">HQ Consolidated (HQ Master)</option>
-  {branches.filter(b => !b.isDeleted).map((b) => (
-  <option key={b.id} value={b.id}>{b.name.replace("Emman Tile Center ", "Branch: ")}</option>
+  {isAdminUser && (
+    <option value="consolidated">HQ Consolidated (HQ Master)</option>
+  )}
+  {branches.filter(b => !b.isDeleted && (isAdminUser || b.id === (currentUser?.branchAssignmentId || 'B1'))).map((b) => (
+    <option key={b.id} value={b.id}>{b.name.replace("Emman Tile Center ", "Branch: ")}</option>
   ))}
   </select>
  </div>
@@ -3191,13 +3195,13 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  {/* Financial unit cost */}
  {!isCompactColumns && canSeeFinancialCostsAndSources && (
  <td className="py-3.5 px-4 text-right font-mono font-bold text-m3-on-surface">
- ₱{(Number(p.costPrice) || 0).toFixed(2)}
+ {formatCurrency(p.costPrice)}
  </td>
  )}
 
  {/* Retail selling price */}
  <td className="py-3.5 px-4 text-right font-mono font-extrabold text-m3-primary">
- ₱{(Number(p.sellingPrice) || 0).toFixed(2)}
+ {formatCurrency(p.sellingPrice)}
  </td>
 
  {/* Current physical warehouse qty */}
@@ -3340,12 +3344,12 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  {canSeeFinancialCostsAndSources && (
  <div>
  <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Unit Cost</span>
- <span className="text-zinc-500 font-mono text-xs">₱{(Number(p.costPrice) || 0).toFixed(2)}</span>
+ <span className="text-zinc-500 font-mono text-xs">{formatCurrency(p.costPrice)}</span>
  </div>
  )}
  <div>
  <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Selling Retail</span>
- <span className="text-m3-primary font-mono text-xs font-extrabold">₱{(Number(p.sellingPrice) || 0).toFixed(2)}</span>
+ <span className="text-m3-primary font-mono text-xs font-extrabold">{formatCurrency(p.sellingPrice)}</span>
  </div>
  <div>
  <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Markup %</span>
@@ -4151,9 +4155,12 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
       {/* Branch Heatmap Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {branches.filter(b => !b.isDeleted && (isAdminUser || b.id === activeBranchId)).map(b => {
-          const bStockItems = branchStock.filter(bs => bs.branchId === b.id);
-          const totalUnitsInBranch = bStockItems.reduce((acc, bs) => acc + bs.quantity, 0);
-          const lowStockCount = bStockItems.filter(bs => bs.quantity < 20).length;
+          const bProducts = products.filter(p => !p.isDeleted && isProductInBranch(p, b.id, branchStock, branches));
+          const totalUnitsInBranch = bProducts.reduce((acc, p) => acc + getBranchStockQuantity(p, b.id, branchStock, branches), 0);
+          const lowStockCount = bProducts.filter(p => {
+            const qty = getBranchStockQuantity(p, b.id, branchStock, branches);
+            return qty > 0 && qty <= (p.minimumStock || 20);
+          }).length;
 
           return (
             <div key={b.id} className="bg-m3-surface p-5 rounded-2xl border border-m3-outline-variant/20 space-y-3 relative overflow-hidden">
@@ -4174,7 +4181,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="bg-m3-surface-low p-2.5 rounded-xl">
                   <span className="text-[9.5px] text-m3-on-surface-variant font-bold block">Physical Units</span>
-                  <span className="text-base font-black font-mono text-m3-primary">{totalUnitsInBranch.toLocaleString()}</span>
+                  <span className="text-base font-black font-mono text-m3-primary">{totalUnitsInBranch.toLocaleString()} Units</span>
                 </div>
                 <div className="bg-m3-surface-low p-2.5 rounded-xl">
                   <span className="text-[9.5px] text-m3-on-surface-variant font-bold block">Low Stock Items</span>
@@ -6842,15 +6849,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                 <h2 className="text-lg font-black tracking-tight text-m3-on-surface uppercase font-sans">
                   Stock Alert Diagnostics & Action Hub
                 </h2>
-                {alertProductsList.length > 0 && (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider bg-rose-500/15 text-rose-500 border border-rose-500/30">
-                    {alertProductsList.length} Total Warning{alertProductsList.length > 1 ? 's' : ''}
-                  </span>
-                )}
               </div>
-              <p className="text-xs text-m3-on-surface-variant font-medium mt-0.5">
-                Monitoring inventory deficits, critical reserves, and out-of-stock SKUs for <strong className="text-m3-primary">{selectedViewBranchId === 'consolidated' ? 'Consolidated All Branches' : (branches.find(b => b.id === selectedViewBranchId)?.name || selectedViewBranchId)}</strong>
-              </p>
             </div>
           </div>
 
@@ -7173,12 +7172,6 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
           <div className="flex items-center gap-4 text-m3-on-surface-variant font-mono">
             <span>
               Showing <strong className="text-m3-on-surface font-extrabold">{modalFilteredAlertItems.length}</strong> alert item(s)
-            </span>
-            <span className="hidden sm:inline">•</span>
-            <span className="hidden sm:inline">
-              Est. Restock Cost: <strong className="text-emerald-500 font-extrabold">
-                ₱{modalFilteredAlertItems.reduce((sum, item) => sum + (item.deficit * (Number(item.product.costPrice) || 0)), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </strong>
             </span>
           </div>
 

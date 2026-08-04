@@ -33,15 +33,7 @@ import {
  Clock
 } from 'lucide-react';
 
-const formatTin = (value: string | undefined | null): string => {
- if (!value) return "";
- const clean = value.replace(/[-\s]/g, "");
- const match = clean.match(/.{1,3}/g);
- if (match) {
- return match.join(" ");
- }
- return value;
-};
+import { formatTin } from '../utils/formatters';
 
 
 interface BranchModuleProps {

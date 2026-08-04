@@ -27,9 +27,12 @@ export function formatCurrency(
   const num = typeof val === 'number' ? val : Number(val);
   const safeNum = isNaN(num) || !isFinite(num) ? 0 : num;
 
+  const minDigits = Math.max(0, Math.min(20, Math.floor(minimumFractionDigits)));
+  const maxDigits = Math.max(minDigits, Math.min(20, Math.floor(maximumFractionDigits)));
+
   const formatted = safeNum.toLocaleString('en-PH', {
-    minimumFractionDigits,
-    maximumFractionDigits,
+    minimumFractionDigits: minDigits,
+    maximumFractionDigits: maxDigits,
     notation: compact ? 'compact' : 'standard',
   });
 
@@ -48,4 +51,17 @@ export function formatUnits(
   const safeNum = isNaN(num) || !isFinite(num) ? 0 : num;
   const label = Math.abs(safeNum) === 1 ? unitSingular : unitPlural;
   return `${safeNum.toLocaleString()} ${label}`;
+}
+
+/**
+ * Formats Tax Identification Number (TIN) into 3-digit grouped format (e.g. 123 456 789).
+ */
+export function formatTin(value: string | undefined | null): string {
+  if (!value) return "";
+  const clean = value.replace(/[-\s]/g, "");
+  const match = clean.match(/.{1,3}/g);
+  if (match) {
+    return match.join(" ");
+  }
+  return value;
 }

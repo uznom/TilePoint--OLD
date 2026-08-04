@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from "react";
+import { formatCurrency } from "../utils/formatters";
 import { motion, AnimatePresence } from "motion/react";
 import { ConfirmationModal } from "./ConfirmationModal";
 import {
@@ -1211,7 +1212,7 @@ export default function AtposExtraModules({
             <div className="bg-m3-surface-lowest p-2.5 rounded-xl border border-m3-outline-variant/10 flex items-center justify-between">
               <div>
                 <span className="text-[10px] text-zinc-400 uppercase font-bold block">Redemption Value</span>
-                <span className="text-xs font-extrabold text-emerald-500 font-mono">1 Pt = ₱{config.pointValueInPhp.toFixed(2)} Off</span>
+                <span className="text-xs font-extrabold text-emerald-500 font-mono">1 Pt = {formatCurrency(config.pointValueInPhp)} Off</span>
               </div>
               <Sparkles className="h-4 w-4 text-emerald-500/30 shrink-0" />
             </div>
@@ -1227,7 +1228,7 @@ export default function AtposExtraModules({
             <div className="bg-m3-surface-lowest p-2.5 rounded-xl border border-m3-outline-variant/10 flex items-center justify-between">
               <div>
                 <span className="text-[10px] text-zinc-400 uppercase font-bold block">Total Points Issued</span>
-                <span className="text-xs font-extrabold text-amber-500 font-mono">{totalPointsPool.toLocaleString()} Pts <span className="text-[10px] text-zinc-400 font-normal">(₱{totalMonetaryValue.toFixed(2)})</span></span>
+                <span className="text-xs font-extrabold text-amber-500 font-mono">{totalPointsPool.toLocaleString()} Pts <span className="text-[10px] text-zinc-400 font-normal">({formatCurrency(totalMonetaryValue)})</span></span>
               </div>
               <Award className="h-4 w-4 text-amber-500/30 shrink-0" />
             </div>
@@ -1408,7 +1409,7 @@ export default function AtposExtraModules({
                           ⭐ {(m.points || 0).toLocaleString()} Pts
                         </td>
                         <td className="p-3 text-right font-mono font-bold text-emerald-500">
-                          ₱{ptValue.toFixed(2)}
+                          {formatCurrency(ptValue)}
                         </td>
                         <td className="p-3 text-center">
                           <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
@@ -4324,7 +4325,7 @@ export default function AtposExtraModules({
                   <span>Points Adjustment (+ grant, - deduct) *</span>
                   {adjustPointsAmount && (
                     <span className="font-mono text-xs text-amber-500 font-bold">
-                      Val: ₱{(Math.abs(parseInt(adjustPointsAmount) || 0) * (db.loyaltyConfig?.pointValueInPhp || 1.0)).toFixed(2)}
+                      Val: {formatCurrency(Math.abs(parseInt(adjustPointsAmount) || 0) * (db.loyaltyConfig?.pointValueInPhp || 1.0))}
                     </span>
                   )}
                 </label>

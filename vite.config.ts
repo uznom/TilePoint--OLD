@@ -27,7 +27,7 @@ export default defineConfig(() => {
       },
     },
     optimizeDeps: {
-      include: ['xlsx']
+      include: ['react-router-dom', 'xlsx']
     },
     build: {
       chunkSizeWarningLimit: 3000

@@ -542,10 +542,11 @@ interface DbContextType {
 
  // Actions - POS & Checkout
  holdSale: (
- cartItems: { product: Product; quantity: number }[],
- customerName: string,
- notes: string,
- ) => string; // returns hold ID
+		cartItems: { product: Product; quantity: number }[],
+		customerName: string,
+		notes: string,
+		branchIdOverride?: string,
+	) => string; // returns hold ID
  resumeParkedSale: (
  parkedId: string,
  cashierName?: string,
@@ -558,6 +559,7 @@ interface DbContextType {
  timestamp: string;
  heldBy?: string;
  heldByBranchId?: string;
+		branchId?: string;
  status?: string;
  }[];
  setParkedSales: React.Dispatch<
@@ -570,6 +572,7 @@ interface DbContextType {
  timestamp: string;
  heldBy?: string;
  heldByBranchId?: string;
+		branchId?: string;
  status?: string;
  }[]
  >
@@ -593,14 +596,17 @@ interface DbContextType {
  openShift: (startCash: number) => void;
  closeShift: (cashCount: number) => void;
  forceCloseAllShifts: () => void;
- getShiftReportStats: (shift: Shift) => {
- salesCount: number;
- salesTotal: number;
- vatTotal: number;
- discountTotal: number;
- netTotal: number;
- cashSalesTotal: number;
- };
+  getShiftReportStats: (shift: Shift) => {
+    salesCount: number;
+    salesTotal: number;
+    vatTotal: number;
+    discountTotal: number;
+    netTotal: number;
+    cashSalesTotal: number;
+    nonCashSalesTotal: number;
+    expensesTotal: number;
+    expectedEndCash: number;
+  };
 
  // Actions - Purchase Orders
  createPO: (
@@ -2233,36 +2239,27 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  0,
  );
 
- // If catalog says we have positive stock, but total branch stock is 0 (classic migrated/imported signature)
- if (p.stockQuantity > 0 && totalBranchQty === 0) {
- // Assign full quantity to the current user's branch or the first non-deleted branch
- const targetBranchId =
- currentUser?.branchAssignmentId ||
- branches.find((b) => !b.isDeleted)?.id ||
- "B1";
+ const primaryBranchId = (typeof window !== "undefined" && localStorage.getItem("tilepoint_primary_branch_id")) || "B1";
+ const mainBranchId = branches.find(b => !b.isDeleted && (b.id === primaryBranchId || b.id === "B1"))?.id || branches.find(b => !b.isDeleted)?.id || "B1";
 
- const key = `${targetBranchId}_${p.id}`;
- const existingIdx = keyToIndexMap.get(key);
+  branches.filter(b => !b.isDeleted).forEach(b => {
+  const key = b.id + "_" + p.id;
+  const existingIdx = keyToIndexMap.get(key);
+  if (existingIdx === undefined) {
+  const initialQty = (totalBranchQty === 0 && b.id === mainBranchId) ? p.stockQuantity : 0;
+  updated.push({
+  id: key,
+  branchId: b.id,
+  productId: p.id,
+  quantity: initialQty,
+  });
+  keyToIndexMap.set(key, updated.length - 1);
+  hasChanges = true;
+  }
+  });
+  });
 
- if (existingIdx !== undefined && existingIdx !== -1) {
- updated[existingIdx] = {
- ...updated[existingIdx],
- quantity: p.stockQuantity,
- };
- } else {
- updated.push({
- id: key,
- branchId: targetBranchId,
- productId: p.id,
- quantity: p.stockQuantity,
- });
- keyToIndexMap.set(key, updated.length - 1);
- }
- hasChanges = true;
- }
- });
-
- return hasChanges ? updated : prevStock;
+  return hasChanges ? updated : prevStock;
  });
  }
  }, [products, branches, currentUser?.branchAssignmentId]);
@@ -9008,89 +9005,117 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  );
  };
 
- const closeShift = (cashCount: number) => {
- if (!activeShift) return;
+  const closeShift = (cashCount: number) => {
+    if (!activeShift) return;
 
- // Enforce pre-closure backup snapshot in internal database records
- const snapshotName = `Shift Close Auto-Snapshot - ${activeShift.id} - ${new Date().toLocaleDateString()}`;
- generateSystemSnapshot(snapshotName);
+    // Enforce pre-closure backup snapshot in internal database records
+    const snapshotName = `Shift Close Auto-Snapshot - ${activeShift.id} - ${new Date().toLocaleDateString()}`;
+    generateSystemSnapshot(snapshotName);
 
- const statsResult = getShiftReportStats(activeShift);
- const expectedEndCash = activeShift.startCash + statsResult.cashSalesTotal;
- const variance = cashCount - expectedEndCash;
+    const statsResult = getShiftReportStats(activeShift);
+    const expectedEndCash = statsResult.expectedEndCash;
+    const variance = cashCount - expectedEndCash;
 
- setShifts((prev) =>
- prev.map((s) => {
- if (s.id === activeShift.id) {
- return {
- ...s,
- status: "CLOSED" as ShiftStatus,
- endCash: expectedEndCash,
- cashCount,
- variance,
- closedAt: new Date().toISOString(),
- };
- }
- return s;
- }),
- );
+    setShifts((prev) =>
+      prev.map((s) => {
+        if (s.id === activeShift.id) {
+          return {
+            ...s,
+            status: "CLOSED" as ShiftStatus,
+            endCash: expectedEndCash,
+            cashCount,
+            variance,
+            shiftSalesTotal: statsResult.netTotal,
+            shiftSalesCount: statsResult.salesCount,
+            shiftVatTotal: statsResult.vatTotal,
+            shiftDiscountTotal: statsResult.discountTotal,
+            closedAt: new Date().toISOString(),
+          };
+        }
+        return s;
+      }),
+    );
 
- addAuditLog(
- "SHIFT_CLOSE",
- `Closed active shift. Counted ₱${cashCount.toFixed(2)} vs Expected ₱${expectedEndCash.toFixed(2)} (Variance: ₱${variance.toFixed(2)})`,
- "Shifts",
- activeShift.id,
- );
- };
-
- const forceCloseAllShifts = () => {
-   setShifts((prev) =>
-     prev.map((s) => {
-       if (s.status === "Open" || !s.closedAt) {
-         return {
-           ...s,
-           status: "CLOSED" as any,
-           closedAt: new Date().toISOString(),
-         };
-       }
-       return s;
-     })
-   );
-   addAuditLog(
-     "SHIFT_FORCE_CLOSE_ALL",
-     "Forced closure of all open/unclosed drawer shifts via System Operations Center.",
-     "Shifts",
-     "ALL"
-   );
- };
-
- const getShiftReportStats = (shift: Shift) => {
- // Net sales made inside this shift
- const shiftSales = sales.filter(
- (s) => s.shiftId === shift.id && !s.isDeleted,
- );
- const salesCount = shiftSales.length;
- const salesTotal = shiftSales.reduce((acc, curr) => acc + (Number(curr.subtotal) || 0), 0);
- const vatTotal = shiftSales.reduce((acc, curr) => acc + (Number(curr.vat) || 0), 0);
- const discountTotal = shiftSales.reduce(
- (acc, curr) => acc + curr.discount,
- 0,
- );
-  const netTotal = shiftSales.reduce((acc, curr) => acc + (Number(curr.grandTotal) || 0), 0);
-  const cashSalesTotal = shiftSales
-    .filter((s) => !s.paymentMethod || s.paymentMethod.toLowerCase() === "cash")
-    .reduce((acc, curr) => acc + (Number(curr.grandTotal) || 0), 0);
-
-  return {
-    salesCount,
-    salesTotal,
-    vatTotal,
-    discountTotal,
-    netTotal,
-    cashSalesTotal,
+    addAuditLog(
+      "SHIFT_CLOSE",
+      `Closed active shift. Counted ₱${cashCount.toFixed(2)} vs Expected ₱${expectedEndCash.toFixed(2)} (Variance: ₱${variance.toFixed(2)})`,
+      "Shifts",
+      activeShift.id,
+    );
   };
- };
 
+  const forceCloseAllShifts = () => {
+    setShifts((prev) =>
+      prev.map((s) => {
+        if (s.status === "Open" || !s.closedAt) {
+          return {
+            ...s,
+            status: "CLOSED" as any,
+            closedAt: new Date().toISOString(),
+          };
+        }
+        return s;
+      })
+    );
+    addAuditLog(
+      "SHIFT_FORCE_CLOSE_ALL",
+      "Forced closure of all open/unclosed drawer shifts via System Operations Center.",
+      "Shifts",
+      "ALL"
+    );
+  };
+
+  const getShiftReportStats = (shift: Shift) => {
+    // Net sales made inside this shift
+    const shiftSales = sales.filter((s) => {
+      if (!s || s.isDeleted) return false;
+      if (s.shiftId === shift.id) return true;
+      if (s.branchId === shift.branchId && s.cashierId === shift.cashierId) {
+        const sTime = new Date(s.createdAt || 0).getTime();
+        const openTime = new Date(shift.openedAt).getTime();
+        const closeTime = shift.closedAt ? new Date(shift.closedAt).getTime() : Date.now();
+        return sTime >= openTime && sTime <= closeTime;
+      }
+      return false;
+    });
+
+    const salesCount = shiftSales.length;
+    const salesTotal = shiftSales.reduce((acc, curr) => acc + (Number(curr.subtotal) || 0), 0);
+    const vatTotal = shiftSales.reduce((acc, curr) => acc + (Number(curr.vat) || 0), 0);
+    const discountTotal = shiftSales.reduce((acc, curr) => acc + (Number(curr.discount) || 0), 0);
+    const netTotal = shiftSales.reduce((acc, curr) => acc + (Number(curr.grandTotal) || 0), 0);
+
+    const cashSalesTotal = shiftSales
+      .filter((s) => !s.paymentMethod || s.paymentMethod.toLowerCase() === "cash")
+      .reduce((acc, curr) => acc + (Number(curr.grandTotal) || 0), 0);
+
+    const nonCashSalesTotal = Math.max(0, netTotal - cashSalesTotal);
+
+    // Calculate store expenses disbursed in cash during this shift duration at this branch
+    const shiftExpenses = (expenses || []).filter((e) => {
+      if (!e || e.isDeleted) return false;
+      if (e.branchId !== shift.branchId) return false;
+      const eTime = new Date(e.dateTime || 0).getTime();
+      const openTime = new Date(shift.openedAt).getTime();
+      const closeTime = shift.closedAt ? new Date(shift.closedAt).getTime() : Date.now();
+      return eTime >= openTime && eTime <= closeTime;
+    });
+    const expensesTotal = shiftExpenses.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+
+    const expectedEndCash = shift.startCash + cashSalesTotal - expensesTotal;
+
+    return {
+      salesCount,
+      salesTotal,
+      vatTotal,
+      discountTotal,
+      netTotal,
+      cashSalesTotal,
+      nonCashSalesTotal,
+      expensesTotal,
+      expectedEndCash,
+    };
+  };
  // PURCHASE ORDERS
  const createPO = (
  supplierId: string,

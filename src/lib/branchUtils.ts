@@ -69,7 +69,7 @@ export function getBranchStockQuantity(
   branches: Branch[] | undefined | null
 ): number {
   if (!p) return 0;
-  if (!targetBranchId || targetBranchId === 'consolidated' || targetBranchId === 'all') {
+  if (!targetBranchId || targetBranchId === 'consolidated' || targetBranchId === 'all' || targetBranchId === 'ALL') {
     return p.stockQuantity ?? 0;
   }
 
@@ -81,17 +81,21 @@ export function getBranchStockQuantity(
     return bsRec.quantity ?? 0;
   }
 
-  // If no record exists, verify if target is Primary HQ branch and product belongs to it
+  // Primary HQ branch check
   const primaryBranchId = (typeof window !== 'undefined' && localStorage.getItem("tilepoint_primary_branch_id")) || "B1";
   const primaryBranch = safeBranches.find(b => b && b.id === primaryBranchId) || safeBranches.find(b => b && b.id === 'B1') || safeBranches[0];
-  const targetBranch = safeBranches.find(b => b && b.id === targetBranchId);
+  const targetBranch = safeBranches.find(b => b && (
+    b.id === targetBranchId ||
+    slugifyBranchStr(b.name) === slugifyBranchStr(targetBranchId) ||
+    slugifyBranchStr(b.branchCode) === slugifyBranchStr(targetBranchId)
+  ));
   const isTargetPrimary = primaryBranch && (
     targetBranchId === primaryBranch.id ||
     targetBranchId === 'B1' ||
     (targetBranch && targetBranch.id === primaryBranch.id)
   );
 
-  if (isTargetPrimary && isProductInBranch(p, targetBranchId, safeBranchStock, safeBranches)) {
+  if (isTargetPrimary) {
     return p.stockQuantity ?? 0;
   }
 
@@ -100,7 +104,7 @@ export function getBranchStockQuantity(
 
 /**
  * Utility function to verify if a product belongs to or is actively stocked in a specific branch.
- * Prevents cross-branch inventory leakage (e.g. ETC_DIPOLOG MAIN items appearing in CHT_SINDANGAN).
+ * Prevents cross-branch inventory leakage while ensuring multi-branch visibility on all devices.
  */
 export function isProductInBranch(
   p: Product | undefined | null,
@@ -141,22 +145,41 @@ export function isProductInBranch(
     return true;
   }
 
-  // 2. Check Primary HQ branch (B1)
-  const primaryBranchId = (typeof window !== 'undefined' && localStorage.getItem("tilepoint_primary_branch_id")) || "B1";
-  const primaryBranch = safeBranches.find(b => b && b.id === primaryBranchId) || safeBranches.find(b => b && b.id === 'B1') || safeBranches[0];
-  const isTargetPrimary = primaryBranch && (
-    targetBranchId === primaryBranch.id ||
-    targetBranchId === 'B1' ||
-    (targetBranch && targetBranch.id === primaryBranch.id)
-  );
-
-  if (isTargetPrimary) {
-    return true;
+  // 2. Check if product is explicitly assigned to a DIFFERENT restricted branch
+  const prodBranchId = (p as any).branchAssignmentId || (p as any).branchId;
+  if (prodBranchId && prodBranchId !== 'all' && prodBranchId !== 'ALL' && prodBranchId !== 'consolidated') {
+    const prodBranchSlug = slugifyBranchStr(prodBranchId);
+    if (prodBranchSlug && targetIdSlug && prodBranchSlug !== targetIdSlug &&
+        (!targetNameSlug || prodBranchSlug !== targetNameSlug) &&
+        (!targetCodeSlug || prodBranchSlug !== targetCodeSlug)) {
+      return false;
+    }
   }
 
-  // 3. Product explicit branch assignment
-  if ((p as any).branchAssignmentId === targetBranchId || (p as any).branchId === targetBranchId) {
-    return true;
+  // 3. Otherwise, product is available across all active branches
+  return true;
+}
+
+/**
+ * Utility function to compare two branch identifiers (IDs, names, or codes)
+ * to determine if they refer to the same branch location.
+ */
+export function isSameBranch(
+  branchA: string | undefined | null,
+  branchB: string | undefined | null,
+  branches?: Branch[] | null
+): boolean {
+  if (!branchA || !branchB) return false;
+  if (branchA === branchB) return true;
+  
+  const slugA = slugifyBranchStr(branchA);
+  const slugB = slugifyBranchStr(branchB);
+  if (slugA && slugB && slugA === slugB) return true;
+
+  if (branches && branches.length > 0) {
+    const bObjA = branches.find(b => b.id === branchA || slugifyBranchStr(b.name) === slugA || slugifyBranchStr(b.branchCode) === slugA);
+    const bObjB = branches.find(b => b.id === branchB || slugifyBranchStr(b.name) === slugB || slugifyBranchStr(b.branchCode) === slugB);
+    if (bObjA && bObjB && bObjA.id === bObjB.id) return true;
   }
 
   return false;

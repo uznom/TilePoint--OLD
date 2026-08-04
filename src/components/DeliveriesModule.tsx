@@ -5,6 +5,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDb } from '../context/DbContext';
+import { formatCurrency } from '../utils/formatters';
 import { Delivery, DeliveryStatus, UserRole } from '../types/db';
 import { useResponsivePageSize } from './TablePagination';
 import {
@@ -522,15 +523,15 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
               <span className="text-[7.5px] uppercase text-emerald-800 font-extrabold block">Bill & Payment Summary</span>
               <div className="flex justify-between text-gray-800">
                 <span>Bill Total:</span>
-                <span className="font-bold">₱{grandTotal.toFixed(2)}</span>
+                <span className="font-bold">{formatCurrency(grandTotal)}</span>
               </div>
               <div className="flex justify-between text-gray-800">
                 <span>Paid ({activeDeliverySale.paymentMethod || "Cash"}):</span>
-                <span className="font-bold">₱{amountTendered.toFixed(2)}</span>
+                <span className="font-bold">{formatCurrency(amountTendered)}</span>
               </div>
               <div className="flex justify-between text-emerald-800 font-extrabold pt-0.5 border-t border-emerald-300">
                 <span>Change Due:</span>
-                <span>₱{changeAmount.toFixed(2)}</span>
+                <span>{formatCurrency(changeAmount)}</span>
               </div>
             </div>
           );
@@ -1092,13 +1093,13 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  return (
  <div className="bg-m3-surface-lowest p-3 rounded-2xl border border-m3-outline-variant/15 text-[11px] leading-relaxed text-left space-y-1 font-mono">
  <div className="flex justify-between items-center text-zinc-400 font-medium text-[10px]">
- <span>Bill Total: <strong className="text-m3-on-surface">₱{grandTotal.toFixed(2)}</strong></span>
- <span>Paid ({activeDeliverySale.paymentMethod || "Cash"}): <strong className="text-m3-on-surface">₱{amountTendered.toFixed(2)}</strong></span>
+ <span>Bill Total: <strong className="text-m3-on-surface">{formatCurrency(grandTotal)}</strong></span>
+ <span>Paid ({activeDeliverySale.paymentMethod || "Cash"}): <strong className="text-m3-on-surface">{formatCurrency(amountTendered)}</strong></span>
  </div>
  {(changeAmount > 0 || amountTendered > grandTotal) && (
  <div className="flex justify-between items-center pt-1.5 border-t border-dashed border-m3-outline-variant/15 font-black text-emerald-400 text-xs">
  <span className="uppercase text-[9.5px] font-sans tracking-wider">Customer Change:</span>
- <span className="text-sm font-black text-emerald-300">₱{changeAmount.toFixed(2)}</span>
+ <span className="text-sm font-black text-emerald-300">{formatCurrency(changeAmount)}</span>
  </div>
  )}
  </div>
@@ -1533,7 +1534,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
               <option value="">-- Choose POS Transaction Order --</option>
               {sales.slice(0, 30).map((s) => (
                 <option key={s.id} value={s.id}>
-                  Ref: {s.saleNumber} | {s.customerName} | ₱{(Number(s.grandTotal) || 0).toFixed(2)} ({s.createdAt && !isNaN(new Date(s.createdAt).getTime()) ? new Date(s.createdAt).toLocaleDateString() : 'N/A'})
+                  Ref: {s.saleNumber} | {s.customerName} | {formatCurrency(s.grandTotal)} ({s.createdAt && !isNaN(new Date(s.createdAt).getTime()) ? new Date(s.createdAt).toLocaleDateString() : 'N/A'})
                 </option>
               ))}
             </select>

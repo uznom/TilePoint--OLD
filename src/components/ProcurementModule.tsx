@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useDb, useDbProducts } from "../context/DbContext";
+import { formatCurrency } from "../utils/formatters";
 import { generateEan13Barcode } from "../utils/barcodeGenerator";
 import { PurchaseOrder, UserRole } from "../types/db";
 import { useResponsivePageSize, TablePagination } from "./TablePagination";
@@ -1276,25 +1277,23 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </td>
 
  <td className="py-3.5 px-4 text-right text-zinc-400">
- ₱
- {relatedPoItems
- .reduce(
+ {formatCurrency(
+ relatedPoItems.reduce(
  (s, it) =>
  s + it.costPrice * it.quantityRequested,
  0,
  )
- .toFixed(2)}
+ )}
  </td>
 
  <td className="py-3.5 px-4 text-right text-zinc-400">
- ₱
- {(
+ {formatCurrency(
  relatedPoItems.reduce(
  (s, it) =>
  s + it.costPrice * it.quantityRequested,
  0,
  ) * 0.12
- ).toFixed(2)}
+ )}
  </td>
 
  <td className="py-3.5 px-4 text-right text-rose-500">
@@ -1302,14 +1301,13 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </td>
 
  <td className="py-3.5 px-4 text-right text-m3-primary font-extrabold">
- ₱
- {(
+ {formatCurrency(
  relatedPoItems.reduce(
  (s, it) =>
  s + it.costPrice * it.quantityRequested,
  0,
  ) * 1.12
- ).toFixed(2)}
+ )}
  </td>
 
  <td className="py-3.5 px-4 text-center uppercase text-[9.5px]">
@@ -1891,7 +1889,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </div>
  </div>
  <span className="text-[10px] bg-m3-primary/15 text-m3-primary px-2 py-0.5 rounded-full font-mono">
- ₱{(Number(p.costPrice) || 0).toFixed(2)}
+ {formatCurrency(p.costPrice)}
  </span>
  </div>
  ));
@@ -2663,7 +2661,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  {getProductName(item.productId)}
  </h5>
  <span className="text-[10px] text-m3-on-surface-variant font-mono">
- Supplier Unit Cost: ₱{(Number(item.costPrice) || 0).toFixed(2)}
+ Supplier Unit Cost: {formatCurrency(item.costPrice)}
  </span>
  </div>
 

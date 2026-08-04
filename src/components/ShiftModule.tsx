@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDb } from '../context/DbContext';
 import { Shift, UserRole } from '../types/db';
+import { formatCurrency } from '../utils/formatters';
 import { useResponsivePageSize, TablePagination } from './TablePagination';
 import {
  Lock,
@@ -70,7 +71,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
 
  // Stats computed
  const shiftStats = activeShift ? getShiftReportStats(activeShift) : null;
- const expectedEndCash = activeShift && shiftStats ? activeShift.startCash + shiftStats.cashSalesTotal : 0;
+  const expectedEndCash = activeShift && shiftStats ? shiftStats.expectedEndCash : 0;
 
  const handleOpenLocalShift = (e: React.FormEvent) => {
  e.preventDefault();
@@ -118,12 +119,12 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
 
  <div className="p-3.5 bg-m3-tertiary-container text-m3-on-tertiary-container border border-m3-tertiary/20 rounded-2xl text-center space-y-1" title="Net grand totals checked out">
  <span className="text-[9px] text-m3-on-tertiary-container-variant/80 font-bold uppercase tracking-widest">Net Revenue</span>
- <h5 className="text-base font-extrabold font-mono text-m3-tertiary">₱{shiftStats.netTotal.toLocaleString(undefined, { maximumFractionDigits: 1 })}</h5>
+ <h5 className="text-base font-extrabold font-mono text-m3-tertiary">{formatCurrency(shiftStats.netTotal)}</h5>
  </div>
 
  <div className="p-3.5 bg-m3-primary-container text-m3-on-primary-container border border-m3-primary/20 rounded-2xl text-center space-y-1">
  <span className="text-[9px] text-m3-on-primary-container-variant/80 font-bold uppercase tracking-widest">Start Cash</span>
- <h5 className="text-base font-extrabold font-mono text-m3-primary">₱{activeShift.startCash}</h5>
+ <h5 className="text-base font-extrabold font-mono text-m3-primary">{formatCurrency(activeShift.startCash)}</h5>
  </div>
  </div>
 
@@ -131,22 +132,22 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
  <div className="space-y-2 border-t border-m3-outline-variant/15 pt-3 text-xs leading-relaxed">
  <div className="flex justify-between">
  <span className="text-m3-on-surface-variant/85 font-medium">Gross Sales Subtotal:</span>
- <span className="font-mono font-bold">₱{shiftStats.salesTotal.toFixed(2)}</span>
+ <span className="font-mono font-bold">{formatCurrency(shiftStats.salesTotal)}</span>
  </div>
  <div className="flex justify-between">
  <span className="text-m3-on-surface-variant/85 font-medium">Calculated VAT Tax (12%):</span>
- <span className="font-mono font-bold">₱{shiftStats.vatTotal.toFixed(2)}</span>
+ <span className="font-mono font-bold">{formatCurrency(shiftStats.vatTotal)}</span>
  </div>
  {shiftStats.discountTotal > 0 && (
  <div className="flex justify-between text-m3-tertiary font-bold">
  <span>Applied Discounts:</span>
- <span className="font-mono">-₱{shiftStats.discountTotal.toFixed(2)}</span>
+ <span className="font-mono">-{formatCurrency(shiftStats.discountTotal)}</span>
  </div>
  )}
 
  <div className="flex justify-between border-t border-dashed border-m3-outline-variant/20 pt-2.5 font-black text-sm">
  <span>Expected Terminal Cash Total:</span>
- <span className="font-mono text-m3-primary">₱{expectedEndCash.toFixed(2)}</span>
+ <span className="font-mono text-m3-primary">{formatCurrency(expectedEndCash)}</span>
  </div>
  </div>
 
@@ -196,11 +197,11 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
  <div className="p-3 bg-m3-surface-container/40 border border-m3-outline-variant/30 rounded-2xl space-y-1.5 font-mono text-[11px]">
  <div className="flex justify-between text-m3-on-surface-variant">
  <span>Expected drawer:</span>
- <span>₱{expectedEndCash.toFixed(2)}</span>
+ <span>{formatCurrency(expectedEndCash)}</span>
  </div>
  <div className="flex justify-between text-m3-on-surface">
  <span>Counted drawer:</span>
- <span className="font-bold">₱{parseFloat(closingCashInput).toFixed(2)}</span>
+ <span className="font-bold">{formatCurrency(closingCashInput)}</span>
  </div>
 
  {/* Variance computed */}
@@ -215,7 +216,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
  : 'text-red-500'
  }`}>
  <span>Variance / Deviation:</span>
- <span>{variance >= 0 ? '+' : ''}₱{variance.toFixed(2)}</span>
+ <span>{variance >= 0 ? '+' : ''}{formatCurrency(variance)}</span>
  </div>
  );
  })()}
@@ -318,9 +319,9 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
  <tr key={idx} className="hover:bg-m3-surface-low/50">
  <td className="py-2.5 px-3 font-mono text-[11px] font-bold text-m3-primary">{s.id}</td>
  <td className="py-2.5 px-3">{s.cashierName}</td>
- <td className="py-2.5 px-3 text-right font-mono">₱{s.startCash.toFixed(2)}</td>
- <td className="py-2.5 px-3 text-right font-mono">₱{(s.endCash || s.startCash + s.shiftSalesTotal + s.shiftVatTotal).toFixed(2)}</td>
- <td className="py-2.5 px-3 text-right font-mono">₱{(s.cashCount || s.startCash + s.shiftSalesTotal + s.shiftVatTotal).toFixed(2)}</td>
+ <td className="py-2.5 px-3 text-right font-mono">{formatCurrency(s.startCash)}</td>
+ <td className="py-2.5 px-3 text-right font-mono">{formatCurrency(s.endCash !== undefined && s.endCash !== null ? s.endCash : (s.startCash + (s.shiftSalesTotal || 0)))}</td>
+ <td className="py-2.5 px-3 text-right font-mono">{formatCurrency(s.cashCount !== undefined && s.cashCount !== null ? s.cashCount : 0)}</td>
  <td className={`py-2.5 px-3 text-right font-mono font-bold ${
  s.variance === 0
  ? 'text-m3-tertiary'
@@ -328,7 +329,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
  ? 'text-m3-primary'
  : 'text-red-550'
  }`}>
- ₱{s.variance.toFixed(2)}
+ {formatCurrency(s.variance)}
  </td>
  <td className="py-2.5 px-3 text-center">
  <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest border ${
@@ -388,24 +389,24 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
  <div className="space-y-1.5 text-m3-on-surface-variant border-t border-dashed border-m3-outline-variant/30 pt-2 font-mono">
  <div className="flex justify-between">
  <span>Float Starting base:</span>
- <span>₱{activeShift.startCash.toFixed(2)}</span>
+ <span>{formatCurrency(activeShift.startCash)}</span>
  </div>
  <div className="flex justify-between">
  <span>Gross sales Subtotal:</span>
- <span>₱{shiftStats.salesTotal.toFixed(2)}</span>
+ <span>{formatCurrency(shiftStats.salesTotal)}</span>
  </div>
  <div className="flex justify-between">
  <span>Sales Tax / VAT (12%):</span>
- <span>₱{shiftStats.vatTotal.toFixed(2)}</span>
+ <span>{formatCurrency(shiftStats.vatTotal)}</span>
  </div>
  <div className="flex justify-between">
  <span>Deducted Surcharges / Disc:</span>
- <span className="text-m3-primary font-bold">-₱{shiftStats.discountTotal.toFixed(2)}</span>
+ <span className="text-m3-primary font-bold">-{formatCurrency(shiftStats.discountTotal)}</span>
  </div>
 
  <div className="flex justify-between font-black text-m3-on-surface border-t border-dashed border-m3-outline-variant/35 pt-2 text-sm leading-normal">
  <span>Expected Drawer Liquid:</span>
- <span className="text-m3-primary">₱{expectedEndCash.toFixed(2)}</span>
+ <span className="text-m3-primary">{formatCurrency(expectedEndCash)}</span>
  </div>
  </div>
 
@@ -459,20 +460,20 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
  <div className="space-y-1.5 text-m3-on-surface-variant border-t border-dashed border-m3-outline-variant/30 pt-2 font-mono">
  <div className="flex justify-between font-bold">
  <span>Net Shift Revenue:</span>
- <span className="text-m3-tertiary font-black">₱{shiftStats.netTotal.toFixed(2)}</span>
+ <span className="text-m3-tertiary font-black">{formatCurrency(shiftStats.netTotal)}</span>
  </div>
  <div className="flex justify-between">
  <span>Total VAT Collected:</span>
- <span>₱{shiftStats.vatTotal.toFixed(2)}</span>
+ <span>{formatCurrency(shiftStats.vatTotal)}</span>
  </div>
  <div className="flex justify-between">
  <span>Applied Discounts:</span>
- <span className="text-m3-primary font-bold">-₱{shiftStats.discountTotal.toFixed(2)}</span>
+ <span className="text-m3-primary font-bold">-{formatCurrency(shiftStats.discountTotal)}</span>
  </div>
 
  <div className="flex justify-between font-black text-m3-on-surface border-t border-dashed border-m3-outline-variant/35 pt-2 text-sm leading-normal">
  <span>Final expected cash drawer:</span>
- <span className="text-m3-primary">₱{expectedEndCash.toFixed(2)}</span>
+ <span className="text-m3-primary">{formatCurrency(expectedEndCash)}</span>
  </div>
  </div>
 

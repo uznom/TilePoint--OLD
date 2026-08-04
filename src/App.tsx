@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { DbProvider, useDb, DbSnapshot } from "./context/DbContext";
 import { UserRole, User } from "./types/db";
 import { motion, AnimatePresence, MotionConfig } from "motion/react";
@@ -11,38 +12,43 @@ import { SkeletalLoader } from "./components/SkeletalLoader";
 import { LoginModule } from "./components/LoginModule";
 import { SetupModule } from "./components/SetupModule";
 import {
- createSaltedHash,
- formatHashToken,
- verifyPasswordWithToken,
+  createSaltedHash,
+  formatHashToken,
+  verifyPasswordWithToken,
 } from "./lib/crypto";
 import { verifyAndUnwrapBackup, saveFileToBackup } from "./lib/fileBackupHelper";
 
-// Modular components imports
-import { Dashboard } from "./components/Dashboard";
-import { AdminProfitModule } from "./components/AdminProfitModule";
-import { PosModule } from "./components/PosModule";
-import { InventoryModule } from "./components/InventoryModule";
-import { ProcurementModule } from "./components/ProcurementModule";
-import { TransmittalModule } from "./components/TransmittalModule";
-import { ShiftModule } from "./components/ShiftModule";
-import { BranchModule } from "./components/BranchModule";
-import { UsersModule } from "./components/UsersModule";
-import { SystemSettingsModule } from "./components/SystemSettingsModule";
-import { CalculatorModule } from "./components/CalculatorModule";
-import { StaffPortal } from "./components/StaffPortal";
-import AtposExtraModules from "./components/AtposExtraModules";
-import { DeliveriesModule } from "./components/DeliveriesModule";
-import { SalesTransmissionModule } from "./components/SalesTransmissionModule";
-import { DailyReconciliationModule } from "./components/DailyReconciliationModule";
-import { ReconciliationTransmissionModule } from "./components/ReconciliationTransmissionModule";
+// Modular lazy components imports for route-based code splitting
+import {
+  LazyDashboard as Dashboard,
+  LazyAdminProfitModule as AdminProfitModule,
+  LazyPosModule as PosModule,
+  LazyInventoryModule as InventoryModule,
+  LazyProcurementModule as ProcurementModule,
+  LazyTransmittalModule as TransmittalModule,
+  LazyShiftModule as ShiftModule,
+  LazyBranchModule as BranchModule,
+  LazyUsersModule as UsersModule,
+  LazySystemSettingsModule as SystemSettingsModule,
+  LazyCalculatorModule as CalculatorModule,
+  LazyStaffPortal as StaffPortal,
+  LazyAtposExtraModules as AtposExtraModules,
+  LazyDeliveriesModule as DeliveriesModule,
+  LazySalesTransmissionModule as SalesTransmissionModule,
+  LazyDailyReconciliationModule as DailyReconciliationModule,
+  LazyReconciliationTransmissionModule as ReconciliationTransmissionModule,
+  LazyDamageRegisterModule as DamageRegisterModule,
+} from "./components/LazyModules";
+import { PageLoadingFallback } from "./components/PageLoadingFallback";
+
 import { TutorialOnboarding } from "./components/TutorialOnboarding";
 import { PrivacyAccessibilityHub } from "./components/PrivacyAccessibilityHub";
 import { OnboardingSetupWizard } from "./components/OnboardingSetupWizard";
 import { SystemLoadingOverlay } from "./components/SystemLoadingOverlay";
 import { IdleScreen } from "./components/IdleScreen";
 import { PwaInstallPrompt } from "./components/PwaInstallPrompt";
-import { DamageRegisterModule } from "./components/DamageRegisterModule";
 import { MobilePcOnlyBlocker } from "./components/MobilePcOnlyBlocker";
+import { isSameBranch } from "./lib/branchUtils";
 import { ConfirmationModal } from "./components/ConfirmationModal";
 import { QuickModuleSwitcherModal } from "./components/QuickModuleSwitcherModal";
 
@@ -97,227 +103,127 @@ import {
  Clock,
 } from "lucide-react";
 
-// Flat list of All Submodules for global routing, role-mapping and mobile navigation anchors
-const menuItems = [
- {
- id: "tutorials",
- name: "Operational Walkthrough",
- icon: BookOpen,
- roles: [
+const ALL_ROLES = [
  UserRole.ADMIN,
  UserRole.MANAGER,
  UserRole.CASHIER,
  UserRole.STAFF,
- ],
- },
+];
+const ADMIN_MANAGER = [UserRole.ADMIN, UserRole.MANAGER];
+const ADMIN_MANAGER_CASHIER = [
+ UserRole.ADMIN,
+ UserRole.MANAGER,
+ UserRole.CASHIER,
+];
+const ADMIN_ONLY = [UserRole.ADMIN];
+
+// Definitive Directory Hierarchical Categories and Sub-items with RBAC configuration
+export const sidebarCategoryTree = [
  {
- id: "dashboard",
- name: "Branch Dashboard",
- icon: LayoutDashboard,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
- {
- id: "profit-analytics",
- name: "P&L Accounting Desk",
- icon: DollarSign,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
- {
- id: "pos",
- name: "ERP OS Checkout Mode",
+ id: "sale",
+ name: "Sale",
  icon: ShoppingCart,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
- },
- {
- id: "shift",
- name: "Shift drawer",
- icon: LockKeyhole,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER],
- },
- {
- id: "calculator",
- name: "Tile Coverage Calc",
- icon: Calculator,
- roles: [
- UserRole.ADMIN,
- UserRole.MANAGER,
- UserRole.CASHIER,
- UserRole.STAFF,
+ subItems: [
+ { id: "pos", name: "ERP OS Checkout Mode", roles: ALL_ROLES },
+ { id: "shift", name: "Shift drawer", roles: ADMIN_MANAGER_CASHIER },
+ { id: "calculator", name: "Tile Coverage Calc", roles: ALL_ROLES },
  ],
  },
  {
- id: "branches",
- name: "Branches Profile",
- icon: Building2,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
- {
- id: "users",
- name: "Employee Directory",
- icon: UsersIcon,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
- {
- id: "system-settings",
- name: "System Settings",
- icon: Sliders,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
-
- // ATPOS v2 Submodules
- {
- id: "inventory-stocks",
- name: "Catalog Stock Ledger",
+ id: "inventory",
+ name: "Inventory",
  icon: Layers,
- roles: [
- UserRole.ADMIN,
- UserRole.MANAGER,
- UserRole.CASHIER,
- UserRole.STAFF,
+ subItems: [
+ { id: "inventory-stocks", name: "Catalog Stock Ledger", roles: ALL_ROLES },
+ { id: "inventory-adjustments", name: "Adjustments Logs", roles: ALL_ROLES },
+ { id: "inventory-transfer", name: "Stock Transfers", roles: ALL_ROLES },
+ { id: "inventory-logistics", name: "Logistics Ledger & Heatmap", roles: ALL_ROLES },
+ { id: "inventory-import", name: "Migration & Import/Export Tool", roles: ADMIN_MANAGER },
+ { id: "inventory-damage", name: "Broken & BOA Register", roles: ALL_ROLES },
+ { id: "inventory-expiry", name: "Shelf-Life & Expiry Calendar", roles: ALL_ROLES },
+ { id: "inventory-branch-prices", name: "Branch MSRP & SRP Suggestions", roles: ADMIN_MANAGER },
  ],
  },
  {
- id: "inventory-adjustments",
- name: "Adjustments Logs",
- icon: Layers,
- roles: [
- UserRole.ADMIN,
- UserRole.MANAGER,
- UserRole.CASHIER,
- UserRole.STAFF,
- ],
- },
- {
- id: "inventory-transfer",
- name: "Stock Transfers",
- icon: Send,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
- },
- {
- id: "inventory-logistics",
- name: "Logistics Ledger & Heatmap",
- icon: Layers,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
- },
- {
- id: "inventory-import",
- name: "Migration & Import/Export Tool",
- icon: Layers,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
- {
- id: "inventory-damage",
- name: "Broken & BOA Register",
- icon: AlertTriangle,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
- },
- {
- id: "inventory-expiry",
- name: "Shelf-Life & Expiry Calendar",
- icon: Clock,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
- },
- {
- id: "inventory-branch-prices",
- name: "Branch MSRP & SRP Suggestions",
- icon: DollarSign,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
-
- {
- id: "adjustments-void",
- name: "Search Voided Sales",
- icon: History,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
- },
- {
- id: "adjustments-return",
- name: "Search Returned Products",
- icon: RefreshCw,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
- },
-
- {
- id: "members-manage",
- name: "Manage Members",
- icon: UsersIcon,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
- },
- {
- id: "members-receivables",
- name: "Account Receivables",
- icon: UsersIcon,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
- {
- id: "members-loyalty",
- name: "Member Loyalty Points",
- icon: Sparkles,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
- },
-
- {
- id: "expenses-add",
- name: "Add Expenses",
- icon: DollarSign,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
- {
- id: "expenses-search",
- name: "Search Expenses",
- icon: DollarSign,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
-
- {
- id: "suppliers-manage",
- name: "Manage Suppliers",
- icon: Building2,
- roles: [UserRole.ADMIN],
- },
- {
- id: "suppliers-credits",
- name: "Active Credits",
- icon: Building2,
- roles: [UserRole.ADMIN],
- },
- {
- id: "suppliers-calendar",
- name: "Payment Calendar",
- icon: CalendarDays,
- roles: [UserRole.ADMIN],
- },
-
- {
- id: "bir-xz",
- name: "Search X&Z Reading",
+ id: "bir",
+ name: "BIR & Sales Transmission",
  icon: FileText,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
+ subItems: [
+ { id: "reconciliation-transmission", name: "Reconciliation & Transmission", roles: ADMIN_MANAGER },
+ { id: "bir-xz", name: "Search X&Z Reading", roles: ADMIN_MANAGER },
+ { id: "bir-summary", name: "BIR Summary Report", roles: ADMIN_MANAGER },
+ ],
  },
  {
- id: "bir-summary",
- name: "BIR Summary Report",
- icon: FileText,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
- {
- id: "reconciliation-transmission",
- name: "Reconciliation & Transmission",
- icon: RefreshCw,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
- {
- id: "deliveries-panel",
- name: "Delivery Center",
+ id: "deliveries",
+ name: "Cargo Deliveries",
  icon: Truck,
- roles: [
- UserRole.ADMIN,
- UserRole.MANAGER,
- UserRole.CASHIER,
- UserRole.STAFF,
+ subItems: [
+ { id: "deliveries-panel", name: "Delivery Center", roles: ALL_ROLES },
+ ],
+ },
+ {
+ id: "members",
+ name: "Members",
+ icon: UsersIcon,
+ subItems: [
+ { id: "members-manage", name: "Manage Members", roles: ALL_ROLES },
+ { id: "members-receivables", name: "Account Receivables", roles: ADMIN_MANAGER },
+ { id: "members-loyalty", name: "Member Loyalty Points", roles: ALL_ROLES },
+ ],
+ },
+ {
+ id: "supplier",
+ name: "Supplier",
+ icon: Building2,
+ subItems: [
+ { id: "suppliers-manage", name: "Manage Suppliers", roles: ADMIN_ONLY },
+ { id: "suppliers-credits", name: "Active Credits", roles: ADMIN_ONLY },
+ { id: "suppliers-calendar", name: "Payment Calendar", roles: ADMIN_ONLY },
+ ],
+ },
+ {
+ id: "expenses",
+ name: "Expenses",
+ icon: DollarSign,
+ subItems: [
+ { id: "expenses-add", name: "Add Expenses", roles: ADMIN_MANAGER },
+ { id: "expenses-search", name: "Search Expenses", roles: ADMIN_MANAGER },
+ ],
+ },
+ {
+ id: "adjustments",
+ name: "Sale Adjustments",
+ icon: RefreshCw,
+ subItems: [
+ { id: "adjustments-void", name: "Search Voided Sales", roles: ALL_ROLES },
+ { id: "adjustments-return", name: "Search Returned Products", roles: ALL_ROLES },
+ ],
+ },
+ {
+ id: "admin-bi",
+ name: "Business Intelligence",
+ icon: LayoutDashboard,
+ subItems: [
+ { id: "dashboard", name: "Branch Dashboard", roles: ADMIN_MANAGER },
+ { id: "profit-analytics", name: "P&L Accounting Desk", roles: ADMIN_MANAGER },
+ ],
+ },
+ {
+ id: "admin-org",
+ name: "Staff & Settings",
+ icon: UsersIcon,
+ subItems: [
+ { id: "branches", name: "Branches Profile", roles: ADMIN_MANAGER },
+ { id: "users", name: "Employee Directory", roles: ADMIN_MANAGER },
+ { id: "system-settings", name: "System Settings", roles: ADMIN_MANAGER },
+ { id: "tutorials", name: "Operational Walkthrough", roles: ALL_ROLES },
  ],
  },
 ];
+
+// Centralized flat list of all submodules derived from sidebarCategoryTree
+export const allSubModules = sidebarCategoryTree.flatMap((category) => category.subItems);
 
 function AppContent() {
  const {
@@ -373,14 +279,89 @@ function AppContent() {
  invalidateLocalCache,
  syncFromSharedServer,
  } = useDb();
- const showSaleRedDot = parkedSales.length > 0; const showDeliveriesRedDot = deliveries.some(d => d.status === 'Scheduled' || d.status === 'Packed' || d.status === 'Out For Delivery'); let showInventoryRedDot = false; try { const cached = localStorage.getItem("tp_batch_expirations"); if (cached) { const parsed = JSON.parse(cached); const today = new Date(); showInventoryRedDot = parsed.some((b: any) => { if (!b.expiryDate) return false; const exp = new Date(b.expiryDate); const diffTime = exp.getTime() - today.getTime(); const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); return diffDays <= 30; }); } else { showInventoryRedDot = true; } } catch (_) { showInventoryRedDot = true; } const showTransferRedDot = stockTransfers.some(t => { if (t.status !== 'Pending') return false; return t.fromBranchId !== t.toBranchId; }); const showExpiryRedDot = showInventoryRedDot; const initialSavedTabRef = useRef<string | null>(null);
+ const showSaleRedDot = parkedSales.some((p: any) => {
+    const pBranch = p.heldByBranchId || (p as any).branchId;
+    if (!pBranch) return false;
+    return isSameBranch(pBranch, currentUser?.branchAssignmentId || "B1", branches);
+  }); const showDeliveriesRedDot = deliveries.some(d => d.status === 'Scheduled' || d.status === 'Packed' || d.status === 'Out For Delivery'); let showInventoryRedDot = false; try { const cached = localStorage.getItem("tp_batch_expirations"); if (cached) { const parsed = JSON.parse(cached); const today = new Date(); showInventoryRedDot = parsed.some((b: any) => { if (!b.expiryDate) return false; const exp = new Date(b.expiryDate); const diffTime = exp.getTime() - today.getTime(); const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); return diffDays <= 30; }); } else { showInventoryRedDot = true; } } catch (_) { showInventoryRedDot = true; } const showTransferRedDot = stockTransfers.some(t => { if (t.status !== 'Pending') return false; return t.fromBranchId !== t.toBranchId; }); const showExpiryRedDot = showInventoryRedDot; const initialSavedTabRef = useRef<string | null>(null);
  if (initialSavedTabRef.current === null && typeof window !== "undefined") {
  initialSavedTabRef.current =
  localStorage.getItem("tilepoint_active_tab") || "none";
  }
 
+ const location = useLocation();
+ const navigate = useNavigate();
+
+ const TAB_TO_PATH: Record<string, string> = {
+ dashboard: "/dashboard",
+ "profit-analytics": "/analytics",
+ pos: "/pos",
+ ledger: "/ledger",
+ inventory: "/inventory",
+ procurement: "/procurement",
+ transmittal: "/transmittal",
+ shift: "/shifts",
+ calculator: "/calculator",
+ branches: "/branches",
+ "system-settings": "/settings",
+ users: "/users",
+ "reconciliation-transmission": "/reconciliation-transmission",
+ "deliveries-panel": "/deliveries",
+ "inventory-damage": "/damage-register",
+ tutorials: "/tutorials",
+ "adjustments-void": "/adjustments-void",
+ "suppliers-manage": "/suppliers-manage",
+ "staff-portal": "/portal",
+ "sales-transmission": "/sales-transmission",
+ "daily-reconciliation": "/daily-reconciliation",
+ "inventory-stocks": "/inventory/stocks",
+ "inventory-adjustments": "/inventory/adjustments",
+ "inventory-transfer": "/inventory/transfers",
+ "inventory-logistics": "/inventory/logistics",
+ "inventory-import": "/inventory/import",
+ "inventory-branch-prices": "/inventory/branch-prices",
+ "inventory-expiry": "/inventory/expiry",
+ };
+
+ const PATH_TO_TAB: Record<string, string> = {
+ "/": "dashboard",
+ "/dashboard": "dashboard",
+ "/analytics": "profit-analytics",
+ "/pos": "pos",
+ "/ledger": "ledger",
+ "/inventory": "inventory",
+ "/procurement": "procurement",
+ "/transmittal": "transmittal",
+ "/shifts": "shift",
+ "/calculator": "calculator",
+ "/branches": "branches",
+ "/settings": "system-settings",
+ "/users": "users",
+ "/reconciliation-transmission": "reconciliation-transmission",
+ "/deliveries": "deliveries-panel",
+ "/damage-register": "inventory-damage",
+ "/tutorials": "tutorials",
+ "/adjustments-void": "adjustments-void",
+ "/suppliers-manage": "suppliers-manage",
+ "/portal": "staff-portal",
+ "/sales-transmission": "sales-transmission",
+ "/daily-reconciliation": "daily-reconciliation",
+ "/inventory/stocks": "inventory-stocks",
+ "/inventory/adjustments": "inventory-adjustments",
+ "/inventory/transfers": "inventory-transfer",
+ "/inventory/logistics": "inventory-logistics",
+ "/inventory/import": "inventory-import",
+ "/inventory/branch-prices": "inventory-branch-prices",
+ "/inventory/expiry": "inventory-expiry",
+ };
+
  const [activeTab, setActiveTab] = useState(() => {
  if (typeof window !== "undefined") {
+ const currentPath = window.location.pathname;
+ if (currentPath && currentPath !== "/") {
+ const routeTab = PATH_TO_TAB[currentPath] || currentPath.replace(/^\//, "");
+ if (routeTab) return routeTab;
+ }
  const savedTab = localStorage.getItem("tilepoint_active_tab");
  if (savedTab) return savedTab;
  }
@@ -393,6 +374,29 @@ function AppContent() {
  }
  return "dashboard";
  });
+
+ // Sync state -> URL safely
+ useEffect(() => {
+ if (activeTab && typeof activeTab === "string") {
+ const targetPath = TAB_TO_PATH[activeTab] || `/${activeTab}`;
+ if (typeof targetPath === "string" && targetPath.trim() !== "" && location.pathname !== targetPath) {
+ try {
+ navigate(targetPath, { replace: true });
+ } catch (navErr) {
+ console.warn("[Routing] Browser navigation intercepted:", navErr);
+ }
+ }
+ }
+ }, [activeTab, location.pathname, navigate]);
+
+ // Sync URL -> state on browser Back / Forward navigation
+ useEffect(() => {
+ const rawPath = location.pathname;
+ const routeTab = PATH_TO_TAB[rawPath] || (rawPath && rawPath.length > 1 ? rawPath.replace(/^\//, "") : null);
+ if (routeTab) {
+ setActiveTab((prev) => (prev !== routeTab ? routeTab : prev));
+ }
+ }, [location.pathname]);
 
  const [confirmRestoreSnap, setConfirmRestoreSnap] = useState<DbSnapshot | null>(null);
 
@@ -488,12 +492,19 @@ function AppContent() {
  // Dynamic automatic routing on login/identity-switch to ensure Admin sees dashboard first
  useEffect(() => {
  if (isLoggedIn && currentUser) {
+ if (typeof window !== "undefined") {
+ const currentPath = window.location.pathname;
+ if (currentPath && currentPath !== "/") {
+ const routeTab = PATH_TO_TAB[currentPath] || currentPath.replace(/^\//, "");
+ if (routeTab) return;
+ }
+ }
  const savedTab =
  initialSavedTabRef.current && initialSavedTabRef.current !== "none"
  ? initialSavedTabRef.current
  : localStorage.getItem("tilepoint_active_tab");
  if (savedTab && savedTab !== "none") {
- const savedItem = menuItems.find((m) => m.id === savedTab);
+ const savedItem = allSubModules.find((m) => m.id === savedTab);
  if (savedItem && savedItem.roles.includes(currentUser.role)) {
  setActiveTab(savedTab);
  return;
@@ -1069,8 +1080,8 @@ function AppContent() {
  if (tabId === activeTab) return;
 
  // Safety role clearance checker
- const targetItem = menuItems.find((item) => item.id === tabId);
- if (targetItem && currentUser && !targetItem.roles.includes(currentUser.role)) {
+ const targetItem = allSubModules.find((item) => item.id === tabId);
+ if (targetItem && currentUser && targetItem.roles && !targetItem.roles.includes(currentUser.role)) {
  return;
  }
 
@@ -1157,8 +1168,8 @@ function AppContent() {
  const target = numberShortcutMap[e.key];
  
  // Verify RBAC permissions for the logged in user
- const masterItem = menuItems.find((m) => m.id === target.id);
- if (masterItem && currentUser && !masterItem.roles.includes(currentUser.role)) {
+ const masterItem = allSubModules.find((m) => m.id === target.id);
+ if (masterItem && currentUser && masterItem.roles && !masterItem.roles.includes(currentUser.role)) {
  showToast(`Shortcut [Ctrl+${e.key}]: Access restricted for ${currentUser.role} role.`);
  return;
  }
@@ -1378,327 +1389,7 @@ function AppContent() {
  );
  }
 
- // Flat list of All Submodules for global routing, role-mapping and mobile navigation anchors
- const _unusedMenuItems = [
- {
- id: "tutorials",
- name: "Operational Walkthrough",
- icon: BookOpen,
- roles: [
- UserRole.ADMIN,
- UserRole.MANAGER,
- UserRole.CASHIER,
- UserRole.STAFF,
- ],
- },
- {
- id: "dashboard",
- name: "Branch Dashboard",
- icon: LayoutDashboard,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
- {
- id: "profit-analytics",
- name: "P&L Accounting Desk",
- icon: DollarSign,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
- {
- id: "pos",
- name: "ERP OS Checkout Mode",
- icon: ShoppingCart,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
- },
- {
- id: "shift",
- name: "Shift drawer",
- icon: LockKeyhole,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER],
- },
- {
- id: "calculator",
- name: "Tile Coverage Calc",
- icon: Calculator,
- roles: [
- UserRole.ADMIN,
- UserRole.MANAGER,
- UserRole.CASHIER,
- UserRole.STAFF,
- ],
- },
- {
- id: "branches",
- name: "Branches Profile",
- icon: Building2,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
- {
- id: "users",
- name: "Employee Directory",
- icon: UsersIcon,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
- {
- id: "system-settings",
- name: "System Settings",
- icon: Sliders,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
 
- // ATPOS v2 Submodules
- {
- id: "inventory-stocks",
- name: "Catalog Stock Ledger",
- icon: Layers,
- roles: [
- UserRole.ADMIN,
- UserRole.MANAGER,
- UserRole.CASHIER,
- UserRole.STAFF,
- ],
- },
- {
- id: "inventory-adjustments",
- name: "Adjustments Logs",
- icon: Layers,
- roles: [
- UserRole.ADMIN,
- UserRole.MANAGER,
- UserRole.CASHIER,
- UserRole.STAFF,
- ],
- },
- {
- id: "inventory-transfer",
- name: "Stock Transfers",
- icon: Send,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
- },
- {
- id: "inventory-logistics",
- name: "Logistics Ledger & Heatmap",
- icon: Layers,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
- },
- {
- id: "inventory-import",
- name: "Migration & Import/Export Tool",
- icon: Layers,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
- {
- id: "inventory-damage",
- name: "Broken & BOA Register",
- icon: AlertTriangle,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
- },
- {
- id: "inventory-expiry",
- name: "Shelf-Life & Expiry Calendar",
- icon: Clock,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
- },
- {
- id: "inventory-branch-prices",
- name: "Branch MSRP & SRP Suggestions",
- icon: DollarSign,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
-
- {
- id: "adjustments-void",
- name: "Search Voided Sales",
- icon: History,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
- },
- {
- id: "adjustments-return",
- name: "Search Returned Products",
- icon: RefreshCw,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
- },
-
- {
- id: "members-manage",
- name: "Manage Members",
- icon: UsersIcon,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
- },
- {
- id: "members-receivables",
- name: "Account Receivables",
- icon: UsersIcon,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
- {
- id: "members-loyalty",
- name: "Member Loyalty Points",
- icon: Sparkles,
- roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
- },
-
- {
- id: "expenses-add",
- name: "Add Expenses",
- icon: DollarSign,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
- {
- id: "expenses-search",
- name: "Search Expenses",
- icon: DollarSign,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
-
- {
- id: "suppliers-manage",
- name: "Manage Suppliers",
- icon: Building2,
- roles: [UserRole.ADMIN],
- },
- {
- id: "suppliers-credits",
- name: "Active Credits",
- icon: Building2,
- roles: [UserRole.ADMIN],
- },
- {
- id: "suppliers-calendar",
- name: "Payment Calendar",
- icon: CalendarDays,
- roles: [UserRole.ADMIN],
- },
-
- {
- id: "bir-xz",
- name: "Search X&Z Reading",
- icon: FileText,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
- {
- id: "bir-summary",
- name: "BIR Summary Report",
- icon: FileText,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
- {
- id: "reconciliation-transmission",
- name: "Reconciliation & Transmission",
- icon: RefreshCw,
- roles: [UserRole.ADMIN, UserRole.MANAGER],
- },
- {
- id: "deliveries-panel",
- name: "Delivery Center",
- icon: Truck,
- roles: [
- UserRole.ADMIN,
- UserRole.MANAGER,
- UserRole.CASHIER,
- UserRole.STAFF,
- ],
- },
- ];
-
- // ATPOS v2 Directory Hierarchical Folders
- const sidebarCategoryTree = [
- {
- id: "sale",
- name: "Sale",
- icon: ShoppingCart,
- subItems: [
- { id: "pos", name: "ERP OS Checkout Mode" },
- ],
- },
- {
- id: "inventory",
- name: "Inventory",
- icon: Layers,
- subItems: [
- { id: "inventory-stocks", name: "Catalog Stock Ledger" },
- { id: "inventory-adjustments", name: "Adjustments Logs" },
- { id: "inventory-transfer", name: "Stock Transfers" },
- { id: "inventory-logistics", name: "Logistics Ledger & Heatmap" },
- { id: "inventory-import", name: "Migration & Import/Export Tool" },
- { id: "inventory-damage", name: "Broken & BOA Register" },
- { id: "inventory-expiry", name: "Shelf-Life & Expiry Calendar" },
- { id: "inventory-branch-prices", name: "Branch MSRP & SRP Suggestions" },
- ],
- },
- {
- id: "bir",
- name: "BIR & Sales Transmission",
- icon: FileText,
- subItems: [
- { id: "reconciliation-transmission", name: "Reconciliation & Transmission" },
- { id: "bir-xz", name: "Search X&Z Reading" },
- { id: "bir-summary", name: "BIR Summary Report" },
- ],
- },
- {
- id: "deliveries",
- name: "Cargo Deliveries",
- icon: Truck,
- subItems: [{ id: "deliveries-panel", name: "Delivery Center" }],
- },
- {
- id: "members",
- name: "Members",
- icon: UsersIcon,
- subItems: [
- { id: "members-manage", name: "Manage Members" },
- { id: "members-receivables", name: "Account Receivables" },
- { id: "members-loyalty", name: "Member Loyalty Points" },
- ],
- },
- {
- id: "supplier",
- name: "Supplier",
- icon: Building2,
- subItems: [
- { id: "suppliers-manage", name: "Manage Suppliers" },
- { id: "suppliers-credits", name: "Active Credits" },
- { id: "suppliers-calendar", name: "Payment Calendar" },
- ],
- },
- {
- id: "expenses",
- name: "Expenses",
- icon: DollarSign,
- subItems: [
- { id: "expenses-add", name: "Add Expenses" },
- { id: "expenses-search", name: "Search Expenses" },
- ],
- },
- {
- id: "adjustments",
- name: "Sale Adjustments",
- icon: RefreshCw,
- subItems: [
- { id: "adjustments-void", name: "Search Voided Sales" },
- { id: "adjustments-return", name: "Search Returned Products" },
- ],
- },
- {
- id: "admin-bi",
- name: "Business Intelligence",
- icon: LayoutDashboard,
- subItems: [
- { id: "dashboard", name: "Branch Dashboard" },
- { id: "profit-analytics", name: "P&L Accounting Desk" },
- ],
- },
- {
- id: "admin-org",
- name: "Staff & Settings",
- icon: UsersIcon,
- subItems: [
- { id: "branches", name: "Branches Profile" },
- { id: "users", name: "Employee Directory" },
- { id: "system-settings", name: "System Settings" },
- ],
- },
- ];
 
  const getBranchName = (id: string | null) => {
  if (!id || id === "B1" || id === "main") {
@@ -2201,10 +1892,7 @@ function AppContent() {
 
    // Strong dynamic RBAC: Filter sub-items to only those this user has permission to see
    const authorizedSubItems = category.subItems.filter((sub) => {
-   const masterItem = menuItems.find((m) => m.id === sub.id);
-   return masterItem
-   ? masterItem.roles.includes(currentUser.role)
-   : false;
+     return sub.roles ? sub.roles.includes(currentUser.role) : true;
    });
 
    // Under strong RBAC, if there are no authorized sub-items, do not show the category folder at all
@@ -2474,12 +2162,7 @@ function AppContent() {
 
   // Enforce RBAC filtering for sub-pages so they match exactly what is authorized
   const authorizedSubItems = activeCategory.subItems.filter(
-  (sub) => {
-  const masterItem = menuItems.find((m) => m.id === sub.id);
-  return masterItem
-  ? masterItem.roles.includes(currentUser.role)
-  : false;
-  },
+    (sub) => sub.roles ? sub.roles.includes(currentUser.role) : true,
   );
 
   if (authorizedSubItems.length <= 1 || activeTab === "pos")
@@ -2632,7 +2315,7 @@ function AppContent() {
  onForceEnable={() => setDeveloperBypassTabs((prev) => [...prev, activeTab])}
  />
  ) : (
- <>
+ <Suspense fallback={<PageLoadingFallback />}>
  {activeTab === "tutorials" && <TutorialOnboarding />}
  {activeTab === "dashboard" && (
  <Dashboard darkMode={darkMode} onNavigate={changeTab} />
@@ -2787,7 +2470,7 @@ function AppContent() {
  onNavigate={changeTab}
  />
  )}
- </>
+ </Suspense>
  )}
  </motion.div>
  )}
@@ -2809,10 +2492,7 @@ function AppContent() {
  {sidebarCategoryTree.map((category) => {
  // Dynamic RBAC filtering
  const authorizedSubItems = category.subItems.filter((sub) => {
- const masterItem = menuItems.find((m) => m.id === sub.id);
- return masterItem
- ? masterItem.roles.includes(currentUser.role)
- : false;
+   return sub.roles ? sub.roles.includes(currentUser.role) : true;
  });
 
  // Branch authorization filter
