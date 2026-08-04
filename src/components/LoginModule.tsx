@@ -86,10 +86,7 @@ export const LoginModule: React.FC = () => {
    return;
   }
 
-  // Small delay to feel professional but fast
-  await new Promise(resolve => setTimeout(resolve, 400));
-
-  const loginResult = await login(username, password);
+   const loginResult = await login(username, password);
   
   if (!loginResult.success) {
    setErrorMsg(loginResult.error || 'Authentication failure.');
@@ -183,7 +180,7 @@ export const LoginModule: React.FC = () => {
           type="text"
           disabled={isRateLimited || isSubmitting}
           placeholder="Enter username"
-          value={username}
+          value={username ?? ''}
           onChange={(e) => setUsername(e.target.value)}
           className="w-full pl-10 pr-4 py-3 rounded-xl border border-m3-outline-variant/65 cursor-text disabled:opacity-50 disabled:bg-m3-surface-container bg-m3-surface text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary/50 text-sm font-semibold transition-all"
          />
@@ -199,7 +196,7 @@ export const LoginModule: React.FC = () => {
           type={showPassword ? 'text' : 'password'}
           disabled={isRateLimited || isSubmitting}
           placeholder="••••••••••••"
-          value={password}
+          value={password ?? ''}
           onChange={(e) => setPassword(e.target.value)}
           className="w-full pl-10 pr-12 py-3 rounded-xl border border-m3-outline-variant/65 cursor-text disabled:opacity-50 disabled:bg-m3-surface-container bg-m3-surface text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary/50 text-sm font-semibold transition-all font-mono"
          />
@@ -358,7 +355,7 @@ export const LoginModule: React.FC = () => {
         </div>
 
         <div className="pt-3 border-t border-m3-outline-variant/15 text-[10px] text-m3-on-surface-variant/70 italic text-center">
-         Copyright &copy; 2026 Erica Manaban and Mark Jefferson Monares / TilePoint Enterprise. All Rights Reserved.
+         Copyright &copy; {new Date().getFullYear()} Erica Manaban and Mark Jefferson Monares / TilePoint Enterprise. All Rights Reserved.
         </div>
        </div>
 

@@ -473,7 +473,7 @@ export const SetupModule: React.FC = () => {
  </label>
  <input
  type="text"
- value={fullName}
+ value={fullName ?? ''}
  onChange={(e) => setFullName(e.target.value)}
  placeholder="Full name"
  className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-sans"
@@ -487,7 +487,7 @@ export const SetupModule: React.FC = () => {
  </label>
  <input
  type="text"
- value={username}
+ value={username ?? ''}
  onChange={(e) => setUsername(e.target.value)}
  placeholder="Username / ID"
  className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-mono"
@@ -499,7 +499,7 @@ export const SetupModule: React.FC = () => {
  </label>
  <input
  type="email"
- value={email}
+ value={email ?? ''}
  onChange={(e) => setEmail(e.target.value)}
  placeholder="Email address"
  className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-sans"
@@ -515,7 +515,7 @@ export const SetupModule: React.FC = () => {
  <div className="relative">
  <input
  type={showPassword ? "text" : "password"}
- value={password}
+ value={password ?? ''}
  onChange={(e) => setPassword(e.target.value)}
  placeholder="Min 6 alphanumeric characters"
  className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl pl-3 pr-10 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-sans"
@@ -541,7 +541,7 @@ export const SetupModule: React.FC = () => {
  <input
  type="text"
  maxLength={4}
- value={managerPin}
+ value={managerPin ?? ''}
  onChange={(e) =>
  setManagerPin(e.target.value.replace(/\D/g, ""))
  }
@@ -575,7 +575,7 @@ export const SetupModule: React.FC = () => {
  </label>
  <input
  type="text"
- value={branchId}
+ value={branchId ?? ''}
  onChange={(e) => setBranchId(e.target.value)}
  placeholder="Branch ID (e.g. B1)"
  className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-mono"
@@ -591,7 +591,7 @@ export const SetupModule: React.FC = () => {
  </label>
  <input
  type="text"
- value={branchName}
+ value={branchName ?? ''}
  onChange={(e) => setBranchName(e.target.value)}
  placeholder="Branch Name"
  className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors"
@@ -604,7 +604,7 @@ export const SetupModule: React.FC = () => {
  </label>
  <input
  type="text"
- value={branchAddress}
+ value={branchAddress ?? ''}
  onChange={(e) => setBranchAddress(e.target.value)}
  placeholder="Street, City, Province"
  className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors"
@@ -617,7 +617,7 @@ export const SetupModule: React.FC = () => {
  </label>
  <input
  type="text"
- value={branchPhone}
+ value={branchPhone ?? ''}
  onChange={(e) => setBranchPhone(e.target.value)}
  placeholder="Phone number"
  className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-mono"

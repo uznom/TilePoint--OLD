@@ -143,9 +143,14 @@ const pool = mysql.createPool({
   password: process.env.MYSQL_PASSWORD || '',
   database: process.env.MYSQL_DATABASE || 'tilepoint_db',
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: Number(process.env.MYSQL_CONNECTION_LIMIT || 25),
+  maxIdle: Number(process.env.MYSQL_MAX_IDLE || 10),
+  idleTimeout: 60000,
   queueLimit: 0,
-  connectTimeout: 2000
+  connectTimeout: 5000,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
+  namedPlaceholders: true
 });
 
 let isMysqlActive = false;
@@ -400,7 +405,11 @@ function upsertRecordSqlite(tableName, record) {
   } catch (e) {}
 }
 
-function readFullDatabaseFromSqlite() {
+function getOrReadFullDatabaseSync() {
+  if (!isDbCacheDirty && cachedFullDb && cachedDbHash) {
+    return { db: cachedFullDb, hash: cachedDbHash };
+  }
+
   const db = {};
   if (!sqliteDb) return { db, hash: '' };
 
@@ -426,7 +435,14 @@ function readFullDatabaseFromSqlite() {
   }
 
   const hash = computeDatabaseHash(db);
+  cachedFullDb = db;
+  cachedDbHash = hash;
+  isDbCacheDirty = false;
   return { db, hash };
+}
+
+function readFullDatabaseFromSqlite() {
+  return getOrReadFullDatabaseSync();
 }
 
 function saveKeyToSqlite(key, value) {
@@ -478,12 +494,44 @@ async function checkMysqlConnection() {
 checkMysqlConnection().catch(() => {});
 setInterval(checkMysqlConnection, 30000);
 
+// --- IN-MEMORY CACHE & DEBOUNCED DISK PERSISTENCE ---
+let cachedFullDb = null;
+let cachedDbHash = null;
+let isDbCacheDirty = true;
+let writeDbTimer = null;
+let isConfiguredCache = null;
+
+function invalidateDbCache() {
+  isDbCacheDirty = true;
+}
+
+function scheduleDebouncedDbFileWrite() {
+  if (writeDbTimer) clearTimeout(writeDbTimer);
+  writeDbTimer = setTimeout(() => {
+    try {
+      const { db } = getOrReadFullDatabaseSync();
+      fs.writeFile(DB_FILE_PATH, JSON.stringify(db), 'utf8', (err) => {
+        if (err) console.error('[File DB] Async write warning:', err.message);
+      });
+    } catch (e) {
+      console.error('[File DB] Debounced write error:', e.message);
+    }
+  }, 1000);
+}
+
 // JSON File Store Read/Write
 function readDbFile() {
+  if (cachedFullDb && !isDbCacheDirty) {
+    return cachedFullDb;
+  }
   try {
     if (fs.existsSync(DB_FILE_PATH)) {
       const data = fs.readFileSync(DB_FILE_PATH, 'utf8');
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      cachedFullDb = parsed;
+      cachedDbHash = computeDatabaseHash(parsed);
+      isDbCacheDirty = false;
+      return parsed;
     }
   } catch (e) {
     console.error('[File DB] Read error:', e.message);
@@ -492,11 +540,12 @@ function readDbFile() {
 }
 
 function writeDbFile(data) {
-  try {
-    fs.writeFileSync(DB_FILE_PATH, JSON.stringify(data, null, 2), 'utf8');
-  } catch (e) {
-    console.error('[File DB] Write error:', e.message);
+  if (data && typeof data === 'object') {
+    cachedFullDb = data;
+    cachedDbHash = computeDatabaseHash(data);
+    isDbCacheDirty = false;
   }
+  scheduleDebouncedDbFileWrite();
 }
 
 // Map JSON collection keys to MySQL tables
@@ -680,6 +729,72 @@ async function upsertRecordMysql(tableName, record) {
   await pool.execute(sql, values);
 }
 
+// Helper: Fast Chunked Batch Upsert for MySQL (Multi-Row Bulk Inserts)
+async function upsertBatchMysql(tableName, records, chunkSize = 50) {
+  if (!records || !Array.isArray(records) || records.length === 0) return;
+  const allowed = TABLE_COLUMNS[tableName];
+  if (!allowed) return;
+
+  for (let i = 0; i < records.length; i += chunkSize) {
+    const chunk = records.slice(i, i + chunkSize);
+    const keySet = new Set();
+    chunk.forEach(rec => {
+      if (rec && typeof rec === 'object') {
+        Object.keys(rec).forEach(k => {
+          if (allowed.includes(k) && rec[k] !== undefined) {
+            keySet.add(k);
+          }
+        });
+      }
+    });
+
+    const keys = Array.from(keySet);
+    if (keys.length === 0) continue;
+
+    const columnsStr = keys.map(k => `\`${k}\``).join(', ');
+    const updateClause = keys.filter(k => k !== 'id').map(k => `\`${k}\` = VALUES(\`${k}\`)`).join(', ');
+
+    const rowPlaceholders = [];
+    const values = [];
+
+    for (const rec of chunk) {
+      if (!rec || typeof rec !== 'object') continue;
+      const placeholders = keys.map(() => '?').join(', ');
+      rowPlaceholders.push(`(${placeholders})`);
+
+      for (const k of keys) {
+        const val = rec[k];
+        if (val === null || val === undefined) {
+          values.push(null);
+        } else if (typeof val === 'boolean') {
+          values.push(val ? 1 : 0);
+        } else if (typeof val === 'object') {
+          values.push(JSON.stringify(val));
+        } else if (typeof val === 'string' && (k.endsWith('At') || k.endsWith('Date') || k === 'timestamp' || k === 'dateTime')) {
+          const d = new Date(val);
+          if (!isNaN(d.getTime())) {
+            values.push(d.toISOString().slice(0, 19).replace('T', ' '));
+          } else {
+            values.push(val);
+          }
+        } else {
+          values.push(val);
+        }
+      }
+    }
+
+    if (rowPlaceholders.length === 0) continue;
+
+    const sql = `
+      INSERT INTO \`${tableName}\` (${columnsStr})
+      VALUES ${rowPlaceholders.join(', ')}
+      ${updateClause ? `ON DUPLICATE KEY UPDATE ${updateClause}` : ''}
+    `;
+
+    await pool.execute(sql, values);
+  }
+}
+
 // Helper: Read full database state from AlaSQL
 function readFullDatabaseFromAlasql() {
   const db = {};
@@ -709,26 +824,36 @@ function readFullDatabaseFromAlasql() {
   return { db, hash };
 }
 
-// Helper: Read full database state from MySQL
+// Helper: Read full database state from MySQL (Optimized Concurrent Parallel Queries)
 async function readFullDatabaseFromMysql() {
   const db = {};
 
-  const [rows] = await pool.query('SELECT setting_key, setting_value FROM system_settings');
-  for (const r of rows) {
-    try {
-      db[r.setting_key] = JSON.parse(r.setting_value);
-    } catch {
-      db[r.setting_key] = r.setting_value;
+  try {
+    const [rows] = await pool.query('SELECT setting_key, setting_value FROM system_settings');
+    for (const r of rows) {
+      try {
+        db[r.setting_key] = JSON.parse(r.setting_value);
+      } catch {
+        db[r.setting_key] = r.setting_value;
+      }
     }
-  }
+  } catch (e) {}
 
-  for (const [tpKey, tableName] of Object.entries(KEY_TO_TABLE_MAP)) {
-    if (tpKey === 'tp_db_snapshots') continue;
-    try {
+  const entries = Object.entries(KEY_TO_TABLE_MAP).filter(([tpKey]) => tpKey !== 'tp_db_snapshots');
+
+  const results = await Promise.allSettled(
+    entries.map(async ([tpKey, tableName]) => {
       const [tableRows] = await pool.query(`SELECT * FROM \`${tableName}\``);
+      return { tpKey, tableName, tableRows };
+    })
+  );
+
+  for (const res of results) {
+    if (res.status === 'fulfilled') {
+      const { tpKey, tableName, tableRows } = res.value;
       db[tpKey] = tableRows.map(r => parseRowFromMysql(tableName, r));
-    } catch (err) {
-      db[tpKey] = [];
+    } else {
+      console.warn('[MySQL Read Error]', res.reason?.message);
     }
   }
 
@@ -738,17 +863,25 @@ async function readFullDatabaseFromMysql() {
 
 // Wrapper: Read full database from MySQL or SQLite Engine
 async function readFullDatabase() {
+  if (!isDbCacheDirty && cachedFullDb && cachedDbHash) {
+    return { db: cachedFullDb, hash: cachedDbHash };
+  }
+
   if (isMysqlActive) {
     try {
-      return await readFullDatabaseFromMysql();
+      const res = await readFullDatabaseFromMysql();
+      cachedFullDb = res.db;
+      cachedDbHash = res.hash;
+      isDbCacheDirty = false;
+      return res;
     } catch (err) {
       console.warn('[Database] MySQL query failed, falling back to SQLite Engine:', err.message);
       isMysqlActive = false;
     }
   }
 
-  const sqliteRes = readFullDatabaseFromSqlite();
-  if (sqliteRes && sqliteRes.db && Object.keys(sqliteRes.db).length > 0) {
+  const sqliteRes = getOrReadFullDatabaseSync();
+  if (sqliteRes && sqliteRes.hash) {
     return sqliteRes;
   }
 
@@ -776,15 +909,13 @@ function saveKeyToAlasql(key, value) {
   }
 }
 
-// Helper: Save single key to MySQL
+// Helper: Save single key to MySQL (Batch Optimized)
 async function saveKeyToMysql(key, value) {
   const tableName = KEY_TO_TABLE_MAP[key];
 
   if (tableName) {
     if (Array.isArray(value)) {
-      for (const item of value) {
-        await upsertRecordMysql(tableName, item);
-      }
+      await upsertBatchMysql(tableName, value);
     } else if (typeof value === 'object' && value !== null) {
       await upsertRecordMysql(tableName, value);
     }
@@ -800,8 +931,11 @@ async function saveKeyToMysql(key, value) {
 
 // Wrapper: Save key-value state to MySQL, SQLite and AlaSQL Store
 async function saveKeyToStore(key, value) {
-  // Always update SQLite persistent database & AlaSQL in-memory engine
+  if (key === 'tp_is_configured' && (value === 'true' || value === true)) {
+    isConfiguredCache = true;
+  }
   if (key === 'tp_bootstrap_init') {
+    isConfiguredCache = true;
     if (value && typeof value === 'object') {
       for (const k of Object.keys(value)) {
         saveKeyToAlasql(k, value[k]);
@@ -836,35 +970,48 @@ async function saveKeyToStore(key, value) {
     }
   }
 
-  // Sync snapshot to disk
-  const { db } = readFullDatabaseFromSqlite();
-  writeDbFile(db);
+  invalidateDbCache();
+  scheduleDebouncedDbFileWrite();
 }
 
 // Wrapper: Check if database is configured
 async function isDatabaseConfiguredStore() {
+  if (isConfiguredCache === true) return true;
+
   if (isMysqlActive) {
     try {
       const [settings] = await pool.query('SELECT setting_value FROM system_settings WHERE setting_key = ?', ['tp_is_configured']);
       if (settings.length > 0) {
         const val = settings[0].setting_value;
-        return val === 'true' || val === true || val === '"true"';
+        const conf = val === 'true' || val === true || val === '"true"';
+        if (conf) isConfiguredCache = true;
+        return conf;
       }
       const [users] = await pool.query('SELECT COUNT(*) as count FROM users');
-      return users[0].count > 0;
+      const conf = users[0].count > 0;
+      if (conf) isConfiguredCache = true;
+      return conf;
     } catch (e) {
       isMysqlActive = false;
     }
   }
 
-  const { db } = readFullDatabaseFromSqlite();
-  if (db.tp_is_configured === 'false' || db.tp_is_configured === false) return false;
-  if (db.tp_is_configured === 'true' || db.tp_is_configured === true) return true;
-  if (Array.isArray(db.tp_users) && db.tp_users.length > 0) return true;
+  if (sqliteDb) {
+    try {
+      const row = sqliteDb.prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'tp_is_configured'").get();
+      if (row && row.setting_value) {
+        const val = row.setting_value;
+        const conf = val === 'true' || val === true || val === '"true"';
+        if (conf) isConfiguredCache = true;
+        return conf;
+      }
+      const userCount = sqliteDb.prepare("SELECT COUNT(*) as count FROM users").get();
+      const conf = userCount && userCount.count > 0;
+      if (conf) isConfiguredCache = true;
+      return conf;
+    } catch (e) {}
+  }
 
-  const alasqlRes = readFullDatabaseFromAlasql();
-  if (alasqlRes.db.tp_is_configured === 'true' || alasqlRes.db.tp_is_configured === true) return true;
-  if (Array.isArray(alasqlRes.db.tp_users) && alasqlRes.db.tp_users.length > 0) return true;
   return false;
 }
 
@@ -1291,8 +1438,18 @@ app.get('/api/db/events', (req, res) => {
 // API: Get full database state
 app.get('/api/db', async (req, res) => {
   try {
-    const { db, hash } = await readFullDatabase();
     const clientHash = req.query.hash || req.headers['if-none-match'];
+
+    if (clientHash && cachedDbHash && clientHash === cachedDbHash && !isDbCacheDirty) {
+      return res.json({
+        success: true,
+        unchanged: true,
+        hash: cachedDbHash,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const { db, hash } = await readFullDatabase();
 
     if (clientHash && clientHash === hash) {
       return res.json({
@@ -1791,6 +1948,11 @@ app.post('/api/db/delta', async (req, res) => {
               db[key][idx] = { ...db[key][idx], ...row };
             } else {
               db[key].push(row);
+            }
+            if (tableName && sqliteDb) {
+              try {
+                upsertRecordSqlite(tableName, row);
+              } catch (_) {}
             }
           }
           break;

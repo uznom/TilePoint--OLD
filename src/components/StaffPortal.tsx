@@ -4,9 +4,10 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useDb } from '../context/DbContext';
+import { useDb, useDbProducts, useDbBranchStock } from '../context/DbContext';
 import { Product } from '../types/db';
 import { isProductInBranch } from '../lib/branchUtils';
+import { isTileProduct, calculateTileCoverage } from '../utils/productUtils';
 import {
  QrCode,
  Search,
@@ -44,7 +45,9 @@ interface StaffPortalProps {
 }
 
 export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode }) => {
- const { currentUser, products, branchStock, logout, branches, addAuditLog, holdSale } = useDb();
+ const products = useDbProducts();
+ const branchStock = useDbBranchStock();
+ const { currentUser, logout, branches, addAuditLog, holdSale } = useDb();
 
  // Customer order cart states
  const [staffCart, setStaffCart] = useState<{ product: Product; quantity: number }[]>([]);
@@ -66,6 +69,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  // View toggles within our scan view
  const [isCalculatorExpanded, setIsCalculatorExpanded] = useState(false);
  const [isCartOverlayOpen, setIsCartOverlayOpen] = useState(false);
+ const [catalogCategory, setCatalogCategory] = useState<'ALL' | 'TILES' | 'SUPPLIES'>('ALL');
 
  // Video capture refs
  const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -212,12 +216,16 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  };
 
  const handleCopyToCalc = (prod: Product) => {
+ if (!isTileProduct(prod)) {
+ showToast('Estimator is strictly reserved for Tile items (Porcelain, Ceramic, Granite, Marble).');
+ return;
+ }
  // Attempt parse sizes e.g. "60x60 cm"
  const sizeStr = prod.size || '60x60 cm';
  const cleanNumbers = sizeStr.replace(/[^0-9x]/gi, ''); // keep only digits and 'x'
  const dimensions = cleanNumbers.split('x');
 
- if (dimensions.length >= 2) {
+ if (dimensions.length >= 2 && dimensions[0] && dimensions[1]) {
  setCalcTileLength(dimensions[0]);
  setCalcTileWidth(dimensions[1]);
  }
@@ -229,7 +237,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  // Expand calculator card
  setIsCalculatorExpanded(true);
  playBeep();
- showToast('Tile specs copied to Estimator!');
+ showToast(`Tile specs for ${prod.productName} copied to Estimator!`);
  };
 
  const getBranchStockInfo = (prod: Product) => {
@@ -426,7 +434,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <input
  id="staff-search-input-unified"
  type="text"
- value={searchQuery}
+ value={searchQuery ?? ''}
  onChange={e => setSearchQuery(e.target.value)}
  placeholder="Search catalog or simulation SKU..."
  className="w-full bg-m3-surface border-2 border-m3-outline-variant/40 px-10 py-3.5 text-sm placeholder-m3-on-surface-variant/50 focus:outline-none focus:border-m3-primary text-m3-on-surface font-extrabold tracking-wide rounded-2xl"
@@ -594,9 +602,20 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  </div>
 
  <div className="border-b border-m3-outline-variant/10 pb-3 text-left">
- <span className="text-[10px] bg-m3-primary/10 text-m3-primary font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider block w-fit mb-1.5">
+ <div className="flex items-center gap-2 flex-wrap mb-1.5">
+ <span className="text-[10px] bg-m3-primary/10 text-m3-primary font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider block w-fit">
  {scannedProduct.category}
  </span>
+ {isTileProduct(scannedProduct) ? (
+ <span className="text-[9px] bg-emerald-500/10 text-emerald-500 font-black px-2 py-0.5 rounded-full uppercase tracking-wider border border-emerald-500/20">
+ Tile Item • Estimator Ready
+ </span>
+ ) : (
+ <span className="text-[9px] bg-amber-500/10 text-amber-500 font-black px-2 py-0.5 rounded-full uppercase tracking-wider border border-amber-500/20">
+ Non-Tile Supply / Hardware
+ </span>
+ )}
+ </div>
  <h3 className="text-sm font-black text-m3-on-surface leading-snug">
  {scannedProduct.productName}
  </h3>
@@ -673,6 +692,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  </button>
 
  <div className="grid grid-cols-2 gap-2">
+ {isTileProduct(scannedProduct) ? (
  <button
  onClick={() => handleCopyToCalc(scannedProduct)}
  className="py-2.5 bg-m3-primary/10 text-m3-primary hover:bg-m3-primary/20 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
@@ -680,6 +700,11 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <Plus className="h-3.5 w-3.5 text-m3-primary" />
  <span>Send to Estimator</span>
  </button>
+ ) : (
+ <div className="py-2.5 px-2 bg-m3-surface border border-m3-outline-variant/30 text-zinc-400 rounded-xl text-[9px] font-bold uppercase tracking-wider flex items-center justify-center text-center select-none">
+ Estimator N/A (Non-Tile)
+ </div>
+ )}
 
  <button
  onClick={() => {
@@ -731,7 +756,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <input
  type="number"
  step="0.1"
- value={calcRoomLength}
+ value={calcRoomLength ?? ''}
  onChange={e => setCalcRoomLength(e.target.value)}
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/40 px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary rounded-t-lg font-bold font-mono"
  />
@@ -742,7 +767,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <input
  type="number"
  step="0.1"
- value={calcRoomWidth}
+ value={calcRoomWidth ?? ''}
  onChange={e => setCalcRoomWidth(e.target.value)}
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/40 px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary rounded-t-lg font-bold font-mono"
  />
@@ -755,7 +780,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <label className="text-[9px] font-black text-m3-primary uppercase block">Tile Length (cm)</label>
  <input
  type="number"
- value={calcTileLength}
+ value={calcTileLength ?? ''}
  onChange={e => setCalcTileLength(e.target.value)}
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/40 px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary rounded-t-lg font-bold font-mono"
  />
@@ -765,7 +790,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <label className="text-[9px] font-black text-m3-primary uppercase block">Tile Width (cm)</label>
  <input
  type="number"
- value={calcTileWidth}
+ value={calcTileWidth ?? ''}
  onChange={e => setCalcTileWidth(e.target.value)}
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/40 px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary rounded-t-lg font-bold font-mono"
  />
@@ -778,7 +803,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <label className="text-[9px] font-black text-m3-primary uppercase block">Tiles Per Box</label>
  <input
  type="number"
- value={calcBoxDensity}
+ value={calcBoxDensity ?? ''}
  onChange={e => setCalcBoxDensity(e.target.value)}
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/40 px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary rounded-t-lg font-bold font-mono"
  />
@@ -788,7 +813,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <label className="text-[9px] font-black text-m3-primary uppercase block">Wastage / Slicing (%)</label>
  <input
  type="number"
- value={calcWastagePercent}
+ value={calcWastagePercent ?? ''}
  onChange={e => setCalcWastagePercent(e.target.value)}
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/40 px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary rounded-t-lg font-bold font-mono"
  />
@@ -816,21 +841,74 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
 
  {/* SCANNER SIMULATOR SYSTEM BAR (FLOOR DIRECT CATALOG) */}
  <div className="space-y-2 pt-2 text-left">
- <span className="text-[10px] font-black tracking-wider text-m3-primary uppercase pl-1 block">
- Tactile Quick-Scan Catalog (Test simul barcodes)
+ <div className="flex justify-between items-center px-1 flex-wrap gap-1">
+ <span className="text-[10px] font-black tracking-wider text-m3-primary uppercase block">
+ Floor Quick-Scan Catalog
  </span>
+ <div className="flex gap-1">
+ <button
+ type="button"
+ onClick={() => setCatalogCategory('ALL')}
+ className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase transition-colors cursor-pointer ${
+ catalogCategory === 'ALL'
+ ? 'bg-m3-primary text-m3-on-primary'
+ : 'bg-m3-surface-medium text-m3-on-surface hover:bg-m3-outline-variant/20'
+ }`}
+ >
+ All
+ </button>
+ <button
+ type="button"
+ onClick={() => setCatalogCategory('TILES')}
+ className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase transition-colors cursor-pointer ${
+ catalogCategory === 'TILES'
+ ? 'bg-emerald-600 text-white'
+ : 'bg-m3-surface-medium text-m3-on-surface hover:bg-m3-outline-variant/20'
+ }`}
+ >
+ Tiles Only
+ </button>
+ <button
+ type="button"
+ onClick={() => setCatalogCategory('SUPPLIES')}
+ className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase transition-colors cursor-pointer ${
+ catalogCategory === 'SUPPLIES'
+ ? 'bg-amber-600 text-white'
+ : 'bg-m3-surface-medium text-m3-on-surface hover:bg-m3-outline-variant/20'
+ }`}
+ >
+ Supplies
+ </button>
+ </div>
+ </div>
+
  <div className="grid grid-cols-2 gap-2">
- {staffBranchProducts.slice(0, 8).map((p, idx) => (
+ {staffBranchProducts
+ .filter(p => {
+ if (catalogCategory === 'TILES') return isTileProduct(p);
+ if (catalogCategory === 'SUPPLIES') return !isTileProduct(p);
+ return true;
+ })
+ .slice(0, 10)
+ .map((p, idx) => {
+ const isTile = isTileProduct(p);
+ return (
  <div 
  key={idx}
  className="p-2.5 bg-m3-surface-low border border-m3-outline-variant/20 rounded-xl flex items-center justify-between text-left transition-all font-bold shrink-0"
  >
  <button
+ type="button"
  onClick={() => handleSelectProduct(p)}
  className="flex-1 text-left truncate min-w-0 font-bold focus:outline-none cursor-pointer"
  >
  <div className="text-[10px] text-m3-on-surface font-extrabold truncate leading-tight">{p.productName}</div>
+ <div className="flex items-center gap-1 mt-0.5">
  <span className="text-[8px] text-zinc-500 font-mono italic font-semibold">{p.sku}</span>
+ <span className={`text-[7.5px] px-1 font-mono rounded ${isTile ? 'bg-emerald-500/15 text-emerald-500 font-black' : 'bg-zinc-500/15 text-zinc-400 font-semibold'}`}>
+ {isTile ? 'TILE' : 'ITEM'}
+ </span>
+ </div>
  </button>
  
  <div className="flex items-center gap-1.5 shrink-0 ml-1">
@@ -849,7 +927,8 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  </button>
  </div>
  </div>
- ))}
+ );
+ })}
  </div>
  </div>
 
@@ -1005,7 +1084,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <label className="text-[9px] font-black text-m3-primary uppercase pl-1 block">Customer Identifier Name</label>
  <input
  type="text"
- value={customerName}
+ value={customerName ?? ''}
  onChange={e => setCustomerName(e.target.value)}
  placeholder="Customer Name / Walk-in"
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/40 px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary rounded-t-lg font-bold"
@@ -1015,7 +1094,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <div className="space-y-1">
  <label className="text-[9px] font-black text-m3-primary uppercase pl-1 block">Floor Assistant Notes / Dispatch Remarks</label>
  <textarea
- value={orderNotes}
+ value={orderNotes ?? ''}
  onChange={e => setOrderNotes(e.target.value)}
  placeholder="Floor assistant notes or remarks"
  rows={2}

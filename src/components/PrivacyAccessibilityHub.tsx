@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useDb, DbSnapshot } from '../context/DbContext';
 import { exportMasterDatabaseToXLSX } from '../lib/excelExportHelper';
-import { UserRole } from '../types/db';
+import { UserRole, ArchivableCategory } from '../types/db';
 import { ActionButton } from './ActionButton';
 import {
  Cookie,
@@ -48,7 +48,10 @@ import {
  Play,
  HardDrive,
  ShieldCheck,
- FileSpreadsheet
+ FileSpreadsheet,
+ FolderArchive,
+ Clock,
+ AlertTriangle,
 } from 'lucide-react';
 import { 
  generateThemeFromSeed, 
@@ -364,7 +367,38 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  }, [activeTab, db.currentUser?.role]);
 
  // DB Tuning custom state variables
- const [dbSubTab, setDbSubTab] = useState<'performance' | 'rules' | 'backup'>('performance');
+ const [dbSubTab, setDbSubTab] = useState<'performance' | 'rules' | 'backup' | 'archive'>('performance');
+ const [selectedArchivalCategory, setSelectedArchivalCategory] = useState<ArchivableCategory>('auditLogs');
+ const [selectedArchivalAgeMonths, setSelectedArchivalAgeMonths] = useState<number>(6);
+ const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState<boolean>(false);
+ const [archivingStatus, setArchivingStatus] = useState<string | null>(null);
+ const [isProcessingArchive, setIsProcessingArchive] = useState<boolean>(false);
+ const [isBatchCleanupConfirmOpen, setIsBatchCleanupConfirmOpen] = useState<boolean>(false);
+ const [batchCleanupStatus, setBatchCleanupStatus] = useState<string | null>(null);
+ const [isProcessingBatchCleanup, setIsProcessingBatchCleanup] = useState<boolean>(false);
+
+ const computeMatchingCount = (cat: ArchivableCategory, ageM: number) => {
+ const cutoffMs = ageM > 0 ? Date.now() - ageM * 30 * 24 * 60 * 60 * 1000 : Date.now() + 100000;
+ if (cat === 'auditLogs') {
+ return db.auditLogs.filter(i => new Date(i.createdAt || i.timestamp || 0).getTime() < cutoffMs).length;
+ }
+ if (cat === 'movements') {
+ return db.movements.filter(i => new Date(i.timestamp || 0).getTime() < cutoffMs).length;
+ }
+ if (cat === 'sales') {
+ return db.sales.filter(i => new Date(i.createdAt || 0).getTime() < cutoffMs).length;
+ }
+ if (cat === 'expenses') {
+ return db.expenses.filter(i => new Date(i.dateTime || 0).getTime() < cutoffMs).length;
+ }
+ if (cat === 'returns') {
+ return db.productReturns.filter(i => new Date(i.dateTime || 0).getTime() < cutoffMs).length;
+ }
+ if (cat === 'damageLogs') {
+ return db.damageLogs.filter(i => new Date(i.createdAt || i.reportedAt || 0).getTime() < cutoffMs).length;
+ }
+ return 0;
+ };
  const [snapshotName, setSnapshotName] = useState('');
  const [selectedRuleset, setSelectedRuleset] = useState<'firestore' | 'storage'>('firestore');
  const [ruleEnforcementProfile, setRuleEnforcementProfile] = useState<'strict' | 'audit' | 'open'>('strict');
@@ -752,9 +786,6 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
  Visual & Nav Assist Settings
  </h4>
- <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
- Customize keyboard layout outlines, typography styles, and high-performance high contrast layers to ensure readability for all.
- </p>
  </div>
 
  <div className="h-px bg-m3-outline-variant/15" />
@@ -809,9 +840,6 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  <span>Dyslexic-Friendly Typography</span>
  {dyslexicFont && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
  </div>
- <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
- Applies Comic Neue & slab spacing alignments globally, optimizing font tracking, line height, and stroke curves for dyslexic readability.
- </p>
  </div>
  </button>
 
@@ -825,9 +853,6 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  <div className="text-[11.5px] font-extrabold font-sans text-m3-on-surface">
  Color Contrast Levels
  </div>
- <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
- Choose a contrast configuration for system backgrounds, primary accents, outlines, and text surfaces.
- </p>
  </div>
  </div>
 
@@ -868,9 +893,6 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  <span>Maximize Text Contrast</span>
  {maximizeTextContrast && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
  </div>
- <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
- Adds a high-visibility background frame around body texts and description strings to ensure outstanding readability against gradients and custom hues.
- </p>
  </div>
  </button>
 
@@ -892,9 +914,6 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  <span>A11y Highlight Keyboard Outlines</span>
  {enhancedOutlines && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
  </div>
- <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
- Forces thick orange safety outlines around focused checkout inputs and catalog layout buttons when navigating via the TAB key.
- </p>
  </div>
  </button>
 
@@ -916,9 +935,6 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  <span>Turn Off Backdrop & UI Blurs</span>
  {disableBlurs && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
  </div>
- <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
- Removes frosted glass translucent backdrops and heavy gradient blur filters to improve visual clarity and rendering performance.
- </p>
  </div>
  </button>
 
@@ -940,9 +956,6 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  <span>Remove Animations & Effects</span>
  {disableAnimations && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
  </div>
- <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
- Bypasses interface slide-in motion, tab page fade effects, and interactive scaling physics for instant navigation.
- </p>
  </div>
  </button>
 
@@ -964,9 +977,6 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  <span>Mobile Battery & Thermal Saver</span>
  {db.lowPerformanceMode && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
  </div>
- <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
- Mitigates thermal throttling and battery drainage on mobile client hardware. Programmatically scales presentation effects, strips blurs, and speeds up layouts.
- </p>
  </div>
  </button>
  </div>
@@ -982,9 +992,6 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  <Palette className="h-4.5 w-4.5 text-m3-primary" />
  <span>Material Dynamic Color Themes</span>
  </h4>
- <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
- Drag your cursor across the color wheel or select a preset below to change the system color. The system generates a complete tonal scheme matching Material Design 3 guidelines.
- </p>
  </div>
 
  {/* Side-by-side Layout for Color Wheel & Panel */}
@@ -1032,7 +1039,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  <div className="relative h-6 w-10 rounded-lg overflow-hidden border border-m3-outline-variant/30 flex items-center justify-center bg-m3-surface hover:border-m3-primary/60 transition-colors shadow-sm">
  <input 
  type="color" 
- value={customColorSeed}
+ value={customColorSeed ?? ''}
  onChange={(e) => handleApplyTheme(e.target.value)}
  className="absolute inset-0 w-full h-full p-0 border-0 cursor-pointer opacity-0"
  />
@@ -1092,7 +1099,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black font-mono text-m3-on-surface-variant/70">#</span>
  <input
  type="text"
- value={hexInput.startsWith('#') ? hexInput.slice(1) : hexInput}
+ value={hexInput.startsWith('#') ? hexInput.slice(1) : hexInput ?? ''}
  onChange={(e) => {
  const val = e.target.value.toUpperCase();
  setHexInput(val.startsWith('#') ? val : '#' + val);
@@ -1290,9 +1297,6 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
  Cookie & Browser Data Consent
  </h4>
- <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
- Customize what data categories are indexed locally. Our cookies are entirely stored under sandbox boundaries inside local indexes to optimize system load speeds.
- </p>
  </div>
 
  <div className="h-px bg-m3-outline-variant/15" />
@@ -1306,9 +1310,6 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  <span className="text-xs font-extrabold font-sans text-m3-on-surface">Necessary System Cookies</span>
  <span className="text-[8.5px] font-mono bg-emerald-500/10 text-emerald-500 rounded px-1.5 font-bold uppercase tracking-wider">Permanent</span>
  </div>
- <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
- Stores session authentication tokens, active shift tracking, and local workspace configurations. Cannot be disabled as they are required to maintain secure user sessions.
- </p>
  </div>
  </div>
 
@@ -1332,9 +1333,6 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  <span className="text-xs font-extrabold text-m3-on-surface">Functional App Preferences</span>
  <span className="text-[8.5px] font-mono bg-m3-primary/10 text-m3-primary rounded px-1.5 font-bold uppercase tracking-wider">Active</span>
  </div>
- <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
- Saves light/dark mode states, active ERP OS shopping baskets, custom branch profiles, and accessibility profiles to prevent re-configuring options on every system log-in.
- </p>
  </div>
  </div>
 
@@ -1358,9 +1356,6 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  <span className="text-xs font-extrabold text-m3-on-surface">On-Prem Trace Audit Logger</span>
  <span className="text-[8.5px] font-mono bg-zinc-450 text-zinc-400 rounded px-1.5 font-bold uppercase tracking-wider">Opt-In</span>
  </div>
- <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
- Retains local system operations telemetry, audit logs, error diagnostics logs, and SQL-blocker responses in your local console to aid debugging. Generates zero tracking cookies.
- </p>
  </div>
  </div>
  </div>
@@ -1408,7 +1403,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  Privacy & Security Policy
  </h4>
  <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed font-sans">
- Last Refreshed: June 8, 2026. This policy details how data privacy, local offline storage, and system security are handled.
+ Last Refreshed: {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}. This policy details how data privacy, local offline storage, and system security are handled.
  </p>
  </div>
 
@@ -2087,17 +2082,18 @@ startxref
  </div>
 
  {/* Sub-tab Pill navigation inside dbtuning */}
- <div className="flex border-b border-m3-outline-variant/15 pb-2 gap-1.5 select-none shrink-0">
+ <div className="flex border-b border-m3-outline-variant/15 pb-2 gap-1.5 select-none shrink-0 overflow-x-auto">
  {[
  { id: 'performance', name: 'Save Settings' },
  { id: 'rules', name: 'Security Rules' },
- { id: 'backup', name: 'Backups' }
+ { id: 'backup', name: 'Backups' },
+ { id: 'archive', name: 'Data Archive & Purge' }
  ].map(sub => (
  <button
  key={sub.id}
  type="button"
  onClick={() => setDbSubTab(sub.id as any)}
- className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+ className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
  dbSubTab === sub.id
  ? 'bg-m3-primary/15 text-m3-primary border border-m3-primary/30'
  : 'hover:bg-m3-primary/5 text-m3-on-surface-variant'
@@ -2396,7 +2392,7 @@ startxref
  <div className="flex gap-2">
  <input
  type="text"
- value={snapshotName}
+ value={snapshotName ?? ''}
  onChange={(e) => setSnapshotName(e.target.value)}
  placeholder="E.g., Pre-Inventory Audit Backup, v2.1-Prod"
  className="flex-1 px-3.5 py-2 text-xs rounded-lg bg-m3-surface border border-m3-outline-variant/20 focus:border-m3-primary outline-none text-m3-on-surface font-sans"
@@ -2673,7 +2669,7 @@ startxref
  <div className="flex gap-2">
  <input
  type="text"
- value={activeFolderHandle ? `[Native Sync Folder]: ${activeFolderHandle.name}` : deviceBackupPath}
+ value={activeFolderHandle ? `[Native Sync Folder]: ${activeFolderHandle.name ?? ''}` : deviceBackupPath}
  onChange={(e) => setDeviceBackupPath(e.target.value)}
  disabled={!!activeFolderHandle}
  placeholder="Directory path"
@@ -2723,7 +2719,7 @@ startxref
  </label>
  <input
  type="text"
- value={filenamePattern}
+ value={filenamePattern ?? ''}
  onChange={(e) => setFilenamePattern(e.target.value)}
  placeholder="Filename prefix"
  className="w-full px-3 py-2 text-xs rounded-lg bg-m3-surface border border-m3-outline-variant/20 focus:border-m3-primary outline-none text-white font-mono"
@@ -2858,6 +2854,454 @@ startxref
 
  </div>
  )}
+
+ {/* Subtab D: SELECTIVE ARCHIVAL & PURGING */}
+ {dbSubTab === 'archive' && (
+ <div className="space-y-5 animate-fade-in font-sans">
+ {/* Header Info Banner */}
+ <div className="p-4 rounded-2xl border border-m3-primary/20 bg-m3-primary/5 space-y-2">
+ <div className="flex items-center gap-2 text-m3-primary">
+ <FolderArchive className="h-5 w-5 shrink-0" />
+ <h5 className="text-xs font-extrabold uppercase font-mono tracking-wider">
+ Secondary Archival, Retention Policy & Category Purging
+ </h5>
+ </div>
+ <p className="text-[10.5px] text-m3-on-surface-variant leading-relaxed">
+ Configure time-threshold retention rules per category or manually export historical records into secondary JSON archives before removing them from active database state.
+ </p>
+ </div>
+
+ {/* SYSTEM DATA RETENTION POLICY CONFIGURATION CARD */}
+ <div className="p-4 rounded-2xl border border-m3-outline-variant/30 bg-m3-surface-low/80 space-y-4">
+ <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-m3-outline-variant/15">
+ <div>
+ <div className="flex items-center gap-2">
+ <ShieldCheck className="h-4 w-4 text-m3-primary" />
+ <h6 className="text-xs font-black uppercase tracking-wider font-mono text-m3-on-surface">
+ System Data Retention Policy Configuration
+ </h6>
+ </div>
+ <p className="text-[10px] text-m3-on-surface-variant mt-0.5">
+ Define custom time-thresholds for automated data lifecycles. Configured policy rules dictate retention limits before records become eligible for secondary archival.
+ </p>
+ </div>
+ 
+ <button
+ type="button"
+ onClick={() => setIsBatchCleanupConfirmOpen(true)}
+ className="px-3 py-2 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 rounded-xl text-[10px] font-black uppercase tracking-wider font-mono flex items-center gap-1.5 shrink-0 transition-all cursor-pointer shadow-sm"
+ >
+ <Play className="h-3.5 w-3.5" />
+ Run Automated Policy Cleanup
+ </button>
+ </div>
+
+ {batchCleanupStatus && (
+ <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono font-bold flex items-center gap-2 animate-fade-in">
+ <CheckCircle className="h-4 w-4 shrink-0" />
+ <span>{batchCleanupStatus}</span>
+ </div>
+ )}
+
+ <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+ {[
+ { id: 'auditLogs' as const, label: 'Audit Trail & Activity Logs', icon: Clock },
+ { id: 'movements' as const, label: 'Stock Movement Ledger', icon: Layers },
+ { id: 'sales' as const, label: 'Historical Sales Invoices', icon: FileSpreadsheet },
+ { id: 'expenses' as const, label: 'Operating Expenses', icon: HardDrive },
+ { id: 'returns' as const, label: 'Customer Product Returns', icon: RotateCcw },
+ { id: 'damageLogs' as const, label: 'Damage & Waste Register', icon: ShieldAlert },
+ ].map(item => {
+ const IconC = item.icon;
+ const currentMonths = db.retentionPolicy[item.id] ?? 6;
+ const exceedingCount = computeMatchingCount(item.id, currentMonths);
+
+ return (
+ <div key={item.id} className="p-3 rounded-xl border border-m3-outline-variant/20 bg-m3-surface space-y-2.5">
+ <div className="flex items-center justify-between">
+ <div className="flex items-center gap-2">
+ <span className="p-1 rounded bg-m3-primary/10 text-m3-primary">
+ <IconC className="h-3.5 w-3.5" />
+ </span>
+ <span className="text-[10.5px] font-extrabold text-m3-on-surface truncate max-w-[140px]">
+ {item.label}
+ </span>
+ </div>
+ {exceedingCount > 0 ? (
+ <span className="text-[9px] font-mono font-black px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+ {exceedingCount} due
+ </span>
+ ) : (
+ <span className="text-[9px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+ Compliant
+ </span>
+ )}
+ </div>
+
+ <div className="flex items-center justify-between text-[9.5px]">
+ <span className="text-m3-on-surface-variant font-mono">Retention Policy:</span>
+ <select
+ value={currentMonths}
+ onChange={(e) => {
+ const val = Number(e.target.value);
+ db.updateRetentionPolicy(item.id, val);
+ if (selectedArchivalCategory === item.id) {
+ setSelectedArchivalAgeMonths(val);
+ }
+ }}
+ className="px-2 py-1 bg-zinc-900 border border-zinc-700 rounded-lg text-amber-300 font-mono font-bold text-[10px] cursor-pointer focus:outline-none focus:border-m3-primary"
+ >
+ <option value={1}>1 Month (30 Days)</option>
+ <option value={3}>3 Months (90 Days)</option>
+ <option value={6}>6 Months (180 Days)</option>
+ <option value={12}>1 Year (365 Days)</option>
+ <option value={24}>2 Years (730 Days)</option>
+ <option value={0}>Keep Indefinitely (Never Purge)</option>
+ </select>
+ </div>
+ </div>
+ );
+ })}
+ </div>
+ </div>
+
+ {/* Step 1: Select Category */}
+ <div className="space-y-2">
+ <label className="text-[10px] font-black uppercase tracking-widest text-m3-primary font-mono block">
+ Step 1: Select Data Category
+ </label>
+ <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+ {[
+ { id: 'auditLogs' as const, label: 'Audit Trail & Activity Logs', icon: Clock, count: db.auditLogs.length, desc: 'System activity & security events' },
+ { id: 'movements' as const, label: 'Stock Movement Ledger', icon: Layers, count: db.movements.length, desc: 'Inventory transfers & adjustments' },
+ { id: 'sales' as const, label: 'Historical Sales Invoices', icon: FileSpreadsheet, count: db.sales.length, desc: 'Completed checkout sales records' },
+ { id: 'expenses' as const, label: 'Operating Expenses', icon: HardDrive, count: db.expenses.length, desc: 'Branch expenses & petty cash' },
+ { id: 'returns' as const, label: 'Customer Product Returns', icon: RotateCcw, count: db.productReturns.length, desc: 'Refunds & item restock history' },
+ { id: 'damageLogs' as const, label: 'Damage & Waste Register', icon: ShieldAlert, count: db.damageLogs.length, desc: 'Defective & broken stock logs' },
+ ].map(cat => {
+ const IconComp = cat.icon;
+ const isSelected = selectedArchivalCategory === cat.id;
+ return (
+ <button
+ key={cat.id}
+ type="button"
+ onClick={() => setSelectedArchivalCategory(cat.id)}
+ className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between space-y-2 ${
+ isSelected
+ ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface shadow-md ring-1 ring-m3-primary/30'
+ : 'bg-m3-surface border-m3-outline-variant/20 hover:bg-m3-primary/5 text-m3-on-surface-variant'
+ }`}
+ >
+ <div className="flex items-center justify-between">
+ <span className={`p-1.5 rounded-lg ${isSelected ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-low text-m3-primary'}`}>
+ <IconComp className="h-4 w-4" />
+ </span>
+ <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${isSelected ? 'bg-m3-primary/20 text-m3-primary' : 'bg-zinc-800 text-zinc-400'}`}>
+ {cat.count} items
+ </span>
+ </div>
+ <div>
+ <span className="text-[11px] font-bold block">{cat.label}</span>
+ <span className="text-[9px] text-m3-on-surface-variant opacity-80 leading-tight block">{cat.desc}</span>
+ </div>
+ </button>
+ );
+ })}
+ </div>
+ </div>
+
+ {/* Step 2: Select Retention Cutoff */}
+ <div className="space-y-2">
+ <label className="text-[10px] font-black uppercase tracking-widest text-m3-primary font-mono block">
+ Step 2: Select Age Threshold Cutoff
+ </label>
+ <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+ {[
+ { months: 1, label: 'Older than 1 mo', sub: '30 days+' },
+ { months: 3, label: 'Older than 3 mos', sub: '90 days+' },
+ { months: 6, label: 'Older than 6 mos', sub: '180 days (Rec.)' },
+ { months: 12, label: 'Older than 1 yr', sub: '365 days+' },
+ { months: 24, label: 'Older than 2 yrs', sub: '730 days+' },
+ { months: 0, label: 'All Records', sub: 'Full Purge' },
+ ].map(opt => {
+ const isSelected = selectedArchivalAgeMonths === opt.months;
+ return (
+ <button
+ key={opt.months}
+ type="button"
+ onClick={() => setSelectedArchivalAgeMonths(opt.months)}
+ className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
+ isSelected
+ ? 'bg-amber-500/15 border-amber-500 text-amber-300 font-bold'
+ : 'bg-m3-surface border-m3-outline-variant/20 hover:bg-m3-primary/5 text-m3-on-surface-variant'
+ }`}
+ >
+ <span className="text-[10px] font-extrabold uppercase font-mono block">{opt.label}</span>
+ <span className="text-[8px] opacity-75">{opt.sub}</span>
+ </button>
+ );
+ })}
+ </div>
+ </div>
+
+ {/* Estimation & Action Card */}
+ {(() => {
+ const matchingCount = computeMatchingCount(selectedArchivalCategory, selectedArchivalAgeMonths);
+ const cutoffDate = selectedArchivalAgeMonths > 0
+ ? new Date(Date.now() - selectedArchivalAgeMonths * 30 * 24 * 60 * 60 * 1000).toLocaleDateString()
+ : 'All historical dates';
+ const ageText = selectedArchivalAgeMonths === 0 ? 'all records' : `records older than ${selectedArchivalAgeMonths} month(s) (before ${cutoffDate})`;
+
+ return (
+ <div className="p-4 rounded-2xl border border-m3-outline-variant/20 bg-m3-surface-low/50 space-y-4">
+ <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-2 border-b border-m3-outline-variant/15">
+ <div>
+ <span className="text-[9px] font-black uppercase tracking-widest text-m3-on-surface-variant font-mono block">
+ Archival Scope Calculation
+ </span>
+ <span className="text-xs font-bold text-m3-on-surface">
+ Category: <span className="text-m3-primary uppercase font-mono">{selectedArchivalCategory}</span> | Threshold: <span className="text-amber-400 font-mono">{selectedArchivalAgeMonths === 0 ? 'Full Purge' : `${selectedArchivalAgeMonths} Months`}</span>
+ </span>
+ </div>
+ <div className="text-right">
+ <span className="text-[9px] text-m3-on-surface-variant font-mono block uppercase">Matching Records</span>
+ <span className={`text-lg font-black font-mono ${matchingCount > 0 ? 'text-amber-400' : 'text-zinc-500'}`}>
+ {matchingCount} {matchingCount === 1 ? 'record' : 'records'}
+ </span>
+ </div>
+ </div>
+
+ <p className="text-[10px] text-zinc-300 leading-relaxed">
+ {matchingCount > 0 ? (
+ <>
+ Ready to archive <strong className="text-amber-300">{matchingCount}</strong> {ageText}. Triggering execution will save a downloadable secondary JSON archive file (<code className="text-xs bg-zinc-900 px-1 py-0.5 rounded text-emerald-400">TilePoint_Archive_{selectedArchivalCategory}_...json</code>) and purge those items from active storage.
+ </>
+ ) : (
+ <>
+ No records found in category <strong className="text-m3-primary">{selectedArchivalCategory}</strong> matching the criteria ({ageText}).
+ </>
+ )}
+ </p>
+
+ {archivingStatus && (
+ <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[10px] font-mono font-bold animate-fade-in flex items-center gap-2">
+ <CheckCircle className="h-4 w-4 shrink-0" />
+ <span>{archivingStatus}</span>
+ </div>
+ )}
+
+ <div className="pt-1">
+ <button
+ type="button"
+ disabled={matchingCount === 0 || isProcessingArchive}
+ onClick={() => setIsArchiveConfirmOpen(true)}
+ className="w-full py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-black text-xs font-black uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all shadow-lg font-mono"
+ >
+ <Download className="h-4 w-4" />
+ {isProcessingArchive ? 'Compiling Archive & Purging...' : `Export Archive & Purge ${matchingCount} Records`}
+ </button>
+ </div>
+ </div>
+ );
+ })()}
+
+ {/* Past Purge Audit Trail */}
+ <div className="p-4 rounded-2xl border border-m3-outline-variant/15 bg-m3-surface-low/30 space-y-3">
+ <div className="flex items-center justify-between">
+ <span className="text-[10px] font-black uppercase tracking-widest text-m3-primary font-mono flex items-center gap-1.5">
+ <Terminal className="h-3.5 w-3.5" />
+ Data Category Purge Audit History
+ </span>
+ <span className="text-[9px] text-zinc-400 font-mono">
+ {db.auditLogs.filter(a => a.actionCode === 'DATA_CATEGORY_PURGE').length} past purge events
+ </span>
+ </div>
+
+ <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+ {db.auditLogs.filter(a => a.actionCode === 'DATA_CATEGORY_PURGE').length === 0 ? (
+ <div className="p-3 text-center text-[10px] text-zinc-500 italic rounded-lg bg-zinc-900/30">
+ No selective category purges recorded yet. All historical records remain intact.
+ </div>
+ ) : (
+ db.auditLogs
+ .filter(a => a.actionCode === 'DATA_CATEGORY_PURGE')
+ .slice(0, 10)
+ .map(log => (
+ <div key={log.id} className="p-2.5 rounded-lg bg-zinc-900/60 border border-zinc-800 text-[9.5px] font-mono flex items-start justify-between gap-3">
+ <div className="space-y-0.5">
+ <span className="text-emerald-400 font-bold block">{log.description}</span>
+ <span className="text-zinc-500 text-[8.5px]">
+ Executed by: {log.userName || log.username || 'System'} | Category: {log.tableAffected || log.recordId || 'General'}
+ </span>
+ </div>
+ <span className="text-zinc-500 text-[8.5px] whitespace-nowrap shrink-0">
+ {new Date(log.createdAt || log.timestamp || '').toLocaleString()}
+ </span>
+ </div>
+ ))
+ )}
+ </div>
+ </div>
+
+ {/* Confirmation Modal */}
+ {isArchiveConfirmOpen && (
+ <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[300] flex items-center justify-center p-4 animate-fade-in">
+ <div className="bg-zinc-900 border border-amber-500/40 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+ <div className="flex items-center gap-2.5 text-amber-400">
+ <AlertTriangle className="h-5 w-5 shrink-0" />
+ <h4 className="text-sm font-extrabold font-mono uppercase tracking-wider">
+ Confirm Category Archival & Purge
+ </h4>
+ </div>
+
+ <p className="text-xs text-zinc-300 leading-relaxed">
+ You are about to export and purge <strong className="text-amber-300 font-mono">{computeMatchingCount(selectedArchivalCategory, selectedArchivalAgeMonths)} records</strong> from category <strong className="text-m3-primary uppercase font-mono">{selectedArchivalCategory}</strong>.
+ </p>
+
+ <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-800 space-y-1.5 text-[10px] text-zinc-400 font-mono">
+ <div className="flex justify-between">
+ <span>Category:</span>
+ <span className="text-white font-bold uppercase">{selectedArchivalCategory}</span>
+ </div>
+ <div className="flex justify-between">
+ <span>Age Threshold:</span>
+ <span className="text-white font-bold">{selectedArchivalAgeMonths === 0 ? 'All Records' : `${selectedArchivalAgeMonths} Months`}</span>
+ </div>
+ <div className="flex justify-between">
+ <span>Matching Count:</span>
+ <span className="text-amber-400 font-bold">{computeMatchingCount(selectedArchivalCategory, selectedArchivalAgeMonths)} items</span>
+ </div>
+ <div className="flex justify-between">
+ <span>Action:</span>
+ <span className="text-emerald-400 font-bold">Secondary Archive Export + Local Purge</span>
+ </div>
+ </div>
+
+ <p className="text-[9.5px] text-zinc-400 italic">
+ A downloadable secondary archive file will be compiled and saved automatically.
+ </p>
+
+ <div className="flex items-center justify-end gap-2 pt-2">
+ <button
+ type="button"
+ onClick={() => setIsArchiveConfirmOpen(false)}
+ className="px-4 py-2 text-xs font-bold uppercase text-zinc-400 hover:text-white bg-zinc-800 rounded-xl cursor-pointer"
+ >
+ Cancel
+ </button>
+ <button
+ type="button"
+ disabled={isProcessingArchive}
+ onClick={async () => {
+ setIsProcessingArchive(true);
+ try {
+ const res = await db.exportAndPurgeCategoryData(selectedArchivalCategory, selectedArchivalAgeMonths);
+ if (res.count > 0) {
+ setArchivingStatus(`Successfully archived ${res.count} records to "${res.exportedFilename}" and purged active category state.`);
+ setTimeout(() => setArchivingStatus(null), 7000);
+ } else {
+ setArchivingStatus('No records were purged.');
+ setTimeout(() => setArchivingStatus(null), 3000);
+ }
+ } catch (e: any) {
+ setArchivingStatus(`Error during purge: ${e?.message || 'Failed'}`);
+ } finally {
+ setIsProcessingArchive(false);
+ setIsArchiveConfirmOpen(false);
+ }
+ }}
+ className="px-4 py-2 text-xs font-black uppercase text-black bg-amber-500 hover:bg-amber-400 rounded-xl cursor-pointer font-mono"
+ >
+ {isProcessingArchive ? 'Processing...' : 'Confirm & Purge'}
+ </button>
+ </div>
+ </div>
+ </div>
+ )}
+
+ {/* Batch Automated Policy Cleanup Modal */}
+ {isBatchCleanupConfirmOpen && (
+ <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[300] flex items-center justify-center p-4 animate-fade-in">
+ <div className="bg-zinc-900 border border-emerald-500/40 rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-2xl">
+ <div className="flex items-center gap-2.5 text-emerald-400">
+ <ShieldCheck className="h-5 w-5 shrink-0" />
+ <h4 className="text-sm font-extrabold font-mono uppercase tracking-wider">
+ Automated Retention Policy Cleanup
+ </h4>
+ </div>
+
+ <p className="text-xs text-zinc-300 leading-relaxed">
+ This action will evaluate all system data categories against their configured retention policy limits and execute secondary archival and purging for all eligible historical records.
+ </p>
+
+ <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-800 space-y-2 text-[10px] font-mono">
+ <span className="text-[9px] uppercase text-zinc-400 font-bold block pb-1 border-b border-zinc-800">
+ Retention Lifecycle Scope Breakdown
+ </span>
+ {[
+ { id: 'auditLogs' as const, label: 'Audit Trail & Activity Logs' },
+ { id: 'movements' as const, label: 'Stock Movement Ledger' },
+ { id: 'sales' as const, label: 'Historical Sales Invoices' },
+ { id: 'expenses' as const, label: 'Operating Expenses' },
+ { id: 'returns' as const, label: 'Customer Product Returns' },
+ { id: 'damageLogs' as const, label: 'Damage & Waste Register' },
+ ].map(cat => {
+ const months = db.retentionPolicy[cat.id] ?? 6;
+ const count = computeMatchingCount(cat.id, months);
+ return (
+ <div key={cat.id} className="flex justify-between items-center text-zinc-300">
+ <span className="truncate max-w-[180px]">{cat.label}:</span>
+ <div className="flex items-center gap-2">
+ <span className="text-zinc-500">{months === 0 ? 'Indefinite' : `>${months}m`}</span>
+ <span className={`font-bold ${count > 0 ? 'text-amber-400' : 'text-zinc-600'}`}>
+ {count} items
+ </span>
+ </div>
+ </div>
+ );
+ })}
+ </div>
+
+ <div className="flex items-center justify-end gap-2 pt-2">
+ <button
+ type="button"
+ onClick={() => setIsBatchCleanupConfirmOpen(false)}
+ className="px-4 py-2 text-xs font-bold uppercase text-zinc-400 hover:text-white bg-zinc-800 rounded-xl cursor-pointer"
+ >
+ Cancel
+ </button>
+ <button
+ type="button"
+ disabled={isProcessingBatchCleanup}
+ onClick={async () => {
+ setIsProcessingBatchCleanup(true);
+ try {
+ const results = await db.runRetentionPolicyCleanup();
+ if (results.length > 0) {
+ const totalCount = results.reduce((a, b) => a + b.count, 0);
+ setBatchCleanupStatus(`Automated policy cleanup finished successfully. Archived and purged ${totalCount} records across ${results.length} categories.`);
+ setTimeout(() => setBatchCleanupStatus(null), 8000);
+ } else {
+ setBatchCleanupStatus('All data categories are fully compliant with their configured retention policies.');
+ setTimeout(() => setBatchCleanupStatus(null), 4000);
+ }
+ } catch (e: any) {
+ setBatchCleanupStatus(`Error during policy cleanup: ${e?.message || 'Failed'}`);
+ } finally {
+ setIsProcessingBatchCleanup(false);
+ setIsBatchCleanupConfirmOpen(false);
+ }
+ }}
+ className="px-4 py-2 text-xs font-black uppercase text-black bg-emerald-400 hover:bg-emerald-300 rounded-xl cursor-pointer font-mono"
+ >
+ {isProcessingBatchCleanup ? 'Executing Policy Cleanup...' : 'Confirm & Run Policy Cleanup'}
+ </button>
+ </div>
+ </div>
+ </div>
+ )}
+ </div>
+ )}
  </div>
  )}
  </div>
@@ -2910,7 +3354,7 @@ startxref
  <input
  type="text"
  placeholder="Search systems manual chapters or frequently asked questions (FAQs)..."
- value={faqSearch}
+ value={faqSearch ?? ''}
  onChange={(e) => setFaqSearch(e.target.value)}
  className="w-full bg-transparent text-xs text-m3-on-surface placeholder-zinc-500 border-0 focus:outline-none"
  />

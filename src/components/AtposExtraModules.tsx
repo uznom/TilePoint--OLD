@@ -170,7 +170,7 @@ export default function AtposExtraModules({
  const [billFrequency, setBillFrequency] = useState<
  "WEEKLY" | "MONTHLY" | "SEMI_QUARTERLY" | "QUARTERLY" | "YEARLY"
  >("MONTHLY");
- const [billDueDate, setBillDueDate] = useState("2026-06-15");
+ const [billDueDate, setBillDueDate] = useState(() => new Date().toISOString().split("T")[0]);
 
  const [printReceiptData, setPrintReceiptData] = useState<any>(null);
  const [dateFilter, setDateFilter] = useState("");
@@ -528,20 +528,20 @@ export default function AtposExtraModules({
  });
 
  const totalSalesFromDay = activeSales.reduce(
- (acc, s) => acc + (s.grandTotal || 0),
+  (acc, s) => acc + (Number(s.grandTotal) || 0),
  0,
  );
  const discountTotal = activeSales.reduce(
- (acc, s) => acc + (s.discount || 0),
+  (acc, s) => acc + (Number(s.discount) || 0),
  0,
  );
- const vatOutput = activeSales.reduce((acc, s) => acc + (s.vat || 0), 0);
+ const vatOutput = activeSales.reduce((acc, s) => acc + (Number(s.vat) || 0), 0);
  const vatableSales = activeSales.reduce(
- (acc, s) => acc + (s.vat > 0 ? (s.subtotal - (s.vat || 0)) || 0 : 0),
+  (acc, s) => acc + (Number(s.vat) > 0 ? (Number(s.subtotal) - (Number(s.vat) || 0)) || 0 : 0),
  0,
  );
  const vatExemptSales = activeSales.reduce(
- (acc, s) => acc + (s.vat === 0 ? s.subtotal || 0 : 0),
+  (acc, s) => acc + (Number(s.vat) === 0 ? Number(s.subtotal) || 0 : 0),
  0,
  );
 
@@ -553,10 +553,6 @@ export default function AtposExtraModules({
  <h2 className="text-xl font-bold font-sans text-m3-on-surface capitalize leading-none">
  {activeSubTab.replace(/-/g, " ")}
  </h2>
- <p className="text-xs text-m3-on-surface-variant font-medium mt-1.5">
- Operational and financial terminal connected to Emman Tile Point
- database.
- </p>
  </div>
 
  <span className="self-start md:self-auto px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-m3-primary/10 text-m3-primary border border-m3-primary/25">
@@ -692,7 +688,7 @@ export default function AtposExtraModules({
  </label>
  <input
  required
- value={newMemberName}
+ value={newMemberName ?? ''}
  onChange={(e) => setNewMemberName(e.target.value)}
  type="text"
  placeholder="Juan Perez Inc."
@@ -705,7 +701,7 @@ export default function AtposExtraModules({
  </label>
  <input
  required
- value={newMemberPhone}
+ value={newMemberPhone ?? ''}
  onChange={(e) => setNewMemberPhone(e.target.value)}
  type="tel"
  placeholder="Phone number"
@@ -717,7 +713,7 @@ export default function AtposExtraModules({
  Email Address
  </label>
  <input
- value={newMemberEmail}
+ value={newMemberEmail ?? ''}
  onChange={(e) => setNewMemberEmail(e.target.value)}
  type="email"
  placeholder="perez@gmail.com"
@@ -729,7 +725,7 @@ export default function AtposExtraModules({
  Credit Account Limit (PHP)
  </label>
  <input
- value={newMemberLimit}
+ value={newMemberLimit ?? ''}
  onChange={(e) => setNewMemberLimit(Number(e.target.value))}
  type="number"
  className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary"
@@ -748,7 +744,7 @@ export default function AtposExtraModules({
  <div className="flex bg-m3-surface-low border border-m3-outline-variant/15 p-2 rounded-xl items-center gap-2 font-sans text-xs">
  <Search className="h-4 w-4 text-m3-on-surface-variant pl-1 shrink-0" />
  <input
- value={memberSearch}
+ value={memberSearch ?? ''}
  onChange={(e) => setMemberSearch(e.target.value)}
  placeholder="Filter customer database..."
  className="w-full bg-transparent border-0 outline-none p-1.5"
@@ -756,7 +752,7 @@ export default function AtposExtraModules({
  <div className="flex items-center gap-1 shrink-0 border-l border-m3-outline-variant/20 pl-2">
  <Building2 className="h-3.5 w-3.5 text-m3-primary shrink-0" />
  <select
- value={memberBranchFilter}
+ value={memberBranchFilter ?? ''}
  onChange={(e) => setMemberBranchFilter(e.target.value)}
  className="bg-m3-surface border border-m3-outline-variant/30 text-m3-primary text-xs font-bold rounded-lg px-2 py-1 outline-none cursor-pointer"
  >
@@ -955,7 +951,7 @@ export default function AtposExtraModules({
  <input
  type="number"
  required
- value={paymentAmount}
+ value={paymentAmount ?? ''}
  onChange={(e) => setPaymentAmount(e.target.value)}
  placeholder="Amount"
  className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none font-mono focus:border-m3-primary"
@@ -1007,13 +1003,6 @@ export default function AtposExtraModules({
  <Info className="h-4 w-4 text-m3-primary" />
  <span>Credit Allocation Protocols</span>
  </div>
- <p className="text-m3-on-surface-variant leading-relaxed">
- Account Receivables represent outstanding corporate project
- orders allowed for trusted local tile contractors and
- builders. Invoices are capped dynamically according to
- pre-allocated Credit Limit profiles. Overdue accounts trigger
- warning colors at checkout.
- </p>
  </div>
 
  {/* A/R Ledger & Payment History Card */}
@@ -1024,9 +1013,6 @@ export default function AtposExtraModules({
          <History className="h-4.5 w-4.5" />
          <span>A/R Ledger & Payment History</span>
        </h3>
-       <p className="text-[10px] text-zinc-400 mt-0.5">
-         Chronological audit trail of credit charges and settle payments.
-       </p>
      </div>
      <div className="flex items-center gap-1">
        <span className="text-[10px] text-zinc-400">Account:</span>
@@ -1195,15 +1181,7 @@ export default function AtposExtraModules({
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-amber-500 shrink-0" />
                 <h3 className="font-extrabold text-sm text-m3-primary">Member Account & Loyalty Desk</h3>
-                <span className={`px-2.5 py-0.5 text-[10px] font-extrabold rounded-full font-mono uppercase ${
-                  config.enabled ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" : "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20"
-                }`}>
-                  {config.enabled ? "● Program Active" : "○ Paused"}
-                </span>
               </div>
-              <p className="text-[11px] text-zinc-400 mt-0.5">
-                Manage loyalty program rules and member reward point balances.
-              </p>
             </div>
 
             {(db.currentUser?.role === UserRole.ADMIN || db.currentUser?.role === UserRole.MANAGER) && (
@@ -1214,7 +1192,7 @@ export default function AtposExtraModules({
                   className="px-3 py-1.5 bg-m3-surface-high hover:bg-m3-surface-highest text-m3-on-surface text-xs font-bold rounded-xl border border-m3-outline-variant/30 flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
                   <Settings className="h-3.5 w-3.5 text-amber-500" />
-                  <span>{showLoyaltySettings ? "Close Rules Settings" : "⚙️ Edit Loyalty Rules"}</span>
+                  <span>{showLoyaltySettings ? "Close Rules Settings" : "Edit Loyalty Rules"}</span>
                 </button>
               </div>
             )}
@@ -1302,7 +1280,7 @@ export default function AtposExtraModules({
                       type="number"
                       required
                       min="1"
-                      value={loyaltySpendInput}
+                      value={loyaltySpendInput ?? ''}
                       onChange={(e) => setLoyaltySpendInput(e.target.value)}
                       placeholder="500"
                       className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg py-1.5 pl-7 pr-2 outline-none font-mono font-bold focus:border-amber-500 text-m3-on-surface"
@@ -1322,7 +1300,7 @@ export default function AtposExtraModules({
                       required
                       step="0.01"
                       min="0.01"
-                      value={loyaltyPointValInput}
+                      value={loyaltyPointValInput ?? ''}
                       onChange={(e) => setLoyaltyPointValInput(e.target.value)}
                       placeholder="1.00"
                       className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg py-1.5 pl-7 pr-2 outline-none font-mono font-bold focus:border-amber-500 text-m3-on-surface"
@@ -1367,7 +1345,7 @@ export default function AtposExtraModules({
               <Search className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
               <input
                 type="text"
-                value={loyaltyMemberSearch}
+                value={loyaltyMemberSearch ?? ''}
                 onChange={(e) => setLoyaltyMemberSearch(e.target.value)}
                 placeholder="Search member name or phone..."
                 className="w-full bg-transparent border-0 outline-none text-xs text-m3-on-surface"
@@ -1486,7 +1464,7 @@ export default function AtposExtraModules({
  Branch Location *
  </label>
  <select
- value={expBranchId}
+ value={expBranchId ?? ''}
  onChange={(e) => setExpBranchId(e.target.value)}
  className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary font-bold text-m3-primary"
  >
@@ -1502,7 +1480,7 @@ export default function AtposExtraModules({
  Expense Classification *
  </label>
  <select
- value={expCategory}
+ value={expCategory ?? ''}
  onChange={(e) => setExpCategory(e.target.value)}
  className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary"
  >
@@ -1528,7 +1506,7 @@ export default function AtposExtraModules({
  </label>
  <input
  required
- value={customCategory}
+ value={customCategory ?? ''}
  onChange={(e) => setCustomCategory(e.target.value)}
  type="text"
  placeholder="Custom classification"
@@ -1542,7 +1520,7 @@ export default function AtposExtraModules({
  </label>
  <input
  required
- value={expAmount}
+ value={expAmount ?? ''}
  onChange={(e) => setExpAmount(e.target.value)}
  type="number"
  placeholder="500"
@@ -1555,7 +1533,7 @@ export default function AtposExtraModules({
  </label>
  <textarea
  rows={3}
- value={expNotes}
+ value={expNotes ?? ''}
  onChange={(e) => setExpNotes(e.target.value)}
  placeholder="Bought extra heavy mop for the main hall tiles..."
  className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary"
@@ -1575,7 +1553,7 @@ export default function AtposExtraModules({
  <div className="flex bg-m3-surface-low border border-m3-outline-variant/15 p-2 rounded-xl items-center gap-2 font-sans text-xs">
  <Search className="h-4 w-4 text-m3-on-surface-variant pl-1 shrink-0" />
  <input
- value={expenseSearch}
+ value={expenseSearch ?? ''}
  onChange={(e) => setExpenseSearch(e.target.value)}
  placeholder="Filter disbursements..."
  className="w-full bg-transparent border-0 outline-none p-1.5"
@@ -1583,7 +1561,7 @@ export default function AtposExtraModules({
  <div className="flex items-center gap-1 shrink-0 border-l border-m3-outline-variant/20 pl-2">
  <Building2 className="h-3.5 w-3.5 text-m3-primary shrink-0" />
  <select
- value={expenseBranchFilter}
+ value={expenseBranchFilter ?? ''}
  onChange={(e) => setExpenseBranchFilter(e.target.value)}
  className="bg-m3-surface border border-m3-outline-variant/30 text-m3-primary text-xs font-bold rounded-lg px-2 py-1 outline-none cursor-pointer"
  >
@@ -1734,7 +1712,7 @@ export default function AtposExtraModules({
               <span className="font-extrabold text-m3-on-surface-variant">Filter Date:</span>
               <input
                 type="date"
-                value={dateFilter}
+                value={dateFilter ?? ''}
                 onChange={(e) => setDateFilter(e.target.value)}
                 className="bg-m3-surface-high border border-m3-outline-variant rounded p-1 outline-none text-m3-on-surface"
               />
@@ -1752,7 +1730,7 @@ export default function AtposExtraModules({
             <div className="flex items-center gap-2">
               <span className="font-extrabold text-m3-on-surface-variant">Category:</span>
               <select
-                value={expenseCategoryFilter}
+                value={expenseCategoryFilter ?? ''}
                 onChange={(e) => setExpenseCategoryFilter(e.target.value)}
                 className="bg-m3-surface-high border border-m3-outline-variant rounded p-1 outline-none text-m3-on-surface"
               >
@@ -1777,7 +1755,7 @@ export default function AtposExtraModules({
               <input
                 type="text"
                 placeholder="Search detail, user, ID..."
-                value={expenseSearchQuery}
+                value={expenseSearchQuery ?? ''}
                 onChange={(e) => setExpenseSearchQuery(e.target.value)}
                 className="bg-m3-surface-high border border-m3-outline-variant rounded p-1 outline-none text-m3-on-surface w-44"
               />
@@ -1966,7 +1944,7 @@ export default function AtposExtraModules({
  </label>
  <input
  required
- value={retSaleId}
+ value={retSaleId ?? ''}
  onChange={(e) => setRetSaleId(e.target.value)}
  type="text"
  placeholder="Receipt ID"
@@ -1979,7 +1957,7 @@ export default function AtposExtraModules({
  </label>
  <input
  required
- value={retProduct}
+ value={retProduct ?? ''}
  onChange={(e) => setRetProduct(e.target.value)}
  type="text"
  placeholder="Ceramic Floor Tile Carrara"
@@ -1993,7 +1971,7 @@ export default function AtposExtraModules({
  </label>
  <input
  required
- value={retQty}
+ value={retQty ?? ''}
  onChange={(e) => setRetQty(e.target.value)}
  type="number"
  placeholder="1"
@@ -2005,7 +1983,7 @@ export default function AtposExtraModules({
  Damage Fee %
  </label>
  <select
- value={retFee}
+ value={retFee ?? ''}
  onChange={(e) => setRetFee(e.target.value)}
  className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary"
  >
@@ -2022,7 +2000,7 @@ export default function AtposExtraModules({
  </label>
  <input
  required
- value={retRef}
+ value={retRef ?? ''}
  onChange={(e) => setRetRef(e.target.value)}
  type="number"
  placeholder="580"
@@ -2482,8 +2460,8 @@ export default function AtposExtraModules({
  const isFinished = remaining <= 0;
  const statusState = isFinished ? "paid" : totalPaid > 0 ? "partial" : "active";
 
- // Calculate urgency relative to baseline July 2, 2026 (local metadata current time reference)
- const today = new Date(2026, 6, 2);
+ // Calculate urgency relative to current date
+ const today = new Date();
  const itemDate = new Date(item.year, item.month, item.day);
  const diffTime = itemDate.getTime() - today.getTime();
  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -2748,7 +2726,7 @@ export default function AtposExtraModules({
  <input
  required
  type="text"
- value={billTitle}
+ value={billTitle ?? ''}
  onChange={(e) => setBillTitle(e.target.value)}
  placeholder="Account Title"
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded-lg p-2.5 outline-none font-semibold focus:border-m3-primary text-m3-on-surface"
@@ -2761,7 +2739,7 @@ export default function AtposExtraModules({
  <input
  required
  type="number"
- value={billAmount}
+ value={billAmount ?? ''}
  onChange={(e) => setBillAmount(e.target.value)}
  placeholder="12500"
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded-lg p-2.5 outline-none font-mono focus:border-m3-primary text-m3-on-surface"
@@ -2772,7 +2750,7 @@ export default function AtposExtraModules({
  Recurrence Interval *
  </label>
  <select
- value={billFrequency}
+ value={billFrequency ?? ''}
  onChange={(e) =>
  setBillFrequency(e.target.value as any)
  }
@@ -2795,7 +2773,7 @@ export default function AtposExtraModules({
  </label>
  <input
  type="date"
- value={billDueDate}
+ value={billDueDate ?? ''}
  onChange={(e) => setBillDueDate(e.target.value)}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded-lg p-2.5 outline-none cursor-pointer font-bold font-mono text-m3-on-surface"
  />
@@ -2819,7 +2797,7 @@ export default function AtposExtraModules({
  Draft reminders or admin details here. All changes are instantly saved to the secure database.
  </p>
  <textarea
- value={calendarNotes}
+ value={calendarNotes ?? ''}
  onChange={(e) => {
  setCalendarNotes(e.target.value);
  }}
@@ -2839,7 +2817,7 @@ export default function AtposExtraModules({
  <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-zinc-500" />
  <input
  type="text"
- value={payableSearchQuery}
+ value={payableSearchQuery ?? ''}
  onChange={(e) => setPayableSearchQuery(e.target.value)}
  placeholder="Search supplier / ID..."
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded-lg pl-8 pr-3 py-2 text-xs outline-none focus:border-m3-primary text-m3-on-surface font-medium"
@@ -2852,7 +2830,7 @@ export default function AtposExtraModules({
  Filter Status
  </label>
  <select
- value={payableStatusFilter}
+ value={payableStatusFilter ?? ''}
  onChange={(e) => setPayableStatusFilter(e.target.value as any)}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded-md p-1 font-sans text-[10px] outline-none font-bold focus:border-m3-primary text-m3-on-surface"
  >
@@ -2867,7 +2845,7 @@ export default function AtposExtraModules({
  Sort By
  </label>
  <select
- value={payableSortField}
+ value={payableSortField ?? ''}
  onChange={(e) => setPayableSortField(e.target.value as any)}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded-md p-1 font-sans text-[10px] outline-none font-bold focus:border-m3-primary text-m3-on-surface"
  >
@@ -3029,7 +3007,7 @@ export default function AtposExtraModules({
  </button>
  
  <select
- value={calendarMonth}
+ value={calendarMonth ?? ''}
  onChange={(e) => {
  setCalendarMonth(Number(e.target.value));
  setSelectedCalendarDay(null);
@@ -3044,14 +3022,14 @@ export default function AtposExtraModules({
  </select>
 
  <select
- value={calendarYear}
+ value={calendarYear ?? ''}
  onChange={(e) => {
  setCalendarYear(Number(e.target.value));
  setSelectedCalendarDay(null);
  }}
  className="bg-transparent border-0 text-xs font-bold font-mono text-m3-primary focus:ring-0 cursor-pointer pr-8 py-0.5"
  >
- {[2024, 2025, 2026, 2027, 2028].map((y) => (
+ {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((y) => (
  <option key={y} value={y} className="bg-m3-surface-lowest text-m3-on-surface font-mono">
  {y}
  </option>
@@ -3367,7 +3345,7 @@ export default function AtposExtraModules({
  <label className="text-[8px] text-zinc-400 font-bold">Amount to Pay *</label>
  <input
  type="number"
- value={partialPaymentAmount}
+ value={partialPaymentAmount ?? ''}
  onChange={(e) => setPartialPaymentAmount(e.target.value)}
  placeholder={remaining.toString()}
  max={remaining}
@@ -3380,7 +3358,7 @@ export default function AtposExtraModules({
  <label className="text-[8px] text-zinc-400 font-bold">Cheque Number *</label>
  <input
  type="text"
- value={partialChequeNumber}
+ value={partialChequeNumber ?? ''}
  onChange={(e) => setPartialChequeNumber(e.target.value)}
  placeholder="Cheque Number"
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded p-1.5 text-[10px] outline-none text-m3-on-surface font-mono focus:border-m3-primary"
@@ -3392,7 +3370,7 @@ export default function AtposExtraModules({
  <label className="text-[8px] text-zinc-400 font-bold">Remarks / Notes</label>
  <input
  type="text"
- value={partialPaymentNotes}
+ value={partialPaymentNotes ?? ''}
  onChange={(e) => setPartialPaymentNotes(e.target.value)}
  placeholder="Remarks / Notes"
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded p-1.5 text-[10px] outline-none text-m3-on-surface focus:border-m3-primary"
@@ -3407,7 +3385,7 @@ export default function AtposExtraModules({
  <input
  type="password"
  maxLength={6}
- value={partialManagerPin}
+ value={partialManagerPin ?? ''}
  onChange={(e) => setPartialManagerPin(e.target.value)}
  placeholder="••••"
  className="w-full bg-m3-surface-lowest border border-rose-500/35 rounded p-1.5 text-[10px] font-mono outline-none text-m3-on-surface focus:border-rose-500"
@@ -3517,7 +3495,7 @@ export default function AtposExtraModules({
  <div className="flex gap-1.5">
  <input
  type="text"
- value={dayMemoInput}
+ value={dayMemoInput ?? ''}
  onChange={(e) => setDayMemoInput(e.target.value)}
  onKeyDown={(e) => {
  if (e.key === "Enter" && dayMemoInput.trim()) {
@@ -3832,7 +3810,7 @@ export default function AtposExtraModules({
  <span>End. Accumulative Balance:</span>
  <span>
  ₱
- {(5420910.0 + totalSalesFromDay).toLocaleString(
+ {(5420910.0 + Number(totalSalesFromDay)).toLocaleString(
  "en-US",
  { minimumFractionDigits: 2 },
  )}
@@ -3870,7 +3848,14 @@ export default function AtposExtraModules({
  <h1 className="text-xl font-black uppercase font-mono tracking-tight text-black">EMMAN TILE CENTER</h1>
  <p className="text-xs font-serif font-bold text-black">Bureau of Internal Revenue (BIR) Official Sales & Taxation Ledger</p>
  <p className="text-[10px] font-mono text-black mt-0.5">
- Permit #: BIR-PERMIT-2026-99201-MNL | Serial: MIN-2026049281-01 | Machine Tax ID: 009-482-110-000
+ {(() => {
+  const activeBranch = db.branches.find(b => b.id === db.currentUser?.branchAssignmentId) || db.branches[0];
+  const yr = new Date().getFullYear();
+  const code = activeBranch?.branchCode || "99201";
+  const serial = activeBranch?.id?.slice(0, 6) || "049281";
+  const tin = activeBranch?.tin || "009-482-110-000";
+  return `Permit #: BIR-PERMIT-${yr}-${code}-MNL | Serial: MIN-${yr}${serial}-01 | Machine Tax ID: ${tin}`;
+})()}
  </p>
  <p className="text-[10px] font-mono text-black">
  Branch: Central Depot & Main Hub | Operator: {db.currentUser?.fullName || 'System Administrator'}
@@ -4346,7 +4331,7 @@ export default function AtposExtraModules({
                 <input
                   type="number"
                   required
-                  value={adjustPointsAmount}
+                  value={adjustPointsAmount ?? ''}
                   onChange={(e) => setAdjustPointsAmount(e.target.value)}
                   placeholder="Points amount"
                   className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none font-mono font-bold text-sm focus:border-amber-500 text-m3-on-surface"
@@ -4406,7 +4391,7 @@ export default function AtposExtraModules({
                 </label>
                 <input
                   type="text"
-                  value={adjustPointsReason}
+                  value={adjustPointsReason ?? ''}
                   onChange={(e) => setAdjustPointsReason(e.target.value)}
                   placeholder="Reason / Note"
                   className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none text-xs focus:border-amber-500 text-m3-on-surface"
@@ -4448,7 +4433,7 @@ export default function AtposExtraModules({
             date: new Date().toLocaleString(),
             prevBalance: 5420910.0,
             paid: totalSalesFromDay,
-            newBalance: 5420910.0 + totalSalesFromDay,
+            newBalance: 5420910.0 + Number(totalSalesFromDay),
             pointsGained: 0,
           });
           setConfirmZReadingModal(false);

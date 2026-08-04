@@ -231,6 +231,29 @@ export function AdminProfitModule({
 
  // Metrics hook calculation
  const metrics = useMemo(() => {
+ // Pre-indexed Map lookups for O(1) performance
+ const saleItemsBySaleId = new Map<string, typeof saleItems>();
+ if (saleItems) {
+ saleItems.forEach((item) => {
+ if (item.isDeleted) return;
+ let list = saleItemsBySaleId.get(item.saleId);
+ if (!list) {
+ list = [];
+ saleItemsBySaleId.set(item.saleId, list);
+ }
+ list.push(item);
+ });
+ }
+
+ const productsById = new Map<string, (typeof products)[0]>();
+ if (products) {
+ products.forEach((p) => {
+ if (!p.isDeleted) {
+ productsById.set(p.id, p);
+ }
+ });
+ }
+
  const activeSales = sales.filter((s) => {
  if (selectedBranchId !== "all" && s.branchId !== selectedBranchId) return false;
  return true;
@@ -240,18 +263,18 @@ export function AdminProfitModule({
  const voidedSales = activeSales.filter((s) => s.isDeleted);
 
  // Gross Revenue
- const grossSalesCollected = nonDeletedSales.reduce((acc, s) => acc + s.grandTotal, 0);
- const grossSalesSubtotal = nonDeletedSales.reduce((acc, s) => acc + s.subtotal, 0);
- const grossSalesVat = nonDeletedSales.reduce((acc, s) => acc + s.vat, 0);
- const grossSalesDiscount = nonDeletedSales.reduce((acc, s) => acc + s.discount, 0);
+ const grossSalesCollected = nonDeletedSales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
+ const grossSalesSubtotal = nonDeletedSales.reduce((acc, s) => acc + (Number(s.subtotal) || 0), 0);
+ const grossSalesVat = nonDeletedSales.reduce((acc, s) => acc + (Number(s.vat) || 0), 0);
+ const grossSalesDiscount = nonDeletedSales.reduce((acc, s) => acc + (Number(s.discount) || 0), 0);
 
  // COGS
  let calculatedCogs = 0;
  nonDeletedSales.forEach((sale) => {
- const items = saleItems.filter((item) => item.saleId === sale.id && !item.isDeleted);
+ const items = saleItemsBySaleId.get(sale.id) || [];
  const modPercent = branchLandingModifiers[sale.branchId] ?? 2.5; // Default to 2.5% landing modifier if unconfigured
  items.forEach((item) => {
- const prod = products.find((p) => p.id === item.productId);
+ const prod = productsById.get(item.productId);
  const baseCost = prod ? prod.costPrice : 0;
  calculatedCogs += item.quantity * baseCost * (1 + modPercent / 100);
  });
@@ -308,12 +331,12 @@ export function AdminProfitModule({
  if (selectedBranchId !== "all" && log.branchId !== selectedBranchId) return false;
  return true;
  });
- const totalDamageLoss = activeDamageLogs.reduce((acc, log) => {
- const prod = products.find((p) => p.id === log.productId);
- if (!prod) return acc;
- const costPerUnit = log.unitType === "Piece" ? (prod.costPrice / (prod.boxQuantity || 4)) : prod.costPrice;
- return acc + (costPerUnit * log.quantity);
- }, 0);
+  const totalDamageLoss = activeDamageLogs.reduce((acc, log) => {
+    const prod = productsById.get(log.productId);
+    if (!prod) return acc;
+    const costPerUnit = log.unitType === "Piece" ? (prod.costPrice / (prod.boxQuantity || 4)) : prod.costPrice;
+    return acc + (costPerUnit * Number(log.quantity || 0));
+  }, 0);
 
  const activeShifts = shifts.filter((sh) => {
  if (selectedBranchId !== "all" && sh.branchId !== selectedBranchId) return false;
@@ -327,8 +350,8 @@ export function AdminProfitModule({
  return acc;
  }, 0);
 
- const totalVoidsLoss = voidedSales.reduce((acc, s) => acc + s.grandTotal, 0);
- const totalSystemLoss = totalDamageLoss + totalShiftShortage + totalVoidsLoss;
+ const totalVoidsLoss = voidedSales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
+ const totalSystemLoss = totalDamageLoss + totalShiftShortage;
 
  // Net Profit
  const totalExpensesAndDeductions = calculatedCogs + totalOpex + totalSystemLoss;
@@ -408,7 +431,7 @@ export function AdminProfitModule({
 
  return branches.filter((b) => !b.isDeleted).map((branch) => {
  const branchSales = sales.filter((s) => s.branchId === branch.id && !s.isDeleted);
- const branchGross = branchSales.reduce((acc, s) => acc + s.grandTotal, 0);
+ const branchGross = branchSales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
  
  let branchCogs = 0;
  const modPercent = branchLandingModifiers[branch.id] ?? 2.5;
@@ -438,14 +461,14 @@ export function AdminProfitModule({
  .filter((exp) => !exp.isDeleted && exp.branchId === branch.id)
  .reduce((acc, exp) => acc + exp.amount, 0) + branchAutomatedCalendarPayments;
 
- const branchDamages = damageLogs
- .filter((log) => !log.isDeleted && log.branchId === branch.id)
- .reduce((acc, log) => {
- const prod = products.find((p) => p.id === log.productId);
- if (!prod) return acc;
- const costPerUnit = log.unitType === "Piece" ? (prod.costPrice / (prod.boxQuantity || 4)) : prod.costPrice;
- return acc + (costPerUnit * log.quantity);
- }, 0);
+  const branchDamages = damageLogs
+    .filter((log) => !log.isDeleted && log.branchId === branch.id)
+    .reduce((acc, log) => {
+      const prod = products.find((p) => p.id === log.productId);
+      if (!prod) return acc;
+      const costPerUnit = log.unitType === "Piece" ? (prod.costPrice / (prod.boxQuantity || 4)) : prod.costPrice;
+      return acc + (costPerUnit * Number(log.quantity || 0));
+    }, 0);
 
  const branchShiftShortages = shifts
  .filter((sh) => sh.branchId === branch.id)
@@ -456,9 +479,9 @@ export function AdminProfitModule({
 
  const branchVoids = sales
  .filter((s) => s.isDeleted && s.branchId === branch.id)
- .reduce((acc, s) => acc + s.grandTotal, 0);
+ .reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
 
- const branchLoss = branchDamages + branchShiftShortages + branchVoids;
+ const branchLoss = branchDamages + branchShiftShortages;
  const branchNet = branchGross - (branchCogs + branchOpex + branchLoss);
  const branchNetMargin = branchGross > 0 ? (branchNet / branchGross) * 100 : 0;
 
@@ -495,1186 +518,792 @@ export function AdminProfitModule({
     };
   }, [branchLeaderboard]);
 
- return (
- <div className="space-y-6" id="isolated-accounting-console">
- {/* 1. VISUAL INTERACTIVE FINANCIAL EQUATION PANEL */}
- <div className="android-glass border border-m3-outline-variant/35 rounded-[28px] p-6 bg-m3-surface-low text-m3-on-surface relative overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl" id="isolated-accounting-console-main-panel">
- <div className="absolute right-0 top-0 translate-x-16 -translate-y-16 h-48 w-48 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
- <div className="absolute left-0 bottom-0 -translate-x-16 translate-y-16 h-48 w-48 bg-m3-primary/5 rounded-full blur-3xl pointer-events-none" />
- 
- <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 border-b border-m3-outline-variant/15 pb-4">
- <div className="flex items-center gap-2.5">
- <div className="p-2 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 rounded-xl border border-emerald-500/20">
- <Sparkles className="h-4.5 w-4.5" />
- </div>
- <div>
- <h3 className="text-sm font-black uppercase tracking-wider text-m3-on-surface dark:text-zinc-100">Consolidated Profitability Model</h3>
- 
- </div>
- </div>
- <div className="flex items-center gap-2">
- <span className="text-[9.5px] font-mono bg-m3-primary/10 text-m3-primary border border-m3-primary/20 px-3 py-1 rounded-full font-black uppercase tracking-widest">
- Live Ledger Feed
- </span>
- </div>
- </div>
- 
- {/* The Flow Equation Display */}
- <div className="flex flex-col lg:flex-row items-stretch gap-4 lg:gap-3 mb-6 relative">
- 
- {/* Gross Revenue Card */}
- <div className="flex-1 min-w-0 bg-white dark:bg-zinc-950 dark:bg-gradient-to-br dark:from-zinc-950/40 dark:to-zinc-900/40 border border-emerald-500/20 dark:border-m3-outline-variant/20 rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 hover:border-emerald-500/35 shadow-none dark:shadow-none group">
- <div className="flex justify-between items-start">
- <span className="text-[9.5px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">Gross Revenue</span>
- <span className="text-[9.5px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 px-2 py-0.5 rounded-full font-extrabold uppercase">
- INFLOW (+)
- </span>
- </div>
- <div className="my-3.5">
- <div className="text-2xl lg:text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono tracking-tight group-hover:scale-[1.01] transition-transform origin-left">
- ₱{metrics.grossRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
- </div>
- <p className="text-[10.5px] text-zinc-500 dark:text-zinc-400 mt-1">
- Net of discounts: <span className="font-mono text-zinc-700 dark:text-zinc-300 font-bold">₱{metrics.discountsAllowed.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
- </p>
- </div>
- <div className="text-[10px] text-zinc-500 dark:text-zinc-400 pt-2.5 border-t border-m3-outline-variant/10 flex items-center gap-1.5">
- <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" />
- <span>Consolidated Sales Volume</span>
- </div>
- </div>
-
- {/* Minus Operator Pill */}
- <div className="flex lg:flex-col items-center justify-center shrink-0 py-1 lg:px-1">
- <div className="h-7 w-7 rounded-full bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/40 flex items-center justify-center text-rose-600 dark:text-rose-400 font-black text-sm shadow-sm font-mono select-none">
- −
- </div>
- </div>
-
- {/* Deductions (COGS + OpEx + Loss) */}
- <div className="flex-[1.5] min-w-0 bg-white dark:bg-zinc-950 dark:bg-gradient-to-br dark:from-zinc-950/40 dark:to-zinc-900/40 border border-rose-500/20 dark:border-m3-outline-variant/20 rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 hover:border-rose-500/35 shadow-none dark:shadow-none">
- <div className="flex justify-between items-start mb-3">
- <span className="text-[9.5px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">Total Deductions</span>
- <span className="text-[9.5px] font-mono bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25 px-2 py-0.5 rounded-full font-extrabold uppercase">
- OUTFLOW (−)
- </span>
- </div>
-
- <div className="grid grid-cols-3 gap-3 my-1">
- {/* COGS */}
- <div className="p-2.5 rounded-xl bg-zinc-50/50 dark:bg-zinc-950/20 border border-rose-500/10 dark:border-m3-outline-variant/10 flex flex-col justify-between shadow-none dark:shadow-none">
- <div className="text-[9.5px] font-bold text-zinc-500 dark:text-zinc-400 block uppercase tracking-wider">COGS</div>
- <div className="font-mono font-black text-rose-600 dark:text-rose-400 text-xs mt-1">
- ₱{metrics.cogs.toLocaleString(undefined, { maximumFractionDigits: 0 })}
- </div>
- <span className="text-[9px] text-zinc-500 dark:text-zinc-400 font-medium mt-0.5 block">
- {metrics.grossRevenue > 0 ? ((metrics.cogs / metrics.grossRevenue) * 100).toFixed(0) : 0}% of Rev
- </span>
- </div>
- 
- {/* OpEx */}
- <div className="p-2.5 rounded-xl bg-zinc-50/50 dark:bg-zinc-950/20 border border-rose-500/10 dark:border-m3-outline-variant/10 flex flex-col justify-between shadow-none dark:shadow-none">
- <div className="text-[9.5px] font-bold text-zinc-500 dark:text-zinc-400 block uppercase tracking-wider">OpEx</div>
- <div className="font-mono font-black text-rose-600 dark:text-rose-400 text-xs mt-1">
- ₱{metrics.opex.toLocaleString(undefined, { maximumFractionDigits: 0 })}
- </div>
- <span className="text-[9px] text-zinc-500 dark:text-zinc-400 font-medium mt-0.5 block">
- {metrics.grossRevenue > 0 ? ((metrics.opex / metrics.grossRevenue) * 100).toFixed(0) : 0}% of Rev
- </span>
- </div>
-
- {/* Loss / Shrinkage */}
- <div className="p-2.5 rounded-xl bg-zinc-50/50 dark:bg-zinc-950/20 border border-rose-500/10 dark:border-m3-outline-variant/10 flex flex-col justify-between shadow-none dark:shadow-none">
- <div className="text-[9.5px] font-bold text-zinc-500 dark:text-zinc-400 block uppercase tracking-wider">Shrinkage</div>
- <div className="font-mono font-black text-rose-600 dark:text-rose-400 text-xs mt-1">
- ₱{metrics.shrinkage.toLocaleString(undefined, { maximumFractionDigits: 0 })}
- </div>
- <span className="text-[9px] text-zinc-500 dark:text-zinc-400 font-medium mt-0.5 block">
- {metrics.grossRevenue > 0 ? ((metrics.shrinkage / metrics.grossRevenue) * 100).toFixed(0) : 0}% of Rev
- </span>
- </div>
- </div>
-
- <div className="text-right text-[11px] font-mono text-m3-on-surface dark:text-zinc-300 font-extrabold pt-3 mt-3 border-t border-m3-outline-variant/10 flex justify-between items-center">
- <span className="text-[9.5px] font-sans font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Sum Outflows</span>
- <span>₱{(metrics.cogs + metrics.opex + metrics.shrinkage).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
- </div>
- </div>
-
- {/* Equals Operator Pill */}
- <div className="flex lg:flex-col items-center justify-center shrink-0 py-1 lg:px-1">
- <div className="h-7 w-7 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-black text-sm shadow-sm font-mono select-none">
- =
- </div>
- </div>
-
- {/* Net Profit Result */}
- <div className={`flex-1 min-w-0 border rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 group ${
- metrics.netProfit >= 0 
- ? "bg-emerald-500/5 dark:bg-gradient-to-br dark:from-emerald-500/10 dark:to-emerald-500/5 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:border-emerald-500/50" 
- : "bg-rose-500/5 dark:bg-gradient-to-br dark:from-rose-500/10 dark:to-rose-500/5 border-rose-500/30 text-rose-700 dark:text-rose-300 hover:border-rose-500/50"
- }`}>
- <div className="flex justify-between items-start">
- <span className="text-[9.5px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">Net Earnings</span>
- <span className={`text-[9.5px] font-mono px-2 py-0.5 rounded-full font-black uppercase border ${
- metrics.netProfit >= 0 
- ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400" 
- : "bg-rose-500/10 border-rose-500/25 text-rose-600 dark:text-rose-400"
- }`}>
- {metrics.netProfit >= 0 ? "SURPLUS" : "DEFICIT"}
- </span>
- </div>
- 
- <div className="my-3.5">
- <div className="text-2xl lg:text-3xl font-black tracking-tight font-mono group-hover:scale-[1.01] transition-transform origin-left">
- ₱{metrics.netProfit.toLocaleString(undefined, { maximumFractionDigits: 0 })}
- </div>
- <div className="mt-1.5 flex items-center gap-1">
- {metrics.netProfit >= 0 ? (
- <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 animate-bounce" />
- ) : (
- <TrendingDown className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400 animate-bounce" />
- )}
- <span className="text-[10.5px] font-mono font-extrabold text-zinc-700 dark:text-zinc-300">
- Margin: {metrics.netMarginPercent.toFixed(1)}%
- </span>
- </div>
- </div>
-
- <div className="text-[10px] text-zinc-500 dark:text-zinc-400 pt-2.5 border-t border-m3-outline-variant/10 flex items-center gap-1.5">
- <span className={`h-1.5 w-1.5 rounded-full ${metrics.netProfit >= 0 ? "bg-emerald-500 dark:bg-emerald-400" : "bg-rose-500 dark:bg-rose-400"}`} />
- <span>Return on Enterprise Capital</span>
- </div>
- </div>
-
- </div>
-
- {/* Dynamic Allocation Ratios */}
- {metrics.grossRevenue > 0 && (
- <div className="space-y-1.5">
- <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-black uppercase tracking-wider font-mono">Gross Revenue Allocation Ratios:</span>
- <div className="w-full h-5 rounded-full bg-zinc-200 dark:bg-zinc-800 flex overflow-hidden shadow-inner text-[9px] font-black font-mono text-white text-center">
- {/* COGS Segment */}
- <div 
- style={{ width: `${(metrics.cogs / metrics.grossRevenue) * 100}%` }}
- className="bg-amber-600/90 flex items-center justify-center min-w-[20px] transition-all"
- title={`COGS: ${((metrics.cogs / metrics.grossRevenue) * 100).toFixed(1)}%`}
- >
- {((metrics.cogs / metrics.grossRevenue) * 100) >= 10 && `COGS (${((metrics.cogs / metrics.grossRevenue) * 100).toFixed(0)}%)`}
- </div>
- 
- {/* OpEx Segment */}
- <div 
- style={{ width: `${(metrics.opex / metrics.grossRevenue) * 100}%` }}
- className="bg-rose-600/90 flex items-center justify-center min-w-[20px] transition-all"
- title={`OpEx: ${((metrics.opex / metrics.grossRevenue) * 100).toFixed(1)}%`}
- >
- {((metrics.opex / metrics.grossRevenue) * 100) >= 10 && `OpEx (${((metrics.opex / metrics.grossRevenue) * 100).toFixed(0)}%)`}
- </div>
-
- {/* Shrink/Loss Segment */}
- <div 
- style={{ width: `${(metrics.shrinkage / metrics.grossRevenue) * 100}%` }}
- className="bg-red-700/95 flex items-center justify-center min-w-[20px] transition-all"
- title={`Loss: ${((metrics.shrinkage / metrics.grossRevenue) * 100).toFixed(1)}%`}
- >
- {((metrics.shrinkage / metrics.grossRevenue) * 100) >= 10 && `Loss (${((metrics.shrinkage / metrics.grossRevenue) * 100).toFixed(0)}%)`}
- </div>
-
- {/* Net Profit Segment */}
- <div 
- style={{ width: `${Math.max(0, (metrics.netProfit / metrics.grossRevenue) * 100)}%` }}
- className="bg-emerald-600/90 flex items-center justify-center min-w-[20px] transition-all"
- title={`Net Profit: ${((metrics.netProfit / metrics.grossRevenue) * 100).toFixed(1)}%`}
- >
- {((metrics.netProfit / metrics.grossRevenue) * 100) >= 10 && `Profit (${((metrics.netProfit / metrics.grossRevenue) * 100).toFixed(0)}%)`}
- </div>
- </div>
- 
- <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-zinc-500 dark:text-zinc-400 pt-1.5 font-sans justify-center">
- <span className="flex items-center gap-1.5">
- <span className="h-2 w-2 rounded-full bg-amber-600/90 block" /> COGS Wholesale Price ({((metrics.cogs / metrics.grossRevenue) * 100).toFixed(1)}%)
- </span>
- <span className="flex items-center gap-1.5">
- <span className="h-2 w-2 rounded-full bg-rose-600/90 block" /> Operating Expenses ({((metrics.opex / metrics.grossRevenue) * 100).toFixed(1)}%)
- </span>
- <span className="flex items-center gap-1.5">
- <span className="h-2 w-2 rounded-full bg-red-700/95 block" /> Loss / Shrink ({((metrics.shrinkage / metrics.grossRevenue) * 100).toFixed(1)}%)
- </span>
- <span className="flex items-center gap-1.5">
- <span className="h-2 w-2 rounded-full bg-emerald-600/90 block" /> Net Margin ({((metrics.netProfit / metrics.grossRevenue) * 100).toFixed(1)}%)
- </span>
- </div>
- </div>
- )}
- </div>
-
- {/* 1.5 EXPANDED PROFIT AND LOSS (P&L) FINANCIAL STATEMENT */}
- <div id="tilepoint-printable-pl" className="android-glass border border-m3-outline-variant/35 rounded-[28px] p-6 bg-m3-surface-low text-m3-on-surface relative overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl">
- <div className="absolute right-0 top-0 translate-x-16 -translate-y-16 h-48 w-48 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
- <div className="absolute left-0 bottom-0 -translate-x-16 translate-y-16 h-48 w-48 bg-m3-primary/5 rounded-full blur-3xl pointer-events-none" />
-
- <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 border-b border-m3-outline-variant/15 pb-4">
- <div className="flex items-center gap-2.5">
- <div className="p-2 bg-m3-primary/10 text-m3-primary rounded-xl border border-m3-primary/20 shrink-0">
- <FileText className="h-4.5 w-4.5" />
- </div>
- <div>
- <h3 className="text-sm font-black uppercase tracking-wider text-m3-on-surface dark:text-zinc-100">Elaborative Profit &amp; Loss (P&amp;L) Statement</h3>
- <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
- Detailed general ledger accounting report for {selectedBranchId === "all" ? "Consolidated All Branches" : getBranchName(selectedBranchId)}
- </p>
- </div>
- </div>
-
- <div className="flex items-center gap-2 w-full sm:w-auto">
- <button
- onClick={() => handleExportPLCsv(opexByCategory)}
- className="flex-1 sm:flex-none px-3 py-1.5 bg-zinc-800 hover:bg-zinc-750 text-white rounded-xl text-[10px] font-black uppercase tracking-wider border border-zinc-700 shadow-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer"
- title="Export P&amp;L Ledger to CSV"
- >
- <RefreshCw className="h-3.5 w-3.5" />
- <span>Export CSV</span>
- </button>
- <button
- onClick={() => window.print()}
- className="flex-1 sm:flex-none px-3 py-1.5 bg-m3-primary hover:bg-m3-primary/95 text-m3-on-primary rounded-xl text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer"
- title="Print Financial Statement"
- >
- <Calendar className="h-3.5 w-3.5" />
- <span>Print P&amp;L</span>
- </button>
- </div>
- </div>
-
-  {/* P&L Interactive Cascade Waterfall Flow */}
-  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-    {/* LEFT COLUMN: Cascade Steps (Revenue, COGS, OpEx, Losses Breakdown) */}
-    <div className="lg:col-span-8 space-y-4">
-      
-      {/* STEP 1: OPERATING REVENUE (INFLOW) */}
-      <div className="bg-white/40 dark:bg-zinc-950/20 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow backdrop-blur-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/20">
-              <TrendingUp className="h-5 w-5" />
-            </div>
-            <div>
-              <h4 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 font-mono">Step 1: Gross Sales Inflow</h4>
-              <div className="text-lg font-extrabold text-zinc-800 dark:text-zinc-100 font-mono mt-0.5">
-                ₱{metrics.grossRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
-            </div>
-          </div>
-          <div className="text-right">
-            <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono uppercase tracking-wider">
-              Revenue Source
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-4 pt-3 border-t border-zinc-200/50 dark:border-zinc-800/60 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-zinc-500">
-          <div>
-            <span className="block text-[10px] uppercase font-bold text-zinc-400 font-mono">Gross Showroom Trade</span>
-            <span className="font-mono text-zinc-700 dark:text-zinc-300 font-bold block mt-0.5">
-              ₱{(metrics.grossSubtotal - metrics.vatCollected).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-            <span className="text-[9px] text-zinc-400 block mt-0.5">
-              {metrics.grossRevenue > 0 ? (((metrics.grossSubtotal - metrics.vatCollected) / metrics.grossRevenue) * 100).toFixed(1) : 0}% of Net Sales
-            </span>
+  return (
+    <div className="space-y-6" id="isolated-accounting-console">
+      {/* P&L Desk Top Header */}
+      <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[24px] p-5 sm:p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="p-3 bg-m3-primary/10 text-m3-primary rounded-2xl border border-m3-primary/20 shrink-0">
+            <DollarSign className="h-6 w-6" />
           </div>
           <div>
-            <span className="block text-[10px] uppercase font-bold text-zinc-400 font-mono">VAT/Tax Liability (12%)</span>
-            <span className="font-mono text-zinc-700 dark:text-zinc-300 font-bold block mt-0.5">
-              ₱{metrics.vatCollected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-            <span className="text-[9px] text-zinc-400 block mt-0.5">
-              {metrics.grossRevenue > 0 ? ((metrics.vatCollected / metrics.grossRevenue) * 100).toFixed(1) : 0}% of Net Sales
-            </span>
-          </div>
-          <div>
-            <span className="block text-[10px] uppercase font-bold text-rose-400 font-mono">Customer Discounts</span>
-            <span className="font-mono text-rose-500 font-bold block mt-0.5">
-              -₱{metrics.discountsAllowed.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-            <span className="text-[9px] text-rose-400 block mt-0.5">
-              -{metrics.grossRevenue > 0 ? ((metrics.discountsAllowed / metrics.grossRevenue) * 100).toFixed(1) : 0}% deduction ratio
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* STEP 2: COST OF SALES (DIRECT OUTFLOW) */}
-      <div className="bg-white/40 dark:bg-zinc-950/20 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow backdrop-blur-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl border border-amber-500/20">
-              <Percent className="h-5 w-5" />
-            </div>
-            <div>
-              <h4 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 font-mono">Step 2: Cost of Sales (COGS)</h4>
-              <div className="text-lg font-extrabold text-zinc-800 dark:text-zinc-100 font-mono mt-0.5">
-                -₱{metrics.cogs.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
-            </div>
-          </div>
-          <div className="text-right">
-            <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-mono">
-              {metrics.grossRevenue > 0 ? ((metrics.cogs / metrics.grossRevenue) * 100).toFixed(1) : 0}% COGS Ratio
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-4 pt-3 border-t border-zinc-200/50 dark:border-zinc-800/60">
-          <div className="flex justify-between items-center text-xs">
-            <span className="text-zinc-500 dark:text-zinc-400">Wholesale base inventory material costs &amp; branch landing modifiers</span>
-            <span className="font-mono text-amber-600 dark:text-amber-400 font-bold">
-              -₱{metrics.cogs.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-          </div>
-          <div className="mt-3 p-3 rounded-xl bg-zinc-100/40 dark:bg-zinc-900/20 flex justify-between items-center border border-zinc-200/50 dark:border-zinc-800/80 text-xs">
-            <span className="font-bold text-zinc-700 dark:text-zinc-300">Resulting Gross Enterprise Surplus (Gross Profit)</span>
-            <div className="text-right">
-              <span className="font-mono font-black text-emerald-600 dark:text-emerald-400 block">
-                ₱{(metrics.grossRevenue - metrics.cogs).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-              <span className="text-[9px] font-bold text-emerald-500 font-mono">
-                {metrics.grossMarginPercent.toFixed(1)}% Gross Margin
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-base font-black text-m3-on-surface tracking-tight uppercase">
+                P&L Accounting Desk
+              </h2>
+              <span className="text-[10px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 px-2.5 py-0.5 rounded-full font-bold uppercase">
+                Live Financial Engine
               </span>
             </div>
+            <p className="text-xs text-m3-on-surface-variant font-medium mt-0.5">
+              Consolidated enterprise profitability, landing cost management & ledger audit logs
+            </p>
           </div>
         </div>
-      </div>
 
-      {/* STEP 3: OPERATING OVERHEAD EXPENSES (INDIRECT OUTFLOW) */}
-      <div className="bg-white/40 dark:bg-zinc-950/20 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow backdrop-blur-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-xl border border-rose-500/20">
-              <DollarSign className="h-5 w-5" />
-            </div>
-            <div>
-              <h4 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 font-mono">Step 3: Operating Expenses (OpEx)</h4>
-              <div className="text-lg font-extrabold text-zinc-800 dark:text-zinc-100 font-mono mt-0.5">
-                -₱{metrics.opex.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
-            </div>
-          </div>
-          <div>
-            <button 
-              onClick={() => setIsDetailedOpexExpanded(!isDetailedOpexExpanded)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-m3-primary hover:bg-m3-primary/10 rounded-xl transition-all cursor-pointer border border-m3-primary/20"
+        {/* Header Controls: Branch Selector & Export Statement */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-2 bg-m3-surface-lowest border border-m3-outline-variant/30 px-3 py-1.5 rounded-xl text-xs">
+            <Building className="h-3.5 w-3.5 text-m3-primary shrink-0" />
+            <select
+              value={selectedBranchId}
+              onChange={(e) => setSelectedBranchId(e.target.value)}
+              className="bg-transparent font-bold text-m3-on-surface focus:outline-none cursor-pointer text-xs pr-1"
             >
-              <span>{isDetailedOpexExpanded ? "Hide Details" : "See Details"}</span>
-              {isDetailedOpexExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-            </button>
+              <option value="all">Consolidated (All Branches)</option>
+              {branches.filter(b => !b.isDeleted).map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
           </div>
-        </div>
 
-        <div className="mt-3">
-          <div className="w-full bg-zinc-150 dark:bg-zinc-900 h-1.5 rounded-full overflow-hidden">
-            <div 
-              style={{ width: `${Math.min(100, metrics.grossRevenue > 0 ? (metrics.opex / metrics.grossRevenue) * 100 : 0)}%` }}
-              className="bg-rose-500 h-full transition-all"
-            />
-          </div>
-          <div className="flex justify-between text-[10px] text-zinc-400 mt-1.5 font-mono">
-            <span>{metrics.grossRevenue > 0 ? ((metrics.opex / metrics.grossRevenue) * 100).toFixed(1) : 0}% of net revenue</span>
-            <span>Budget Allocation Boundary</span>
-          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const opexCats: Record<string, number> = {};
+              metrics.combinedExpenses.forEach(exp => {
+                opexCats[exp.category] = (opexCats[exp.category] || 0) + exp.amount;
+              });
+              handleExportPLCsv(opexCats);
+            }}
+            className="flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-sm cursor-pointer shrink-0"
+            title="Download formatted P&L CSV statement"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span>Export P&L Statement</span>
+          </button>
         </div>
-
-        {isDetailedOpexExpanded && (
-          <div className="mt-4 pt-3 border-t border-zinc-200/50 dark:border-zinc-800/60 space-y-1.5 max-h-60 overflow-y-auto">
-            {Object.entries(opexByCategory).map(([cat, val]) => (
-              <div key={cat} className="flex justify-between items-center text-xs p-1.5 hover:bg-zinc-100/30 dark:hover:bg-zinc-900/20 rounded-lg transition-colors">
-                <span className="text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
-                  {cat}
-                </span>
-                <div className="text-right flex items-center gap-2">
-                  <span className="font-mono text-zinc-700 dark:text-zinc-300 font-bold">
-                    -₱{val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                  <span className="text-[10px] font-mono text-zinc-400 min-w-[45px]">
-                    {metrics.grossRevenue > 0 ? ((val / metrics.grossRevenue) * 100).toFixed(1) : 0}%
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* STEP 4: ENTERPRISE SYSTEM LOSSES (SHRINKAGE & VOIDS) */}
-      <div className="bg-white/40 dark:bg-zinc-950/20 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow backdrop-blur-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-500/10 text-red-600 dark:text-red-400 rounded-xl border border-red-500/20">
-              <AlertTriangle className="h-5 w-5" />
-            </div>
-            <div>
-              <h4 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 font-mono">Step 4: Voids &amp; Material Shrinkage</h4>
-              <div className="text-lg font-extrabold text-zinc-800 dark:text-zinc-100 font-mono mt-0.5">
-                -₱{metrics.shrinkage.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
-            </div>
-          </div>
-          <div>
-            <button 
-              onClick={() => setIsDetailedLossesExpanded(!isDetailedLossesExpanded)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-m3-primary hover:bg-m3-primary/10 rounded-xl transition-all cursor-pointer border border-m3-primary/20"
-            >
-              <span>{isDetailedLossesExpanded ? "Hide Details" : "See Details"}</span>
-              {isDetailedLossesExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-3">
-          <div className="w-full bg-zinc-150 dark:bg-zinc-900 h-1.5 rounded-full overflow-hidden">
-            <div 
-              style={{ width: `${Math.min(100, metrics.grossRevenue > 0 ? (metrics.shrinkage / metrics.grossRevenue) * 100 : 0)}%` }}
-              className="bg-red-500 h-full transition-all"
-            />
-          </div>
-          <div className="flex justify-between text-[10px] text-zinc-400 mt-1.5 font-mono">
-            <span>{metrics.grossRevenue > 0 ? ((metrics.shrinkage / metrics.grossRevenue) * 100).toFixed(1) : 0}% shrinkage index</span>
-            <span>Risk Management Threshold</span>
-          </div>
-        </div>
-
-        {isDetailedLossesExpanded && (
-          <div className="mt-4 pt-3 border-t border-zinc-200/50 dark:border-zinc-800/60 space-y-1.5">
-            {/* Material Damages */}
-            <div className="flex justify-between items-center text-xs p-1.5 hover:bg-zinc-100/30 dark:hover:bg-zinc-900/20 rounded-lg transition-colors">
-              <span className="text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
-                Showroom Breakages &amp; Damages Write-offs
-              </span>
-              <div className="text-right flex items-center gap-2">
-                <span className="font-mono text-zinc-700 dark:text-zinc-300 font-bold">
-                  -₱{metrics.damageLoss.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-                <span className="text-[10px] font-mono text-zinc-400 min-w-[45px]">
-                  {metrics.grossRevenue > 0 ? ((metrics.damageLoss / metrics.grossRevenue) * 100).toFixed(1) : 0}%
-                </span>
-              </div>
-            </div>
-            
-            {/* Shift Cash Variance */}
-            <div className="flex justify-between items-center text-xs p-1.5 hover:bg-zinc-100/30 dark:hover:bg-zinc-900/20 rounded-lg transition-colors">
-              <span className="text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
-                Cashier Register Shortage Variances
-              </span>
-              <div className="text-right flex items-center gap-2">
-                <span className="font-mono text-zinc-700 dark:text-zinc-300 font-bold">
-                  -₱{metrics.shiftShortage.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-                <span className="text-[10px] font-mono text-zinc-400 min-w-[45px]">
-                  {metrics.grossRevenue > 0 ? ((metrics.shiftShortage / metrics.grossRevenue) * 100).toFixed(1) : 0}%
-                </span>
-              </div>
-            </div>
-
-            {/* Voids */}
-            <div className="flex justify-between items-center text-xs p-1.5 hover:bg-zinc-100/30 dark:hover:bg-zinc-900/20 rounded-lg transition-colors">
-              <span className="text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
-                Authorized Audit Voids &amp; Cancellations
-              </span>
-              <div className="text-right flex items-center gap-2">
-                <span className="font-mono text-zinc-700 dark:text-zinc-300 font-bold">
-                  -₱{metrics.voidedLoss.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-                <span className="text-[10px] font-mono text-zinc-400 min-w-[45px]">
-                  {metrics.grossRevenue > 0 ? ((metrics.voidedLoss / metrics.grossRevenue) * 100).toFixed(1) : 0}%
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-    </div>
-
-    {/* RIGHT COLUMN: Consolidated Results Card & Flow summary */}
-    <div className="lg:col-span-4 flex flex-col">
-      
-      {/* CONSOLIDATED NET RETAINED PROFIT CELEBRATION BOX */}
-      <div className={`rounded-3xl border p-6 flex flex-col justify-between h-full min-h-[340px] transition-all relative overflow-hidden flex-1 ${
-        metrics.netProfit >= 0
-          ? "bg-gradient-to-br from-emerald-500/[0.04] to-emerald-500/[0.12] dark:from-emerald-950/20 dark:to-emerald-900/30 border-emerald-500/20 text-emerald-800 dark:text-emerald-300 shadow-sm"
-          : "bg-gradient-to-br from-rose-500/[0.04] to-rose-500/[0.12] dark:from-rose-950/20 dark:to-rose-900/30 border-rose-500/20 text-rose-800 dark:text-rose-300 shadow-sm"
-      }`}>
-        <div className="absolute right-0 bottom-0 translate-x-12 translate-y-12 h-36 w-36 opacity-10 bg-zinc-500 rounded-full blur-xl pointer-events-none" />
-        
-        <div>
+      {/* 1. FINANCIAL MODEL CARDS & REVENUE ALLOCATION */}
+      <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[24px] p-5 sm:p-6 shadow-sm space-y-6">
+        <div className="flex items-center justify-between border-b border-m3-outline-variant/15 pb-3">
           <div className="flex items-center gap-2">
-            {metrics.netProfit >= 0 ? (
-              <div className="p-2 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl">
-                <TrendingUp className="h-4.5 w-4.5" />
-              </div>
-            ) : (
-              <div className="p-2 bg-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl">
-                <TrendingDown className="h-4.5 w-4.5" />
-              </div>
-            )}
-            <span className="text-[10px] font-black uppercase tracking-widest font-mono text-zinc-500 dark:text-zinc-400">Net Surplus Summary</span>
+            <Sparkles className="h-4.5 w-4.5 text-m3-primary" />
+            <h3 className="text-xs font-black uppercase tracking-wider text-m3-on-surface">
+              Consolidated Financial Model
+            </h3>
           </div>
-
-          <div className="mt-8">
-            
-            <h2 className="text-2xl lg:text-3xl font-black font-mono tracking-tight mt-1 text-zinc-800 dark:text-zinc-100">
-              {metrics.netProfit >= 0 ? "₱" + metrics.netProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-₱" + Math.abs(metrics.netProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </h2>
-            <div className="mt-2.5">
-              <span className={`inline-block text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border font-mono ${
-                metrics.netProfit >= 0
-                  ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
-                  : "bg-rose-500/20 border-rose-500/30 text-rose-600 dark:text-rose-400"
-              }`}>
-                {metrics.netMarginPercent.toFixed(2)}% Net Margin
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-12 pt-4 border-t border-zinc-200/50 dark:border-zinc-800/60 text-[11px] text-zinc-500 dark:text-zinc-400 space-y-2.5">
-          <div className="flex justify-between">
-            <span>Inflows (Net Sales)</span>
-            <span className="font-mono font-bold text-zinc-700 dark:text-zinc-300">₱{metrics.grossRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Total Outflows</span>
-            <span className="font-mono font-bold text-zinc-700 dark:text-zinc-300">-₱{(metrics.cogs + metrics.opex + metrics.shrinkage).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-          </div>
-          <div className="flex justify-between pt-1 border-t border-dashed border-zinc-200/50 dark:border-zinc-800/80 font-bold">
-            <span>Retained Balance</span>
-            <span className={`font-mono ${metrics.netProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-              ₱{metrics.netProfit.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-            </span>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-{/* Operational Health Commentary */}
- <div className="mt-5 p-4 rounded-xl bg-zinc-100 dark:bg-zinc-950/40 border border-m3-outline-variant/20 flex gap-3">
- <div className="p-2 bg-m3-primary/10 text-m3-primary rounded-lg shrink-0 h-9 w-9 flex items-center justify-center">
- <Sparkles className="h-4 w-4 text-emerald-500" />
- </div>
- <div>
- <h5 className="text-[11px] font-bold uppercase tracking-wider text-m3-on-surface dark:text-zinc-300">Operational Health Commentary</h5>
- 
- </div>
- </div>
- </div>
-
- {/* 2. DEDICATED PROFIT TIMELINE & TRENDS (PROFIT ANALYTICS GRAPH) */}
- <div className="android-glass border border-m3-outline-variant/35 rounded-[28px] p-1.5 bg-m3-surface-low/60 shadow-md">
- <ProfitAnalytics
- darkMode={darkMode}
- selectedBranchId={selectedBranchId}
- setSelectedBranchId={setSelectedBranchId}
- getBranchName={getBranchName}
- showToastMsg={showToastMsg}
- />
- </div>
-
- {/* 3. MULTI-BRANCH COMPARISON AND LANDING COST MODIFIERS */}
- <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
- 
- {/* Left: Leaderboards & Contribution */}
- <div className="p-6 bg-m3-surface-low border border-m3-outline-variant/35 shadow-md rounded-[24px] lg:col-span-2 flex flex-col justify-between">
- <div>
- <div className="flex items-center justify-between mb-4 border-b border-m3-outline-variant/15 pb-3">
- <div>
- <h3 className="text-xs font-black text-m3-primary flex items-center gap-2 uppercase tracking-wider">
- <Building className="h-4.5 w-4.5 text-m3-primary" /> Branch Profitability Comparison
- </h3>
- 
- </div>
-   <button
-    onClick={() => setSelectedBranchId("all")}
-    className={`text-[9px] font-mono px-2.5 py-1 rounded-lg border font-bold cursor-pointer transition-all flex items-center gap-1 ${
-      selectedBranchId === "all"
-        ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-sm ring-1 ring-emerald-500/30 font-black"
-        : "bg-m3-surface-low text-zinc-400 border-m3-outline-variant/20 hover:bg-emerald-500/10 hover:text-emerald-400"
-    }`}
-    title="Click to view Consolidated All Branches in Financial Health Trend Matrix"
-  >
-    <Layers className="h-3 w-3" />
-    Consolidated View {selectedBranchId === "all" ? "✓ Active" : ""}
-  </button>
- </div>
-
- <div className="overflow-x-auto">
- <table className="w-full text-left text-xs">
- <thead>
- <tr className="border-b border-m3-outline-variant/20 text-m3-on-surface-variant uppercase tracking-wider font-extrabold text-[10px]">
- <th className="py-2.5">Branch Profile</th>
- <th className="py-2.5 text-right">Gross Rev</th>
- <th className="py-2.5 text-right">COGS</th>
- <th className="py-2.5 text-right">OpEx</th>
- <th className="py-2.5 text-right">System Loss</th>
- <th className="py-2.5 text-right">Net Profit</th>
- <th className="py-2.5 text-right pr-2">Net Marg</th>
- </tr>
- </thead>
-   <tbody className="divide-y divide-m3-outline-variant/10">
-    {/* Consolidated Enterprise Row */}
-    <tr
-      key="consolidated-all"
-      className={`transition-colors cursor-pointer border-b-2 border-m3-outline-variant/25 ${
-        selectedBranchId === "all"
-          ? "bg-m3-primary/10 font-black text-m3-primary dark:bg-m3-primary/20"
-          : "hover:bg-m3-primary/5 bg-m3-surface-low/60 font-bold text-m3-on-surface"
-      }`}
-      onClick={() => setSelectedBranchId("all")}
-    >
-      <td className="py-3 font-extrabold flex items-center gap-2">
-        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-emerald-500/20 text-emerald-500 dark:text-emerald-400 font-black uppercase tracking-wider">
-          ALL
-        </span>
-        <span className="truncate">{consolidatedSummary.name}</span>
-      </td>
-      <td className="py-3 text-right font-mono font-bold">₱{consolidatedSummary.gross.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-      <td className="py-3 text-right font-mono text-zinc-400 dark:text-zinc-300">₱{consolidatedSummary.cogs.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-      <td className="py-3 text-right font-mono text-zinc-400 dark:text-zinc-300">₱{consolidatedSummary.opex.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-      <td className="py-3 text-right font-mono text-zinc-400 dark:text-zinc-300">₱{consolidatedSummary.loss.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-      <td className={`py-3 text-right font-mono font-black ${consolidatedSummary.net >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-        ₱{consolidatedSummary.net.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-      </td>
-      <td className={`py-3 text-right pr-2 font-mono font-black ${consolidatedSummary.margin >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-        {consolidatedSummary.margin.toFixed(1)}%
-      </td>
-    </tr>
-
-  {branchLeaderboard.map((item, index) => {
- const rankBadge = index === 0 ? "1st" : index === 1 ? "2nd" : index === 2 ? "3rd" : `#${index + 1}`;
- 
- return (
- <tr 
- key={item.id} 
- className={`hover:bg-m3-primary/5 transition-colors cursor-pointer ${
- selectedBranchId === item.id ? "bg-m3-primary/5 font-extrabold text-m3-primary" : ""
- }`}
- onClick={() => {
- setSelectedBranchId(selectedBranchId === item.id ? "all" : item.id);
- }}
- >
- <td className="py-3 font-semibold flex items-center gap-1.5">
- <span className="text-xs font-mono">{rankBadge}</span>
- <span className="truncate">{item.name}</span>
- </td>
- <td className="py-3 text-right font-mono">₱{item.gross.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
- <td className="py-3 text-right font-mono text-zinc-400 dark:text-zinc-300">₱{item.cogs.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
- <td className="py-3 text-right font-mono text-zinc-400 dark:text-zinc-300">₱{item.opex.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
- <td className="py-3 text-right font-mono text-zinc-400 dark:text-zinc-300">₱{item.loss.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
- <td className={`py-3 text-right font-mono font-black ${item.net >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
- ₱{item.net.toLocaleString(undefined, { maximumFractionDigits: 0 })}
- </td>
- <td className={`py-3 text-right pr-2 font-mono font-black ${item.margin >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
- {item.margin.toFixed(1)}%
- </td>
- </tr>
- );
- })}
- {branchLeaderboard.length === 0 && (
- <tr>
- <td colSpan={7} className="text-center py-6 text-xs text-m3-on-surface-variant">No branch records available.</td>
- </tr>
- )}
-</tbody>
- </table>
- </div>
- </div>
- 
- <div className="text-[10px] text-zinc-500 dark:text-zinc-400 font-sans italic pt-4 mt-4 border-t border-m3-outline-variant/10 text-center flex items-center justify-center gap-2">
- <Sparkles className="h-3.5 w-3.5 text-m3-primary" />
-   <span>Click on any branch row or Consolidated to filter and isolate P&L timelines above.</span>
- </div>
- </div>
-
- {/* Right: Landing cost modifiers panel */}
- <div className="p-6 bg-m3-surface-low border border-m3-outline-variant/35 shadow-md rounded-[24px] flex flex-col justify-between">
- <div>
- <div className="flex items-center gap-2 mb-3.5 pb-2 border-b border-m3-outline-variant/15">
- <Sliders className="h-4.5 w-4.5 text-m3-primary" />
- <div>
- <h4 className="text-xs font-black uppercase tracking-wider text-m3-on-surface">Landing Cost Multipliers</h4>
- 
- </div>
- </div>
-
- <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
- {branches.filter((b) => !b.isDeleted).map((b) => {
- const currentModifier = branchLandingModifiers[b.id] ?? 2.5;
- const isEditing = editingBranchId === b.id;
-
- return (
- <div key={b.id} className="p-3 rounded-xl bg-zinc-100 dark:bg-zinc-950/20 border border-m3-outline-variant/10 space-y-2">
- <div className="flex items-center justify-between">
- <span className="text-xs font-bold text-m3-on-surface dark:text-zinc-300 truncate">{b.name}</span>
- <span className="text-[10.5px] font-mono font-black text-amber-600 dark:text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md">
- {currentModifier}%
- </span>
- </div>
-
- {isEditing ? (
- <div className="flex items-center gap-2">
- <input
- type="number"
- step="0.1"
- min="0"
- max="100"
- value={editingValue}
- onChange={(e) => setEditingValue(e.target.value)}
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 rounded-lg text-xs p-1.5 font-mono text-center text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-amber-500"
- placeholder="2.5"
- />
- <button
- onClick={() => handleModifierSave(b.id)}
- className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 text-[10.5px] font-black uppercase rounded-lg cursor-pointer shrink-0 transition-colors"
- >
- Save
- </button>
- <button
- onClick={() => setEditingBranchId(null)}
- className="px-2.5 py-1.5 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 text-[10.5px] font-bold uppercase rounded-lg cursor-pointer shrink-0 transition-colors"
- >
- Esc
- </button>
- </div>
- ) : (
- <div className="flex items-center justify-between pt-1">
- 
- <button
- onClick={() => {
- setEditingBranchId(b.id);
- setEditingValue(currentModifier.toString());
- }}
- className="text-[9.5px] uppercase font-black tracking-widest text-m3-primary hover:underline cursor-pointer"
- >
- Configure
- </button>
- </div>
- )}
- </div>
- );
- })}
- </div>
- </div>
-
- <div className="bg-amber-500/10 p-3 rounded-xl border border-amber-500/20 text-[10px] text-amber-800 dark:text-amber-300 mt-4 leading-relaxed font-sans">
- <strong>️ Cost Accounting Rule</strong>: COGS is calculated by taking the product base wholesale cost and adding this percentage. Always verify actual shipping receipts before overriding values.
- </div>
- </div>
-
- </div>
-
- {/* 4. EXPENDITURE MANAGER AND LEDGER DETAILED AUDIT SHIELDS */}
- <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
- 
- {/* Left: Expenses Intake Terminal */}
- <div className="p-6 bg-m3-surface-low border border-m3-outline-variant/35 shadow-md rounded-[24px] flex flex-col justify-between">
- <form onSubmit={handleAddExpense} className="space-y-4">
- <div className="flex items-center gap-2 mb-2 pb-2 border-b border-m3-outline-variant/15">
- <Plus className="h-4.5 w-4.5 text-m3-primary" />
- <div>
- <h4 className="text-xs font-black uppercase tracking-wider text-m3-on-surface">Record Branch Expenses</h4>
- 
- </div>
- </div>
-
- <div className="space-y-1">
- <label className="text-[10px] font-extrabold uppercase text-zinc-500 dark:text-zinc-400">Target Showroom Branch</label>
- <select
- value={expenseBranch}
- onChange={(e) => setExpenseBranch(e.target.value)}
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 text-xs px-3 py-2 rounded-xl text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary"
- >
- {branches.filter(b => !b.isDeleted).map(b => (
- <option key={b.id} value={b.id} className="bg-m3-surface-lowest text-m3-on-surface">{b.name}</option>
- ))}
- </select>
- </div>
-
- <div className="grid grid-cols-2 gap-3">
- <div className="space-y-1">
- <label className="text-[10px] font-extrabold uppercase text-zinc-500 dark:text-zinc-400">Expense Category</label>
- <select
- value={expenseCategory}
- onChange={(e) => setExpenseCategory(e.target.value)}
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 text-xs px-3 py-2 rounded-xl text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary"
- >
- <option value="Utilities" className="bg-m3-surface-lowest text-m3-on-surface">Utilities (Power, Water)</option>
- <option value="Logistics" className="bg-m3-surface-lowest text-m3-on-surface">Logistics & Freight</option>
- <option value="Packaging" className="bg-m3-surface-lowest text-m3-on-surface">Packaging Boxes</option>
- <option value="Marketing" className="bg-m3-surface-lowest text-m3-on-surface">Local Marketing</option>
- <option value="Repairs" className="bg-m3-surface-lowest text-m3-on-surface">Repairs & Maintenance</option>
- <option value="Miscellaneous" className="bg-m3-surface-lowest text-m3-on-surface">Miscellaneous</option>
- </select>
- </div>
-
- <div className="space-y-1">
- <label className="text-[10px] font-extrabold uppercase text-zinc-500 dark:text-zinc-400">Amount (PHP)</label>
- <input
- type="number"
- required
- placeholder="₱0.00"
- value={expenseAmount}
- onChange={(e) => setExpenseAmount(e.target.value)}
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 text-xs px-3 py-2 rounded-xl text-m3-on-surface placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-m3-primary font-mono"
- />
- </div>
- </div>
-
- <div className="space-y-1">
- <label className="text-[10px] font-extrabold uppercase text-zinc-500 dark:text-zinc-400">Audit Notes / Itemized Details</label>
- <textarea
- placeholder="E.g., June electricity bill, Meralco invoice #..."
- value={expenseNotes}
- onChange={(e) => setExpenseNotes(e.target.value)}
- rows={2}
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 text-xs px-3 py-2 rounded-xl text-m3-on-surface placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-m3-primary"
- />
- </div>
-
- <button
- type="submit"
- className="w-full py-2.5 bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow transition-colors flex items-center justify-center gap-1.5"
- >
- <Plus className="h-4 w-4" />
- Add Expense Log
- </button>
- </form>
- </div>
-
- {/* Right: Detailed Tabbed Audit Streams (Damage logs, cash variances, voids, registered expenses list) */}
- <div className="p-6 bg-m3-surface-low border border-m3-outline-variant/35 shadow-md rounded-[24px] lg:col-span-2 flex flex-col justify-between">
- <div>
- {/* Tab selection headers */}
- <div className="flex items-center justify-between pb-3 border-b border-m3-outline-variant/15 mb-4">
- <div className="flex bg-zinc-200/50 dark:bg-zinc-950/40 p-1 rounded-xl border border-m3-outline-variant/10 text-xs font-bold gap-1">
- <button
- onClick={() => setActiveLedgerTab("damage")}
- className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
- activeLedgerTab === "damage" ? "bg-m3-primary text-m3-on-primary font-black shadow" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
- }`}
- >
- Damage Write-offs
- </button>
- <button
- onClick={() => setActiveLedgerTab("shift-shortages")}
- className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
- activeLedgerTab === "shift-shortages" ? "bg-m3-primary text-m3-on-primary font-black shadow" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
- }`}
- >
- Shift Variance
- </button>
- <button
- onClick={() => setActiveLedgerTab("voids")}
- className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
- activeLedgerTab === "voids" ? "bg-m3-primary text-m3-on-primary font-black shadow" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
- }`}
- >
- Voids Log
- </button>
- <button
- onClick={() => setActiveLedgerTab("expenses")}
- className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
- activeLedgerTab === "expenses" ? "bg-m3-primary text-m3-on-primary font-black shadow" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
- }`}
- >
- Expenses List
- </button>
- </div>
- </div>
-
- {/* TAB PANELS */}
- <div className="max-h-64 overflow-y-auto pr-1">
- 
- {/* Tab: Damage logs write-offs */}
- {activeLedgerTab === "damage" && (
- <div className="space-y-2">
- {metrics.activeDamageLogs.map((log) => (
- <div key={log.id} className="p-3 bg-zinc-100 dark:bg-zinc-950/25 border border-m3-outline-variant/10 rounded-xl flex items-center justify-between text-xs">
- <div>
- <div className="font-extrabold text-m3-on-surface dark:text-zinc-300">{log.productName}</div>
- <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 font-mono">
- Quantity: {log.quantity} {log.unitType || "Pieces"} • Reason: <span className="text-red-600 dark:text-red-400 font-bold uppercase">{log.reason || "BROKEN"}</span>
- </div>
- </div>
- <div className="font-mono text-rose-600 dark:text-rose-400 font-bold shrink-0">
- {/* Cost Per Unit estimation */}
- ₱{(() => {
- const prod = products.find((p) => p.id === log.productId);
- if (!prod) return "0";
- const costPerUnit = log.unitType === "Piece" ? (prod.costPrice / (prod.boxQuantity || 4)) : prod.costPrice;
- return Math.round(costPerUnit * log.quantity).toLocaleString();
- })()}
- </div>
- </div>
- ))}
- {metrics.activeDamageLogs.length === 0 && (
- <p className="text-center py-6 text-zinc-500 dark:text-zinc-400 text-xs italic">No damage write-off entries logged under this branch assign viewport.</p>
- )}
- </div>
- )}
-
- {/* Tab: Shift shortages */}
- {activeLedgerTab === "shift-shortages" && (
- <div className="space-y-2">
- {metrics.activeShifts.map((sh) => {
- const isShortage = sh.variance && sh.variance < 0;
- const isOverage = sh.variance && sh.variance > 0;
- 
- return (
- <div key={sh.id} className="p-3 bg-zinc-100 dark:bg-zinc-950/25 border border-m3-outline-variant/10 rounded-xl flex items-center justify-between text-xs">
- <div>
- <div className="font-extrabold text-m3-on-surface dark:text-zinc-300">Cashier: {sh.cashierName}</div>
- <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 font-mono">
- Opened: {sh.openedAt && !isNaN(new Date(sh.openedAt).getTime()) ? new Date(sh.openedAt).toLocaleDateString() : "N/A"} • Branch: {getBranchName(sh.branchId)}
- </div>
- </div>
- <div className={`font-mono font-black ${isShortage ? "text-rose-600 dark:text-rose-400" : isOverage ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400"}`}>
- {sh.variance !== undefined ? (
- sh.variance < 0 ? `-₱${Math.abs(sh.variance).toLocaleString()}` : `+₱${sh.variance.toLocaleString()}`
- ) : "₱0"}
- </div>
- </div>
- );
- })}
- {metrics.activeShifts.length === 0 && (
- <p className="text-center py-6 text-zinc-500 dark:text-zinc-400 text-xs italic">No closed shift variance logs available.</p>
- )}
- </div>
- )}
-
- {/* Tab: Voids */}
- {activeLedgerTab === "voids" && (
- <div className="space-y-2">
- {metrics.voidedSales.map((sale) => (
- <div key={sale.id} className="p-3 bg-zinc-100 dark:bg-zinc-950/25 border border-m3-outline-variant/10 rounded-xl flex items-center justify-between text-xs">
- <div>
- <div className="font-extrabold text-m3-on-surface dark:text-zinc-300">Invoice: {sale.saleNumber}</div>
- <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 font-mono">
- Voided At: {sale.deletedAt && !isNaN(new Date(sale.deletedAt).getTime()) ? new Date(sale.deletedAt).toLocaleDateString() : "Unknown"} • Branch: {getBranchName(sale.branchId)}
- </div>
- </div>
- <div className="font-mono text-zinc-600 dark:text-zinc-400 font-black shrink-0">
- ₱{sale.grandTotal.toLocaleString()}
- </div>
- </div>
- ))}
- {metrics.voidedSales.length === 0 && (
- <p className="text-center py-6 text-zinc-500 dark:text-zinc-400 text-xs italic">No supervisor-voided invoices logged.</p>
- )}
- </div>
- )}
-
- {/* Tab: Expenses register */}
- {activeLedgerTab === "expenses" && (
- <div className="space-y-2">
- {metrics.combinedExpenses
- .slice()
- .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
- .map((exp) => (
- <div key={exp.id} className="p-3 bg-zinc-100 dark:bg-zinc-950/25 border border-m3-outline-variant/10 rounded-xl flex items-center justify-between text-xs">
- <div>
- <div className="flex items-center gap-1.5 flex-wrap">
- <span className="font-extrabold text-m3-on-surface dark:text-zinc-300">{exp.category}</span>
- <span className="text-[9px] bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 px-1.5 py-0.2 rounded-md font-mono">{getBranchName(exp.branchId)}</span>
- {exp.isAutomated && (
- <span className="text-[8px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 px-1.5 py-0.2 rounded-md font-extrabold uppercase tracking-wide">
- Automated Sync
- </span>
- )}
- </div>
- <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">{exp.notes || "Itemized expense receipt"}</p>
- <span className="text-[9.5px] text-zinc-600 dark:text-zinc-500 block font-mono mt-0.5">Recorded: {exp.dateTime && !isNaN(new Date(exp.dateTime).getTime()) ? new Date(exp.dateTime).toLocaleDateString() : "Unknown"}</span>
- </div>
- <div className="flex items-center gap-3 shrink-0">
- <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">₱{exp.amount.toLocaleString()}</span>
- {!exp.isAutomated ? (
- <button
- onClick={() => handleDeleteExpense(exp.id)}
- className="text-zinc-500 hover:text-rose-500 dark:text-zinc-400 dark:hover:text-rose-400 cursor-pointer text-[10px] font-bold"
- >
- Delete
- </button>
- ) : (
- <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium italic">Calendar Lock</span>
- )}
- </div>
- </div>
- ))}
- {metrics.combinedExpenses.length === 0 && (
- <p className="text-center py-6 text-zinc-500 dark:text-zinc-400 text-xs italic">No expenses recorded for this viewport assignment.</p>
- )}
- </div>
- )}
-
-  {/* Tab: Transaction CSV Logger */}
-  {activeLedgerTab === "csv-logger" && (
-    <div className="space-y-3">
-      <div className="p-3 bg-zinc-900 text-white rounded-xl space-y-2 border border-zinc-800">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
-              Transaction History CSV Export Hub
-            </span>
-          </div>
-          <span className="text-[10px] font-mono bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded">
-            Auto-Sorted Chronologically by Time
+          <span className="text-[10.5px] font-mono text-m3-on-surface-variant font-semibold">
+            Target Viewport: {selectedBranchId === "all" ? "Consolidated All Branches" : getBranchName(selectedBranchId)}
           </span>
         </div>
-        
-        <p className="text-[11px] text-zinc-300 leading-relaxed">
-          Export full store transaction logs formatted for ledger audits or launch the Windows LAN connector.
-        </p>
 
-        <div className="flex flex-wrap items-center gap-2 pt-1">
+        {/* 3 Main Metric Cards Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Gross Revenue */}
+          <div className="bg-m3-surface-lowest border border-emerald-500/20 rounded-2xl p-4 flex flex-col justify-between hover:border-emerald-500/40 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant">Gross Revenue</span>
+              <span className="text-[9.5px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 px-2 py-0.5 rounded-full font-bold uppercase">
+                INFLOW (+)
+              </span>
+            </div>
+            <div className="my-3">
+              <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono tracking-tight">
+                ₱{metrics.grossRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </div>
+              <p className="text-[10.5px] text-m3-on-surface-variant mt-1 font-medium">
+                Discounts Offset: <span className="font-mono font-bold">₱{metrics.discountsAllowed.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+              </p>
+            </div>
+            <div className="text-[10px] text-m3-on-surface-variant pt-2 border-t border-m3-outline-variant/10 flex items-center gap-1.5 font-mono">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <span>Consolidated Sales Volume</span>
+            </div>
+          </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              const csv = generateTransactionCsv(sales, saleItems, branches);
-              const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = `Transaction_History_Master_Log_${new Date().toISOString().slice(0, 10)}.csv`;
-              a.click();
-              URL.revokeObjectURL(url);
-              showToastMsg("Exported Master Transaction History CSV", "success");
-            }}
-            className="px-3 py-1.5 bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary text-[10px] font-extrabold uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <Download className="h-3 w-3" />
-            <span>Export CSV</span>
-          </button>
+          {/* Outflows & Deductions */}
+          <div className="bg-m3-surface-lowest border border-rose-500/20 rounded-2xl p-4 flex flex-col justify-between hover:border-rose-500/40 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant">Total Deductions</span>
+              <span className="text-[9.5px] font-mono bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25 px-2 py-0.5 rounded-full font-bold uppercase">
+                OUTFLOW (−)
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 my-2.5">
+              <div className="p-2 rounded-xl bg-m3-surface-low border border-m3-outline-variant/10">
+                <span className="text-[9px] font-bold text-m3-on-surface-variant uppercase block">COGS</span>
+                <span className="font-mono font-bold text-rose-600 dark:text-rose-400 text-xs mt-0.5 block">
+                  ₱{metrics.cogs.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </span>
+              </div>
+              <div className="p-2 rounded-xl bg-m3-surface-low border border-m3-outline-variant/10">
+                <span className="text-[9px] font-bold text-m3-on-surface-variant uppercase block">OpEx</span>
+                <span className="font-mono font-bold text-rose-600 dark:text-rose-400 text-xs mt-0.5 block">
+                  ₱{metrics.opex.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </span>
+              </div>
+              <div className="p-2 rounded-xl bg-m3-surface-low border border-m3-outline-variant/10">
+                <span className="text-[9px] font-bold text-m3-on-surface-variant uppercase block">Shrink</span>
+                <span className="font-mono font-bold text-rose-600 dark:text-rose-400 text-xs mt-0.5 block">
+                  ₱{metrics.shrinkage.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </span>
+              </div>
+            </div>
+            <div className="text-[10px] text-m3-on-surface-variant pt-2 border-t border-m3-outline-variant/10 flex items-center justify-between font-mono font-extrabold">
+              <span className="uppercase text-[9px] text-m3-on-surface-variant font-sans">Sum Outflows</span>
+              <span>₱{(metrics.cogs + metrics.opex + metrics.shrinkage).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+            </div>
+          </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              downloadWindowsLauncherScript();
-              showToastMsg("Downloaded TilePoint Windows Launcher (.cmd)", "info");
-            }}
-            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <Terminal className="h-3 w-3" />
-            <span>Windows Launcher (.cmd)</span>
-          </button>
+          {/* Net Profit Result */}
+          <div className={`bg-m3-surface-lowest border rounded-2xl p-4 flex flex-col justify-between transition-colors ${
+            metrics.netProfit >= 0 ? "border-emerald-500/30 text-emerald-700 dark:text-emerald-300" : "border-rose-500/30 text-rose-700 dark:text-rose-300"
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant">Net Earnings</span>
+              <span className={`text-[9.5px] font-mono px-2 py-0.5 rounded-full font-bold uppercase border ${
+                metrics.netProfit >= 0 ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400" : "bg-rose-500/10 border-rose-500/25 text-rose-600 dark:text-rose-400"
+              }`}>
+                {metrics.netProfit >= 0 ? "SURPLUS" : "DEFICIT"}
+              </span>
+            </div>
+            <div className="my-3">
+              <div className="text-2xl font-black font-mono tracking-tight">
+                ₱{metrics.netProfit.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </div>
+              <div className="mt-1 flex items-center gap-1.5 text-xs font-mono font-bold text-m3-on-surface">
+                {metrics.netProfit >= 0 ? (
+                  <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                ) : (
+                  <TrendingDown className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
+                )}
+                <span>Net Margin: {metrics.netMarginPercent.toFixed(1)}%</span>
+              </div>
+            </div>
+            <div className="text-[10px] text-m3-on-surface-variant pt-2 border-t border-m3-outline-variant/10 flex items-center gap-1.5 font-mono">
+              <span className={`h-1.5 w-1.5 rounded-full ${metrics.netProfit >= 0 ? "bg-emerald-500" : "bg-rose-500"} shrink-0`} />
+              <span>Return on Enterprise Capital</span>
+            </div>
+          </div>
         </div>
 
-        {csvSyncStatus && (
-          <div className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 p-1.5 rounded border border-emerald-500/30">
-            {csvSyncStatus}
+        {/* Revenue Allocation Ratios Progress Bar */}
+        {metrics.grossRevenue > 0 && (
+          <div className="space-y-2 pt-2 border-t border-m3-outline-variant/15">
+            <span className="text-[10px] text-m3-on-surface-variant font-black uppercase tracking-wider font-mono">
+              Gross Revenue Allocation Breakdowns
+            </span>
+            <div className="w-full h-4.5 rounded-xl bg-m3-surface-lowest flex overflow-hidden shadow-inner text-[9px] font-black font-mono text-white text-center border border-m3-outline-variant/20">
+              <div
+                style={{ width: `${(metrics.cogs / metrics.grossRevenue) * 100}%` }}
+                className="bg-amber-600/90 flex items-center justify-center min-w-[12px] transition-all"
+                title={`COGS: ${((metrics.cogs / metrics.grossRevenue) * 100).toFixed(1)}%`}
+              >
+                {((metrics.cogs / metrics.grossRevenue) * 100) >= 12 && `COGS (${((metrics.cogs / metrics.grossRevenue) * 100).toFixed(0)}%)`}
+              </div>
+              <div
+                style={{ width: `${(metrics.opex / metrics.grossRevenue) * 100}%` }}
+                className="bg-rose-600/90 flex items-center justify-center min-w-[12px] transition-all"
+                title={`OpEx: ${((metrics.opex / metrics.grossRevenue) * 100).toFixed(1)}%`}
+              >
+                {((metrics.opex / metrics.grossRevenue) * 100) >= 12 && `OpEx (${((metrics.opex / metrics.grossRevenue) * 100).toFixed(0)}%)`}
+              </div>
+              <div
+                style={{ width: `${(metrics.shrinkage / metrics.grossRevenue) * 100}%` }}
+                className="bg-red-700/95 flex items-center justify-center min-w-[12px] transition-all"
+                title={`Loss: ${((metrics.shrinkage / metrics.grossRevenue) * 100).toFixed(1)}%`}
+              >
+                {((metrics.shrinkage / metrics.grossRevenue) * 100) >= 12 && `Loss (${((metrics.shrinkage / metrics.grossRevenue) * 100).toFixed(0)}%)`}
+              </div>
+              <div
+                style={{ width: `${Math.max(0, (metrics.netProfit / metrics.grossRevenue) * 100)}%` }}
+                className="bg-emerald-600/90 flex items-center justify-center min-w-[12px] transition-all"
+                title={`Net Profit: ${((metrics.netProfit / metrics.grossRevenue) * 100).toFixed(1)}%`}
+              >
+                {((metrics.netProfit / metrics.grossRevenue) * 100) >= 12 && `Margin (${((metrics.netProfit / metrics.grossRevenue) * 100).toFixed(0)}%)`}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-m3-on-surface-variant font-medium pt-0.5 justify-center">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-amber-600/90 shrink-0" /> COGS Base ({((metrics.cogs / metrics.grossRevenue) * 100).toFixed(1)}%)
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-rose-600/90 shrink-0" /> OpEx ({((metrics.opex / metrics.grossRevenue) * 100).toFixed(1)}%)
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-red-700/95 shrink-0" /> Loss/Shrink ({((metrics.shrinkage / metrics.grossRevenue) * 100).toFixed(1)}%)
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-600/90 shrink-0" /> Net Surplus ({((metrics.netProfit / metrics.grossRevenue) * 100).toFixed(1)}%)
+              </span>
+            </div>
           </div>
         )}
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-zinc-400" />
-        <input
-          type="text"
-          placeholder="Filter logs by Invoice #, Cashier, Customer, Branch..."
-          value={csvSearchQuery}
-          onChange={(e) => setCsvSearchQuery(e.target.value)}
-          className="w-full bg-zinc-100 dark:bg-zinc-950/50 border border-m3-outline-variant/30 text-xs pl-8 pr-3 py-1.5 rounded-xl text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary"
+      {/* 2. PROFIT ANALYTICS TIMELINE & GRAPH */}
+      <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[24px] p-2 shadow-sm">
+        <ProfitAnalytics
+          darkMode={darkMode}
+          selectedBranchId={selectedBranchId}
+          setSelectedBranchId={setSelectedBranchId}
+          getBranchName={getBranchName}
+          showToastMsg={showToastMsg}
         />
       </div>
 
-      <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
-        {(() => {
-          const sorted = [...sales]
-            .filter((s) => !s.isDeleted)
-            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-
-          const filtered = sorted.filter((s) => {
-            if (!csvSearchQuery.trim()) return true;
-            const q = csvSearchQuery.toLowerCase();
-            return (
-              (s.saleNumber && s.saleNumber.toLowerCase().includes(q)) ||
-              (s.cashierName && s.cashierName.toLowerCase().includes(q)) ||
-              (s.customerName && s.customerName.toLowerCase().includes(q)) ||
-              (s.paymentMethod && s.paymentMethod.toLowerCase().includes(q))
-            );
-          });
-
-          if (filtered.length === 0) {
-            return (
-              <p className="text-center py-6 text-zinc-500 dark:text-zinc-400 text-xs italic">
-                No transaction logs match search criteria.
-              </p>
-            );
-          }
-
-          return filtered.slice(-15).reverse().map((s) => {
-            const dt = new Date(s.createdAt);
-            const timeFormatted = !isNaN(dt.getTime())
-              ? dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
-              : s.createdAt;
-            const dateFormatted = !isNaN(dt.getTime())
-              ? dt.toLocaleDateString()
-              : s.createdAt.slice(0, 10);
-
-            return (
-              <div
-                key={s.id}
-                className="p-2.5 bg-zinc-100 dark:bg-zinc-950/30 border border-m3-outline-variant/15 rounded-xl flex items-center justify-between text-xs hover:border-m3-primary/30 transition-all"
+      {/* 3. MULTI-BRANCH COMPARISON & OPERATIONAL AUDIT GRID */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Left Column (7 cols): Branch Leaderboard & Landing Cost Multipliers */}
+        <div className="lg:col-span-7 space-y-6">
+          {/* Branch Leaderboard */}
+          <div className="p-5 sm:p-6 bg-m3-surface-low border border-m3-outline-variant/30 shadow-sm rounded-[24px] space-y-4">
+            <div className="flex items-center justify-between border-b border-m3-outline-variant/15 pb-3">
+              <div className="flex items-center gap-2">
+                <Building className="h-4.5 w-4.5 text-m3-primary" />
+                <h3 className="text-xs font-black uppercase tracking-wider text-m3-on-surface">
+                  Branch Profitability Matrix
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedBranchId("all")}
+                className={`text-[10px] font-mono px-2.5 py-1 rounded-lg border font-bold cursor-pointer transition-all flex items-center gap-1.5 ${
+                  selectedBranchId === "all"
+                    ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/40 shadow-sm"
+                    : "bg-m3-surface-lowest text-m3-on-surface-variant border-m3-outline-variant/30 hover:bg-m3-primary/10"
+                }`}
               >
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-black text-m3-primary">{s.saleNumber || s.id}</span>
-                    <span className="text-[10px] font-mono bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-1.5 py-0.2 rounded">
-                      {timeFormatted} ({dateFormatted})
-                    </span>
+                <Layers className="h-3 w-3" />
+                <span>Consolidated All</span>
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-m3-outline-variant/20 text-m3-on-surface-variant uppercase tracking-wider font-extrabold text-[10px]">
+                    <th className="py-2">Branch Profile</th>
+                    <th className="py-2 text-right">Gross Rev</th>
+                    <th className="py-2 text-right">COGS</th>
+                    <th className="py-2 text-right">OpEx</th>
+                    <th className="py-2 text-right">System Loss</th>
+                    <th className="py-2 text-right">Net Profit</th>
+                    <th className="py-2 text-right pr-1">Margin</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-m3-outline-variant/10">
+                  {/* Consolidated Enterprise Row */}
+                  <tr
+                    className={`transition-colors cursor-pointer border-b-2 border-m3-outline-variant/25 ${
+                      selectedBranchId === "all"
+                        ? "bg-m3-primary/10 font-black text-m3-primary"
+                        : "hover:bg-m3-primary/5 bg-m3-surface-lowest/50 font-bold text-m3-on-surface"
+                    }`}
+                    onClick={() => setSelectedBranchId("all")}
+                  >
+                    <td className="py-2.5 font-extrabold flex items-center gap-1.5">
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-wider">
+                        ALL
+                      </span>
+                      <span className="truncate">{consolidatedSummary.name}</span>
+                    </td>
+                    <td className="py-2.5 text-right font-mono font-bold">₱{consolidatedSummary.gross.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                    <td className="py-2.5 text-right font-mono text-m3-on-surface-variant">₱{consolidatedSummary.cogs.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                    <td className="py-2.5 text-right font-mono text-m3-on-surface-variant">₱{consolidatedSummary.opex.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                    <td className="py-2.5 text-right font-mono text-m3-on-surface-variant">₱{consolidatedSummary.loss.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                    <td className={`py-2.5 text-right font-mono font-black ${consolidatedSummary.net >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                      ₱{consolidatedSummary.net.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </td>
+                    <td className={`py-2.5 text-right pr-1 font-mono font-black ${consolidatedSummary.margin >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                      {consolidatedSummary.margin.toFixed(1)}%
+                    </td>
+                  </tr>
+
+                  {branchLeaderboard.map((item, index) => {
+                    const rankBadge = index === 0 ? "1st" : index === 1 ? "2nd" : index === 2 ? "3rd" : `#${index + 1}`;
+                    return (
+                      <tr 
+                        key={item.id} 
+                        className={`hover:bg-m3-primary/5 transition-colors cursor-pointer ${
+                          selectedBranchId === item.id ? "bg-m3-primary/10 font-extrabold text-m3-primary" : ""
+                        }`}
+                        onClick={() => setSelectedBranchId(selectedBranchId === item.id ? "all" : item.id)}
+                      >
+                        <td className="py-2.5 font-semibold flex items-center gap-1.5">
+                          <span className="text-[10px] font-mono text-m3-on-surface-variant">{rankBadge}</span>
+                          <span className="truncate">{item.name}</span>
+                        </td>
+                        <td className="py-2.5 text-right font-mono">₱{item.gross.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                        <td className="py-2.5 text-right font-mono text-m3-on-surface-variant">₱{item.cogs.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                        <td className="py-2.5 text-right font-mono text-m3-on-surface-variant">₱{item.opex.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                        <td className="py-2.5 text-right font-mono text-m3-on-surface-variant">₱{item.loss.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                        <td className={`py-2.5 text-right font-mono font-black ${item.net >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                          ₱{item.net.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </td>
+                        <td className={`py-2.5 text-right pr-1 font-mono font-black ${item.margin >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                          {item.margin.toFixed(1)}%
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {branchLeaderboard.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="text-center py-6 text-xs text-m3-on-surface-variant">No branch records available.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <p className="text-[10px] text-m3-on-surface-variant italic pt-2 border-t border-m3-outline-variant/10 text-center font-sans">
+              Click any branch row or Consolidated to isolate analytics for that location.
+            </p>
+          </div>
+
+          {/* Landing Cost Multipliers Panel */}
+          <div className="p-5 sm:p-6 bg-m3-surface-low border border-m3-outline-variant/30 shadow-sm rounded-[24px] space-y-4">
+            <div className="flex items-center gap-2 border-b border-m3-outline-variant/15 pb-3">
+              <Sliders className="h-4.5 w-4.5 text-m3-primary" />
+              <h3 className="text-xs font-black uppercase tracking-wider text-m3-on-surface">
+                Branch Landing Cost Multipliers
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-64 overflow-y-auto pr-1">
+              {branches.filter((b) => !b.isDeleted).map((b) => {
+                const currentModifier = branchLandingModifiers[b.id] ?? 2.5;
+                const isEditing = editingBranchId === b.id;
+
+                return (
+                  <div key={b.id} className="p-3 rounded-xl bg-m3-surface-lowest border border-m3-outline-variant/20 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-m3-on-surface truncate">{b.name}</span>
+                      <span className="text-[10.5px] font-mono font-black text-amber-600 dark:text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md">
+                        {currentModifier}%
+                      </span>
+                    </div>
+
+                    {isEditing ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="100"
+                          value={editingValue ?? ''}
+                          onChange={(e) => setEditingValue(e.target.value)}
+                          className="w-full bg-m3-surface-low border border-m3-outline-variant/30 rounded-lg text-xs p-1.5 font-mono text-center text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-amber-500"
+                          placeholder="2.5"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleModifierSave(b.id)}
+                          className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 text-[10px] font-black uppercase rounded-lg cursor-pointer shrink-0 transition-colors"
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingBranchId(null)}
+                          className="px-2.5 py-1.5 bg-m3-surface-low text-m3-on-surface-variant text-[10px] font-bold uppercase rounded-lg cursor-pointer shrink-0 transition-colors"
+                        >
+                          Esc
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-end pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingBranchId(b.id);
+                            setEditingValue(currentModifier.toString());
+                          }}
+                          className="text-[9.5px] uppercase font-black tracking-wider text-m3-primary hover:underline cursor-pointer"
+                        >
+                          Configure
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <div className="text-[10px] text-zinc-500 dark:text-zinc-400 flex items-center gap-2 font-mono">
-                    <span>Cashier: {s.cashierName || "System"}</span>
-                    <span>•</span>
-                    <span>Customer: {s.customerName || "Walk-in"}</span>
-                    <span>•</span>
-                    <span className="uppercase font-bold text-zinc-600 dark:text-zinc-300">{s.paymentMethod}</span>
-                  </div>
+                );
+              })}
+            </div>
+
+            <div className="bg-amber-500/10 p-3 rounded-xl border border-amber-500/20 text-[10px] text-amber-800 dark:text-amber-300 leading-relaxed font-sans">
+              <strong>Cost Accounting Rule</strong>: COGS is calculated by taking the product base wholesale cost and adding this percentage. Always verify actual shipping receipts before overriding values.
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column (5 cols): Expenses Intake Form & Tabbed Audit Streams */}
+        <div className="lg:col-span-5 space-y-6">
+          {/* Record Branch Expenses Form */}
+          <div className="p-5 sm:p-6 bg-m3-surface-low border border-m3-outline-variant/30 shadow-sm rounded-[24px]">
+            <form onSubmit={handleAddExpense} className="space-y-3.5">
+              <div className="flex items-center gap-2 border-b border-m3-outline-variant/15 pb-3">
+                <Plus className="h-4.5 w-4.5 text-m3-primary" />
+                <h3 className="text-xs font-black uppercase tracking-wider text-m3-on-surface">
+                  Record Branch Expenses
+                </h3>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold uppercase text-m3-on-surface-variant">Target Showroom Branch</label>
+                <select
+                  value={expenseBranch ?? ''}
+                  onChange={(e) => setExpenseBranch(e.target.value)}
+                  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 text-xs px-3 py-2 rounded-xl text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary cursor-pointer font-medium"
+                >
+                  {branches.filter(b => !b.isDeleted).map(b => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold uppercase text-m3-on-surface-variant">Expense Category</label>
+                  <select
+                    value={expenseCategory ?? ''}
+                    onChange={(e) => setExpenseCategory(e.target.value)}
+                    className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 text-xs px-3 py-2 rounded-xl text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary cursor-pointer font-medium"
+                  >
+                    <option value="Utilities">Utilities (Power, Water)</option>
+                    <option value="Logistics">Logistics & Freight</option>
+                    <option value="Packaging">Packaging Boxes</option>
+                    <option value="Marketing">Local Marketing</option>
+                    <option value="Repairs">Repairs & Maintenance</option>
+                    <option value="Miscellaneous">Miscellaneous</option>
+                  </select>
                 </div>
 
-                <div className="text-right shrink-0 font-mono">
-                  <div className="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs">
-                    ₱{(s.grandTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </div>
-                  <div className="text-[9px] text-zinc-400">
-                    Disc: ₱{(s.discount || 0).toFixed(2)}
-                  </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold uppercase text-m3-on-surface-variant">Amount (PHP)</label>
+                  <input
+                    type="number"
+                    required
+                    placeholder="0.00"
+                    value={expenseAmount ?? ''}
+                    onChange={(e) => setExpenseAmount(e.target.value)}
+                    className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 text-xs px-3 py-2 rounded-xl text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary font-mono font-bold"
+                  />
                 </div>
               </div>
-            );
-          });
-        })()}
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold uppercase text-m3-on-surface-variant">Audit Notes / Itemized Details</label>
+                <textarea
+                  placeholder="E.g., June electricity bill, Meralco invoice #..."
+                  value={expenseNotes ?? ''}
+                  onChange={(e) => setExpenseNotes(e.target.value)}
+                  rows={2}
+                  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 text-xs px-3 py-2 rounded-xl text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-2.5 bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow transition-all flex items-center justify-center gap-1.5"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Expense Log</span>
+              </button>
+            </form>
+          </div>
+
+          {/* Detailed Tabbed Audit Streams */}
+          <div className="p-5 sm:p-6 bg-m3-surface-low border border-m3-outline-variant/30 shadow-sm rounded-[24px] space-y-4">
+            <div className="flex items-center justify-between border-b border-m3-outline-variant/15 pb-3">
+              <div className="flex bg-m3-surface-lowest p-1 rounded-xl border border-m3-outline-variant/20 text-xs font-bold gap-1 flex-wrap w-full">
+                <button
+                  type="button"
+                  onClick={() => setActiveLedgerTab("damage")}
+                  className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer text-[11px] ${
+                    activeLedgerTab === "damage" ? "bg-m3-primary text-m3-on-primary font-black shadow" : "text-m3-on-surface-variant hover:text-m3-on-surface"
+                  }`}
+                >
+                  Damage Write-offs
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveLedgerTab("shift-shortages")}
+                  className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer text-[11px] ${
+                    activeLedgerTab === "shift-shortages" ? "bg-m3-primary text-m3-on-primary font-black shadow" : "text-m3-on-surface-variant hover:text-m3-on-surface"
+                  }`}
+                >
+                  Shift Variance
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveLedgerTab("voids")}
+                  className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer text-[11px] ${
+                    activeLedgerTab === "voids" ? "bg-m3-primary text-m3-on-primary font-black shadow" : "text-m3-on-surface-variant hover:text-m3-on-surface"
+                  }`}
+                >
+                  Voids Log
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveLedgerTab("expenses")}
+                  className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer text-[11px] ${
+                    activeLedgerTab === "expenses" ? "bg-m3-primary text-m3-on-primary font-black shadow" : "text-m3-on-surface-variant hover:text-m3-on-surface"
+                  }`}
+                >
+                  Expenses List
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveLedgerTab("csv-logger")}
+                  className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer text-[11px] ${
+                    activeLedgerTab === "csv-logger" ? "bg-m3-primary text-m3-on-primary font-black shadow" : "text-m3-on-surface-variant hover:text-m3-on-surface"
+                  }`}
+                >
+                  CSV Logs
+                </button>
+              </div>
+            </div>
+
+            {/* TAB PANELS */}
+            <div className="max-h-72 overflow-y-auto pr-1">
+              {/* Tab: Damage logs write-offs */}
+              {activeLedgerTab === "damage" && (
+                <div className="space-y-2">
+                  {metrics.activeDamageLogs.map((log) => (
+                    <div key={log.id} className="p-3 bg-m3-surface-lowest border border-m3-outline-variant/15 rounded-xl flex items-center justify-between text-xs">
+                      <div>
+                        <div className="font-bold text-m3-on-surface">{log.productName}</div>
+                        <div className="text-[10px] text-m3-on-surface-variant mt-0.5 font-mono">
+                          Quantity: {log.quantity} {log.unitType || "Pieces"} • Reason: <span className="text-red-600 dark:text-red-400 font-bold uppercase">{log.reason || "BROKEN"}</span>
+                        </div>
+                      </div>
+                      <div className="font-mono text-rose-600 dark:text-rose-400 font-bold shrink-0">
+                        ₱{(() => {
+                          const prod = products.find((p) => p.id === log.productId);
+                          if (!prod) return "0";
+                          const costPerUnit = log.unitType === "Piece" ? (prod.costPrice / (prod.boxQuantity || 4)) : prod.costPrice;
+                          return Math.round(costPerUnit * log.quantity).toLocaleString();
+                        })()}
+                      </div>
+                    </div>
+                  ))}
+                  {metrics.activeDamageLogs.length === 0 && (
+                    <p className="text-center py-6 text-m3-on-surface-variant text-xs italic">No damage write-off entries logged under this branch.</p>
+                  )}
+                </div>
+              )}
+
+              {/* Tab: Shift shortages */}
+              {activeLedgerTab === "shift-shortages" && (
+                <div className="space-y-2">
+                  {metrics.activeShifts.map((sh) => {
+                    const isShortage = sh.variance && sh.variance < 0;
+                    const isOverage = sh.variance && sh.variance > 0;
+                    return (
+                      <div key={sh.id} className="p-3 bg-m3-surface-lowest border border-m3-outline-variant/15 rounded-xl flex items-center justify-between text-xs">
+                        <div>
+                          <div className="font-bold text-m3-on-surface">Cashier: {sh.cashierName}</div>
+                          <div className="text-[10px] text-m3-on-surface-variant mt-0.5 font-mono">
+                            Opened: {sh.openedAt && !isNaN(new Date(sh.openedAt).getTime()) ? new Date(sh.openedAt).toLocaleDateString() : "N/A"} • Branch: {getBranchName(sh.branchId)}
+                          </div>
+                        </div>
+                        <div className={`font-mono font-black ${isShortage ? "text-rose-600 dark:text-rose-400" : isOverage ? "text-emerald-600 dark:text-emerald-400" : "text-m3-on-surface-variant"}`}>
+                          {sh.variance !== undefined ? (
+                            sh.variance < 0 ? `-₱${Math.abs(sh.variance).toLocaleString()}` : `+₱${sh.variance.toLocaleString()}`
+                          ) : "₱0"}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {metrics.activeShifts.length === 0 && (
+                    <p className="text-center py-6 text-m3-on-surface-variant text-xs italic">No closed shift variance logs available.</p>
+                  )}
+                </div>
+              )}
+
+              {/* Tab: Voids */}
+              {activeLedgerTab === "voids" && (
+                <div className="space-y-2">
+                  {metrics.voidedSales.map((sale) => (
+                    <div key={sale.id} className="p-3 bg-m3-surface-lowest border border-m3-outline-variant/15 rounded-xl flex items-center justify-between text-xs">
+                      <div>
+                        <div className="font-bold text-m3-on-surface">Invoice: {sale.saleNumber}</div>
+                        <div className="text-[10px] text-m3-on-surface-variant mt-0.5 font-mono">
+                          Voided At: {sale.deletedAt && !isNaN(new Date(sale.deletedAt).getTime()) ? new Date(sale.deletedAt).toLocaleDateString() : "Unknown"} • Branch: {getBranchName(sale.branchId)}
+                        </div>
+                      </div>
+                      <div className="font-mono text-m3-on-surface font-black shrink-0">
+                        ₱{sale.grandTotal.toLocaleString()}
+                      </div>
+                    </div>
+                  ))}
+                  {metrics.voidedSales.length === 0 && (
+                    <p className="text-center py-6 text-m3-on-surface-variant text-xs italic">No supervisor-voided invoices logged.</p>
+                  )}
+                </div>
+              )}
+
+              {/* Tab: Expenses register */}
+              {activeLedgerTab === "expenses" && (
+                <div className="space-y-2">
+                  {metrics.combinedExpenses
+                    .slice()
+                    .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
+                    .map((exp) => (
+                      <div key={exp.id} className="p-3 bg-m3-surface-lowest border border-m3-outline-variant/15 rounded-xl flex items-center justify-between text-xs">
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-m3-on-surface">{exp.category}</span>
+                            <span className="text-[9px] bg-m3-surface-low text-m3-on-surface-variant px-1.5 py-0.2 rounded-md font-mono">{getBranchName(exp.branchId)}</span>
+                          </div>
+                          <p className="text-[10px] text-m3-on-surface-variant mt-0.5">{exp.notes || "Itemized expense receipt"}</p>
+                          <span className="text-[9.5px] text-m3-on-surface-variant block font-mono mt-0.5">Recorded: {exp.dateTime && !isNaN(new Date(exp.dateTime).getTime()) ? new Date(exp.dateTime).toLocaleDateString() : "Unknown"}</span>
+                        </div>
+                        <div className="flex items-center gap-2.5 shrink-0">
+                          <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">₱{exp.amount.toLocaleString()}</span>
+                          {!exp.isAutomated ? (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteExpense(exp.id)}
+                              className="text-m3-on-surface-variant hover:text-rose-500 cursor-pointer text-[10px] font-bold"
+                            >
+                              Delete
+                            </button>
+                          ) : (
+                            <span className="text-[10px] text-m3-on-surface-variant font-medium italic">Lock</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  {metrics.combinedExpenses.length === 0 && (
+                    <p className="text-center py-6 text-m3-on-surface-variant text-xs italic">No expenses recorded for this viewport assignment.</p>
+                  )}
+                </div>
+              )}
+
+              {/* Tab: CSV Master Logger */}
+              {activeLedgerTab === "csv-logger" && (
+                <div className="space-y-3">
+                  <div className="p-3 bg-m3-surface-lowest border border-m3-outline-variant/20 rounded-xl space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs font-black uppercase tracking-wider text-m3-primary">
+                        Transaction History Master CSV
+                      </span>
+                      <span className="text-[10px] font-mono bg-m3-surface-low text-m3-on-surface-variant px-2 py-0.5 rounded">
+                        Sorted Chronologically
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const csv = generateTransactionCsv(sales, saleItems, branches);
+                          const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = `Transaction_History_Master_Log_${new Date().toISOString().slice(0, 10)}.csv`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                          showToastMsg("Exported Master Transaction History CSV", "success");
+                        }}
+                        className="px-3 py-1.5 bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary text-[10px] font-extrabold uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <Download className="h-3 w-3" />
+                        <span>Export CSV</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          downloadWindowsLauncherScript();
+                          showToastMsg("Downloaded TilePoint Windows Launcher (.cmd)", "info");
+                        }}
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <Terminal className="h-3 w-3" />
+                        <span>Windows Launcher (.cmd)</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-m3-on-surface-variant" />
+                    <input
+                      type="text"
+                      placeholder="Filter logs by Invoice #, Cashier, Customer..."
+                      value={csvSearchQuery ?? ''}
+                      onChange={(e) => setCsvSearchQuery(e.target.value)}
+                      className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 text-xs pl-8 pr-3 py-1.5 rounded-xl text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+                    {(() => {
+                      const sorted = [...sales]
+                        .filter((s) => !s.isDeleted)
+                        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+                      const filtered = sorted.filter((s) => {
+                        if (!csvSearchQuery.trim()) return true;
+                        const q = csvSearchQuery.toLowerCase();
+                        return (
+                          (s.saleNumber && s.saleNumber.toLowerCase().includes(q)) ||
+                          (s.cashierName && s.cashierName.toLowerCase().includes(q)) ||
+                          (s.customerName && s.customerName.toLowerCase().includes(q)) ||
+                          (s.paymentMethod && s.paymentMethod.toLowerCase().includes(q))
+                        );
+                      });
+
+                      if (filtered.length === 0) {
+                        return (
+                          <p className="text-center py-6 text-m3-on-surface-variant text-xs italic">
+                            No transaction logs match search criteria.
+                          </p>
+                        );
+                      }
+
+                      return filtered.slice(-15).reverse().map((s) => {
+                        const dt = new Date(s.createdAt);
+                        const timeFormatted = !isNaN(dt.getTime())
+                          ? dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+                          : s.createdAt;
+                        const dateFormatted = !isNaN(dt.getTime())
+                          ? dt.toLocaleDateString()
+                          : s.createdAt.slice(0, 10);
+
+                        return (
+                          <div
+                            key={s.id}
+                            className="p-2.5 bg-m3-surface-lowest border border-m3-outline-variant/15 rounded-xl flex items-center justify-between text-xs hover:border-m3-primary/30 transition-all"
+                          >
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono font-black text-m3-primary">{s.saleNumber || s.id}</span>
+                                <span className="text-[10px] font-mono bg-m3-surface-low text-m3-on-surface-variant px-1.5 py-0.2 rounded">
+                                  {timeFormatted} ({dateFormatted})
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-m3-on-surface-variant flex items-center gap-1.5 font-mono">
+                                <span>Cashier: {s.cashierName || "System"}</span>
+                                <span>•</span>
+                                <span className="uppercase font-bold">{s.paymentMethod}</span>
+                              </div>
+                            </div>
+
+                            <div className="text-right shrink-0 font-mono">
+                              <div className="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs">
+                                ₱{(s.grandTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
-  )}
+  );
+}
 
- </div>
- </div>
-
- <div className="pt-3 border-t border-m3-outline-variant/10 flex items-center justify-between text-[10px] text-zinc-500 dark:text-zinc-400">
- <span>️ Authorized Access: RESTRICTED TO ADMIN ONLY</span>
- <div className="flex items-center gap-1">
- <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
- <span className="font-mono">Ledger Lock Active</span>
- </div>
- </div>
- </div>
-
- </div>
-
- </div>
- );
-};

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useDb } from '../context/DbContext';
+import { useDb, useDbProducts, useDbBranchStock } from '../context/DbContext';
 import { DamageLog, DamageCategory, DamageActionTaken, UserRole, Product } from '../types/db';
 import { isProductInBranch } from '../lib/branchUtils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -38,9 +38,9 @@ interface DamageRegisterModuleProps {
 }
 
 export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
+ const products = useDbProducts();
+ const branchStock = useDbBranchStock();
  const {
- products,
- branchStock,
  branches,
  damageLogs,
  createDamageLog,
@@ -164,32 +164,32 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  });
 
  // Calculate Aggregates
- const statsTotalShatteredBoxes = damageLogs
- .filter(l => !l.isDeleted && l.unitType === 'Box')
- .reduce((sum, curr) => sum + curr.quantity, 0);
+  const statsTotalShatteredBoxes = damageLogs
+    .filter(l => !l.isDeleted && l.unitType === 'Box')
+    .reduce((sum, curr) => sum + Number(curr.quantity || 0), 0);
 
- const statsTotalShatteredPieces = damageLogs
- .filter(l => !l.isDeleted && l.unitType === 'Piece')
- .reduce((sum, curr) => sum + curr.quantity, 0);
+  const statsTotalShatteredPieces = damageLogs
+    .filter(l => !l.isDeleted && l.unitType === 'Piece')
+    .reduce((sum, curr) => sum + Number(curr.quantity || 0), 0);
 
- // Financial impact calculation (estimate)
- const statsFinancialImpact = damageLogs
- .filter(l => !l.isDeleted)
- .reduce((sum, curr) => {
- const prod = products.find(p => p.id === curr.productId);
- if (!prod) return sum;
- // Calculate fractional cost if Pieces vs Box
- const costPerUnit = curr.unitType === 'Box' ? prod.costPrice : (prod.costPrice / (prod.boxQuantity || 4));
- return sum + (costPerUnit * curr.quantity);
- }, 0);
+  // Financial impact calculation (estimate)
+  const statsFinancialImpact = damageLogs
+    .filter(l => !l.isDeleted)
+    .reduce((sum, curr) => {
+      const prod = products.find(p => p.id === curr.productId);
+      if (!prod) return sum;
+      // Calculate fractional cost if Pieces vs Box
+      const costPerUnit = curr.unitType === 'Box' ? prod.costPrice : (prod.costPrice / (prod.boxQuantity || 4));
+      return sum + (costPerUnit * Number(curr.quantity || 0));
+    }, 0);
 
- // Count by Category
- const categorySummaryCount = damageLogs
- .filter(l => !l.isDeleted)
- .reduce((acc, curr) => {
- acc[curr.category] = (acc[curr.category] || 0) + curr.quantity;
- return acc;
- }, {} as Record<DamageCategory, number>);
+  // Count by Category
+  const categorySummaryCount = damageLogs
+    .filter(l => !l.isDeleted)
+    .reduce((acc, curr) => {
+      acc[curr.category] = (acc[curr.category] || 0) + Number(curr.quantity || 0);
+      return acc;
+    }, {} as Record<DamageCategory, number>);
 
  return (
  <div className="space-y-6 max-w-7xl mx-auto p-2" id="tilepoint-damage-logs-panel">
@@ -202,9 +202,6 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <AlertTriangle className="h-3 w-3" /> Materials Breakage Registry
  </div>
  <h2 className="text-xl md:text-2xl font-black text-m3-on-surface uppercase tracking-tight">Broken & BOA Damage Register</h2>
- <p className="text-xs text-m3-on-surface-variant max-w-xl font-medium">
- Standard logging platform to track tile fractures, warehouse drop damage, and shipping defects. Recorded breakage instantly balances branch stocks with proper double-entry ledger entries.
- </p>
  </div>
  <div className="flex relative z-10 shrink-0">
  <button
@@ -295,7 +292,6 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <AlertTriangle className="h-5 w-5 text-rose-500" />
  <div>
  <h3 className="text-sm font-black uppercase text-m3-on-surface">Log Material Damage/Breakage</h3>
- <p className="text-[10px] text-m3-on-surface-variant">Accurately select details below. Submission immediately deducts physical stock from active showrooms.</p>
  </div>
  </div>
 
@@ -310,7 +306,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <input
  type="text"
  placeholder="Type name, brand, or SKU..."
- value={productSearch}
+ value={productSearch ?? ''}
  onChange={(e) => setProductSearch(e.target.value)}
  className="w-full pl-9 pr-4 py-2 text-xs font-medium rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none focus:ring-1 focus:ring-rose-500"
  />
@@ -376,7 +372,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <label className="block text-[10px] uppercase font-black text-zinc-400 tracking-wider mb-1.5">2. Reporting Showroom Branch</label>
   {currentUser?.role === 'Admin' ? (
   <select
-  value={selectedBranchId}
+  value={selectedBranchId ?? ''}
   onChange={(e) => setSelectedBranchId(e.target.value)}
   className="w-full p-2.5 text-xs font-semibold rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none focus:ring-1 focus:ring-rose-500"
   >
@@ -398,7 +394,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <input
  type="number"
  min={1}
- value={quantity}
+ value={quantity ?? ''}
  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 0))}
  className="w-full p-2.5 text-xs font-black font-mono rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none focus:ring-1 focus:ring-rose-500"
  />
@@ -435,7 +431,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <div>
  <label className="block text-[10px] uppercase font-black text-zinc-400 tracking-wider mb-1.5">Breakage Incident Cause (Category)</label>
  <select
- value={category}
+ value={category ?? ''}
  onChange={(e) => setCategory(e.target.value as DamageCategory)}
  className="w-full p-2.5 text-xs font-semibold rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none focus:ring-1 focus:ring-rose-500"
  >
@@ -455,7 +451,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <div>
  <label className="block text-[10px] uppercase font-black text-zinc-400 tracking-wider mb-1.5">Action & Disposal Treatment</label>
  <select
- value={actionTaken}
+ value={actionTaken ?? ''}
  onChange={(e) => setActionTaken(e.target.value as DamageActionTaken)}
  className="w-full p-2.5 text-xs font-semibold rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none focus:ring-1 focus:ring-rose-500"
  >
@@ -470,7 +466,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <label className="block text-[10px] uppercase font-black text-zinc-400 tracking-wider mb-1.5">Incident Description & Audit Notes</label>
  <textarea
  placeholder="Input specific observations (e.g., 'Box arrived completely crushed on transit truck #3', 'Chipped corner discovered upon showroom sample rotation')..."
- value={notes}
+ value={notes ?? ''}
  onChange={(e) => setNotes(e.target.value)}
  rows={3}
  className="w-full p-2.5 text-xs font-medium rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none focus:ring-1 focus:ring-rose-500 placeholder:text-zinc-500"
@@ -512,7 +508,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <input
  type="text"
  placeholder="Product, SKU, notes..."
- value={searchTerm}
+ value={searchTerm ?? ''}
  onChange={(e) => setSearchTerm(e.target.value)}
  className="w-full pl-8 pr-3 py-1.5 text-xs font-medium rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none focus:ring-1 focus:ring-rose-500"
  />
@@ -523,7 +519,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <div className="space-y-1.5">
  <label className="text-[10px] uppercase font-black text-zinc-400 tracking-wider mb-1">Incident Category</label>
  <select
- value={categoryFilter}
+ value={categoryFilter ?? ''}
  onChange={(e) => setCategoryFilter(e.target.value)}
  className="w-full p-2 text-xs font-semibold rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none"
  >
@@ -540,7 +536,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <label className="text-[10px] uppercase font-black text-zinc-400 tracking-wider mb-1">Branch Store Location</label>
   {currentUser?.role === 'Admin' ? (
   <select
-  value={branchFilter}
+  value={branchFilter ?? ''}
   onChange={(e) => setBranchFilter(e.target.value)}
   className="w-full p-2 text-xs font-semibold rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none"
   >
@@ -639,7 +635,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  {log.branchName}
  </td>
  <td className="py-3 px-4 text-right">
- <span className="font-extrabold font-mono text-rose-500 text-sm">-{log.quantity}</span>
+ <span className="font-extrabold font-mono text-rose-500 text-sm">-{Math.abs(Number(log.quantity) || 0)}</span>
  <span className="text-[9px] uppercase block tracking-wider font-extrabold text-zinc-400 mt-0.5">{log.unitType}s</span>
  </td>
  <td className="py-3 px-4 whitespace-nowrap">

@@ -27,7 +27,7 @@ const REGISTRY_STORE_NAME = 'backup_registry';
 
 export interface RegisteredBackup {
  filename: string;
- category: 'Database_Backups' | 'Transmittals' | 'Sales_Reports' | 'Inventory_Exports';
+ category: 'Database_Backups' | 'Transmittals' | 'Sales_Reports' | 'Inventory_Exports' | 'Archives';
  contentType: string;
  content: string;
  timestamp: string;
@@ -211,7 +211,7 @@ export async function signTextPayload(text: string): Promise<string> {
  */
 export async function registerBackup(
  filename: string,
- category: 'Database_Backups' | 'Transmittals' | 'Sales_Reports' | 'Inventory_Exports',
+ category: 'Database_Backups' | 'Transmittals' | 'Sales_Reports' | 'Inventory_Exports' | 'Archives',
  contentType: string,
  content: string,
  seal: string
@@ -322,7 +322,7 @@ export async function verifyAndUnwrapBackup(rawText: string): Promise<any> {
 export async function saveFileToBackup(
  content: string,
  filename: string,
- category: 'Database_Backups' | 'Transmittals' | 'Sales_Reports' | 'Inventory_Exports',
+ category: 'Database_Backups' | 'Transmittals' | 'Sales_Reports' | 'Inventory_Exports' | 'Archives',
  contentType: string = 'application/json'
 ): Promise<{ success: boolean; method: 'native' | 'download'; path: string; error?: any }> {
  

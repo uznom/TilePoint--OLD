@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useDb } from '../context/DbContext';
+import { useDb, useDbProducts, useDbBranchStock } from '../context/DbContext';
 import { saveFileToBackup } from '../lib/fileBackupHelper';
 import { exportInventoryCatalogToXLSX, exportStockAlertsToXLSX } from '../lib/excelExportHelper';
 import { runPreflightValidation, PreflightReport } from '../lib/preflightValidator';
@@ -82,8 +82,9 @@ export interface BatchExpiration {
 }
 
 export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, initialSubTab, hideTabHeader, isCompactGlobal, onSubTabChange }) => {
+ const products = useDbProducts();
+ const branchStock = useDbBranchStock();
  const {
- products,
  suppliers,
  branches,
  sales,
@@ -97,7 +98,6 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  addAuditLog,
  movements,
  stockTransfers,
- branchStock,
  ledgerEntries,
  createStockTransfer,
  updateStockTransferStatus,
@@ -814,10 +814,10 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  const bSaleIds = new Set(bSaleItems.map(si => si.saleId));
  const bSales = sales.filter(s => bSaleIds.has(s.id) && s.branchId === b.id && !s.isDeleted);
 
- let lastSaleDate = new Date(p.createdAt || '2026-01-01');
+ let lastSaleDate = new Date(p.createdAt || new Date());
  if (bSales.length > 0) {
  const saleTimes = bSales.map(s => new Date(s.createdAt).getTime());
- const latestTime = Math.max(...saleTimes);
+ const latestTime = saleTimes.reduce((max, t) => t > max ? t : max, saleTimes[0] || 0);
  if (!isNaN(latestTime)) {
  lastSaleDate = new Date(latestTime);
  }
@@ -2845,7 +2845,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <div className="flex items-center gap-1.5 bg-m3-surface-lowest border border-emerald-500/30 px-3 py-1.5 rounded-xl shadow-sm">
  <span className="text-[9px] uppercase font-black tracking-widest text-emerald-600 font-mono">Branch:</span>
  <select
-  value={selectedViewBranchId}
+  value={selectedViewBranchId ?? ''}
   onChange={e => setSelectedViewBranchId(e.target.value)}
   className="bg-transparent text-xs text-emerald-500 focus:outline-none cursor-pointer transition-colors font-extrabold outline-none"
   >
@@ -2860,7 +2860,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <div className="flex items-center gap-1.5 bg-m3-surface-lowest border border-m3-outline-variant/25 px-3 py-1.5 rounded-xl shadow-sm">
  <span className="text-[9px] uppercase font-black tracking-widest text-m3-on-surface-variant font-mono">Category:</span>
  <select
- value={categoryFilter}
+ value={categoryFilter ?? ''}
  onChange={e => setCategoryFilter(e.target.value)}
  className="bg-transparent text-xs text-m3-on-surface focus:outline-none cursor-pointer transition-colors font-semibold outline-none"
  >
@@ -2878,7 +2878,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <div className="flex items-center gap-1.5 bg-m3-surface-lowest border border-m3-outline-variant/25 px-3 py-1.5 rounded-xl shadow-sm">
  <span className="text-[9px] uppercase font-black tracking-widest text-m3-on-surface-variant font-mono">Status:</span>
  <select
- value={statusFilter}
+ value={statusFilter ?? ''}
  onChange={e => setStatusFilter(e.target.value)}
  className="bg-transparent text-xs text-m3-on-surface focus:outline-none cursor-pointer transition-colors font-semibold outline-none"
  >
@@ -2895,7 +2895,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <ArrowUpDown className="h-3.5 w-3.5 text-m3-primary" />
  <span className="text-[9px] uppercase font-black tracking-widest text-m3-on-surface-variant font-mono">Sort By:</span>
  <select
- value={sortBy}
+ value={sortBy ?? ''}
  onChange={e => setSortBy(e.target.value as any)}
  className="bg-transparent text-xs text-m3-on-surface focus:outline-none cursor-pointer transition-colors font-semibold outline-none"
  >
@@ -3132,7 +3132,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  )}
  {p.hasExpiration && (() => {
  if (p.expirationDate) {
- const today = new Date("2026-07-18");
+ const today = new Date();
  const exp = new Date(p.expirationDate);
  const diffTime = exp.getTime() - today.getTime();
  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -3399,7 +3399,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   <input
   type="number"
   className="w-12 bg-m3-surface-lowest text-xs font-mono font-bold text-center border-b border-m3-outline-variant text-m3-on-surface py-0.5"
-  value={overrideLimit}
+  value={overrideLimit ?? ''}
   onChange={(e) => {
   const val = parseInt(e.target.value);
   updateBranchLowStockThreshold(p.id, b.id, isNaN(val) ? p.minimumStock : val);
@@ -3866,9 +3866,6 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
             <Activity className="h-5 w-5 text-m3-primary" />
             <span>Stock Adjustments & Audit Movement Logs</span>
           </h2>
-          <p className="text-xs text-m3-on-surface-variant font-medium mt-0.5">
-            Complete audit trail of all physical stock additions, inventory manual write-offs, damages, and reconciliations.
-          </p>
         </div>
         <button
           type="button"
@@ -3889,13 +3886,13 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
         <div className="bg-emerald-500/5 p-4 rounded-2xl border border-emerald-500/15 space-y-1">
           <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Stock Inflows (+)</span>
           <div className="text-xl font-black font-mono text-emerald-600 dark:text-emerald-400">
-            +{filteredMovements.filter(m => m.quantity > 0).reduce((acc, m) => acc + m.quantity, 0)} boxes
+            +{filteredMovements.filter(m => Number(m.quantity || 0) > 0).reduce((acc, m) => acc + Number(m.quantity || 0), 0)} boxes
           </div>
         </div>
         <div className="bg-rose-500/5 p-4 rounded-2xl border border-rose-500/15 space-y-1">
           <span className="text-[10px] font-black uppercase tracking-wider text-rose-600 dark:text-rose-400">Deductions & Outflows (-)</span>
           <div className="text-xl font-black font-mono text-rose-600 dark:text-rose-400">
-            {filteredMovements.filter(m => m.quantity < 0).reduce((acc, m) => acc + m.quantity, 0)} boxes
+            {filteredMovements.filter(m => Number(m.quantity || 0) < 0).reduce((acc, m) => acc + Number(m.quantity || 0), 0)} boxes
           </div>
         </div>
         <div className="bg-amber-500/5 p-4 rounded-2xl border border-amber-500/15 space-y-1">
@@ -3912,7 +3909,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-m3-on-surface-variant/60" />
           <input
             type="text"
-            value={movementSearch}
+            value={movementSearch ?? ''}
             onChange={(e) => setMovementSearch(e.target.value)}
             placeholder="Search log by notes, ref #, or operator..."
             className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-m3-surface-low border border-m3-outline-variant/30 focus:border-m3-primary focus:outline-none text-m3-on-surface"
@@ -3920,7 +3917,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <select
-            value={movementTypeFilter}
+            value={movementTypeFilter ?? ''}
             onChange={(e) => setMovementTypeFilter(e.target.value)}
             className="px-3 py-2 text-xs rounded-xl bg-m3-surface-low border border-m3-outline-variant/30 text-m3-on-surface font-bold focus:outline-none"
           >
@@ -3960,7 +3957,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                 const prod = products.find(p => p.id === m.productId);
                 const br = branches.find(b => b.id === (m.sourceBranchId || m.destinationBranchId));
                 const brName = br ? br.name : (m.sourceBranchId || 'Central');
-                const isPositive = m.quantity > 0;
+                const qtyVal = Number(m.quantity || 0);
+                const isPositive = qtyVal > 0;
 
                 return (
                   <tr key={m.id} className="hover:bg-m3-surface-low/40 transition-colors">
@@ -3985,7 +3983,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                       </span>
                     </td>
                     <td className={`py-3 px-4 text-right font-mono font-black ${isPositive ? 'text-emerald-500' : 'text-rose-500'}`}>
-                      {isPositive ? `+${m.quantity}` : m.quantity} units
+                      {isPositive ? `+${qtyVal}` : `${qtyVal}`} units
                     </td>
                     <td className="py-3 px-4 font-mono text-m3-on-surface-variant">
                       {m.referenceId || 'N/A'}
@@ -4017,9 +4015,6 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
             <ArrowRightLeft className="h-5 w-5 text-m3-primary" />
             <span>Inter-Branch Stock Transfers & Transmittals</span>
           </h2>
-          <p className="text-xs text-m3-on-surface-variant font-medium mt-0.5">
-            Manage multi-store inventory relocations, pending dispatch approvals, and branch receipt confirmations.
-          </p>
         </div>
         <button
           type="button"
@@ -4142,9 +4137,6 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
             <Sliders className="h-5 w-5 text-m3-primary" />
             <span>Branch Logistics Distribution & Ledger Heatmap</span>
           </h2>
-          <p className="text-xs text-m3-on-surface-variant font-medium mt-0.5">
-            Real-time visual map of inventory volume, cross-node movement intensity, and financial stock ledgers.
-          </p>
         </div>
         <button
           type="button"
@@ -4290,9 +4282,6 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
             <Database className="h-5 w-5 text-emerald-500" />
             <span>Migration & Import / Export Tool</span>
           </h2>
-          <p className="text-xs text-m3-on-surface-variant font-medium mt-0.5">
-            Import tile catalog CSV or JSON files into TilePoint database or download full system backups.
-          </p>
         </div>
 
         {/* Tab Switcher: Import vs Export */}
@@ -4335,7 +4324,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
             </div>
             {currentUser?.role === UserRole.ADMIN ? (
               <select
-                value={importTargetBranchId}
+                value={importTargetBranchId ?? ''}
                 onChange={e => setImportTargetBranchId(e.target.value)}
                 className="bg-m3-surface-lowest border border-m3-outline-variant/30 px-3 py-2 text-xs font-bold text-m3-on-surface rounded-xl focus:outline-none focus:border-m3-primary cursor-pointer max-w-md w-full sm:w-auto"
               >
@@ -4391,9 +4380,6 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   <ShieldCheck className="h-4 w-4 text-emerald-500" />
                   <span>Pre-Flight Schema & Validation Inspector</span>
                 </h3>
-                <p className="text-xs text-m3-on-surface-variant mt-0.5">
-                  Paste raw JSON array or CSV text, or check loaded dataset before committing to live inventory.
-                </p>
               </div>
               <button
                 type="button"
@@ -4409,7 +4395,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
             <div className="space-y-1">
               <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider block">Raw Data / Payload Preview</label>
               <textarea
-                value={rawImportText}
+                value={rawImportText ?? ''}
                 onChange={(e) => setRawImportText(e.target.value)}
                 rows={5}
                 placeholder="Paste raw JSON array or CSV text content here..."
@@ -4438,9 +4424,6 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                 <Database className="h-4 w-4 text-m3-primary" />
                 <span>Export Product Catalog (.JSON)</span>
               </h3>
-              <p className="text-xs text-m3-on-surface-variant leading-relaxed">
-                Download a complete, structured JSON backup of your active product listings and metadata suitable for cross-system database restores.
-              </p>
             </div>
             <div className="pt-2">
               <button
@@ -4480,9 +4463,6 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                 <Sliders className="h-4 w-4 text-emerald-500" />
                 <span>Export Inventory CSV Spreadsheet</span>
               </h3>
-              <p className="text-xs text-m3-on-surface-variant leading-relaxed">
-                Export standard UTF-8 encoded CSV files compatible with Microsoft Excel, Google Sheets, or third-party POS/ERP accounting tools.
-              </p>
             </div>
             <div className="pt-2">
               <button
@@ -4525,9 +4505,6 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                 <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
                 <span>Export Admin Excel Workbook (.XLSX)</span>
               </h3>
-              <p className="text-xs text-m3-on-surface-variant leading-relaxed">
-                Generate a formatted multi-sheet Microsoft Excel workbook containing complete catalog items, supplier rosters, and branch store configurations.
-              </p>
             </div>
             <div className="pt-2">
               <button
@@ -4559,9 +4536,6 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
             <DollarSign className="h-5 w-5 text-m3-primary" />
             <span>Branch MSRP & SRP Pricing Overrides</span>
           </h2>
-          <p className="text-xs text-m3-on-surface-variant font-medium mt-0.5">
-            Configure custom branch selling prices or localized retail price markups for specific store locations.
-          </p>
         </div>
       </div>
 
@@ -4870,7 +4844,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <div className="space-y-1">
  <label className="font-extrabold text-m3-on-surface-variant uppercase tracking-wider text-[10px]">Select Catalog Product</label>
  <select
- value={batchFormProductId}
+ value={batchFormProductId ?? ''}
  onChange={e => {
  const val = e.target.value;
  setBatchFormProductId(val);
@@ -4912,7 +4886,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="text"
  required
  placeholder="Batch / Lot number"
- value={batchFormNo}
+ value={batchFormNo ?? ''}
  onChange={e => setBatchFormNo(e.target.value)}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 focus:border-m3-primary px-3 py-2 text-xs focus:outline-none rounded-xl font-bold font-mono text-m3-on-surface"
  />
@@ -4923,7 +4897,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="number"
  required
  min={1}
- value={batchFormQty}
+ value={batchFormQty ?? ''}
  onChange={e => setBatchFormQty(parseInt(e.target.value) || 0)}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 focus:border-m3-primary px-3 py-2 text-xs focus:outline-none rounded-xl font-bold font-mono text-m3-on-surface"
  />
@@ -4937,7 +4911,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <input
  type="date"
  required
- value={batchFormMfgDate}
+ value={batchFormMfgDate ?? ''}
  onChange={e => setBatchFormMfgDate(e.target.value)}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 focus:border-m3-primary px-3 py-2 text-xs focus:outline-none rounded-xl font-bold font-mono text-m3-on-surface"
  />
@@ -4947,7 +4921,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <input
  type="date"
  required
- value={batchFormExpDate}
+ value={batchFormExpDate ?? ''}
  onChange={e => setBatchFormExpDate(e.target.value)}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 focus:border-m3-primary px-3 py-2 text-xs focus:outline-none rounded-xl font-bold font-mono text-m3-on-surface"
  />
@@ -4959,7 +4933,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <label className="font-extrabold text-m3-on-surface-variant uppercase tracking-wider text-[10px]">Branch Allocation</label>
  {currentUser?.role === 'Admin' ? (
  <select
- value={batchFormBranchId}
+ value={batchFormBranchId ?? ''}
  onChange={e => setBatchFormBranchId(e.target.value)}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 focus:border-m3-primary px-3 py-2 text-xs focus:outline-none rounded-xl font-bold text-m3-on-surface"
  required
@@ -4983,7 +4957,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <textarea
  rows={2}
  placeholder="Storage specifications, quality checks..."
- value={batchFormRemarks}
+ value={batchFormRemarks ?? ''}
  onChange={e => setBatchFormRemarks(e.target.value)}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 focus:border-m3-primary px-3 py-2 text-xs focus:outline-none rounded-xl font-medium text-m3-on-surface"
  />
@@ -5037,7 +5011,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <input
  type="text"
  required
- value={quickSupName}
+ value={quickSupName ?? ''}
  onChange={e => setQuickSupName(e.target.value)}
  placeholder="Supplier company name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold"
@@ -5049,7 +5023,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <label className="text-[9px] font-bold text-m3-on-surface-variant uppercase pl-0.5">Primary Contact Agent</label>
  <input
  type="text"
- value={quickSupContact}
+ value={quickSupContact ?? ''}
  onChange={e => setQuickSupContact(e.target.value)}
  placeholder="Contact agent name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
@@ -5060,7 +5034,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <label className="text-[9px] font-bold text-m3-on-surface-variant uppercase pl-0.5">Contact Phone</label>
  <input
  type="text"
- value={quickSupPhone}
+ value={quickSupPhone ?? ''}
  onChange={e => setQuickSupPhone(e.target.value)}
  placeholder="Phone number"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono"
@@ -5072,7 +5046,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <label className="text-[9px] font-bold text-m3-on-surface-variant uppercase pl-0.5">Corporate Email</label>
  <input
  type="email"
- value={quickSupEmail}
+ value={quickSupEmail ?? ''}
  onChange={e => setQuickSupEmail(e.target.value)}
  placeholder="Corporate email address"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
@@ -5083,7 +5057,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <label className="text-[9px] font-bold text-m3-on-surface-variant uppercase pl-0.5">Office Address</label>
  <input
  type="text"
- value={quickSupAddress}
+ value={quickSupAddress ?? ''}
  onChange={e => setQuickSupAddress(e.target.value)}
  placeholder="Street, City, Province"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
@@ -5143,7 +5117,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <input
  type="text"
  required
- value={productCode}
+ value={productCode ?? ''}
  onChange={e => setProductCode(e.target.value)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
  />
@@ -5154,7 +5128,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <input
  type="text"
  required
- value={sku}
+ value={sku ?? ''}
  onChange={e => setSku(e.target.value)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
  />
@@ -5182,7 +5156,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <input
  type="text"
  required
- value={barcode}
+ value={barcode ?? ''}
  onChange={e => setBarcode(e.target.value)}
  placeholder="e.g. 4801122334455"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
@@ -5204,14 +5178,14 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <input
  type="text"
  required
- value={category}
+ value={category ?? ''}
  onChange={e => setCategory(e.target.value)}
  placeholder="e.g. Electrical Tools, Solar Modules"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold"
  />
  ) : (
  <select
- value={category}
+ value={category ?? ''}
  onChange={e => {
  if (e.target.value === '__CUSTOM__') {
  setIsCustomCategoryInput(true);
@@ -5235,7 +5209,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <input
  type="text"
  required={!isRegisteringNewSupplier}
- value={brand}
+ value={brand ?? ''}
  onChange={e => setBrand(e.target.value)}
  placeholder="Brand name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold"
@@ -5246,7 +5220,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Tile Design Name (Optional)</label>
  <input
  type="text"
- value={designName}
+ value={designName ?? ''}
  onChange={e => setDesignName(e.target.value)}
  placeholder="Tile design name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold"
@@ -5258,7 +5232,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <input
  type="text"
  required
- value={productName}
+ value={productName ?? ''}
  onChange={e => setProductName(e.target.value)}
  placeholder="Product full descriptive name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans font-black text-sm"
@@ -5280,7 +5254,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <input
  type="text"
  required
- value={unit}
+ value={unit ?? ''}
  onChange={e => setUnit(e.target.value)}
  placeholder="Box / Piece / Bag"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold"
@@ -5291,7 +5265,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Dimensions</label>
  <input
  type="text"
- value={size}
+ value={size ?? ''}
  onChange={e => setSize(e.target.value)}
  placeholder="Dimensions (e.g. 60x60 cm)"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold font-mono"
@@ -5323,7 +5297,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="number"
  step="0.001"
  required
- value={coveragePerBox === 0 ? '' : coveragePerBox}
+ value={coveragePerBox === 0 ? '' : coveragePerBox ?? ''}
  placeholder="0.00"
  onChange={e => setCoveragePerBox(e.target.value === '' ? 0 : Number(e.target.value))}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
@@ -5358,7 +5332,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  {!isRegisteringNewSupplier ? (
  <div className="flex gap-2 items-center">
  <select
- value={supplierId}
+ value={supplierId ?? ''}
  onChange={e => setSupplierId(e.target.value)}
  className="flex-1 bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md cursor-pointer font-bold"
  >
@@ -5387,7 +5361,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <input
  type="text"
  required={isRegisteringNewSupplier}
- value={newSupplierName}
+ value={newSupplierName ?? ''}
  onChange={e => setNewSupplierName(e.target.value)}
  placeholder="Supplier company name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-2 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold"
@@ -5398,7 +5372,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <label className="text-[9px] font-bold text-m3-on-surface-variant uppercase pl-0.5">Primary Contact Agent</label>
  <input
  type="text"
- value={newSupplierContact}
+ value={newSupplierContact ?? ''}
  onChange={e => setNewSupplierContact(e.target.value)}
  placeholder="Contact agent name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-2 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
@@ -5411,7 +5385,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <label className="text-[9px] font-bold text-m3-on-surface-variant uppercase pl-0.5">Contact Phone</label>
  <input
  type="text"
- value={newSupplierPhone}
+ value={newSupplierPhone ?? ''}
  onChange={e => setNewSupplierPhone(e.target.value)}
  placeholder="Phone number"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-2 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono"
@@ -5422,7 +5396,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <label className="text-[9px] font-bold text-m3-on-surface-variant uppercase pl-0.5">Corporate Email</label>
  <input
  type="email"
- value={newSupplierEmail}
+ value={newSupplierEmail ?? ''}
  onChange={e => setNewSupplierEmail(e.target.value)}
  placeholder="Corporate email address"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-2 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
@@ -5434,7 +5408,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <label className="text-[9px] font-bold text-m3-on-surface-variant uppercase pl-0.5">Office Address</label>
  <input
  type="text"
- value={newSupplierAddress}
+ value={newSupplierAddress ?? ''}
  onChange={e => setNewSupplierAddress(e.target.value)}
  placeholder="Street, City, Province"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-2 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
@@ -5459,7 +5433,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="number"
  step="0.1"
  required
- value={costPrice === 0 ? '' : costPrice}
+ value={costPrice === 0 ? '' : costPrice ?? ''}
  placeholder="0.00"
  onChange={e => handleCostPriceChange(e.target.value === '' ? 0 : Number(e.target.value))}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
@@ -5472,7 +5446,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="number"
  step="0.1"
  required
- value={markupPercent === 0 ? '' : markupPercent}
+ value={markupPercent === 0 ? '' : markupPercent ?? ''}
  placeholder="0"
  onChange={e => handleMarkupChange(e.target.value === '' ? 0 : Number(e.target.value))}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
@@ -5485,7 +5459,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="number"
  step="0.1"
  required
- value={sellingPrice === 0 ? '' : sellingPrice}
+ value={sellingPrice === 0 ? '' : sellingPrice ?? ''}
  placeholder="0.00"
  onChange={e => handleSellingPriceChange(e.target.value === '' ? 0 : Number(e.target.value))}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-black text-m3-primary"
@@ -5495,7 +5469,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <div className="space-y-1 relative pl-0">
  <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">VAT Taxation Type</label>
  <select
- value={taxType}
+ value={taxType ?? ''}
  onChange={e => setTaxType(e.target.value)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold cursor-pointer"
  >
@@ -5529,7 +5503,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  </div>
  {currentUser?.role === UserRole.ADMIN ? (
  <select
- value={targetBranchId}
+ value={targetBranchId ?? ''}
  onChange={e => {
  setTargetBranchId(e.target.value);
  setOrigin(e.target.value);
@@ -5555,7 +5529,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <input
  type="number"
  required
- value={stockQuantity === 0 ? '' : stockQuantity}
+ value={stockQuantity === 0 ? '' : stockQuantity ?? ''}
  placeholder="0"
  onChange={e => setStockQuantity(e.target.value === '' ? 0 : Number(e.target.value))}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
@@ -5567,7 +5541,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <input
  type="number"
  required
- value={minimumStock === 0 ? '' : minimumStock}
+ value={minimumStock === 0 ? '' : minimumStock ?? ''}
  placeholder="0"
  onChange={e => setMinimumStock(e.target.value === '' ? 0 : Number(e.target.value))}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
@@ -5620,7 +5594,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <input
  type="date"
  required={hasExpiration}
- value={expirationDate}
+ value={expirationDate ?? ''}
  onChange={e => setExpirationDate(e.target.value)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-amber-500 px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold cursor-pointer"
  />
@@ -5641,7 +5615,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 select-none">Acquired From / Stock Source</label>
  <input
  type="text"
- value={origin}
+ value={origin ?? ''}
  onChange={e => setOrigin(e.target.value)}
  placeholder="Acquired from / Stock source"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans font-bold"
@@ -5732,7 +5706,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="number"
  required
  min={1}
- value={adjustVal}
+ value={adjustVal ?? ''}
  onChange={e => setAdjustVal(Math.max(1, Number(e.target.value)))}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
  />
@@ -5744,7 +5718,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <textarea
  required
  rows={3}
- value={adjustReason}
+ value={adjustReason ?? ''}
  onChange={e => setAdjustReason(e.target.value)}
  placeholder="Adjustment reason / notes"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans italic"
@@ -5797,7 +5771,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Select Catalogue Tile</label>
  <select
  required
- value={manualLedgerProductId}
+ value={manualLedgerProductId ?? ''}
  onChange={e => setManualLedgerProductId(e.target.value)}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface rounded-xl focus:outline-none transition-colors font-sans"
  >
@@ -5818,7 +5792,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  {currentUser?.role === 'Admin' ? (
  <select
  required
- value={manualLedgerBranchId}
+ value={manualLedgerBranchId ?? ''}
  onChange={e => setManualLedgerBranchId(e.target.value)}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface rounded-xl focus:outline-none transition-colors font-sans"
  >
@@ -5838,7 +5812,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Movement Ledger Type</label>
  <select
  required
- value={manualLedgerType}
+ value={manualLedgerType ?? ''}
  onChange={e => setManualLedgerType(e.target.value as any)}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface rounded-xl focus:outline-none transition-colors font-sans font-bold"
  >
@@ -5860,7 +5834,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="number"
  required
  min={1}
- value={manualLedgerQty}
+ value={manualLedgerQty ?? ''}
  onChange={e => setManualLedgerQty(Math.max(1, Number(e.target.value)))}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/35 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-xl font-mono font-bold"
  />
@@ -5876,7 +5850,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="text"
  required
  placeholder="Reference Code / Ticket ID"
- value={manualLedgerRefNo}
+ value={manualLedgerRefNo ?? ''}
  onChange={e => setManualLedgerRefNo(e.target.value)}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/35 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-xl font-mono font-bold"
  />
@@ -5890,7 +5864,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  required
  rows={3}
  placeholder="Describe why this entry is being manually added (e.g., Audit mismatch on Cebu yard, physical breakage during transport, showroom sample allocation...)"
- value={manualLedgerRemarks}
+ value={manualLedgerRemarks ?? ''}
  onChange={e => setManualLedgerRemarks(e.target.value)}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/35 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-xl font-sans italic"
  />
@@ -6154,7 +6128,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  </label>
  {currentUser?.role === UserRole.ADMIN ? (
  <select
- value={importTargetBranchId}
+ value={importTargetBranchId ?? ''}
  onChange={e => setImportTargetBranchId(e.target.value)}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 px-3 py-2 text-xs font-bold text-m3-on-surface rounded-xl focus:outline-none focus:border-m3-primary cursor-pointer"
  >
@@ -6175,7 +6149,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <div className="space-y-1">
  <label className="text-[10px] font-black uppercase text-m3-primary tracking-wider block">Paste JSON import array data block</label>
  <textarea
- value={rawImportText}
+ value={rawImportText ?? ''}
  onChange={(e) => setRawImportText(e.target.value)}
  rows={6}
  placeholder={`[
@@ -6307,7 +6281,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  Select Existing Destination Branch *
  </label>
  <select
- value={pb.selectedExistingBranchId}
+ value={pb.selectedExistingBranchId ?? ''}
  onChange={(e) => {
  const updated = [...pendingBranches];
  updated[idx].selectedExistingBranchId = e.target.value;
@@ -6335,7 +6309,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  </label>
  <input
  type="text"
- value={pb.id}
+ value={pb.id ?? ''}
  disabled
  className="w-full bg-m3-surface-lowest opacity-75 border-b-2 border-m3-outline-variant/20 p-2.5 focus:outline-none text-m3-on-surface-variant font-mono font-bold rounded-t cursor-not-allowed"
  title="Detected uniquely from the CSV records"
@@ -6348,7 +6322,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  </label>
  <input
  type="text"
- value={pb.name}
+ value={pb.name ?? ''}
  onChange={(e) => {
  const updated = [...pendingBranches];
  updated[idx].name = e.target.value;
@@ -6366,7 +6340,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  </label>
  <input
  type="text"
- value={pb.manager}
+ value={pb.manager ?? ''}
  onChange={(e) => {
  const updated = [...pendingBranches];
  updated[idx].manager = e.target.value;
@@ -6384,7 +6358,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  </label>
  <input
  type="text"
- value={pb.phone}
+ value={pb.phone ?? ''}
  onChange={(e) => {
  const updated = [...pendingBranches];
  updated[idx].phone = e.target.value;
@@ -6402,7 +6376,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  </label>
  <input
  type="text"
- value={pb.address}
+ value={pb.address ?? ''}
  onChange={(e) => {
  const updated = [...pendingBranches];
  updated[idx].address = e.target.value;
@@ -6439,7 +6413,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  type="number"
  min={1}
  max={50}
- value={pb.staffCount}
+ value={pb.staffCount ?? ''}
  onChange={(e) => {
  const updated = [...pendingBranches];
  updated[idx].staffCount = parseInt(e.target.value) || 3;
@@ -6495,7 +6469,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 block select-none">Dispensing Branch (Source)</label>
  <select
  disabled={currentUser.role !== 'Admin'}
- value={transferSource}
+ value={transferSource ?? ''}
  onChange={e => {
  const src = e.target.value;
  setTransferSource(src);
@@ -6518,7 +6492,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <div className="space-y-1">
  <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 block select-none">Receiving Branch (Destination)</label>
  <select
- value={transferDest}
+ value={transferDest ?? ''}
  onChange={e => setTransferDest(e.target.value)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary p-2.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans"
  >
@@ -6558,7 +6532,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <div className="flex-1 space-y-1">
  <span className="text-[9px] text-zinc-500 font-bold block">Select Ceramic Product</span>
  <select
- value={tempProductId}
+ value={tempProductId ?? ''}
  onChange={e => setTempProductId(e.target.value)}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/20 focus:border-m3-primary px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-lg font-sans"
  >
@@ -6578,7 +6552,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <input
  type="number"
  min={1}
- value={tempQty}
+ value={tempQty ?? ''}
  onChange={e => setTempQty(Math.max(1, parseInt(e.target.value) || 1))}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/20 focus:border-m3-primary px-3 py-1.5 text-xs text-m3-on-surface text-center focus:outline-none transition-colors rounded-lg font-mono"
  />
@@ -6659,7 +6633,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 block select-none">Justification Remarks / Transfer Motivation</label>
  <textarea
  rows={2}
- value={transferReasonInput}
+ value={transferReasonInput ?? ''}
  onChange={e => setTransferReasonInput(e.target.value)}
  placeholder="Justification remarks / transfer motivation"
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/20 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-sans"
@@ -6726,7 +6700,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Reporting Branch</label>
  <select
  required
- value={bulkDamageBranchId}
+ value={bulkDamageBranchId ?? ''}
  onChange={e => setBulkDamageBranchId(e.target.value)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary p-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans"
  >
@@ -6740,7 +6714,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <div className="space-y-1">
  <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Damage Category</label>
  <select
- value={bulkDamageCategory}
+ value={bulkDamageCategory ?? ''}
  onChange={e => setBulkDamageCategory(e.target.value)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary p-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans"
  >
@@ -6755,7 +6729,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <div className="space-y-1">
  <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Action / Treatment Taken</label>
  <select
- value={bulkDamageAction}
+ value={bulkDamageAction ?? ''}
  onChange={e => setBulkDamageAction(e.target.value)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary p-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans"
  >
@@ -6811,7 +6785,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <textarea
  required
  rows={2}
- value={bulkDamageNotes}
+ value={bulkDamageNotes ?? ''}
  onChange={e => setBulkDamageNotes(e.target.value)}
  placeholder="Describe the incident causing the stock breakages or suppliers delivery issue..."
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/20 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-xl font-sans"
@@ -6988,7 +6962,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                 <input
                   type="text"
                   placeholder="Filter by code, item name, SKU..."
-                  value={stockAlertSearch}
+                  value={stockAlertSearch ?? ''}
                   onChange={e => setStockAlertSearch(e.target.value)}
                   className="w-full pl-8 pr-8 py-1.5 bg-m3-surface-lowest border border-m3-outline-variant/30 text-m3-on-surface rounded-xl text-xs font-bold focus:outline-none focus:border-m3-primary"
                   title="Live search filter for alert items by tile code, product name, SKU, or brand"
@@ -7008,7 +6982,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] font-bold text-m3-on-surface-variant shrink-0 hidden md:inline">Category:</span>
               <select
-                value={stockAlertCategory}
+                value={stockAlertCategory ?? ''}
                 onChange={e => setStockAlertCategory(e.target.value)}
                 className="px-3 py-1.5 bg-m3-surface-lowest border border-m3-outline-variant/30 text-m3-on-surface rounded-xl text-xs font-bold focus:outline-none focus:border-m3-primary cursor-pointer"
                 title="Filter stock alerts by category"

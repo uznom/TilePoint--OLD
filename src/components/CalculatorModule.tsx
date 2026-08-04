@@ -4,9 +4,10 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useDb } from '../context/DbContext';
+import { useDb, useDbProducts, useDbBranchStock } from '../context/DbContext';
 import { Product } from '../types/db';
 import { isProductInBranch, getBranchStockQuantity } from '../lib/branchUtils';
+import { isTileProduct } from '../utils/productUtils';
 import {
  Calculator,
  Ruler,
@@ -29,7 +30,9 @@ interface CalculatorModuleProps {
 }
 
 export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, onApply }) => {
- const { products, branchStock, branches, currentUser } = useDb();
+ const products = useDbProducts();
+ const branchStock = useDbBranchStock();
+ const { branches, currentUser } = useDb();
 
  // Dimensional Inputs
  const [roomLength, setRoomLength] = useState('4.0');
@@ -61,50 +64,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  .filter((p) => {
  if (p.isDeleted) return false;
  if (!isProductInBranch(p, userBranchId, branchStock, branches)) return false;
-
- // Classify if it's actually a tile product
- const cat = (p.category || '').toLowerCase().trim();
- const name = (p.productName || '').toLowerCase().trim();
-
- // Explicit exclusions of non-tile categories and items
- if (
- cat.includes('trim') ||
- cat.includes('tool') ||
- cat.includes('grout') ||
- cat.includes('adhesive') ||
- cat.includes('spacer') ||
- cat.includes('sink') ||
- cat.includes('electrical') ||
- cat.includes('gloves') ||
- cat.includes('watercloset') ||
- cat.includes('nosing') ||
- cat.includes('accessories')
- ) {
- return false;
- }
-
- if (
- name.includes('trim') ||
- name.includes('adhesive') ||
- name.includes('grout') ||
- name.includes('spacer') ||
- name.includes('electrical') ||
- name.includes('gloves') ||
- name.includes('closet') ||
- name.includes('stairnosing') ||
- name.includes('sink')
- ) {
- return false;
- }
-
- // Must be a tile category or name keyword, or have a physical dimension size
- const tileCategories = ['tiles', 'granite', 'ceramic', 'terra cotta', 'porcelain tiles', 'porcelain', 'stone', 'marble', 'slate'];
- const isTileCategory = tileCategories.some(tCat => cat === tCat || cat.includes(tCat));
- const hasTileName = name.includes('tile') || name.includes('granite') || name.includes('ceramic') || name.includes('porcelain');
- const hasTileSize = !!p.size && /^\d+\s*x\s*\d+/i.test(p.size);
-
- const isTile = isTileCategory || hasTileName || hasTileSize;
- if (!isTile) return false;
+ if (!isTileProduct(p)) return false;
 
  // Apply search term filter if any
  const term = searchQuery.toLowerCase().trim();
@@ -249,7 +209,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  <input
  type="text"
  placeholder="Search tile inventory by name, code or category..."
- value={searchQuery}
+ value={searchQuery ?? ''}
  onFocus={() => setShowProductDropdown(true)}
  onChange={(e) => {
  setSearchQuery(e.target.value);
@@ -345,7 +305,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  type="number"
  step="0.01"
  min="0"
- value={roomLength}
+ value={roomLength ?? ''}
  onChange={(e) => setRoomLength(e.target.value)}
  className="w-full bg-m3-surface dark:bg-zinc-900/60 border border-m3-outline-variant/30 text-xs px-3.5 py-2.5 rounded-xl font-mono text-m3-on-surface dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-m3-primary text-center font-bold"
  placeholder="4.0"
@@ -357,7 +317,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  type="number"
  step="0.01"
  min="0"
- value={roomWidth}
+ value={roomWidth ?? ''}
  onChange={(e) => setRoomWidth(e.target.value)}
  className="w-full bg-m3-surface dark:bg-zinc-900/60 border border-m3-outline-variant/30 text-xs px-3.5 py-2.5 rounded-xl font-mono text-m3-on-surface dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-m3-primary text-center font-bold"
  placeholder="3.5"
@@ -397,7 +357,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  <input
  type="number"
  min="1"
- value={tileLength}
+ value={tileLength ?? ''}
  onChange={(e) => setTileLength(e.target.value)}
  className="w-full bg-m3-surface dark:bg-zinc-900/60 border border-m3-outline-variant/30 text-xs p-2 rounded-lg font-mono text-m3-on-surface dark:text-zinc-100 text-center focus:outline-none focus:ring-1 focus:ring-m3-primary font-bold"
  />
@@ -407,7 +367,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  <input
  type="number"
  min="1"
- value={tileWidth}
+ value={tileWidth ?? ''}
  onChange={(e) => setTileWidth(e.target.value)}
  className="w-full bg-m3-surface dark:bg-zinc-900/60 border border-m3-outline-variant/30 text-xs p-2 rounded-lg font-mono text-m3-on-surface dark:text-zinc-100 text-center focus:outline-none focus:ring-1 focus:ring-m3-primary font-bold"
  />
@@ -417,7 +377,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  <input
  type="number"
  min="1"
- value={boxQuantity}
+ value={boxQuantity ?? ''}
  onChange={(e) => setBoxQuantity(e.target.value)}
  className="w-full bg-m3-surface dark:bg-zinc-900/60 border border-m3-outline-variant/30 text-xs p-2 rounded-lg font-mono text-m3-on-surface dark:text-zinc-100 text-center focus:outline-none focus:ring-1 focus:ring-m3-primary font-bold"
  />

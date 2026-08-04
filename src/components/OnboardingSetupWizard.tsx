@@ -698,7 +698,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  <div className="space-y-1">
  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 pl-1 block">Or Paste Raw Clipboard text below:</span>
  <textarea
- value={rawImportText}
+ value={rawImportText ?? ''}
  onChange={(e) => setRawImportText(e.target.value)}
  rows={6}
  placeholder={`Product Name,Product Code,Cost Price,Selling Price,Quantity,Category\n"Legacy Premium Marble",L-PM-01,150,220,100,"Marble"\n"Eco Slate Tile",E-SL-02,80,130,150,"Porcelain"`}
@@ -757,7 +757,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  <input
  type="text"
  placeholder="Product name"
- value={newProdName}
+ value={newProdName ?? ''}
  onChange={e => setNewProdName(e.target.value)}
  className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl px-3 py-1.5 text-xs focus:outline-none text-slate-200 transition-colors"
  />
@@ -768,7 +768,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  <input
  type="text"
  placeholder="Product system code"
- value={newProdCode}
+ value={newProdCode ?? ''}
  onChange={e => setNewProdCode(e.target.value)}
  className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl px-3 py-1.5 text-xs focus:outline-none text-slate-200 transition-colors bg-transparent"
  />
@@ -779,7 +779,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  <input
  type="number"
  placeholder="150"
- value={newProdPrice}
+ value={newProdPrice ?? ''}
  onChange={e => setNewProdPrice(e.target.value)}
  className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl px-3 py-1.5 text-xs focus:outline-none text-slate-200 transition-colors bg-transparent"
  />
@@ -790,7 +790,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  <input
  type="number"
  placeholder="50"
- value={newProdQty}
+ value={newProdQty ?? ''}
  onChange={e => setNewProdQty(e.target.value)}
  className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl px-3 py-1.5 text-xs focus:outline-none text-slate-200 transition-colors bg-transparent"
  />
@@ -895,7 +895,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  <label className="text-[10px] font-bold uppercase text-slate-400 block pl-1">Manager In Charge *</label>
  <input
  type="text"
- value={pb.manager}
+ value={pb.manager ?? ''}
  onChange={(e) => {
  const updated = [...pendingBranches];
  updated[idx].manager = e.target.value;
@@ -911,7 +911,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  <label className="text-[10px] font-bold uppercase text-slate-400 block pl-1">Branch Contact Number *</label>
  <input
  type="text"
- value={pb.phone}
+ value={pb.phone ?? ''}
  onChange={(e) => {
  const updated = [...pendingBranches];
  updated[idx].phone = e.target.value;
@@ -927,7 +927,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  <label className="text-[10px] font-bold uppercase text-slate-400 block pl-1">Full Dispatch Address *</label>
  <input
  type="text"
- value={pb.address}
+ value={pb.address ?? ''}
  onChange={(e) => {
  const updated = [...pendingBranches];
  updated[idx].address = e.target.value;
@@ -964,7 +964,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  type="number"
  min={1}
  max={50}
- value={pb.staffCount}
+ value={pb.staffCount ?? ''}
  onChange={(e) => {
  const updated = [...pendingBranches];
  updated[idx].staffCount = parseInt(e.target.value) || 3;

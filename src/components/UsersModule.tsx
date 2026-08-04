@@ -609,7 +609,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  <input
  type="text"
  required
- value={fullName}
+ value={fullName ?? ''}
  onChange={e => setFullName(e.target.value)}
  placeholder="Enter full name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
@@ -621,7 +621,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  <input
  type="text"
  required
- value={username}
+ value={username ?? ''}
  onChange={e => setUsername(e.target.value)}
  placeholder="Enter username"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
@@ -633,7 +633,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  <input
  type="email"
  required
- value={email}
+ value={email ?? ''}
  onChange={e => setEmail(e.target.value)}
  placeholder="Enter email address"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
@@ -643,7 +643,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  <div className="space-y-1 relative">
  <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">Operational Role</label>
  <select
- value={role}
+ value={role ?? ''}
  onChange={e => setRole(e.target.value as UserRole)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md cursor-pointer"
  >
@@ -660,7 +660,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  <input
  type="text"
  maxLength={6}
- value={managerPin}
+ value={managerPin ?? ''}
  onChange={e => setManagerPin(e.target.value.replace(/\D/g, ''))}
  placeholder="Enter 4-6 digit PIN"
  className="w-full bg-m3-surface-lowest border-b-2 border-amber-550 focus:border-amber-500 px-3 py-2 text-xs text-m3-on-surface font-semibold focus:outline-none transition-colors rounded-t-md font-mono"
@@ -672,7 +672,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  <div className="space-y-1 relative">
  <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">Primary Branch Assignment</label>
  <select
- value={branchAssignmentId}
+ value={branchAssignmentId ?? ''}
  onChange={e => setBranchAssignmentId(e.target.value)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md cursor-pointer"
  >

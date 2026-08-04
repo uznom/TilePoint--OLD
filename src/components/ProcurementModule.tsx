@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { useDb } from "../context/DbContext";
+import { useDb, useDbProducts } from "../context/DbContext";
 import { generateEan13Barcode } from "../utils/barcodeGenerator";
 import { PurchaseOrder, UserRole } from "../types/db";
 import { useResponsivePageSize, TablePagination } from "./TablePagination";
@@ -41,10 +41,10 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  darkMode,
  defaultTab = "po",
 }) => {
+ const products = useDbProducts();
  const {
  purchaseOrders,
  poItems,
- products,
  suppliers,
  brands,
  branches,
@@ -1197,13 +1197,6 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  <h4 className="font-bold text-amber-600 dark:text-amber-500 font-mono text-xs uppercase tracking-wider">
  Pending &amp; Draft Requisitions pipeline
  </h4>
- <p className="text-m3-on-surface-variant/95 mt-0.5">
- Review procurement layouts and draft purchase order
- specifications assembled by store operators. Approving a
- pending draft dispatches the order to the active
- outsourcing deck, permitting receipt of carrier
- shipments.
- </p>
  </div>
  </div>
  )}
@@ -1215,13 +1208,6 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  <h4 className="font-bold text-emerald-600 dark:text-emerald-500 font-mono text-xs uppercase tracking-wider">
  Enterprise Supplier Outsourcing Deck
  </h4>
- <p className="text-m3-on-surface-variant/95 mt-0.5">
- This cockpit displays purchase orders actively sourced
- and outsourced to third-party manufacturers. Track
- logistics carrier transit statuses, print invoice
- records, or log arriving carrier cargo to automatically
- reconcile inventory volume.
- </p>
  </div>
  </div>
  )}
@@ -1645,10 +1631,6 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  <h2 className="text-base font-black text-m3-on-surface tracking-tight font-sans">
  Brand Sourcing &amp; Directory Deck
  </h2>
- <p className="text-xs text-m3-on-surface-variant">
- Configure manufacturer-to-supplier mappings to power automated
- PO consolidation.
- </p>
  </div>
  {allowedToModify && (
  <button
@@ -1761,9 +1743,6 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  <Settings2 className="h-4.5 w-4.5 text-m3-primary" />
  <span>Automated PO Consolidation Desk</span>
  </h3>
- <p className="text-[11px] text-m3-on-surface-variant/95 leading-relaxed mt-1">
- Products requiring restocking are consolidated here. Items under different brands but supplied by the same company will be automatically merged into a single Purchase Order.
- </p>
  </div>
 
  <div className="flex items-center gap-2 shrink-0">
@@ -1771,7 +1750,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  Receiving Branch:
  </label>
  <select
- value={selectedConsolidationBranchId}
+ value={selectedConsolidationBranchId ?? ''}
  onChange={(e) =>
  setSelectedConsolidationBranchId(e.target.value)
  }
@@ -1799,7 +1778,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  type="text"
  id="quick-add-product-select-search"
  placeholder=" Search product or brand name..."
- value={procurementProductSearch}
+ value={procurementProductSearch ?? ''}
  onFocus={() => setShowProcurementProductDropdown(true)}
  onChange={(e) => {
  setProcurementProductSearch(e.target.value);
@@ -1928,7 +1907,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  Supplier Payment Terms:
  </label>
  <select
- value={paymentTerm}
+ value={paymentTerm ?? ''}
  onChange={(e) => {
  const val = e.target.value;
  setPaymentTerm(val === "CUSTOM" ? "CUSTOM" : Number(val));
@@ -1951,7 +1930,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </label>
  <input
  type="date"
- value={payoutDueDate}
+ value={payoutDueDate ?? ''}
  disabled={paymentTerm !== "CUSTOM"}
  onChange={(e) => setPayoutDueDate(e.target.value)}
  className="w-full bg-m3-surface-lowest border border-m3-outline-variant/35 rounded-xl px-2.5 py-1.5 text-xs font-bold font-mono text-m3-on-surface focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer [color-scheme:dark]"
@@ -2011,7 +1990,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  <input
  type="number"
  min={1}
- value={cartItem.quantity}
+ value={cartItem.quantity ?? ''}
  onChange={(e) => {
  const val = Math.max(
  1,
@@ -2353,7 +2332,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  Vendor Supplier
  </label>
  <select
- value={selectedSupplierId}
+ value={selectedSupplierId ?? ''}
  onChange={(e) => setSelectedSupplierId(e.target.value)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md cursor-pointer"
  >
@@ -2371,7 +2350,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </label>
  {currentUser?.role === UserRole.ADMIN ? (
  <select
- value={selectedBranchId}
+ value={selectedBranchId ?? ''}
  onChange={(e) => setSelectedBranchId(e.target.value)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md cursor-pointer"
  >
@@ -2394,7 +2373,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  Supplier Payment Terms
  </label>
  <select
- value={paymentTerm}
+ value={paymentTerm ?? ''}
  onChange={(e) => {
  const val = e.target.value;
  setPaymentTerm(val === "CUSTOM" ? "CUSTOM" : Number(val));
@@ -2417,7 +2396,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </label>
  <input
  type="date"
- value={payoutDueDate}
+ value={payoutDueDate ?? ''}
  disabled={paymentTerm !== "CUSTOM"}
  onChange={(e) => setPayoutDueDate(e.target.value)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
@@ -2514,7 +2493,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  <input
  type="text"
  required
- value={manualProdName}
+ value={manualProdName ?? ''}
  onChange={(e) => setManualProdName(e.target.value)}
  placeholder="Product name"
  className="w-full bg-m3-surface border-b border-amber-500/30 px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 rounded-t-lg font-sans font-bold"
@@ -2526,7 +2505,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  Category
  </label>
  <select
- value={manualCategory}
+ value={manualCategory ?? ''}
  onChange={(e) => setManualCategory(e.target.value)}
  className="w-full bg-m3-surface border-b-2 border-amber-500/30 px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 rounded-t-lg font-sans font-bold cursor-pointer"
  >
@@ -2542,7 +2521,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </label>
  <input
  type="text"
- value={manualBrand}
+ value={manualBrand ?? ''}
  onChange={(e) => setManualBrand(e.target.value)}
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface font-mono focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg"
  />
@@ -2554,7 +2533,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </label>
  <input
  type="text"
- value={manualSize}
+ value={manualSize ?? ''}
  onChange={(e) => setManualSize(e.target.value)}
  placeholder="Dimensions (e.g. 60x60 cm)"
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-bold font-mono"
@@ -2567,7 +2546,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </label>
  <input
  type="number"
- value={manualCostPrice}
+ value={manualCostPrice ?? ''}
  onChange={(e) => setManualCostPrice(e.target.value)}
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-mono font-bold"
  />
@@ -2579,7 +2558,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </label>
  <input
  type="number"
- value={manualSellingPrice}
+ value={manualSellingPrice ?? ''}
  onChange={(e) => setManualSellingPrice(e.target.value)}
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-mono font-bold"
  />
@@ -2593,7 +2572,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </label>
  <input
  type="number"
- value={manualQtyRequested}
+ value={manualQtyRequested ?? ''}
  onChange={(e) => setManualQtyRequested(e.target.value)}
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-mono font-black"
  />
@@ -2605,7 +2584,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </label>
  <input
  type="text"
- value={manualOrigin}
+ value={manualOrigin ?? ''}
  onChange={(e) => setManualOrigin(e.target.value)}
  placeholder="Manufacturing origin"
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-sans font-bold"
@@ -2631,7 +2610,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  Product catalog Lookup
  </label>
  <select
- value={selectedProdId}
+ value={selectedProdId ?? ''}
  onChange={(e) => setSelectedProdId(e.target.value)}
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-md cursor-pointer"
  >
@@ -2651,7 +2630,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </label>
  <input
  type="number"
- value={qtyRequestedInput}
+ value={qtyRequestedInput ?? ''}
  onChange={(e) => setQtyRequestedInput(e.target.value)}
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors font-mono font-black rounded-t-md"
  />
@@ -2717,7 +2696,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </label>
  <input
  type="text"
- value={poNotes}
+ value={poNotes ?? ''}
  onChange={(e) => setPoNotes(e.target.value)}
  placeholder="Procurement notes"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
@@ -2732,7 +2711,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </label>
  <input
  type="text"
- value={templateNameInput}
+ value={templateNameInput ?? ''}
  onChange={(e) => setTemplateNameInput(e.target.value)}
  placeholder="Template name"
  className="w-full bg-m3-surface border border-m3-outline-variant px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-lg font-medium"
@@ -3000,7 +2979,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </label>
  <input
  type="date"
- value={receiveTermStartDate}
+ value={receiveTermStartDate ?? ''}
  onChange={(e) => {
  const newStart = e.target.value;
  setReceiveTermStartDate(newStart);
@@ -3021,7 +3000,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </label>
  <input
  type="date"
- value={receiveTermEndDate}
+ value={receiveTermEndDate ?? ''}
  onChange={(e) => {
  setReceiveTermEndDate(e.target.value);
  setReceiveTermsLength(0); // set to custom
@@ -3096,7 +3075,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </label>
  <input
  type="text"
- value={supName}
+ value={supName ?? ''}
  onChange={(e) => setSupName(e.target.value)}
  placeholder="Supplier company name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-bold"
@@ -3109,7 +3088,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </label>
  <input
  type="text"
- value={supContactPerson}
+ value={supContactPerson ?? ''}
  onChange={(e) => setSupContactPerson(e.target.value)}
  placeholder="Contact agent name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg"
@@ -3123,7 +3102,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </label>
  <input
  type="text"
- value={supPhone}
+ value={supPhone ?? ''}
  onChange={(e) => setSupPhone(e.target.value)}
  placeholder="Phone number"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-mono"
@@ -3136,7 +3115,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </label>
  <input
  type="email"
- value={supEmail}
+ value={supEmail ?? ''}
  onChange={(e) => setSupEmail(e.target.value)}
  placeholder="Corporate email address"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg"
@@ -3149,7 +3128,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  Physical HQ Address
  </label>
  <textarea
- value={supAddress}
+ value={supAddress ?? ''}
  onChange={(e) => setSupAddress(e.target.value)}
  placeholder="Street, City, Province"
  rows={2}
@@ -3256,7 +3235,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </label>
  <input
  type="text"
- value={brandName}
+ value={brandName ?? ''}
  onChange={(e) => setBrandName(e.target.value)}
  placeholder="Brand name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-bold"
@@ -3291,7 +3270,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  Authorized Supplier Partner
  </label>
  <select
- value={brandSupplierId}
+ value={brandSupplierId ?? ''}
  onChange={(e) => setBrandSupplierId(e.target.value)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-bold"
  >
@@ -3310,7 +3289,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  Description / Notes
  </label>
  <textarea
- value={brandDescription}
+ value={brandDescription ?? ''}
  onChange={(e) => setBrandDescription(e.target.value)}
  placeholder="Description / Notes"
  rows={2}

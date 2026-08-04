@@ -1,13 +1,14 @@
 @echo off
 :: =====================================================================
-:: TILEPOINT POS SYSTEM - AUTOMATED WINDOWS 11 INSTALLER & DEPLOYER
+:: TILEPOINT POS SYSTEM - AUTOMATED WINDOWS 10/11 INSTALLER & DEPLOYER
 :: =====================================================================
 :: This script automates Node.js dependency installation, 
+:: better-sqlite3 native add-on compilation & verification,
 :: local HTTPS certificate generation using mkcert, Windows Firewall setup, 
-:: environment file configuration, and background execution.
+:: environment file configuration, client production build, and background server execution.
 :: =====================================================================
 
-title TilePoint Local Server Installer
+title TilePoint Enterprise POS Server Installer
 color 0B
 cls
 
@@ -40,8 +41,8 @@ if %errorLevel% neq 0 (
     )
     echo [INFO] This installer requires Administrator privileges to:
     echo   1. Install missing prerequisites (Node.js, Git)
-    echo   2. Configure Windows Defender Firewall rules for Port 3000
-    echo   3. Setup trusted HTTPS certificates using mkcert
+    echo   2. Configure Windows Defender Firewall rules for Ports 3000 & 3306
+    echo   3. Setup trusted HTTPS certificates using mkcert in Windows Trust Store
     echo.
     echo Requesting Administrator elevation...
     powershell -Command "Start-Process -FilePath '%~f0' -ArgumentList '--elevated' -Verb RunAs"
@@ -49,7 +50,7 @@ if %errorLevel% neq 0 (
 )
 
 :StandardUserFlow
-echo [OK] Continuing with system checks...
+echo [OK] Administrator privileges confirmed or standard flow selected.
 echo Checking system prerequisites...
 echo ---------------------------------------------------------------------
 
@@ -103,25 +104,35 @@ if %errorlevel% neq 0 (
     pause
     exit /b
 )
-echo [OK] Node.js is ready: 
+echo [OK] Active Node.js runtime: 
 node -v
 echo.
 
-:: 2. Install Project Dependencies
+:: 1. Install Project Dependencies & Rebuild Native SQLite
 echo ---------------------------------------------------------------------
-echo STEP 1: Installing node packages...
+echo STEP 1: Installing dependencies & compiling better-sqlite3...
 echo ---------------------------------------------------------------------
 call npm install
 if %errorlevel% neq 0 (
     echo.
-    echo [WARNING] npm install reported warnings or errors. 
-    echo Continuing anyway, as cached packages may already be present.
+    echo [WARNING] npm install reported warnings. Continuing installation...
 ) else (
-    echo [OK] Package installation completed successfully!
+    echo [OK] Dependencies installed successfully!
 )
+
+echo Rebuilding better-sqlite3 C++ native add-on for current Node ABI...
+call npm rebuild better-sqlite3 >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [INFO] Native rebuild skipped or completed with prebuilts.
+) else (
+    echo [OK] better-sqlite3 compiled successfully!
+)
+
+:: Test better-sqlite3 native engine
+node -e "try { const Database = require('better-sqlite3'); const db = new Database(':memory:'); console.log('[OK] better-sqlite3 engine verified! SQLite version:', db.prepare('SELECT sqlite_version() AS v').get().v); } catch(e) { console.log('[!] SQLite Engine Warning:', e.message); }" 2>nul
 echo.
 
-:: Get local IP address using PowerShell (excluding WSL, VirtualBox, Docker, and disconnected adapters)
+:: 2. Get local IPv4 address
 for /f "usebackq tokens=*" %%a in (`powershell -NoProfile -Command "try { $adapters = Get-NetIPInterface -ConnectionState Connected -AddressFamily IPv4 -ErrorAction SilentlyContinue; if ($adapters) { $indexes = $adapters.InterfaceIndex; (Get-NetIPAddress -AddressFamily IPv4 -InterfaceIndex $indexes | Where-Object { $_.IPAddress -notlike '127*' -and $_.IPAddress -notlike '169.254*' -and $_.InterfaceAlias -notlike '*Loopback*' -and $_.InterfaceAlias -notlike '*WSL*' -and $_.InterfaceAlias -notlike '*VirtualBox*' -and $_.InterfaceAlias -notlike '*vEthernet*' -and $_.InterfaceAlias -notlike '*Docker*' } | Select-Object -ExpandProperty IPAddress -First 1) } else { (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127*' -and $_.IPAddress -notlike '169.254*' -and $_.InterfaceAlias -notlike '*Loopback*' } | Select-Object -ExpandProperty IPAddress -First 1) } } catch { (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127*' -and $_.IPAddress -notlike '169.254*' -and $_.InterfaceAlias -notlike '*Loopback*' } | Select-Object -ExpandProperty IPAddress -First 1) }"`) do set "LOCAL_IP=%%a"
 if "%LOCAL_IP%"=="" set "LOCAL_IP=127.0.0.1"
 
@@ -133,12 +144,12 @@ if not exist .env (
     echo Copying .env.example to .env...
     copy .env.example .env >nul
     
-    :: Inject auto-detected IP address into the newly created .env atomically without file locking
+    :: Inject auto-detected IP address into the newly created .env
     powershell -NoProfile -Command "$c = Get-Content .env; $c = $c -replace 'APP_URL=.*', 'APP_URL=https://%LOCAL_IP%:3000'; $c = $c -replace 'VITE_SECURITY_SECRET=.*', 'VITE_SECURITY_SECRET=\"TilePointSecPass_Auto_%RANDOM%%RANDOM%\"'; Set-Content -Path .env -Value $c -Encoding Ascii"
     
-    echo [OK] Created .env file and bound to your local IP address: %LOCAL_IP%
+    echo [OK] Created .env file and bound to local IP address: %LOCAL_IP%
 ) else (
-    echo [INFO] An existing .env file was found. Leaving it unmodified to protect your custom settings.
+    echo [INFO] An existing .env file was found. Preserving current custom configuration.
 )
 echo.
 
@@ -146,63 +157,64 @@ echo.
 echo ---------------------------------------------------------------------
 echo STEP 3: Generating fully-trusted local SSL Certificates with mkcert...
 echo ---------------------------------------------------------------------
-if exist key.pem (
-    del key.pem >nul 2>&1
-)
-if exist cert.pem (
-    del cert.pem >nul 2>&1
-)
+if exist key.pem del key.pem >nul 2>&1
+if exist cert.pem del cert.pem >nul 2>&1
 
-if not exist mkcert.exe (
-    echo Downloading mkcert for Windows (x64)...
-    curl -L -o mkcert.exe "https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-windows-amd64.exe"
-)
-
-if exist mkcert.exe (
-    for %%F in (mkcert.exe) do if %%~zF LSS 500000 (
-        echo [!] mkcert.exe download was incomplete or invalid. Cleaning up file...
-        del mkcert.exe >nul 2>&1
+set MKCERT_CMD=
+where mkcert >nul 2>&1
+if %errorlevel% equ 0 (
+    set "MKCERT_CMD=mkcert"
+) else (
+    if not exist mkcert.exe (
+        echo Downloading mkcert for Windows (x64)...
+        curl -L -o mkcert.exe "https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-windows-amd64.exe"
     )
+    if exist mkcert.exe (
+        for %%F in (mkcert.exe) do if %%~zF LSS 500000 (
+            echo [!] Downloaded mkcert binary invalid. Removing corrupted download...
+            del mkcert.exe >nul 2>&1
+        )
+    )
+    if exist mkcert.exe set "MKCERT_CMD=.\mkcert.exe"
 )
 
-if exist mkcert.exe (
-    echo Installing Local Certificate Authority to Windows Trust Store...
-    .\mkcert.exe -install
+if not "%MKCERT_CMD%"=="" (
+    echo Installing Local Certificate Authority to Windows Trust Store via %MKCERT_CMD%...
+    %MKCERT_CMD% -install
     
     echo Generating trusted certificates for localhost, 127.0.0.1, and %LOCAL_IP%...
-    .\mkcert.exe -key-file key.pem -cert-file cert.pem localhost 127.0.0.1 %LOCAL_IP%
+    %MKCERT_CMD% -key-file key.pem -cert-file cert.pem localhost 127.0.0.1 %LOCAL_IP%
     echo [OK] Trusted SSL Certificate files successfully generated (key.pem, cert.pem).
 ) else (
-    echo [WARNING] mkcert download unsuited or offline. Falling back to PowerShell certificate generator...
+    echo [WARNING] mkcert binary unavailable. Using native PowerShell certificate generator...
     powershell -ExecutionPolicy Bypass -File .\generate-certs.ps1
 )
 echo.
 
-:: 5. Open Windows Defender Firewall Port
+:: 5. Open Windows Defender Firewall Ports
 echo ---------------------------------------------------------------------
-echo STEP 4: Setting Windows Defender Firewall rules for Inbound Port 3000...
+echo STEP 4: Setting Windows Defender Firewall rules for Ports 3000 & 3306...
 echo ---------------------------------------------------------------------
-powershell -NoProfile -Command "try { Remove-NetFirewallRule -DisplayName 'TilePoint Server Port 3000' -ErrorAction SilentlyContinue; New-NetFirewallRule -DisplayName 'TilePoint Server Port 3000' -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow -ErrorAction SilentlyContinue } catch {}" >nul 2>&1
-echo [OK] Inbound firewall rule processed for TCP Port 3000.
+powershell -NoProfile -Command "try { Remove-NetFirewallRule -DisplayName 'TilePoint Server Port 3000' -ErrorAction SilentlyContinue; New-NetFirewallRule -DisplayName 'TilePoint Server Port 3000' -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow -ErrorAction SilentlyContinue; Remove-NetFirewallRule -DisplayName 'TilePoint MySQL Port 3306' -ErrorAction SilentlyContinue; New-NetFirewallRule -DisplayName 'TilePoint MySQL Port 3306' -Direction Inbound -LocalPort 3306 -Protocol TCP -Action Allow -ErrorAction SilentlyContinue } catch {}" >nul 2>&1
+echo [OK] Inbound firewall rules applied for TCP Ports 3000 (Server) & 3306 (Database).
 echo.
 
 :: 6. Build Client Application
 echo ---------------------------------------------------------------------
-echo STEP 5: Building Client Assets...
+echo STEP 5: Building Production Client Assets...
 echo ---------------------------------------------------------------------
 call npm run build
 if %errorlevel% neq 0 (
-    echo [WARNING] Asset build encountered errors. Checking dist folder...
+    echo [WARNING] Production asset build reported warnings. Checking output directory...
 ) else (
-    echo [OK] Assets built successfully inside dist/ folder.
+    echo [OK] Static client assets successfully compiled into dist/ folder.
 )
 echo.
 
 :: 7. Launch Background Server
 echo ---------------------------------------------------------------------
-echo STEP 6: Starting Server...
+echo STEP 6: Launching TilePoint Server under PM2...
 echo ---------------------------------------------------------------------
-:: Add standard Windows roaming npm path to current session path so global tools are instantly active
 set "PATH=%PATH%;%APPDATA%\npm"
 
 set HAS_PM2=0
@@ -211,18 +223,18 @@ if %errorlevel% equ 0 set HAS_PM2=1
 if exist "%APPDATA%\npm\pm2.cmd" set HAS_PM2=1
 
 if %HAS_PM2% equ 0 (
-    echo [INFO] PM2 process manager is not installed. Installing PM2 globally...
+    echo [INFO] Installing PM2 Process Manager globally...
     call npm install -g pm2
 )
 
-echo Starting background process via PM2...
+echo Starting background service via PM2...
 call pm2 delete tilepoint-hq-server >nul 2>&1
 call pm2 start server.js --name "tilepoint-hq-server"
 
-:: Fallback if PM2 is not active or fails
+:: Fallback if PM2 start fails
 if %errorlevel% neq 0 (
-    echo [WARNING] PM2 start failed. Launching Node server in a dedicated command window...
-    start "TilePoint ERP OS Server" cmd /k "node server.js"
+    echo [WARNING] PM2 start encountered issues. Launching Node server in dedicated process...
+    start "TilePoint Enterprise POS Server" cmd /k "node server.js"
 )
 
 echo.
@@ -230,36 +242,36 @@ echo =====================================================================
 echo                SUCCESSFUL DEPLOYMENT SUMMARY
 echo =====================================================================
 echo.
-echo  Your local server is up and running securely!
+echo  TilePoint Enterprise Server is active and accepting connections!
 echo.
-echo   * ADMINISTRATIVE CONSOLE (this PC) : https://localhost:3000
-echo   * MOBILE RETAIL DEVISE ACCESS      : https://%LOCAL_IP%:3000
+echo   * CENTRAL ADMIN CONSOLE (this PC) : https://localhost:3000
+echo   * MOBILE CASHIER & TERMINAL IP    : https://%LOCAL_IP%:3000
 echo.
 echo =====================================================================
 echo                LAUNCHING APPLICATIONS
 echo =====================================================================
 echo.
-echo Launching TilePoint ERP OS in your default browser...
+echo Launching TilePoint POS in your default browser...
 start "" "https://%LOCAL_IP%:3000"
 echo.
 echo =====================================================================
-echo                ALTERNATIVE WEB BROWSERS
+echo                ALTERNATIVE BROWSER LAUNCH OPTIONS
 echo =====================================================================
 echo [1] Exit Deployment Utility (Default)
 echo [2] Launch in Google Chrome
 echo [3] Launch in Microsoft Edge
 echo [4] Launch in Mozilla Firefox
 echo ---------------------------------------------------------------------
-choice /c 1234 /t 10 /d 1 /m "Select an alternative browser or press 1 to exit (Auto-exiting in 10s): "
+choice /c 1234 /t 10 /d 1 /m "Select an option or press 1 to exit (Auto-exiting in 10s): "
 
 if %errorlevel% equ 2 (
-    echo Launching TilePoint ERP OS in Google Chrome...
+    echo Launching TilePoint POS in Google Chrome...
     start "" chrome "https://%LOCAL_IP%:3000"
 ) else if %errorlevel% equ 3 (
-    echo Launching TilePoint ERP OS in Microsoft Edge...
+    echo Launching TilePoint POS in Microsoft Edge...
     start "" msedge "https://%LOCAL_IP%:3000"
 ) else if %errorlevel% equ 4 (
-    echo Launching TilePoint ERP OS in Mozilla Firefox...
+    echo Launching TilePoint POS in Mozilla Firefox...
     start "" firefox "https://%LOCAL_IP%:3000"
 )
 
@@ -269,11 +281,10 @@ echo Installation and setup completed successfully!
 exit /b
 
 :RefreshPath
-:: Query the Registry to load the updated PATH variable instantly
+:: Query Registry to reload updated PATH variable instantly
 for /f "tokens=2*" %%A in ('reg query "HKLM\System\CurrentControlSet\Control\Session Manager\Environment" /v Path') do set "SYS_PATH=%%B"
 for /f "tokens=2*" %%A in ('reg query "HKCU\Environment" /v Path') do set "USER_PATH=%%B"
-:: Expand nested variables like %SystemRoot% and %USERPROFILE% safely
 call set "PATH=%SYS_PATH%;%USER_PATH%"
-:: Add common installation directories as fail-safes
 set "PATH=%PATH%;C:\Program Files\nodejs;C:\Program Files\Git\cmd;%APPDATA%\npm"
 exit /b
+

@@ -281,7 +281,7 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
                 <input
                   ref={inputRef}
                   type="text"
-                  value={searchQuery}
+                  value={searchQuery ?? ''}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
                     setSelectedIndex(0);

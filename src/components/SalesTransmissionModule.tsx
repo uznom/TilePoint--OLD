@@ -151,9 +151,9 @@ export function validateAndMapInboundReport(rawParsed: any): { errors: string[];
  branchName: String(parsed.branchName).trim(),
  reportingDate: String(parsed.reportingDate).trim(),
  totalSalesCount: typeof parsed.totalSalesCount === 'number' ? parsed.totalSalesCount : validatedSales.length,
- totalSalesAmount: typeof parsed.totalSalesAmount === 'number' ? parsed.totalSalesAmount : validatedSales.reduce((acc, s) => acc + s.grandTotal, 0),
- totalVatAmount: typeof parsed.totalVatAmount === 'number' ? parsed.totalVatAmount : validatedSales.reduce((acc, s) => acc + s.vat, 0),
- totalDiscountAmount: typeof parsed.totalDiscountAmount === 'number' ? parsed.totalDiscountAmount : validatedSales.reduce((acc, s) => acc + s.discount, 0),
+ totalSalesAmount: typeof parsed.totalSalesAmount === 'number' ? parsed.totalSalesAmount : validatedSales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0),
+ totalVatAmount: typeof parsed.totalVatAmount === 'number' ? parsed.totalVatAmount : validatedSales.reduce((acc, s) => acc + (Number(s.vat) || 0), 0),
+ totalDiscountAmount: typeof parsed.totalDiscountAmount === 'number' ? parsed.totalDiscountAmount : validatedSales.reduce((acc, s) => acc + (Number(s.discount) || 0), 0),
  sales: validatedSales,
  saleItems: validatedSaleItems,
  notes: parsed.notes ? String(parsed.notes).trim() : undefined,
@@ -314,7 +314,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  // 4. Totals recalculation check
  if (Array.isArray(parsed.sales)) {
  checks.recalculatedCount = parsed.sales.length;
- checks.recalculatedAmount = parsed.sales.reduce((acc: number, s: any) => acc + (s.grandTotal || 0), 0);
+ checks.recalculatedAmount = parsed.sales.reduce((acc: number, s: any) => acc + (Number(s.grandTotal) || 0), 0);
  
  const countMatch = checks.totalSalesCount === 0 || checks.totalSalesCount === checks.recalculatedCount;
  const amountMatch = checks.totalSalesAmount === 0 || Math.abs(checks.totalSalesAmount - checks.recalculatedAmount) < 0.1;
@@ -546,9 +546,9 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
   return parentSale && parentSale.branchId === targetBranchId && !parentSale.isDeleted && parentSale.createdAt.split("T")[0] === reportingDate;
   });
 
-  const sumGrandTotal = localSales.reduce((acc, s) => acc + s.grandTotal, 0);
-  const sumVat = localSales.reduce((acc, s) => acc + s.vat, 0);
-  const sumDiscount = localSales.reduce((acc, s) => acc + s.discount, 0);
+  const sumGrandTotal = localSales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
+  const sumVat = localSales.reduce((acc, s) => acc + (Number(s.vat) || 0), 0);
+  const sumDiscount = localSales.reduce((acc, s) => acc + (Number(s.discount) || 0), 0);
 
   // 1. FILTER EXPENSES
   const localExpenses = expenses.filter(exp => {
@@ -595,7 +595,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
     return saleHour === hour;
    });
    const hourlyCount = hourlySales.length;
-   const hourlyAmount = hourlySales.reduce((acc, s) => acc + s.grandTotal, 0);
+   const hourlyAmount = hourlySales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
    return { hour, count: hourlyCount, amount: hourlyAmount };
   });
 
@@ -661,6 +661,9 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  transmissionType: 'Online',
  sales: compiledLocalSalesData.sales,
  saleItems: compiledLocalSalesData.saleItems,
+ deliveries: compiledLocalSalesData.deliveries,
+ expenses: compiledLocalSalesData.expenses,
+ purchaseOrders: compiledLocalSalesData.purchaseOrders,
  users: branchEmployees,
  notes: `Online real-time sync completed by employee ${currentUser.fullName}.`
  });
@@ -733,6 +736,9 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  transmissionId,
  sales: compiledLocalSalesData.sales,
  saleItems: compiledLocalSalesData.saleItems,
+ deliveries: compiledLocalSalesData.deliveries,
+ expenses: compiledLocalSalesData.expenses,
+ purchaseOrders: compiledLocalSalesData.purchaseOrders,
  users: (users || []).filter(u => u.branchAssignmentId === currentBranchMeta.id),
  notes: `Offline encrypted sales package generated securely with validation signatures.`
  };
@@ -929,9 +935,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                 <h2 className="text-base font-black uppercase tracking-wider text-m3-primary font-sans leading-none">
                   HQ Manual JSON Import Center
                 </h2>
-                <p className="text-[10px] text-zinc-400 font-bold font-mono uppercase tracking-widest mt-1">
-                  Offline Ledger Processing & Integrity Audits
-                </p>
+                
               </div>
             </div>
             <p className="text-xs text-m3-on-surface-variant max-w-xl leading-relaxed pl-1 pt-1">
@@ -1019,7 +1023,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                   )}
                 </div>
                 <textarea
-                  value={pastedJson}
+                  value={pastedJson ?? ''}
                   onChange={(e) => setPastedJson(e.target.value)}
                   placeholder='Paste raw downloaded corporate JSON file contents here, e.g. { "branchId": "B2", "branchName": "Branch Name", ... }'
                   rows={6}
@@ -1288,7 +1292,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
             <div className="flex items-center gap-2">
               <input
                 type="date"
-                value={reportingDate}
+                value={reportingDate ?? ''}
                 onChange={(e) => setReportingDate(e.target.value)}
                 className="bg-m3-surface-container border border-m3-outline-variant/40 rounded-xl px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary font-mono"
               />
@@ -1450,7 +1454,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  </span>
  <input
  type="text"
- value={adminSearchQuery}
+ value={adminSearchQuery ?? ''}
  onChange={(e) => setAdminSearchQuery(e.target.value)}
  placeholder="Search query (Branch, Date, Report ID)..."
  className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-m3-primary text-m3-on-surface"
@@ -1462,7 +1466,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 pl-0.5 font-mono">Branch origin:</label>
  {currentUser.role === UserRole.ADMIN ? (
  <select
- value={adminBranchFilter}
+ value={adminBranchFilter ?? ''}
  onChange={(e) => setAdminBranchFilter(e.target.value)}
  className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl px-2.5 py-2 text-xs focus:outline-none focus:border-m3-primary text-m3-on-surface"
  >
@@ -1481,7 +1485,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  <div className="sm:col-span-3 space-y-1">
  <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 pl-0.5 font-mono">Audit state:</label>
  <select
- value={adminStatusFilter}
+ value={adminStatusFilter ?? ''}
  onChange={(e) => setAdminStatusFilter(e.target.value)}
  className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl px-2.5 py-2 text-xs focus:outline-none focus:border-m3-primary text-m3-on-surface"
  >
@@ -1713,7 +1717,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  <div className="space-y-1.5">
  <label className="text-[9.5px] font-black uppercase tracking-widest text-zinc-400 pl-0.5">Auditor Verification notes:</label>
  <textarea
- value={auditNotes}
+ value={auditNotes ?? ''}
  onChange={(e) => setAuditNotes(e.target.value)}
  placeholder="Log notes about physical cash counting, discrepancies or VAT ledger checks..."
  rows={3}
@@ -2368,7 +2372,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
         )}
       </div>
       <textarea
-        value={pastedJson}
+        value={pastedJson ?? ''}
         onChange={(e) => setPastedJson(e.target.value)}
         placeholder='Paste raw downloaded corporate JSON file contents here, e.g. { "branchId": "B2", "branchName": "Branch Name", ... }'
         rows={6}
