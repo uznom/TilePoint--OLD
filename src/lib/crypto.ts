@@ -127,10 +127,26 @@ export function sha256Pure(str: string): string {
 /**
  * Custom High-Performance PBKDF2 Salted Hashing algorithm utilizing SHA-256
  */
+async function sha256WebCrypto(str: string): Promise<string> {
+ const encoder = new TextEncoder();
+ const data = encoder.encode(str);
+ const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+ const hashArray = Array.from(new Uint8Array(hashBuffer));
+ return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export async function createSaltedHash(password: string, salt: string, iterations = 2500): Promise<string> {
  let hash = password + '$' + salt;
- for (let i = 0; i < iterations; i++) {
- hash = sha256Pure(hash);
+ const hasSubtle = typeof window !== 'undefined' && window.crypto && window.crypto.subtle;
+ 
+ if (hasSubtle) {
+  for (let i = 0; i < iterations; i++) {
+   hash = await sha256WebCrypto(hash);
+  }
+ } else {
+  for (let i = 0; i < iterations; i++) {
+   hash = sha256Pure(hash);
+  }
  }
  return btoa(hash).slice(0, 64);
 }

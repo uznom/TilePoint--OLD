@@ -58,7 +58,8 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
     users,
     createUser,
     updateUser,
-    sales
+    sales,
+    productReturns
   } = useDb();
 
   const primaryBranchId = localStorage.getItem("tilepoint_primary_branch_id") || "B1";
@@ -104,6 +105,37 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
       return `${admins.map(a => a.fullName).join(', ')} (Admin)`;
     }
     return 'Unassigned';
+  };
+
+  const getBranchMonthlySales = (branchId: string) => {
+    if (!sales || sales.length === 0) return 0;
+    const now = new Date();
+    const currYear = now.getFullYear();
+    const currMonth = now.getMonth();
+
+    const grossSales = sales
+      .filter(s => {
+        if (s.branchId !== branchId || s.isDeleted) return false;
+        if (!s.createdAt) return false;
+        const d = new Date(s.createdAt);
+        if (isNaN(d.getTime())) return false;
+        return d.getFullYear() === currYear && d.getMonth() === currMonth;
+      })
+      .reduce((sum, s) => sum + (Number(s.grandTotal) || 0), 0);
+
+    const branchSaleIds = new Set(sales.filter(s => s.branchId === branchId && !s.isDeleted).map(s => s.id));
+
+    const totalReturns = (productReturns || [])
+      .filter(r => {
+        if (r.isDeleted) return false;
+        if (!branchSaleIds.has(r.saleId)) return false;
+        const rDate = r.dateTime ? new Date(r.dateTime) : null;
+        if (!rDate || isNaN(rDate.getTime())) return false;
+        return rDate.getFullYear() === currYear && rDate.getMonth() === currMonth;
+      })
+      .reduce((sum, r) => sum + (Number(r.amountRefunded) || 0), 0);
+
+    return Math.max(0, grossSales - totalReturns);
   };
 
   // Create Modal settings
@@ -483,7 +515,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  <div className="flex justify-between items-center bg-m3-surface-low/95 backdrop-blur-md p-4 rounded-[20px] border border-m3-outline-variant/20 sticky top-0 z-20 shadow-md">
  <div>
  <h3 className="text-xs font-black tracking-widest text-m3-primary uppercase font-mono">Store Chains & Branches</h3>
- <p className="text-xs text-m3-on-surface-variant/80 mt-0.5">Corporate business parameter logs</p>
+ 
  </div>
 
  {isUserAdmin && (
@@ -735,7 +767,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  <div className="space-y-0.5 text-center">
  <span className="text-[9px] uppercase tracking-widest font-bold text-m3-on-surface-variant/70">Sales (MO)</span>
  <div className="text-xs font-black font-mono text-m3-tertiary flex items-center justify-center gap-0.5">
- <TrendingUp className="h-3.5 w-3.5" /> ₱{((sales ? sales.filter(s => s.branchId === b.id && s.createdAt && typeof s.createdAt === 'string' && s.createdAt.startsWith(new Date().toISOString().slice(0, 7)) && !s.isDeleted).reduce((sum, s) => sum + s.grandTotal, 0) : 0) || b.monthlySales || 0).toLocaleString(undefined, { notation: 'compact' })}
+ <TrendingUp className="h-3.5 w-3.5" /> ₱{getBranchMonthlySales(b.id).toLocaleString(undefined, { notation: 'compact' })}
  </div>
  </div>
  </div>
@@ -765,9 +797,6 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  <Receipt className="h-4.5 w-4.5 text-m3-primary" />
  Receipt & Promotional Customizer
  </h3>
- <p className="text-[10px] text-zinc-400 font-medium mt-0.5">
- Configure social handles, promotional text, tax identifiers, and QR surveys printed at the bottom of customer receipts.
- </p>
  </div>
 
  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -779,7 +808,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  Select Branch to Configure
  </label>
  <select
- value={inlineBranchId}
+ value={inlineBranchId ?? ''}
  onChange={e => setInlineBranchId(e.target.value)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-bold"
  >
@@ -797,7 +826,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  </label>
  <input
  type="text"
- value={inlineTin}
+ value={inlineTin ?? ''}
  onChange={e => setInlineTin(formatTin(e.target.value))}
  placeholder="000-000-000-000"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono"
@@ -812,7 +841,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  </label>
  <input
  type="text"
- value={inlineFacebook}
+ value={inlineFacebook ?? ''}
  onChange={e => setInlineFacebook(e.target.value)}
  placeholder="Facebook handle"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans"
@@ -825,7 +854,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  </label>
  <input
  type="text"
- value={inlineThankYou}
+ value={inlineThankYou ?? ''}
  onChange={e => setInlineThankYou(e.target.value)}
  placeholder="Thank you message"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans"
@@ -838,7 +867,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  Promotional Message (Appears at Bottom of Receipt)
  </label>
  <textarea
- value={inlinePromoText}
+ value={inlinePromoText ?? ''}
  onChange={e => setInlinePromoText(e.target.value)}
  placeholder="Promotional message"
  rows={2}
@@ -923,7 +952,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  type="range"
  min="20"
  max="120"
- value={inlineLogoSize}
+ value={inlineLogoSize ?? ''}
  onChange={(e) => setInlineLogoSize(Number(e.target.value))}
  className="flex-1 accent-m3-primary h-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
  />
@@ -1050,7 +1079,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  </div>
 
  <div className="text-[7px] text-zinc-500 mt-0.5">
- Contact: {selectedBranchForPreview?.phone || "0000"} • TIN {formatTin(inlineTin) || "000-111-222"}
+ Contact: {selectedBranchForPreview?.phone || "0000"} • TIN {formatTin(selectedBranchForPreview?.tin || inlineTin) || "N/A"}
  </div>
  </div>
 
@@ -1061,7 +1090,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  <div className="space-y-0.5 text-[7.5px] text-zinc-700">
  <div className="flex justify-between">
  <span>DATE & TIME:</span>
- <span>2026-07-14 05:48 UTC</span>
+ <span>{new Date().toISOString().replace("T", " ").slice(0, 16)} UTC</span>
  </div>
  <div className="flex justify-between font-bold text-black">
  <span>INVOICE REF:</span>
@@ -1210,7 +1239,6 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  <span className="text-[9px] bg-m3-primary/10 text-m3-primary px-2 py-0.5 rounded font-mono font-bold uppercase tracking-wider">Collapsed</span>
  )}
  </h3>
- <p className="text-[10px] text-zinc-400 font-medium">Complete system roster of authorized personnel across all retail branches</p>
  </div>
  <button 
  type="button" 
@@ -1227,7 +1255,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  <div className="relative flex-1 max-w-sm">
  <input
  type="text"
- value={personnelSearch}
+ value={personnelSearch ?? ''}
  onChange={(e) => setPersonnelSearch(e.target.value)}
  placeholder="Search employees by name, role, email..."
  className="w-full bg-m3-surface border border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-xl"
@@ -1364,7 +1392,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  <input
  type="text"
  required
- value={customBranchId}
+ value={customBranchId ?? ''}
  onChange={e => setCustomBranchId(e.target.value)}
  placeholder="Branch ID (e.g. B1)"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono"
@@ -1382,7 +1410,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  <input
  type="text"
  required
- value={name}
+ value={name ?? ''}
  onChange={e => setName(e.target.value)}
  placeholder="Branch Name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
@@ -1394,7 +1422,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  <input
  type="text"
  required
- value={address}
+ value={address ?? ''}
  onChange={e => setAddress(e.target.value)}
  placeholder="Street, City, Province"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
@@ -1406,7 +1434,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  <input
  type="text"
  required
- value={phone}
+ value={phone ?? ''}
  onChange={e => setPhone(e.target.value)}
  placeholder="Phone number"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
@@ -1417,7 +1445,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">TIN (Taxpayer Identification Number)</label>
  <input
  type="text"
- value={tin}
+ value={tin ?? ''}
  onChange={e => setTin(formatTin(e.target.value))}
  placeholder="000-000-000-000"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
@@ -1430,7 +1458,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  <input
  type="number"
  required
- value={staffCount}
+ value={staffCount ?? ''}
  onChange={e => setStaffCount(Number(e.target.value))}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
  />
@@ -1441,7 +1469,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  <input
  type="number"
  required
- value={activeCashiers}
+ value={activeCashiers ?? ''}
  onChange={e => setActiveCashiers(Number(e.target.value))}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
  />
@@ -1453,7 +1481,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  <input
  type="text"
  required
- value={branchCode}
+ value={branchCode ?? ''}
  onChange={e => setBranchCode(e.target.value)}
  placeholder="BR-SILAY"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
@@ -1466,7 +1494,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  <input
  type="text"
  required
- value={localIp}
+ value={localIp ?? ''}
  onChange={e => setLocalIp(e.target.value)}
  placeholder="192.168.1.50"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
@@ -1476,7 +1504,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  <div className="space-y-1 relative">
  <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">Gateway Rules</label>
  <select
- value={gatewayRules}
+ value={gatewayRules ?? ''}
  onChange={e => setGatewayRules(e.target.value)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
  >
@@ -1498,7 +1526,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
     <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pl-1">Opening Time</label>
     <input
      type="time"
-     value={openingTime}
+     value={openingTime ?? ''}
      onChange={e => setOpeningTime(e.target.value)}
      className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono"
     />
@@ -1507,7 +1535,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
     <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pl-1">Closing Time</label>
     <input
      type="time"
-     value={closingTime}
+     value={closingTime ?? ''}
      onChange={e => setClosingTime(e.target.value)}
      className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono"
     />
@@ -1621,7 +1649,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
        <input
         type="text"
         placeholder="Full Name (e.g. Juan Cruz)"
-        value={inlineFullName}
+        value={inlineFullName ?? ''}
         onChange={e => setInlineFullName(e.target.value)}
         className="w-full bg-m3-surface-lowest border-b border-m3-outline-variant/40 focus:border-m3-primary px-2 py-1 text-xs text-m3-on-surface focus:outline-none rounded-t-sm"
        />
@@ -1630,7 +1658,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
        <input
         type="text"
         placeholder="Username"
-        value={inlineUsername}
+        value={inlineUsername ?? ''}
         onChange={e => setInlineUsername(e.target.value)}
         className="w-full bg-m3-surface-lowest border-b border-m3-outline-variant/40 focus:border-m3-primary px-2 py-1 text-xs text-m3-on-surface focus:outline-none rounded-t-sm"
        />
@@ -1638,7 +1666,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
         type="text"
         placeholder="4-6 Digit Security PIN"
         maxLength={6}
-        value={inlinePin}
+        value={inlinePin ?? ''}
         onChange={e => setInlinePin(e.target.value.replace(/\D/g, ''))}
         className="w-full bg-m3-surface-lowest border-b border-m3-outline-variant/40 focus:border-m3-primary px-2 py-1 text-xs text-m3-on-surface focus:outline-none rounded-t-sm font-mono"
        />
@@ -1647,12 +1675,12 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
        <input
         type="email"
         placeholder="Email Address"
-        value={inlineEmail}
+        value={inlineEmail ?? ''}
         onChange={e => setInlineEmail(e.target.value)}
         className="w-full bg-m3-surface-lowest border-b border-m3-outline-variant/40 focus:border-m3-primary px-2 py-1 text-xs text-m3-on-surface focus:outline-none rounded-t-sm"
        />
        <select
-        value={inlineRole}
+        value={inlineRole ?? ''}
         onChange={e => setInlineRole(e.target.value as UserRole)}
         className="w-full bg-m3-surface-lowest border-b border-m3-outline-variant/40 focus:border-m3-primary px-2 py-1 text-xs text-m3-on-surface focus:outline-none rounded-t-sm"
        >

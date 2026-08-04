@@ -15,7 +15,7 @@
     {
       "src": "/icon.svg",
       "type": "image/svg+xml",
-      "sizes": "any",
+      "sizes": "192x192 512x512",
       "purpose": "any"
     },
     {
@@ -31,14 +31,14 @@
       "short_name": "POS",
       "description": "Launch TilePoint POS Module",
       "url": "/?tab=pos",
-      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+      "icons": [{ "src": "/icon.svg", "type": "image/svg+xml", "sizes": "192x192" }]
     },
     {
       "name": "Inventory Roster",
       "short_name": "Inventory",
       "description": "View Stock & Ledger",
       "url": "/?tab=inventory-stocks",
-      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+      "icons": [{ "src": "/icon.svg", "type": "image/svg+xml", "sizes": "192x192" }]
     }
   ]
 }

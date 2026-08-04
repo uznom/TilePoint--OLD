@@ -23,8 +23,9 @@ import {
 } from "../lib/crypto";
 import { saveFileToBackup } from "../lib/fileBackupHelper";
 import { generateEan13Barcode } from "../utils/barcodeGenerator";
-import { isProductInBranch, slugifyBranchStr } from "../lib/branchUtils";
+import { isProductInBranch, slugifyBranchStr, getBranchStockQuantity, getBranchStockRecord } from "../lib/branchUtils";
 import { sqliteDatabaseService } from "../services/sqliteDatabaseService";
+import { dbSyncWorkerClient } from "../services/dbSyncWorkerClient";
 import {
  User,
  UserRole,
@@ -58,152 +59,197 @@ import {
  Member,
  Expense,
  ProductReturn,
-  LoyaltyConfig,
+ LoyaltyConfig,
+ ArchivableCategory,
+ PurgeResult,
+ RetentionPolicyMap,
 } from "../types/db";
 
 // Hard-locked database tables containing active transactions, shift summaries, and stock levels (absolutely exempt from auto-purging)
+// Core database tables containing active session & auth states (exempt from auto-clearing by Cashiers)
 const HARD_LOCKED_KEYS = [
- "tp_sales",
- "tp_sale_items",
- "tp_shifts",
- "tp_branch_stock",
- "tp_movements",
- "tp_purchase_orders",
- "tp_po_items",
- "tp_transmittals",
- "tp_stock_transfers",
- "tp_deliveries",
- "tp_damage_logs",
- "atpos_v2_custom_bills",
- "atpos_v2_members_list",
- "atpos_v2_expenses",
- "atpos_v2_returns",
- "atpos_v2_calendar_notes",
- "atpos_v2_calendar_day_memos",
- "tp_users",
- "tp_branches",
- "tp_suppliers",
- "tp_brands",
- "tp_products",
- "tp_ledger_entries",
- "tp_parked_sales"
+  "tp_sales",
+  "tp_sale_items",
+  "tp_shifts",
+  "tp_branch_stock",
+  "tp_movements",
+  "tp_users",
+  "tp_branches"
 ];
 
+// Comprehensive Synchronous Storage Pruning Function
+const performSyncPruning = (): number => {
+  if (typeof window === "undefined" || !window.localStorage) return 0;
+  console.log("[System Guard] Performing synchronous emergency database pruning...");
+  let bytesFreed = 0;
+
+  const setItemSync = (k: string, val: string) => {
+    try {
+      window.localStorage.setItem(k, val);
+    } catch (_) {}
+  };
+
+  // 1. Strip heavy 'data' payload from tp_db_snapshots in localStorage
+  try {
+    const snapshotsStr = window.localStorage.getItem("tp_db_snapshots");
+    if (snapshotsStr) {
+      const snapshots = JSON.parse(snapshotsStr);
+      if (Array.isArray(snapshots) && snapshots.length > 0) {
+        const metaOnly = snapshots.map((s: any) => {
+          const { data, ...meta } = s;
+          return meta;
+        }).slice(0, 2);
+        const newStr = JSON.stringify(metaOnly);
+        setItemSync("tp_db_snapshots", newStr);
+        bytesFreed += (snapshotsStr.length - newStr.length);
+      }
+    }
+  } catch (_) {
+    try { window.localStorage.removeItem("tp_db_snapshots"); } catch (_) {}
+  }
+
+  // 2. Remove tp_ingestion_snapshots
+  try {
+    const ingestStr = window.localStorage.getItem("tp_ingestion_snapshots");
+    if (ingestStr) {
+      window.localStorage.removeItem("tp_ingestion_snapshots");
+      bytesFreed += ingestStr.length;
+    }
+  } catch (_) {}
+
+  // 3. Trim tp_audit_logs to newest 20
+  try {
+    const logsStr = window.localStorage.getItem("tp_audit_logs");
+    if (logsStr) {
+      const logs = JSON.parse(logsStr);
+      if (Array.isArray(logs) && logs.length > 20) {
+        const sorted = [...logs].sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+        const trimmed = sorted.slice(0, 20);
+        const newStr = JSON.stringify(trimmed);
+        setItemSync("tp_audit_logs", newStr);
+        bytesFreed += (logsStr.length - newStr.length);
+      }
+    }
+  } catch (_) {}
+
+  // 4. Trim tp_movements to newest 50
+  try {
+    const movStr = window.localStorage.getItem("tp_movements");
+    if (movStr) {
+      const movs = JSON.parse(movStr);
+      if (Array.isArray(movs) && movs.length > 50) {
+        const sorted = [...movs].sort((a, b) => new Date(b.createdAt || b.timestamp || 0).getTime() - new Date(a.createdAt || a.timestamp || 0).getTime());
+        const trimmed = sorted.slice(0, 50);
+        const newStr = JSON.stringify(trimmed);
+        setItemSync("tp_movements", newStr);
+        bytesFreed += (movStr.length - newStr.length);
+      }
+    }
+  } catch (_) {}
+
+  // 5. Trim tp_sales and tp_sale_items in localStorage (keep latest 50 sales in local cache)
+  try {
+    const salesStr = window.localStorage.getItem("tp_sales");
+    if (salesStr) {
+      const salesArr = JSON.parse(salesStr);
+      if (Array.isArray(salesArr) && salesArr.length > 50) {
+        const sorted = [...salesArr].sort((a, b) => new Date(b.createdAt || b.dateTime || 0).getTime() - new Date(a.createdAt || a.dateTime || 0).getTime());
+        const trimmedSales = sorted.slice(0, 50);
+        const keepIds = new Set(trimmedSales.map((s: any) => s.id));
+        const newSalesStr = JSON.stringify(trimmedSales);
+        setItemSync("tp_sales", newSalesStr);
+        bytesFreed += (salesStr.length - newSalesStr.length);
+
+        const itemsStr = window.localStorage.getItem("tp_sale_items");
+        if (itemsStr) {
+          const itemsArr = JSON.parse(itemsStr);
+          if (Array.isArray(itemsArr)) {
+            const trimmedItems = itemsArr.filter((item: any) => keepIds.has(item.saleId));
+            setItemSync("tp_sale_items", JSON.stringify(trimmedItems));
+          }
+        }
+      }
+    }
+  } catch (_) {}
+
+  // 6. Trim extended module items
+  ["atpos_v2_expenses", "atpos_v2_returns", "atpos_v2_custom_bills", "atpos_v2_members_list"].forEach((pruneKey) => {
+    try {
+      const str = window.localStorage.getItem(pruneKey);
+      if (str) {
+        const arr = JSON.parse(str);
+        if (Array.isArray(arr) && arr.length > 20) {
+          const trimmed = arr.slice(0, 20);
+          const newStr = JSON.stringify(trimmed);
+          setItemSync(pruneKey, newStr);
+          bytesFreed += (str.length - newStr.length);
+        }
+      }
+    } catch (_) {}
+  });
+
+  // 7. Strip base64 image strings from tp_products in localStorage
+  try {
+    const prodStr = window.localStorage.getItem("tp_products");
+    if (prodStr && prodStr.includes("data:image")) {
+      const prods = JSON.parse(prodStr);
+      if (Array.isArray(prods)) {
+        const stripped = prods.map((p: any) => {
+          if (p.imageUrl && typeof p.imageUrl === "string" && p.imageUrl.startsWith("data:image")) {
+            return { ...p, imageUrl: "" };
+          }
+          return p;
+        });
+        const strippedStr = JSON.stringify(stripped);
+        setItemSync("tp_products", strippedStr);
+        bytesFreed += (prodStr.length - strippedStr.length);
+      }
+    }
+  } catch (_) {}
+
+  // 8. Clear transient keys
+  ["tp_write_stats_prevented", "tp_batch_expirations"].forEach((tk) => {
+    try { window.localStorage.removeItem(tk); } catch (_) {}
+  });
+
+  console.log(`[System Guard] Synchronous pruning finished. Freed approx ${bytesFreed} bytes.`);
+  return bytesFreed;
+};
+
 // Self-healing LocalStorage Interceptor to prevent QuotaExceededError crashes
+try {
 if (typeof window !== "undefined" && window.localStorage && !(window.localStorage.setItem as any).__isInterceptor) {
  const originalSetItem = window.localStorage.setItem;
  const newSetItem = function (this: Storage, key: string, value: string) {
- // All roles are allowed to write to storage with QuotaExceeded self-healing protection
+  try {
+   originalSetItem.call(window.localStorage, key, value);
+  } catch (error: any) {
+   if (
+    error.name === "QuotaExceededError" ||
+    error.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+    error.code === 22
+   ) {
+    console.warn(`[System Guard] LocalStorage quota exceeded for key "${key}". Executing synchronous self-heal...`);
+    performSyncPruning();
 
- try {
- originalSetItem.call(window.localStorage, key, value);
- } catch (error: any) {
- if (
- error.name === "QuotaExceededError" ||
- error.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
- error.code === 22
- ) {
- console.warn(
- `[System Guard] LocalStorage quota exceeded for key "${key}". Attempting automated self-heal/pruning...`,
- );
- let purgedSomething = false;
-
- // 1. Core self-heal: Prune simulation db backup snapshots first (since they are ephemeral interface backups consuming ~80% of storage)
- try {
- const cachedSnapshotsStr =
- window.localStorage.getItem("tp_db_snapshots");
- if (cachedSnapshotsStr) {
- const snapshots = JSON.parse(cachedSnapshotsStr);
- if (Array.isArray(snapshots) && snapshots.length > 0) {
- console.log(
- "[System Guard] Self-healing: Reducing snapshot catalog size to prevent render failure...",
- );
- if (snapshots.length > 1) {
- // Keep only the most recent snapshot to clear space
- originalSetItem.call(
- window.localStorage,
- "tp_db_snapshots",
- JSON.stringify(snapshots.slice(0, 1)),
- );
- } else {
- // Remove all snapshots completely if space is still needed
- window.localStorage.removeItem("tp_db_snapshots");
- }
- purgedSomething = true;
- }
- }
- } catch (e) {
- console.error("[System Guard] Failed to prune tp_db_snapshots:", e);
- }
-
- // 2. Secondary self-heal: Drop temporary logs and older extended module items using LRU sorting
- if (!purgedSomething || key !== "tp_db_snapshots") {
- const largeKeysToPrune = [
- "tp_audit_logs",
- "atpos_v2_expenses",
- "atpos_v2_returns",
- "atpos_v2_custom_bills",
- "atpos_v2_members_list",
- ];
- for (const pruneKey of largeKeysToPrune) {
- if (HARD_LOCKED_KEYS.includes(pruneKey)) {
- console.warn(`[System Guard] Bypassed pruning for hard-locked key: "${pruneKey}"`);
- continue;
- }
- try {
- const cachedStr = window.localStorage.getItem(pruneKey);
- if (cachedStr) {
- const parsed = JSON.parse(cachedStr);
- if (Array.isArray(parsed) && parsed.length > 25) {
- console.log(
- `[System Guard] Self-healing: Trimming oldest entries from key "${pruneKey}" using LRU to free up space.`,
- );
- const sorted = [...parsed];
- if (pruneKey === "tp_audit_logs") {
- sorted.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
- } else if (pruneKey === "atpos_v2_expenses" || pruneKey === "atpos_v2_returns") {
- sorted.sort((a, b) => new Date(b.dateTime || 0).getTime() - new Date(a.dateTime || 0).getTime());
- }
- originalSetItem.call(
- window.localStorage,
- pruneKey,
- JSON.stringify(sorted.slice(0, 25)),
- );
- purgedSomething = true;
- }
- }
- } catch (e) {
- // Ignore
- }
- }
- }
-
- // 3. Retry the original write operation after cleaning up
- try {
- originalSetItem.call(window.localStorage, key, value);
- console.log(
- `[System Guard] Self-healing SUCCESS: Saved key "${key}" after pruning storage layout.`,
- );
- return;
- } catch (retryError) {
- console.error(
- `[System Guard] Critical Storage Fail: Unable to save "${key}" even after pruning. Suppressing crash.`,
- retryError,
- );
- if (typeof window !== "undefined") {
- window.dispatchEvent(
- new CustomEvent("tp_storage_failure", {
- detail: { message: "Local storage full. Transaction not saved to drive!" },
- })
- );
- }
- // Return without throwing to protect application runtime state of active view
- return;
- }
- }
- // Re-throw other unexpected localStorage exceptions
- throw error;
- }
+    try {
+     originalSetItem.call(window.localStorage, key, value);
+     console.log(`[System Guard] Self-healing SUCCESS: Saved key "${key}" after pruning storage layout.`);
+     return;
+    } catch (retryError) {
+     console.warn(`[System Guard] LocalStorage full after pruning. Using fallback sessionStorage & volatile memory:`, retryError);
+     try {
+      sessionStorage.setItem(key, value);
+     } catch (_) {}
+     if (typeof window !== "undefined") {
+      (window as any).tpVolatileCache = (window as any).tpVolatileCache || {};
+      (window as any).tpVolatileCache[key] = value;
+     }
+     return;
+    }
+   }
+   throw error;
+  }
  };
  (newSetItem as any).__isInterceptor = true;
  window.localStorage.setItem = newSetItem;
@@ -362,6 +408,9 @@ if (typeof window !== "undefined" && window.localStorage && !(window.localStorag
  }
  originalClear.call(window.localStorage);
  };
+}
+} catch (e) {
+ console.warn("[System Guard] LocalStorage interceptor error:", e);
 }
 
 interface SummaryStats {
@@ -550,6 +599,7 @@ interface DbContextType {
  vatTotal: number;
  discountTotal: number;
  netTotal: number;
+ cashSalesTotal: number;
  };
 
  // Actions - Purchase Orders
@@ -767,6 +817,13 @@ interface DbContextType {
  clearServerErrorState: () => void;
  invalidateLocalCache: () => Promise<void>;
  safeApiFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+ exportAndPurgeCategoryData: (
+ category: ArchivableCategory,
+ ageMonths: number
+ ) => Promise<PurgeResult>;
+ retentionPolicy: RetentionPolicyMap;
+ updateRetentionPolicy: (category: ArchivableCategory, months: number) => void;
+ runRetentionPolicyCleanup: () => Promise<PurgeResult[]>;
 }
 
 export interface DbSnapshot {
@@ -972,19 +1029,22 @@ const mergeParkedSales = (local: any[], remote: any[], deletedSet?: Set<string>)
  const map = new Map<string, any>();
  remote.forEach((item) => {
  if (item && item.id && (!deletedSet || !deletedSet.has(item.id))) {
- map.set(item.id, item);
+ map.set(item.id, { ...item, synced: true });
  }
  });
  local.forEach((localItem) => {
  if (localItem && localItem.id && (!deletedSet || !deletedSet.has(localItem.id))) {
  if (!map.has(localItem.id)) {
+ const isRecentlyCreatedUnsynced = !localItem.synced && (Date.now() - (localItem.createdAt || 0) < 60000);
+ if (isRecentlyCreatedUnsynced) {
  map.set(localItem.id, localItem);
+ }
  } else {
  const remoteItem = map.get(localItem.id);
  const localTs = localItem.createdAt || getCreatedAt(localItem) || 0;
  const remoteTs = remoteItem?.createdAt || getCreatedAt(remoteItem) || 0;
  if (localTs > remoteTs) {
- map.set(localItem.id, localItem);
+ map.set(localItem.id, { ...localItem, synced: true });
  }
  }
  }
@@ -1723,6 +1783,38 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  useEffect(() => {
+ let queueChannel: BroadcastChannel | null = null;
+ try {
+ queueChannel = new BroadcastChannel("tilepoint_queue_channel");
+ queueChannel.onmessage = (event) => {
+ if (event.data) {
+ if (event.data.type === "QUEUE_RESUME" && event.data.parkedId) {
+ recordDeletedParkedSaleId(event.data.parkedId);
+ rawSetParkedSales((prev: any[]) => prev.filter((p) => p && p.id !== event.data.parkedId));
+ } else if (event.data.type === "QUEUE_ADD" && event.data.hold) {
+ rawSetParkedSales((prev: any[]) => {
+ if (prev.some((p) => p && p.id === event.data.hold.id)) return prev;
+ return [...prev, event.data.hold];
+ });
+ } else if (event.data.type === "QUEUE_SYNC") {
+ syncFromSharedServer(true).catch(() => {});
+ }
+ }
+ };
+ } catch (_) {}
+
+ const handleCustomQueueUpdate = (e: any) => {
+ if (e.detail?.action === "resume" && e.detail?.parkedId) {
+ recordDeletedParkedSaleId(e.detail.parkedId);
+ rawSetParkedSales((prev: any[]) => prev.filter((p) => p && p.id !== e.detail.parkedId));
+ } else if (e.detail?.action === "add" && e.detail?.hold) {
+ rawSetParkedSales((prev: any[]) => {
+ if (prev.some((p) => p && p.id === e.detail.hold.id)) return prev;
+ return [...prev, e.detail.hold];
+ });
+ }
+ };
+
  const handleStorageChange = (e: StorageEvent) => {
  if (e.key === "tp_shared_deleted_parked_ids" && e.newValue) {
  try {
@@ -1754,7 +1846,13 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  window.addEventListener("storage", handleStorageChange);
- return () => window.removeEventListener("storage", handleStorageChange);
+ window.addEventListener("tp_queue_updated", handleCustomQueueUpdate);
+
+ return () => {
+ if (queueChannel) queueChannel.close();
+ window.removeEventListener("storage", handleStorageChange);
+ window.removeEventListener("tp_queue_updated", handleCustomQueueUpdate);
+ };
  }, []);
 
  const setParkedSales = (updater: any) => {
@@ -1791,6 +1889,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  if (!isSyncingFromServer.current && nextValue !== undefined) {
  saveToStorageWithDebounce("tp_parked_sales", nextValue, true);
+ try {
+ const queueChannel = new BroadcastChannel("tilepoint_queue_channel");
+ queueChannel.postMessage({ type: "QUEUE_SYNC", timestamp: Date.now() });
+ queueChannel.close();
+ } catch (_) {}
  }
  };
 
@@ -1921,6 +2024,42 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return next;
  });
  };
+
+ const DEFAULT_RETENTION_POLICY: RetentionPolicyMap = {
+ auditLogs: 6,
+ movements: 12,
+ sales: 24,
+ expenses: 12,
+ returns: 6,
+ damageLogs: 6,
+ };
+
+ const [retentionPolicy, setRetentionPolicy] = useState<RetentionPolicyMap>(() => {
+ return safeParse<RetentionPolicyMap>("tilepoint_retention_policy", DEFAULT_RETENTION_POLICY);
+ });
+
+ const updateRetentionPolicy = (category: ArchivableCategory, months: number) => {
+ setRetentionPolicy((prev) => {
+ const next = { ...prev, [category]: months };
+ localStorage.setItem("tilepoint_retention_policy", JSON.stringify(next));
+ return next;
+ });
+  addAuditLog(
+  "RETENTION_POLICY_UPDATE",
+  `Updated retention policy for category '${category}' to ${months === 0 ? "Keep Indefinitely" : `${months} months`}`,
+  "SYSTEM",
+  category
+  );
+  };
+
+  const CATEGORY_DISPLAY_LABELS: Record<ArchivableCategory, string> = {
+  auditLogs: "Audit Trail & Activity Logs",
+  movements: "Stock Movement Ledger",
+  sales: "Historical Sales Invoices",
+  expenses: "Operating Expenses",
+  returns: "Customer Product Returns",
+  damageLogs: "Damage & Waste Register",
+  };
 
  const [dayMemos, setDayMemos] = useState<Record<string, string>>(() => {
  return safeParse<Record<string, string>>("atpos_v2_calendar_day_memos", {});
@@ -2276,22 +2415,43 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  "Emman Tile Center",
  };
 
+ let serializedBody: string;
+ let volatileUpdates: Record<string, string> = {};
+
+ if (dbSyncWorkerClient.isWorkerAvailable) {
+ try {
+ const workerRes = await dbSyncWorkerClient.prepareBulkPayload(payload);
+ serializedBody = workerRes.serialized;
+ volatileUpdates = workerRes.volatileUpdates;
+ } catch (_) {
+ serializedBody = JSON.stringify({ data: payload });
+ }
+ } else {
+ serializedBody = JSON.stringify({ data: payload });
+ }
+
  const res = await safeApiFetch("/api/db/bulk", {
  method: "POST",
  headers: {
  "Content-Type": "application/json",
  ...getAuthHeaders(),
  },
- body: JSON.stringify({ data: payload }),
+ body: serializedBody,
  });
  if (res.ok) {
  console.log(
  "[Shared DB Client] Successfully synced all local data to server.",
  );
+ if (Object.keys(volatileUpdates).length > 0) {
+ Object.keys(volatileUpdates).forEach((k) => {
+ volatileCache.current[k] = volatileUpdates[k];
+ });
+ } else {
  Object.keys(payload).forEach((k) => {
  const val = (payload as any)[k];
  volatileCache.current[k] = typeof val === "string" ? val : JSON.stringify(val);
  });
+ }
  }
  } catch (err) {
  console.error("[Shared DB Client] Failed bulk sync to server:", err);
@@ -2462,7 +2622,14 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  const processOfflineQueue = processTransactionSyncQueue;
 
- const syncFromSharedServer = async (silent = false) => {
+ const activeSyncPromise = useRef<Promise<void> | null>(null);
+
+ const syncFromSharedServer = (silent = false): Promise<void> => {
+ if (activeSyncPromise.current) {
+ return activeSyncPromise.current;
+ }
+
+ activeSyncPromise.current = (async () => {
  if (typeof window !== 'undefined' && localStorage.getItem('tp_setting_up') === 'true') {
  console.log('[Shared DB Client] System setup in progress. Bypassing server sync to avoid overwrite race condition.');
  return;
@@ -2501,6 +2668,150 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  if (responseData.data) {
  const db = responseData.data;
  if (Object.keys(db).length > 0) {
+ let processedByWorker = false;
+
+ if (dbSyncWorkerClient.isWorkerAvailable) {
+ try {
+ const optimisticStockEntries: any[] = [];
+ optimisticStockCacheRef.current.forEach((val, key) => {
+ if (val) optimisticStockEntries.push({ key, ...val });
+ });
+
+ const collectionStates: Record<string, any> = {
+ tp_users: users,
+ tp_branches: branches,
+ tp_suppliers: suppliers,
+ tp_brands: brands,
+ tp_products: products,
+ tp_purchase_orders: purchaseOrders,
+ tp_po_items: poItems,
+ tp_transmittals: transmittals,
+ tp_shifts: shifts,
+ tp_sales: sales,
+ tp_sale_items: saleItems,
+ tp_movements: movements,
+ tp_audit_logs: auditLogs,
+ tp_parked_sales: parkedSales,
+ tp_stock_transfers: stockTransfers,
+ tp_branch_stock: branchStock,
+ tp_ledger_entries: ledgerEntries,
+ tp_branch_sales_reports: branchSalesReports,
+ tp_deliveries: deliveries,
+ tp_damage_logs: damageLogs,
+ atpos_v2_custom_bills: customBills,
+ atpos_v2_members_list: members,
+ atpos_v2_expenses: expenses,
+ atpos_v2_returns: productReturns,
+ atpos_v2_calendar_notes: calendarNotes,
+ atpos_v2_calendar_day_memos: dayMemos
+ };
+
+ const localStoredCollections: Record<string, any> = {};
+ Object.keys(collectionStates).forEach((k) => {
+ if (!collectionStates[k] || collectionStates[k].length === 0) {
+ localStoredCollections[k] = safeParse<any[]>(k, []);
+ }
+ });
+
+ const workerRes = await dbSyncWorkerClient.processSyncResponse({
+ db,
+ collectionStates,
+ localStoredCollections,
+ volatileCache: volatileCache.current,
+ deletedParkedSaleIds: Array.from(deletedParkedSaleIds.current),
+ optimisticStockEntries,
+ currentActiveSessions: activeSessions,
+ isLoggedIn,
+ currentUser,
+ activeSessionId
+ });
+
+ if (workerRes && workerRes.type === 'SYNC_RESPONSE_PROCESSED') {
+ processedByWorker = true;
+
+ if (workerRes.nonCollectionWrites) {
+ Object.keys(workerRes.nonCollectionWrites).forEach((k) => {
+ const valStr = workerRes.nonCollectionWrites![k];
+ volatileCache.current[k] = valStr;
+ try { localStorage.setItem(k, valStr); } catch (_) {}
+ });
+ }
+
+ const setters: Record<string, (val: any) => void> = {
+ tp_users: setUsers,
+ tp_branches: setBranches,
+ tp_suppliers: setSuppliers,
+ tp_brands: setBrands,
+ tp_products: setProducts,
+ tp_purchase_orders: setPurchaseOrders,
+ tp_po_items: setPoItems,
+ tp_transmittals: setTransmittals,
+ tp_shifts: setShifts,
+ tp_sales: setSales,
+ tp_sale_items: setSaleItems,
+ tp_movements: setMovements,
+ tp_audit_logs: setAuditLogs,
+ tp_parked_sales: setParkedSales,
+ tp_stock_transfers: setStockTransfers,
+ tp_branch_stock: setBranchStock,
+ tp_ledger_entries: setLedgerEntries,
+ tp_branch_sales_reports: setBranchSalesReports,
+ tp_deliveries: setDeliveries,
+ tp_damage_logs: setDamageLogs,
+ atpos_v2_custom_bills: setCustomBills,
+ atpos_v2_members_list: setMembers,
+ atpos_v2_expenses: setExpenses,
+ atpos_v2_returns: setProductReturns
+ };
+
+ if (workerRes.collections) {
+ Object.keys(workerRes.collections).forEach((k) => {
+ const item = workerRes.collections![k];
+ if (item) {
+ if (volatileCache.current[k] !== item.mergedStr) {
+ volatileCache.current[k] = item.mergedStr;
+ try { localStorage.setItem(k, item.mergedStr); } catch (_) {}
+ }
+ if (item.hasChanged && setters[k]) {
+ setters[k](item.merged);
+ }
+ if (item.serverWasEmpty) {
+ console.log(`[Sync Guard] Local dataset for "${k}" is non-empty while server was empty. Queueing server write...`);
+ setTimeout(() => {
+ saveToStorageWithDebounce(k, item.merged, true);
+ }, 500);
+ }
+ }
+ });
+ }
+
+ if (workerRes.calendarNotesChanged && workerRes.calendarNotes !== undefined) {
+ setCalendarNotes(workerRes.calendarNotes);
+ }
+ if (workerRes.dayMemosChanged && workerRes.dayMemos !== undefined) {
+ setDayMemos(workerRes.dayMemos);
+ }
+ if (workerRes.activeSessionsChanged && workerRes.updatedSessions) {
+ setActiveSessions(workerRes.updatedSessions);
+ }
+ if (workerRes.isConfiguredValue !== undefined) {
+ if (!workerRes.isConfiguredValue) {
+ localStorage.setItem("tp_is_configured", "false");
+ localStorage.setItem("tilepoint_onboarded_setup", "false");
+ setIsConfigured(false);
+ } else {
+ localStorage.setItem("tp_is_configured", "true");
+ setIsConfigured(true);
+ }
+ }
+ }
+ } catch (workerErr) {
+ console.warn('[Shared DB Client] Web worker sync processing error, using fallback:', workerErr);
+ processedByWorker = false;
+ }
+ }
+
+ if (!processedByWorker) {
  // Pre-populate volatileCache and localStorage ONLY if string content has changed
         const collectionKeys = [
           "tp_users",
@@ -2626,9 +2937,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  const getItemKey = (item: any): string | null => {
  if (!item || typeof item !== "object") return null;
+ if (item.id) return String(item.id).toLowerCase();
  if (item.branchId && item.productId)
  return `${String(item.branchId).toLowerCase()}_${String(item.productId).toLowerCase()}`;
- if (item.id) return String(item.id).toLowerCase();
  if (item.username) return String(item.username).toLowerCase();
  if (item.code) return String(item.code).toLowerCase();
  return null;
@@ -2669,8 +2980,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  } else if (inMs > exMs) {
  keepExisting = false;
  } else {
- // When version and timestamps are equal or missing, server payload (b) from central host is authoritative!
- keepExisting = false;
+ // When version and timestamps are equal, preserve local state so unsynced updates aren't lost
+ keepExisting = true;
  }
 
  // Check optimistic stock cache protection to prevent stock jump anomaly
@@ -2728,11 +3039,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
             const rawServer = typeof db[key] === "string" ? safeParse(db[key], []) : db[key];
             const serverArr = Array.isArray(rawServer) ? rawServer : [];
 
-            // Fallback to local storage if current React state happens to be unpopulated
+            // Combine current React state and local disk storage so no local items are missed
             const localStored = safeParse<any[]>(key, []);
-            const localArr = (Array.isArray(currentState) && currentState.length > 0)
-              ? currentState
-              : (Array.isArray(localStored) ? localStored : []);
+            const localArr = (Array.isArray(currentState) && currentState.length > 0 && Array.isArray(localStored) && localStored.length > 0)
+              ? mergeCollections(currentState, localStored)
+              : ((Array.isArray(currentState) && currentState.length > 0) ? currentState : (Array.isArray(localStored) ? localStored : []));
 
             const merged = key === "tp_parked_sales"
  ? mergeParkedSales(localArr, serverArr, deletedParkedSaleIds.current)
@@ -2836,6 +3147,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  setIsConfigured(true);
  }
  }
+ }
  } else {
  // Shared server db is empty (first-time launch of the server!)
  // Bootstrap server with local client-side state so we don't lose anything
@@ -2855,6 +3167,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  setServerConnected(false);
  } finally {
  isSyncingFromServer.current = false;
+ activeSyncPromise.current = null;
  if (!silent) {
  setSyncStatus((prev) => {
  const next = { ...prev };
@@ -2876,6 +3189,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  });
  }
  }
+ })().finally(() => {
+ activeSyncPromise.current = null;
+ });
+
+ return activeSyncPromise.current;
  };
 
  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -2930,6 +3248,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  try {
  setIsSystemHydrating(true);
  await syncFromSharedServer();
+ runDatabasePruning();
  await fetchDbSnapshots();
  } catch (err) {
  console.error(
@@ -2990,6 +3309,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  isSseConnected.current = true;
  reconnectDelay = 5000; // Reset backoff on success
  } else if (payload.type === 'db_update') {
+ if (payload.info && payload.info.hash && payload.info.hash === lastServerDbHash.current) {
+ return;
+ }
  console.log("[Real-Time Sync] Central database updated. Pulling changes silently...");
  // Execute silent pull sync to update cashier or staff screens instantly
  await syncFromSharedServer(true);
@@ -3103,7 +3425,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  setDbSnapshots((prev) => {
  const updated = [newSnapshot, ...prev].slice(0, 2);
  try {
- localStorage.setItem("tp_db_snapshots", JSON.stringify(updated));
+ const metaOnly = updated.map(({ data, ...meta }: any) => meta);
+ localStorage.setItem("tp_db_snapshots", JSON.stringify(metaOnly));
  } catch (e) {
  console.error(
  "[System Guard] Failed to save tp_db_snapshots to localStorage:",
@@ -3197,44 +3520,42 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const safeLocalStorageSetItem = (key: string, dataStr: string): boolean => {
- try {
- localStorage.setItem(key, dataStr);
- return true;
- } catch (e: any) {
- if (
- e.name === "QuotaExceededError" ||
- e.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
- e.code === 22
- ) {
- console.warn(
- "[Quota Guardian] QuotaExceededError captured! Running emergency database pruning...",
- );
- runDatabasePruning();
- try {
- localStorage.setItem(key, dataStr);
- return true;
- } catch (retryError) {
- console.error(
- "[Quota Guardian] LocalStorage write failed completely even after emergency pruning:",
- retryError,
- );
- if (typeof window !== "undefined") {
- window.dispatchEvent(
- new CustomEvent("tp_storage_failure", {
- detail: { message: "Local storage full. Transaction not saved to drive!" },
- })
- );
- }
- return false;
- }
- }
- console.error("[Quota Guardian] Unknown storage write failure:", e);
- return false;
- }
+  try {
+   localStorage.setItem(key, dataStr);
+   return true;
+  } catch (e: any) {
+   if (
+    e.name === "QuotaExceededError" ||
+    e.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+    e.code === 22
+   ) {
+    console.warn(
+     "[Quota Guardian] QuotaExceededError captured! Running emergency synchronous database pruning...",
+    );
+    performSyncPruning();
+    try {
+     localStorage.setItem(key, dataStr);
+     return true;
+    } catch (retryError) {
+     console.warn(
+      "[Quota Guardian] LocalStorage write bypass using sessionStorage & volatile cache:",
+      retryError,
+     );
+     try {
+      sessionStorage.setItem(key, dataStr);
+     } catch (_) {}
+     volatileCache.current[key] = dataStr;
+     return true;
+    }
+   }
+   console.error("[Quota Guardian] Unknown storage write failure:", e);
+   return false;
+  }
  };
 
  const runDatabasePruning = () => {
- const cutoffDate = new Date();
+  performSyncPruning();
+  const cutoffDate = new Date();
  cutoffDate.setDate(cutoffDate.getDate() - 30); // 30 days threshold
  const cutoffTime = cutoffDate.getTime();
 
@@ -3294,24 +3615,38 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return filtered;
  });
 
- // 6. Prune older background simulation db backups/snapshots (ephemeral interface analytics/backups)
+ // 6. Prune and strip heavy data payloads from tp_db_snapshots in localStorage
  try {
  const cachedSnapshotsStr = localStorage.getItem("tp_db_snapshots");
  if (cachedSnapshotsStr) {
  const snapshots = JSON.parse(cachedSnapshotsStr);
  if (Array.isArray(snapshots)) {
- const filteredSnapshots = snapshots.filter((snap: any) => {
- const snapTime = snap.timestamp ? new Date(snap.timestamp).getTime() : 0;
- return snapTime >= cutoffTime;
- }).slice(0, 2); // Keep only up to 2 snapshots to free up significant space
- localStorage.setItem("tp_db_snapshots", JSON.stringify(filteredSnapshots));
+ const metadataOnlySnapshots = snapshots.map((snap: any) => {
+ const { data, ...meta } = snap;
+ return meta;
+ }).slice(0, 5);
+ localStorage.setItem("tp_db_snapshots", JSON.stringify(metadataOnlySnapshots));
  }
  }
  } catch (_) {}
 
- console.log(
- "[Quota Guardian] Automated database pruning completed successfully: Old ephemeral interface analytics, temporary logs, and older extended module items (expenses, returns, custom bills, members) have been cleared using LRU caching to preserve storage runway. Active transactions, shift summaries, and stock levels remain strictly hard-locked.",
- );
+ // 7. Prune heavy ingestion snapshots from localStorage
+ try {
+ const cachedIngestStr = localStorage.getItem("tp_ingestion_snapshots");
+ if (cachedIngestStr) {
+ const ingestSnaps = JSON.parse(cachedIngestStr);
+ if (Array.isArray(ingestSnaps)) {
+ const metaIngest = ingestSnaps.slice(0, 1).map((ing: any) => ({
+ id: ing.id,
+ reportingDate: ing.reportingDate,
+ branchId: ing.branchId,
+ branchName: ing.branchName,
+ timestamp: ing.timestamp,
+ }));
+ localStorage.setItem("tp_ingestion_snapshots", JSON.stringify(metaIngest));
+ }
+ }
+ } catch (_) {}
  };
 
  const checkAndPruneIfHighUsage = () => {
@@ -3322,12 +3657,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return;
  }
  const MAX_LIMIT = 5 * 1024 * 1024; // 5MB limit
- const THRESHOLD = MAX_LIMIT * 0.85; // 85% capacity
+ const THRESHOLD = MAX_LIMIT * 0.70; // 70% capacity (3.5MB)
 
  if (currentUsageBytes > THRESHOLD) {
- console.warn(
- `[Quota Guardian] High storage usage detected: ${Math.round(currentUsageBytes / 1024)}KB of 5000KB used. Initializing auto-pruning.`,
- );
  runDatabasePruning();
  }
  };
@@ -3461,24 +3793,27 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  value: any,
  bypassDebounce = false,
  ) => {
- // 1. PERSISTENT HYDRATION GUARD: Block saving completely while hydration loop is in progress
- if (isHydrating || isSystemHydrating || isSyncingFromServer.current) {
+ // 1. PERSISTENT HYDRATION GUARD: Block saving completely while initial hydration is in progress
+ if (isHydrating || isSystemHydrating) {
  return;
  }
 
  const dataStr = JSON.stringify(value);
-
- // Quick check to avoid redundant operations if current local value or volatile cache matches exactly
- if (volatileCache.current[key] === dataStr && !bypassDebounce) {
- return;
- }
- const currentCached = localStorage.getItem(key);
- if (currentCached === dataStr && !bypassDebounce) {
- volatileCache.current[key] = dataStr;
- return;
- }
-
  const previousVolatileCached = volatileCache.current[key];
+
+ // ALWAYS sync to local storage & volatile cache immediately so browser disk state never trails React state
+ volatileCache.current[key] = dataStr;
+ safeLocalStorageSetItem(key, dataStr);
+
+ // Avoid redundant server operations if current local value matches volatile cache
+ if (previousVolatileCached === dataStr && !bypassDebounce) {
+ return;
+ }
+
+ // Avoid redundant server loop while syncing from server, unless explicit user bypass is requested
+ if (isSyncingFromServer.current && !bypassDebounce) {
+ return;
+ }
 
  const transactionalKeys = [
  "tp_products",
@@ -3499,7 +3834,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  let deltas: any[] = [];
  if (transactionalKeys.includes(key)) {
  try {
- const cachedStr = previousVolatileCached || currentCached;
+ const cachedStr = previousVolatileCached || localStorage.getItem(key);
  const oldVal = cachedStr ? JSON.parse(cachedStr) : [];
  deltas = computeDeltas(key, oldVal, value);
  } catch (err) {
@@ -3735,7 +4070,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  setDbSnapshots((prev) => {
  const updatedSnapshots = [newSnapshot, ...prev].slice(0, 2);
  try {
- localStorage.setItem("tp_db_snapshots", JSON.stringify(updatedSnapshots));
+ const metadataOnly = updatedSnapshots.map(({ data, ...meta }: any) => meta);
+ localStorage.setItem("tp_db_snapshots", JSON.stringify(metadataOnly));
  } catch (e) {
  console.error("[System Guard] Failed to save system snapshot:", e);
  }
@@ -3965,6 +4301,199 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  );
  };
 
+ const exportAndPurgeCategoryData = async (
+ category: ArchivableCategory,
+ ageMonths: number
+ ): Promise<PurgeResult> => {
+ if (currentUser.role !== UserRole.ADMIN && currentUser.role !== UserRole.MANAGER) {
+ console.error("Security alert: exportAndPurgeCategoryData is restricted to system administrators.");
+ return { count: 0, exportedFilename: null, category, ageMonths, timestamp: new Date().toISOString() };
+ }
+
+ const now = Date.now();
+ const cutoffMs = ageMonths > 0 ? now - ageMonths * 30 * 24 * 60 * 60 * 1000 : now + 100000;
+ const cutoffDateISO = new Date(cutoffMs).toISOString();
+ const dateStr = new Date().toISOString().slice(0, 10);
+ const ageLabel = ageMonths === 0 ? "all_records" : `older_than_${ageMonths}m`;
+ const filename = `TilePoint_Archive_${category}_${ageLabel}_${dateStr}.json`;
+
+ let itemsToPurge: any[] = [];
+ let remainingCount = 0;
+
+ if (category === "auditLogs") {
+ const keep: AuditLog[] = [];
+ auditLogs.forEach((item) => {
+ const itemTime = new Date(item.createdAt || item.timestamp || 0).getTime();
+ if (itemTime < cutoffMs) {
+ itemsToPurge.push(item);
+ } else {
+ keep.push(item);
+ }
+ });
+ if (itemsToPurge.length > 0) {
+ setAuditLogs(keep);
+ localStorage.setItem("tp_audit_logs", JSON.stringify(keep));
+ }
+ remainingCount = keep.length;
+ } else if (category === "movements") {
+ const keep: InventoryMovement[] = [];
+ movements.forEach((item) => {
+ const itemTime = new Date(item.timestamp || 0).getTime();
+ if (itemTime < cutoffMs) {
+ itemsToPurge.push(item);
+ } else {
+ keep.push(item);
+ }
+ });
+ if (itemsToPurge.length > 0) {
+ setMovements(keep);
+ localStorage.setItem("tp_movements", JSON.stringify(keep));
+ }
+ remainingCount = keep.length;
+ } else if (category === "sales") {
+ const keep: Sale[] = [];
+ sales.forEach((item) => {
+ const itemTime = new Date(item.createdAt || 0).getTime();
+ if (itemTime < cutoffMs) {
+ itemsToPurge.push(item);
+ } else {
+ keep.push(item);
+ }
+ });
+ if (itemsToPurge.length > 0) {
+ setSales(keep);
+ localStorage.setItem("tp_sales", JSON.stringify(keep));
+ }
+ remainingCount = keep.length;
+ } else if (category === "expenses") {
+ const keep: Expense[] = [];
+ expenses.forEach((item) => {
+ const itemTime = new Date(item.dateTime || 0).getTime();
+ if (itemTime < cutoffMs) {
+ itemsToPurge.push(item);
+ } else {
+ keep.push(item);
+ }
+ });
+ if (itemsToPurge.length > 0) {
+ setExpenses(keep);
+ localStorage.setItem("atpos_v2_expenses", JSON.stringify(keep));
+ }
+ remainingCount = keep.length;
+ } else if (category === "returns") {
+ const keep: ProductReturn[] = [];
+ productReturns.forEach((item) => {
+ const itemTime = new Date(item.dateTime || 0).getTime();
+ if (itemTime < cutoffMs) {
+ itemsToPurge.push(item);
+ } else {
+ keep.push(item);
+ }
+ });
+ if (itemsToPurge.length > 0) {
+ setProductReturns(keep);
+ localStorage.setItem("atpos_v2_returns", JSON.stringify(keep));
+ }
+ remainingCount = keep.length;
+ } else if (category === "damageLogs") {
+ const keep: DamageLog[] = [];
+ damageLogs.forEach((item) => {
+ const itemTime = new Date(item.createdAt || item.reportedAt || 0).getTime();
+ if (itemTime < cutoffMs) {
+ itemsToPurge.push(item);
+ } else {
+ keep.push(item);
+ }
+ });
+ if (itemsToPurge.length > 0) {
+ setDamageLogs(keep);
+ localStorage.setItem("tp_damage_logs", JSON.stringify(keep));
+ }
+ remainingCount = keep.length;
+ }
+
+ if (itemsToPurge.length === 0) {
+ return {
+ count: 0,
+ exportedFilename: null,
+ category,
+ ageMonths,
+ timestamp: new Date().toISOString(),
+ };
+ }
+
+ // 1. Export secondary archive file
+ const archivePayload = {
+ archiveMetadata: {
+ category,
+ ageMonths,
+ ageLabel,
+ purgedCount: itemsToPurge.length,
+ remainingCount,
+ cutoffDateISO,
+ exportedAt: new Date().toISOString(),
+ exportedBy: currentUser?.username || "Admin",
+ systemVersion: "TilePoint v2.0",
+ },
+ records: itemsToPurge,
+ };
+
+ await saveFileToBackup(
+ JSON.stringify(archivePayload, null, 2),
+ filename,
+ "Archives",
+ "application/json"
+ );
+
+ // 2. Log audit event
+ addAuditLog(
+ "DATA_CATEGORY_PURGE",
+ `Exported & purged ${itemsToPurge.length} records from category '${category}' (${ageLabel}). Archive saved as: ${filename}`,
+ "SYSTEM",
+ category
+ );
+
+ return {
+ count: itemsToPurge.length,
+ exportedFilename: filename,
+ category,
+ ageMonths,
+ timestamp: new Date().toISOString(),
+ };
+ };
+
+ const runRetentionPolicyCleanup = async (): Promise<PurgeResult[]> => {
+ if (currentUser.role !== UserRole.ADMIN && currentUser.role !== UserRole.MANAGER) {
+ console.error("Security alert: runRetentionPolicyCleanup is restricted to system administrators.");
+ return [];
+ }
+
+ const categories: ArchivableCategory[] = ["auditLogs", "movements", "sales", "expenses", "returns", "damageLogs"];
+ const results: PurgeResult[] = [];
+
+ for (const cat of categories) {
+ const months = retentionPolicy[cat] ?? 0;
+ if (months > 0) {
+ const res = await exportAndPurgeCategoryData(cat, months);
+ if (res.count > 0) {
+ results.push(res);
+ }
+ }
+ }
+
+ if (results.length > 0) {
+ const totalPurged = results.reduce((acc, r) => acc + r.count, 0);
+ addAuditLog(
+ "RETENTION_POLICY_AUTOMATED_CLEANUP",
+ `Automated policy cleanup executed across ${results.length} categories. Total purged: ${totalPurged} records.`,
+ "SYSTEM",
+ "RETENTION_POLICY"
+ );
+ }
+
+ return results;
+ };
+
  // Write changes to cache - now debounced to eliminate LocalStorage / Database I/O strain in high-volume POS environments!
  useEffect(() => {
  if (isConfigured) {
@@ -4053,7 +4582,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }, [branchSalesReports]);
 
  useEffect(() => {
- saveToStorageWithDebounce("tp_deliveries", deliveries);
+ saveToStorageWithDebounce("tp_deliveries", deliveries, true);
  }, [deliveries]);
 
  useEffect(() => {
@@ -4628,6 +5157,78 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  });
  }
 
+ // Synchronize transmitted deliveries if included
+ if (report.deliveries && Array.isArray(report.deliveries) && report.deliveries.length > 0) {
+ setDeliveries((prev) => {
+ const next = [...prev];
+ report.deliveries!.forEach((del: any) => {
+ if (!del || typeof del !== "object" || !del.id) return;
+ const idx = next.findIndex((d) => d.id === del.id || (d.saleId && d.saleId === del.saleId));
+ if (idx !== -1) {
+ next[idx] = { ...next[idx], ...del };
+ } else {
+ next.push(del);
+ }
+ });
+ localStorage.setItem("tp_deliveries", JSON.stringify(next));
+ return next;
+ });
+ }
+
+ // Synchronize transmitted expenses if included
+ if (report.expenses && Array.isArray(report.expenses) && report.expenses.length > 0) {
+ setExpenses((prev) => {
+ const next = [...prev];
+ report.expenses!.forEach((exp: any) => {
+ if (!exp || typeof exp !== "object" || !exp.id) return;
+ const idx = next.findIndex((e) => e.id === exp.id);
+ if (idx !== -1) {
+ next[idx] = { ...next[idx], ...exp };
+ } else {
+ next.push(exp);
+ }
+ });
+ localStorage.setItem("atpos_v2_expenses", JSON.stringify(next));
+ return next;
+ });
+ }
+
+ // Synchronize transmitted sales transactions if included
+ if (report.sales && Array.isArray(report.sales) && report.sales.length > 0) {
+ setSales((prev) => {
+ const next = [...prev];
+ report.sales.forEach((s: any) => {
+ if (!s || typeof s !== "object" || !s.id) return;
+ const idx = next.findIndex((existing) => existing.id === s.id || existing.saleNumber === s.saleNumber);
+ if (idx !== -1) {
+ next[idx] = { ...next[idx], ...s };
+ } else {
+ next.push(s);
+ }
+ });
+ localStorage.setItem("tp_sales", JSON.stringify(next));
+ return next;
+ });
+ }
+
+ // Synchronize transmitted sale items if included
+ if (report.saleItems && Array.isArray(report.saleItems) && report.saleItems.length > 0) {
+ setSaleItems((prev) => {
+ const next = [...prev];
+ report.saleItems.forEach((si: any) => {
+ if (!si || typeof si !== "object" || !si.id) return;
+ const idx = next.findIndex((existing) => existing.id === si.id);
+ if (idx !== -1) {
+ next[idx] = { ...next[idx], ...si };
+ } else {
+ next.push(si);
+ }
+ });
+ localStorage.setItem("tp_sale_items", JSON.stringify(next));
+ return next;
+ });
+ }
+
  addAuditLog(
  "SALES_TRANSMISSION",
  `Sales report for branch ${report.branchName} (${report.reportingDate}) transmitted successfully via ${report.transmissionType} channel. Total Grand Total: ₱${report.totalSalesAmount.toLocaleString()}`,
@@ -4867,7 +5468,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  totalSalesAmount:
  parsed.totalSalesAmount ||
  parsed.sales.reduce(
- (acc: number, s: any) => acc + (s.grandTotal || 0),
+ (acc: number, s: any) => acc + (Number(s.grandTotal) || 0),
  0,
  ),
  totalVatAmount:
@@ -4907,7 +5508,16 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  setRollbackSnapshots((prev) => {
  const next = [newSnapshot, ...prev].slice(0, 5);
- localStorage.setItem("tp_ingestion_snapshots", JSON.stringify(next));
+ try {
+ const metaIngest = next.slice(0, 1).map((ing: any) => ({
+ id: ing.id,
+ reportingDate: ing.reportingDate,
+ branchId: ing.branchId,
+ branchName: ing.branchName,
+ timestamp: ing.timestamp,
+ }));
+ localStorage.setItem("tp_ingestion_snapshots", JSON.stringify(metaIngest));
+ } catch (_) {}
  return next;
  });
 
@@ -5083,6 +5693,63 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  });
  }
 
+ // Synchronize inbound deliveries if included
+ const inboundDeliveries = parsed.deliveries || parsed.tp_deliveries || [];
+ if (Array.isArray(inboundDeliveries) && inboundDeliveries.length > 0) {
+ setDeliveries((prev) => {
+ const next = [...prev];
+ inboundDeliveries.forEach((del: any) => {
+ if (!del || typeof del !== "object" || !del.id) return;
+ const idx = next.findIndex((d) => d.id === del.id || (d.saleId && d.saleId === del.saleId));
+ if (idx !== -1) {
+ next[idx] = { ...next[idx], ...del };
+ } else {
+ next.push(del);
+ }
+ });
+ localStorage.setItem("tp_deliveries", JSON.stringify(next));
+ return next;
+ });
+ }
+
+ // Synchronize inbound sales transactions if included
+ const inboundSales = parsed.sales || [];
+ if (Array.isArray(inboundSales) && inboundSales.length > 0) {
+ setSales((prev) => {
+ const next = [...prev];
+ inboundSales.forEach((s: any) => {
+ if (!s || typeof s !== "object" || !s.id) return;
+ const idx = next.findIndex((existing) => existing.id === s.id || existing.saleNumber === s.saleNumber);
+ if (idx !== -1) {
+ next[idx] = { ...next[idx], ...s };
+ } else {
+ next.push(s);
+ }
+ });
+ localStorage.setItem("tp_sales", JSON.stringify(next));
+ return next;
+ });
+ }
+
+ // Synchronize inbound sale items if included
+ const inboundSaleItems = parsed.saleItems || [];
+ if (Array.isArray(inboundSaleItems) && inboundSaleItems.length > 0) {
+ setSaleItems((prev) => {
+ const next = [...prev];
+ inboundSaleItems.forEach((si: any) => {
+ if (!si || typeof si !== "object" || !si.id) return;
+ const idx = next.findIndex((existing) => existing.id === si.id);
+ if (idx !== -1) {
+ next[idx] = { ...next[idx], ...si };
+ } else {
+ next.push(si);
+ }
+ });
+ localStorage.setItem("tp_sale_items", JSON.stringify(next));
+ return next;
+ });
+ }
+
  addAuditLog(
  "SALES_IMPORT",
  `Manually received & parsed JSON sales package for ${newReport.branchName} (${newReport.reportingDate}). Sales amount: ₱${newReport.totalSalesAmount.toLocaleString()}`,
@@ -5185,10 +5852,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const currentBranch =
  branches.find((b) => b.id === currentUser.branchAssignmentId) ||
  branches[0];
+ const isScheduled = Boolean(delivery.truck?.trim() && delivery.driver?.trim());
  const newDelivery: Delivery = {
  ...delivery,
  id: `DEL-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
- status: "Pending Scheduling",
+ status: isScheduled ? "Scheduled" : "Pending Scheduling",
  createdAt: new Date().toISOString(),
  updatedAt: new Date().toISOString(),
  branchId: currentBranch.id,
@@ -5197,7 +5865,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  setDeliveries((prev) => {
  const updated = [newDelivery, ...prev];
- localStorage.setItem("tp_deliveries", JSON.stringify(updated));
+ saveToStorageWithDebounce("tp_deliveries", updated, true);
  return updated;
  });
 
@@ -5228,7 +5896,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }
  return d;
  });
- localStorage.setItem("tp_deliveries", JSON.stringify(updated));
+ saveToStorageWithDebounce("tp_deliveries", updated, true);
  return updated;
  });
 
@@ -5249,18 +5917,19 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  setDeliveries((prev) => {
  const updated = prev.map((d) => {
  if (d.id === id) {
+ const isPendingState = d.status === "Pending Scheduling" || d.status === "Packed" || (d.status as any) === "Pending";
  return {
  ...d,
  truck,
  driver,
  helper,
- status: d.status === "Pending Scheduling" ? "Scheduled" : d.status,
+ status: isPendingState ? "Scheduled" : d.status,
  updatedAt: new Date().toISOString(),
  };
  }
  return d;
  });
- localStorage.setItem("tp_deliveries", JSON.stringify(updated));
+ saveToStorageWithDebounce("tp_deliveries", updated, true);
  return updated;
  });
 
@@ -5294,7 +5963,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }
  return d;
  });
- localStorage.setItem("tp_deliveries", JSON.stringify(updated));
+ saveToStorageWithDebounce("tp_deliveries", updated, true);
  return updated;
  });
 
@@ -7492,9 +8161,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  notes: string,
  ): string => {
  const holdId = `HLD-${Date.now()}`;
- setParkedSales((prev) => [
- ...prev,
- {
+ const newHold = {
  id: holdId,
  customerName: customerName || "Walk-in Customer",
  notes,
@@ -7504,8 +8171,20 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  heldBy: currentUser?.fullName || currentUser?.username || "Yard Staff",
  heldByBranchId: currentUser?.branchAssignmentId || "B1",
  status: "active",
- },
- ]);
+ synced: false,
+ };
+ setParkedSales((prev: any[]) => [...prev, newHold]);
+
+ try {
+ const queueChannel = new BroadcastChannel("tilepoint_queue_channel");
+ queueChannel.postMessage({ type: "QUEUE_ADD", hold: newHold, timestamp: Date.now() });
+ queueChannel.close();
+ } catch (_) {}
+
+ try {
+ window.dispatchEvent(new CustomEvent("tp_queue_updated", { detail: { action: "add", hold: newHold } }));
+ } catch (_) {}
+
  addAuditLog(
  "POS_PARK_SALE",
  `Held order for customer ${customerName || "Walk-in"} (Hold ID: ${holdId}) by ${currentUser?.fullName || "Staff"}`,
@@ -7551,6 +8230,16 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  setParkedSales((prev: any[]) => prev.filter((p) => p && p.id !== parkedId));
 
  try {
+ const queueChannel = new BroadcastChannel("tilepoint_queue_channel");
+ queueChannel.postMessage({ type: "QUEUE_RESUME", parkedId, timestamp: Date.now() });
+ queueChannel.close();
+ } catch (_) {}
+
+ try {
+ window.dispatchEvent(new CustomEvent("tp_queue_updated", { detail: { action: "resume", parkedId } }));
+ } catch (_) {}
+
+ try {
  localStorage.setItem("tp_last_resumed_hold_id", `${parkedId}_${Date.now()}`);
  window.dispatchEvent(new Event("storage"));
  } catch (_) {}
@@ -7582,11 +8271,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  if (cached && (now - cached.lastSaleCommitTime < 60000)) {
  return cached.quantity;
  }
- const bsRecord = branchStock.find((bs) => bs.productId === productId && bs.branchId === bId);
- if (bsRecord) return bsRecord.quantity;
  const prod = products.find((p) => p.id === productId);
- return prod ? prod.stockQuantity : 0;
- }, [branchStock, products, currentUser?.branchAssignmentId]);
+ return getBranchStockQuantity(prod, bId, branchStock, branches);
+ }, [branchStock, products, branches, currentUser?.branchAssignmentId]);
 
  const getProductStockCountContext = useCallback((productId: string): number => {
  const cacheKey = `prod:${productId}`;
@@ -7733,24 +8420,17 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  // Anti-collision Lock: Defensive stock verification immediately before deductions
  for (const item of cartItems) {
- const branchStockRec = branchStock.find(
- (bs) =>
- bs.productId === item.product.id && bs.branchId === userBranchId,
- );
- const currentQty = branchStockRec ? branchStockRec.quantity : (item.product.stockQuantity ?? 0);
+ const currentQty = getBranchStockQuantityContext(item.product.id, userBranchId);
  if (currentQty < item.quantity) {
  throw new Error(
- `Insufficient inventory: Product "${item.product.productName}" has only ${currentQty} units available in local branch stock, but ${item.quantity} units were requested.`,
+ `Insufficient inventory: Product "${item.product.productName}" has only ${currentQty} units available in branch inventory, but ${item.quantity} units were requested.`,
  );
  }
  }
 
  // Totals calculations
  const subtotal = cartItems.reduce((acc, item) => {
- const branchStockRec = branchStock.find(
- (bs) =>
- bs.productId === item.product.id && bs.branchId === userBranchId,
- );
+ const branchStockRec = getBranchStockRecord(item.product, userBranchId, branchStock, branches);
  const basePrice =
  branchStockRec &&
  branchStockRec.sellingPriceOverride !== undefined &&
@@ -7862,10 +8542,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  // Save sale items
  const newSaleItems: SaleItem[] = cartItems.map((item, idx) => {
- const branchStockRec = branchStock.find(
- (bs) =>
- bs.productId === item.product.id && bs.branchId === userBranchId,
- );
+ const branchStockRec = getBranchStockRecord(item.product, userBranchId, branchStock, branches);
  const basePrice =
  branchStockRec &&
  branchStockRec.sellingPriceOverride !== undefined &&
@@ -7897,10 +8574,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const nextList = [...prevList];
  const nowIso = new Date().toISOString();
  cartItems.forEach((item) => {
- const matchIdx = nextList.findIndex(
- (bs) =>
- bs.productId === item.product.id && bs.branchId === userBranchId,
- );
+ const bsRec = getBranchStockRecord(item.product, userBranchId, nextList, branches);
+ const matchIdx = bsRec ? nextList.findIndex((bs) => bs.id === bsRec.id) : -1;
  if (matchIdx !== -1) {
  nextList[matchIdx] = {
  ...nextList[matchIdx],
@@ -7978,19 +8653,6 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }),
  );
  }
-
- // Dynamic Monthly sales updates for Branch Card
- setBranches((prev) =>
- prev.map((b) => {
- if (b.id === (currentUser?.branchAssignmentId || "B1")) {
- return {
- ...b,
- monthlySales: b.monthlySales + grandTotal,
- };
- }
- return b;
- }),
- );
 
  addAuditLog(
  "POS_CHECKOUT",
@@ -8265,19 +8927,6 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  );
  }
 
- // Deduct from branch monthly sales
- setBranches((prev) =>
- prev.map((b) => {
- if (b.id === targetSale.branchId) {
- return {
- ...b,
- monthlySales: Math.max(0, b.monthlySales - targetSale.grandTotal),
- };
- }
- return b;
- }),
- );
-
   // Refund member credit if applicable
   if (targetSale.paymentMethod === "Member Credit") {
     setMembers((prevMembers) =>
@@ -8367,7 +9016,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  generateSystemSnapshot(snapshotName);
 
  const statsResult = getShiftReportStats(activeShift);
- const expectedEndCash = activeShift.startCash + statsResult.netTotal;
+ const expectedEndCash = activeShift.startCash + statsResult.cashSalesTotal;
  const variance = cashCount - expectedEndCash;
 
  setShifts((prev) =>
@@ -8421,21 +9070,25 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  (s) => s.shiftId === shift.id && !s.isDeleted,
  );
  const salesCount = shiftSales.length;
- const salesTotal = shiftSales.reduce((acc, curr) => acc + curr.subtotal, 0);
- const vatTotal = shiftSales.reduce((acc, curr) => acc + curr.vat, 0);
+ const salesTotal = shiftSales.reduce((acc, curr) => acc + (Number(curr.subtotal) || 0), 0);
+ const vatTotal = shiftSales.reduce((acc, curr) => acc + (Number(curr.vat) || 0), 0);
  const discountTotal = shiftSales.reduce(
  (acc, curr) => acc + curr.discount,
  0,
  );
- const netTotal = shiftSales.reduce((acc, curr) => acc + curr.grandTotal, 0);
+  const netTotal = shiftSales.reduce((acc, curr) => acc + (Number(curr.grandTotal) || 0), 0);
+  const cashSalesTotal = shiftSales
+    .filter((s) => !s.paymentMethod || s.paymentMethod.toLowerCase() === "cash")
+    .reduce((acc, curr) => acc + (Number(curr.grandTotal) || 0), 0);
 
- return {
- salesCount,
- salesTotal,
- vatTotal,
- discountTotal,
- netTotal,
- };
+  return {
+    salesCount,
+    salesTotal,
+    vatTotal,
+    discountTotal,
+    netTotal,
+    cashSalesTotal,
+  };
  };
 
  // PURCHASE ORDERS
@@ -9151,35 +9804,72 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  ).length;
 
  // Sales sums
- const todayStr = new Date().toISOString().slice(0, 10);
- const todaySalesItems = sales.filter(
- (s) => s.createdAt && typeof s.createdAt === "string" && s.createdAt.startsWith(todayStr) && !s.isDeleted,
+ const now = new Date();
+
+ const validSaleIds = new Set(sales.filter((s) => !s.isDeleted).map((s) => s.id));
+ const validReturns = (productReturns || []).filter(
+ (r) => !r.isDeleted && (!r.saleId || validSaleIds.has(r.saleId)),
  );
- const todaySales = todaySalesItems.reduce(
- (acc, curr) => acc + curr.grandTotal,
+
+ const todaySalesItems = sales.filter((s) => {
+ if (!s.createdAt || s.isDeleted) return false;
+ const d = new Date(s.createdAt);
+ if (isNaN(d.getTime())) return false;
+ return d.getFullYear() === now.getFullYear() &&
+ d.getMonth() === now.getMonth() &&
+ d.getDate() === now.getDate();
+ });
+ const todayReturnsSum = validReturns
+ .filter((r) => {
+ if (!r.dateTime) return false;
+ const d = new Date(r.dateTime);
+ return !isNaN(d.getTime()) && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+ })
+ .reduce((sum, r) => sum + (Number(r.amountRefunded) || 0), 0);
+ const grossTodaySales = todaySalesItems.reduce(
+ (acc, curr) => acc + (Number(curr.grandTotal) || 0),
  0,
  );
+ const todaySales = Math.max(0, grossTodaySales - todayReturnsSum);
 
  // Calculate weekly sales (past 7 days)
  const sevenDaysAgo = new Date();
  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
  const weeklySalesItems = sales.filter(
- (s) => s.createdAt && !isNaN(new Date(s.createdAt).getTime()) && new Date(s.createdAt) >= sevenDaysAgo && !s.isDeleted,
+ (s) => s.createdAt && !s.isDeleted && !isNaN(new Date(s.createdAt).getTime()) && new Date(s.createdAt) >= sevenDaysAgo,
  );
- const weeklySales = weeklySalesItems.reduce(
- (acc, curr) => acc + curr.grandTotal,
+ const weeklyReturnsSum = validReturns
+ .filter((r) => {
+ if (!r.dateTime) return false;
+ const d = new Date(r.dateTime);
+ return !isNaN(d.getTime()) && d >= sevenDaysAgo;
+ })
+ .reduce((sum, r) => sum + (Number(r.amountRefunded) || 0), 0);
+ const grossWeeklySales = weeklySalesItems.reduce(
+ (acc, curr) => acc + (Number(curr.grandTotal) || 0),
  0,
  );
+ const weeklySales = Math.max(0, grossWeeklySales - weeklyReturnsSum);
 
  // Monthly revenue
- const currentMonthStr = new Date().toISOString().slice(0, 7); // YYYY-MM
- const monthlySalesItems = sales.filter(
- (s) => s.createdAt && typeof s.createdAt === "string" && s.createdAt.startsWith(currentMonthStr) && !s.isDeleted,
- );
- const monthlyRevenue = monthlySalesItems.reduce(
- (acc, curr) => acc + curr.grandTotal,
+ const monthlySalesItems = sales.filter((s) => {
+ if (!s.createdAt || s.isDeleted) return false;
+ const d = new Date(s.createdAt);
+ if (isNaN(d.getTime())) return false;
+ return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+ });
+ const monthlyReturnsSum = validReturns
+ .filter((r) => {
+ if (!r.dateTime) return false;
+ const d = new Date(r.dateTime);
+ return !isNaN(d.getTime()) && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+ })
+ .reduce((sum, r) => sum + (Number(r.amountRefunded) || 0), 0);
+ const grossMonthlyRevenue = monthlySalesItems.reduce(
+ (acc, curr) => acc + (Number(curr.grandTotal) || 0),
  0,
  );
+ const monthlyRevenue = Math.max(0, grossMonthlyRevenue - monthlyReturnsSum);
 
  const activeCashiers = users.filter(
  (u) => u.status === "Active" && u.role === UserRole.CASHIER,
@@ -9196,173 +9886,243 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  monthlyRevenue,
  activeCashiers,
  };
- }, [filteredProducts, suppliers, sales, users]);
+ }, [filteredProducts, suppliers, sales, users, productReturns]);
 
- return (
- <DbContext.Provider
- value={{
- currentUser,
- setCurrentUser,
- updateCurrentUser,
- validateInventoryAccess,
- isLoggedIn,
- login,
- logout,
- isConfigured,
- setupSystem,
- isRateLimited: lockoutUntil > Date.now(),
- rateLimitTimeLeft,
- activeBranch,
- users,
- branches,
- suppliers,
- brands,
- products: filteredProducts,
- purchaseOrders,
- poItems,
- transmittals,
- shifts,
- sales,
- saleItems,
- movements,
- auditLogs,
- activeShift,
- stockTransfers,
- branchStock: filteredBranchStock,
- ledgerEntries,
- customBills,
- setCustomBills,
- members,
- setMembers,
- expenses,
- setExpenses,
- productReturns,
- setProductReturns,
- calendarNotes,
- setCalendarNotes,
- dayMemos,
- setDayMemos,
- syncStatus,
- createUser,
- updateUser,
- resetPassword,
- createBranch,
- updateBranch,
- deleteBranch,
- createSupplier,
- updateSupplier,
- deleteSupplier,
- createBrand,
- updateBrand,
- deleteBrand,
- createProduct,
- updateProduct,
- deleteProduct,
- deleteDamageLog,
- importProducts,
- holdSale,
- resumeParkedSale,
- parkedSales,
- setParkedSales,
- loyaltyConfig,
- updateLoyaltyConfig,
- checkoutSale,
- voidSale,
- openShift,
- closeShift,
- forceCloseAllShifts,
- getShiftReportStats,
- createPO,
- updatePOStatus,
- receivePOItems,
- createTransmittal,
- updateTransmittalStatus,
- createStockTransfer,
- updateStockTransferStatus,
- stats,
- addAuditLog,
- logManualAdjustment,
- createManualLedgerEntry,
- truncateDatabase,
- branchSalesReports,
- rollbackSnapshots,
- performRollbackToSnapshot,
- transmitSalesReport,
- importManualSalesReport,
- auditSalesReport,
- deliveries,
- createDelivery,
- updateDeliveryStatus,
- assignDeliveryPersonnel,
- completeDelivery,
- damageLogs,
- createDamageLog,
- updateBranchPriceOverride,
- updateBranchLowStockThreshold,
- debounceDelay,
- setDebounceDelay,
- dbSyncStatus,
- writeStatsCount,
- resetWriteStats,
- forceSyncAll,
- dbSnapshots,
- createDbSnapshot,
- restoreDbSnapshot,
- deleteDbSnapshot,
- autoBackupEnabled,
- setAutoBackupEnabled,
- backupIntervalHours,
- setBackupIntervalHours,
- lastAutoBackupTime,
- setLastAutoBackupTime,
- isSystemProcessing,
- systemProcessingMessage,
- systemProcessingSubtext,
- systemProcessingType,
- systemProcessingProgress,
- triggerSystemProcessing,
- setSystemProcessingProgress,
- setIsSystemProcessing,
- setSystemProcessingMessage,
- setSystemProcessingSubtext,
- simulationModeActive,
- setSimulationModeActive,
- generateMasterForensicBackup,
- importMasterForensicBackup,
- resetLockout,
- isHydrating,
- isSystemHydrating,
- serverConnected,
- syncFromSharedServer,
- lowPerformanceMode,
- setLowPerformanceMode,
- activeSessions,
- activeSessionId,
- terminateSession,
- completeOnboarding,
- isRowClearingBlocked,
- getRowClearingBlockedReason,
- pessimisticLocks,
- acquirePessimisticLock,
- releasePessimisticLock,
- isResourceLocked,
- deletePurchaseOrder,
- deleteStockTransfer,
- deleteTransmittal,
- deleteCustomCorporateBill,
- apiErrorState,
- clearServerErrorState,
- invalidateLocalCache,
- safeApiFetch,
- getInventory: getInventoryContext,
- getBranchStockQuantity: getBranchStockQuantityContext,
- getProductStockCount: getProductStockCountContext,
- revalidateStockCounts,
- }}
- >
- {children}
- </DbContext.Provider>
- );
+   const contextValue = useMemo(
+    () => ({
+      currentUser,
+      setCurrentUser,
+      updateCurrentUser,
+      validateInventoryAccess,
+      isLoggedIn,
+      login,
+      logout,
+      isConfigured,
+      setupSystem,
+      isRateLimited: lockoutUntil > Date.now(),
+      rateLimitTimeLeft,
+      activeBranch,
+      users,
+      branches,
+      suppliers,
+      brands,
+      products: filteredProducts,
+      purchaseOrders,
+      poItems,
+      transmittals,
+      shifts,
+      sales,
+      saleItems,
+      movements,
+      auditLogs,
+      activeShift,
+      stockTransfers,
+      branchStock: filteredBranchStock,
+      ledgerEntries,
+      customBills,
+      setCustomBills,
+      members,
+      setMembers,
+      expenses,
+      setExpenses,
+      productReturns,
+      setProductReturns,
+      calendarNotes,
+      setCalendarNotes,
+      dayMemos,
+      setDayMemos,
+      syncStatus,
+      createUser,
+      updateUser,
+      resetPassword,
+      createBranch,
+      updateBranch,
+      deleteBranch,
+      createSupplier,
+      updateSupplier,
+      deleteSupplier,
+      createBrand,
+      updateBrand,
+      deleteBrand,
+      createProduct,
+      updateProduct,
+      deleteProduct,
+      deleteDamageLog,
+      importProducts,
+      holdSale,
+      resumeParkedSale,
+      parkedSales,
+      setParkedSales,
+      loyaltyConfig,
+      updateLoyaltyConfig,
+      checkoutSale,
+      voidSale,
+      openShift,
+      closeShift,
+      forceCloseAllShifts,
+      getShiftReportStats,
+      createPO,
+      updatePOStatus,
+      receivePOItems,
+      createTransmittal,
+      updateTransmittalStatus,
+      createStockTransfer,
+      updateStockTransferStatus,
+      stats,
+      addAuditLog,
+      logManualAdjustment,
+      createManualLedgerEntry,
+      truncateDatabase,
+      branchSalesReports,
+      rollbackSnapshots,
+      performRollbackToSnapshot,
+      transmitSalesReport,
+      importManualSalesReport,
+      auditSalesReport,
+      deliveries,
+      createDelivery,
+      updateDeliveryStatus,
+      assignDeliveryPersonnel,
+      completeDelivery,
+      damageLogs,
+      createDamageLog,
+      updateBranchPriceOverride,
+      updateBranchLowStockThreshold,
+      debounceDelay,
+      setDebounceDelay,
+      dbSyncStatus,
+      writeStatsCount,
+      resetWriteStats,
+      forceSyncAll,
+      dbSnapshots,
+      createDbSnapshot,
+      restoreDbSnapshot,
+      deleteDbSnapshot,
+      autoBackupEnabled,
+      setAutoBackupEnabled,
+      backupIntervalHours,
+      setBackupIntervalHours,
+      lastAutoBackupTime,
+      setLastAutoBackupTime,
+      isSystemProcessing,
+      systemProcessingMessage,
+      systemProcessingSubtext,
+      systemProcessingType,
+      systemProcessingProgress,
+      triggerSystemProcessing,
+      setSystemProcessingProgress,
+      setIsSystemProcessing,
+      setSystemProcessingMessage,
+      setSystemProcessingSubtext,
+      simulationModeActive,
+      setSimulationModeActive,
+      generateMasterForensicBackup,
+      importMasterForensicBackup,
+      resetLockout,
+      isHydrating,
+      isSystemHydrating,
+      serverConnected,
+      syncFromSharedServer,
+      lowPerformanceMode,
+      setLowPerformanceMode,
+      activeSessions,
+      activeSessionId,
+      terminateSession,
+      completeOnboarding,
+      isRowClearingBlocked,
+      getRowClearingBlockedReason,
+      pessimisticLocks,
+      acquirePessimisticLock,
+      releasePessimisticLock,
+      isResourceLocked,
+      deletePurchaseOrder,
+      deleteStockTransfer,
+      deleteTransmittal,
+      deleteCustomCorporateBill,
+      apiErrorState,
+      clearServerErrorState,
+      invalidateLocalCache,
+      safeApiFetch,
+      exportAndPurgeCategoryData,
+      retentionPolicy,
+      updateRetentionPolicy,
+      runRetentionPolicyCleanup,
+      getInventory: getInventoryContext,
+      getBranchStockQuantity: getBranchStockQuantityContext,
+      getProductStockCount: getProductStockCountContext,
+      revalidateStockCounts,
+    }),
+    [
+      currentUser,
+      lockoutUntil,
+      rateLimitTimeLeft,
+      activeBranch,
+      users,
+      branches,
+      suppliers,
+      brands,
+      filteredProducts,
+      purchaseOrders,
+      poItems,
+      transmittals,
+      shifts,
+      sales,
+      saleItems,
+      movements,
+      auditLogs,
+      activeShift,
+      stockTransfers,
+      filteredBranchStock,
+      ledgerEntries,
+      customBills,
+      members,
+      expenses,
+      productReturns,
+      calendarNotes,
+      dayMemos,
+      syncStatus,
+      parkedSales,
+      loyaltyConfig,
+      retentionPolicy,
+      stats,
+      branchSalesReports,
+      rollbackSnapshots,
+      deliveries,
+      damageLogs,
+      debounceDelay,
+      dbSyncStatus,
+      writeStatsCount,
+      dbSnapshots,
+      autoBackupEnabled,
+      backupIntervalHours,
+      lastAutoBackupTime,
+      isSystemProcessing,
+      systemProcessingMessage,
+      systemProcessingSubtext,
+      systemProcessingType,
+      systemProcessingProgress,
+      simulationModeActive,
+      isHydrating,
+      isSystemHydrating,
+      serverConnected,
+      lowPerformanceMode,
+      activeSessions,
+      activeSessionId,
+      pessimisticLocks,
+      apiErrorState,
+      exportAndPurgeCategoryData,
+      getInventoryContext,
+      getBranchStockQuantityContext,
+      getProductStockCountContext,
+      revalidateStockCounts,
+    ]
+  );
+
+  return (
+    <DbContext.Provider value={contextValue}>
+      {children}
+    </DbContext.Provider>
+  );
 };
 
 export const useDb = () => {
@@ -9372,6 +10132,53 @@ export const useDb = () => {
  }
  return context;
 };
+
+/**
+ * Selector hook allowing components to subscribe to specific parts of DbContext
+ * without triggering re-renders on unrelated database updates.
+ */
+export function useDbSelector<T>(selector: (db: DbContextType) => T): T {
+  const db = useDb();
+  return useMemo(() => selector(db), [db, selector]);
+}
+
+/**
+ * Custom memoized selector for retrieving products list efficiently
+ */
+export function useDbProducts() {
+  const db = useDb();
+  return useMemo(() => db.products, [db.products]);
+}
+
+/**
+ * Custom memoized selector for retrieving branch stock list efficiently
+ */
+export function useDbBranchStock() {
+  const db = useDb();
+  return useMemo(() => db.branchStock, [db.branchStock]);
+}
+
+/**
+ * Custom memoized selector for retrieving inventory helper functions
+ */
+export function useDbInventory() {
+  const db = useDb();
+  return useMemo(() => ({
+    products: db.products,
+    branchStock: db.branchStock,
+    getInventory: db.getInventory,
+    getBranchStockQuantity: db.getBranchStockQuantity,
+    getProductStockCount: db.getProductStockCount,
+    revalidateStockCounts: db.revalidateStockCounts,
+  }), [
+    db.products,
+    db.branchStock,
+    db.getInventory,
+    db.getBranchStockQuantity,
+    db.getProductStockCount,
+    db.revalidateStockCounts,
+  ]);
+}
 
 /**
  * Strict structural layout and clipboard parsing guards.

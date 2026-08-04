@@ -184,7 +184,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
  <input
  type="number"
  required
- value={closingCashInput}
+ value={closingCashInput ?? ''}
  onChange={e => setClosingCashInput(e.target.value)}
  placeholder="3000"
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant focus:border-m3-primary px-3 py-2 text-sm text-center font-mono font-bold text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
@@ -276,7 +276,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
  type="number"
  step="any"
  required
- value={startCashInput}
+ value={startCashInput ?? ''}
  onChange={e => setStartCashInput(e.target.value)}
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant focus:border-m3-primary px-3 py-2 text-sm text-center font-mono font-bold text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
  />

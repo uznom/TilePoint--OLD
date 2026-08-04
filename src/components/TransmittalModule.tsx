@@ -204,7 +204,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  const branchSales = sales.filter(
  (s) => s.branchId === currentBranchId && !s.isDeleted,
  );
- const totalAmount = branchSales.reduce((sum, s) => sum + s.grandTotal, 0);
+ const totalAmount = branchSales.reduce((sum, s) => sum + (Number(s.grandTotal) || 0), 0);
  const packet = {
  compiledAt: new Date().toISOString(),
  branchId: currentBranchId,
@@ -365,7 +365,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  );
 
  // 2. Financial KPIs
- const totalRevenue = bSales.reduce((sum, s) => sum + s.grandTotal, 0);
+ const totalRevenue = bSales.reduce((sum, s) => sum + (Number(s.grandTotal) || 0), 0);
  const totalCostOfGoods = bSaleItems.reduce((sum, item) => {
  const prod = products.find((p) => p.id === item.productId);
  const cost = prod ? prod.costPrice : 0;
@@ -380,12 +380,12 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  const profitMarginPercent =
  totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
- const totalVat = bSales.reduce((sum, s) => sum + s.vat, 0);
- const totalDiscounts = bSales.reduce((sum, s) => sum + s.discount, 0);
+ const totalVat = bSales.reduce((sum, s) => sum + (Number(s.vat) || 0), 0);
+ const totalDiscounts = bSales.reduce((sum, s) => sum + (Number(s.discount) || 0), 0);
 
  const paymentMethodBreakdown = bSales.reduce(
  (acc: Record<string, number>, s) => {
- acc[s.paymentMethod] = (acc[s.paymentMethod] || 0) + s.grandTotal;
+ acc[s.paymentMethod] = (acc[s.paymentMethod] || 0) + (Number(s.grandTotal) || 0);
  return acc;
  },
  {},
@@ -460,7 +460,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  };
  }
  productSalesVolume[item.productId].qty += item.quantity;
- productSalesVolume[item.productId].revenue += item.total;
+ productSalesVolume[item.productId].revenue += Number(item.total) || 0;
  });
 
  const topProductsByRevenue = Object.values(productSalesVolume)
@@ -504,7 +504,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  uniqueProductsCount: 0,
  };
  }
- categoryBreakdown[cat].revenue += item.total;
+ categoryBreakdown[cat].revenue += Number(item.total) || 0;
  });
 
  // Unique products per category
@@ -554,12 +554,12 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
 
  if (dayName) {
  dayOfWeekDistribution[dayName].count++;
- dayOfWeekDistribution[dayName].value += s.grandTotal;
+ dayOfWeekDistribution[dayName].value += Number(s.grandTotal) || 0;
  }
 
  if (hour >= 0 && hour < 24) {
  hourOfDayDistribution[hour].count++;
- hourOfDayDistribution[hour].value += s.grandTotal;
+ hourOfDayDistribution[hour].value += Number(s.grandTotal) || 0;
  }
  });
 
@@ -1377,7 +1377,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </button>
  </div>
  <select
- value={selectedDocType}
+ value={selectedDocType ?? ''}
  onChange={(e) => {
  const val = e.target.value as TransmittalDocType;
  setSelectedDocType(val);
@@ -1404,7 +1404,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  Target branch destination
  </label>
  <select
- value={toBranchId}
+ value={toBranchId ?? ''}
  onChange={(e) => setToBranchId(e.target.value)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md cursor-pointer"
  >
@@ -1425,7 +1425,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  <textarea
  required
  rows={4}
- value={payloadText}
+ value={payloadText ?? ''}
  onChange={(e) => setPayloadText(e.target.value)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface font-mono focus:outline-none transition-colors rounded-t-md"
  />
@@ -1437,7 +1437,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </label>
  <input
  type="text"
- value={notes}
+ value={notes ?? ''}
  onChange={(e) => setNotes(e.target.value)}
  placeholder="Summary memo notes"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
@@ -1859,7 +1859,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </span>
  <textarea
  rows={6}
- value={rawImportText}
+ value={rawImportText ?? ''}
  onChange={(e) => setRawImportText(e.target.value)}
  placeholder="Paste raw downloaded transmittal JSON slip data here..."
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono"

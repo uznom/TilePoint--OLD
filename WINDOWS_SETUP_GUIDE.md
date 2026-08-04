@@ -17,6 +17,7 @@ This document provides a comprehensive, step-by-step guide for installing, confi
    - [Step 2.6: Configure Windows Defender Firewall for Ports 3000 & 3306](#step-26-configure-windows-defender-firewall-for-ports-3000--3306)
    - [Step 2.7: Build Production Client Assets](#step-27-build-production-client-assets)
    - [Step 2.8: Launch and Manage Server under PM2](#step-28-launch-and-manage-server-under-pm2)
+   - [Step 2.9: 1-Click Launcher & Windows Auto-Start on Boot (start-tilepoint.bat)](#step-29-1-click-launcher--windows-auto-start-on-boot-start-tilepointbat)
 5. [Database Management, Migration & Resetting to Setup Wizard State](#-5-database-management-migration--resetting-to-setup-wizard-state)
    - [5.1 better-sqlite3 Database Architecture & File Layout](#-51-better-sqlite3-database-architecture--file-layout)
    - [5.2 better-sqlite3 Diagnostic & Verification Protocol (Testing If Working)](#-52-better-sqlite3-diagnostic--verification-protocol-testing-if-working)
@@ -90,14 +91,15 @@ TilePoint includes a fully automated installer batch file (**`setup-tilepoint.ba
 3. If prompted by Windows User Account Control (UAC), click **Yes**.
 4. The automated script will perform these actions sequentially:
    - ✅ Verify and auto-install Git and Node.js LTS via `winget` if missing.
-   - ✅ Execute `npm install` for project dependencies (including `express`, `alasql`, `mysql2`, `xlsx`, `lucide-react`, etc.).
+   - ✅ Execute `npm install` for project dependencies and rebuild `better-sqlite3` native C++ add-ons.
+   - ✅ Execute `better-sqlite3` native engine verification test to confirm binary ABI compatibility.
    - ✅ Detect your primary local IPv4 address (excluding WSL, Docker, and VirtualBox interfaces).
    - ✅ Create `.env` from `.env.example` with auto-generated security secrets and local IP binding.
-   - ✅ Download `mkcert.exe` and generate trusted SSL certificates (`key.pem`, `cert.pem`) for `localhost` and your local IP.
-   - ✅ Add an Inbound Firewall Rule in Windows Defender for TCP Port 3000.
-   - ✅ Compile production client bundle (`npm run build`).
+   - ✅ Download `mkcert.exe` and generate trusted SSL certificates (`key.pem`, `cert.pem`) for `localhost`, `127.0.0.1`, and your local IP in the Windows Certificate Trust Store.
+   - ✅ Add Inbound Firewall Rules in Windows Defender for TCP Ports 3000 (POS Server) and 3306 (MySQL Server).
+   - ✅ Compile static production client assets (`npm run build`).
    - ✅ Install and launch the server under PM2 process manager as `tilepoint-hq-server`.
-   - ✅ Open your default browser to `https://<YOUR_LOCAL_IP>:3000`.
+   - ✅ Launch your default web browser to `https://<YOUR_LOCAL_IP>:3000` with launch choices for Chrome, Edge, and Firefox.
 
 ---
 
@@ -277,6 +279,37 @@ PM2 keeps your server running 24/7 in the background and restarts it automatical
    ```cmd
    pm2 status
    ```
+
+---
+
+### Step 2.9: 1-Click Launcher & Windows Auto-Start on Boot (`start-tilepoint.bat`)
+
+TilePoint includes a standalone **`start-tilepoint.bat`** script that allows cashiers, managers, and store staff to launch the system with a single click, or configure it to run automatically whenever the Windows PC powers on.
+
+#### Features of `start-tilepoint.bat`:
+1. **Local IPv4 Auto-Detection**: Dynamically queries PowerShell (`Get-NetIPAddress`) to identify your active local area network (LAN) IP address (e.g., `192.168.1.100`), ignoring internal virtual adapters (Docker, WSL, VirtualBox).
+2. **Server Port Check & Auto-Start**: Probes TCP Port 3000. If the TilePoint server is already running, it reuses the active connection. If not running, it automatically boots `server.js` in the background (or via PM2).
+3. **Automated Web Browser Launch**: Automatically opens your default system browser (Chrome, Edge, or Firefox) directly to `http://<YOUR_LOCAL_IP>:3000` or `https://<YOUR_LOCAL_IP>:3000` (when SSL certificates are present).
+
+#### How to Configure TilePoint to Auto-Start on Windows Boot:
+
+##### Method A: Windows Startup Folder (Recommended for Desktop PCs & Laptops)
+1. Press `Win + R` on your keyboard, type `shell:startup` and press Enter.
+   *(This opens the Windows user startup directory: `C:\Users\<User>\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup`)*
+2. Right-click inside the folder, choose **New** -> **Shortcut**.
+3. Target location: Browse to your TilePoint installation directory and select `start-tilepoint.bat` (e.g., `C:\Users\USER\Documents\GitHub\TilePoint\start-tilepoint.bat`).
+4. Name the shortcut `TilePoint POS Auto-Start` and click **Finish**.
+5. **Result**: Whenever Windows powers on or logs in, TilePoint will automatically initialize the server, detect your IP address, and launch the POS interface in your browser without requiring manual terminal commands!
+
+##### Method B: Windows Task Scheduler (Runs as System Service before User Login)
+1. Press `Win + R`, type `taskschd.msc` and press Enter (*Task Scheduler*).
+2. In the right panel, click **Create Basic Task...**
+3. **Name**: `TilePoint POS Startup Service`.
+4. **Trigger**: Select **When the computer starts** or **When I log on**.
+5. **Action**: Select **Start a program**.
+6. **Program/script**: Click Browse and select `C:\path\to\TilePoint\start-tilepoint.bat`.
+7. **Start in (optional)**: Enter `C:\path\to\TilePoint` *(Crucial: set this so relative path resolution loads `server.js` and certificates accurately)*.
+8. Click **Finish**.
 
 ---
 

@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useDb } from "../context/DbContext";
+import { useDb, useDbProducts, useDbBranchStock } from "../context/DbContext";
 import { Product, Sale, SaleItem, UserRole, Member } from "../types/db";
 import { verifyPasswordWithToken } from "../lib/crypto";
 import { saveFileToBackup } from "../lib/fileBackupHelper";
-import { isProductInBranch, getBranchStockQuantity } from "../lib/branchUtils";
+import { isProductInBranch, getBranchStockQuantity, getBranchStockRecord } from "../lib/branchUtils";
 import { createSearchIndex, searchIndex } from "../utils/searchIndex";
 import { useVirtualList } from "../hooks/useVirtualList";
 import {
@@ -22,6 +22,7 @@ import {
  Keyboard,
  X,
  ShieldCheck,
+  RotateCcw,
  History,
  LockKeyhole,
  ShoppingBag,
@@ -46,6 +47,7 @@ import {
   Plus,
   Minus,
   Scissors,
+  RefreshCw,
 } from "lucide-react";
 import { CalculatorModule } from "./CalculatorModule";
 import { ExpressiveTooltip } from "./ExpressiveTooltip";
@@ -123,7 +125,7 @@ const CartQtyInput: React.FC<{
  return (
  <input
  type="number"
- value={localVal}
+ value={localVal ?? ''}
  onChange={handleChange}
  onBlur={handleBlur}
  onKeyDown={handleKeyDown}
@@ -140,8 +142,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
  viewMode,
  showImmersiveControls = true,
 }) => {
+ const rawProducts = useDbProducts();
+ const branchStock = useDbBranchStock();
  const {
- products: rawProducts,
  activeShift,
  openShift,
  closeShift,
@@ -163,7 +166,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  deliveries,
  triggerSystemProcessing,
  branches,
- branchStock,
  syncFromSharedServer,
  syncStatus,
  	members: rawMembers,
@@ -205,10 +207,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  const getBranchPrice = (p: Product) => {
   if (!p) return 0;
-  const branchStockItem = branchStock.find(
-    (bs) =>
-      bs.productId === p.id && bs.branchId === currentUser?.branchAssignmentId,
-  );
+  const branchStockItem = getBranchStockRecord(p, activePosBranchId || currentUser?.branchAssignmentId || "B1", branchStock, branches);
   const price = branchStockItem &&
   branchStockItem.sellingPriceOverride !== undefined &&
   branchStockItem.sellingPriceOverride !== null &&
@@ -483,6 +482,161 @@ export const PosModule: React.FC<PosModuleProps> = ({
  const [deliveryTime, setDeliveryTime] = useState("10:00 AM - 2:00 PM");
  const [deliveryNotes, setDeliveryNotes] = useState("");
 
+  // Safe Transaction Commit & Recovery State
+  interface RecoveredSessionDraft {
+    itemCount: number;
+    grandTotal: number;
+    customerName: string;
+    customerNotes?: string;
+    lastSavedAt: string;
+    hasDeliveryDraft?: boolean;
+  }
+  const [recoveredSession, setRecoveredSession] = useState<RecoveredSessionDraft | null>(null);
+  const [showRecoveryBanner, setShowRecoveryBanner] = useState(false);
+
+  // Safe Transaction Commit: Flush active cart and delivery state synchronously
+  const flushPosSessionToStorage = useCallback(() => {
+    try {
+      if (cart && cart.length > 0) {
+        const deliveryDraftObj = {
+          deliveryCustomerName,
+          deliveryContact,
+          deliveryHouseNo,
+          deliveryStreet,
+          deliveryBarangay,
+          deliveryCity,
+          deliveryLandmark,
+          deliveryDate,
+          deliveryTime,
+          deliveryNotes,
+        };
+
+        const sessionCheckpoint = {
+          cart,
+          customerName,
+          customerNotes,
+          discountValue,
+          discountType,
+          paymentMethod,
+          paymentRef,
+          deliveryDraft: deliveryDraftObj,
+          timestamp: new Date().toISOString(),
+          status: "UNCOMMITTED_DRAFT",
+          cashier: currentUser?.fullName || currentUser?.username || "Cashier",
+        };
+
+        localStorage.setItem("tp_active_cart", JSON.stringify(cart));
+        localStorage.setItem("tp_active_customer_name", customerName);
+        localStorage.setItem("tp_active_customer_notes", customerNotes);
+        localStorage.setItem("tp_pos_session_checkpoint", JSON.stringify(sessionCheckpoint));
+        localStorage.setItem("tp_pending_delivery_draft", JSON.stringify(deliveryDraftObj));
+      } else {
+        localStorage.removeItem("tp_pos_session_checkpoint");
+        localStorage.removeItem("tp_pending_delivery_draft");
+      }
+    } catch (err) {
+      console.warn("[POS Safe Commit] Local Storage Flush Warning:", err);
+    }
+  }, [
+    cart,
+    customerName,
+    customerNotes,
+    discountValue,
+    discountType,
+    paymentMethod,
+    paymentRef,
+    deliveryCustomerName,
+    deliveryContact,
+    deliveryHouseNo,
+    deliveryStreet,
+    deliveryBarangay,
+    deliveryCity,
+    deliveryLandmark,
+    deliveryDate,
+    deliveryTime,
+    deliveryNotes,
+    currentUser,
+  ]);
+
+  // Point of Sale Safeguard Guard: Flush cart & session draft before refresh/unload or tab hide
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      flushPosSessionToStorage();
+      if (cart && cart.length > 0) {
+        e.preventDefault();
+        e.returnValue = "Active POS transaction in progress! Reloading will preserve your draft session safely.";
+        return e.returnValue;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        flushPosSessionToStorage();
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("pagehide", flushPosSessionToStorage);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("pagehide", flushPosSessionToStorage);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [cart, flushPosSessionToStorage]);
+
+  // Recovery Task: Check for abandoned/unsynced local session drafts on hydration
+  useEffect(() => {
+    try {
+      const checkpointRaw = localStorage.getItem("tp_pos_session_checkpoint");
+      if (checkpointRaw) {
+        const parsed = JSON.parse(checkpointRaw);
+        if (parsed && Array.isArray(parsed.cart) && parsed.cart.length > 0) {
+          const totalQty = parsed.cart.reduce((acc: number, item: any) => acc + (item.quantity || 1), 0);
+          const subtotalVal = parsed.cart.reduce((acc: number, item: any) => {
+            const price = item.overridePrice !== undefined ? item.overridePrice : (item.product?.sellingPrice || 0);
+            return acc + price * (item.quantity || 1);
+          }, 0);
+          const discountVal = parsed.discountValue || 0;
+          const totalVal = Math.max(0, subtotalVal - discountVal);
+
+          setRecoveredSession({
+            itemCount: totalQty,
+            grandTotal: totalVal,
+            customerName: parsed.customerName || "Walk-in Customer",
+            customerNotes: parsed.customerNotes || "",
+            lastSavedAt: parsed.timestamp ? new Date(parsed.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "previous session",
+            hasDeliveryDraft: Boolean(parsed.deliveryDraft && parsed.deliveryDraft.deliveryBarangay),
+          });
+          setShowRecoveryBanner(true);
+
+          if (parsed.deliveryDraft) {
+            if (parsed.deliveryDraft.deliveryCustomerName) setDeliveryCustomerName(parsed.deliveryDraft.deliveryCustomerName);
+            if (parsed.deliveryDraft.deliveryContact) setDeliveryContact(parsed.deliveryDraft.deliveryContact);
+            if (parsed.deliveryDraft.deliveryHouseNo) setDeliveryHouseNo(parsed.deliveryDraft.deliveryHouseNo);
+            if (parsed.deliveryDraft.deliveryStreet) setDeliveryStreet(parsed.deliveryDraft.deliveryStreet);
+            if (parsed.deliveryDraft.deliveryBarangay) setDeliveryBarangay(parsed.deliveryDraft.deliveryBarangay);
+            if (parsed.deliveryDraft.deliveryCity) setDeliveryCity(parsed.deliveryDraft.deliveryCity);
+            if (parsed.deliveryDraft.deliveryLandmark) setDeliveryLandmark(parsed.deliveryDraft.deliveryLandmark);
+            if (parsed.deliveryDraft.deliveryNotes) setDeliveryNotes(parsed.deliveryDraft.deliveryNotes);
+          }
+
+          addAuditLog(
+            "POS_DRAFT_RECOVERY",
+            `Hydration Safeguard: Restored abandoned uncommitted POS transaction session draft (${totalQty} item(s), ₱${totalVal.toFixed(2)}) for ${parsed.customerName || "Walk-in Customer"}.`,
+            "POS_Session",
+            `RECOVERY-${Date.now()}`
+          );
+
+          console.log(`[POS Recovery Task] Successfully hydrated ${totalQty} cart item(s) from session checkpoint.`);
+        }
+      }
+    } catch (err) {
+      console.warn("[POS Recovery Task] Session hydration warning:", err);
+    }
+  }, []);
+
  // If check out and to be delivered, auto-fill the phone number of the registered member from the database
  useEffect(() => {
  if (deliveryCustomerName.trim()) {
@@ -558,18 +712,31 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  const prevParkedSalesRef = useRef<any[]>([]);
 
+ const [isManualSyncingQueue, setIsManualSyncingQueue] = useState(false);
+
  useEffect(() => {
  if (prevParkedSalesRef.current.length > 0) {
  const prevIds = new Set(prevParkedSalesRef.current.map((ps) => ps.id));
  const newSales = parkedSales.filter((ps) => !prevIds.has(ps.id));
  if (newSales.length > 0) {
  const newest = newSales[newSales.length - 1];
- showToast(` NEW YARD ORDER RECEIVED: ${newest.customerName || "Walk-in Customer"}`);
+ showToast(`⚡ NEW YARD ORDER RECEIVED: ${newest.customerName || "Walk-in Customer"}`);
  playNotificationSound();
+ } else if (parkedSales.length < prevParkedSalesRef.current.length) {
+ showToast("🔄 Queue synchronized: Hold order processed/resumed");
  }
  }
  prevParkedSalesRef.current = parkedSales;
  }, [parkedSales]);
+
+ useEffect(() => {
+ const queueSyncInterval = setInterval(() => {
+ if (typeof document !== "undefined" && document.visibilityState === "visible") {
+ syncFromSharedServer(true).catch(() => {});
+ }
+ }, 4000);
+ return () => clearInterval(queueSyncInterval);
+ }, [syncFromSharedServer]);
 
  // Search input referencer for hotkey focus
  const searchInputRef = useRef<HTMLInputElement>(null);
@@ -803,6 +970,15 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setAmountTendered("");
  setChangeAmount(0);
  setErrorMessage("");
+ setRecoveredSession(null);
+ setShowRecoveryBanner(false);
+ try {
+ localStorage.removeItem("tp_active_cart");
+ localStorage.removeItem("tp_active_customer_name");
+ localStorage.removeItem("tp_active_customer_notes");
+ localStorage.removeItem("tp_pos_session_checkpoint");
+ localStorage.removeItem("tp_pending_delivery_draft");
+ } catch (_) {}
  };
 
  // Park Sale operations
@@ -1005,21 +1181,20 @@ export const PosModule: React.FC<PosModuleProps> = ({
  const freshDb = responseData.data;
  const freshBranchStock = freshDb["tp_branch_stock"] || [];
  const freshProducts = freshDb["tp_products"] || [];
+ const freshBranches = freshDb["tp_branches"] || branches || [];
+ const targetBranchId = activePosBranchId || currentUser?.branchAssignmentId || "B1";
 
  // Validate each item in cart
  for (const item of cart) {
- const serverStockRec = freshBranchStock.find(
- (bs: any) =>
- bs.productId === item.product.id &&
- bs.branchId === (currentUser?.branchAssignmentId || "B1"),
- );
- const serverProd = freshProducts.find((p: any) => p.id === item.product.id);
- const defaultProdQty = serverProd ? serverProd.stockQuantity : (item.product.stockQuantity ?? 0);
- const serverQty = serverStockRec ? serverStockRec.quantity : defaultProdQty;
- if (serverQty < item.quantity) {
+ const serverProd = freshProducts.find((p: any) => p.id === item.product.id) || item.product;
+ const serverQty = getBranchStockQuantity(serverProd, targetBranchId, freshBranchStock, freshBranches);
+ const localQty = getBranchStockQuantity(item.product, targetBranchId, branchStock, branches);
+ const effectiveQty = Math.max(serverQty, localQty);
+
+ if (effectiveQty < item.quantity) {
  await syncFromSharedServer();
  setErrorMessage(
- `CONCURRENT STOCK CONFLICT DETECTED: The product "${item.product.productName}" has only ${serverQty} units remaining in the master database, but your billing basket requested ${item.quantity}. The transaction has been aborted to prevent inventory deficit. Local stock counters have been synchronized to match server state.`,
+ `CONCURRENT STOCK CONFLICT DETECTED: The product "${item.product.productName}" has only ${effectiveQty} units remaining in inventory, but your billing basket requested ${item.quantity}. The transaction has been aborted to prevent inventory deficit. Local stock counters have been synchronized to match server state.`,
  );
  return;
  }
@@ -1271,10 +1446,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
  csv += `"Total Records Exported:","${filteredSales.length} Transactions"\n\n`;
 
  // Statistics section
- const totalSubtotal = filteredSales.reduce((acc, s) => acc + s.subtotal, 0);
- const totalDiscount = filteredSales.reduce((acc, s) => acc + s.discount, 0);
- const totalVat = filteredSales.reduce((acc, s) => acc + s.vat, 0);
- const totalGrand = filteredSales.reduce((acc, s) => acc + s.grandTotal, 0);
+ const totalSubtotal = filteredSales.reduce((acc, s) => acc + (Number(s.subtotal) || 0), 0);
+ const totalDiscount = filteredSales.reduce((acc, s) => acc + (Number(s.discount) || 0), 0);
+ const totalVat = filteredSales.reduce((acc, s) => acc + (Number(s.vat) || 0), 0);
+ const totalGrand = filteredSales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
 
  csv += `"AGGREGATE SUMS STATISTICS"\n`;
  csv += `"Total Base Subtotal","PHP ${(Number(totalSubtotal) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}"\n`;
@@ -1630,9 +1805,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
  const ledgerStats = React.useMemo(() => {
  const activeSales = filteredSales.filter(s => !s.isDeleted);
  const voidedSales = filteredSales.filter(s => s.isDeleted);
- const netRevenue = activeSales.reduce((acc, s) => acc + s.grandTotal, 0);
- const totalDiscount = activeSales.reduce((acc, s) => acc + s.discount, 0);
- const totalVat = activeSales.reduce((acc, s) => acc + s.vat, 0);
+ const netRevenue = activeSales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
+ const totalDiscount = activeSales.reduce((acc, s) => acc + (Number(s.discount) || 0), 0);
+ const totalVat = activeSales.reduce((acc, s) => acc + (Number(s.vat) || 0), 0);
  return {
  activeCount: activeSales.length,
  voidedCount: voidedSales.length,
@@ -2037,11 +2212,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </>
  )}
  </h2>
- <p className="text-[10.5px] text-zinc-400 font-semibold pl-1 mt-1">
- {(activeSubModule as string) === "checkout"
- ? "Process and settle materials queued and staged on-the-floor by yard staff."
- : "Audit corporate ledgers, reprint receipts, and execute manager-guarded void overrides."}
- </p>
+ 
  </div>
 
  <div className="flex items-center gap-3">
@@ -2083,6 +2254,54 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  {activeSubModule === "checkout" ? (
  <div className="flex-1 min-h-0 flex flex-col justify-between gap-4 w-full overflow-hidden">
+      {/* SAFE TRANSACTION COMMIT & HYDRATION RECOVERY BANNER */}
+      {showRecoveryBanner && recoveredSession && (
+        <div className="bg-emerald-950/40 border-2 border-emerald-500/40 rounded-2xl p-3.5 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-3 animate-fade-in shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-emerald-500/20 text-emerald-400 rounded-xl shrink-0">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
+                  Safe Transaction Commit: Abandoned Session Restored
+                </span>
+                <span className="text-[9.5px] font-mono px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-md font-bold">
+                  {recoveredSession.lastSavedAt}
+                </span>
+              </div>
+              <p className="text-xs text-m3-on-surface font-medium mt-0.5">
+                Hydration Safeguard recovered an uncommitted POS checkout session with <strong className="text-emerald-300">{recoveredSession.itemCount} item(s)</strong> worth <strong className="text-emerald-300">₱{recoveredSession.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> for customer <strong className="text-emerald-300">"{recoveredSession.customerName}"</strong>.
+                {recoveredSession.hasDeliveryDraft && " (Includes active delivery schedule draft)"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-end md:self-auto">
+            <button
+              type="button"
+              onClick={() => {
+                setShowRecoveryBanner(false);
+                showToast("Uncommitted draft session resumed. Ready for settlement.");
+              }}
+              className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span>Resume Active Cart</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                handleCancelSale();
+                showToast("Abandoned transaction draft discarded.");
+              }}
+              className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1"
+            >
+              <X className="h-3.5 w-3.5" />
+              <span>Discard Draft</span>
+            </button>
+          </div>
+        </div>
+      )}
  {/* MOBILE ONLY TAB SWITCHER */}
  <div className="flex lg:hidden bg-m3-surface-low border border-m3-outline-variant/15 p-1 rounded-2xl w-full gap-1 flex-shrink-0">
  <button
@@ -2133,12 +2352,34 @@ export const PosModule: React.FC<PosModuleProps> = ({
  Yard Staff Transactions HOLD Queue ({parkedSales.length})
  </span>
  </div>
+ <div className="flex items-center gap-1.5">
  {syncStatus?.[currentUser?.branchAssignmentId || "B1"] === "Syncing" && (
  <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-400 border border-amber-500/25 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full">
  <span className="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
  Syncing
  </span>
  )}
+ <button
+ type="button"
+ onClick={async (e) => {
+ e.stopPropagation();
+ setIsManualSyncingQueue(true);
+ try {
+ await syncFromSharedServer(true);
+ showToast("⚡ Queue state refreshed from central register!");
+ } catch (_) {
+ showToast("⚠️ Unable to reach sync server.");
+ } finally {
+ setTimeout(() => setIsManualSyncingQueue(false), 600);
+ }
+ }}
+ className="inline-flex items-center gap-1 px-2 py-0.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary border border-m3-primary/25 rounded-md text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer active:scale-95"
+ title="Force refresh hold queue state from server"
+ >
+ <RefreshCw className={`h-3 w-3 ${isManualSyncingQueue ? "animate-spin" : ""}`} />
+ <span>Sync</span>
+ </button>
+ </div>
  </h3>
  <p className="text-[10px] text-zinc-400 font-semibold mt-1 leading-tight">
  Materials staged on-the-floor by floor staff are queued below.
@@ -2401,7 +2642,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </label>
  <input
  type="text"
- value={customerName}
+ value={customerName ?? ''}
  onChange={(e) =>
  setCustomerName(e.target.value.slice(0, 100))
  }
@@ -2495,7 +2736,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </label>
  <input
  type="text"
- value={customerNotes}
+ value={customerNotes ?? ''}
  onChange={(e) =>
  setCustomerNotes(e.target.value.slice(0, 100))
  }
@@ -2532,7 +2773,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <div className="relative font-sans">
  <input
  type="text"
- value={barcodeSearchTerm}
+ value={barcodeSearchTerm ?? ''}
  onChange={(e) =>
  setBarcodeSearchTerm(e.target.value)
  }
@@ -2914,7 +3155,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  id="cash-tendered-field"
  type="number"
  disabled={paymentMethod !== "Cash"}
- value={amountTendered}
+ value={amountTendered ?? ''}
  onChange={(e) => setAmountTendered(e.target.value)}
  placeholder={grandTotal.toFixed(0)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant px-3 py-1.5 text-xs text-m3-on-surface font-mono font-bold focus:outline-none focus:border-m3-primary transition-colors disabled:opacity-45 disabled:cursor-not-allowed rounded-t-lg"
@@ -2962,7 +3203,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
             <div className="relative">
               <input
                 type="text"
-                value={paymentRef}
+                value={paymentRef ?? ''}
                 onChange={(e) => setPaymentRef(e.target.value)}
                 placeholder={
                   paymentMethod === "Card / Bank Terminal"
@@ -3204,9 +3445,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <LockKeyhole className="h-5 w-5 animate-pulse text-rose-500" />
  <span>Corporate Daily Sales Ledger & Void Terminal</span>
  </h3>
- <p className="text-[10.5px] text-zinc-400 font-semibold leading-relaxed max-w-2xl pl-1 mt-1">
- Centralized accounting sub-module. Action control operations such as <strong className="text-rose-500 font-black">Invoice Voiding</strong> or <strong className="text-m3-primary font-black">Ticket Reprinting</strong> are strictly guarded and require a Manager PIN validation.
- </p>
  </div>
  
  {/* Actions & Controls in header */}
@@ -3301,7 +3539,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-zinc-500" />
  <input
  type="text"
- value={ledgerSearchQuery}
+ value={ledgerSearchQuery ?? ''}
  onChange={(e) => {
  setLedgerSearchQuery(e.target.value);
  setSalesPage(1);
@@ -3331,7 +3569,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <span>Payment Method</span>
  </span>
  <select
- value={ledgerPaymentFilter}
+ value={ledgerPaymentFilter ?? ''}
  onChange={(e) => {
  setLedgerPaymentFilter(e.target.value);
  setSalesPage(1);
@@ -3355,7 +3593,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <div className="relative flex items-center gap-1">
  <input
  type="date"
- value={ledgerDateFilter}
+ value={ledgerDateFilter ?? ''}
  onChange={(e) => {
  setLedgerDateFilter(e.target.value);
  setSalesPage(1);
@@ -3664,7 +3902,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  type="number"
  step="any"
  required
- value={startCashInput}
+ value={startCashInput ?? ''}
  onChange={(e) => setStartCashInput(e.target.value)}
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-sm text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors text-center font-mono font-black rounded-t-lg"
  />
@@ -3731,7 +3969,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  {activeShift &&
  (() => {
  const stats = getShiftReportStats(activeShift);
- const expectedCash = activeShift.startCash + stats.netTotal;
+ const expectedCash = activeShift.startCash + stats.cashSalesTotal;
  const enteredCash = parseFloat(closeShiftCashInput) || 0;
  const variance =
  closeShiftCashInput === "" ? 0 : enteredCash - expectedCash;
@@ -3759,15 +3997,26 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  <div className="flex justify-between">
  <span className="text-m3-on-surface-variant">
- Net Sales Added:
+ Cash Sales Added:
  </span>
  <span className="font-mono font-bold text-m3-on-surface">
  ₱
- {(Number(stats?.netTotal) || 0).toLocaleString(undefined, {
+ {(Number(stats?.cashSalesTotal) || 0).toLocaleString(undefined, {
  minimumFractionDigits: 2,
  })}
  </span>
  </div>
+ {stats && stats.netTotal > stats.cashSalesTotal && (
+ <div className="flex justify-between text-[11px] text-m3-on-surface-variant/80">
+ <span>Non-Cash Payments (Card/GCash/Credit):</span>
+ <span className="font-mono font-bold">
+ ₱
+ {(Number(stats.netTotal - stats.cashSalesTotal) || 0).toLocaleString(undefined, {
+ minimumFractionDigits: 2,
+ })}
+ </span>
+ </div>
+ )}
  <div className="flex justify-between border-t border-dashed border-m3-outline-variant/25 pt-2 text-sm font-bold">
  <span className="text-m3-primary">
  Expected Drawer Cash:
@@ -3789,7 +4038,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  type="number"
  step="any"
  required
- value={closeShiftCashInput}
+ value={closeShiftCashInput ?? ''}
  onChange={(e) =>
  setCloseShiftCashInput(e.target.value)
  }
@@ -3947,7 +4196,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </label>
  <input
  type="number"
- value={discountInput}
+ value={discountInput ?? ''}
  onChange={(e) => setDiscountInput(e.target.value)}
  placeholder={
  discountType === "PERCENT"
@@ -4211,7 +4460,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </label>
  <input
  type="text"
- value={customerModalInput}
+ value={customerModalInput ?? ''}
  onChange={(e) => setCustomerModalInput(e.target.value)}
  placeholder="Full Name"
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold"
@@ -4379,7 +4628,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <input
  type="text"
  required
- value={approverUsername}
+ value={approverUsername ?? ''}
  onChange={(e) => setApproverUsername(e.target.value)}
  placeholder="Authorize username"
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold"
@@ -4393,7 +4642,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <input
  type="password"
  required
- value={approverPassword}
+ value={approverPassword ?? ''}
  onChange={(e) => setApproverPassword(e.target.value)}
  placeholder="••••••••"
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold"
@@ -4482,7 +4731,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  required
  min={0}
  step="0.01"
- value={overridePriceInput}
+ value={overridePriceInput ?? ''}
  onChange={(e) => setOverridePriceInput(e.target.value)}
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold font-mono"
  />
@@ -4645,7 +4894,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <input
  type="text"
  required
- value={deliveryCustomerName}
+ value={deliveryCustomerName ?? ''}
  onChange={(e) => setDeliveryCustomerName(e.target.value)}
  placeholder="Recipient name"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold"
@@ -4659,7 +4908,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <input
  type="text"
  required
- value={deliveryContact}
+ value={deliveryContact ?? ''}
  onChange={(e) => setDeliveryContact(e.target.value)}
  placeholder="Phone number"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold"
@@ -4672,7 +4921,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </label>
  <input
  type="text"
- value={deliveryHouseNo}
+ value={deliveryHouseNo ?? ''}
  onChange={(e) => setDeliveryHouseNo(e.target.value)}
  placeholder="House No. / Building / Suite"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
@@ -4685,7 +4934,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </label>
  <input
  type="text"
- value={deliveryStreet}
+ value={deliveryStreet ?? ''}
  onChange={(e) => setDeliveryStreet(e.target.value)}
  placeholder="Street / Subdivision"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
@@ -4699,7 +4948,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <input
  type="text"
  required
- value={deliveryBarangay}
+ value={deliveryBarangay ?? ''}
  onChange={(e) => setDeliveryBarangay(e.target.value)}
  placeholder="Barangay"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold"
@@ -4713,7 +4962,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <input
  type="text"
  required
- value={deliveryCity}
+ value={deliveryCity ?? ''}
  onChange={(e) => setDeliveryCity(e.target.value)}
  placeholder="City / Municipality"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold"
@@ -4726,7 +4975,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </label>
  <input
  type="text"
- value={deliveryLandmark}
+ value={deliveryLandmark ?? ''}
  onChange={(e) => setDeliveryLandmark(e.target.value)}
  placeholder="Landmarks or special delivery instructions"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
@@ -4740,7 +4989,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <input
  type="date"
  required
- value={deliveryDate}
+ value={deliveryDate ?? ''}
  onChange={(e) => setDeliveryDate(e.target.value)}
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold cursor-pointer"
  />
@@ -4752,7 +5001,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </label>
  <input
  type="text"
- value={deliveryTime}
+ value={deliveryTime ?? ''}
  onChange={(e) => setDeliveryTime(e.target.value)}
  placeholder="Arrival window (e.g. 10:00 AM - 2:00 PM)"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
@@ -4766,7 +5015,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </label>
  <textarea
  rows={2}
- value={deliveryNotes}
+ value={deliveryNotes ?? ''}
  onChange={(e) => setDeliveryNotes(e.target.value)}
  placeholder="Special instructions or notes"
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
@@ -4864,7 +5113,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  type="password"
  required
  maxLength={6}
- value={securityPinInput}
+ value={securityPinInput ?? ''}
  onChange={(e) => {
  setSecurityPinInput(e.target.value.replace(/\D/g, ""));
  setSecurityPinError("");
@@ -5292,7 +5541,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <input
  type="text"
  required
- value={newMemberName}
+ value={newMemberName ?? ''}
  onChange={(e) => setNewMemberName(e.target.value)}
  placeholder="Full Name / Company"
  className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl px-3.5 py-2 text-xs font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
@@ -5306,7 +5555,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </label>
  <input
  type="text"
- value={newMemberPhone}
+ value={newMemberPhone ?? ''}
  onChange={(e) => setNewMemberPhone(e.target.value)}
  placeholder="Phone number"
  className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl px-3.5 py-2 text-xs font-mono font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
@@ -5319,7 +5568,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </label>
  <input
  type="email"
- value={newMemberEmail}
+ value={newMemberEmail ?? ''}
  onChange={(e) => setNewMemberEmail(e.target.value)}
  placeholder="Email address"
  className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl px-3.5 py-2 text-xs font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
@@ -5335,7 +5584,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  type="number"
  min="0"
  step="500"
- value={newMemberLimit}
+ value={newMemberLimit ?? ''}
  onChange={(e) => setNewMemberLimit(e.target.value)}
  placeholder="0"
  className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl px-3.5 py-2 text-xs font-mono font-extrabold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
@@ -5438,7 +5687,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  required
  min="10"
  step="10"
- value={loyaltySpendInput}
+ value={loyaltySpendInput ?? ''}
  onChange={(e) => setLoyaltySpendInput(e.target.value)}
  placeholder="500"
  className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl pl-7 pr-3 py-2 text-xs font-mono font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
@@ -5458,7 +5707,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  required
  min="0.1"
  step="0.1"
- value={loyaltyPointValueInput}
+ value={loyaltyPointValueInput ?? ''}
  onChange={(e) => setLoyaltyPointValueInput(e.target.value)}
  placeholder="1.00"
  className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl pl-7 pr-3 py-2 text-xs font-mono font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"

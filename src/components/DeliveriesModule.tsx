@@ -27,7 +27,9 @@ import {
  Signature,
  FileSignature,
  ShieldAlert,
- Printer
+ Printer,
+ RefreshCw,
+ Plus
 } from 'lucide-react';
 
 interface DeliveriesModuleProps {
@@ -104,39 +106,145 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  const [posDelivDate, setPosDelivDate] = useState(new Date().toISOString().split('T')[0]);
  const [posDelivTime, setPosDelivTime] = useState('10:00 AM - 2:00 PM');
  const [posDelivNotes, setPosDelivNotes] = useState('');
+ const [posDelivTruck, setPosDelivTruck] = useState('');
+ const [posDelivDriver, setPosDelivDriver] = useState('');
+ const [posDelivHelper, setPosDelivHelper] = useState('');
 
- // Auto-sync POS Store Deliveries that were not previously scheduled
- const syncMissingPosDeliveries = React.useCallback(() => {
-   let createdCount = 0;
-   sales.forEach((s) => {
-     const hasDeliveryNote = s.notes && (
-       s.notes.toLowerCase().includes('delivery') ||
-       s.notes.toLowerCase().includes('barangay') ||
-       s.notes.toLowerCase().includes('ship') ||
-       s.notes.includes('SYSTEM ASSIGNED STORE DELIVERY TRACE:')
-     );
-     const existing = deliveries.find((d) => d.saleId === s.id || d.saleNumber === s.saleNumber);
-     if (hasDeliveryNote && !existing) {
-       createDelivery({
-         saleId: s.id,
-         saleNumber: s.saleNumber,
-         customerName: s.customerName || 'Walk-in Customer',
-         contactNumber: 'N/A',
-         barangay: 'Central',
-         cityMunicipality: 'Dipolog City',
-         deliveryDate: new Date().toISOString().split('T')[0],
-         deliveryTime: '10:00 AM - 2:00 PM',
-         notes: s.notes,
-       });
-       createdCount++;
-     }
-   });
-   if (createdCount > 0) {
-     triggerToast("Auto-synced " + createdCount + " POS store delivery order(s) into Cargo Freight Scheduling.");
-   } else {
-     triggerToast("All store deliveries are already synced in Cargo Freight Scheduling.");
-   }
- }, [sales, deliveries, createDelivery]);
+ // Delivery State Reconciliation & Diagnostic Audit Tracking
+ const [lastReconciledAt, setLastReconciledAt] = useState<string | null>(null);
+ const [reconciliationStats, setReconciliationStats] = useState<{
+ reconciledCount: number;
+ pending: number;
+ scheduled: number;
+ transit: number;
+ delivered: number;
+ failed: number;
+ } | null>(null);
+
+ // Auto-reconcile delivery status discrepancies & missing POS store delivery orders across sessions
+ const runDeliveriesReconciliationCheck = React.useCallback((silent = false) => {
+ let createdCount = 0;
+ let reconciledCount = 0;
+
+ // 1. Scan POS sales for store delivery orders missing logistics tracking
+ sales.forEach((s) => {
+ const notesLower = (s.notes || '').toLowerCase();
+ const hasDeliveryNote =
+ notesLower.includes('delivery') ||
+ notesLower.includes('barangay') ||
+ notesLower.includes('ship') ||
+ notesLower.includes('address') ||
+ notesLower.includes('deliv') ||
+ notesLower.includes('truck') ||
+ notesLower.includes('cargo') ||
+ notesLower.includes('unloading') ||
+ notesLower.includes('house') ||
+ notesLower.includes('street') ||
+ (s.notes && s.notes.includes('SYSTEM ASSIGNED STORE DELIVERY TRACE:'));
+ const existing = deliveries.find((d) => d.saleId === s.id || d.saleNumber === s.saleNumber);
+ if (hasDeliveryNote && !existing) {
+ createDelivery({
+ saleId: s.id,
+ saleNumber: s.saleNumber,
+ customerName: s.customerName || 'Walk-in Customer',
+ contactNumber: 'N/A',
+ barangay: 'Central',
+ cityMunicipality: 'Dipolog City',
+ deliveryDate: new Date().toISOString().split('T')[0],
+ deliveryTime: '10:00 AM - 2:00 PM',
+ notes: s.notes,
+ });
+ createdCount++;
+ }
+ });
+
+ // 2. Reconcile existing delivery status discrepancies across active sessions
+ deliveries.forEach((d) => {
+ // Reconcile pending deliveries that have driver/truck assigned but status wasn't updated to Scheduled
+ if (d.status === 'Pending Scheduling' && (d.driver || d.truck)) {
+ updateDeliveryStatus(d.id, 'Scheduled', 'Auto-reconciled: Assigned driver/truck detected in logistics state.');
+ reconciledCount++;
+ }
+
+ // Reconcile scheduled deliveries that have notes indicating dispatched or in-transit
+ if (d.status === 'Scheduled' || d.status === 'Packed') {
+ const dNotesLower = (d.notes || '').toLowerCase();
+ if (
+ dNotesLower.includes('dispatched') ||
+ dNotesLower.includes('in-transit') ||
+ dNotesLower.includes('out for delivery') ||
+ dNotesLower.includes('en route')
+ ) {
+ updateDeliveryStatus(d.id, 'Out For Delivery', 'Auto-reconciled: Transit status synced from session dispatch log.');
+ reconciledCount++;
+ }
+ }
+
+ // Reconcile deliveries linked to completed or voided POS sales
+ const matchedSale = sales.find((s) => s.id === d.saleId || s.saleNumber === d.saleNumber);
+ if (matchedSale) {
+ if (matchedSale.isDeleted && d.status !== 'Cancelled') {
+ updateDeliveryStatus(d.id, 'Cancelled', 'Auto-reconciled: Linked POS sale was voided/cancelled.');
+ reconciledCount++;
+ } else if (!matchedSale.isDeleted && (matchedSale as any).isDelivered && d.status !== 'Delivered' && d.status !== 'Failed Delivery') {
+ if (d.status === 'Out For Delivery' || d.status === 'Scheduled' || d.status === 'Packed') {
+ updateDeliveryStatus(d.id, 'Delivered', 'Auto-reconciled: Linked POS sale checkout completed.');
+ reconciledCount++;
+ }
+ }
+ }
+ });
+
+ // 3. Compute diagnostic statistics
+ const pendingCount = deliveries.filter((d) => ['Pending Scheduling', 'Packed'].includes(d.status)).length;
+ const scheduledCount = deliveries.filter((d) => d.status === 'Scheduled').length;
+ const transitCount = deliveries.filter((d) => d.status === 'Out For Delivery').length;
+ const deliveredCount = deliveries.filter((d) => d.status === 'Delivered').length;
+ const failedCount = deliveries.filter((d) => ['Failed Delivery', 'Cancelled'].includes(d.status)).length;
+
+ const totalReconciled = createdCount + reconciledCount;
+ const timestamp = new Date().toLocaleTimeString();
+ setLastReconciledAt(timestamp);
+ setReconciliationStats({
+ reconciledCount: totalReconciled,
+ pending: pendingCount,
+ scheduled: scheduledCount,
+ transit: transitCount,
+ delivered: deliveredCount,
+ failed: failedCount,
+ });
+
+ // 4. Log structured diagnostic report to console on mount/execution
+ console.log(
+ `[Deliveries Audit & Sync] Component Mount Reconciliation complete at ${timestamp}.\n` +
+ `• Created Missing Store Deliveries: ${createdCount}\n` +
+ `• Status Inconsistencies Reconciled: ${reconciledCount}\n` +
+ `• Total Active Deliveries: ${deliveries.length}\n` +
+ `• Diagnostics Breakdown -> Pending: ${pendingCount}, Scheduled: ${scheduledCount}, In-Transit: ${transitCount}, Delivered: ${deliveredCount}, Failed/Cancelled: ${failedCount}`
+ );
+
+ // 5. Audit Log Entry if items were created or reconciled
+ if (totalReconciled > 0) {
+ addAuditLog(
+ 'DELIVERY_RECONCILE',
+ `Deliveries Reconciliation: ${createdCount} missing store delivery order(s) auto-created, ${reconciledCount} status discrepancy item(s) reconciled across sessions.`,
+ 'Delivery',
+ 'RECONCILE_ALL'
+ );
+ }
+
+ // 6. User Feedback Toast
+ if (totalReconciled > 0) {
+ triggerToast(`Reconciliation complete: ${totalReconciled} delivery item(s) auto-synced across sessions.`);
+ } else if (!silent) {
+ triggerToast(`All ${deliveries.length} delivery records are fully reconciled and in sync.`);
+ }
+ }, [sales, deliveries, createDelivery, updateDeliveryStatus, addAuditLog]);
+
+ // Run reconciliation check on component mount and whenever sales/deliveries count updates
+ useEffect(() => {
+ runDeliveriesReconciliationCheck(true);
+ }, [sales.length, deliveries.length, runDeliveriesReconciliationCheck]);
 
  // When selected POS sale changes in schedule modal
  const handleSelectPosSale = (saleId: string) => {
@@ -172,9 +280,15 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
      deliveryDate: posDelivDate,
      deliveryTime: posDelivTime || undefined,
      notes: posDelivNotes || undefined,
+     truck: posDelivTruck.trim() || undefined,
+     driver: posDelivDriver.trim() || undefined,
+     helper: posDelivHelper.trim() || undefined,
    });
    setShowSchedulePosModal(false);
    setSelectedPosSaleId('');
+   setPosDelivTruck('');
+   setPosDelivDriver('');
+   setPosDelivHelper('');
    setSelectedDeliveryId(dRecord.id);
    triggerToast("Successfully scheduled Cargo Delivery " + dRecord.id + " for POS Invoice #" + sale.saleNumber);
  };
@@ -399,23 +513,28 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
           <span className="text-gray-600 block">Helpers: {activeDelivery?.helper || "N/A"}</span>
         </div>
 
-        {activeDeliverySale && (
-          <div className="bg-emerald-50/90 p-1.5 rounded border border-emerald-300">
-            <span className="text-[7.5px] uppercase text-emerald-800 font-extrabold block">Bill & Payment Summary</span>
-            <div className="flex justify-between text-gray-800">
-              <span>Bill Total:</span>
-              <span className="font-bold">₱{(activeDeliverySale.grandTotal || 0).toFixed(2)}</span>
+        {activeDeliverySale && (() => {
+          const grandTotal = Number(activeDeliverySale.grandTotal || 0);
+          const amountTendered = Number(activeDeliverySale.amountTendered || grandTotal);
+          const changeAmount = Number(activeDeliverySale.changeAmount || (amountTendered > grandTotal ? amountTendered - grandTotal : 0));
+          return (
+            <div className="bg-emerald-50/90 p-1.5 rounded border border-emerald-300">
+              <span className="text-[7.5px] uppercase text-emerald-800 font-extrabold block">Bill & Payment Summary</span>
+              <div className="flex justify-between text-gray-800">
+                <span>Bill Total:</span>
+                <span className="font-bold">₱{grandTotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-gray-800">
+                <span>Paid ({activeDeliverySale.paymentMethod || "Cash"}):</span>
+                <span className="font-bold">₱{amountTendered.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-emerald-800 font-extrabold pt-0.5 border-t border-emerald-300">
+                <span>Change Due:</span>
+                <span>₱{changeAmount.toFixed(2)}</span>
+              </div>
             </div>
-            <div className="flex justify-between text-gray-800">
-              <span>Paid ({activeDeliverySale.paymentMethod || "Cash"}):</span>
-              <span className="font-bold">₱{(activeDeliverySale.amountTendered || activeDeliverySale.grandTotal || 0).toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-emerald-800 font-extrabold pt-0.5 border-t border-emerald-300">
-              <span>Change Due:</span>
-              <span>₱{(activeDeliverySale.changeAmount || ((activeDeliverySale.amountTendered || 0) > (activeDeliverySale.grandTotal || 0) ? (activeDeliverySale.amountTendered || 0) - (activeDeliverySale.grandTotal || 0) : 0) || 0).toFixed(2)}</span>
-            </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {/* Items Table */}
@@ -514,6 +633,26 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  </p>
  </div>
 
+ <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+ <button
+ type="button"
+ onClick={() => runDeliveriesReconciliationCheck(false)}
+ className="px-3.5 py-2 rounded-2xl bg-m3-surface-low border border-m3-outline-variant/30 hover:bg-m3-outline-variant/15 text-m3-on-surface text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+ title="Reconcile delivery statuses & sync unscheduled store deliveries across active sessions"
+ >
+ <RefreshCw className="h-3.5 w-3.5 text-m3-primary animate-spin-slow" />
+ <span>Reconcile & Sync Deliveries</span>
+ </button>
+
+ <button
+ type="button"
+ onClick={() => setShowSchedulePosModal(true)}
+ className="px-4 py-2 rounded-2xl bg-m3-primary text-m3-on-primary hover:bg-m3-primary/90 text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+ >
+ <Plus className="h-4 w-4" />
+ <span>Schedule POS Delivery</span>
+ </button>
+
  {/* Branch scope controller for system admin */}
  {currentUser.role === UserRole.ADMIN && (
  <div className="flex items-center gap-2 bg-m3-surface-low border border-m3-outline-variant/30 p-2 rounded-2xl shadow-sm pl-4 pr-3 shrink-0">
@@ -521,7 +660,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  Outlet Scope:
  </span>
  <select
- value={selectedBranchId}
+ value={selectedBranchId ?? ''}
  onChange={e => setSelectedBranchId(e.target.value)}
  className="text-xs bg-m3-surface text-m3-on-surface font-black uppercase tracking-wide border-0 border-b border-m3-outline-variant/40 focus:border-m3-primary focus:outline-none py-1 px-2.5 rounded-lg cursor-pointer"
  >
@@ -535,12 +674,41 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  </div>
  )}
  </div>
+ </div>
 
  {/* TOAST PANEL BAR */}
  {toastMessage && (
  <div className="bg-m3-tertiary-container border border-m3-tertiary/25 text-m3-on-tertiary-container p-3 px-5 rounded-2xl text-xs font-black shadow-lg animate-fade-in flex items-center justify-between">
  <span>{toastMessage}</span>
  <button onClick={() => setToastMessage(null)} className="text-[10px] uppercase underline opacity-70 cursor-pointer pl-4">Dismiss</button>
+ </div>
+ )}
+
+ {/* RECONCILIATION AUDIT STATUS CARD */}
+ {reconciliationStats && (
+ <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-2xl p-3 px-4 text-xs shadow-xs flex flex-wrap items-center justify-between gap-3 font-sans">
+ <div className="flex items-center gap-2.5">
+ <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+ <div>
+ <span className="font-extrabold text-m3-on-surface uppercase tracking-wide">
+ Delivery Reconciliation & Multi-Session Sync Active
+ </span>
+ <span className="text-[11px] text-m3-on-surface-variant font-medium block">
+ Mount & session audit checked at <strong className="font-mono">{lastReconciledAt || 'Just now'}</strong>. Scheduled & in-transit delivery states fully synced.
+ </span>
+ </div>
+ </div>
+ <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono font-extrabold uppercase bg-m3-surface border border-m3-outline-variant/40 px-3 py-1.5 rounded-xl">
+ <span className="text-amber-500">Pending: {reconciliationStats.pending}</span>
+ <span className="text-m3-primary">Scheduled: {reconciliationStats.scheduled}</span>
+ <span className="text-m3-tertiary">In-Transit: {reconciliationStats.transit}</span>
+ <span className="text-emerald-500">Delivered: {reconciliationStats.delivered}</span>
+ {reconciliationStats.reconciledCount > 0 && (
+ <span className="bg-emerald-500 text-white px-2 py-0.5 rounded-md font-sans">
+ {reconciliationStats.reconciledCount} Auto-Reconciled
+ </span>
+ )}
+ </div>
  </div>
  )}
 
@@ -623,7 +791,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  <div className="relative w-full md:w-80">
  <input
  type="text"
- value={searchTerm}
+ value={searchTerm ?? ''}
  onChange={e => setSearchTerm(e.target.value)}
  placeholder="Search ref #, client, address, pilot..."
  className="w-full bg-m3-surface-lowest text-xs text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary border border-m3-outline-variant/30 pl-8 pr-4 py-2 rounded-xl placeholder-zinc-500 font-bold"
@@ -699,11 +867,26 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  <td className="py-3.5 px-4 font-semibold text-[11px] font-mono">
  {d.driver ? (
  <div>
- <span className="text-m3-primary ">{d.truck}</span>
+ <span className="text-m3-primary font-bold">{d.truck}</span>
  <span className="text-zinc-500 block text-[9.5px]">Driver: {d.driver}</span>
  </div>
  ) : (
- <span className="text-zinc-500 block italic leading-none text-[10px]">Unscheduled</span>
+ <button
+ type="button"
+ onClick={(e) => {
+ e.stopPropagation();
+ setSelectedDeliveryId(d.id);
+ setShowAssignForm(true);
+ setAssignTruck(d.truck || '');
+ setAssignDriver(d.driver || '');
+ setAssignHelper(d.helper || '');
+ }}
+ className="px-2.5 py-1 rounded-xl bg-m3-primary/10 border border-m3-primary/30 text-m3-primary hover:bg-m3-primary hover:text-m3-on-primary text-[10px] font-black uppercase tracking-wide transition-all cursor-pointer flex items-center gap-1 shadow-xs"
+ title="Click to assign Truck Plate & Driver Pilot"
+ >
+ <Truck className="h-3 w-3" />
+ <span>Schedule Truck</span>
+ </button>
  )}
  </td>
 
@@ -902,20 +1085,25 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  </div>
 
  {/* Order Payment & Customer Change Details */}
- {activeDeliverySale && (
+ {activeDeliverySale && (() => {
+ const grandTotal = Number(activeDeliverySale.grandTotal || 0);
+ const amountTendered = Number(activeDeliverySale.amountTendered || grandTotal);
+ const changeAmount = Number(activeDeliverySale.changeAmount || (amountTendered > grandTotal ? amountTendered - grandTotal : 0));
+ return (
  <div className="bg-m3-surface-lowest p-3 rounded-2xl border border-m3-outline-variant/15 text-[11px] leading-relaxed text-left space-y-1 font-mono">
  <div className="flex justify-between items-center text-zinc-400 font-medium text-[10px]">
- <span>Bill Total: <strong className="text-m3-on-surface">₱{(activeDeliverySale.grandTotal || 0).toFixed(2)}</strong></span>
- <span>Paid ({activeDeliverySale.paymentMethod || "Cash"}): <strong className="text-m3-on-surface">₱{(activeDeliverySale.amountTendered || activeDeliverySale.grandTotal || 0).toFixed(2)}</strong></span>
+ <span>Bill Total: <strong className="text-m3-on-surface">₱{grandTotal.toFixed(2)}</strong></span>
+ <span>Paid ({activeDeliverySale.paymentMethod || "Cash"}): <strong className="text-m3-on-surface">₱{amountTendered.toFixed(2)}</strong></span>
  </div>
- {((activeDeliverySale.changeAmount || 0) > 0 || (activeDeliverySale.amountTendered || 0) > (activeDeliverySale.grandTotal || 0)) && (
+ {(changeAmount > 0 || amountTendered > grandTotal) && (
  <div className="flex justify-between items-center pt-1.5 border-t border-dashed border-m3-outline-variant/15 font-black text-emerald-400 text-xs">
  <span className="uppercase text-[9.5px] font-sans tracking-wider">Customer Change:</span>
- <span className="text-sm font-black text-emerald-300">₱{(activeDeliverySale.changeAmount || ((activeDeliverySale.amountTendered || 0) > (activeDeliverySale.grandTotal || 0) ? (activeDeliverySale.amountTendered || 0) - (activeDeliverySale.grandTotal || 0) : 0) || 0).toFixed(2)}</span>
+ <span className="text-sm font-black text-emerald-300">₱{changeAmount.toFixed(2)}</span>
  </div>
  )}
  </div>
- )}
+ );
+ })()}
 
  {/* Cargo Assignee Information details */}
  <div className="bg-m3-surface-lowest p-3 rounded-2xl border border-m3-outline-variant/15 text-[11px] leading-relaxed text-left">
@@ -1039,7 +1227,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  type="text"
  required
  placeholder="Truck plate / Model"
- value={assignTruck}
+ value={assignTruck ?? ''}
  onChange={(e) => setAssignTruck(e.target.value)}
  className="w-full bg-m3-surface border border-m3-outline-variant/50 px-2.5 py-1.5 rounded-lg text-xs leading-none text-m3-on-surface focus:outline-none focus:border-m3-primary font-mono uppercase"
  />
@@ -1051,7 +1239,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  type="text"
  required
  placeholder="Driver name"
- value={assignDriver}
+ value={assignDriver ?? ''}
  onChange={(e) => setAssignDriver(e.target.value)}
  className="w-full bg-m3-surface border border-m3-outline-variant/50 px-2.5 py-1.5 rounded-lg text-xs leading-none text-m3-on-surface focus:outline-none focus:border-m3-primary font-bold"
  />
@@ -1062,7 +1250,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  <input
  type="text"
  placeholder="Helper name"
- value={assignHelper}
+ value={assignHelper ?? ''}
  onChange={(e) => setAssignHelper(e.target.value)}
  className="w-full bg-m3-surface border border-m3-outline-variant/50 px-2.5 py-1.5 rounded-lg text-xs leading-none text-m3-on-surface focus:outline-none focus:border-m3-primary"
  />
@@ -1131,7 +1319,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  <input
  type="text"
  placeholder="Receiver name"
- value={receiverName}
+ value={receiverName ?? ''}
  onChange={(e) => setReceiverName(e.target.value)}
  className="w-full bg-m3-surface border border-m3-outline-variant/50 px-2.5 py-1.5 rounded-lg text-xs leading-none text-m3-on-surface focus:outline-none focus:border-m3-primary font-bold"
  />
@@ -1142,7 +1330,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  <input
  type="text"
  placeholder="Signature code"
- value={signatureText}
+ value={signatureText ?? ''}
  onChange={(e) => setSignatureText(e.target.value)}
  className="w-full bg-m3-surface border border-m3-outline-variant/50 px-2.5 py-1.5 rounded-lg text-xs leading-none text-m3-on-surface focus:outline-none focus:border-m3-primary font-mono italic"
  />
@@ -1200,7 +1388,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  rows={3}
  required
  placeholder="Reason for delivery failure..."
- value={failReason}
+ value={failReason ?? ''}
  onChange={(e) => setFailReason(e.target.value)}
  className="w-full bg-m3-surface border border-rose-500/20 px-2.5 py-1.5 rounded-lg text-xs text-m3-on-surface focus:outline-none focus:border-rose-500 font-semibold"
  />
@@ -1337,7 +1525,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
               Select POS Order Invoice <span className="text-rose-500">*</span>
             </label>
             <select
-              value={selectedPosSaleId}
+              value={selectedPosSaleId ?? ''}
               onChange={(e) => handleSelectPosSale(e.target.value)}
               required
               className="w-full bg-m3-surface-lowest text-xs text-m3-on-surface font-mono font-bold border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
@@ -1358,7 +1546,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
               </label>
               <input
                 type="text"
-                value={posDelivCustomerName}
+                value={posDelivCustomerName ?? ''}
                 onChange={(e) => setPosDelivCustomerName(e.target.value)}
                 placeholder="Full Name"
                 className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
@@ -1370,7 +1558,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
               </label>
               <input
                 type="text"
-                value={posDelivContact}
+                value={posDelivContact ?? ''}
                 onChange={(e) => setPosDelivContact(e.target.value)}
                 placeholder="Phone number"
                 className="w-full bg-m3-surface-lowest text-xs font-mono font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
@@ -1385,7 +1573,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
               </label>
               <input
                 type="text"
-                value={posDelivHouseNo}
+                value={posDelivHouseNo ?? ''}
                 onChange={(e) => setPosDelivHouseNo(e.target.value)}
                 placeholder="House / Unit / Bldg No"
                 className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
@@ -1397,7 +1585,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
               </label>
               <input
                 type="text"
-                value={posDelivStreet}
+                value={posDelivStreet ?? ''}
                 onChange={(e) => setPosDelivStreet(e.target.value)}
                 placeholder="Street / Avenue"
                 className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
@@ -1412,7 +1600,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
               </label>
               <input
                 type="text"
-                value={posDelivBarangay}
+                value={posDelivBarangay ?? ''}
                 onChange={(e) => setPosDelivBarangay(e.target.value)}
                 required
                 placeholder="Barangay"
@@ -1425,7 +1613,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
               </label>
               <input
                 type="text"
-                value={posDelivCity}
+                value={posDelivCity ?? ''}
                 onChange={(e) => setPosDelivCity(e.target.value)}
                 placeholder="City / Municipality"
                 className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
@@ -1440,7 +1628,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
               </label>
               <input
                 type="date"
-                value={posDelivDate}
+                value={posDelivDate ?? ''}
                 onChange={(e) => setPosDelivDate(e.target.value)}
                 className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
               />
@@ -1450,7 +1638,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
                 Preferred Slot
               </label>
               <select
-                value={posDelivTime}
+                value={posDelivTime ?? ''}
                 onChange={(e) => setPosDelivTime(e.target.value)}
                 className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
               >
@@ -1467,11 +1655,55 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
             </label>
             <input
               type="text"
-              value={posDelivLandmark}
+              value={posDelivLandmark ?? ''}
               onChange={(e) => setPosDelivLandmark(e.target.value)}
               placeholder="Landmark or special instructions"
               className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-m3-primary"
             />
+          </div>
+
+          <div className="bg-m3-surface p-3.5 rounded-2xl border border-m3-primary/20 space-y-3">
+            <span className="text-[10px] font-black uppercase tracking-wider text-m3-primary block">
+              Assign Truck & Driver Logistics Pilot (Optional - Instant Schedule)
+            </span>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-m3-on-surface-variant mb-1">
+                  Truck Plate / Model
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. ABC-1234"
+                  value={posDelivTruck ?? ''}
+                  onChange={(e) => setPosDelivTruck(e.target.value)}
+                  className="w-full bg-m3-surface-lowest text-xs font-mono uppercase font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2 focus:outline-none focus:ring-1 focus:ring-m3-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-m3-on-surface-variant mb-1">
+                  Driver Pilot Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="Driver Full Name"
+                  value={posDelivDriver ?? ''}
+                  onChange={(e) => setPosDelivDriver(e.target.value)}
+                  className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2 focus:outline-none focus:ring-1 focus:ring-m3-primary"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold uppercase text-m3-on-surface-variant mb-1">
+                Helper Companion (Optional)
+              </label>
+              <input
+                type="text"
+                placeholder="Helper Name"
+                value={posDelivHelper ?? ''}
+                onChange={(e) => setPosDelivHelper(e.target.value)}
+                className="w-full bg-m3-surface-lowest text-xs font-bold text-m3-on-surface border border-m3-outline-variant/30 rounded-xl p-2 focus:outline-none focus:ring-1 focus:ring-m3-primary"
+              />
+            </div>
           </div>
 
           <div className="flex gap-2 pt-2 border-t border-m3-outline-variant/20">

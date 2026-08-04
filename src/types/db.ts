@@ -536,3 +536,28 @@ export interface ProductReturn {
  deletedAt?: string;
 }
 
+export type ArchivableCategory =
+  | "auditLogs"
+  | "movements"
+  | "sales"
+  | "expenses"
+  | "returns"
+  | "damageLogs";
+
+export type RetentionPolicyMap = Record<ArchivableCategory, number>;
+
+export interface CategoryRetentionRule {
+  category: ArchivableCategory;
+  label: string;
+  retentionMonths: number; // 0 = Keep Indefinitely
+  autoArchiveEnabled: boolean;
+}
+
+export interface PurgeResult {
+  count: number;
+  exportedFilename: string | null;
+  category: ArchivableCategory;
+  ageMonths: number;
+  timestamp: string;
+}
+

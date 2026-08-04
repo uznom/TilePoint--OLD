@@ -143,10 +143,10 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
     });
 
     // Compute revenue, discounts, vat
-    const totalRevenue = localSales.reduce((acc, s) => acc + (s.grandTotal || 0), 0);
-    const totalSubtotal = localSales.reduce((acc, s) => acc + (s.subtotal || 0), 0);
-    const totalVat = localSales.reduce((acc, s) => acc + (s.vat || 0), 0);
-    const totalDiscount = localSales.reduce((acc, s) => acc + (s.discount || 0), 0);
+    const totalRevenue = localSales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
+    const totalSubtotal = localSales.reduce((acc, s) => acc + (Number(s.subtotal) || 0), 0);
+    const totalVat = localSales.reduce((acc, s) => acc + (Number(s.vat) || 0), 0);
+    const totalDiscount = localSales.reduce((acc, s) => acc + (Number(s.discount) || 0), 0);
 
     // Compute COGS
     let totalCogs = 0;
@@ -471,7 +471,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
               </label>
               <div className="relative">
                 <select
-                  value={selectedBranchId}
+                  value={selectedBranchId ?? ''}
                   onChange={(e) => setSelectedBranchId(e.target.value)}
                   className="w-full sm:w-44 px-3.5 py-2.5 bg-m3-surface-lowest border border-m3-outline-variant/20 rounded-xl text-xs font-bold uppercase tracking-wider text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary appearance-none cursor-pointer pr-8 bg-white dark:bg-[#131A22] text-[#101828] dark:text-[#F8FAFC]"
                 >
@@ -493,7 +493,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
             <div className="relative">
               <input
                 type="date"
-                value={reportingDate}
+                value={reportingDate ?? ''}
                 onChange={(e) => setReportingDate(e.target.value)}
                 max={new Date().toISOString().split("T")[0]}
                 className="w-full sm:w-44 px-3.5 py-2.5 bg-m3-surface-lowest border border-m3-outline-variant/20 rounded-xl text-xs font-bold text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary cursor-pointer"

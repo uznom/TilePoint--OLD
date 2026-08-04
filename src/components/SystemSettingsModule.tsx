@@ -23,7 +23,12 @@ import {
  Trash2,
  Database,
  ShieldCheck,
- Search
+ Search,
+ Moon,
+ Sun,
+ Building2,
+ Percent,
+ Receipt
 } from 'lucide-react';
 import { useDb } from '../context/DbContext';
 import { UserRole } from '../types/db';
@@ -35,6 +40,86 @@ interface SystemSettingsModuleProps {
  followSystemTheme?: boolean;
  setFollowSystemTheme?: (follow: boolean) => void;
 }
+
+interface SettingToggleCardProps {
+ icon: React.ElementType;
+ title: string;
+ subtitle?: string;
+ active: boolean;
+ onClick: () => void;
+ activeLabel?: string;
+ inactiveLabel?: string;
+ disabled?: boolean;
+}
+
+const SettingToggleCard: React.FC<SettingToggleCardProps> = ({
+ icon: Icon,
+ title,
+ subtitle,
+ active,
+ onClick,
+ activeLabel = 'ACTIVE',
+ inactiveLabel = 'DISABLED',
+ disabled = false,
+}) => (
+ <button
+  type="button"
+  disabled={disabled}
+  onClick={onClick}
+  className={`p-4 rounded-2xl border flex items-center justify-between gap-3 transition-all text-left cursor-pointer group ${
+   disabled ? 'opacity-50 cursor-not-allowed ' : ''
+  }${
+   active
+    ? 'bg-m3-primary/10 border-m3-primary/50 text-m3-on-surface shadow-xs'
+    : 'bg-m3-surface-low border-m3-outline-variant/15 hover:bg-m3-primary/5 hover:border-m3-outline-variant/30'
+  }`}
+ >
+  <div className="flex items-center gap-3.5 min-w-0">
+   <div
+    className={`p-2.5 rounded-xl shrink-0 transition-transform group-hover:scale-105 ${
+     active
+      ? 'bg-m3-primary text-m3-on-primary shadow-sm'
+      : 'bg-m3-surface-container text-m3-on-surface-variant'
+    }`}
+   >
+    <Icon className="h-5 w-5" />
+   </div>
+   <div className="flex flex-col min-w-0">
+    <span className="text-xs font-black text-m3-on-surface font-sans truncate">
+     {title}
+    </span>
+    {subtitle && (
+     <span className="text-[10px] text-m3-on-surface-variant/70 font-mono font-medium truncate mt-0.5">
+      {subtitle}
+     </span>
+    )}
+   </div>
+  </div>
+
+  <div className="flex items-center gap-2 shrink-0">
+   <span
+    className={`text-[9px] font-black uppercase font-mono px-2 py-0.5 rounded-md tracking-wider ${
+     active
+      ? 'bg-m3-primary/20 text-m3-primary border border-m3-primary/30'
+      : 'bg-m3-surface-container text-m3-on-surface-variant/60 border border-transparent'
+    }`}
+   >
+    {active ? activeLabel : inactiveLabel}
+   </span>
+   <div
+    className={`w-10 h-5.5 rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
+     active ? 'bg-m3-primary' : 'bg-m3-outline-variant/40'
+    }`}
+   >
+    <div
+     className={`w-4.5 h-4.5 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-in-out ${
+      active ? 'translate-x-4.5' : 'translate-x-0'
+     }`}
+    />
+   </div>
+  </div>
+ </button>
+);
 
 export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  darkMode,
@@ -287,9 +372,6 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  <h3 className="text-sm font-black uppercase font-mono tracking-wider text-m3-primary">
  System Settings & Configuration
  </h3>
- <p className="text-xs text-m3-on-surface-variant font-medium mt-0.5 font-sans">
- Manage accessibility, graphics performance, and visual preferences
- </p>
  </div>
  </div>
 
@@ -334,249 +416,96 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  </div>
  )}
 
- {/* 1. GLOBAL ENTERPRISE SECURITY AUDIT STREAM - FIRST VIEW */}
- <div className="bg-m3-surface-lowest border border-m3-outline-variant/20 rounded-2xl p-5 shadow-sm space-y-4">
- <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-m3-outline-variant/15">
- <div>
- <h3 className="text-sm font-black uppercase font-mono tracking-wider text-m3-primary flex items-center gap-2">
- <ShieldCheck className="h-5 w-5 text-m3-primary" /> Global Enterprise Security Audit Stream
- </h3>
- <p className="text-[11px] text-m3-on-surface-variant font-medium mt-0.5">
- Live audit ledger tracking voided sales, manager code approvals and system activity
- </p>
- </div>
- <div className="flex items-center gap-2">
- <div className="relative">
- <Search className="h-3.5 w-3.5 text-zinc-400 absolute left-2.5 top-2.5" />
- <input
- type="text"
- value={auditSearchTerm}
- onChange={(e) => setAuditSearchTerm(e.target.value)}
- placeholder="Filter audit logs..."
- className="pl-8 pr-3 py-1.5 text-xs bg-m3-surface-low border border-m3-outline-variant/20 rounded-xl focus:outline-none focus:border-m3-primary w-44 font-mono text-m3-on-surface"
- />
- </div>
- <span className="text-[10px] font-mono font-bold bg-m3-primary/10 text-m3-primary px-2.5 py-1 rounded-lg border border-m3-primary/20 shrink-0">
- {filteredAuditLogs.length} Events
- </span>
- </div>
- </div>
-
- <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1 font-sans">
- {filteredAuditLogs.map((log, idx) => {
- const actionText = log.action || log.actionCode || '';
- const isDanger = actionText.includes('VOID') || actionText.includes('DELETE') || actionText.includes('REJECT');
- const isSuccess = actionText.includes('APPROVE') || actionText.includes('RECEIVE') || actionText.includes('SUCCESS');
- 
- return (
- <div key={idx} className="flex justify-between items-start text-xs border border-m3-outline-variant/10 rounded-xl p-3 bg-m3-surface-low/40 hover:bg-m3-surface-low transition-colors">
- <div className="space-y-1.5 pr-4">
- <div className="flex items-center gap-2">
- <span className={`text-[9.5px] uppercase tracking-wider font-extrabold inline-block px-2.5 py-0.5 rounded-md font-mono border ${
- isDanger 
- ? 'bg-rose-500/10 text-rose-400 border-rose-500/25' 
- : isSuccess 
- ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' 
- : 'bg-m3-primary/10 text-m3-primary border-m3-primary/25'
- }`}>
- {log.action || log.actionCode || 'SYSTEM'}
- </span>
- <span className="text-[10px] text-zinc-400 font-mono">
- Target: <span className="text-m3-on-surface font-semibold">{log.tableAffected || 'System'}</span> ({log.recordId || 'Global'})
- </span>
- </div>
- <p className="text-m3-on-surface font-medium leading-snug">{log.description}</p>
- <span className="text-[10px] text-zinc-400 block font-mono">
- Operator: <span className="text-m3-primary font-bold">@{log.username || 'system'}</span>
- </span>
- </div>
- <div className="text-right text-xs text-m3-on-surface-variant font-mono shrink-0 ml-2">
- {new Date(log.timestamp).toLocaleTimeString()}
- <span className="block text-[10px] opacity-75">{new Date(log.timestamp).toLocaleDateString()}</span>
- </div>
- </div>
- );
- })}
-
- {filteredAuditLogs.length === 0 && (
- <div className="text-center py-8 text-xs text-m3-on-surface-variant font-mono bg-m3-surface-low/30 rounded-xl border border-dashed border-m3-outline-variant/15">
- No security audit entries match your current search parameters.
- </div>
- )}
- </div>
- </div>
-
  {/* PERFORMANCE & ENGINE CONTROLS SECTION */}
  <div className="space-y-4">
  <div>
  <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
  Visual & Performance Optimization
  </h4>
- <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
- Adjust graphic properties and interface rendering speeds to customize system responsivity and improve hardware performance.
- </p>
  </div>
 
  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
- {/* FOLLOW SYSTEM THEME TOGGLE */}
- {setFollowSystemTheme && (
- <button
- type="button"
- onClick={() => {
- const newVal = !followSystemTheme;
- setFollowSystemTheme(newVal);
- if (newVal) {
- const isDark = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
- if (setDarkMode) setDarkMode(isDark);
- }
- window.dispatchEvent(new Event('tilepoint-theme-updated'));
- }}
- className={`p-4 rounded-2xl border flex items-start gap-4 transition-all text-left cursor-pointer group ${
- followSystemTheme
- ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface shadow-sm'
- : 'bg-m3-surface-low border-m3-outline-variant/15 hover:bg-m3-primary/5 hover:border-m3-outline-variant/30'
- }`}
- >
- <div className={`p-2.5 rounded-xl shrink-0 transition-transform group-hover:scale-105 ${followSystemTheme ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
- <Sliders className="h-5 w-5" />
- </div>
- <div className="space-y-1">
- <div className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5 font-sans">
- <span>Follow System Theme State</span>
- {followSystemTheme && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
- </div>
- <p className="text-xs text-m3-on-surface-variant leading-relaxed">
- Automatically matches the ERP interface theme with your operating system's light or dark mode preference.
- </p>
- </div>
- </button>
- )}
+  {/* FOLLOW SYSTEM THEME TOGGLE */}
+  {setFollowSystemTheme && (
+   <SettingToggleCard
+    icon={Sliders}
+    title="Follow System Theme State"
+    subtitle="Auto sync theme with host device preferences"
+    active={followSystemTheme}
+    onClick={() => {
+     const newVal = !followSystemTheme;
+     setFollowSystemTheme(newVal);
+     if (newVal) {
+      const isDark = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (setDarkMode) setDarkMode(isDark);
+     }
+     window.dispatchEvent(new Event('tilepoint-theme-updated'));
+    }}
+    activeLabel="SYNCED"
+    inactiveLabel="OFF"
+   />
+  )}
 
- {/* MANUAL DARK MODE SELECTION */}
- {setDarkMode && (
- <button
- type="button"
- onClick={() => {
- if (setFollowSystemTheme) setFollowSystemTheme(false);
- setDarkMode(!darkMode);
- window.dispatchEvent(new Event('tilepoint-theme-updated'));
- }}
- className={`p-4 rounded-2xl border flex items-start gap-4 transition-all text-left cursor-pointer group ${
- darkMode && !followSystemTheme
- ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface shadow-sm'
- : 'bg-m3-surface-low border-m3-outline-variant/15 hover:bg-m3-primary/5 hover:border-m3-outline-variant/30'
- }`}
- >
- <div className={`p-2.5 rounded-xl shrink-0 transition-transform group-hover:scale-105 ${darkMode && !followSystemTheme ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
- <Settings className="h-5 w-5" />
- </div>
- <div className="space-y-1">
- <div className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5 font-sans">
- <span>Manual Workspace Dark Theme</span>
- {darkMode && !followSystemTheme && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
- </div>
- <p className="text-xs text-m3-on-surface-variant leading-relaxed">
- Override automatic theme matching and force high-contrast dark mode display across all corporate modules.
- </p>
- </div>
- </button>
- )}
+  {/* MANUAL DARK MODE SELECTION */}
+  {setDarkMode && (
+   <SettingToggleCard
+    icon={darkMode ? Moon : Sun}
+    title="Workspace Dark Theme"
+    subtitle="Dark high-contrast color scheme"
+    active={darkMode && !followSystemTheme}
+    onClick={() => {
+     if (setFollowSystemTheme) setFollowSystemTheme(false);
+     setDarkMode(!darkMode);
+     window.dispatchEvent(new Event('tilepoint-theme-updated'));
+    }}
+    activeLabel="DARK"
+    inactiveLabel="LIGHT"
+   />
+  )}
 
- {/* TURN OFF BLURS TOGGLE */}
- <button
- type="button"
- onClick={() => updateSetting('tilepoint-disable-blurs', !disableBlurs)}
- className={`p-4 rounded-2xl border flex items-start gap-4 transition-all text-left cursor-pointer group ${
- disableBlurs
- ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface shadow-sm'
- : 'bg-m3-surface-low border-m3-outline-variant/15 hover:bg-m3-primary/5 hover:border-m3-outline-variant/30'
- }`}
- >
- <div className={`p-2.5 rounded-xl shrink-0 transition-transform group-hover:scale-105 ${disableBlurs ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
- <Eye className="h-5 w-5" />
- </div>
- <div className="space-y-1">
- <div className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5 font-sans">
- <span>Turn Off Backdrop & UI Blurs</span>
- {disableBlurs && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
- </div>
- <p className="text-xs text-m3-on-surface-variant leading-relaxed">
- Removes frosted glass translucent backdrops and heavy gradient blur filters to improve visual clarity and rendering performance.
- </p>
- </div>
- </button>
+  {/* TURN OFF BLURS TOGGLE */}
+  <SettingToggleCard
+   icon={Eye}
+   title="Turn Off UI Blurs & Glass"
+   subtitle="Removes backdrop filters for maximum rendering speed"
+   active={disableBlurs}
+   onClick={() => updateSetting('tilepoint-disable-blurs', !disableBlurs)}
+   activeLabel="OFF"
+   inactiveLabel="ON"
+  />
 
- {/* REMOVE ANIMATIONS TOGGLE */}
- <button
- type="button"
- onClick={() => updateSetting('tilepoint-disable-animations', !disableAnimations)}
- className={`p-4 rounded-2xl border flex items-start gap-4 transition-all text-left cursor-pointer group ${
- disableAnimations
- ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface shadow-sm'
- : 'bg-m3-surface-low border-m3-outline-variant/15 hover:bg-m3-primary/5 hover:border-m3-outline-variant/30'
- }`}
- >
- <div className={`p-2.5 rounded-xl shrink-0 transition-transform group-hover:scale-105 ${disableAnimations ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
- <Sparkles className="h-5 w-5" />
- </div>
- <div className="space-y-1">
- <div className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5 font-sans">
- <span>Remove Animations & Effects</span>
- {disableAnimations && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
- </div>
- <p className="text-xs text-m3-on-surface-variant leading-relaxed">
- Bypasses interface slide-in motion, tab page fade effects, and interactive scaling physics for instant navigation.
- </p>
- </div>
- </button>
+  {/* REMOVE ANIMATIONS TOGGLE */}
+  <SettingToggleCard
+   icon={Sparkles}
+   title="Remove Animations & UI Motion"
+   subtitle="Instant zero-delay state transitions"
+   active={disableAnimations}
+   onClick={() => updateSetting('tilepoint-disable-animations', !disableAnimations)}
+   activeLabel="OFF"
+   inactiveLabel="ON"
+  />
 
- {/* DISABLE PWA INSTALL PROMPT TOGGLE */}
- <button
- type="button"
- onClick={() => updateSetting('tilepoint-disable-install-prompt', !disableInstallPrompt)}
- className={`p-4 rounded-2xl border flex items-start gap-4 transition-all text-left cursor-pointer group ${
- disableInstallPrompt
- ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface shadow-sm'
- : 'bg-m3-surface-low border-m3-outline-variant/15 hover:bg-m3-primary/5 hover:border-m3-outline-variant/30'
- }`}
- >
- <div className={`p-2.5 rounded-xl shrink-0 transition-transform group-hover:scale-105 ${disableInstallPrompt ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
- <Download className="h-5 w-5" />
- </div>
- <div className="space-y-1">
- <div className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5 font-sans">
- <span>Turn Off Install Prompt</span>
- {disableInstallPrompt && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
- </div>
- <p className="text-xs text-m3-on-surface-variant leading-relaxed">
- Prevents the floating Progress Web App (PWA) installation alert banner from displaying on your screen.
- </p>
- </div>
- </button>
+  {/* DISABLE PWA INSTALL PROMPT TOGGLE */}
+  <SettingToggleCard
+   icon={Download}
+   title="Turn Off PWA Install Banner"
+   subtitle="Hides home screen app installation prompt"
+   active={disableInstallPrompt}
+   onClick={() => updateSetting('tilepoint-disable-install-prompt', !disableInstallPrompt)}
+   activeLabel="HIDDEN"
+   inactiveLabel="VISIBLE"
+  />
 
- {/* DISABLE IDLE CLOCK OVERLAY TOGGLE */}
- <button
- type="button"
- onClick={() => updateSetting('tilepoint-disable-idle-clock', !disableIdleClock)}
- className={`p-4 rounded-2xl border flex items-start gap-4 transition-all text-left cursor-pointer group ${
- disableIdleClock
- ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface shadow-sm'
- : 'bg-m3-surface-low border-m3-outline-variant/15 hover:bg-m3-primary/5 hover:border-m3-outline-variant/30'
- }`}
- >
- <div className={`p-2.5 rounded-xl shrink-0 transition-transform group-hover:scale-105 ${disableIdleClock ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
- <Clock className="h-5 w-5" />
- </div>
- <div className="space-y-1">
- <div className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5 font-sans">
- <span>Turn Off Idle Clock Overlay</span>
- {disableIdleClock && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
- </div>
- <p className="text-xs text-m3-on-surface-variant leading-relaxed">
- Disables the full-screen dynamic screensaver overlay that activates during periods of checkout and interface inactivity.
- </p>
- </div>
- </button>
+  {/* DISABLE IDLE CLOCK OVERLAY TOGGLE */}
+  <SettingToggleCard
+   icon={Clock}
+   title="Turn Off Idle Clock Screensaver"
+   subtitle="Prevents idle timer screen lock overlay"
+   active={disableIdleClock}
+   onClick={() => updateSetting('tilepoint-disable-idle-clock', !disableIdleClock)}
+   activeLabel="OFF"
+   inactiveLabel="ON"
+  />
  </div>
  </div>
 
@@ -588,9 +517,6 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
  Accessibility & Typography preferences
  </h4>
- <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
- Configure system-wide text sizing, high-visibility contrast layers, and assistive typography layouts.
- </p>
  </div>
 
  {/* FONT SCALING REGION */}
@@ -628,9 +554,6 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  System Color Contrast Config
  </label>
  <div className="w-full p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low space-y-3">
- <p className="text-[11px] text-m3-on-surface-variant leading-relaxed">
- Choose a dynamic color weighting scheme to improve visual differentiation across system containers, text assets, and borders.
- </p>
  <div className="grid grid-cols-3 gap-2 p-1.5 rounded-xl bg-m3-surface-container">
  {(['default', 'medium', 'high'] as const).map((level) => (
  <button
@@ -651,77 +574,32 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  </div>
 
  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
- {/* DYSLEXIC FRIENDLY toggle */}
- <button
- type="button"
- onClick={() => updateSetting('tilepoint-dyslexic-font', !dyslexicFont)}
- className={`p-4 rounded-xl border flex items-start gap-4 transition-all text-left cursor-pointer group ${
- dyslexicFont
- ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface'
- : 'bg-m3-surface-low border-m3-outline-variant/15 hover:bg-m3-primary/5'
- }`}
- >
- <div className={`p-2 rounded-lg shrink-0 ${dyslexicFont ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
- <CaseSensitive className="h-4.5 w-4.5" />
- </div>
- <div className="space-y-1">
- <div className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5 font-sans">
- <span>Dyslexic-Friendly Typography</span>
- {dyslexicFont && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
- </div>
- <p className="text-xs text-m3-on-surface-variant leading-relaxed">
- Applies Comic Neue & slab spacing alignments globally, optimizing font tracking, line height, and stroke curves for dyslexic readability.
- </p>
- </div>
- </button>
+  {/* DYSLEXIC FRIENDLY toggle */}
+  <SettingToggleCard
+   icon={CaseSensitive}
+   title="Dyslexic-Friendly Typography"
+   subtitle="Enhanced letter shapes for increased readability"
+   active={dyslexicFont}
+   onClick={() => updateSetting('tilepoint-dyslexic-font', !dyslexicFont)}
+  />
 
- {/* MAXIMIZE TEXT CONTRAST Toggle */}
- <button
- type="button"
- onClick={() => updateSetting('tilepoint-maximize-text-contrast', !maximizeTextContrast)}
- className={`p-4 rounded-xl border flex items-start gap-4 transition-all text-left cursor-pointer group ${
- maximizeTextContrast
- ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface'
- : 'bg-m3-surface-low border-m3-outline-variant/15 hover:bg-m3-primary/5'
- }`}
- >
- <div className={`p-2 rounded-lg shrink-0 ${maximizeTextContrast ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
- <Layers className="h-4.5 w-4.5" />
- </div>
- <div className="space-y-1">
- <div className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5 font-sans">
- <span>Maximize Text Contrast</span>
- {maximizeTextContrast && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
- </div>
- <p className="text-xs text-m3-on-surface-variant leading-relaxed">
- Adds a high-visibility background frame around body texts and description strings to ensure outstanding readability against gradients and custom hues.
- </p>
- </div>
- </button>
+  {/* MAXIMIZE CONTRAST toggle */}
+  <SettingToggleCard
+   icon={Layers}
+   title="Maximize Text Contrast"
+   subtitle="WCAG AAA compliance for extreme clarity"
+   active={maximizeTextContrast}
+   onClick={() => updateSetting('tilepoint-text-contrast', !maximizeTextContrast)}
+  />
 
- {/* KEYBOARD OUTLINES toggle */}
- <button
- type="button"
- onClick={() => updateSetting('tilepoint-enhanced-outlines', !enhancedOutlines)}
- className={`p-4 rounded-xl border flex items-start gap-4 transition-all text-left cursor-pointer group md:col-span-2 ${
- enhancedOutlines
- ? 'bg-m3-primary/15 border-m3-primary text-m3-on-surface'
- : 'bg-m3-surface-low border-m3-outline-variant/15 hover:bg-m3-primary/5'
- }`}
- >
- <div className={`p-2 rounded-lg shrink-0 ${enhancedOutlines ? 'bg-m3-primary text-m3-on-primary' : 'bg-m3-surface-container text-m3-on-surface-variant'}`}>
- <Keyboard className="h-4.5 w-4.5" />
- </div>
- <div className="space-y-1">
- <div className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5 font-sans">
- <span>Highlight Keyboard Focus Outlines</span>
- {enhancedOutlines && <span className="h-1.5 w-1.5 rounded-full bg-m3-primary" />}
- </div>
- <p className="text-xs text-m3-on-surface-variant leading-relaxed">
- Forces thick orange safety outlines around focused checkout inputs and catalog layout buttons when navigating via the TAB key.
- </p>
- </div>
- </button>
+  {/* KEYBOARD OUTLINES toggle */}
+  <SettingToggleCard
+   icon={Keyboard}
+   title="Highlight Focus Outlines"
+   subtitle="High-visibility keyboard navigation focus rings"
+   active={enhancedOutlines}
+   onClick={() => updateSetting('tilepoint-enhanced-outlines', !enhancedOutlines)}
+  />
  </div>
  </div>
 
@@ -735,9 +613,6 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
  Enterprise Profile & Business Rules
  </h4>
- <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed font-sans">
- Configure showroom brand headers, VAT rates, currency standards, and security manager PINs.
- </p>
  </div>
 
  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -748,7 +623,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  </label>
  <input
  type="text"
- value={companyName}
+ value={companyName ?? ''}
  disabled={!isAuthorized}
  onChange={(e) => {
  const val = e.target.value;
@@ -767,7 +642,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  </label>
  <input
  type="number"
- value={taxRate}
+ value={taxRate ?? ''}
  disabled={!isAuthorized}
  onChange={(e) => {
  const val = Math.max(0, Number(e.target.value));
@@ -785,7 +660,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  Base Currency Symbol
  </label>
  <select
- value={currency}
+ value={currency ?? ''}
  disabled={!isAuthorized}
  onChange={(e) => {
  const val = e.target.value;
@@ -810,7 +685,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  <input
  type="text"
  maxLength={4}
- value={managerPin}
+ value={managerPin ?? ''}
  disabled={!isAuthorized}
  onChange={(e) => {
  const val = e.target.value.replace(/\D/g, '');
@@ -839,7 +714,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  type="range"
  min="20"
  max="120"
- value={logoSize}
+ value={logoSize ?? ''}
  disabled={!isAuthorized}
  onChange={(e) => {
  const val = Number(e.target.value);
@@ -929,7 +804,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  </p>
  <input
  type="text"
- value={resetConfirmation}
+ value={resetConfirmation ?? ''}
  onChange={(e) => setResetConfirmation(e.target.value)}
  placeholder="Type RESET to authorize"
  className="bg-m3-surface border border-rose-500/30 rounded-xl text-xs font-mono font-bold p-2.5 w-full max-w-xs mt-1.5 text-rose-400 outline-none focus:border-rose-500 text-center tracking-widest uppercase"
@@ -943,9 +818,6 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  <div>
  <span className="text-[10px] font-extrabold text-amber-500 font-mono uppercase block">Option A</span>
  <h5 className="font-black text-xs text-m3-on-surface mt-1">Reset All Stock Counts</h5>
- <p className="text-[10px] text-zinc-400 mt-1 leading-normal font-sans">
- Purges sales history, purchase orders, ledger journals, and sets all local branch product stock levels to zero. Catalog stays intact.
- </p>
  </div>
  <HoldToConfirmButton
  disabled={resetConfirmation !== 'RESET' || (isRowClearingBlocked() && !forceUnlockReset)}
@@ -965,9 +837,6 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  <div>
  <span className="text-[10px] font-extrabold text-rose-500 font-mono uppercase block">Option B</span>
  <h5 className="font-black text-xs text-m3-on-surface mt-1">Full Database Wipe</h5>
- <p className="text-[10px] text-zinc-400 mt-1 leading-normal font-sans">
- Completely purges all products, custom suppliers, local warehouse stocks, and checkout histories. Starts with an empty database.
- </p>
  </div>
  <HoldToConfirmButton
  disabled={resetConfirmation !== 'RESET' || (isRowClearingBlocked() && !forceUnlockReset)}
@@ -987,9 +856,6 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  <div>
  <span className="text-[10px] font-extrabold text-purple-500 font-mono uppercase block">Option C</span>
  <h5 className="font-black text-xs text-m3-on-surface mt-1">Factory Reset (Setup 0)</h5>
- <p className="text-[10px] text-zinc-400 mt-1 leading-normal font-sans">
- Completely erases all application data, configurations, credentials, and settings. Automatically reboots to the initial setup wizard.
- </p>
  </div>
  <HoldToConfirmButton
  disabled={resetConfirmation !== 'RESET'}

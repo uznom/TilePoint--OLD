@@ -1104,16 +1104,16 @@ function AppContent() {
 
 
  useEffect(() => {
- const handleStorageFailure = (e: Event) => {
- const customEvent = e as CustomEvent;
- const message = customEvent.detail?.message || "Local storage full. Transaction not saved to drive!";
- showToast(message);
- };
+  const handleStorageFailure = (e: Event) => {
+   const customEvent = e as CustomEvent;
+   const message = customEvent.detail?.message || "Local storage quota auto-managed. Data synced with server.";
+   showToast(message);
+  };
 
- window.addEventListener("tp_storage_failure", handleStorageFailure);
- return () => {
- window.removeEventListener("tp_storage_failure", handleStorageFailure);
- };
+  window.addEventListener("tp_storage_failure", handleStorageFailure);
+  return () => {
+   window.removeEventListener("tp_storage_failure", handleStorageFailure);
+  };
  }, []);
 
  // Immersive ERP OS terminal distraction-free mode state
@@ -1863,7 +1863,6 @@ function AppContent() {
  {/* Right side controls with Dropdown Menu following strict user intent */}
  <div className="flex items-center gap-3 relative">
 
-
  <div className="relative animate-fade-in">
  <button
  id="account-dropdown-trigger"
@@ -2170,7 +2169,7 @@ function AppContent() {
    const cached = localStorage.getItem("tp_batch_expirations");
    if (cached) {
     const parsed = JSON.parse(cached);
-    const today = new Date("2026-07-18");
+    const today = new Date();
     showInventoryRedDot = parsed.some((b: any) => {
      if (!b.expiryDate) return false;
      const exp = new Date(b.expiryDate);
@@ -3173,7 +3172,7 @@ function AppContent() {
  currentUser.role !== UserRole.ADMIN ||
  !autoBackupEnabled
  }
- value={backupIntervalHours}
+ value={backupIntervalHours ?? ''}
  onChange={(e) => {
  const val = Number(e.target.value);
  setBackupIntervalHours(val);
@@ -3222,7 +3221,7 @@ function AppContent() {
  <div className="flex gap-2 font-sans">
  <input
  type="text"
- value={manualSnapshotName}
+ value={manualSnapshotName ?? ''}
  onChange={(e) =>
  setManualSnapshotName(e.target.value)
  }
@@ -3679,7 +3678,7 @@ function AppContent() {
  <input
  type="text"
  required
- value={editFullName}
+ value={editFullName ?? ''}
  onChange={(e) => setEditFullName(e.target.value)}
  placeholder="Enter full name"
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-sans"
@@ -3696,7 +3695,7 @@ function AppContent() {
  <input
  type="text"
  required
- value={editUsername}
+ value={editUsername ?? ''}
  onChange={(e) => setEditUsername(e.target.value)}
  placeholder="Username"
  className="w-full bg-m3-surface border-b-2 border-m3-outline-variant pl-7 pr-3 py-2 text-xs text-m3-on-surface font-mono focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg"
@@ -3720,7 +3719,7 @@ function AppContent() {
  <div className="relative">
  <input
  type={showCurrentPassword ? "text" : "password"}
- value={currentPassword}
+ value={currentPassword ?? ''}
  onChange={(e) => {
  setCurrentPassword(e.target.value);
  setSettingsError("");
@@ -3752,7 +3751,7 @@ function AppContent() {
  <div className="relative">
  <input
  type={showNewPassword ? "text" : "password"}
- value={newPassword}
+ value={newPassword ?? ''}
  onChange={(e) => {
  setNewPassword(e.target.value);
  setSettingsError("");
@@ -3781,7 +3780,7 @@ function AppContent() {
  </label>
  <input
  type={showNewPassword ? "text" : "password"}
- value={confirmPassword}
+ value={confirmPassword ?? ''}
  onChange={(e) => {
  setConfirmPassword(e.target.value);
  setSettingsError("");

@@ -1,3 +1,4 @@
+import { formatCurrency, formatUnits } from '../utils/formatters';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -70,7 +71,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  updateCurrentUser,
  checkoutSale,
  simulationModeActive,
- users
+ users,
+ productReturns
  } = useDb();
 
  const [hoveredBar, setHoveredBar] = useState<number | null>(null);
@@ -163,25 +165,56 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  return p.stockQuantity;
  };
 
- // Today's Sales
- const todayStr = new Date().toISOString().slice(0, 10);
- const todaySalesItems = filteredSales.filter(s => s.createdAt && typeof s.createdAt === 'string' && s.createdAt.startsWith(todayStr) && !s.isDeleted);
- const computedTodaySales = todaySalesItems.reduce((acc, curr) => acc + curr.grandTotal, 0);
+ // Date comparison helpers
+ const isSameDay = (dateVal: string | number | Date | undefined, targetDate: Date) => {
+ if (!dateVal) return false;
+ const d = new Date(dateVal);
+ if (isNaN(d.getTime())) return false;
+ return d.getFullYear() === targetDate.getFullYear() &&
+ d.getMonth() === targetDate.getMonth() &&
+ d.getDate() === targetDate.getDate();
+ };
 
- // Weekly Sales
+ const isSameMonth = (dateVal: string | number | Date | undefined, targetYear: number, targetMonth: number) => {
+ if (!dateVal) return false;
+ const d = new Date(dateVal);
+ if (isNaN(d.getTime())) return false;
+ return d.getFullYear() === targetYear && d.getMonth() === targetMonth;
+ };
+
+ // Product Returns filtering helper for current view context
+ const filteredReturns = (productReturns || []).filter(r => {
+ if (r.isDeleted) return false;
+ if (activeBranchId) {
+ const matchingSale = sales.find(s => s.id === r.saleId);
+ if (matchingSale && matchingSale.branchId !== activeBranchId) return false;
+ }
+ return true;
+ });
+
+ // Today's Sales (Net of Returns)
+ const now = new Date();
+ const todaySalesItems = filteredSales.filter(s => s.createdAt && !s.isDeleted && isSameDay(s.createdAt, now));
+ const todayReturnsSum = filteredReturns.filter(r => isSameDay(r.dateTime, now)).reduce((acc, curr) => acc + (Number(curr.amountRefunded) || 0), 0);
+ const computedTodaySales = Math.max(0, todaySalesItems.reduce((acc, curr) => acc + (Number(curr.grandTotal) || 0), 0) - todayReturnsSum);
+
+ // Weekly Sales (Net of Returns)
  const sevenDaysAgo = new Date();
  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
- const weeklySalesItems = filteredSales.filter(s => s.createdAt && !isNaN(new Date(s.createdAt).getTime()) && new Date(s.createdAt) >= sevenDaysAgo && !s.isDeleted);
- const computedWeeklySales = weeklySalesItems.reduce((acc, curr) => acc + curr.grandTotal, 0);
+ const weeklySalesItems = filteredSales.filter(s => s.createdAt && !s.isDeleted && new Date(s.createdAt) >= sevenDaysAgo);
+ const weeklyReturnsSum = filteredReturns.filter(r => r.dateTime && !isNaN(new Date(r.dateTime).getTime()) && new Date(r.dateTime) >= sevenDaysAgo).reduce((acc, curr) => acc + (Number(curr.amountRefunded) || 0), 0);
+ const computedWeeklySales = Math.max(0, weeklySalesItems.reduce((acc, curr) => acc + (Number(curr.grandTotal) || 0), 0) - weeklyReturnsSum);
 
- // Monthly Revenue (current month)
- const currentMonthStr = new Date().toISOString().slice(0, 7);
- const monthlySalesItems = filteredSales.filter(s => s.createdAt && typeof s.createdAt === 'string' && s.createdAt.startsWith(currentMonthStr) && !s.isDeleted);
- const computedMonthlyRevenue = monthlySalesItems.reduce((acc, curr) => acc + curr.grandTotal, 0);
+ // Monthly Revenue (current month, Net of Returns)
+ const monthlySalesItems = filteredSales.filter(s => s.createdAt && !s.isDeleted && isSameMonth(s.createdAt, now.getFullYear(), now.getMonth()));
+ const monthlyReturnsSum = filteredReturns.filter(r => isSameMonth(r.dateTime, now.getFullYear(), now.getMonth())).reduce((acc, curr) => acc + (Number(curr.amountRefunded) || 0), 0);
+ const computedMonthlyRevenue = Math.max(0, monthlySalesItems.reduce((acc, curr) => acc + (Number(curr.grandTotal) || 0), 0) - monthlyReturnsSum);
 
- // Corporate aggregate metric calculation (All branches, regardless of assignment)
- const corporateTodaySales = sales.filter(s => s.createdAt && typeof s.createdAt === 'string' && s.createdAt.startsWith(todayStr) && !s.isDeleted).reduce((acc, s) => acc + s.grandTotal, 0);
- const corporateMonthlyRevenue = sales.filter(s => s.createdAt && typeof s.createdAt === 'string' && s.createdAt.startsWith(currentMonthStr) && !s.isDeleted).reduce((acc, s) => acc + s.grandTotal, 0);
+ // Corporate aggregate metric calculation (All branches, Net of Returns)
+ const corporateTodayReturns = (productReturns || []).filter(r => !r.isDeleted && isSameDay(r.dateTime, now)).reduce((acc, r) => acc + (Number(r.amountRefunded) || 0), 0);
+ const corporateMonthlyReturns = (productReturns || []).filter(r => !r.isDeleted && isSameMonth(r.dateTime, now.getFullYear(), now.getMonth())).reduce((acc, r) => acc + (Number(r.amountRefunded) || 0), 0);
+ const corporateTodaySales = Math.max(0, sales.filter(s => s.createdAt && !s.isDeleted && isSameDay(s.createdAt, now)).reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0) - corporateTodayReturns);
+ const corporateMonthlyRevenue = Math.max(0, sales.filter(s => s.createdAt && !s.isDeleted && isSameMonth(s.createdAt, now.getFullYear(), now.getMonth())).reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0) - corporateMonthlyReturns);
  const activeBranchesCount = branches.filter(b => !b.isDeleted).length;
 
  // Inventory value computed dynamically based on cost basis and selected branch
@@ -228,13 +261,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  return days.map((day, idx) => {
  const targetDate = new Date();
  targetDate.setDate(today.getDate() - (adjustedCurrentDayIdx - idx));
- const targetDateStr = targetDate.toISOString().slice(0, 10);
 
- const daySales = filteredSales.filter(s => s.createdAt && typeof s.createdAt === 'string' && s.createdAt.startsWith(targetDateStr) && !s.isDeleted);
+ const daySales = filteredSales.filter(s => s.createdAt && !s.isDeleted && isSameDay(s.createdAt, targetDate));
  
  let liveValue = 0;
  if (weeklyMetric === 'revenue') {
- liveValue = daySales.reduce((sum, s) => sum + s.grandTotal, 0);
+ const dayReturns = filteredReturns.filter(r => isSameDay(r.dateTime, targetDate)).reduce((sum, r) => sum + (Number(r.amountRefunded) || 0), 0);
+ liveValue = Math.max(0, daySales.reduce((sum, s) => sum + (Number(s.grandTotal) || 0), 0) - dayReturns);
  } else if (weeklyMetric === 'orders') {
  liveValue = daySales.length;
  } else if (weeklyMetric === 'boxes') {
@@ -251,44 +284,68 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  };
 
  const getMonthlyChartData = () => {
- const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
- 
- let list = months.map((month, idx) => {
- const monthPrefix = `2026-${String(idx + 1).padStart(2, '0')}`;
- const monthSales = filteredSales.filter(s => s.createdAt && typeof s.createdAt === 'string' && s.createdAt.startsWith(monthPrefix) && !s.isDeleted);
- const computedRev = monthSales.reduce((sum, s) => sum + s.grandTotal, 0);
+  const now = new Date();
+  const list: { month: string; monthPrefix: string; year: number; revenue: number; isPredicted?: boolean }[] = [];
 
- return { 
- month, 
- revenue: Math.round(computedRev),
- isPredicted: false
- };
- });
+  // Construct 6 trailing months up to current month (5 months ago .. current month)
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const year = d.getFullYear();
+    const monthNum = d.getMonth() + 1;
+    const monthPrefix = `${year}-${String(monthNum).padStart(2, '0')}`;
+    const monthName = d.toLocaleDateString('en-US', { month: 'short' });
 
- if (forecastEnabled) {
- const forecastMonths = ['Jul', 'Aug', 'Sep'];
- let currentVal = list[5].revenue;
- let trendVal = (list[5].revenue - list[4].revenue) * 0.3;
+    const monthSales = filteredSales.filter(s =>
+      s.createdAt &&
+      !s.isDeleted &&
+      isSameMonth(s.createdAt, year, d.getMonth())
+    );
+    const monthReturns = filteredReturns.filter(r => isSameMonth(r.dateTime, year, d.getMonth())).reduce((sum, r) => sum + (Number(r.amountRefunded) || 0), 0);
+    const computedRev = Math.max(0, monthSales.reduce((sum, s) => sum + (Number(s.grandTotal) || 0), 0) - monthReturns);
 
- forecastMonths.forEach((m, idx) => {
- const forecastedRevenue = Math.round(currentVal * (1 + 0.04 * (idx + 1)) + trendVal);
- list.push({
- month: m,
- revenue: forecastedRevenue,
- isPredicted: true
- });
- currentVal = forecastedRevenue;
- });
- }
+    list.push({
+      month: monthName,
+      monthPrefix,
+      year,
+      revenue: Math.round(computedRev),
+      isPredicted: false
+    });
+  }
 
- return list;
- };
+  if (forecastEnabled) {
+    let currentVal = list[list.length - 1].revenue;
+    let prevVal = list[list.length - 2]?.revenue || currentVal;
+    let trendVal = (currentVal - prevVal) * 0.3;
 
- const weeklyChartData = getWeeklyChartData();
+    for (let idx = 1; idx <= 3; idx++) {
+      const fd = new Date(now.getFullYear(), now.getMonth() + idx, 1);
+      const fYear = fd.getFullYear();
+      const fMonthNum = fd.getMonth() + 1;
+      const fMonthPrefix = `${fYear}-${String(fMonthNum).padStart(2, '0')}`;
+      const fMonthName = fd.toLocaleDateString('en-US', { month: 'short' });
+
+      const forecastedRevenue = Math.max(0, Math.round(currentVal * (1 + 0.04 * idx) + trendVal));
+      list.push({
+        month: fMonthName,
+        monthPrefix: fMonthPrefix,
+        year: fYear,
+        revenue: forecastedRevenue,
+        isPredicted: true
+      });
+      currentVal = forecastedRevenue;
+    }
+  }
+
+  return list;
+  };
+
+  const weeklyChartData = getWeeklyChartData();
  const monthlyChartData = getMonthlyChartData();
 
- const maxWeeklyAmount = Math.max(...weeklyChartData.map(d => d.amount));
- const maxMonthlyAmount = Math.max(...monthlyChartData.map(d => d.revenue));
+ const weeklyAmounts = weeklyChartData.map(d => d.amount);
+ const maxWeeklyAmount = weeklyAmounts.length > 0 ? weeklyAmounts.reduce((max, a) => a > max ? a : max, 0) : 0;
+ const monthlyRevenues = monthlyChartData.map(d => d.revenue);
+ const maxMonthlyAmount = monthlyRevenues.length > 0 ? monthlyRevenues.reduce((max, r) => r > max ? r : max, 0) : 0;
 
  const getMonthlyRatio = (val: number) => {
  if (!maxMonthlyAmount || isNaN(maxMonthlyAmount) || maxMonthlyAmount <= 0) return 0;
@@ -371,10 +428,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  const branchPerformance = branches.map(b => {
  const liveSales = sales
  .filter(s => s.branchId === b.id && !s.isDeleted)
- .reduce((acc, s) => acc + s.grandTotal, 0);
+ .reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
  
  // Baseline mapped representatively plus current session sales
- const totalSales = b.monthlySales + liveSales;
+ const branchSaleIds = new Set(sales.filter(s => s.branchId === b.id && !s.isDeleted).map(s => s.id));
+ const currentMonthReturns = (productReturns || [])
+ .filter(r => !r.isDeleted && branchSaleIds.has(r.saleId) && isSameMonth(r.dateTime, now.getFullYear(), now.getMonth()))
+ .reduce((acc, r) => acc + (Number(r.amountRefunded) || 0), 0);
+
+ const currentMonthSales = Math.max(0, sales
+ .filter(s => s.branchId === b.id && !s.isDeleted && isSameMonth(s.createdAt, now.getFullYear(), now.getMonth()))
+ .reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0) - currentMonthReturns);
+
+ const totalSales = currentMonthSales;
  
  let textGrowth = "+12%";
  let growth = 12;
@@ -421,8 +487,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  revenue: 0
  };
  }
- acc[item.productId].quantitySold += item.quantity;
- acc[item.productId].revenue += item.total;
+ acc[item.productId].quantitySold += Number(item.quantity) || 0;
+ acc[item.productId].revenue += Number(item.total) || 0;
  return acc;
  }, {} as Record<string, { productId: string; productName: string; quantitySold: number; revenue: number }>);
 
@@ -460,10 +526,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
     const bSaleIds = new Set(bSaleItems.map(si => si.saleId));
     const bSales = sales.filter(s => bSaleIds.has(s.id) && s.branchId === b.id && !s.isDeleted);
 
-    let lastSaleDate = new Date(p.createdAt || '2026-01-01');
+    let lastSaleDate = new Date(p.createdAt || new Date());
     if (bSales.length > 0) {
      const saleTimes = bSales.map(s => new Date(s.createdAt).getTime());
-     const latestTime = Math.max(...saleTimes);
+     const latestTime = saleTimes.reduce((max, t) => t > max ? t : max, saleTimes[0] || 0);
      if (!isNaN(latestTime)) {
       lastSaleDate = new Date(latestTime);
      }
@@ -627,7 +693,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <span className="text-[9px] text-m3-primary font-mono uppercase font-black pl-1">Active View-Port Branch:</span>
  {currentUser.role === UserRole.ADMIN ? (
  <select
- value={selectedBranchId}
+ value={selectedBranchId ?? ''}
  onChange={(e) => {
  setSelectedBranchId(e.target.value);
  showToastMsg(`Switched Command View-Port to: ${e.target.value === 'all' ? 'All Corporate Branches' : getBranchName(e.target.value)}`, 'info');
@@ -738,10 +804,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  .filter(si => todaySalesIds.has(si.saleId) && !si.isDeleted)
  .reduce((sum, item) => sum + item.quantity, 0);
 
- const cashToday = todaySalesItems.filter(s => s.paymentMethod === 'Cash').reduce((acc, s) => acc + s.grandTotal, 0);
- const cardToday = todaySalesItems.filter(s => s.paymentMethod === 'Credit Card').reduce((acc, s) => acc + s.grandTotal, 0);
- const bankToday = todaySalesItems.filter(s => s.paymentMethod === 'Bank Transfer').reduce((acc, s) => acc + s.grandTotal, 0);
- const gcashToday = todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Maya').reduce((acc, s) => acc + s.grandTotal, 0);
+ const cashToday = todaySalesItems.filter(s => s.paymentMethod === 'Cash').reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
+ const cardToday = todaySalesItems.filter(s => s.paymentMethod === 'Credit Card').reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
+ const bankToday = todaySalesItems.filter(s => s.paymentMethod === 'Bank Transfer').reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
+ const gcashToday = todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Maya').reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
 
  const printContent = `
  <html>
@@ -848,15 +914,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <div class="stats-grid">
  <div class="stat-box">
  <div class="stat-label">TODAY'S CUMULATIVE REVENUE</div>
- <div class="stat-val">₱${computedTodaySales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+ <div class="stat-val">${formatCurrency(computedTodaySales)}</div>
  </div>
  <div class="stat-box">
  <div class="stat-label">NUMBER OF CHECKOUTS</div>
  <div class="stat-val">${todaySalesItems.length} Sales</div>
  </div>
  <div class="stat-box">
- <div class="stat-label">TOTAL CARGO BOX QUANTITY</div>
- <div class="stat-val">${todayBoxesSold} Tiles</div>
+ <div class="stat-label">TOTAL CARGO UNIT QUANTITY</div>
+ <div class="stat-val">${todayBoxesSold} Units</div>
  </div>
  <div class="stat-box">
  <div class="stat-label">GENERATED BY</div>
@@ -1010,7 +1076,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <div className="bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/10 shadow-sm">
  <span className="block text-[8px] font-extrabold text-m3-on-surface-variant/80 uppercase tracking-widest">Live Today's Revenue</span>
  <div className="text-xl font-black mt-1 text-emerald-600 dark:text-emerald-400 tracking-tight">
- ₱{computedTodaySales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+ {formatCurrency(computedTodaySales)}
  </div>
  </div>
 
@@ -1022,14 +1088,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </div>
 
  <div className="bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/10 shadow-sm">
- <span className="block text-[8px] font-extrabold text-m3-on-surface-variant/80 uppercase tracking-widest">Boxes Sold Today</span>
- <div className="text-xl font-black mt-1 text-m3-on-surface tracking-tight">
- {(() => {
- const todaySalesIds = new Set(todaySalesItems.map(s => s.id));
- return saleItems.filter(si => todaySalesIds.has(si.saleId) && !si.isDeleted).reduce((sum, item) => sum + item.quantity, 0);
- })()} Cartons
- </div>
- </div>
+ <span className="block text-[8px] font-extrabold text-m3-on-surface-variant/80 uppercase tracking-widest">Units Sold Today</span>
+              <div className="text-xl font-black mt-1 text-m3-on-surface tracking-tight">
+                {(() => {
+                  const todaySalesIds = new Set(todaySalesItems.map(s => s.id));
+                  const totalQty = saleItems.filter(si => todaySalesIds.has(si.saleId) && !si.isDeleted).reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+                  return `${totalQty.toLocaleString()} ${totalQty === 1 ? 'Unit' : 'Units'}`;
+                })()}
+              </div>
+            </div>
  </div>
 
  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1042,10 +1109,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
  <div className="bg-m3-surface-lowest p-4.5 rounded-2xl border border-m3-outline-variant/10 space-y-4">
  {[
- { label: 'Cleared Cash drawer', val: todaySalesItems.filter(s => s.paymentMethod === 'Cash').reduce((acc, s) => acc + s.grandTotal, 0), color: 'bg-emerald-500', count: todaySalesItems.filter(s => s.paymentMethod === 'Cash').length },
- { label: 'Card swipes volume', val: todaySalesItems.filter(s => s.paymentMethod === 'Credit Card').reduce((acc, s) => acc + s.grandTotal, 0), color: 'bg-m3-primary', count: todaySalesItems.filter(s => s.paymentMethod === 'Credit Card').length },
- { label: 'GCash / Electronic Wallet', val: todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Maya').reduce((acc, s) => acc + s.grandTotal, 0), color: 'bg-m3-tertiary', count: todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Maya').length },
- { label: 'Local Bank Transfers', val: todaySalesItems.filter(s => s.paymentMethod === 'Bank Transfer').reduce((acc, s) => acc + s.grandTotal, 0), color: 'bg-pink-500', count: todaySalesItems.filter(s => s.paymentMethod === 'Bank Transfer').length },
+ { label: 'Cleared Cash drawer', val: todaySalesItems.filter(s => s.paymentMethod === 'Cash').reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0), color: 'bg-emerald-500', count: todaySalesItems.filter(s => s.paymentMethod === 'Cash').length },
+ { label: 'Card swipes volume', val: todaySalesItems.filter(s => s.paymentMethod === 'Credit Card').reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0), color: 'bg-m3-primary', count: todaySalesItems.filter(s => s.paymentMethod === 'Credit Card').length },
+ { label: 'GCash / Electronic Wallet', val: todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Maya').reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0), color: 'bg-m3-tertiary', count: todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Maya').length },
+ { label: 'Local Bank Transfers', val: todaySalesItems.filter(s => s.paymentMethod === 'Bank Transfer').reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0), color: 'bg-pink-500', count: todaySalesItems.filter(s => s.paymentMethod === 'Bank Transfer').length },
  ].map((mode, i) => {
  const totalVol = computedTodaySales || 1;
  const percent = Math.min(100, Math.round((mode.val / totalVol) * 100));
@@ -1080,7 +1147,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <div className="bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/10 h-[190px] overflow-y-auto space-y-2.5 font-sans">
  {(() => {
  const cashierMap = todaySalesItems.reduce((acc, s) => {
- acc[s.cashierName] = (acc[s.cashierName] || 0) + s.grandTotal;
+ acc[s.cashierName] = (acc[s.cashierName] || 0) + (Number(s.grandTotal) || 0);
  return acc;
  }, {} as Record<string, number>);
  
@@ -1121,7 +1188,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  type="text"
  className="w-full bg-transparent border-0 pl-10 pr-4 py-2 text-xs focus:ring-0 text-m3-on-surface placeholder-m3-on-surface-variant/55 font-semibold"
  placeholder="Search today's stream by customer, ticket #, or operator..."
- value={dailySalesSearch}
+ value={dailySalesSearch ?? ''}
  onChange={(e) => setDailySalesSearch(e.target.value)}
  />
  </div>
@@ -1281,7 +1348,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <input
  type="number"
  className="w-24 bg-m3-surface-lowest border border-m3-outline-variant/50 px-1 py-0.5 text-[11px] font-mono rounded font-bold text-m3-on-surface"
- value={tempCorporateTargetInput}
+ value={tempCorporateTargetInput ?? ''}
  onChange={(e) => setTempCorporateTargetInput(e.target.value)}
  placeholder="10000000"
  onKeyDown={(e) => {
@@ -1476,7 +1543,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <label className="text-zinc-400 font-bold">Sales Target Quota (PHP):</label>
  <input 
  type="number" 
- value={editingBranchQuota}
+ value={editingBranchQuota ?? ''}
  onChange={(e) => setEditingBranchQuota(Number(e.target.value))}
  className="bg-zinc-800 border border-m3-outline-variant/20 rounded-xl p-1.5 text-xs text-white"
  />
@@ -1486,7 +1553,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <label className="text-zinc-400 font-bold">Floor Staff Assigned:</label>
  <input 
  type="number" 
- value={editingBranchStaff}
+ value={editingBranchStaff ?? ''}
  onChange={(e) => setEditingBranchStaff(Number(e.target.value))}
  className="bg-zinc-800 border border-m3-outline-variant/20 rounded-xl p-1.5 text-xs text-white"
  />
@@ -1538,13 +1605,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  const adm = assigned.filter(u => u.role === UserRole.ADMIN || (u.role as string) === 'Admin');
  if (adm.length > 0) return `${adm.map(a => a.fullName).join(', ')} (Admin)`;
  return 'Unassigned';
- })()} • {b.staffCount} floor staff • Target: ₱{branchQuota.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+ })()} • {b.staffCount} floor staff • Target: ₱{(Number(branchQuota) || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
  </div>
  </>
  )}
  </td>
  <td className="py-3 text-right font-mono font-bold text-m3-on-surface-variant align-middle">
- ₱{b.totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+ ₱{(Number(b.totalSales) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
  </td>
  <td className="py-3 text-center align-middle">
  <span className={`inline-flex items-center gap-0.5 px-2.5 py-0.5 rounded-full font-bold font-mono text-[10px] ${
@@ -1613,12 +1680,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </div>
  </div>
 
- <div className="border-t border-m3-outline-variant/10 pt-4 mt-5 font-mono text-[10px] text-zinc-400 flex items-center justify-between">
- <span>Security audit logs trace all actions</span>
- <button onClick={() => onNavigate('users')} className="text-m3-primary hover:underline font-black cursor-pointer">
- Employee Directory
- </button>
- </div>
  </div>
 
  </div>
@@ -1658,7 +1719,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </div>
  
  <select
- value={bestsellerLimit}
+ value={bestsellerLimit ?? ''}
  onChange={(e) => setBestsellerLimit(Number(e.target.value))}
  className="bg-m3-surface-low border border-m3-outline-variant/35 rounded-lg py-1 px-2 font-bold focus:outline-none cursor-pointer text-m3-on-surface [color-scheme:dark]"
  >
@@ -1693,7 +1754,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  .sort((a, b) => bestsellerSortBy === 'qty' ? b.quantitySold - a.quantitySold : b.revenue - a.revenue)
  .slice(0, bestsellerLimit)
  .map((p, idx) => {
- const formattedRev = p.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+ 
  return (
  <tr key={idx} className="hover:bg-m3-primary/5 transition-colors">
  <td className="py-3">
@@ -1706,14 +1767,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </span>
  </td>
  <td className="py-3 text-right font-mono font-bold text-emerald-500">
- {p.quantitySold} boxes
+ {p.quantitySold} units
  </td>
  <td className="py-3 text-right font-mono font-bold text-m3-primary">
- ₱{formattedRev}
+ {formatCurrency(p.revenue)}
  </td>
  <td className="py-3 text-right pr-2 font-mono">
  <span className={`font-bold ${p.stockQuantity <= 10 ? 'text-rose-500' : 'text-zinc-300'}`}>
- {p.stockQuantity} boxes
+ {p.stockQuantity} units
  </span>
  </td>
  </tr>
@@ -1724,12 +1785,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </table>
  </div>
  </div>
- <div className="border-t border-m3-outline-variant/10 pt-3.5 mt-4 text-[10.5px] font-mono text-zinc-400 flex justify-between items-center">
- <span>Bestseller tracking computed dynamically per invoice</span>
- <button onClick={() => onNavigate('pos')} className="text-m3-primary hover:underline font-black cursor-pointer">
- Go to ERP OS checkout terminal to record new sales 
- </button>
- </div>
  </div>
  
  {/* Automated Redistribution Broker Card */}
@@ -1739,9 +1794,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <Truck className="h-4.5 w-4.5 text-emerald-500 shrink-0" />
  <span>Inter-Branch Stock Balancing</span>
  </h3>
- <p className="text-[11.5px] text-m3-on-surface-variant leading-relaxed mb-4">
- Smart broker matching branch stock shortages with branch overstocks.
- </p>
 
  <div className="space-y-3">
  {/* Find shortage products */}
@@ -1767,7 +1819,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </div>
  <p className="text-[11.3px] font-extrabold text-m3-on-surface truncate">{shortageProd.productName}</p>
  <p className="text-[10px] text-zinc-400 leading-normal">
- <strong className="text-zinc-200">{donorBranch?.name}</strong> has excess inventory (<strong className="text-emerald-400">{matchingExcessStock.quantity} boxes</strong>).
+ <strong className="text-zinc-200">{donorBranch?.name}</strong> has excess inventory (<strong className="text-emerald-400">{matchingExcessStock.quantity} units</strong>).
  </p>
  <button
  type="button"
@@ -1783,7 +1835,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  }}
  className="w-full bg-emerald-500 text-white py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-emerald-600 transition-all cursor-pointer flex items-center justify-center gap-1 shadow-sm mt-1 animate-pulse"
  >
- <ArrowRightLeft className="h-3 w-3" /> One-Click Rebalance (15 boxes)
+ <ArrowRightLeft className="h-3 w-3" /> One-Click Rebalance (15 units)
  </button>
  </div>
  );
@@ -1804,9 +1856,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </div>
  </div>
 
- <div className="border-t border-m3-outline-variant/10 pt-3 mt-4 text-[10px] font-mono text-zinc-400">
- Updates warehouse inventory levels in real-time
- </div>
  </div>
  
  </div>
@@ -1822,7 +1871,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <h3 className="text-base font-extrabold text-m3-primary tracking-tight flex items-center gap-2">
  <ArrowRightLeft className="h-5 w-5 text-m3-primary" /> Active Logistics Transfer Hub
  </h3>
- <p className="text-xs text-m3-on-surface-variant">Approve or Reject interlinked branch stock transport requests</p>
  </div>
  <span className="text-[10.5px] font-bold bg-m3-tertiary-container text-m3-on-tertiary-container border border-m3-outline-variant/30 px-2.5 py-1 rounded-full uppercase tracking-wider">
  Admin Sign-off Power
@@ -1855,7 +1903,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
  {(t.items || []).map((it, itemIdx) => (
  <div key={itemIdx} className="text-xs text-zinc-400 font-mono">
- Cargo: <span className="font-extrabold text-zinc-300">{it.productName}</span> — <span className="text-m3-primary font-black py-0.5 px-2 bg-m3-primary/10 rounded">{it.quantity} boxes</span>
+ Cargo: <span className="font-extrabold text-zinc-300">{it.productName}</span> — <span className="text-m3-primary font-black py-0.5 px-2 bg-m3-primary/10 rounded">{it.quantity} units</span>
  </div>
  ))}
 
@@ -1997,13 +2045,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
  </div>
 
- {/* Dynamic Drilldown Card Helper */}
- <div className="mt-4 border-t border-m3-outline-variant/15 pt-3">
- <div className="text-center py-4 px-3 text-xs text-m3-on-surface-variant bg-m3-surface-low/40 rounded-2xl border border-dashed border-m3-outline-variant/15 flex items-center justify-center gap-2">
- <Layers className="h-4 w-4 text-m3-primary shrink-0" />
- <span>Click any category card above to launch the <strong>Product Level Drilldown Modal</strong>.</span>
- </div>
- </div>
 
  </div>
 
@@ -2024,9 +2065,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <Layers className="h-5 w-5" />
  </div>
  <div>
- <span className="text-[10px] font-black uppercase tracking-wider text-m3-primary font-mono block">
- Active Inventory Health Audit
- </span>
  <h3 className="text-base font-extrabold text-m3-on-surface">
  {activeDrilldown === 'products' ? 'TOTAL PRODUCT CATALOG' : activeDrilldown === 'low' ? 'LOW STOCK SHELF' : activeDrilldown === 'critical' ? 'CRITICAL STOCK ALERT' : 'OUT OF STOCK LIST'}
  </h3>
@@ -2128,7 +2166,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </div>
 
  <div className="flex items-center justify-between border-t border-m3-outline-variant/10 pt-2 text-[10.5px]">
- <span>Current Global Stock: <span className="font-black text-m3-primary font-mono">{p.stockQuantity} boxes</span></span>
+ <span>Current Global Stock: <span className="font-black text-m3-primary font-mono">{p.stockQuantity} units</span></span>
  <span className="text-zinc-500 font-mono">Min req: {p.minimumStock}</span>
  </div>
 
@@ -2175,14 +2213,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  const items = [{ productId: p.id, quantity: 15 }];
  const reason = `Inter-branch surplus transfer initialized from ${donor?.name} to balanced shortage.`;
  createStockTransfer(eb.branchId, recipient.id, 'Redistribution', items, reason);
- showToastMsg(`Dispatched excess stock rebalance transfer of 15boxes from ${donor?.name}!`, 'success');
+ showToastMsg(`Dispatched excess stock rebalance transfer of 15 units from ${donor?.name}!`, 'success');
  } catch (err) {
  showToastMsg('Failed to dispatch balancing transfer.', 'error');
  }
  }}
  className="w-full py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold rounded-lg text-[9.5px] uppercase transition-all cursor-pointer"
  >
- Transfer 15 boxes from surplus {donor?.name}
+ Transfer 15 units from surplus {donor?.name}
  </button>
  );
  })}
@@ -2246,10 +2284,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </div>
 
  {/* Modal Footer */}
- <div className="p-4 bg-m3-surface-low border-t border-m3-outline-variant/15 flex items-center justify-between shrink-0">
- <span className="text-[10.5px] text-zinc-400 font-mono">
- Click outside or click Close to return to main dashboard.
- </span>
+ <div className="p-4 bg-m3-surface-low border-t border-m3-outline-variant/15 flex items-center justify-end shrink-0">
  <button
  onClick={() => setActiveDrilldown('none')}
  className="px-5 py-2 bg-m3-primary text-m3-on-primary font-bold rounded-xl text-xs uppercase font-mono hover:opacity-90 transition-opacity cursor-pointer"
@@ -2262,6 +2297,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  )}
 
  {/* Priority 3: Company-wide Revenue Charts */}
+ {false && (
  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
  
  {/* Weekly Sales Bar Chart */}
@@ -2296,7 +2332,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  onClick={() => { setWeeklyMetric('boxes'); setSelectedWeeklyDay(null); }} 
  className={`px-2.5 py-1 text-[10px] rounded-lg font-bold transition-all ${weeklyMetric === 'boxes' ? 'bg-m3-primary text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}
  >
- Units Box
+ Units Sold
  </button>
  </div>
  </div>
@@ -2315,10 +2351,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <div className="relative h-56 w-full flex items-end pt-4 pb-2">
  <div className="absolute inset-y-0 left-0 flex flex-col justify-between text-[9px] text-m3-on-surface-variant font-mono pointer-events-none select-none">
  <span>
- {weeklyMetric === 'revenue' ? `₱${maxWeeklyAmount.toLocaleString()}` : weeklyMetric === 'orders' ? `${maxWeeklyAmount} POs` : `${maxWeeklyAmount} Boxes`}
+ {weeklyMetric === 'revenue' ? `₱${maxWeeklyAmount.toLocaleString()}` : weeklyMetric === 'orders' ? `${maxWeeklyAmount} POs` : `${maxWeeklyAmount} Units`}
  </span>
  <span>
- {weeklyMetric === 'revenue' ? `₱${Math.round(maxWeeklyAmount * 0.5).toLocaleString()}` : weeklyMetric === 'orders' ? `${Math.round(maxWeeklyAmount * 0.5)} POs` : `${Math.round(maxWeeklyAmount * 0.5)} Boxes`}
+ {weeklyMetric === 'revenue' ? `₱${Math.round(maxWeeklyAmount * 0.5).toLocaleString()}` : weeklyMetric === 'orders' ? `${Math.round(maxWeeklyAmount * 0.5)} POs` : `${Math.round(maxWeeklyAmount * 0.5)} Units`}
  </span>
  <span>0</span>
  </div>
@@ -2353,7 +2389,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  }`}>
  <span className="text-[9px] text-zinc-400 font-sans">{data.day} Value:</span>
  <span className="text-emerald-400 font-black">
- {weeklyMetric === 'revenue' ? `₱${data.amount.toLocaleString()}` : weeklyMetric === 'orders' ? `${data.amount} Orders` : `${data.amount} Boxes Sold`}
+ {weeklyMetric === 'revenue' ? `₱${data.amount.toLocaleString()}` : weeklyMetric === 'orders' ? `${data.amount} Orders` : `${data.amount} Units Sold`}
  </span>
  </div>
 
@@ -2557,6 +2593,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
  </div>
 
+  )}
+
  {/* Priority 3: Procurement & Tile Aging Canditates */}
  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
  
@@ -2675,121 +2713,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
  </div>
 
- {/* Priority 4: Dynamic Admin Audit Logs Ledger Activity tracker */}
- <div className="m3-card shadow-sm">
- <div className="flex items-center justify-between mb-4">
- <div>
- <h3 className="text-base font-extrabold text-m3-primary flex items-center gap-2">
- <ShieldCheck className="h-5 w-5 text-m3-primary" /> Global Enterprise Security Audit Stream
- </h3>
- 
- </div>
- </div>
-
- <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
- {auditLogs.slice(0, 12).map((log, idx) => {
- const actionText = log.action || log.actionCode || '';
- const isDanger = actionText.includes('VOID') || actionText.includes('DELETE') || actionText.includes('REJECT');
- const isSuccess = actionText.includes('APPROVE') || actionText.includes('RECEIVE') || actionText.includes('SUCCESS');
- const isInfo = actionText.includes('LOGIN') || actionText.includes('CREATE') || actionText.includes('UPDATE');
- 
- return (
- <div key={idx} className="flex justify-between items-start text-xs border-b border-m3-outline-variant/10 pb-2.5 last:border-0 last:pb-0 hover:bg-m3-surface-low rounded p-1 transition-colors">
- <div className="space-y-1 pr-4">
- <span className={`text-[9.5px] uppercase tracking-wider font-bold inline-block px-2.5 py-0.5 rounded font-mono border ${
- isDanger 
- ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' 
- : isSuccess 
- ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
- : 'bg-m3-primary/10 text-m3-primary border-m3-primary/20'
- }`}>
- {log.action || log.actionCode || 'SYSTEM'}
- </span>
- <span className="text-m3-on-surface font-medium block leading-snug">{log.description}</span>
- <span className="text-[10px] text-zinc-400 block font-mono pl-1">
- <span className="hidden sm:inline">Target Record: {log.tableAffected} ({log.recordId || 'Global'}) • </span>Operator: @{log.username}
- </span>
- </div>
- <div className="text-right text-[10.5px] text-zinc-400 font-mono shrink-0 ml-4">
- {new Date(log.timestamp).toLocaleTimeString()}
- </div>
- </div>
- );
- })}
-
- {auditLogs.length === 0 && (
- <div className="text-center py-6 text-xs text-m3-on-surface-variant">No system operations tracked yet.</div>
- )}
- </div>
- </div>
-
-
-
- </div>
- );
- }
-
- /*****************************************************************************
- * 2. BRANCH MANAGER & CASHIER PORTAL SUB-DASHBOARDS
- *****************************************************************************/
- return (
- <div className="space-y-6 animate-fade-in text-m3-on-surface">
- 
- {/* Dynamic Toast feedback panel */}
- {toast && (
- <div className={`fixed top-4 right-4 z-50 p-4 rounded-2xl shadow-2xl flex items-center gap-3 border animate-slide-left ${
- toast.type === 'success' 
- ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' 
- : toast.type === 'error' 
- ? 'bg-rose-500/15 border-rose-500/30 text-rose-300' 
- : 'bg-amber-500/15 border-amber-500/30 text-amber-300'
- }`}>
- <Activity className="h-5 w-5 animate-pulse shrink-0" />
- <span className="text-xs font-bold leading-tight">{toast.message}</span>
- <button onClick={() => setToast(null)} className="p-1 hover:bg-m3-on-surface/10 rounded-lg text-current">
- <X className="h-3.5 w-3.5" />
- </button>
- </div>
- )}
-
- {/* simulated branch roles instruction banner */}
- <div className="android-glass border border-m3-outline-variant/30 rounded-[24px] p-6 shadow-md grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
- <div className="lg:col-span-12">
- <div className="flex items-center gap-2">
- <span className="text-[9px] bg-m3-primary/10 text-m3-primary px-3 py-1 rounded-lg border border-m3-primary/20 font-mono font-black uppercase tracking-widest">
- Duty Directive
- </span>
- <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
- <span className="text-[10px] text-m3-on-surface-variant font-mono">Active Store Dashboard Context</span>
- </div>
- 
- <div className="animate-fade-in mt-3">
- <h2 className="text-xl font-extrabold tracking-tight text-m3-primary">Welcome, {currentUser.fullName}</h2>
- <p className="text-xs text-m3-on-surface-variant leading-relaxed mt-1">
- You are signed in as the <span className="font-extrabold text-m3-primary">{currentUser.role}</span> for <span className="font-extrabold">{getBranchName(currentUser.branchAssignmentId)}</span>. 
- Review local store parameters, handle shift operations, process customer checkout baskets, or perform inventory checkouts below.
- </p>
- 
- {/* Quick tabs router based on branch role clearances */}
- <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-4">
- {currentUser.role !== UserRole.CASHIER && (
- <button onClick={() => onNavigate('inventory')} className="p-2.5 text-left text-xs bg-m3-surface-low rounded-xl border border-m3-outline-variant/35 hover:bg-m3-primary/10 hover:text-m3-primary transition-all flex justify-between items-center cursor-pointer">
- <span className="font-bold">Verify Branch Stock levels</span>
- <ArrowUpRight className="h-4 w-4 shrink-0" />
- </button>
- )}
- <button onClick={() => onNavigate('pos')} className="p-2.5 text-left text-xs bg-m3-surface-low rounded-xl border border-m3-outline-variant/35 hover:bg-m3-primary/10 hover:text-m3-primary transition-all flex justify-between items-center cursor-pointer">
- <span className="font-bold">Point-of-Sale Checkout</span>
- <ArrowUpRight className="h-4 w-4 shrink-0" />
- </button>
- <button onClick={() => onNavigate('shift')} className="p-2.5 text-left text-xs bg-m3-surface-low rounded-xl border border-m3-outline-variant/35 hover:bg-m3-primary/10 hover:text-m3-primary transition-all flex justify-between items-center cursor-pointer">
- <span className="font-bold">Cashier Shift Drawers</span>
- <ArrowUpRight className="h-4 w-4 shrink-0" />
- </button>
- </div>
- </div>
- </div>
- </div>
 
  {/* Low & Critical alerts banner */}
  {(lowStockProducts.length > 0 || outOfStockProducts.length > 0) && (
@@ -3169,83 +3092,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
  </div>
 
- {/* Inventory Aging & Redistribution Suggestion Feed & Global Enterprise Security Audit Stream */}
- <div className="grid grid-cols-1 gap-6">
- 
- {/* Tile movement aging & Pull out suggestions candidates */}
- <div className="m3-card shadow-sm flex flex-col justify-between animate-fade-in">
- <div>
- <div className="flex items-center justify-between mb-2">
- <div>
- <h3 className="text-base font-extrabold tracking-tight text-m3-primary flex items-center gap-1.5">
- <History className="h-5 w-5 text-m3-primary" /> Inventory Aging & Redistribution Suggestion Feed
- </h3>
- <p className="text-xs text-m3-on-surface-variant font-mono">Slow-moving tiles candidates targeted for reallocation</p>
- </div>
- <span className="text-[10px] bg-m3-primary/10 text-m3-primary border border-m3-primary/20 px-2.5 py-0.5 rounded-full font-bold animate-pulse">
- Prevent Dead Stock
- </span>
- </div>
-
- <div className="overflow-x-auto mt-4">
- <table className="w-full text-left text-xs">
- <thead>
- <tr className="border-b border-m3-outline-variant/20 text-m3-on-surface-variant uppercase tracking-wider font-bold">
- <th className="py-2">Tile Product</th>
- <th className="py-2">Branch Assignment</th>
- <th className="py-2 text-center">Days Unsold</th>
- <th className="py-2 text-center">Threat Level</th>
- <th className="py-2 text-right">Corporate Suggestion</th>
- </tr>
- </thead>
- <tbody className="divide-y divide-m3-outline-variant/10">
- {slowMovingCandidates.map((cand, idx) => (
- <tr key={idx} className="hover:bg-m3-primary/5 transition-colors">
- <td className="py-3">
- <div className="font-extrabold text-m3-on-surface leading-tight">{cand.productName}</div>
- <div className="text-[10px] text-zinc-400 font-mono mt-0.5">Code Segment: {cand.productId}</div>
- </td>
- <td className="py-3 font-semibold text-m3-on-surface-variant">
- {cand.branchName}
- </td>
- <td className="py-3 text-center font-mono font-black text-rose-400">
- {cand.daysUnsold} Days
- </td>
- <td className="py-3 text-center">
- <span className={`px-2 py-0.5 rounded text-[9.5px] font-black font-mono uppercase ${
- cand.riskLevel === 'HIGH' 
- ? 'bg-rose-500/10 text-rose-400 border border-rose-500/25' 
- : 'bg-amber-500/10 text-amber-400 border border-amber-500/25'
- }`}>
- {cand.riskLevel}
- </span>
- </td>
- <td className="py-3 text-right">
- <div className="flex flex-col items-end gap-1">
- <span className="text-[10px] font-bold text-emerald-400 font-mono italic">{cand.suggestedAction}</span>
- <button
- onClick={() => handleExecuteRedistribution(cand)}
- className="px-2.5 py-1 bg-m3-primary hover:bg-m3-primary/8 font-bold text-[9px] uppercase tracking-wider text-m3-on-primary rounded-lg transition-all cursor-pointer active:scale-95"
- >
- Confirm Redistribution Flow
- </button>
- </div>
- </td>
- </tr>
- ))}
- </tbody>
- </table>
- </div>
- </div>
-
- <p className="text-[10.5px] text-zinc-400 mt-4 pl-1 font-mono italic">
- *Automated inventory algorithm monitors slow stock sales profiles over 90 days to release dynamic pull out proposals.
- </p>
- </div>
-
- </div>
 
  </div>
  );
 }
 
+
+}

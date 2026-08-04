@@ -54,6 +54,7 @@ export function ProfitAnalytics({
  expenses,
  customBills,
  purchaseOrders,
+ productReturns,
  } = useDb();
 
  // Determine default period dynamically based on database history age span
@@ -82,7 +83,10 @@ export function ProfitAnalytics({
  return "7d";
  }
 
- const minDate = Math.min(...dates);
+ let minDate = dates[0];
+ for (let i = 1; i < dates.length; i++) {
+   if (dates[i] < minDate) minDate = dates[i];
+ }
  const diffMs = Date.now() - minDate;
  const diffDays = diffMs / (1000 * 60 * 60 * 24);
 
@@ -143,6 +147,35 @@ export function ProfitAnalytics({
  }
  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
  };
+
+ // Pre-indexed Map lookups for high performance O(1) Business Intelligence
+ const saleItemsBySaleId = useMemo(() => {
+ const map = new Map<string, typeof saleItems>();
+ if (saleItems) {
+ saleItems.forEach((item) => {
+ if (item.isDeleted) return;
+ let list = map.get(item.saleId);
+ if (!list) {
+ list = [];
+ map.set(item.saleId, list);
+ }
+ list.push(item);
+ });
+ }
+ return map;
+ }, [saleItems]);
+
+ const productsById = useMemo(() => {
+ const map = new Map<string, (typeof products)[0]>();
+ if (products) {
+ products.forEach((p) => {
+ if (!p.isDeleted) {
+ map.set(p.id, p);
+ }
+ });
+ }
+ return map;
+ }, [products]);
 
  // Timeline Data Generation
  const timelineData = useMemo(() => {
@@ -209,6 +242,7 @@ export function ProfitAnalytics({
  if (selectedBranchId !== "all" && sale.branchId !== selectedBranchId) return;
 
  const saleDate = new Date(sale.createdAt);
+ if (isNaN(saleDate.getTime())) return;
  let key = "";
  if (viewFormat === "day") {
  key = saleDate.toDateString();
@@ -217,16 +251,36 @@ export function ProfitAnalytics({
  }
 
  if (periodsMap[key]) {
- periodsMap[key].revenue += sale.grandTotal;
+ periodsMap[key].revenue += Number(sale.grandTotal) || 0;
 
- // Calculate COGS
- const items = saleItems.filter((item) => item.saleId === sale.id && !item.isDeleted);
+ // Calculate COGS using O(1) indexed Map lookups
+ const items = saleItemsBySaleId.get(sale.id) || [];
  const modPercent = branchLandingModifiers[sale.branchId] ?? 2.5;
  items.forEach((item) => {
- const prod = products.find((p) => p.id === item.productId);
+ const prod = productsById.get(item.productId);
  const baseCost = prod ? prod.costPrice : 0;
  periodsMap[key].cogs += item.quantity * baseCost * (1 + modPercent / 100);
  });
+ }
+ });
+
+ // Deduct Product Returns / Refunds from Revenue
+ (productReturns || []).forEach((ret) => {
+ if (ret.isDeleted) return;
+ const sale = sales.find((s) => s.id === ret.saleId);
+ if (selectedBranchId !== "all" && sale && sale.branchId !== selectedBranchId) return;
+
+ const retDate = new Date(ret.dateTime);
+ if (isNaN(retDate.getTime())) return;
+ let key = "";
+ if (viewFormat === "day") {
+ key = retDate.toDateString();
+ } else {
+ key = `${retDate.getFullYear()}-${retDate.getMonth()}`;
+ }
+
+ if (periodsMap[key]) {
+ periodsMap[key].revenue = Math.max(0, periodsMap[key].revenue - (Number(ret.amountRefunded) || 0));
  }
  });
 
@@ -244,7 +298,7 @@ export function ProfitAnalytics({
  }
 
  if (periodsMap[key]) {
- periodsMap[key].opex += exp.amount;
+ periodsMap[key].opex += Number(exp.amount) || 0;
  }
  });
 
@@ -294,10 +348,10 @@ export function ProfitAnalytics({
  }
 
  if (periodsMap[key]) {
- const prod = products.find((p) => p.id === log.productId);
+ const prod = productsById.get(log.productId);
  if (prod) {
  const costPerUnit = log.unitType === "Piece" ? (prod.costPrice / (prod.boxQuantity || 4)) : prod.costPrice;
- periodsMap[key].loss += costPerUnit * log.quantity;
+ periodsMap[key].loss += costPerUnit * Number(log.quantity || 0);
  }
  }
  });
@@ -335,7 +389,7 @@ export function ProfitAnalytics({
  Margin: parseFloat(marginPercent.toFixed(1)),
  };
  });
- }, [sales, saleItems, products, expensesList, damageLogs, shifts, selectedBranchId, selectedPeriod, branchLandingModifiers, customBills, purchaseOrders]);
+ }, [sales, saleItemsBySaleId, productsById, expensesList, damageLogs, shifts, selectedBranchId, selectedPeriod, branchLandingModifiers, customBills, purchaseOrders]);
 
  // Aggregate Totals for the current timeframe
  const totals = useMemo(() => {
@@ -458,7 +512,7 @@ export function ProfitAnalytics({
   <div className="flex bg-zinc-200/50 dark:bg-zinc-950/40 p-1 rounded-xl border border-m3-outline-variant/15 text-xs font-bold items-center px-2">
   <Building className="h-3.5 w-3.5 text-m3-primary mr-1 shrink-0" />
   <select
-  value={selectedBranchId}
+  value={selectedBranchId ?? ''}
   onChange={(e) => setSelectedBranchId(e.target.value)}
   className="bg-transparent text-m3-on-surface dark:text-zinc-200 text-xs font-bold focus:outline-none cursor-pointer py-1"
   >
@@ -709,10 +763,6 @@ export function ProfitAnalytics({
  <div className="flex items-center gap-1.5 font-bold text-zinc-700 dark:text-zinc-300">
  <Sparkles className="h-4 w-4 text-emerald-500" />
  
- </div>
- <div className="flex items-center gap-1.5 font-mono text-[9px] font-extrabold bg-zinc-100 dark:bg-m3-surface-high/30 px-2 py-1 rounded-lg border border-m3-outline-variant/15 text-zinc-600 dark:text-zinc-400">
- <span>STABLE LEDGER LOCK</span>
- <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
  </div>
  </div>
  </div>

@@ -112,24 +112,17 @@ export const PwaInstallPrompt: React.FC = () => {
  window.addEventListener('appinstalled', handleAppInstalled);
 
  // If iOS Safari, we can display instructions after a delayed trigger because the event won't fire
+ let iosTimer: any = null;
  if (iosDetected && localStorage.getItem('tp_pwa_installed') !== 'true' && !localStorage.getItem('tilepoint-disable-install-prompt')) {
- setTimeout(() => {
+ iosTimer = setTimeout(() => {
  setShowPrompt(true);
  }, 2500);
  }
 
- // Alternative trigger check if never prompt event fires but not installed
- const fallbackTimer = setTimeout(() => {
- if (!deferredPrompt && !iosDetected && !checkStandalone && localStorage.getItem('tp_pwa_installed') !== 'true' && !localStorage.getItem('tilepoint-disable-install-prompt')) {
- // Show install button as simulated setup anyway to give guide
- setShowPrompt(true);
- }
- }, 4000);
-
  return () => {
  window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
  window.removeEventListener('appinstalled', handleAppInstalled);
- clearTimeout(fallbackTimer);
+ if (iosTimer) clearTimeout(iosTimer);
  };
  }, [deferredPrompt, isLoggedIn]);
 
@@ -141,22 +134,6 @@ export const PwaInstallPrompt: React.FC = () => {
 
  const handleInstallClick = async () => {
  if (!deferredPrompt) {
- const isWindows = /windows/i.test(navigator.userAgent);
- const isAndroid = /android/i.test(navigator.userAgent);
-
- if (isWindows) {
- alert(
- "To install TilePoint on Windows:\n\n1. Look at your browser address bar at top right.\n2. Click the 'Install TilePoint' icon (or open menu ⋮ / ⋯ > 'Apps' > 'Install TilePoint').\n3. Click 'Install' to pin TilePoint to your Windows Start Menu and Taskbar!"
- );
- } else if (isAndroid) {
- alert(
- "To install TilePoint on Android:\n\n1. Tap the menu button (⋮) at top right of your browser.\n2. Select 'Install app' or 'Add to Home screen'.\n3. Confirm by tapping 'Add' or 'Install'."
- );
- } else {
- alert(
- "To install TilePoint PWA:\n\n• On Desktop (Chrome/Edge): Click the Install icon in your address bar or menu (⋮) > 'Install TilePoint'.\n• On Mobile: Tap browser menu (⋮) > 'Add to Home screen'."
- );
- }
  return;
  }
 
@@ -172,11 +149,6 @@ export const PwaInstallPrompt: React.FC = () => {
  localStorage.setItem('tp_pwa_installed', 'true');
  setIsInstalled(true);
  setShowPrompt(false);
- try {
- window.location.reload();
- } catch (e) {
- // Safe fallback
- }
  }
  } catch (err) {
  console.warn('[PWA Install Prompt Error]:', err);
