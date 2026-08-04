@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from "react";
 import { useDb } from "../context/DbContext";
 import { isProductInBranch } from "../lib/branchUtils";
+import { formatCurrency } from "../utils/formatters";
 import { saveFileToBackup, verifyAndUnwrapBackup } from "../lib/fileBackupHelper";
 import { Transmittal, TransmittalDocType, UserRole } from "../types/db";
 import { useResponsivePageSize, TablePagination } from "./TablePagination";
@@ -781,7 +782,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </td>
  <td className="py-1.5 text-center font-mono text-teal-500 font-bold print:text-black">
  {item.sellingPriceOverride ? (
- `₱${(Number(item.sellingPriceOverride) || 0).toFixed(2)}`
+ formatCurrency(item.sellingPriceOverride)
  ) : (
  <span className="text-zinc-500 italic">None</span>
  )}
@@ -1045,7 +1046,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </td>
  <td className="py-1.5 text-center font-mono text-teal-500 font-bold print:text-black">
  {item.sellingPriceOverride
- ? `₱${(Number(item.sellingPriceOverride) || 0).toFixed(2)}`
+ ? formatCurrency(item.sellingPriceOverride)
  : "None"}
  </td>
  <td className="py-1.5 text-right font-mono font-black text-emerald-500 print:text-black">

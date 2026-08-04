@@ -9,7 +9,8 @@ import { useDb, useDbProducts, useDbBranchStock } from "../context/DbContext";
 import { Product, Sale, SaleItem, UserRole, Member } from "../types/db";
 import { verifyPasswordWithToken } from "../lib/crypto";
 import { saveFileToBackup } from "../lib/fileBackupHelper";
-import { isProductInBranch, getBranchStockQuantity, getBranchStockRecord } from "../lib/branchUtils";
+import { isProductInBranch, getBranchStockQuantity, getBranchStockRecord, isSameBranch } from "../lib/branchUtils";
+import { formatCurrency } from "../utils/formatters";
 import { createSearchIndex, searchIndex } from "../utils/searchIndex";
 import { useVirtualList } from "../hooks/useVirtualList";
 import {
@@ -52,15 +53,7 @@ import {
 import { CalculatorModule } from "./CalculatorModule";
 import { ExpressiveTooltip } from "./ExpressiveTooltip";
 
-const formatTin = (value: string | undefined | null): string => {
- if (!value) return "";
- const clean = value.replace(/[-\s]/g, "");
- const match = clean.match(/.{1,3}/g);
- if (match) {
- return match.join(" ");
- }
- return value;
-};
+import { formatTin } from '../utils/formatters';
 
 interface PosModuleProps {
  darkMode: boolean;
@@ -177,6 +170,15 @@ export const PosModule: React.FC<PosModuleProps> = ({
   const [activePosBranchId, setActivePosBranchId] = useState<string>(
     currentUser?.branchAssignmentId || "B1"
   );
+
+  const branchParkedSales = React.useMemo(() => {
+    const currentBranch = activePosBranchId || currentUser?.branchAssignmentId || "B1";
+    return parkedSales.filter((p: any) => {
+      const pBranch = p.heldByBranchId || (p as any).branchId;
+      if (!pBranch) return false;
+      return isSameBranch(pBranch, currentBranch, branches);
+    });
+  }, [parkedSales, activePosBranchId, currentUser?.branchAssignmentId, branches]);
 
   useEffect(() => {
     if (currentUser?.branchAssignmentId) {
@@ -717,7 +719,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
  useEffect(() => {
  if (prevParkedSalesRef.current.length > 0) {
  const prevIds = new Set(prevParkedSalesRef.current.map((ps) => ps.id));
- const newSales = parkedSales.filter((ps) => !prevIds.has(ps.id));
+ const newSales = parkedSales.filter((ps) => {
+      const psBranch = ps.heldByBranchId || (ps as any).branchId || "B1";
+      return psBranch === (activePosBranchId || "B1") && !prevIds.has(ps.id);
+    });
  if (newSales.length > 0) {
  const newest = newSales[newSales.length - 1];
  showToast(`⚡ NEW YARD ORDER RECEIVED: ${newest.customerName || "Walk-in Customer"}`);
@@ -984,7 +989,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  // Park Sale operations
  const handleHold = () => {
  if (cart.length === 0) return;
- holdSale(cart, customerName, customerNotes);
+ holdSale(cart, customerName, customerNotes, activePosBranchId);
  handleCancelSale();
  showToast("Transaction parked inside safe hold registers.");
  };
@@ -1013,7 +1018,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  const ongoingCustomerNotes = customerNotes;
 
  if (ongoingCart.length > 0) {
- holdSale(ongoingCart, ongoingCustomerName, ongoingCustomerNotes);
+ holdSale(ongoingCart, ongoingCustomerName, ongoingCustomerNotes, activePosBranchId);
  }
 
  // Refreshes stock quantity on resumed cart items from latest products list
@@ -1904,10 +1909,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
               </div>
               <div className="flex justify-between text-[8.5px] text-m3-on-surface-variant">
                 <span>
-                  ₱{(Number(it.unitPrice) || 0).toFixed(2)} x {it.quantity}
+                  {formatCurrency(it.unitPrice)} x {it.quantity}
                 </span>
                 <span className="font-bold text-m3-on-surface">
-                  ₱{(Number(it.total) || 0).toFixed(2)}
+                  {formatCurrency(it.total)}
                 </span>
               </div>
             </div>
@@ -1923,19 +1928,17 @@ export const PosModule: React.FC<PosModuleProps> = ({
         <div className="flex justify-between text-m3-on-surface-variant">
           <span>VATable Sales:</span>
           <span>
-            ₱
             {activeReceipt && (Number(activeReceipt.vat) || 0) > 0
-              ? ((Number(activeReceipt.subtotal) || 0) - (Number(activeReceipt.vat) || 0)).toFixed(2)
-              : "0.00"}
+              ? formatCurrency((Number(activeReceipt.subtotal) || 0) - (Number(activeReceipt.vat) || 0))
+              : "₱0.00"}
           </span>
         </div>
         <div className="flex justify-between text-m3-on-surface-variant">
           <span>VAT-Exempt Sales:</span>
           <span>
-            ₱
             {activeReceipt && (Number(activeReceipt.vat) || 0) === 0
-              ? (Number(activeReceipt.subtotal) || 0).toFixed(2)
-              : "0.00"}
+              ? formatCurrency(activeReceipt.subtotal)
+              : "₱0.00"}
           </span>
         </div>
         <div className="flex justify-between text-m3-on-surface-variant">
@@ -1944,17 +1947,17 @@ export const PosModule: React.FC<PosModuleProps> = ({
         </div>
         <div className="flex justify-between text-m3-on-surface-variant">
           <span>12% Output VAT:</span>
-          <span>₱{(Number(activeReceipt?.vat) || 0).toFixed(2)}</span>
+          <span>{formatCurrency(activeReceipt?.vat)}</span>
         </div>
         {activeReceipt && (Number(activeReceipt.discount) || 0) > 0 && (
           <div className="flex justify-between text-m3-primary font-bold">
             <span>BIR Discount Applied:</span>
-            <span>-₱{(Number(activeReceipt.discount) || 0).toFixed(2)}</span>
+            <span>-{formatCurrency(activeReceipt.discount)}</span>
           </div>
         )}
         <div className="flex justify-between font-black text-m3-on-surface text-xs pt-1 border-t border-dotted border-m3-outline-variant/20">
           <span>GRAND TOTAL DUE:</span>
-          <span>₱{(Number(activeReceipt?.grandTotal) || 0).toFixed(2)}</span>
+          <span>{formatCurrency(activeReceipt?.grandTotal)}</span>
         </div>
       </div>
 
@@ -1977,7 +1980,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
           {(activeReceipt?.pointsRedeemed || 0) > 0 && (
             <div className="flex justify-between text-rose-500 font-bold">
               <span>Points Redeemed:</span>
-              <span>-{activeReceipt?.pointsRedeemed} Pts (-₱{((activeReceipt?.pointsRedeemed || 0) * (loyaltyConfig?.pointValueInPhp || 1.0)).toFixed(2)})</span>
+              <span>-{activeReceipt?.pointsRedeemed} Pts (-{formatCurrency((activeReceipt?.pointsRedeemed || 0) * (loyaltyConfig?.pointValueInPhp || 1.0))})</span>
             </div>
           )}
           {activeReceiptMember && (
@@ -1999,14 +2002,14 @@ export const PosModule: React.FC<PosModuleProps> = ({
         <div className="flex justify-between">
           <span>Amount Tendered:</span>
           <span className="text-m3-on-surface font-bold">
-            ₱{(activeReceipt?.amountTendered || activeReceipt?.grandTotal || 0).toFixed(2)}
+            {formatCurrency(activeReceipt?.amountTendered || activeReceipt?.grandTotal)}
           </span>
         </div>
         {activeReceipt && (activeReceipt.changeAmount > 0 || activeReceipt.paymentMethod === "Cash") && (
           <div className="flex justify-between font-extrabold">
             <span>Change:</span>
             <span className="text-emerald-500 font-bold">
-              ₱{(activeReceipt.changeAmount || 0).toFixed(2)}
+              {formatCurrency(activeReceipt.changeAmount)}
             </span>
           </div>
         )}
@@ -2152,9 +2155,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
       {/* Payment summary */}
       <div className="bg-emerald-50 p-1.5 rounded border border-emerald-300 text-[9px] font-mono flex justify-between items-center">
-        <span className="font-bold text-emerald-900">Total: ₱{(Number(activeReceipt.grandTotal) || 0).toFixed(2)}</span>
-        <span className="text-emerald-800">Paid: ₱{(Number(activeReceipt.amountTendered || activeReceipt.grandTotal) || 0).toFixed(2)}</span>
-        <span className="font-extrabold text-emerald-900">Change: ₱{(Number(activeReceipt.changeAmount) || 0).toFixed(2)}</span>
+        <span className="font-bold text-emerald-900">Total: {formatCurrency(activeReceipt.grandTotal)}</span>
+        <span className="text-emerald-800">Paid: {formatCurrency(activeReceipt.amountTendered || activeReceipt.grandTotal)}</span>
+        <span className="font-extrabold text-emerald-900">Change: {formatCurrency(activeReceipt.changeAmount)}</span>
       </div>
 
       {/* Receiver Sign-Off */}
@@ -2324,10 +2327,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
  }`}
  >
  <History className="h-4 w-4" />
- <span>Hold Queue ({parkedSales.length})</span>
- {parkedSales.length > 0 && (
+ <span>Hold Queue ({branchParkedSales.length})</span>
+ {branchParkedSales.length > 0 && (
  <span className="absolute -top-1 right-2 bg-rose-500 text-white font-mono text-[9px] h-4.5 min-w-[18px] px-1 rounded-full flex items-center justify-center font-black border-2 border-m3-surface-low shadow">
- {parkedSales.length}
+ {branchParkedSales.length}
  </span>
  )}
  </button>
@@ -2349,7 +2352,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
  </span>
  <span>
- Yard Staff Transactions HOLD Queue ({parkedSales.length})
+ Yard Staff Transactions HOLD Queue ({branchParkedSales.length})
  </span>
  </div>
  <div className="flex items-center gap-1.5">
@@ -2388,9 +2391,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
 
  <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[600px] lg:max-h-none scrollbar-thin">
- {parkedSales.length > 0 ? (
+ {branchParkedSales.length > 0 ? (
  <div className="flex flex-col gap-3">
- {parkedSales.map((park) => {
+ {branchParkedSales.map((park) => {
  const isCurrentResuming = resumingParkedId === park.id;
  return (
  <div
@@ -2903,15 +2906,15 @@ export const PosModule: React.FC<PosModuleProps> = ({
  {item.overridePrice !== undefined ? (
  <>
  <span className="text-zinc-500 line-through">
- ₱{(Number(getBranchPrice(item.product)) || 0).toFixed(2)}
+ {formatCurrency(getBranchPrice(item.product))}
  </span>
  <span className="text-emerald-500 font-extrabold bg-emerald-500/10 px-1 rounded">
- ₱{(Number(item.overridePrice) || 0).toFixed(2)}
+ {formatCurrency(item.overridePrice)}
  </span>
  </>
  ) : (
  <span className="text-zinc-300">
- ₱{(Number(getBranchPrice(item.product)) || 0).toFixed(2)}
+ {formatCurrency(getBranchPrice(item.product))}
  </span>
  )}
  <span>/{item.product.unit}</span>
@@ -3058,7 +3061,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  ? "VAT-Exempt Sales"
  : "VATable Sales (Net)"}
  </span>
- <span className="font-mono">₱{(subtotal - vat).toFixed(2)}</span>
+ <span className="font-mono">{formatCurrency(subtotal - vat)}</span>
  </div>
  <div className="flex justify-between text-xs font-bold text-zinc-400 mt-0.5">
  <span>
@@ -3066,14 +3069,14 @@ export const PosModule: React.FC<PosModuleProps> = ({
  ? "12% Output VAT (Exempt)"
  : "12% Output VAT"}
  </span>
- <span className="font-mono">₱{vat.toFixed(2)}</span>
+ <span className="font-mono">{formatCurrency(vat)}</span>
  </div>
 
  {discountAmount > 0 && (
  <div className="flex justify-between text-xs font-black text-emerald-500 mt-0.5">
  <span>Discount Voucher Applied</span>
  <span className="font-mono">
- -₱{discountAmount.toFixed(2)}
+ -{formatCurrency(discountAmount)}
  </span>
  </div>
  )}
@@ -3229,7 +3232,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  CHANGE DISPENSE:
  </span>
  <span className="text-xs">
- ₱{changeAmount.toFixed(2)}
+ {formatCurrency(changeAmount)}
  </span>
  </div>
  )}
@@ -3679,16 +3682,16 @@ export const PosModule: React.FC<PosModuleProps> = ({
  {s.customerName}
  </td>
  <td className="py-3 px-4 text-right text-zinc-400">
- ₱{(Number(s.subtotal) || 0).toFixed(2)}
+ {formatCurrency(s.subtotal)}
  </td>
  <td className="py-3 px-4 text-right text-zinc-400">
- ₱{(Number(s.vat) || 0).toFixed(2)}
+ {formatCurrency(s.vat)}
  </td>
  <td className="py-3 px-4 text-right text-rose-500">
- -₱{(Number(s.discount) || 0).toFixed(2)}
+ -{formatCurrency(s.discount)}
  </td>
  <td className="py-3 px-4 text-right text-m3-primary font-extrabold">
- ₱{(Number(s.grandTotal) || 0).toFixed(2)}
+ {formatCurrency(s.grandTotal)}
  </td>
  <td className="py-3 px-4 text-center uppercase text-[9.5px]">
  {s.isDeleted ? (
@@ -4796,13 +4799,13 @@ export const PosModule: React.FC<PosModuleProps> = ({
  {/* Customer Payment & Change summary for dispatched fulfillment */}
  <div className="bg-m3-surface-lowest p-3 rounded-2xl border border-m3-outline-variant/20 space-y-1.5 text-xs font-mono">
  <div className="flex justify-between items-center text-m3-on-surface-variant">
- <span>Total Bill: <strong className="text-m3-on-surface">₱{(pendingSaleForFulfillment?.grandTotal || 0).toFixed(2)}</strong></span>
- <span>Tendered ({pendingSaleForFulfillment?.paymentMethod || "Cash"}): <strong className="text-m3-on-surface">₱{(pendingSaleForFulfillment?.amountTendered || pendingSaleForFulfillment?.grandTotal || 0).toFixed(2)}</strong></span>
+ <span>Total Bill: <strong className="text-m3-on-surface">{formatCurrency(pendingSaleForFulfillment?.grandTotal)}</strong></span>
+ <span>Tendered ({pendingSaleForFulfillment?.paymentMethod || "Cash"}): <strong className="text-m3-on-surface">{formatCurrency(pendingSaleForFulfillment?.amountTendered || pendingSaleForFulfillment?.grandTotal)}</strong></span>
  </div>
  {(pendingSaleForFulfillment?.changeAmount || 0) > 0 && (
  <div className="flex justify-between items-center pt-1.5 border-t border-dashed border-m3-outline-variant/20 font-extrabold text-emerald-400 bg-emerald-500/10 -mx-3 -mb-3 p-2.5 rounded-b-2xl">
  <span className="uppercase text-[10px] tracking-wider font-sans">Customer Change Due:</span>
- <span className="text-sm font-black text-emerald-300">₱{(pendingSaleForFulfillment?.changeAmount || 0).toFixed(2)}</span>
+ <span className="text-sm font-black text-emerald-300">{formatCurrency(pendingSaleForFulfillment?.changeAmount)}</span>
  </div>
  )}
  </div>
@@ -5318,7 +5321,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <div className="flex justify-between">
  <span className="text-zinc-400 font-sans">Subtotal Sale:</span>
  <span className="font-bold">
- ₱{(Number(selectedSaleDetail.subtotal) || 0).toFixed(2)}
+ {formatCurrency(selectedSaleDetail.subtotal)}
  </span>
  </div>
  <div className="flex justify-between">
@@ -5326,7 +5329,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  VAT Included (12%):
  </span>
  <span className="font-bold text-zinc-300">
- ₱{(Number(selectedSaleDetail.vat) || 0).toFixed(2)}
+ {formatCurrency(selectedSaleDetail.vat)}
  </span>
  </div>
  <div className="flex justify-between">
@@ -5334,22 +5337,22 @@ export const PosModule: React.FC<PosModuleProps> = ({
  Discount Deductions:
  </span>
  <span className="font-bold text-rose-500">
- -₱{(Number(selectedSaleDetail.discount) || 0).toFixed(2)}
+ -{formatCurrency(selectedSaleDetail.discount)}
  </span>
  </div>
  <div className="flex justify-between border-t border-m3-outline-variant/10 pt-1.5 text-xs text-m3-primary font-bold">
  <span className="font-sans">Grand Total:</span>
  <span className="text-sm font-extrabold text-[#10B981]">
- ₱{(Number(selectedSaleDetail.grandTotal) || 0).toFixed(2)}
+ {formatCurrency(selectedSaleDetail.grandTotal)}
  </span>
  </div>
  <div className="flex justify-between text-[10px] text-zinc-500 pt-1">
  <span className="font-sans">Amount Tendered:</span>
- <span>₱{(Number(selectedSaleDetail.amountTendered) || 0).toFixed(2)}</span>
+ <span>{formatCurrency(selectedSaleDetail.amountTendered)}</span>
  </div>
  <div className="flex justify-between text-[10px] text-zinc-500">
  <span className="font-sans">Change Settled:</span>
- <span>₱{(Number(selectedSaleDetail.changeAmount) || 0).toFixed(2)}</span>
+ <span>{formatCurrency(selectedSaleDetail.changeAmount)}</span>
  </div>
  </div>
 

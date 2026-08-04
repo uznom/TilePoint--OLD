@@ -67,6 +67,7 @@ export function AdminProfitModule({
  addAuditLog,
  customBills,
  purchaseOrders,
+ productReturns,
  } = useDb();
 
  // Localized tab inside the accounting console
@@ -380,7 +381,7 @@ export function AdminProfitModule({
  activeShifts,
  voidedSales,
  };
- }, [sales, saleItems, products, damageLogs, shifts, branchLandingModifiers, selectedBranchId, expenses, customBills, purchaseOrders]);
+ }, [sales, saleItems, products, damageLogs, shifts, branchLandingModifiers, selectedBranchId, expenses, customBills, purchaseOrders, productReturns]);
 
  const opexByCategory = useMemo(() => {
  const categories: Record<string, number> = {

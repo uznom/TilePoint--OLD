@@ -6,7 +6,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useDb, useDbProducts, useDbBranchStock } from '../context/DbContext';
 import { Product } from '../types/db';
-import { isProductInBranch } from '../lib/branchUtils';
+import { isProductInBranch, getBranchStockQuantity, getBranchStockRecord } from '../lib/branchUtils';
+import { formatCurrency } from '../utils/formatters';
 import { isTileProduct, calculateTileCoverage } from '../utils/productUtils';
 import {
  QrCode,
@@ -91,7 +92,19 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
 
  // Load target branch-specific products for this staff assignment
  const userBranchId = currentUser?.branchAssignmentId || 'B1';
- const staffBranchProducts = products.filter(p => !p.isDeleted && isProductInBranch(p, userBranchId, branchStock, branches));
+ const rawStaffBranchProducts = products.filter(p => !p.isDeleted && isProductInBranch(p, userBranchId, branchStock, branches));
+
+ // Sort products so all in-stock items appear above and no-stock items appear below
+ const staffBranchProducts = [...rawStaffBranchProducts].sort((a, b) => {
+ const qtyA = getBranchStockQuantity(a, userBranchId, branchStock, branches);
+ const qtyB = getBranchStockQuantity(b, userBranchId, branchStock, branches);
+ const inStockA = qtyA > 0 ? 1 : 0;
+ const inStockB = qtyB > 0 ? 1 : 0;
+ if (inStockA !== inStockB) {
+ return inStockB - inStockA; // 1 (in-stock) comes before 0 (no-stock)
+ }
+ return a.productName.localeCompare(b.productName);
+ });
 
  // Search filter matches
  const filteredProducts = searchQuery.trim() === ''
@@ -242,11 +255,15 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
 
  const getBranchStockInfo = (prod: Product) => {
  const branchName = branches.find(b => b.id === currentUser.branchAssignmentId)?.name || 'This Branch';
- const isOutOfStock = prod.stockQuantity <= 0;
- const isCritical = prod.stockQuantity <= prod.minimumStock;
+ const qty = getBranchStockQuantity(prod, userBranchId, branchStock, branches);
+ const bsRec = getBranchStockRecord(prod, userBranchId, branchStock, branches);
+ const threshold = bsRec?.lowStockThresholdOverride ?? prod.minimumStock;
+ const isOutOfStock = qty <= 0;
+ const isCritical = qty > 0 && qty <= threshold;
 
  return {
  branchName,
+ qty,
  isOutOfStock,
  isCritical,
  stockClass: isOutOfStock 
@@ -259,10 +276,19 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
 
  // Cart helper functions
  const handleAddToStaffCart = (prod: Product) => {
+ const availableQty = getBranchStockQuantity(prod, userBranchId, branchStock, branches);
+ if (availableQty <= 0) {
+ showToast(`Cannot add ${prod.productName}: NO STOCKS available!`);
+ return;
+ }
  playBeep();
  setStaffCart(prev => {
  const existing = prev.find(item => item.product.id === prod.id);
  if (existing) {
+ if (existing.quantity >= availableQty) {
+ showToast(`Stock limit reached (${availableQty} ${prod.unit}s available)!`);
+ return prev;
+ }
  return prev.map(item =>
  item.product.id === prod.id ? { ...item, quantity: item.quantity + 1 } : item
  );
@@ -274,6 +300,14 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
 
  const handleUpdateCartQty = (prodId: string, delta: number) => {
  setStaffCart(prev => {
+ const targetItem = prev.find(item => item.product.id === prodId);
+ if (targetItem && delta > 0) {
+ const availableQty = getBranchStockQuantity(targetItem.product, userBranchId, branchStock, branches);
+ if (targetItem.quantity + delta > availableQty) {
+ showToast(`Stock limit reached (${availableQty} ${targetItem.product.unit}s in stock)!`);
+ return prev;
+ }
+ }
  return prev.map(item => {
  if (item.product.id === prodId) {
  const newQty = item.quantity + delta;
@@ -294,6 +328,20 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  showToast('Cannot publish an empty order!');
  return;
  }
+
+ // Check stock availability for all cart items
+ for (const item of staffCart) {
+ const avail = getBranchStockQuantity(item.product, userBranchId, branchStock, branches);
+ if (avail <= 0) {
+ showToast(`Order failed: "${item.product.productName}" has NO STOCKS available!`);
+ return;
+ }
+ if (item.quantity > avail) {
+ showToast(`Order failed: "${item.product.productName}" only has ${avail} units in stock!`);
+ return;
+ }
+ }
+
  const cleanCustomerName = customerName.trim() || 'Walk-in Customer (Handheld Portal)';
  
  setIsTransmitting(true);
@@ -302,7 +350,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  await new Promise<void>((resolve) => {
  setTimeout(() => {
  // Run holdSale which does the immediate write-through
- const holdId = holdSale(staffCart, cleanCustomerName, orderNotes);
+ const holdId = holdSale(staffCart, cleanCustomerName, orderNotes, userBranchId);
  
  // Reset local cart and fields
  setStaffCart([]);
@@ -476,19 +524,36 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <div className="p-2 border-b border-m3-outline-variant/10 text-[9px] uppercase font-black text-m3-primary tracking-wide bg-m3-surface-low">
  Matching Catalog ({filteredProducts.length})
  </div>
- {filteredProducts.map((p, idx) => (
+ {filteredProducts.map((p, idx) => {
+ const stockQty = getBranchStockQuantity(p, userBranchId, branchStock, branches);
+ const isNoStock = stockQty <= 0;
+ return (
  <button
  key={idx}
  onClick={() => handleSelectProduct(p)}
- className="w-full text-left p-3 hover:bg-emerald-500/5 transition-all flex items-center justify-between border-b border-m3-outline-variant/5 last:border-0 font-bold"
+ className={`w-full text-left p-3 hover:bg-emerald-500/5 transition-all flex items-center justify-between border-b border-m3-outline-variant/5 last:border-0 font-bold ${
+ isNoStock ? 'bg-red-500/5' : ''
+ }`}
  >
- <div>
- <div className="text-xs text-m3-on-surface font-extrabold truncate">{p.productName}</div>
- <div className="text-[10px] text-zinc-400 font-mono font-medium">SKU: {p.sku} • ₱{(Number(p.sellingPrice) || 0).toFixed(2)}</div>
+ <div className="min-w-0 flex-1 pr-2">
+ <div className="text-xs text-m3-on-surface font-extrabold truncate flex items-center gap-1.5 flex-wrap">
+ <span className="truncate">{p.productName}</span>
+ {isNoStock ? (
+ <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-500 border border-red-500/30 font-black uppercase">
+ NO STOCKS
+ </span>
+ ) : (
+ <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-mono font-black">
+ {stockQty} in stock
+ </span>
+ )}
  </div>
- <ChevronRight className="h-4 w-4 text-emerald-500" />
+ <div className="text-[10px] text-zinc-400 font-mono font-medium mt-0.5">SKU: {p.sku} • {formatCurrency(p.sellingPrice)}</div>
+ </div>
+ <ChevronRight className="h-4 w-4 text-emerald-500 shrink-0" />
  </button>
- ))}
+ );
+ })}
  {filteredProducts.length === 0 && (
  <div className="p-4 text-center text-xs text-zinc-400 font-medium">
  No matching products.
@@ -597,8 +662,12 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <div className="bg-m3-surface-low border border-m3-outline-variant/35 rounded-3xl p-5 shadow-sm space-y-4 animate-fade-in relative overflow-hidden text-left" id="spec-display-box-unified">
  
  {/* Corner status label */}
- <div className="absolute top-3 right-3 bg-emerald-500/10 text-emerald-500 text-[9px] font-black uppercase py-1 px-2.5 rounded-full border border-emerald-500/20 tracking-wider">
- Scanned
+ <div className={`absolute top-3 right-3 text-[9px] font-black uppercase py-1 px-2.5 rounded-full border tracking-wider ${
+ getBranchStockQuantity(scannedProduct, userBranchId, branchStock, branches) <= 0
+ ? 'bg-red-500/20 text-red-500 border-red-500/30'
+ : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+ }`}>
+ {getBranchStockQuantity(scannedProduct, userBranchId, branchStock, branches) <= 0 ? 'NO STOCKS' : 'Scanned'}
  </div>
 
  <div className="border-b border-m3-outline-variant/10 pb-3 text-left">
@@ -629,7 +698,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <div className="bg-m3-surface border border-m3-outline-variant/20 rounded-2xl p-3 text-center space-y-1">
  <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 block select-none">Selling price / Unit</span>
  <div className="text-lg font-black text-m3-tertiary font-mono">
- ₱{(Number(scannedProduct.sellingPrice) || 0).toFixed(2)}
+ {formatCurrency(scannedProduct.sellingPrice)}
  </div>
  <span className="text-[10px] text-zinc-400 font-bold font-medium">per {scannedProduct.unit}</span>
  </div>
@@ -640,14 +709,14 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <div className={`border rounded-2xl p-3 text-center space-y-1 transition-all ${stats.stockClass}`}>
  <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 block select-none">Available Stock</span>
  <div className="text-lg font-black font-mono">
- {scannedProduct.stockQuantity} {scannedProduct.unit}s
+ {stats.qty} {scannedProduct.unit}s
  </div>
  <span className="text-[9px] block font-black uppercase tracking-wider font-mono">
  {stats.isOutOfStock 
- ? 'Depleted' 
+ ? 'NO STOCKS' 
  : stats.isCritical 
  ? 'Critical Alert!' 
- : 'Safe Stock'}
+ : 'In Stock'}
  </span>
  </div>
  );
@@ -685,10 +754,19 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <div className="border-t border-m3-outline-variant/15 pt-4 space-y-2">
  <button
  onClick={() => handleAddToStaffCart(scannedProduct)}
- className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-sm transition-colors"
+ disabled={getBranchStockQuantity(scannedProduct, userBranchId, branchStock, branches) <= 0}
+ className={`w-full py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${
+ getBranchStockQuantity(scannedProduct, userBranchId, branchStock, branches) <= 0
+ ? 'bg-red-500/10 text-red-500 border border-red-500/30 cursor-not-allowed opacity-80'
+ : 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-sm'
+ }`}
  >
  <ShoppingCart className="h-4 w-4" />
- <span>Add to Clerk Order Cart</span>
+ <span>
+ {getBranchStockQuantity(scannedProduct, userBranchId, branchStock, branches) <= 0 
+ ? 'NO STOCKS AVAILABLE — PURCHASE DISABLED' 
+ : 'Add to Clerk Order Cart'}
+ </span>
  </button>
 
  <div className="grid grid-cols-2 gap-2">
@@ -889,41 +967,58 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  if (catalogCategory === 'SUPPLIES') return !isTileProduct(p);
  return true;
  })
- .slice(0, 10)
  .map((p, idx) => {
  const isTile = isTileProduct(p);
+ const qty = getBranchStockQuantity(p, userBranchId, branchStock, branches);
+ const isNoStock = qty <= 0;
  return (
  <div 
- key={idx}
- className="p-2.5 bg-m3-surface-low border border-m3-outline-variant/20 rounded-xl flex items-center justify-between text-left transition-all font-bold shrink-0"
+ key={p.id || idx}
+ className={`p-2.5 bg-m3-surface-low border ${
+ isNoStock ? 'border-red-500/30 bg-red-500/5' : 'border-m3-outline-variant/20'
+ } rounded-xl flex items-center justify-between text-left transition-all font-bold shrink-0 relative`}
  >
  <button
  type="button"
  onClick={() => handleSelectProduct(p)}
- className="flex-1 text-left truncate min-w-0 font-bold focus:outline-none cursor-pointer"
+ className="flex-1 text-left truncate min-w-0 font-bold focus:outline-none cursor-pointer pr-1"
  >
  <div className="text-[10px] text-m3-on-surface font-extrabold truncate leading-tight">{p.productName}</div>
- <div className="flex items-center gap-1 mt-0.5">
- <span className="text-[8px] text-zinc-500 font-mono italic font-semibold">{p.sku}</span>
+ <div className="flex items-center gap-1 mt-1 flex-wrap">
+ <span className="text-[8px] text-zinc-400 font-mono italic font-semibold">{p.sku}</span>
  <span className={`text-[7.5px] px-1 font-mono rounded ${isTile ? 'bg-emerald-500/15 text-emerald-500 font-black' : 'bg-zinc-500/15 text-zinc-400 font-semibold'}`}>
  {isTile ? 'TILE' : 'ITEM'}
  </span>
+ {isNoStock ? (
+ <span className="text-[7.5px] px-1 font-mono rounded bg-red-500/20 text-red-500 font-black border border-red-500/30 uppercase">
+ NO STOCKS
+ </span>
+ ) : (
+ <span className="text-[7.5px] px-1 font-mono rounded bg-emerald-500/15 text-emerald-500 font-extrabold">
+ {qty} in stock
+ </span>
+ )}
  </div>
  </button>
  
- <div className="flex items-center gap-1.5 shrink-0 ml-1">
+ <div className="flex items-center gap-1 shrink-0 ml-1">
  <span className="text-[8px] font-black text-m3-primary font-mono bg-m3-primary/10 py-0.5 px-1 rounded border border-m3-primary/15">
- ₱{Math.round(p.sellingPrice)}
+ {formatCurrency(p.sellingPrice)}
  </span>
  <button
  onClick={(e) => {
  e.stopPropagation();
  handleAddToStaffCart(p);
  }}
- className="p-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-colors cursor-pointer"
- title="Quick add to Order Cart"
+ disabled={isNoStock}
+ className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
+ isNoStock 
+ ? 'bg-zinc-800/40 text-zinc-500 border border-zinc-700/30 cursor-not-allowed opacity-50' 
+ : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+ }`}
+ title={isNoStock ? "No stocks available in branch" : "Quick add to Order Cart"}
  >
- <Plus className="h-3 w-3" />
+ {isNoStock ? <X className="h-3 w-3 text-red-400" /> : <Plus className="h-3 w-3" />}
  </button>
  </div>
  </div>
@@ -963,7 +1058,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <div className="text-right shrink-0">
  <span className="text-[10px] uppercase font-black text-emerald-200 tracking-wider block leading-none">Cashier Total</span>
  <span className="text-sm font-black font-mono text-white block mt-1">
- ₱{totalCartPrice.toFixed(2)}
+ {formatCurrency(totalCartPrice)}
  </span>
  </div>
  </button>
@@ -1017,12 +1112,25 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <div className="divide-y divide-m3-outline-variant/10">
  {staffCart.map((item, idx) => {
  const totalItemPrice = item.product.sellingPrice * item.quantity;
+ const availStock = getBranchStockQuantity(item.product, userBranchId, branchStock, branches);
+ const isNoStock = availStock <= 0;
  return (
- <div key={idx} className="p-3.5 flex items-center justify-between gap-3 text-xs font-semibold">
+ <div key={idx} className={`p-3.5 flex items-center justify-between gap-3 text-xs font-semibold ${isNoStock ? 'bg-red-500/5' : ''}`}>
  <div className="min-w-0 flex-1">
+ <div className="flex items-center gap-1.5 flex-wrap">
  <h4 className="text-xs font-extrabold text-m3-on-surface truncate">{item.product.productName}</h4>
+ {isNoStock ? (
+ <span className="text-[8px] px-1.5 py-0.2 rounded bg-red-500/20 text-red-500 border border-red-500/30 font-black uppercase">
+ NO STOCKS
+ </span>
+ ) : (
+ <span className="text-[8px] px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-500 font-mono font-bold">
+ {availStock} available
+ </span>
+ )}
+ </div>
  <div className="text-[9px] text-zinc-400 font-mono mt-0.5 uppercase">
- SKU: {item.product.sku} • ₱{(Number(item.product.sellingPrice) || 0).toFixed(2)}
+ SKU: {item.product.sku} • {formatCurrency(item.product.sellingPrice)}
  </div>
  </div>
 
@@ -1048,7 +1156,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  {/* Unit Total price */}
  <div className="text-right shrink-0 min-w-[65px] flex flex-col items-end">
  <span className="font-mono font-extrabold text-m3-tertiary">
- ₱{totalItemPrice.toFixed(2)}
+ {formatCurrency(totalItemPrice)}
  </span>
  <button
  onClick={() => handleRemoveFromCart(item.product.id)}
@@ -1067,7 +1175,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <div className="p-3 bg-m3-surface/40 border-t border-m3-outline-variant/10 text-xs font-black flex justify-between items-center text-left">
  <span className="text-zinc-450 uppercase tracking-widest text-[9.5px]">Estimate Subtotal</span>
  <span className="text-sm font-black font-mono text-m3-primary">
- ₱{totalCartPrice.toFixed(2)}
+ {formatCurrency(totalCartPrice)}
  </span>
  </div>
  </div>

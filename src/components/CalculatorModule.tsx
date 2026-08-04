@@ -252,7 +252,11 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  </div>
  <div className="text-right shrink-0">
  <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold block">₱{p.sellingPrice?.toLocaleString()} / {p.unit}</span>
- <span className="text-[10px] text-m3-on-surface-variant dark:text-zinc-400">Stock: {p.stockQuantity}</span>
+ {p.stockQuantity <= 0 ? (
+	<span className="text-[9px] font-black uppercase text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20 ml-1">NO STOCKS</span>
+) : (
+	<span className="text-[10px] text-m3-on-surface-variant dark:text-zinc-400">Stock: {p.stockQuantity}</span>
+)}
  </div>
  </div>
  ))
@@ -517,7 +521,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  : 'bg-m3-surface-container-high dark:bg-zinc-800 text-m3-on-surface-variant/50 dark:text-zinc-500 cursor-not-allowed border border-m3-outline-variant/30'
  }`}
  >
- <span>Apply & Add to Active Invoice</span>
+ <span>{(selectedProduct && (selectedProduct.stockQuantity ?? 0) <= 0) ? "NO STOCKS AVAILABLE — PURCHASE DISABLED" : "Apply & Add to Active Invoice"}</span>
  <ArrowRight className="h-4 w-4" />
  </button>
  </div>

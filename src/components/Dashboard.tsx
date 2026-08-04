@@ -804,10 +804,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  .filter(si => todaySalesIds.has(si.saleId) && !si.isDeleted)
  .reduce((sum, item) => sum + item.quantity, 0);
 
- const cashToday = todaySalesItems.filter(s => s.paymentMethod === 'Cash').reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
- const cardToday = todaySalesItems.filter(s => s.paymentMethod === 'Credit Card').reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
- const bankToday = todaySalesItems.filter(s => s.paymentMethod === 'Bank Transfer').reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
- const gcashToday = todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Maya').reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
+ const isCash = (m?: string) => !m || m.toLowerCase() === 'cash';
+ const isCard = (m?: string) => !!m && (m.toLowerCase().includes('card') || m.toLowerCase().includes('credit'));
+ const isGcash = (m?: string) => !!m && (m.toLowerCase().includes('gcash') || m.toLowerCase().includes('maya') || m.toLowerCase().includes('paymaya'));
+ const isBank = (m?: string) => !!m && m.toLowerCase().includes('bank');
+
+ const cashToday = todaySalesItems.filter(s => isCash(s.paymentMethod)).reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
+ const cardToday = todaySalesItems.filter(s => isCard(s.paymentMethod)).reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
+ const bankToday = todaySalesItems.filter(s => isBank(s.paymentMethod)).reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
+ const gcashToday = todaySalesItems.filter(s => isGcash(s.paymentMethod)).reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
 
  const printContent = `
  <html>
@@ -944,25 +949,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <tr>
  <td>Cash</td>
  <td><strong>₱${cashToday.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
- <td>${todaySalesItems.filter(s => s.paymentMethod === 'Cash').length}</td>
+ <td>${todaySalesItems.filter(s => isCash(s.paymentMethod)).length}</td>
  <td>Verified Active</td>
  </tr>
  <tr>
  <td>Card</td>
  <td><strong>₱${cardToday.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
- <td>${todaySalesItems.filter(s => s.paymentMethod === 'Credit Card').length}</td>
+ <td>${todaySalesItems.filter(s => isCard(s.paymentMethod)).length}</td>
  <td>Settle Pending</td>
  </tr>
  <tr>
  <td>GCash / Mobile Wallet</td>
  <td><strong>₱${gcashToday.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
- <td>${todaySalesItems.filter(s => s.paymentMethod === 'GCash' || s.paymentMethod === 'Maya').length}</td>
+ <td>${todaySalesItems.filter(s => isGcash(s.paymentMethod)).length}</td>
  <td>Settled Live</td>
  </tr>
  <tr>
  <td>Bank Transfer</td>
  <td><strong>₱${bankToday.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
- <td>${todaySalesItems.filter(s => s.paymentMethod === 'Bank Transfer').length}</td>
+ <td>${todaySalesItems.filter(s => isBank(s.paymentMethod)).length}</td>
  <td>Cleared Live</td>
  </tr>
  </tbody>
@@ -1170,7 +1175,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <span className="text-xs font-bold text-m3-on-surface">{name}</span>
  </div>
  <div className="text-right">
- <span className="text-xs font-black font-mono text-emerald-600 dark:text-emerald-400">₱{Number(sum).toFixed(2)}</span>
+ <span className="text-xs font-black font-mono text-emerald-600 dark:text-emerald-400">{formatCurrency(sum)}</span>
  </div>
  </div>
  ));
@@ -3024,7 +3029,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </div>
  </div>
  <div className="text-right">
- <div className="text-xs font-bold font-mono text-m3-tertiary">₱{(Number(sale.grandTotal) || 0).toFixed(2)}</div>
+ <div className="text-xs font-bold font-mono text-m3-tertiary">{formatCurrency(sale.grandTotal)}</div>
  <span className="text-[9px] bg-m3-tertiary-container text-m3-on-tertiary-container border border-m3-outline-variant/20 px-2 py-0.5 rounded-full font-bold">
  {sale.paymentMethod}
  </span>
