@@ -3,3 +3,4 @@ export * from './useDebounce';
 export * from './usePagination';
 export * from './useCart';
 export * from './useModalState';
+export * from './useRouteSyncManager';

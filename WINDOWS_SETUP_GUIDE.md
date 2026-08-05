@@ -955,6 +955,30 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 
 ---
 
+### Troubleshooting PWA Service Worker Registration & Self-Signed SSL Certificates
+
+**Symptom**: Console error when loading TilePoint on LAN IP (`https://192.168.1.6:3000`):
+`[PWA] TilePoint PWA Service Worker registration failed: SecurityError: Failed to register a ServiceWorker for scope ('https://192.168.1.6:3000/') with script ('https://192.168.1.6:3000/sw.js'): An SSL certificate error occurred when fetching the script.`
+
+**Why This Happens**:
+Chromium (Chrome / Edge) enforces strict security rules for Service Workers. Service Workers cannot be registered over HTTPS on IP addresses using self-signed SSL certificates unless the certificate is installed into the OS **Trusted Root Certification Authorities** store.
+
+**Fix Method 1: Install `tilepoint-ca.crt` into Windows Trusted Root Certificate Store (Recommended)**
+1. In PowerShell as Administrator in the project directory, run:
+   ```powershell
+   Import-Certificate -FilePath ".\tilepoint-ca.crt" -CertStoreLocation "Cert:\LocalMachine\Root"
+   ```
+   *(Or double-click `tilepoint-ca.crt` -> Install Certificate -> Store Location: Local Machine -> Place all certificates in the following store -> Browse -> Trusted Root Certification Authorities -> Finish).*
+2. Restart Chrome / Edge.
+
+**Fix Method 2: Enable Chrome Flag for Insecure LAN Origins (Ideal for Cashier Tablets/Phones)**
+1. On Chrome / Edge, navigate to: `chrome://flags/#unsafely-treat-insecure-origin-as-secure`
+2. Add your LAN IP and port: `https://192.168.1.6:3000` (replace with your server IP).
+3. Set the flag dropdown to **Enabled** and click **Relaunch**.
+4. The PWA Service Worker will now register cleanly and allow offline caching!
+
+---
+
 ## 🛠️ 11. Useful Operational Commands Reference
 
 | Operation | Command | Execution Context |

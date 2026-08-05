@@ -21,7 +21,7 @@ echo.
 :: Step 1: Detect Local LAN IPv4 Address
 echo [1/3] Detecting local IP address...
 set LOCAL_IP=
-for /f "tokens=*" %%i in ('powershell -NoProfile -Command "(Get-NetIPAddress -AddressFamily IPv4 -Type Unicast | Where-Object {$_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.254.*'}).IPAddress | Select-Object -First 1"') do (
+for /f "usebackq tokens=*" %%i in (`powershell -NoProfile -Command "try { $adapters = Get-NetIPInterface -ConnectionState Connected -AddressFamily IPv4 -ErrorAction SilentlyContinue; if ($adapters) { $indexes = $adapters.InterfaceIndex; (Get-NetIPAddress -AddressFamily IPv4 -InterfaceIndex $indexes | Where-Object { $_.IPAddress -notlike '127*' -and $_.IPAddress -notlike '169.254*' -and $_.InterfaceAlias -notlike '*Loopback*' -and $_.InterfaceAlias -notlike '*WSL*' -and $_.InterfaceAlias -notlike '*VirtualBox*' -and $_.InterfaceAlias -notlike '*vEthernet*' -and $_.InterfaceAlias -notlike '*Docker*' } | Select-Object -ExpandProperty IPAddress -First 1) } else { (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127*' -and $_.IPAddress -notlike '169.254*' -and $_.InterfaceAlias -notlike '*Loopback*' } | Select-Object -ExpandProperty IPAddress -First 1) } } catch { (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127*' -and $_.IPAddress -notlike '169.254*' -and $_.InterfaceAlias -notlike '*Loopback*' } | Select-Object -ExpandProperty IPAddress -First 1) }"`) do (
     set "LOCAL_IP=%%i"
 )
 

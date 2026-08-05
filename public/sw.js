@@ -1,12 +1,16 @@
-const CACHE_NAME = 'tilepoint-atpos-v2-cache-v2';
+const CACHE_NAME = 'tilepoint-atpos-v2-cache-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/icon.svg',
+  '/icon-192.png',
+  '/icon-512.png',
   '/manifest.json',
   './',
   './index.html',
   './icon.svg',
+  './icon-192.png',
+  './icon-512.png',
   './manifest.json'
 ];
 

@@ -52,6 +52,17 @@ try {
     Write-Host "SUCCESS! Certificates generated successfully:" -ForegroundColor Green
     Write-Host "  - key.pem  (Private Key)" -ForegroundColor Green
     Write-Host "  - cert.pem (Certificate)" -ForegroundColor Green
+    
+    try {
+        if ([bool]([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+            Import-Certificate -FilePath "cert.pem" -CertStoreLocation "Cert:\LocalMachine\Root" -ErrorAction SilentlyContinue | Out-Null
+            Write-Host "  - Imported cert.pem to Trusted Root store for PWA Service Worker support!" -ForegroundColor Cyan
+        } else {
+            Write-Host "  - Tip for PWA Service Worker over LAN IP: Run in Admin PowerShell to trust:" -ForegroundColor Yellow
+            Write-Host "    Import-Certificate -FilePath 'cert.pem' -CertStoreLocation 'Cert:\LocalMachine\Root'" -ForegroundColor Yellow
+        }
+    } catch {}
+
     Write-Host "=========================================================" -ForegroundColor Green
 }
 catch {
