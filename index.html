@@ -60,7 +60,11 @@
               });
             })
             .catch((error) => {
-              console.warn('[PWA] TilePoint PWA Service Worker registration failed:', error);
+              if (error && (error.name === 'SecurityError' || String(error).includes('SSL') || String(error).includes('SecurityError'))) {
+                console.info('[PWA] Service Worker registration paused (Self-Signed SSL Certificate on LAN IP). TilePoint operating in web mode. To enable full PWA offline caching on LAN IP, trust tilepoint-ca.crt in Windows Root store or use Chrome flag #unsafely-treat-insecure-origin-as-secure.');
+              } else {
+                console.warn('[PWA] TilePoint PWA Service Worker registration failed:', error);
+              }
             });
         });
 

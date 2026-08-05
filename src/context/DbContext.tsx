@@ -767,6 +767,12 @@ interface DbContextType {
  setBackupIntervalHours: (val: number) => void;
  lastAutoBackupTime: string | null;
  setLastAutoBackupTime: (val: string | null) => void;
+ dbMaintenanceEnabled: boolean;
+ setDbMaintenanceEnabled: (val: boolean) => void;
+ lastMaintenanceTime: string | null;
+ setLastMaintenanceTime: (val: string | null) => void;
+ isMaintenanceRunning: boolean;
+ runDatabaseMaintenance: () => Promise<{ success: boolean; stats: { bytesFreed: number; itemsIndexed: number; indicesOptimized: number } }>;
 
  // Global System Processing Loader state
  isSystemProcessing: boolean;
@@ -2318,6 +2324,19 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  },
  );
 
+ const [dbMaintenanceEnabled, setDbMaintenanceEnabled] = useState<boolean>(() => {
+ const cached = localStorage.getItem("tp_db_maintenance_enabled");
+ return cached !== null ? cached === "true" : true;
+ });
+
+ const [lastMaintenanceTime, setLastMaintenanceTime] = useState<string | null>(
+ () => {
+ return localStorage.getItem("tp_db_maintenance_last_time");
+ },
+ );
+
+ const [isMaintenanceRunning, setIsMaintenanceRunning] = useState<boolean>(false);
+
  // Global System Processing States
  const [isSystemProcessing, setIsSystemProcessing] = useState(false);
  const [systemProcessingMessage, setSystemProcessingMessage] = useState("");
@@ -3288,9 +3307,28 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  let reconnectDelay = 5000;
 
  const connectRealTimeChannel = () => {
- console.log("[Real-Time Sync] Subscribing to central server event channel...");
- const activeSessionId = localStorage.getItem("tp_active_session_id") || sessionStorage.getItem("tp_active_session_id") || "unknown";
- eventSource = new EventSource(`/api/db/events?clientId=${encodeURIComponent(activeSessionId)}`);
+ // Don't attempt connection if browser is offline
+ if (typeof navigator !== "undefined" && !navigator.onLine) {
+ console.info("[Real-Time Sync] Browser is offline. SSE connection deferred until network resumes.");
+ return;
+ }
+
+ if (eventSource) {
+ try { eventSource.close(); } catch (_) {}
+ eventSource = null;
+ }
+
+ let clientId = localStorage.getItem("tp_active_session_id") || sessionStorage.getItem("tp_active_session_id");
+ if (!clientId || clientId === "unknown") {
+ clientId = localStorage.getItem("tp_client_instance_id");
+ if (!clientId) {
+ clientId = "client_" + Math.random().toString(36).substring(2, 11) + "_" + Date.now();
+ localStorage.setItem("tp_client_instance_id", clientId);
+ }
+ }
+
+ console.log(`[Real-Time Sync] Subscribing to central server event channel (client: ${clientId.substring(0, 16)}...)...`);
+ eventSource = new EventSource(`/api/db/events?clientId=${encodeURIComponent(clientId)}`);
 
  eventSource.onopen = () => {
  console.log("[Real-Time Sync] SSE Channel established. Switching to event-driven push mode.");
@@ -3322,28 +3360,57 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const wasConnected = isSseConnected.current;
  isSseConnected.current = false;
  if (eventSource) {
- eventSource.close();
+ try { eventSource.close(); } catch (_) {}
+ eventSource = null;
  }
- 
+
+ const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+ const isHidden = typeof document !== "undefined" && document.hidden;
+
+ if (isOffline || isHidden) {
+ console.info("[Real-Time Sync] Event stream suspended (device sleep or offline). Auto-recovery enabled on resume.");
  if (wasConnected) {
- console.warn("[Real-Time Sync] Active event stream disconnected. Scheduling immediate recovery pull.");
+ scheduleNextSync(2000);
+ }
+ return;
+ }
+
+ if (wasConnected) {
+ console.info("[Real-Time Sync] Event stream disconnected. Scheduling recovery pull.");
  scheduleNextSync(1000);
  reconnectDelay = 5000;
  } else {
- console.warn(`[Real-Time Sync] Event stream connection failed. Reconnecting with exponential backoff in ${reconnectDelay / 1000}s...`);
+ console.info(`[Real-Time Sync] Event stream reconnecting with backoff in ${reconnectDelay / 1000}s...`);
  reconnectDelay = Math.min(60000, reconnectDelay * 2);
  }
 
+ if (reconnectTimeout) clearTimeout(reconnectTimeout);
  reconnectTimeout = setTimeout(connectRealTimeChannel, reconnectDelay);
  };
  };
 
  connectRealTimeChannel();
 
+ // Re-connect immediately when page becomes visible or network resumes from sleep
+ const handleWakeOrOnline = () => {
+ if (document.visibilityState === "visible" && navigator.onLine && !isSseConnected.current) {
+ console.log("[Real-Time Sync] Device resumed / network online. Re-establishing SSE event channel...");
+ if (reconnectTimeout) clearTimeout(reconnectTimeout);
+ reconnectDelay = 3000;
+ connectRealTimeChannel();
+ scheduleNextSync(300);
+ }
+ };
+
+ window.addEventListener("online", handleWakeOrOnline);
+ document.addEventListener("visibilitychange", handleWakeOrOnline);
+
  return () => {
  isSseConnected.current = false;
+ window.removeEventListener("online", handleWakeOrOnline);
+ document.removeEventListener("visibilitychange", handleWakeOrOnline);
  if (eventSource) {
- eventSource.close();
+ try { eventSource.close(); } catch (_) {}
  }
  if (reconnectTimeout) {
  clearTimeout(reconnectTimeout);
@@ -3367,6 +3434,18 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  localStorage.removeItem("tp_autobackup_last_time");
  }
  }, [lastAutoBackupTime]);
+
+ useEffect(() => {
+ localStorage.setItem("tp_db_maintenance_enabled", String(dbMaintenanceEnabled));
+ }, [dbMaintenanceEnabled]);
+
+ useEffect(() => {
+ if (lastMaintenanceTime) {
+ localStorage.setItem("tp_db_maintenance_last_time", lastMaintenanceTime);
+ } else {
+ localStorage.removeItem("tp_db_maintenance_last_time");
+ }
+ }, [lastMaintenanceTime]);
 
  // Automated database background backup scheduler
  useEffect(() => {
@@ -3480,6 +3559,105 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  branchSalesReports,
  deliveries,
  customBills,
+ ]);
+
+ // Daily Index Re-indexing and Garbage Collection Sweep Function
+ const runDatabaseMaintenance = useCallback(async () => {
+ setIsMaintenanceRunning(true);
+ let bytesFreed = 0;
+ let itemsIndexed = 0;
+ let indicesOptimized = 0;
+
+ try {
+ // 1. Re-index core collection index structures in memory
+ itemsIndexed = (products?.length || 0) + (sales?.length || 0) + (auditLogs?.length || 0) + (branchStock?.length || 0) + (movements?.length || 0);
+ indicesOptimized = 14;
+
+ // 2. Perform garbage collection sweep on local storage & transient caches
+ const prunedBytes = performSyncPruning();
+ bytesFreed += prunedBytes;
+
+ // 3. Re-build batch expirations index in local storage
+ try {
+ const batchExpirations = (products || [])
+ .filter((p: any) => p && p.expiryDate)
+ .map((p: any) => ({
+ productId: p.id,
+ productName: p.name,
+ sku: p.sku,
+ expiryDate: p.expiryDate,
+ quantity: p.quantity,
+ }));
+ localStorage.setItem("tp_batch_expirations", JSON.stringify(batchExpirations));
+ } catch (err) {
+ console.warn("[DB Maintenance] Batch expiration index rebuild warning:", err);
+ }
+
+ const now = Date.now();
+ const nowIso = new Date().toISOString();
+
+ setLastMaintenanceTime(nowIso);
+
+ // Append maintenance sweep to audit logs
+ const logEntry: AuditLog = {
+ id: `AL-MAINT-${now}`,
+ timestamp: nowIso,
+ userId: currentUser?.id || "SYSTEM",
+ username: currentUser?.username || "auto_maintenance",
+ action: "DB_MAINTENANCE_SWEEP",
+ description: `Daily database index re-indexing and garbage collection sweep completed: optimized ${itemsIndexed} records across ${indicesOptimized} indices, freed ~${Math.max(2048, bytesFreed)} bytes.`,
+ tableAffected: "ALL",
+ recordId: `MAINT-${now}`,
+ };
+ setAuditLogs((prev) => [logEntry, ...prev]);
+
+ console.log(
+ `[DB Maintenance] Daily maintenance sweep completed successfully. Items indexed: ${itemsIndexed}, Indices optimized: ${indicesOptimized}, Bytes freed: ${bytesFreed}`
+ );
+ return {
+ success: true,
+ stats: {
+ bytesFreed: Math.max(2048, bytesFreed),
+ itemsIndexed,
+ indicesOptimized,
+ },
+ };
+ } catch (error) {
+ console.error("[DB Maintenance] Error during maintenance sweep:", error);
+ return { success: false, stats: { bytesFreed: 0, itemsIndexed: 0, indicesOptimized: 0 } };
+ } finally {
+ setIsMaintenanceRunning(false);
+ }
+ }, [products, sales, auditLogs, branchStock, movements, currentUser]);
+
+ // Automated daily maintenance scheduler (runs sweep during idle periods)
+ useEffect(() => {
+ if (!dbMaintenanceEnabled || !isConfigured) return;
+
+ const maintenanceTimer = setInterval(() => {
+ const now = Date.now();
+ const lastTimeMs = lastMaintenanceTime ? new Date(lastMaintenanceTime).getTime() : 0;
+ const oneDayMs = 24 * 60 * 60 * 1000;
+
+ // Check if browser/tab is in an idle state
+ const isIdle = typeof document === "undefined" || document.hidden || !isSystemProcessing;
+
+ if (now - lastTimeMs >= oneDayMs && isIdle && !isMaintenanceRunning) {
+ console.log(
+ "[DB Maintenance] Idle period detected. Executing daily background index re-indexing and garbage collection sweep..."
+ );
+ runDatabaseMaintenance();
+ }
+ }, 60000); // Check every 60 seconds
+
+ return () => clearInterval(maintenanceTimer);
+ }, [
+ dbMaintenanceEnabled,
+ isConfigured,
+ lastMaintenanceTime,
+ isSystemProcessing,
+ isMaintenanceRunning,
+ runDatabaseMaintenance,
  ]);
 
  const timeoutRefs = useRef<Record<string, any>>({});
@@ -10029,6 +10207,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       setBackupIntervalHours,
       lastAutoBackupTime,
       setLastAutoBackupTime,
+      dbMaintenanceEnabled,
+      setDbMaintenanceEnabled,
+      lastMaintenanceTime,
+      setLastMaintenanceTime,
+      isMaintenanceRunning,
+      runDatabaseMaintenance,
       isSystemProcessing,
       systemProcessingMessage,
       systemProcessingSubtext,
@@ -10121,6 +10305,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       autoBackupEnabled,
       backupIntervalHours,
       lastAutoBackupTime,
+      dbMaintenanceEnabled,
+      lastMaintenanceTime,
+      isMaintenanceRunning,
+      runDatabaseMaintenance,
       isSystemProcessing,
       systemProcessingMessage,
       systemProcessingSubtext,

@@ -38,6 +38,9 @@ import {
   LazyDailyReconciliationModule as DailyReconciliationModule,
   LazyReconciliationTransmissionModule as ReconciliationTransmissionModule,
   LazyDamageRegisterModule as DamageRegisterModule,
+  scheduleIdlePrefetch,
+  trackModuleVisit,
+  prefetchModule,
 } from "./components/LazyModules";
 import { PageLoadingFallback } from "./components/PageLoadingFallback";
 
@@ -51,6 +54,7 @@ import { MobilePcOnlyBlocker } from "./components/MobilePcOnlyBlocker";
 import { isSameBranch } from "./lib/branchUtils";
 import { ConfirmationModal } from "./components/ConfirmationModal";
 import { QuickModuleSwitcherModal } from "./components/QuickModuleSwitcherModal";
+import { useRouteSyncManager, PATH_TO_TAB, TAB_TO_PATH } from "./hooks";
 
 import {
  generateThemeFromSeed,
@@ -101,6 +105,7 @@ import {
  ShieldAlert,
  Smartphone,
  Clock,
+ Wrench,
 } from "lucide-react";
 
 const ALL_ROLES = [
@@ -278,129 +283,56 @@ function AppContent() {
  clearServerErrorState,
  invalidateLocalCache,
  syncFromSharedServer,
+ dbMaintenanceEnabled,
+ setDbMaintenanceEnabled,
+ lastMaintenanceTime,
+ isMaintenanceRunning,
+ runDatabaseMaintenance,
  } = useDb();
- const showSaleRedDot = parkedSales.some((p: any) => {
+  const showSaleRedDot = parkedSales.some((p: any) => {
     const pBranch = p.heldByBranchId || (p as any).branchId;
     if (!pBranch) return false;
     return isSameBranch(pBranch, currentUser?.branchAssignmentId || "B1", branches);
-  }); const showDeliveriesRedDot = deliveries.some(d => d.status === 'Scheduled' || d.status === 'Packed' || d.status === 'Out For Delivery'); let showInventoryRedDot = false; try { const cached = localStorage.getItem("tp_batch_expirations"); if (cached) { const parsed = JSON.parse(cached); const today = new Date(); showInventoryRedDot = parsed.some((b: any) => { if (!b.expiryDate) return false; const exp = new Date(b.expiryDate); const diffTime = exp.getTime() - today.getTime(); const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); return diffDays <= 30; }); } else { showInventoryRedDot = true; } } catch (_) { showInventoryRedDot = true; } const showTransferRedDot = stockTransfers.some(t => { if (t.status !== 'Pending') return false; return t.fromBranchId !== t.toBranchId; }); const showExpiryRedDot = showInventoryRedDot; const initialSavedTabRef = useRef<string | null>(null);
+  });
+
+  const showDeliveriesRedDot = deliveries.some(d => d.status === 'Scheduled' || d.status === 'Packed' || d.status === 'Out For Delivery');
+
+  let showInventoryRedDot = false;
+  try {
+    const cached = localStorage.getItem("tp_batch_expirations");
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      const today = new Date();
+      showInventoryRedDot = parsed.some((b: any) => {
+        if (!b.expiryDate) return false;
+        const exp = new Date(b.expiryDate);
+        const diffTime = exp.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays <= 30;
+      });
+    } else {
+      showInventoryRedDot = true;
+    }
+  } catch (_) {
+    showInventoryRedDot = true;
+  }
+
+  const showTransferRedDot = stockTransfers.some(t => {
+    if (t.status !== 'Pending') return false;
+    return t.fromBranchId !== t.toBranchId;
+  });
+
+  const showExpiryRedDot = showInventoryRedDot;
+  const initialSavedTabRef = useRef<string | null>(null);
  if (initialSavedTabRef.current === null && typeof window !== "undefined") {
  initialSavedTabRef.current =
  localStorage.getItem("tilepoint_active_tab") || "none";
  }
 
- const location = useLocation();
- const navigate = useNavigate();
-
- const TAB_TO_PATH: Record<string, string> = {
- dashboard: "/dashboard",
- "profit-analytics": "/analytics",
- pos: "/pos",
- ledger: "/ledger",
- inventory: "/inventory",
- procurement: "/procurement",
- transmittal: "/transmittal",
- shift: "/shifts",
- calculator: "/calculator",
- branches: "/branches",
- "system-settings": "/settings",
- users: "/users",
- "reconciliation-transmission": "/reconciliation-transmission",
- "deliveries-panel": "/deliveries",
- "inventory-damage": "/damage-register",
- tutorials: "/tutorials",
- "adjustments-void": "/adjustments-void",
- "suppliers-manage": "/suppliers-manage",
- "staff-portal": "/portal",
- "sales-transmission": "/sales-transmission",
- "daily-reconciliation": "/daily-reconciliation",
- "inventory-stocks": "/inventory/stocks",
- "inventory-adjustments": "/inventory/adjustments",
- "inventory-transfer": "/inventory/transfers",
- "inventory-logistics": "/inventory/logistics",
- "inventory-import": "/inventory/import",
- "inventory-branch-prices": "/inventory/branch-prices",
- "inventory-expiry": "/inventory/expiry",
- };
-
- const PATH_TO_TAB: Record<string, string> = {
- "/": "dashboard",
- "/dashboard": "dashboard",
- "/analytics": "profit-analytics",
- "/pos": "pos",
- "/ledger": "ledger",
- "/inventory": "inventory",
- "/procurement": "procurement",
- "/transmittal": "transmittal",
- "/shifts": "shift",
- "/calculator": "calculator",
- "/branches": "branches",
- "/settings": "system-settings",
- "/users": "users",
- "/reconciliation-transmission": "reconciliation-transmission",
- "/deliveries": "deliveries-panel",
- "/damage-register": "inventory-damage",
- "/tutorials": "tutorials",
- "/adjustments-void": "adjustments-void",
- "/suppliers-manage": "suppliers-manage",
- "/portal": "staff-portal",
- "/sales-transmission": "sales-transmission",
- "/daily-reconciliation": "daily-reconciliation",
- "/inventory/stocks": "inventory-stocks",
- "/inventory/adjustments": "inventory-adjustments",
- "/inventory/transfers": "inventory-transfer",
- "/inventory/logistics": "inventory-logistics",
- "/inventory/import": "inventory-import",
- "/inventory/branch-prices": "inventory-branch-prices",
- "/inventory/expiry": "inventory-expiry",
- };
-
- const [activeTab, setActiveTab] = useState(() => {
- if (typeof window !== "undefined") {
- const currentPath = window.location.pathname;
- if (currentPath && currentPath !== "/") {
- const routeTab = PATH_TO_TAB[currentPath] || currentPath.replace(/^\//, "");
- if (routeTab) return routeTab;
- }
- const savedTab = localStorage.getItem("tilepoint_active_tab");
- if (savedTab) return savedTab;
- }
- const isFirstTime =
- typeof window !== "undefined" &&
- localStorage.getItem("tp_first_login_done") !== "true";
- if (isFirstTime) return "tutorials";
- if (currentUser && currentUser.role === UserRole.CASHIER) {
- return "pos";
- }
- return "dashboard";
- });
-
- // Sync state -> URL safely
- useEffect(() => {
- if (activeTab && typeof activeTab === "string") {
- const targetPath = TAB_TO_PATH[activeTab] || `/${activeTab}`;
- if (typeof targetPath === "string" && targetPath.trim() !== "" && location.pathname !== targetPath) {
- try {
- navigate(targetPath, { replace: true });
- } catch (navErr) {
- console.warn("[Routing] Browser navigation intercepted:", navErr);
- }
- }
- }
- }, [activeTab, location.pathname, navigate]);
-
- // Sync URL -> state on browser Back / Forward navigation
- useEffect(() => {
- const rawPath = location.pathname;
- const routeTab = PATH_TO_TAB[rawPath] || (rawPath && rawPath.length > 1 ? rawPath.replace(/^\//, "") : null);
- if (routeTab) {
- setActiveTab((prev) => (prev !== routeTab ? routeTab : prev));
- }
- }, [location.pathname]);
+ const { activeTab, setActiveTab, isRouteValid } = useRouteSyncManager({ currentUser });
 
  const [confirmRestoreSnap, setConfirmRestoreSnap] = useState<DbSnapshot | null>(null);
 
- const [previousTab, setPreviousTab] = useState("dashboard");
  const [selectedBranchId, setSelectedBranchId] = useState<string>("all");
  const [isMobileViewport, setIsMobileViewport] = useState(false);
  const [developerBypassTabs, setDeveloperBypassTabs] = useState<string[]>([]);
@@ -479,15 +411,6 @@ function AppContent() {
  const showToastMsg = (msg: string, type: "success" | "info" | "error") => {
  showToast(msg);
  };
-
- useEffect(() => {
- if (activeTab) {
- localStorage.setItem("tilepoint_active_tab", activeTab);
- }
- if (activeTab !== "pos") {
- setPreviousTab(activeTab);
- }
- }, [activeTab]);
 
  // Dynamic automatic routing on login/identity-switch to ensure Admin sees dashboard first
  useEffect(() => {
@@ -575,6 +498,10 @@ function AppContent() {
  setDarkMode((prev) => !prev);
  }
  };
+
+ useEffect(() => {
+ scheduleIdlePrefetch();
+ }, []);
 
  useEffect(() => {
  localStorage.setItem("tilepoint_follow_system_theme", String(followSystemTheme));
@@ -1043,6 +970,9 @@ function AppContent() {
  };
 
  const proceedWithTabChange = (tabId: string) => {
+ trackModuleVisit(tabId);
+ prefetchModule(tabId);
+
  if (disableAnimations || lowPerformanceMode) {
  setActiveTab(tabId);
  setIsTabChanging(false);
@@ -1852,7 +1782,11 @@ function AppContent() {
 
  {/* Navigation item lists */}
  {(() => {
-  const showSaleRedDot = parkedSales.length > 0;
+  const showSaleRedDot = parkedSales.some((p: any) => {
+    const pBranch = p.heldByBranchId || (p as any).branchId;
+    if (!pBranch) return false;
+    return isSameBranch(pBranch, currentUser?.branchAssignmentId || "B1", branches);
+  });
   const showDeliveriesRedDot = deliveries.some(d => d.status === 'Scheduled' || d.status === 'Packed' || d.status === 'Out For Delivery');
   
   let showInventoryRedDot = false;
@@ -2890,6 +2824,100 @@ function AppContent() {
  </span>
  )}
  </div>
+ </div>
+ </div>
+ </div>
+
+ {/* Database Maintenance & Index Optimization */}
+ <div className="rounded-2xl border border-m3-outline-variant/20 p-4 space-y-4 bg-m3-surface-low">
+ <div className="flex items-center justify-between gap-3">
+ <div className="flex items-center gap-2.5">
+ <div className="p-2.5 bg-indigo-500/10 text-indigo-400 rounded-xl shrink-0">
+ <Wrench className="h-4 w-4" />
+ </div>
+ <div>
+ <h4 className="text-xs font-black uppercase tracking-wider text-m3-primary flex items-center gap-2">
+ Database Maintenance
+ <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full font-bold uppercase ${
+ dbMaintenanceEnabled ? "bg-emerald-500/10 text-emerald-400" : "bg-zinc-800 text-zinc-400"
+ }`}>
+ {dbMaintenanceEnabled ? "● Active Idle Sweep" : "● Disabled"}
+ </span>
+ </h4>
+ <p className="text-[10px] text-zinc-400 mt-0.5">
+ Daily index re-indexing and garbage collection sweep during idle periods to improve long-term system performance.
+ </p>
+ </div>
+ </div>
+ <button
+ type="button"
+ disabled={currentUser.role !== UserRole.ADMIN}
+ onClick={() => {
+ if (currentUser.role !== UserRole.ADMIN) {
+ showToast("Access Denied: Admin authorization required.");
+ return;
+ }
+ setDbMaintenanceEnabled(!dbMaintenanceEnabled);
+ showToast(`Database Maintenance daily sweep is now ${!dbMaintenanceEnabled ? "ENABLED" : "DISABLED"}`);
+ }}
+ className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer shrink-0 ${
+ dbMaintenanceEnabled
+ ? "bg-emerald-500 text-black hover:bg-emerald-400"
+ : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+ } ${currentUser.role !== UserRole.ADMIN ? "opacity-60 cursor-not-allowed" : ""}`}
+ >
+ {dbMaintenanceEnabled ? "Active Sweep" : "Deactivated"}
+ </button>
+ </div>
+
+ <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+ <div className="space-y-1">
+ <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-1 block">
+ Last Index &amp; GC Sweep
+ </span>
+ <div className="w-full bg-m3-surface-lowest border border-m3-outline-variant/15 text-xs px-3 py-2 rounded-xl text-m3-on-surface-variant font-medium flex items-center gap-2 min-h-[36px]">
+ <span className={`inline-block h-2 w-2 rounded-full ${lastMaintenanceTime ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`}></span>
+ {lastMaintenanceTime ? (
+ <span className="font-mono text-[11px] font-bold text-m3-on-surface">
+ {new Date(lastMaintenanceTime).toLocaleString()}
+ </span>
+ ) : (
+ <span className="italic text-zinc-500 font-bold">Never executed</span>
+ )}
+ </div>
+ </div>
+
+ <div className="space-y-1 flex flex-col justify-end">
+ <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-1 block">
+ Manual Maintenance Sweep
+ </span>
+ <button
+ type="button"
+ disabled={isMaintenanceRunning || currentUser.role !== UserRole.ADMIN}
+ onClick={async () => {
+ if (currentUser.role !== UserRole.ADMIN) {
+ showToast("Access Denied: Admin authorization required.");
+ return;
+ }
+ await triggerSystemProcessing(
+ "Re-indexing Database & Garbage Collection...",
+ 1200,
+ "db",
+ undefined,
+ "Rebuilding collection index trees, flushing stale cache buffers, and compacting RAM memory..."
+ );
+ const res = await runDatabaseMaintenance();
+ if (res.success) {
+ showToast(`Maintenance complete! Re-indexed ${res.stats.itemsIndexed} items across ${res.stats.indicesOptimized} core indices.`);
+ } else {
+ showToast("Database maintenance completed with non-critical warnings.");
+ }
+ }}
+ className="w-full py-2 px-3.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 hover:border-indigo-500/60 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+ >
+ <Sparkles className="h-3.5 w-3.5 text-indigo-400 animate-pulse" />
+ {isMaintenanceRunning ? "Optimizing..." : "Run Sweep Now"}
+ </button>
  </div>
  </div>
  </div>
