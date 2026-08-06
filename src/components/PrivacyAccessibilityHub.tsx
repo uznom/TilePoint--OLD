@@ -104,8 +104,8 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  });
 
  // Settings states initialized from localStorage for persistence
- const [textSize, setTextSize] = useState<'normal' | 'large' | 'xlarge'>(() => {
- return (localStorage.getItem('tilepoint-text-size') as 'normal' | 'large' | 'xlarge') || 'normal';
+ const [textSize, setTextSize] = useState<'small' | 'normal' | 'large' | 'xlarge'>(() => {
+ return (localStorage.getItem('tilepoint-text-size') as any) || 'normal';
  });
  
  const [colorContrast, setColorContrast] = useState<'default' | 'medium' | 'high'>(() => {
@@ -142,7 +142,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  const persistedMaxText = localStorage.getItem('tilepoint-maximize-text-contrast') === 'true';
  const persistedDisableAnimations = localStorage.getItem('tilepoint-disable-animations') === 'true';
  const persistedDisableBlurs = localStorage.getItem('tilepoint-disable-blurs') === 'true';
- const persistedTextSize = (localStorage.getItem('tilepoint-text-size') as 'normal' | 'large' | 'xlarge') || 'normal';
+ const persistedTextSize = (localStorage.getItem('tilepoint-text-size') as any) || 'normal';
  const persistedDyslexic = localStorage.getItem('tilepoint-dyslexic-font') === 'true';
  const persistedOutlines = localStorage.getItem('tilepoint-enhanced-outlines') === 'true';
  const persistedCompanyName = localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center';
@@ -511,8 +511,10 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  const root = document.documentElement;
 
  // 1. Sizing
- root.classList.remove('accessibility-large-text', 'accessibility-xlarge-text');
- if (textSize === 'large') {
+ root.classList.remove('accessibility-small-text', 'accessibility-large-text', 'accessibility-xlarge-text');
+ if (textSize === 'small') {
+ root.classList.add('accessibility-small-text');
+ } else if (textSize === 'large') {
  root.classList.add('accessibility-large-text');
  } else if (textSize === 'xlarge') {
  root.classList.add('accessibility-xlarge-text');
@@ -797,9 +799,9 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  </label>
  <div className="grid grid-cols-3 gap-2.5">
  {[
+ { id: 'small', name: 'Small (0.88x)', class: 'font-normal' },
  { id: 'normal', name: 'Normal (1.0x)', class: 'font-normal' },
- { id: 'large', name: 'Large (1.12x)', class: 'font-medium' },
- { id: 'xlarge', name: 'Extra Large (1.24x)', class: 'font-semibold' }
+ { id: 'large', name: 'Large (1.12x)', class: 'font-medium' }
  ].map((sz) => (
  <button
  key={sz.id}

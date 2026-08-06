@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useDb, useDbProducts, useDbBranchStock } from '../context/DbContext';
 import { Product } from '../types/db';
 import { isProductInBranch, getBranchStockQuantity, getBranchStockRecord } from '../lib/branchUtils';
@@ -90,31 +90,62 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  const [calcTilesWithWastage, setCalcTilesWithWastage] = useState(0);
  const [calcBoxesNeeded, setCalcBoxesNeeded] = useState(0);
 
- // Load target branch-specific products for this staff assignment
- const userBranchId = currentUser?.branchAssignmentId || 'B1';
- const rawStaffBranchProducts = products.filter(p => !p.isDeleted && isProductInBranch(p, userBranchId, branchStock, branches));
+	// Load target branch-specific products for this staff assignment
+	const userBranchId = currentUser?.branchAssignmentId || 'B1';
 
- // Sort products so all in-stock items appear above and no-stock items appear below
- const staffBranchProducts = [...rawStaffBranchProducts].sort((a, b) => {
- const qtyA = getBranchStockQuantity(a, userBranchId, branchStock, branches);
- const qtyB = getBranchStockQuantity(b, userBranchId, branchStock, branches);
- const inStockA = qtyA > 0 ? 1 : 0;
- const inStockB = qtyB > 0 ? 1 : 0;
- if (inStockA !== inStockB) {
- return inStockB - inStockA; // 1 (in-stock) comes before 0 (no-stock)
- }
- return a.productName.localeCompare(b.productName);
- });
+	// Fast O(1) stock map lookup table to prevent O(N*M) loop on every render
+	const stockMap = useMemo(() => {
+		const map = new Map<string, number>();
+		for (let i = 0; i < branchStock.length; i++) {
+			const bs = branchStock[i];
+			if (bs && bs.productId && (bs.branchId === userBranchId || bs.branchId === 'B1')) {
+				map.set(bs.productId, bs.quantity ?? 0);
+			}
+		}
+		return map;
+	}, [branchStock, userBranchId]);
 
- // Search filter matches
- const filteredProducts = searchQuery.trim() === ''
- ? []
- : staffBranchProducts.filter(p => 
- p.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
- p.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
- p.barcode.toLowerCase().includes(searchQuery.toLowerCase()) ||
- p.category.toLowerCase().includes(searchQuery.toLowerCase())
- );
+	const getStockQty = useCallback((p: Product | undefined | null): number => {
+		if (!p) return 0;
+		if (stockMap.has(p.id)) return stockMap.get(p.id)!;
+		return getBranchStockQuantity(p, userBranchId, branchStock, branches);
+	}, [stockMap, userBranchId, branchStock, branches]);
+
+	// Sort products so all in-stock items appear above and no-stock items appear below
+	const staffBranchProducts = useMemo(() => {
+		const raw = products.filter(p => !p.isDeleted);
+		return [...raw].sort((a, b) => {
+			const qtyA = stockMap.get(a.id) ?? (a.stockQuantity ?? 0);
+			const qtyB = stockMap.get(b.id) ?? (b.stockQuantity ?? 0);
+			const inStockA = qtyA > 0 ? 1 : 0;
+			const inStockB = qtyB > 0 ? 1 : 0;
+			if (inStockA !== inStockB) {
+				return inStockB - inStockA;
+			}
+			return a.productName.localeCompare(b.productName);
+		});
+	}, [products, stockMap]);
+
+	// Search filter matches (memoized)
+	const filteredProducts = useMemo(() => {
+		const q = searchQuery.trim().toLowerCase();
+		if (!q) return [];
+		return staffBranchProducts.filter(p => 
+			p.productName.toLowerCase().includes(q) ||
+			p.sku.toLowerCase().includes(q) ||
+			p.barcode.toLowerCase().includes(q) ||
+			p.category.toLowerCase().includes(q)
+		);
+	}, [searchQuery, staffBranchProducts]);
+
+	// Catalog category filter (memoized)
+	const displayedCatalogProducts = useMemo(() => {
+		return staffBranchProducts.filter(p => {
+			if (catalogCategory === 'TILES') return isTileProduct(p);
+			if (catalogCategory === 'SUPPLIES') return !isTileProduct(p);
+			return true;
+		});
+	}, [staffBranchProducts, catalogCategory]);
 
  // Standard Web Audio synthesizer beep sound
  const playBeep = () => {
@@ -205,28 +236,18 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  }
  }, [calcRoomLength, calcRoomWidth, calcTileLength, calcTileWidth, calcBoxDensity, calcWastagePercent]);
 
- // Handle SKU match / simulate barcode match
- const handleSelectProduct = (prod: Product) => {
- playBeep();
- setScannedProduct(prod);
- setSearchQuery('');
- setScanMessage(`matched barcode: SKU ${prod.sku}`);
- stopCameraStream();
- 
- // Auto audit log search/scan
- addAuditLog(
- 'STAFF_LOOKUP',
- `Staff ${currentUser.fullName} checked price & stock of ${prod.productName} via handheld lookup/simulation.`,
- 'Products',
- prod.id
- );
+	// Handle SKU match / simulate barcode match
+	const handleSelectProduct = (prod: Product) => {
+		playBeep();
+		setScannedProduct(prod);
+		setSearchQuery("");
+		setScanMessage(`Verified: ${prod.productName}`);
+		stopCameraStream();
 
- // Alert popup feedback
- setScanMessage(`Verified: ${prod.productName}`);
- setTimeout(() => {
- setScanMessage(null);
- }, 4000);
- };
+		setTimeout(() => {
+			setScanMessage(null);
+		}, 4000);
+	};
 
  const handleCopyToCalc = (prod: Product) => {
  if (!isTileProduct(prod)) {
@@ -255,7 +276,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
 
  const getBranchStockInfo = (prod: Product) => {
  const branchName = branches.find(b => b.id === currentUser.branchAssignmentId)?.name || 'This Branch';
- const qty = getBranchStockQuantity(prod, userBranchId, branchStock, branches);
+ const qty = getStockQty(prod);
  const bsRec = getBranchStockRecord(prod, userBranchId, branchStock, branches);
  const threshold = bsRec?.lowStockThresholdOverride ?? prod.minimumStock;
  const isOutOfStock = qty <= 0;
@@ -276,7 +297,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
 
  // Cart helper functions
  const handleAddToStaffCart = (prod: Product) => {
- const availableQty = getBranchStockQuantity(prod, userBranchId, branchStock, branches);
+ const availableQty = getStockQty(prod);
  if (availableQty <= 0) {
  showToast(`Cannot add ${prod.productName}: NO STOCKS available!`);
  return;
@@ -302,7 +323,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  setStaffCart(prev => {
  const targetItem = prev.find(item => item.product.id === prodId);
  if (targetItem && delta > 0) {
- const availableQty = getBranchStockQuantity(targetItem.product, userBranchId, branchStock, branches);
+ const availableQty = getStockQty(targetItem.product);
  if (targetItem.quantity + delta > availableQty) {
  showToast(`Stock limit reached (${availableQty} ${targetItem.product.unit}s in stock)!`);
  return prev;
@@ -331,7 +352,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
 
  // Check stock availability for all cart items
  for (const item of staffCart) {
- const avail = getBranchStockQuantity(item.product, userBranchId, branchStock, branches);
+ const avail = getStockQty(item.product);
  if (avail <= 0) {
  showToast(`Order failed: "${item.product.productName}" has NO STOCKS available!`);
  return;
@@ -525,7 +546,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  Matching Catalog ({filteredProducts.length})
  </div>
  {filteredProducts.map((p, idx) => {
- const stockQty = getBranchStockQuantity(p, userBranchId, branchStock, branches);
+ const stockQty = getStockQty(p);
  const isNoStock = stockQty <= 0;
  return (
  <button
@@ -663,11 +684,11 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  
  {/* Corner status label */}
  <div className={`absolute top-3 right-3 text-[9px] font-black uppercase py-1 px-2.5 rounded-full border tracking-wider ${
- getBranchStockQuantity(scannedProduct, userBranchId, branchStock, branches) <= 0
+ getStockQty(scannedProduct) <= 0
  ? 'bg-red-500/20 text-red-500 border-red-500/30'
  : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
  }`}>
- {getBranchStockQuantity(scannedProduct, userBranchId, branchStock, branches) <= 0 ? 'NO STOCKS' : 'Scanned'}
+ {getStockQty(scannedProduct) <= 0 ? 'NO STOCKS' : 'Scanned'}
  </div>
 
  <div className="border-b border-m3-outline-variant/10 pb-3 text-left">
@@ -754,16 +775,16 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <div className="border-t border-m3-outline-variant/15 pt-4 space-y-2">
  <button
  onClick={() => handleAddToStaffCart(scannedProduct)}
- disabled={getBranchStockQuantity(scannedProduct, userBranchId, branchStock, branches) <= 0}
+ disabled={getStockQty(scannedProduct) <= 0}
  className={`w-full py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${
- getBranchStockQuantity(scannedProduct, userBranchId, branchStock, branches) <= 0
+ getStockQty(scannedProduct) <= 0
  ? 'bg-red-500/10 text-red-500 border border-red-500/30 cursor-not-allowed opacity-80'
  : 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-sm'
  }`}
  >
  <ShoppingCart className="h-4 w-4" />
  <span>
- {getBranchStockQuantity(scannedProduct, userBranchId, branchStock, branches) <= 0 
+ {getStockQty(scannedProduct) <= 0 
  ? 'NO STOCKS AVAILABLE — PURCHASE DISABLED' 
  : 'Add to Clerk Order Cart'}
  </span>
@@ -969,7 +990,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  })
  .map((p, idx) => {
  const isTile = isTileProduct(p);
- const qty = getBranchStockQuantity(p, userBranchId, branchStock, branches);
+ const qty = getStockQty(p);
  const isNoStock = qty <= 0;
  return (
  <div 
@@ -1112,7 +1133,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
  <div className="divide-y divide-m3-outline-variant/10">
  {staffCart.map((item, idx) => {
  const totalItemPrice = item.product.sellingPrice * item.quantity;
- const availStock = getBranchStockQuantity(item.product, userBranchId, branchStock, branches);
+ const availStock = getStockQty(item.product);
  const isNoStock = availStock <= 0;
  return (
  <div key={idx} className={`p-3.5 flex items-center justify-between gap-3 text-xs font-semibold ${isNoStock ? 'bg-red-500/5' : ''}`}>

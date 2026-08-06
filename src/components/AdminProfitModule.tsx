@@ -532,9 +532,6 @@ export function AdminProfitModule({
               <h2 className="text-base font-black text-m3-on-surface tracking-tight uppercase">
                 P&L Accounting Desk
               </h2>
-              <span className="text-[10px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 px-2.5 py-0.5 rounded-full font-bold uppercase">
-                Live Financial Engine
-              </span>
             </div>
             <p className="text-xs text-m3-on-surface-variant font-medium mt-0.5">
               Consolidated enterprise profitability, landing cost management & ledger audit logs

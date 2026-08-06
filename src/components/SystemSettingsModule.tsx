@@ -168,8 +168,8 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  }, [currentUser]);
 
  // Settings states loaded from localStorage
- const [textSize, setTextSize] = useState<'normal' | 'large' | 'xlarge'>(() => {
- return (localStorage.getItem('tilepoint-text-size') as 'normal' | 'large' | 'xlarge') || 'normal';
+ const [textSize, setTextSize] = useState<'small' | 'normal' | 'large' | 'xlarge'>(() => {
+ return (localStorage.getItem('tilepoint-text-size') as any) || 'normal';
  });
 
  const [colorContrast, setColorContrast] = useState<'default' | 'medium' | 'high'>(() => {
@@ -230,7 +230,8 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  // Synchronize DOM classes
  if (key === 'tilepoint-text-size') {
  setTextSize(value as any);
- root.classList.remove('accessibility-large-text', 'accessibility-xlarge-text');
+ root.classList.remove('accessibility-small-text', 'accessibility-large-text', 'accessibility-xlarge-text');
+ if (value === 'small') root.classList.add('accessibility-small-text');
  if (value === 'large') root.classList.add('accessibility-large-text');
  if (value === 'xlarge') root.classList.add('accessibility-xlarge-text');
  }
@@ -333,6 +334,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  // Clean DOM
  const root = document.documentElement;
  root.classList.remove(
+ 'accessibility-small-text',
  'accessibility-large-text',
  'accessibility-xlarge-text',
  'accessibility-maximize-text-contrast',
@@ -526,9 +528,9 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  </label>
  <div className="grid grid-cols-3 gap-3">
  {[
+ { id: 'small', name: 'Small (0.88x)', desc: 'Compact dense text scale' },
  { id: 'normal', name: 'Normal (1.0x)', desc: 'Standard readable UI size' },
- { id: 'large', name: 'Large (1.12x)', desc: 'Enlarged body text scale' },
- { id: 'xlarge', name: 'Extra Large (1.24x)', desc: 'Maximum text visibility' }
+ { id: 'large', name: 'Large (1.12x)', desc: 'Enlarged body text scale' }
  ].map((sz) => (
  <button
  key={sz.id}
