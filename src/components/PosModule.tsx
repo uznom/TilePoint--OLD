@@ -826,17 +826,13 @@ export const PosModule: React.FC<PosModuleProps> = ({
  handleCancelSale();
  } else if (e.key === "F2") {
  e.preventDefault();
- searchInputRef.current?.focus();
+ handleFocusSearch();
  } else if (e.key === "F3") {
  e.preventDefault();
  handleHold();
  } else if (e.key === "F4") {
  e.preventDefault();
- try {
- const parkedDrawer = document.getElementById("parked-sales-drawer");
- parkedDrawer?.scrollIntoView({ behavior: "smooth" });
- window.scrollTo(0, 0);
- } catch (_) {}
+ handleViewParkedSales();
  } else if (e.key === "F5") {
  e.preventDefault();
  setCustomerModalInput(customerName);
@@ -847,31 +843,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setShowDiscountModal(true);
  } else if (e.key === "F7") {
  e.preventDefault();
- if (cart.length > 0) {
- const tenderIdx = document.getElementById("cash-tendered-field") as HTMLInputElement | null;
- const isTenderFocused = document.activeElement === tenderIdx;
- const parsedTender = parseFloat(amountTendered || "0");
- const isCashValid = paymentMethod === "Cash" && !isNaN(parsedTender) && parsedTender >= grandTotal;
- const isNonCash = paymentMethod !== "Cash";
-
- if (isTenderFocused || isCashValid || isNonCash) {
- clientCheckout();
- } else {
- try {
- const checkSection = document.getElementById("checkout-action-panel");
- checkSection?.scrollIntoView({ behavior: "smooth" });
- tenderIdx?.focus();
- window.scrollTo(0, 0);
- } catch (_) {}
- }
- } else {
- showToast("Your active cart is currently empty.");
- }
+ handlePaySettleSale();
  } else if (e.key === "F8") {
  e.preventDefault();
- if (activeReceipt) {
- setShowReceiptModal(true);
- }
+ handleReprintLastReceipt();
  } else if (e.key === "F9" || e.key === "F10") {
  // FIX: Re-purposed F9/F10 to serve as the automatic terminal toggle shortcut for shift controls
  e.preventDefault();
@@ -892,7 +867,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  window.addEventListener("keydown", handleKeyDown);
  return () => window.removeEventListener("keydown", handleKeyDown);
- }, [cart, customerName, activeReceipt, activeShift]);
+ }, [cart, customerName, amountTendered, grandTotal, paymentMethod, activeReceipt, activeShift, sales]);
 
  // Cart operations
  const addToCart = (product: Product) => {
@@ -966,7 +941,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
  }
  };
 
- const handleCancelSale = () => {
+ const handleCancelSale = (silent: boolean | React.MouseEvent = false) => {
+ const isSilent = typeof silent === "boolean" ? silent : false;
+ if (cart.length === 0) {
+ if (!isSilent) showToast("Active cart is already empty.");
+ return;
+ }
  setCart([]);
  setCustomerName("Walk-in Customer");
  setCustomerNotes("");
@@ -984,13 +964,74 @@ export const PosModule: React.FC<PosModuleProps> = ({
  localStorage.removeItem("tp_pos_session_checkpoint");
  localStorage.removeItem("tp_pending_delivery_draft");
  } catch (_) {}
+ if (!isSilent) showToast("Active transaction basket cleared.");
+ };
+
+ const handleFocusSearch = () => {
+ if (searchInputRef.current) {
+      searchInputRef.current.focus();
+      try { searchInputRef.current.select(); } catch (_) {}
+ try {
+ searchInputRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+ } catch (_) {}
+ }
+ };
+
+ const handleViewParkedSales = () => {
+ try {
+ const parkedDrawer = document.getElementById("parked-sales-drawer");
+ if (parkedDrawer) {
+ parkedDrawer.scrollIntoView({ behavior: "smooth" });
+ } else {
+ showToast("No parked hold transactions in memory.");
+ }
+ } catch (_) {}
+ };
+
+ const handlePaySettleSale = () => {
+ if (cart.length === 0) {
+ showToast("Your active cart is currently empty.");
+ return;
+ }
+ const tenderIdx = document.getElementById("cash-tendered-field") as HTMLInputElement | null;
+ const parsedTender = parseFloat(amountTendered || "0");
+ const isCashValid = paymentMethod === "Cash" && !isNaN(parsedTender) && parsedTender >= grandTotal;
+ const isNonCash = paymentMethod !== "Cash";
+
+ if (isCashValid || isNonCash) {
+ clientCheckout();
+ } else {
+ if (paymentMethod === "Cash" && (!amountTendered || parsedTender < grandTotal)) {
+ setAmountTendered(grandTotal.toString());
+ }
+ try {
+ const checkSection = document.getElementById("checkout-action-panel");
+ checkSection?.scrollIntoView({ behavior: "smooth" });
+ setTimeout(() => tenderIdx?.focus(), 100);
+ } catch (_) {}
+ }
+ };
+
+ const handleReprintLastReceipt = () => {
+ if (activeReceipt) {
+ setShowReceiptModal(true);
+ } else if (sales && sales.length > 0) {
+ const lastSale = sales[sales.length - 1];
+ setActiveReceipt(lastSale);
+ setShowReceiptModal(true);
+ } else {
+ showToast("No transaction has been processed in this session yet.");
+ }
  };
 
  // Park Sale operations
  const handleHold = () => {
- if (cart.length === 0) return;
+ if (cart.length === 0) {
+ showToast("Basket is empty. Nothing to park.");
+ return;
+ }
  holdSale(cart, customerName, customerNotes, activePosBranchId);
- handleCancelSale();
+ handleCancelSale(true);
  showToast("Transaction parked inside safe hold registers.");
  };
 
@@ -2369,7 +2410,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setIsManualSyncingQueue(true);
  try {
  await syncFromSharedServer(true);
- showToast("⚡ Queue state refreshed from central register!");
+ showToast("Queue state refreshed from central register!");
  } catch (_) {
  showToast("⚠️ Unable to reach sync server.");
  } finally {
@@ -2479,39 +2520,13 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <div className="grid grid-cols-2 gap-2">
  {[
  { key: "F1", desc: "Void Current Sale", action: () => handleCancelSale(), bg: "hover:bg-rose-500/10 hover:border-rose-500/30 text-rose-600 dark:text-rose-400" },
- { key: "F2", desc: "Focus Search Catalog", action: () => searchInputRef.current?.focus(), bg: "hover:bg-m3-primary/10 hover:border-m3-primary/30" },
+ { key: "F2", desc: "Focus Search Catalog", action: () => handleFocusSearch(), bg: "hover:bg-m3-primary/10 hover:border-m3-primary/30 text-m3-primary" },
  { key: "F3", desc: "Hold Order Stash", action: () => handleHold(), bg: "hover:bg-amber-500/10 hover:border-amber-500/30 text-amber-600 dark:text-amber-400" },
+ { key: "F4", desc: "View Parked Sales", action: () => handleViewParkedSales(), bg: "hover:bg-indigo-500/10 hover:border-indigo-500/30 text-indigo-600 dark:text-indigo-400" },
  { key: "F5", desc: "Assign Customer Name", action: () => { setCustomerModalInput(customerName); setShowCustomerModal(true); }, bg: "hover:bg-m3-primary/10 hover:border-m3-primary/30 text-m3-primary" },
  { key: "F6", desc: "Apply Code/Discount", action: () => { setDiscountInput(""); setShowDiscountModal(true); }, bg: "hover:bg-teal-500/10 hover:border-teal-500/30 text-teal-600 dark:text-teal-400" },
- { key: "F7", desc: "Pay / Settle Sale", action: () => {
- if (cart.length > 0) {
- const tenderIdx = document.getElementById("cash-tendered-field") as HTMLInputElement | null;
- const isTenderFocused = document.activeElement === tenderIdx;
- const parsedTender = parseFloat(amountTendered || "0");
- const isCashValid = paymentMethod === "Cash" && !isNaN(parsedTender) && parsedTender >= grandTotal;
- const isNonCash = paymentMethod !== "Cash";
-
- if (isTenderFocused || isCashValid || isNonCash) {
- clientCheckout();
- } else {
- try {
- const checkSection = document.getElementById("checkout-action-panel");
- checkSection?.scrollIntoView({ behavior: "smooth" });
- tenderIdx?.focus();
- window.scrollTo(0, 0);
- } catch (_) {}
- }
- } else {
- showToast("Your active cart is currently empty.");
- }
- }, bg: "hover:bg-emerald-500/10 hover:border-emerald-500/30 text-emerald-600 dark:text-emerald-400" },
- { key: "F8", desc: "Reprint Last Receipt", action: () => {
- if (activeReceipt) {
- setShowReceiptModal(true);
- } else {
- alert("No transaction has been processed in this session yet.");
- }
- }, bg: "hover:bg-purple-500/10 hover:border-purple-500/30 text-purple-600 dark:text-purple-400" },
+ { key: "F7", desc: "Pay / Settle Sale", action: () => handlePaySettleSale(), bg: "hover:bg-emerald-500/10 hover:border-emerald-500/30 text-emerald-600 dark:text-emerald-400" },
+ { key: "F8", desc: "Reprint Last Receipt", action: () => handleReprintLastReceipt(), bg: "hover:bg-purple-500/10 hover:border-purple-500/30 text-purple-600 dark:text-purple-400" },
  { key: "F9/10", desc: "Shift Active Controls", action: () => {
  if (activeShift) {
  setCloseShiftCashInput("");
@@ -2774,7 +2789,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  Rapid Barcode Laser Scanner / Item SKU Input
  </label>
  <div className="relative font-sans">
- <input
+ <input ref={searchInputRef}
  type="text"
  value={barcodeSearchTerm ?? ''}
  onChange={(e) =>
@@ -3165,30 +3180,42 @@ export const PosModule: React.FC<PosModuleProps> = ({
  />
 
  {paymentMethod === "Cash" && grandTotal > 0 && (
- <div className="flex flex-wrap gap-1 mt-1">
+ <div className="space-y-1.5 mt-1.5">
+ <div className="flex flex-wrap items-center gap-1">
  <button
  type="button"
- onClick={() =>
- setAmountTendered(grandTotal.toString())
- }
- className="text-[9px] font-black uppercase bg-m3-primary/10 text-m3-primary px-1.5 py-0.5 rounded border border-m3-primary/20 hover:bg-m3-primary/20"
+ onClick={() => setAmountTendered(grandTotal.toString())}
+ className="text-[9px] font-black uppercase bg-m3-primary/15 text-m3-primary px-2 py-0.5 rounded border border-m3-primary/30 hover:bg-m3-primary/25 active:scale-95 transition-all cursor-pointer shadow-sm"
  >
- Exact
+ Exact (₱{grandTotal.toFixed(2)})
  </button>
- {[100, 500, 1000].map((val) => (
+ {[100, 200, 500, 1000, 2000].map((val) => (
  <button
- key={val}
+ key={`bill-${val}`}
+ type="button"
+ onClick={() => setAmountTendered(val.toString())}
+ className="text-[9px] font-black bg-zinc-800 hover:bg-zinc-700 text-white px-2 py-0.5 rounded shadow-sm border border-zinc-700 active:scale-95 transition-all cursor-pointer"
+ >
+ ₱{val}
+ </button>
+ ))}
+ </div>
+ <div className="flex flex-wrap items-center gap-1">
+ <span className="text-[8.5px] font-black uppercase text-zinc-400 font-mono mr-1">Quick Add:</span>
+ {[50, 100, 500, 1000].map((val) => (
+ <button
+ key={`add-${val}`}
  type="button"
  onClick={() => {
- const current =
- parseFloat(amountTendered) || 0;
+ const current = parseFloat(amountTendered) || 0;
  setAmountTendered((current + val).toString());
  }}
- className="text-[9px] font-black bg-zinc-800 text-white hover:bg-zinc-700 px-1.5 py-0.5 rounded shadow-sm"
+ className="text-[9px] font-black bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded shadow-sm active:scale-95 transition-all cursor-pointer"
  >
  +₱{val}
  </button>
  ))}
+ </div>
  </div>
  )}
  </div>

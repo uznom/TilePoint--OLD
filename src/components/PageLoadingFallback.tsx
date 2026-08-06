@@ -9,8 +9,8 @@ export const PageLoadingFallback: React.FC<PageLoadingFallbackProps> = ({
   message = "Loading Module...",
 }) => {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[400px] w-full p-8 space-y-6">
-      <div className="w-full max-w-4xl space-y-4">
+    <div className="flex flex-col items-center justify-center min-h-[400px] w-full p-4 sm:p-6 lg:p-8 space-y-6">
+      <div className="w-full space-y-4">
         <div className="flex items-center justify-between">
           <div className="h-8 w-48 bg-m3-surface-container-high/60 rounded-xl animate-pulse" />
           <div className="h-8 w-24 bg-m3-surface-container-high/60 rounded-xl animate-pulse" />

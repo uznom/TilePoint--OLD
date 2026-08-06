@@ -879,7 +879,24 @@ table thead tr th:last-child {
    ACCESSIBILITY OVERGRADES & RECOGNITION CLASSES
    ======================================================== */
 
-/* 1. Large Screen Font Scale Customizers */
+/* 1. Font Scale Customizers */
+html.accessibility-small-text {
+  font-size: 88% !important;
+}
+html.accessibility-small-text .text-xs,
+html.accessibility-small-text .text-\[10px\] {
+  font-size: 0.65rem !important;
+}
+html.accessibility-small-text .text-sm {
+  font-size: 0.78rem !important;
+}
+html.accessibility-small-text .text-base {
+  font-size: 0.88rem !important;
+}
+html.accessibility-small-text .text-lg {
+  font-size: 1.02rem !important;
+}
+
 html.accessibility-large-text {
   font-size: 112% !important;
 }

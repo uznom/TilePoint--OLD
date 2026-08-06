@@ -8,8 +8,9 @@ export const TAB_TO_PATH: Record<string, string> = {
   'profit-analytics': '/analytics',
   pos: '/pos',
   ledger: '/ledger',
-  inventory: '/inventory',
+  inventory: '/inventory/stocks',
   procurement: '/procurement',
+  'procurement-po': '/procurement/po',
   transmittal: '/transmittal',
   shift: '/shifts',
   calculator: '/calculator',
@@ -32,6 +33,28 @@ export const TAB_TO_PATH: Record<string, string> = {
   'inventory-import': '/inventory/import',
   'inventory-branch-prices': '/inventory/branch-prices',
   'inventory-expiry': '/inventory/expiry',
+  members: '/members',
+  'members-manage': '/members/manage',
+  'members-receivables': '/members/receivables',
+  'members-loyalty': '/members/loyalty',
+  'members-search-sales': '/members/search-sales',
+  bir: '/bir',
+  'bir-xz': '/bir/xz',
+  'bir-summary': '/bir/summary',
+  'bir-pwd': '/bir/pwd',
+  'bir-athletes': '/bir/athletes',
+  'bir-solo': '/bir/solo',
+  'bir-senior20': '/bir/senior20',
+  'bir-senior5': '/bir/senior5',
+  'bir-regular': '/bir/regular',
+  supplier: '/supplier',
+  'suppliers-credits': '/suppliers/credits',
+  'suppliers-calendar': '/suppliers/calendar',
+  expenses: '/expenses',
+  'expenses-add': '/expenses/add',
+  'expenses-search': '/expenses/search',
+  adjustments: '/adjustments',
+  'adjustments-return': '/adjustments/return',
 };
 
 export const PATH_TO_TAB: Record<string, string> = {
@@ -40,8 +63,9 @@ export const PATH_TO_TAB: Record<string, string> = {
   '/analytics': 'profit-analytics',
   '/pos': 'pos',
   '/ledger': 'ledger',
-  '/inventory': 'inventory',
+  '/inventory': 'inventory-stocks',
   '/procurement': 'procurement',
+  '/procurement/po': 'procurement-po',
   '/transmittal': 'transmittal',
   '/shifts': 'shift',
   '/calculator': 'calculator',
@@ -64,6 +88,29 @@ export const PATH_TO_TAB: Record<string, string> = {
   '/inventory/import': 'inventory-import',
   '/inventory/branch-prices': 'inventory-branch-prices',
   '/inventory/expiry': 'inventory-expiry',
+  '/members': 'members-manage',
+  '/members/manage': 'members-manage',
+  '/members/receivables': 'members-receivables',
+  '/members/loyalty': 'members-loyalty',
+  '/members/search-sales': 'members-search-sales',
+  '/bir': 'bir-xz',
+  '/bir/xz': 'bir-xz',
+  '/bir/summary': 'bir-summary',
+  '/bir/pwd': 'bir-pwd',
+  '/bir/athletes': 'bir-athletes',
+  '/bir/solo': 'bir-solo',
+  '/bir/senior20': 'bir-senior20',
+  '/bir/senior5': 'bir-senior5',
+  '/bir/regular': 'bir-regular',
+  '/supplier': 'suppliers-manage',
+  '/suppliers/manage': 'suppliers-manage',
+  '/suppliers/credits': 'suppliers-credits',
+  '/suppliers/calendar': 'suppliers-calendar',
+  '/expenses': 'expenses-add',
+  '/expenses/add': 'expenses-add',
+  '/expenses/search': 'expenses-search',
+  '/adjustments': 'adjustments-return',
+  '/adjustments/return': 'adjustments-return',
 };
 
 export interface UseRouteSyncOptions {
@@ -109,7 +156,6 @@ export function useRouteSyncManager(options: UseRouteSyncOptions = {}) {
   const { currentUser, defaultTab = 'dashboard' } = options;
   const location = useLocation();
   const navigate = useNavigate();
-  const isNavigatingRef = useRef(false);
 
   // Initial tab resolution logic
   const resolveInitialTab = useCallback((): string => {
@@ -140,6 +186,10 @@ export function useRouteSyncManager(options: UseRouteSyncOptions = {}) {
 
   const [activeTab, setActiveTabState] = useState<string>(resolveInitialTab);
 
+  // Track the expected target path corresponding to activeTab state
+  const initialRoute = validateAndNormalizeRoute(activeTab);
+  const targetPathRef = useRef<string>(initialRoute.path);
+
   // Pre-emptive route validation helper
   const isRouteValid = useCallback((tabOrPath: string): boolean => {
     return validateAndNormalizeRoute(tabOrPath).isValid;
@@ -163,50 +213,41 @@ export function useRouteSyncManager(options: UseRouteSyncOptions = {}) {
     });
   }, []);
 
-  // Synchronize internal state change to browser URL
+  // Single unified Effect for bidirectional Route <-> Tab Syncing without race conditions or bouncing
   useEffect(() => {
-    if (!activeTab || typeof activeTab !== 'string') return;
+    const currentPath = location.pathname;
+    const activeRouteInfo = validateAndNormalizeRoute(activeTab);
+    const expectedPath = activeRouteInfo.path;
 
-    const routeInfo = validateAndNormalizeRoute(activeTab);
-    const targetPath = routeInfo.path;
-
-    if (location.pathname !== targetPath && !isNavigatingRef.current) {
-      isNavigatingRef.current = true;
-      try {
-        navigate(targetPath, { replace: true });
-      } catch (err) {
-        console.warn('[RouteSyncManager] Navigation error:', err);
-      } finally {
-        setTimeout(() => {
-          isNavigatingRef.current = false;
-        }, 50);
-      }
+    // Case 1: activeTab changed internally (via setActiveTab / changeTab)
+    // We need to update the browser URL to match activeTab.
+    if (currentPath !== expectedPath && targetPathRef.current !== expectedPath) {
+      targetPathRef.current = expectedPath;
+      navigate(expectedPath, { replace: true });
+      return;
     }
-  }, [activeTab, location.pathname, navigate]);
 
-  // Synchronize browser URL changes (back/forward popstate) to internal state with pre-emptive route validation
-  useEffect(() => {
-    const rawPath = location.pathname;
-    const routeInfo = validateAndNormalizeRoute(rawPath);
-
-    if (routeInfo.isValid) {
-      if (activeTab !== routeInfo.tab) {
-        setActiveTabState(routeInfo.tab);
+    // Case 2: Browser URL changed externally (via browser Back/Forward or direct navigation)
+    // We need to update activeTab to match the browser URL.
+    if (currentPath !== expectedPath && currentPath !== targetPathRef.current) {
+      const urlRouteInfo = validateAndNormalizeRoute(currentPath);
+      if (urlRouteInfo.isValid) {
+        targetPathRef.current = urlRouteInfo.path;
+        setActiveTabState(urlRouteInfo.tab);
         if (typeof window !== 'undefined') {
-          localStorage.setItem('tilepoint_active_tab', routeInfo.tab);
+          localStorage.setItem('tilepoint_active_tab', urlRouteInfo.tab);
         }
-        trackModuleVisit(routeInfo.tab);
-        prefetchModule(routeInfo.tab);
+        trackModuleVisit(urlRouteInfo.tab);
+        prefetchModule(urlRouteInfo.tab);
+      } else if (currentPath !== '/' && currentPath !== '/dashboard') {
+        const fallbackTab = currentUser?.role === UserRole.CASHIER ? 'pos' : defaultTab;
+        const fallbackPath = TAB_TO_PATH[fallbackTab] || '/dashboard';
+        targetPathRef.current = fallbackPath;
+        setActiveTabState(fallbackTab);
+        navigate(fallbackPath, { replace: true });
       }
-    } else if (rawPath !== '/' && rawPath !== '/dashboard') {
-      // Pre-emptive fallback for unknown/unrecognized routes
-      console.warn(`[RouteSyncManager] Unrecognized route "${rawPath}", redirecting to fallback route.`);
-      const fallbackTab = currentUser?.role === UserRole.CASHIER ? 'pos' : defaultTab;
-      const fallbackPath = TAB_TO_PATH[fallbackTab] || '/dashboard';
-      setActiveTabState(fallbackTab);
-      navigate(fallbackPath, { replace: true });
     }
-  }, [location.pathname, activeTab, currentUser, defaultTab, navigate]);
+  }, [activeTab, location.pathname, currentUser?.role, defaultTab, navigate]);
 
   return {
     activeTab,

@@ -350,7 +350,7 @@ function AppContent() {
  const height = window.innerHeight;
  setWindowWidth(width);
  setWindowHeight(height);
- setIsMobileViewport(width < 1024);
+ setIsMobileViewport(width < 640);
  
  if (width < 640) {
  setViewportBreakpoint("mobile");
@@ -395,7 +395,7 @@ function AppContent() {
  const height = window.innerHeight;
  setWindowWidth(width);
  setWindowHeight(height);
- setIsMobileViewport(width < 1024);
+ setIsMobileViewport(width < 640);
  if (width < 640) {
  setViewportBreakpoint("mobile");
  } else if (width < 1024) {
@@ -413,13 +413,17 @@ function AppContent() {
  };
 
  // Dynamic automatic routing on login/identity-switch to ensure Admin sees dashboard first
+ const hasInitializedRoutingRef = useRef(false);
  useEffect(() => {
  if (isLoggedIn && currentUser) {
+ if (hasInitializedRoutingRef.current) return;
+ hasInitializedRoutingRef.current = true;
+
  if (typeof window !== "undefined") {
  const currentPath = window.location.pathname;
  if (currentPath && currentPath !== "/") {
  const routeTab = PATH_TO_TAB[currentPath] || currentPath.replace(/^\//, "");
- if (routeTab) return;
+ if (routeTab && isRouteValid(routeTab)) return;
  }
  }
  const savedTab =
@@ -449,6 +453,8 @@ function AppContent() {
  } else {
  setActiveTab("inventory-stocks");
  }
+ } else {
+ hasInitializedRoutingRef.current = false;
  }
  }, [isLoggedIn, currentUser?.id, currentUser?.role]);
  const [isSidebarExpanded, setIsSidebarExpanded] = useState(() => {
@@ -473,6 +479,15 @@ function AppContent() {
  String(isSidebarMinimized),
  );
  }, [isSidebarExpanded, isSidebarMinimized]);
+
+  // Auto-collapse sidebar when in tablet viewport mode to save space while keeping icons visible
+  const prevViewportBreakpointRef = useRef<string>("");
+  useEffect(() => {
+    if (viewportBreakpoint === "tablet" && prevViewportBreakpointRef.current !== "tablet") {
+      setIsSidebarExpanded(false);
+    }
+    prevViewportBreakpointRef.current = viewportBreakpoint;
+  }, [viewportBreakpoint]);
 
  const [followSystemTheme, setFollowSystemTheme] = useState(() => {
  const saved = localStorage.getItem("tilepoint_follow_system_theme");
@@ -748,6 +763,7 @@ function AppContent() {
  const noBlur = localStorage.getItem("tilepoint-disable-blurs") === "true";
  const textSize =
  (localStorage.getItem("tilepoint-text-size") as
+ | "small"
  | "normal"
  | "large"
  | "xlarge") || "normal";
@@ -780,10 +796,13 @@ function AppContent() {
 
  // Sync Font Size classes
  document.documentElement.classList.remove(
+ "accessibility-small-text",
  "accessibility-large-text",
  "accessibility-xlarge-text"
  );
- if (textSize === "large") {
+ if (textSize === "small") {
+ document.documentElement.classList.add("accessibility-small-text");
+ } else if (textSize === "large") {
  document.documentElement.classList.add("accessibility-large-text");
  } else if (textSize === "xlarge") {
  document.documentElement.classList.add("accessibility-xlarge-text");
@@ -973,36 +992,37 @@ function AppContent() {
  trackModuleVisit(tabId);
  prefetchModule(tabId);
 
- if (disableAnimations || lowPerformanceMode) {
+ // Synchronize tab state immediately to eliminate asynchronous routing glitches and bouncing
  setActiveTab(tabId);
+
+ if (disableAnimations || lowPerformanceMode) {
  setIsTabChanging(false);
  setPercentProgress(0);
  return;
  }
 
  setIsTabChanging(true);
- setPercentProgress(15);
+ setPercentProgress(35);
 
- // Simulate progression loader
+ // Fast top linear progress indicator
  const interval = setInterval(() => {
  setPercentProgress((prev) => {
- if (prev >= 90) {
+ if (prev >= 95) {
  clearInterval(interval);
- return 90;
+ return 95;
  }
- return prev + 18;
+ return prev + 20;
  });
- }, 60);
+ }, 30);
 
  setTimeout(() => {
  clearInterval(interval);
  setPercentProgress(100);
- setActiveTab(tabId);
  setTimeout(() => {
  setIsTabChanging(false);
  setPercentProgress(0);
- }, 100);
- }, 400);
+ }, 60);
+ }, 120);
  };
 
  // Tab change simulator timer with active linear progress
@@ -2230,6 +2250,7 @@ function AppContent() {
  exit={{ opacity: 0 }}
  transition={{ duration: 0.15 }}
  style={{ willChange: "opacity" }}
+ className="w-full h-full"
  >
  <SkeletalLoader />
  </motion.div>
@@ -2374,20 +2395,24 @@ function AppContent() {
  viewMode="ledger"
  />
  )}
- {activeTab === "suppliers-manage" && (
+ {(activeTab === "suppliers-manage" || activeTab === "procurement-po") && (
  <ProcurementModule darkMode={darkMode} />
  )}
 
  {/* Integration of ATPOS v2 Specific Submodules */}
  {[
+ "members",
  "members-manage",
  "members-receivables",
  "members-loyalty",
  "members-search-sales",
+ "expenses",
  "expenses-add",
  "expenses-search",
+ "supplier",
  "suppliers-credits",
  "suppliers-calendar",
+ "bir",
  "bir-xz",
  "bir-summary",
  "bir-pwd",
@@ -2396,10 +2421,18 @@ function AppContent() {
  "bir-senior20",
  "bir-senior5",
  "bir-regular",
+ "adjustments",
  "adjustments-return",
  ].includes(activeTab) && (
  <AtposExtraModules
- activeSubTab={activeTab}
+ activeSubTab={
+   activeTab === "members" ? "members-manage" :
+   activeTab === "expenses" ? "expenses-add" :
+   activeTab === "supplier" ? "suppliers-credits" :
+   activeTab === "bir" ? "bir-xz" :
+   activeTab === "adjustments" ? "adjustments-return" :
+   activeTab
+ }
  darkMode={darkMode}
  onNavigate={changeTab}
  />

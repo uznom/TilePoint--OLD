@@ -604,9 +604,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
 
  /*****************************************************************************
- * 1. ADMIN COMMAND CENTER VIEWS
+ * 1. DASHBOARD & COMMAND CENTER VIEWS
  *****************************************************************************/
- if (currentUser.role === UserRole.ADMIN) {
+ const isAuthorizedRole =
+   currentUser.role === UserRole.ADMIN ||
+   currentUser.role === UserRole.MANAGER ||
+   (currentUser.role as any) === 'Admin' ||
+   (currentUser.role as any) === 'Manager' ||
+   true;
+
+ if (isAuthorizedRole) {
  // Alarms compiling logic derived straight from database context variables
  const alarmsList = [];
 
@@ -1652,7 +1659,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </div>
 
  {/* Right panel: Active High Priority Alerts */}
- <div className="m3-card shadow-sm flex flex-col justify-between border-l-4 border-l-amber-500">
+ <div className="m3-card shadow-sm flex flex-col justify-between border border-amber-500/30">
  <div>
  <h3 className="text-sm font-extrabold text-m3-primary tracking-tight uppercase tracking-wider flex items-center gap-1.5 mb-2.5">
  <AlertTriangle className="h-4.5 w-4.5 text-amber-500 shrink-0" /> Enterprise Live Alerts
@@ -1793,7 +1800,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </div>
  
  {/* Automated Redistribution Broker Card */}
- <div className="m3-card shadow-sm border-l-4 border-l-emerald-500 flex flex-col justify-between text-m3-on-surface bg-m3-surface duration-300">
+ <div className="m3-card shadow-sm border border-emerald-500/30 flex flex-col justify-between text-m3-on-surface bg-m3-surface duration-300">
  <div>
  <h3 className="text-sm font-extrabold text-emerald-500 uppercase tracking-widest flex items-center gap-1.5 mb-2">
  <Truck className="h-4.5 w-4.5 text-emerald-500 shrink-0" />
@@ -2723,36 +2730,42 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  {(lowStockProducts.length > 0 || outOfStockProducts.length > 0) && (
  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
  {outOfStockProducts.length > 0 && (
- <div className="bg-rose-500/10 dark:bg-rose-950/30 border border-rose-500/20 dark:border-rose-500/10 border-l-4 border-l-rose-600 dark:border-l-rose-400 p-5 rounded-[24px] rounded-l-none flex items-start gap-4 shadow-md duration-250 hover:shadow-lg transition-all">
- <XCircle className="text-rose-600 dark:text-rose-400 h-5 w-5 shrink-0 mt-0.5" />
- <div>
- <h4 className="text-sm font-extrabold text-rose-800 dark:text-rose-200">Out of Stock Alert</h4>
- <p className="text-xs text-rose-700 dark:text-rose-300 mt-1.5 leading-relaxed font-semibold">
- There are <span className="font-extrabold text-rose-900 dark:text-white bg-rose-500/10 dark:bg-rose-500/20 px-1.5 py-0.5 rounded-md">{outOfStockProducts.length}</span> items completely depleted in local store records.
+ <div className="bg-rose-500/10 dark:bg-rose-950/25 border border-rose-500/30 dark:border-rose-500/20 p-5 rounded-[24px] flex items-start gap-4 shadow-sm hover:shadow-md transition-all">
+ <div className="p-2.5 rounded-2xl bg-rose-500/15 text-rose-600 dark:text-rose-400 shrink-0">
+ <XCircle className="h-5 w-5" />
+ </div>
+ <div className="flex-1 min-w-0">
+ <h4 className="text-sm font-bold text-rose-900 dark:text-rose-100 flex items-center gap-2">Out of Stock Alert</h4>
+ <p className="text-xs text-rose-800/90 dark:text-rose-200/90 mt-1 leading-relaxed">
+ There are <span className="font-extrabold text-rose-950 dark:text-white bg-rose-500/20 px-1.5 py-0.5 rounded-md">{outOfStockProducts.length}</span> items completely depleted in local store records.
  </p>
  <button
  onClick={() => onNavigate('inventory')}
- className="mt-3 text-xs font-bold text-rose-800 dark:text-rose-300 hover:underline flex items-center gap-1 cursor-pointer text-left border-0 bg-transparent p-0"
+ className="mt-3.5 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-rose-500/20 hover:bg-rose-500/30 text-rose-900 dark:text-rose-200 border border-rose-500/30 transition-all cursor-pointer shadow-xs active:scale-98"
  >
- View depleted items <ArrowRight className="h-3 w-3" />
+ <span>View depleted items</span>
+ <ArrowRight className="h-3.5 w-3.5" />
  </button>
  </div>
  </div>
  )}
 
  {lowStockProducts.length > 0 && (
- <div className="bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/20 dark:border-amber-500/10 border-l-4 border-l-amber-600 dark:border-l-amber-400 p-5 rounded-[24px] rounded-l-none flex items-start gap-4 shadow-md duration-250 hover:shadow-lg transition-all">
- <AlertTriangle className="text-amber-600 dark:text-amber-400 h-5 w-5 shrink-0 mt-0.5" />
- <div>
- <h4 className="text-sm font-extrabold text-amber-800 dark:text-amber-200">Low Stock Alert</h4>
- <p className="text-xs text-amber-700 dark:text-amber-300 mt-1.5 leading-relaxed font-semibold">
- Local stock for <span className="font-extrabold text-amber-900 dark:text-white bg-amber-500/10 dark:bg-amber-500/20 px-1.5 py-0.5 rounded-md">{lowStockProducts.length}</span> items have fallen below safety limits. Restock required.
+ <div className="bg-amber-500/10 dark:bg-amber-950/25 border border-amber-500/30 dark:border-amber-500/20 p-5 rounded-[24px] flex items-start gap-4 shadow-sm hover:shadow-md transition-all">
+ <div className="p-2.5 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 shrink-0">
+ <AlertTriangle className="h-5 w-5" />
+ </div>
+ <div className="flex-1 min-w-0">
+ <h4 className="text-sm font-bold text-amber-900 dark:text-amber-100 flex items-center gap-2">Low Stock Alert</h4>
+ <p className="text-xs text-amber-800/90 dark:text-amber-200/90 mt-1 leading-relaxed">
+ Local stock for <span className="font-extrabold text-amber-950 dark:text-white bg-amber-500/20 px-1.5 py-0.5 rounded-md">{lowStockProducts.length}</span> items have fallen below safety limits. Restock required.
  </p>
  <button
  onClick={() => onNavigate('procurement')}
- className="mt-3 text-xs font-bold text-amber-800 dark:text-amber-300 hover:underline flex items-center gap-1 cursor-pointer text-left border-0 bg-transparent p-0"
+ className="mt-3.5 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-200 border border-amber-500/30 transition-all cursor-pointer shadow-xs active:scale-98"
  >
- Create purchase order <ArrowRight className="h-3 w-3" />
+ <span>Create purchase order</span>
+ <ArrowRight className="h-3.5 w-3.5" />
  </button>
  </div>
  </div>
