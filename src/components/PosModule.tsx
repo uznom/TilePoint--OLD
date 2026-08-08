@@ -1492,10 +1492,18 @@ export const PosModule: React.FC<PosModuleProps> = ({
  csv += `"Total Records Exported:","${filteredSales.length} Transactions"\n\n`;
 
  // Statistics section
- const totalSubtotal = filteredSales.reduce((acc, s) => acc + (Number(s.subtotal) || 0), 0);
- const totalDiscount = filteredSales.reduce((acc, s) => acc + (Number(s.discount) || 0), 0);
- const totalVat = filteredSales.reduce((acc, s) => acc + (Number(s.vat) || 0), 0);
- const totalGrand = filteredSales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
+ const { totalSubtotal, totalDiscount, totalVat, totalGrand } = filteredSales.reduce((acc, s) => {
+   acc.totalSubtotal += Number(s.subtotal) || 0;
+   acc.totalDiscount += Number(s.discount) || 0;
+   acc.totalVat += Number(s.vat) || 0;
+   acc.totalGrand += Number(s.grandTotal) || 0;
+   return acc;
+ }, {
+   totalSubtotal: 0,
+   totalDiscount: 0,
+   totalVat: 0,
+   totalGrand: 0
+ });
 
  csv += `"AGGREGATE SUMS STATISTICS"\n`;
  csv += `"Total Base Subtotal","PHP ${(Number(totalSubtotal) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}"\n`;
@@ -1849,18 +1857,29 @@ export const PosModule: React.FC<PosModuleProps> = ({
  });
 
  const ledgerStats = React.useMemo(() => {
- const activeSales = filteredSales.filter(s => !s.isDeleted);
- const voidedSales = filteredSales.filter(s => s.isDeleted);
- const netRevenue = activeSales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
- const totalDiscount = activeSales.reduce((acc, s) => acc + (Number(s.discount) || 0), 0);
- const totalVat = activeSales.reduce((acc, s) => acc + (Number(s.vat) || 0), 0);
+ // ⚡ Bolt: Fused multiple O(N) array passes (filter/reduce) into a single O(N) reduce operation.
+ // Reduces rendering time and memory usage for potentially large filteredSales arrays.
+ const stats = filteredSales.reduce((acc, s) => {
+   if (s.isDeleted) {
+     acc.voidedCount++;
+   } else {
+     acc.activeCount++;
+     acc.netRevenue += Number(s.grandTotal) || 0;
+     acc.totalDiscount += Number(s.discount) || 0;
+     acc.totalVat += Number(s.vat) || 0;
+   }
+   return acc;
+ }, {
+   activeCount: 0,
+   voidedCount: 0,
+   netRevenue: 0,
+   totalDiscount: 0,
+   totalVat: 0
+ });
+
  return {
- activeCount: activeSales.length,
- voidedCount: voidedSales.length,
- netRevenue,
- totalDiscount,
- totalVat,
- totalCount: filteredSales.length
+   ...stats,
+   totalCount: filteredSales.length
  };
  }, [filteredSales]);
 
