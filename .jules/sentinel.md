@@ -6,3 +6,8 @@
 **Vulnerability:** A critical HMAC signing secret (`TILEPOINT_SECURE_PERIMETER_HMAC_SECRET_2026`) was hardcoded in both the frontend (`src/lib/crypto.ts`) and backend (`server.js`), allowing potential session token forgery if source code is exposed.
 **Learning:** In applications with shared logic or symmetry between client and server (like session signing), removing hardcoded secrets requires careful orchestration. The secret must be provided via environment variables (like `dotenv` for Node and `import.meta.env` for Vite), AND any fallback mechanisms must be identical on both ends. Otherwise, cryptographic mismatches occur.
 **Prevention:** Use environment variables for secrets, ensure symmetric fallback logic when defaults are necessary, and add TypeScript definitions for Vite env variables to prevent compilation issues.
+
+## 2024-05-24 - AlaSQL Injection Vulnerabilities in Fallback Logic
+**Vulnerability:** SQL injection vulnerabilities existed in `server.js` within the AlaSQL fallback blocks due to direct string concatenation of unsanitized user inputs into AlaSQL queries (e.g., `alasql('SELECT * FROM sales WHERE shiftId = ' + shiftId)` or string template literals).
+**Learning:** Even internal fallback databases like AlaSQL evaluate SQL queries and are susceptible to SQL injection attacks if input is not parameterized. This can occur when primary database logic (like MySQL) fails and control falls back to an older, less secure pattern.
+**Prevention:** Always use parameterized arrays for AlaSQL queries. The syntax `alasql('SELECT * FROM table WHERE column = ?', [value])` handles parameterization properly.
