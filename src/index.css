@@ -879,57 +879,158 @@ table thead tr th:last-child {
    ACCESSIBILITY OVERGRADES & RECOGNITION CLASSES
    ======================================================== */
 
-/* 1. Font Scale Customizers */
+/* 1. Font Scale Customizers (System UI Only - Excludes Receipts) */
+:root {
+  --sys-font-scale: 1;
+}
+
 html.accessibility-small-text {
-  font-size: 88% !important;
-}
-html.accessibility-small-text .text-xs,
-html.accessibility-small-text .text-\[10px\] {
-  font-size: 0.65rem !important;
-}
-html.accessibility-small-text .text-sm {
-  font-size: 0.78rem !important;
-}
-html.accessibility-small-text .text-base {
-  font-size: 0.88rem !important;
-}
-html.accessibility-small-text .text-lg {
-  font-size: 1.02rem !important;
+  --sys-font-scale: 0.88;
 }
 
 html.accessibility-large-text {
-  font-size: 112% !important;
-}
-html.accessibility-large-text .text-xs,
-html.accessibility-large-text .text-\[10px\] {
-  font-size: 0.8rem !important;
-}
-html.accessibility-large-text .text-sm {
-  font-size: 0.95rem !important;
-}
-html.accessibility-large-text .text-base {
-  font-size: 1.1rem !important;
-}
-html.accessibility-large-text .text-lg {
-  font-size: 1.25rem !important;
+  --sys-font-scale: 1.15;
 }
 
 html.accessibility-xlarge-text {
-  font-size: 124% !important;
+  --sys-font-scale: 1.30;
 }
-html.accessibility-xlarge-text .text-xs,
-html.accessibility-xlarge-text .text-\[10px\] {
-  font-size: 0.9rem !important;
+
+html.accessibility-small-text {
+  font-size: 88% !important;
 }
-html.accessibility-xlarge-text .text-sm {
-  font-size: 1.05rem !important;
+html.accessibility-large-text {
+  font-size: 115% !important;
 }
-html.accessibility-xlarge-text .text-base {
-  font-size: 1.2rem !important;
+html.accessibility-xlarge-text {
+  font-size: 130% !important;
 }
-html.accessibility-xlarge-text .text-lg {
-  font-size: 1.4rem !important;
+
+/* Scaled text size overrides for Small Text (88% = 0.88x) */
+html.accessibility-small-text .text-\[6px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 5.28px !important; }
+html.accessibility-small-text .text-\[6\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 5.72px !important; }
+html.accessibility-small-text .text-\[7px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 6.16px !important; }
+html.accessibility-small-text .text-\[7\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 6.6px !important; }
+html.accessibility-small-text .text-\[8px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 7.04px !important; }
+html.accessibility-small-text .text-\[8\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 7.48px !important; }
+html.accessibility-small-text .text-\[9px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 7.92px !important; }
+html.accessibility-small-text .text-\[9\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 8.36px !important; }
+html.accessibility-small-text .text-\[10px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 8.8px !important; }
+html.accessibility-small-text .text-\[10\.1px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 8.88px !important; }
+html.accessibility-small-text .text-\[10\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 9.24px !important; }
+html.accessibility-small-text .text-\[11px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 9.68px !important; }
+html.accessibility-small-text .text-\[11\.3px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 9.94px !important; }
+html.accessibility-small-text .text-\[11\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 10.12px !important; }
+html.accessibility-small-text .text-\[12px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 10.56px !important; }
+html.accessibility-small-text .text-\[12\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 11px !important; }
+html.accessibility-small-text .text-\[13px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 11.44px !important; }
+html.accessibility-small-text .text-\[14px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 12.32px !important; }
+html.accessibility-small-text .text-\[15px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 13.2px !important; }
+html.accessibility-small-text .text-\[16px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 14.08px !important; }
+html.accessibility-small-text .text-xs:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 0.66rem !important; }
+html.accessibility-small-text .text-sm:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 0.77rem !important; }
+html.accessibility-small-text .text-base:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 0.88rem !important; }
+html.accessibility-small-text .text-lg:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 0.99rem !important; }
+html.accessibility-small-text .text-xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.1rem !important; }
+html.accessibility-small-text .text-2xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.32rem !important; }
+html.accessibility-small-text .text-3xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.65rem !important; }
+html.accessibility-small-text .text-4xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.98rem !important; }
+html.accessibility-small-text .text-5xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 2.64rem !important; }
+
+/* Scaled text size overrides for Large Text (115% = 1.15x) */
+html.accessibility-large-text .text-\[6px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 6.9px !important; }
+html.accessibility-large-text .text-\[6\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 7.47px !important; }
+html.accessibility-large-text .text-\[7px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 8.05px !important; }
+html.accessibility-large-text .text-\[7\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 8.62px !important; }
+html.accessibility-large-text .text-\[8px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 9.2px !important; }
+html.accessibility-large-text .text-\[8\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 9.77px !important; }
+html.accessibility-large-text .text-\[9px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 10.35px !important; }
+html.accessibility-large-text .text-\[9\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 10.92px !important; }
+html.accessibility-large-text .text-\[10px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 11.5px !important; }
+html.accessibility-large-text .text-\[10\.1px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 11.61px !important; }
+html.accessibility-large-text .text-\[10\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 12.07px !important; }
+html.accessibility-large-text .text-\[11px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 12.65px !important; }
+html.accessibility-large-text .text-\[11\.3px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 13px !important; }
+html.accessibility-large-text .text-\[11\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 13.22px !important; }
+html.accessibility-large-text .text-\[12px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 13.8px !important; }
+html.accessibility-large-text .text-\[12\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 14.37px !important; }
+html.accessibility-large-text .text-\[13px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 14.95px !important; }
+html.accessibility-large-text .text-\[14px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 16.1px !important; }
+html.accessibility-large-text .text-\[15px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 17.25px !important; }
+html.accessibility-large-text .text-\[16px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 18.4px !important; }
+html.accessibility-large-text .text-xs:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 0.86rem !important; }
+html.accessibility-large-text .text-sm:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.01rem !important; }
+html.accessibility-large-text .text-base:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.15rem !important; }
+html.accessibility-large-text .text-lg:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.29rem !important; }
+html.accessibility-large-text .text-xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.43rem !important; }
+html.accessibility-large-text .text-2xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.72rem !important; }
+html.accessibility-large-text .text-3xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 2.15rem !important; }
+html.accessibility-large-text .text-4xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 2.58rem !important; }
+html.accessibility-large-text .text-5xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 3.45rem !important; }
+
+/* Scaled text size overrides for Extra Large Text (130% = 1.30x) */
+html.accessibility-xlarge-text .text-\[6px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 7.8px !important; }
+html.accessibility-xlarge-text .text-\[6\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 8.45px !important; }
+html.accessibility-xlarge-text .text-\[7px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 9.1px !important; }
+html.accessibility-xlarge-text .text-\[7\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 9.75px !important; }
+html.accessibility-xlarge-text .text-\[8px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 10.4px !important; }
+html.accessibility-xlarge-text .text-\[8\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 11.05px !important; }
+html.accessibility-xlarge-text .text-\[9px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 11.7px !important; }
+html.accessibility-xlarge-text .text-\[9\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 12.35px !important; }
+html.accessibility-xlarge-text .text-\[10px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 13px !important; }
+html.accessibility-xlarge-text .text-\[10\.1px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 13.13px !important; }
+html.accessibility-xlarge-text .text-\[10\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 13.65px !important; }
+html.accessibility-xlarge-text .text-\[11px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 14.3px !important; }
+html.accessibility-xlarge-text .text-\[11\.3px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 14.69px !important; }
+html.accessibility-xlarge-text .text-\[11\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 14.95px !important; }
+html.accessibility-xlarge-text .text-\[12px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 15.6px !important; }
+html.accessibility-xlarge-text .text-\[12\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 16.25px !important; }
+html.accessibility-xlarge-text .text-\[13px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 16.9px !important; }
+html.accessibility-xlarge-text .text-\[14px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 18.2px !important; }
+html.accessibility-xlarge-text .text-\[15px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 19.5px !important; }
+html.accessibility-xlarge-text .text-\[16px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 20.8px !important; }
+html.accessibility-xlarge-text .text-xs:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 0.975rem !important; }
+html.accessibility-xlarge-text .text-sm:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.1375rem !important; }
+html.accessibility-xlarge-text .text-base:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.3rem !important; }
+html.accessibility-xlarge-text .text-lg:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.4625rem !important; }
+html.accessibility-xlarge-text .text-xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.625rem !important; }
+html.accessibility-xlarge-text .text-2xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.95rem !important; }
+html.accessibility-xlarge-text .text-3xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 2.4375rem !important; }
+html.accessibility-xlarge-text .text-4xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 2.925rem !important; }
+html.accessibility-xlarge-text .text-5xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 3.9rem !important; }
+
+/* 1.5. Thermal Receipt Font Size Adjuster Scale (Independent of System Font Size) */
+.bir-receipt-container {
+  --receipt-font-scale: 1;
 }
+
+.bir-receipt-container.receipt-font-70 { --receipt-font-scale: 0.7; }
+.bir-receipt-container.receipt-font-80 { --receipt-font-scale: 0.8; }
+.bir-receipt-container.receipt-font-85 { --receipt-font-scale: 0.85; }
+.bir-receipt-container.receipt-font-90 { --receipt-font-scale: 0.9; }
+.bir-receipt-container.receipt-font-95 { --receipt-font-scale: 0.95; }
+.bir-receipt-container.receipt-font-100 { --receipt-font-scale: 1.0; }
+.bir-receipt-container.receipt-font-105 { --receipt-font-scale: 1.05; }
+.bir-receipt-container.receipt-font-110 { --receipt-font-scale: 1.1; }
+.bir-receipt-container.receipt-font-115 { --receipt-font-scale: 1.15; }
+.bir-receipt-container.receipt-font-120 { --receipt-font-scale: 1.2; }
+.bir-receipt-container.receipt-font-125 { --receipt-font-scale: 1.25; }
+.bir-receipt-container.receipt-font-130 { --receipt-font-scale: 1.3; }
+
+/* Multiply explicit font size classes inside .bir-receipt-container by --receipt-font-scale */
+.bir-receipt-container .text-\[7px\] { font-size: calc(7px * var(--receipt-font-scale, 1)) !important; }
+.bir-receipt-container .text-\[7\.5px\] { font-size: calc(7.5px * var(--receipt-font-scale, 1)) !important; }
+.bir-receipt-container .text-\[8px\] { font-size: calc(8px * var(--receipt-font-scale, 1)) !important; }
+.bir-receipt-container .text-\[8\.5px\] { font-size: calc(8.5px * var(--receipt-font-scale, 1)) !important; }
+.bir-receipt-container .text-\[9px\] { font-size: calc(9px * var(--receipt-font-scale, 1)) !important; }
+.bir-receipt-container .text-\[9\.5px\] { font-size: calc(9.5px * var(--receipt-font-scale, 1)) !important; }
+.bir-receipt-container .text-\[10px\] { font-size: calc(10px * var(--receipt-font-scale, 1)) !important; }
+.bir-receipt-container .text-\[10\.5px\] { font-size: calc(10.5px * var(--receipt-font-scale, 1)) !important; }
+.bir-receipt-container .text-\[11px\] { font-size: calc(11px * var(--receipt-font-scale, 1)) !important; }
+.bir-receipt-container .text-xs { font-size: calc(12px * var(--receipt-font-scale, 1)) !important; }
+.bir-receipt-container .text-sm { font-size: calc(14px * var(--receipt-font-scale, 1)) !important; }
+.bir-receipt-container .text-base { font-size: calc(16px * var(--receipt-font-scale, 1)) !important; }
+.bir-receipt-container .text-lg { font-size: calc(18px * var(--receipt-font-scale, 1)) !important; }
 
 /* 2. Dyslexic-Friendly Typography Switcher */
 html.accessibility-dyslexic-font:not(.font-mono) :not(code):not(pre):not(.font-mono) {

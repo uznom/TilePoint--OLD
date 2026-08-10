@@ -13,6 +13,7 @@ import { isProductInBranch, getBranchStockQuantity, getBranchStockRecord, isSame
 import { formatCurrency } from "../utils/formatters";
 import { createSearchIndex, searchIndex } from "../utils/searchIndex";
 import { useVirtualList } from "../hooks/useVirtualList";
+import { useReceiptFontSize, ReceiptFontSizeControl } from "./ReceiptFontSizeControl";
 import {
  ShoppingCart,
  Trash2,
@@ -353,10 +354,18 @@ export const PosModule: React.FC<PosModuleProps> = ({
  const [ledgerPaymentFilter, setLedgerPaymentFilter] = useState<string>("All");
  const [ledgerDateFilter, setLedgerDateFilter] = useState<string>("");
  const [isStatsCollapsed, setIsStatsCollapsed] = useState(false);
+ const { fontClass: receiptFontClass } = useReceiptFontSize();
 
  // Cart & POS Screen States
  const [cart, setCart] = useState<
- { product: Product; quantity: number; overridePrice?: number }[]
+ {
+ product: Product;
+ quantity: number;
+ overridePrice?: number;
+ discountType?: "NONE" | "FLAT" | "PERCENT" | "SENIOR" | "PWD" | "CONTRACT";
+ discountValue?: number;
+ discountAmount?: number;
+ }[]
  >(() => {
  try {
  const cached = localStorage.getItem("tp_active_cart");
@@ -407,6 +416,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  >("NONE");
  const [showDiscountModal, setShowDiscountModal] = useState(false);
  const [discountInput, setDiscountInput] = useState("");
+ const [selectedDiscountItemIndex, setSelectedDiscountItemIndex] = useState<number | null>(null);
 
  // Live Override / Permissions States
  interface ApprovalRequest {
@@ -734,14 +744,16 @@ export const PosModule: React.FC<PosModuleProps> = ({
  prevParkedSalesRef.current = parkedSales;
  }, [parkedSales]);
 
- useEffect(() => {
- const queueSyncInterval = setInterval(() => {
- if (typeof document !== "undefined" && document.visibilityState === "visible") {
- syncFromSharedServer(true).catch(() => {});
- }
- }, 4000);
- return () => clearInterval(queueSyncInterval);
- }, [syncFromSharedServer]);
+  useEffect(() => {
+    if (syncStatus?.sseConnected) return;
+
+    const queueSyncInterval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        syncFromSharedServer(true).catch(() => {});
+      }
+    }, 15000);
+    return () => clearInterval(queueSyncInterval);
+  }, [syncFromSharedServer, syncStatus?.sseConnected]);
 
  // Search input referencer for hotkey focus
  const searchInputRef = useRef<HTMLInputElement>(null);
@@ -778,27 +790,66 @@ export const PosModule: React.FC<PosModuleProps> = ({
  }, [posSearchIndex, searchTerm, selectedCategory, userBranchId, branchStock, branches]);
 
  // Dynamic Surcharges, VAT (12%), and Discounts compliant with Philippine and contractor standards
- const subtotal = cart.reduce((acc, item) => {
- const unitPrice =
- item.overridePrice !== undefined
- ? item.overridePrice
- : getBranchPrice(item.product);
- return acc + unitPrice * item.quantity;
- }, 0);
+ const getItemDiscount = useCallback(
+ (item: {
+ product: Product;
+ quantity: number;
+ overridePrice?: number;
+ discountType?: "NONE" | "FLAT" | "PERCENT" | "SENIOR" | "PWD" | "CONTRACT";
+ discountValue?: number;
+ discountAmount?: number;
+ }) => {
+ const basePrice = getBranchPrice(item.product);
+ const unitPrice = item.overridePrice !== undefined ? item.overridePrice : basePrice;
+ const lineSubtotal = unitPrice * item.quantity;
 
- let vat = parseFloat((subtotal * 0.12).toFixed(2));
- let discountAmount = 0;
+ let discAmt = 0;
+ let isVatExempt = false;
+ const dType = item.discountType || "NONE";
+ const dVal = item.discountValue || 0;
 
- if (discountType === "FLAT") {
- discountAmount = discountValue;
- } else if (discountType === "PERCENT") {
- discountAmount = parseFloat((subtotal * (discountValue / 100)).toFixed(2));
- } else if (discountType === "SENIOR" || discountType === "PWD") {
- vat = 0; // VAT Exempt
- discountAmount = parseFloat((subtotal * 0.2).toFixed(2)); // 20% discount on base
- } else if (discountType === "CONTRACT") {
- discountAmount = parseFloat((subtotal * 0.1).toFixed(2)); // 10% Contractor affiliate discount
+ if (dType === "FLAT") {
+ discAmt = Math.min(lineSubtotal, dVal);
+ } else if (dType === "PERCENT") {
+ discAmt = parseFloat((lineSubtotal * (dVal / 100)).toFixed(2));
+ } else if (dType === "SENIOR" || dType === "PWD") {
+ isVatExempt = true;
+ discAmt = parseFloat((lineSubtotal * 0.20).toFixed(2));
+ } else if (dType === "CONTRACT") {
+ discAmt = parseFloat((lineSubtotal * 0.10).toFixed(2));
+ } else if (item.discountAmount) {
+ discAmt = item.discountAmount;
  }
+
+ discAmt = Math.min(lineSubtotal, Math.max(0, discAmt));
+ return {
+ unitPrice,
+ lineSubtotal,
+ itemDiscount: discAmt,
+ isVatExempt,
+ lineNet: Math.max(0, lineSubtotal - discAmt),
+ };
+ },
+ [getBranchPrice],
+ );
+
+ const cartItemDetails = React.useMemo(() => {
+ return cart.map((item) => {
+ const calc = getItemDiscount(item);
+ return {
+ ...item,
+ ...calc,
+ };
+ });
+ }, [cart, getItemDiscount]);
+
+ const subtotal = cartItemDetails.reduce((acc, i) => acc + i.lineSubtotal, 0);
+ const discountAmount = cartItemDetails.reduce((acc, i) => acc + i.itemDiscount, 0);
+
+ const vat = cartItemDetails.reduce((acc, i) => {
+ if (i.isVatExempt || (i.product as any).vatExempt) return acc;
+ return acc + parseFloat((i.lineNet * 0.12).toFixed(2));
+ }, 0);
 
  const grandTotal = parseFloat((subtotal - discountAmount).toFixed(2));
 
@@ -1126,12 +1177,81 @@ export const PosModule: React.FC<PosModuleProps> = ({
  return { required: false, pct };
  };
 
+ const executeApplyDiscount = (
+ type: "NONE" | "FLAT" | "PERCENT" | "SENIOR" | "PWD" | "CONTRACT",
+ numericVal: number,
+ targetIndex: number | null,
+ ) => {
+ if (cart.length === 0) {
+ showToast("Active cart is empty.");
+ setShowDiscountModal(false);
+ return;
+ }
+
+ setCart((prevCart) =>
+ prevCart.map((item, idx) => {
+ if (targetIndex === null || targetIndex === idx) {
+ const basePrice = getBranchPrice(item.product);
+ const unitPrice = item.overridePrice !== undefined ? item.overridePrice : basePrice;
+ const lineSubtotal = unitPrice * item.quantity;
+ let discAmt = 0;
+
+ if (type === "FLAT") {
+ discAmt = Math.min(lineSubtotal, numericVal);
+ } else if (type === "PERCENT") {
+ discAmt = parseFloat((lineSubtotal * (numericVal / 100)).toFixed(2));
+ } else if (type === "SENIOR" || type === "PWD") {
+ discAmt = parseFloat((lineSubtotal * 0.20).toFixed(2));
+ } else if (type === "CONTRACT") {
+ discAmt = parseFloat((lineSubtotal * 0.10).toFixed(2));
+ }
+
+ return {
+ ...item,
+ discountType: type,
+ discountValue: numericVal,
+ discountAmount: discAmt,
+ };
+ }
+ return item;
+ }),
+ );
+
+ setShowDiscountModal(false);
+ setDiscountInput("");
+
+ const targetDesc =
+ targetIndex !== null && cart[targetIndex]
+ ? `for "${cart[targetIndex].product.productName}"`
+ : "for all cart items";
+
+ if (type === "NONE") {
+ showToast(`Discount removed ${targetDesc}.`);
+ } else if (type === "FLAT") {
+ showToast(`Applied ₱${numericVal.toFixed(2)} item discount ${targetDesc}.`);
+ } else if (type === "PERCENT") {
+ showToast(`Applied ${numericVal}% item discount ${targetDesc}.`);
+ } else if (type === "SENIOR") {
+ showToast(`Senior Privilege: Applied 20% Off + VAT Exemption ${targetDesc}!`);
+ } else if (type === "PWD") {
+ showToast(`PWD Exemption: Applied 20% Off + VAT Exemption ${targetDesc}!`);
+ } else if (type === "CONTRACT") {
+ showToast(`Contractor Special: Applied 10% Trade Discount ${targetDesc}!`);
+ }
+ };
+
  const applyCustomDiscount = (
  type: "NONE" | "FLAT" | "PERCENT" | "SENIOR" | "PWD" | "CONTRACT",
  inputVal?: string,
  ) => {
  const numericVal = parseFloat(inputVal || "0") || 0;
- if (type === "FLAT" && (numericVal < 0 || numericVal > subtotal)) {
+ const targetIdx = selectedDiscountItemIndex;
+ const targetSubtotal =
+ targetIdx !== null && cart[targetIdx]
+ ? (cart[targetIdx].overridePrice ?? getBranchPrice(cart[targetIdx].product)) * cart[targetIdx].quantity
+ : subtotal;
+
+ if (type === "FLAT" && (numericVal < 0 || numericVal > targetSubtotal)) {
  showToast("Error: Invalid discount value.");
  return;
  }
@@ -1147,6 +1267,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  discountType: type,
  discountValue: numericVal,
  requiredRole: approval.roleNeeded!,
+ tempCartItemIndex: targetIdx !== null ? targetIdx : undefined,
  });
  setShowDiscountModal(false);
  setApproverUsername("");
@@ -1155,28 +1276,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  return;
  }
 
- setDiscountType(type);
- if (type === "FLAT" || type === "PERCENT") {
- setDiscountValue(numericVal);
- } else {
- setDiscountValue(0);
- }
-
- setShowDiscountModal(false);
-
- if (type === "NONE") {
- showToast("Removed all active discounts.");
- } else if (type === "FLAT") {
- showToast(`Applied ₱${numericVal.toFixed(2)} cash discount.`);
- } else if (type === "PERCENT") {
- showToast(`Applied ${numericVal}% percentage discount.`);
- } else if (type === "SENIOR") {
- showToast("Senior Privilege: Applied 20% Off + 12% VAT Exemption!");
- } else if (type === "PWD") {
- showToast("PWD Exemption: Applied 20% Off + 12% VAT Exemption!");
- } else if (type === "CONTRACT") {
- showToast("Contractor Special: Applied 10% Trade Alliance Discount!");
- }
+ executeApplyDiscount(type, numericVal, targetIdx);
  };
 
  async function clientCheckout() {
@@ -1434,6 +1534,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
  // Quick Open shift function
  const handleOpenShiftSubmit = (e: React.FormEvent) => {
  e.preventDefault();
+ if (activeShift) {
+ showToast("An active shift drawer is already open for your account. Please close it first.");
+ setShowShiftModal(false);
+ setShowCloseShiftModal(true);
+ return;
+ }
  const startingVal = parseFloat(startCashInput) || 0;
  openShift(startingVal);
  setShowShiftModal(false);
@@ -1649,15 +1755,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  // Approved! Resolve pending states
  if (pendingApproval?.type === "DISCOUNT") {
- setDiscountType(pendingApproval.discountType!);
- if (
- pendingApproval.discountType === "FLAT" ||
- pendingApproval.discountType === "PERCENT"
- ) {
- setDiscountValue(pendingApproval.discountValue!);
- } else {
- setDiscountValue(0);
- }
+ const targetIdx = pendingApproval.tempCartItemIndex !== undefined ? pendingApproval.tempCartItemIndex : null;
+ executeApplyDiscount(
+ pendingApproval.discountType!,
+ pendingApproval.discountValue || 0,
+ targetIdx
+ );
  addAuditLog(
  "POS_OVERRIDE_APPROVED",
  `${approver.role} ${approver.fullName} authorized discount override: ${pendingApproval.discountType}, value: ${pendingApproval.discountValue} for Cashier ${currentUser?.fullName}`,
@@ -1951,6 +2054,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
               <div className="flex justify-between text-[8.5px] text-m3-on-surface-variant">
                 <span>
                   {formatCurrency(it.unitPrice)} x {it.quantity}
+                  {(it.discount || 0) > 0 && (
+                    <span className="text-amber-600 dark:text-amber-400 font-bold ml-1">
+                      (Disc: -{formatCurrency(it.discount!)})
+                    </span>
+                  )}
                 </span>
                 <span className="font-bold text-m3-on-surface">
                   {formatCurrency(it.total)}
@@ -2300,22 +2408,22 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <div className="flex-1 min-h-0 flex flex-col justify-between gap-4 w-full overflow-hidden">
       {/* SAFE TRANSACTION COMMIT & HYDRATION RECOVERY BANNER */}
       {showRecoveryBanner && recoveredSession && (
-        <div className="bg-emerald-950/40 border-2 border-emerald-500/40 rounded-2xl p-3.5 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-3 animate-fade-in shrink-0">
+        <div className="bg-emerald-50 dark:bg-emerald-950/40 border-2 border-emerald-300 dark:border-emerald-500/40 rounded-2xl p-3.5 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-3 animate-fade-in shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-emerald-500/20 text-emerald-400 rounded-xl shrink-0">
+            <div className="p-2.5 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded-xl shrink-0">
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
+                <span className="text-xs font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-400">
                   Safe Transaction Commit: Abandoned Session Restored
                 </span>
-                <span className="text-[9.5px] font-mono px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-md font-bold">
+                <span className="text-[9.5px] font-mono px-2 py-0.5 bg-emerald-200/70 dark:bg-emerald-500/20 text-emerald-900 dark:text-emerald-300 rounded-md font-bold">
                   {recoveredSession.lastSavedAt}
                 </span>
               </div>
-              <p className="text-xs text-m3-on-surface font-medium mt-0.5">
-                Hydration Safeguard recovered an uncommitted POS checkout session with <strong className="text-emerald-300">{recoveredSession.itemCount} item(s)</strong> worth <strong className="text-emerald-300">₱{recoveredSession.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> for customer <strong className="text-emerald-300">"{recoveredSession.customerName}"</strong>.
+              <p className="text-xs text-emerald-950 dark:text-m3-on-surface font-medium mt-0.5">
+                Hydration Safeguard recovered an uncommitted POS checkout session with <strong className="text-emerald-800 dark:text-emerald-300">{recoveredSession.itemCount} item(s)</strong> worth <strong className="text-emerald-800 dark:text-emerald-300">₱{recoveredSession.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> for customer <strong className="text-emerald-800 dark:text-emerald-300">"{recoveredSession.customerName}"</strong>.
                 {recoveredSession.hasDeliveryDraft && " (Includes active delivery schedule draft)"}
               </p>
             </div>
@@ -2327,7 +2435,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                 setShowRecoveryBanner(false);
                 showToast("Uncommitted draft session resumed. Ready for settlement.");
               }}
-              className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-black text-xs font-black uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               <span>Resume Active Cart</span>
@@ -2338,7 +2446,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                 handleCancelSale();
                 showToast("Abandoned transaction draft discarded.");
               }}
-              className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1"
+              className="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 dark:bg-rose-500/20 dark:hover:bg-rose-500/30 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1"
             >
               <X className="h-3.5 w-3.5" />
               <span>Discard Draft</span>
@@ -2913,42 +3021,67 @@ export const PosModule: React.FC<PosModuleProps> = ({
  }}
  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 py-2.5 border-b border-m3-outline-variant/10 last:border-0 pl-1 overflow-hidden"
  >
- <div className="space-y-0.5 text-left w-full sm:w-auto">
- <h5 className="text-xs font-black leading-tight text-m3-on-surface">
+ <div className="space-y-1 text-left w-full sm:w-auto">
+ <h5 className="text-sm font-black leading-tight text-m3-on-surface">
  {item.product.productName}
  </h5>
- <div className="text-[10px] text-zinc-400 flex flex-wrap items-center gap-1.5 font-mono font-bold">
+ <div className="text-xs text-zinc-400 flex flex-wrap items-center gap-1.5 font-mono font-bold">
  {item.overridePrice !== undefined ? (
  <>
- <span className="text-zinc-500 line-through">
+ <span className="text-zinc-400 line-through text-xs">
  {formatCurrency(getBranchPrice(item.product))}
  </span>
- <span className="text-emerald-500 font-extrabold bg-emerald-500/10 px-1 rounded">
+ <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-md shadow-2xs">
  {formatCurrency(item.overridePrice)}
  </span>
  </>
  ) : (
- <span className="text-zinc-300">
+ <span className="text-zinc-300 text-xs">
  {formatCurrency(getBranchPrice(item.product))}
  </span>
  )}
  <span>/{item.product.unit}</span>
  <span>•</span>
- <span className="text-m3-primary">
+ <span className="text-m3-primary text-xs">
  SKU: {item.product.sku}
  </span>
  <span>•</span>
  <button
  type="button"
  onClick={() => handleTriggerPriceOverride(idx)}
- className="text-[9px] font-black text-m3-primary hover:text-m3-primary/80 transition-colors uppercase bg-m3-primary/5 px-1.5 py-0.2 rounded"
+ className="text-[11px] font-extrabold text-m3-primary hover:bg-m3-primary/20 bg-m3-primary/10 border border-m3-primary/30 px-2.5 py-1 rounded-md transition-colors uppercase cursor-pointer"
  >
- [Override]
+ Override Price
  </button>
+ <span>•</span>
+ <button
+ type="button"
+ onClick={() => {
+ setSelectedDiscountItemIndex(idx);
+ setShowDiscountModal(true);
+ }}
+ className="text-[11px] font-extrabold text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-md transition-colors uppercase cursor-pointer"
+ >
+ {item.discountType && item.discountType !== "NONE" ? `Disc: ${item.discountType}` : "Discount"}
+ </button>
+ {(() => {
+ const itemDetail = cartItemDetails[idx];
+ if (itemDetail && itemDetail.itemDiscount > 0) {
+ return (
+ <>
+ <span>•</span>
+ <span className="text-[11px] font-black text-amber-700 dark:text-amber-300 bg-amber-500/20 px-2.5 py-0.5 rounded-md border border-amber-500/40 shadow-2xs">
+ -₱{itemDetail.itemDiscount.toFixed(2)} OFF
+ </span>
+ </>
+ );
+ }
+ return null;
+ })()}
  {item.quantity < 0 && (
  <>
  <span>•</span>
- <span className="text-[9px] font-black uppercase text-rose-500 bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20 shrink-0">
+ <span className="text-[10px] font-black uppercase text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20 shrink-0">
  Return / Refund Item
  </span>
  </>
@@ -3114,9 +3247,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setDiscountInput("");
  setShowDiscountModal(true);
  }}
- className="w-full mt-2 flex items-center justify-center gap-1.5 text-[10px] py-1.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary font-black rounded-lg border border-m3-primary/25 uppercase tracking-wider transition-colors"
+ className="w-full mt-2.5 flex items-center justify-center gap-2 text-xs py-2 px-3 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary font-extrabold rounded-xl border border-m3-primary/30 uppercase tracking-wider transition-colors cursor-pointer shadow-2xs"
  >
- <Sparkles className="h-3 w-3" /> Apply Cardholder Discount
+ <Sparkles className="h-3.5 w-3.5" /> Apply Cardholder Discount
  (F6)
  </button>
  </div>
@@ -4141,23 +4274,48 @@ export const PosModule: React.FC<PosModuleProps> = ({
  transition={{ type: "spring", duration: 0.4 }}
  className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left"
  >
- <h3 className="text-sm font-bold text-m3-primary flex items-center gap-2">
- <Sparkles className="h-4.5 w-4.5 text-m3-primary" /> Select
- Trade & Exemption Discounts
+ <h3 className="text-base font-extrabold text-m3-primary flex items-center gap-2">
+ <Sparkles className="h-5 w-5 text-m3-primary" /> Select
+ Item Discount & Exemptions
  </h3>
+
+ <div className="bg-m3-surface p-3.5 rounded-2xl border border-m3-outline-variant/20 space-y-1.5">
+ <label className="text-xs font-bold text-m3-primary uppercase tracking-wider block">
+ Target Item for Discount
+ </label>
+ <select
+ value={selectedDiscountItemIndex === null ? "ALL" : selectedDiscountItemIndex}
+ onChange={(e) => {
+ const val = e.target.value;
+ setSelectedDiscountItemIndex(val === "ALL" ? null : parseInt(val, 10));
+ }}
+ className="w-full bg-m3-surface-low border border-m3-outline-variant/30 text-xs font-bold rounded-xl px-3.5 py-2.5 text-m3-on-surface focus:outline-none focus:border-m3-primary"
+ >
+ <option value="ALL">Apply to ALL Items in Cart ({cart.length} item{cart.length === 1 ? '' : 's'})</option>
+ {cart.map((it, i) => {
+ const baseP = getBranchPrice(it.product);
+ const p = it.overridePrice !== undefined ? it.overridePrice : baseP;
+ return (
+ <option key={i} value={i}>
+ Item #{i + 1}: {it.product.productName} ({formatCurrency(p)}/unit x {it.quantity})
+ </option>
+ );
+ })}
+ </select>
+ </div>
 
  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
  <button
  type="button"
  onClick={() => applyCustomDiscount("NONE")}
- className={`p-3 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
+ className={`p-3.5 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
  discountType === "NONE"
  ? "border-m3-primary bg-m3-primary/10"
  : "border-m3-outline-variant/20 bg-m3-surface hover:bg-m3-outline-variant/10"
  }`}
  >
- <div className="font-bold text-xs">No Discount</div>
- <div className="text-[10px] text-m3-on-surface-variant mt-1 font-medium">
+ <div className="font-bold text-sm">No Discount</div>
+ <div className="text-xs text-m3-on-surface-variant mt-1 font-medium">
  Standard cashier list pricing applies.
  </div>
  </button>
@@ -4165,16 +4323,16 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <button
  type="button"
  onClick={() => applyCustomDiscount("SENIOR")}
- className={`p-3 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
+ className={`p-3.5 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
  discountType === "SENIOR"
  ? "border-m3-primary bg-m3-primary/10"
  : "border-m3-outline-variant/20 bg-m3-surface hover:bg-m3-outline-variant/10"
  }`}
  >
- <div className="font-bold text-xs text-m3-primary flex items-center gap-1">
+ <div className="font-bold text-sm text-m3-primary flex items-center gap-1">
  Senior Citizen
  </div>
- <div className="text-[10px] text-m3-on-surface-variant mt-1 font-medium">
+ <div className="text-xs text-m3-on-surface-variant mt-1 font-medium">
  20% Off base + 12% VAT exemption (Philippine RA 9994).
  </div>
  </button>
@@ -4182,16 +4340,16 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <button
  type="button"
  onClick={() => applyCustomDiscount("PWD")}
- className={`p-3 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
+ className={`p-3.5 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
  discountType === "PWD"
  ? "border-m3-primary bg-m3-primary/10"
  : "border-m3-outline-variant/20 bg-m3-surface hover:bg-m3-outline-variant/10"
  }`}
  >
- <div className="font-bold text-xs text-m3-primary flex items-center gap-1">
+ <div className="font-bold text-sm text-m3-primary flex items-center gap-1">
  PWD Resident
  </div>
- <div className="text-[10px] text-m3-on-surface-variant mt-1 font-medium">
+ <div className="text-xs text-m3-on-surface-variant mt-1 font-medium">
  20% Off base + 12% VAT exemption (Philippine RA 10754).
  </div>
  </button>
@@ -4199,29 +4357,29 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <button
  type="button"
  onClick={() => applyCustomDiscount("CONTRACT")}
- className={`p-3 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
+ className={`p-3.5 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
  discountType === "CONTRACT"
  ? "border-m3-primary bg-m3-primary/10"
  : "border-m3-outline-variant/20 bg-m3-surface hover:bg-m3-outline-variant/10"
  }`}
  >
- <div className="font-bold text-xs text-m3-primary">
+ <div className="font-bold text-sm text-m3-primary">
  Contractor Alliance
  </div>
- <div className="text-[10px] text-m3-on-surface-variant mt-1 font-medium">
+ <div className="text-xs text-m3-on-surface-variant mt-1 font-medium">
  Flat 10% Trade Allied partner discount.
  </div>
  </button>
  </div>
 
  <div className="border-t border-m3-outline-variant/20 pt-4 space-y-4">
- <h4 className="text-[10px] font-bold text-m3-primary uppercase tracking-wider pl-1 font-sans">
+ <h4 className="text-xs font-extrabold text-m3-primary uppercase tracking-wider pl-1 font-sans">
  Or Apply Custom Values (Flat / Rate)
  </h4>
 
  <div className="flex gap-3">
  <div className="flex-1 relative pl-0">
- <label className="text-[9.5px] font-bold tracking-wider text-m3-on-surface-variant mb-1 block pl-1">
+ <label className="text-xs font-bold tracking-wider text-m3-on-surface-variant mb-1 block pl-1">
  Discount Amount/Value
  </label>
  <input
@@ -4233,7 +4391,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  ? "e.g. 15 for 15%"
  : "e.g. 100 for ₱100"
  }
- className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs font-mono font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary rounded-t-lg transition-colors"
+ className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3.5 py-2.5 text-sm font-mono font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary rounded-t-lg transition-colors"
  />
  </div>
 
@@ -4244,7 +4402,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  onClick={() =>
  applyCustomDiscount("FLAT", discountInput)
  }
- className="px-4 py-2 bg-m3-primary/10 text-m3-primary border border-m3-primary/20 hover:bg-m3-primary/20 text-[10.5px] font-bold rounded-lg cursor-pointer transition-colors"
+ className="px-4 py-2.5 bg-m3-primary/10 text-m3-primary border border-m3-primary/20 hover:bg-m3-primary/20 text-xs font-bold rounded-lg cursor-pointer transition-colors"
  >
  Apply Flat (₱)
  </button>
@@ -4253,7 +4411,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  onClick={() =>
  applyCustomDiscount("PERCENT", discountInput)
  }
- className="px-4 py-2 bg-m3-primary/10 text-m3-primary border border-m3-primary/20 hover:bg-m3-primary/20 text-[10.5px] font-bold rounded-lg cursor-pointer transition-colors"
+ className="px-4 py-2.5 bg-m3-primary/10 text-m3-primary border border-m3-primary/20 hover:bg-m3-primary/20 text-xs font-bold rounded-lg cursor-pointer transition-colors"
  >
  Apply Percent (%)
  </button>
@@ -4348,8 +4506,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
     )}
   </div>
 
+  {/* Receipt Font Size Adjuster Control */}
+  <ReceiptFontSizeControl mode="compact" className="mb-1.5" />
+
   {/* Receipt Content Container */}
-  <div className="space-y-3 my-2 select-text text-left max-h-[50vh] overflow-y-auto bir-receipt-container scrollbar-thin p-1">
+  <div className={`space-y-3 my-2 select-text text-left max-h-[50vh] overflow-y-auto bir-receipt-container scrollbar-thin p-1 ${receiptFontClass}`}>
     {receiptViewMode === "unified" && (
       <>
         {renderPosSalesReceipt()}
@@ -4729,19 +4890,19 @@ export const PosModule: React.FC<PosModuleProps> = ({
  className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left"
  >
  <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
- <h3 className="text-sm font-black text-m3-primary flex items-center gap-1.5 uppercase tracking-wider">
+ <h3 className="text-base font-black text-m3-primary flex items-center gap-1.5 uppercase tracking-wider">
  <span>Unit Price Override</span>
  </h3>
  <button
  type="button"
  onClick={() => setOverrideModalOpen(false)}
- className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-0.5 rounded-full"
+ className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full hover:bg-m3-outline-variant/15 transition-colors"
  >
  <X className="h-5 w-5" />
  </button>
  </div>
 
- <div className="space-y-1 leading-normal pl-1 text-[11px] font-medium text-m3-on-surface-variant">
+ <div className="space-y-1.5 leading-normal pl-1 text-xs font-semibold text-m3-on-surface-variant bg-m3-surface p-3 rounded-xl border border-m3-outline-variant/20">
  <div>
  <strong>Product:</strong>{" "}
  {cart[overrideItemIndex].product.productName}
@@ -4752,8 +4913,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  </div>
 
- <div className="space-y-1">
- <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-m3-primary uppercase tracking-wider pl-1 block">
  New Unit Selling Price
  </label>
  <input
@@ -4763,9 +4924,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
  step="0.01"
  value={overridePriceInput ?? ''}
  onChange={(e) => setOverridePriceInput(e.target.value)}
- className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold font-mono"
+ className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3.5 py-2.5 text-sm text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold font-mono"
  />
- <span className="text-[9px] text-m3-on-surface-variant pl-1 block mt-1 font-medium">
+ <span className="text-xs text-m3-on-surface-variant pl-1 block mt-1 font-medium">
  {currentUser?.role === UserRole.CASHIER
  ? "Changing the standard price requires Manager override verification."
  : "Your role has privileges to direct-apply this override."}

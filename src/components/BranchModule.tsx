@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { ReceiptFontSizeControl, useReceiptFontSize } from './ReceiptFontSizeControl';
 import { useDb } from '../context/DbContext';
 import { Branch, UserRole } from '../types/db';
 import { useResponsivePageSize, TablePagination } from './TablePagination';
@@ -131,6 +132,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
   };
 
   // Create Modal settings
+  const { fontClass: receiptFontClass } = useReceiptFontSize();
   const [showModal, setShowModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingId, setEditingId] = useState('');
@@ -1023,6 +1025,9 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  </div>
  </div>
 
+ {/* RECEIPT FONT SIZE CONTROL */}
+ <ReceiptFontSizeControl mode="full" className="mt-4" />
+
  <div className="flex justify-end pt-2">
  <button
  type="submit"
@@ -1043,7 +1048,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  </div>
 
  {/* Thermal Receipt Virtual Box */}
- <div className="relative mx-auto max-w-[280px] bg-white text-zinc-900 py-5 px-5 border border-zinc-200 rounded-2xl shadow-lg font-mono select-none overflow-hidden text-[9px] leading-relaxed">
+ <div className={`relative mx-auto max-w-[280px] bg-white text-zinc-900 py-5 px-5 border border-zinc-200 rounded-2xl shadow-lg font-mono select-none overflow-hidden text-[9px] leading-relaxed bir-receipt-container ${receiptFontClass}`}>
  {/* Symmetrical paper top tears decoration */}
  <div className="absolute top-0 left-0 right-0 h-1 bg-zinc-200 flex overflow-hidden opacity-40" style={{ backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 2px, #d4d4d8 2px, #d4d4d8 4px)" }}></div>
 

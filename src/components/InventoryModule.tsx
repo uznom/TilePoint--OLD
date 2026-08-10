@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import Papa from 'papaparse';
 import { useDb, useDbProducts, useDbBranchStock } from '../context/DbContext';
 import { saveFileToBackup } from '../lib/fileBackupHelper';
 import { exportInventoryCatalogToXLSX, exportStockAlertsToXLSX } from '../lib/excelExportHelper';
@@ -15,6 +16,11 @@ import { formatCurrency } from '../utils/formatters';
 import { Product, UserRole, TransferType, TransferStatus } from '../types/db';
 import { HoldToConfirmButton } from './HoldToConfirmButton';
 import { ConfirmationModal } from './ConfirmationModal';
+import { StockAlertsModal } from './inventory/StockAlertsModal';
+import { BarcodeModal } from './inventory/BarcodeModal';
+import { BulkDamageModal } from './inventory/BulkDamageModal';
+import { StockAdjustmentModal } from './inventory/StockAdjustmentModal';
+import { ManualLedgerModal } from './inventory/ManualLedgerModal';
 import { useResponsivePageSize, useTableAutoPageSize, TablePagination } from './TablePagination';
 import { createSearchIndex, searchIndex } from '../utils/searchIndex';
 import { useVirtualList } from '../hooks/useVirtualList';
@@ -2047,32 +2053,72 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  }
  };
 
- const processSelectedFile = (file: File) => {
- const reader = new FileReader();
- reader.onload = async (event) => {
- const text = event.target?.result as string;
- if (text) {
- setRawImportText(text);
- showToast(`Loaded file: ${file.name}. Running pre-flight schema inspection...`);
- setIsAnalyzingPreflight(true);
- try {
- const report = await runPreflightValidation(
- text,
- importTargetBranchId,
- branches,
- products,
- currentUser?.role
- );
- setPreflightReport(report);
- } catch (err: any) {
- showToast(`Pre-flight analysis error: ${err.message}`);
- } finally {
- setIsAnalyzingPreflight(false);
- }
- }
- };
- reader.readAsText(file);
- };
+  const processSelectedFile = (file: File) => {
+    setIsAnalyzingPreflight(true);
+    showToast(`Ingesting file: ${file.name}...`);
+
+    if (file.name.toLowerCase().endsWith('.json') || file.type.includes('json')) {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const text = event.target?.result as string;
+        if (text) {
+          setRawImportText(text);
+          showToast(`Loaded JSON: ${file.name}. Running pre-flight schema inspection...`);
+          try {
+            const report = await runPreflightValidation(
+              text,
+              importTargetBranchId,
+              branches,
+              products,
+              currentUser?.role
+            );
+            setPreflightReport(report);
+          } catch (err: any) {
+            showToast(`Pre-flight analysis error: ${err.message}`);
+          } finally {
+            setIsAnalyzingPreflight(false);
+          }
+        }
+      };
+      reader.readAsText(file);
+    } else {
+      // Use PapaParse streaming chunking parser for memory-safe processing of 3000+ item CSV datasets
+      const parsedRows: Array<Record<string, any>> = [];
+      Papa.parse<Record<string, any>>(file, {
+        header: true,
+        skipEmptyLines: 'greedy',
+        transformHeader: (h) => h.replace(/^["']|["']$/g, '').trim(),
+        chunk: (results) => {
+          if (results.data && results.data.length > 0) {
+            parsedRows.push(...results.data);
+          }
+        },
+        complete: async () => {
+          try {
+            const reconstructedCsvText = Papa.unparse(parsedRows);
+            setRawImportText(reconstructedCsvText);
+            showToast(`Streamed & parsed ${parsedRows.length.toLocaleString()} items from ${file.name}! Running pre-flight inspection...`);
+            const report = await runPreflightValidation(
+              reconstructedCsvText,
+              importTargetBranchId,
+              branches,
+              products,
+              currentUser?.role
+            );
+            setPreflightReport(report);
+          } catch (err: any) {
+            showToast(`Pre-flight analysis error: ${err.message}`);
+          } finally {
+            setIsAnalyzingPreflight(false);
+          }
+        },
+        error: (err) => {
+          showToast(`Streaming CSV parse error: ${err.message}`);
+          setIsAnalyzingPreflight(false);
+        }
+      });
+    }
+  };
 
  const handleExportData = (type: 'products' | 'suppliers' | 'branches', format: 'json' | 'csv') => {
  let dataToExport: any[] = [];
@@ -2223,86 +2269,18 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  return;
  }
  }
-
- // Helper to parse CSV raw text into rows
- const parseCSV = (text: string): Array<Record<string, any>> => {
- const lines: string[] = [];
- let currentLine = '';
- let insideQuotes = false;
- 
- for (let i = 0; i < text.length; i++) {
- const char = text[i];
- if (char === '"' || char === "'") {
- insideQuotes = !insideQuotes;
- }
- if ((char === '\r' || char === '\n') && !insideQuotes) {
- if (currentLine.trim()) {
- lines.push(currentLine);
- }
- currentLine = '';
- if (char === '\r' && text[i + 1] === '\n') {
- i++;
- }
- } else {
- currentLine += char;
- }
- }
- if (currentLine.trim()) {
- lines.push(currentLine);
- }
-
- if (lines.length < 2) {
- throw new Error('CSV must contain a header row and at least one data row.');
- }
-
- const headerLine = lines[0];
- let delimiter = ',';
- const commaCount = (headerLine.match(/,/g) || []).length;
- const semiCount = (headerLine.match(/;/g) || []).length;
- const tabCount = (headerLine.match(/\t/g) || []).length;
- 
- if (semiCount > commaCount && semiCount > tabCount) {
- delimiter = ';';
- } else if (tabCount > commaCount && tabCount > semiCount) {
- delimiter = '\t';
- }
-
- const splitLine = (line: string): string[] => {
- const result: string[] = [];
- let cell = '';
- let inQuotes = false;
- for (let j = 0; j < line.length; j++) {
- const c = line[j];
- if (c === '"' || c === "'") {
- inQuotes = !inQuotes;
- } else if (c === delimiter && !inQuotes) {
- result.push(cell.trim());
- cell = '';
- } else {
- cell += c;
- }
- }
- result.push(cell.trim());
- return result;
- };
-
- const headers = splitLine(headerLine).map(h => h.replace(/^["']|["']$/g, '').trim());
- const rows: Array<Record<string, any>> = [];
-
- for (let k = 1; k < lines.length; k++) {
- const cells = splitLine(lines[k]);
- if (cells.length > 0 && cells.some(c => c)) {
- const rowObj: Record<string, any> = {};
- headers.forEach((header, index) => {
- const val = (cells[index] || '').replace(/^["']|["']$/g, '').trim();
- rowObj[header] = val;
- });
- rows.push(rowObj);
- }
- }
-
- return rows;
- };
+  // Helper to parse CSV raw text into rows using PapaParse engine
+  const parseCSV = (text: string): Array<Record<string, any>> => {
+    const result = Papa.parse<Record<string, any>>(text, {
+      header: true,
+      skipEmptyLines: 'greedy',
+      transformHeader: (h) => h.replace(/^["']|["']$/g, '').trim(),
+    });
+    if ((!result.data || result.data.length === 0) && result.errors && result.errors.length > 0) {
+      throw new Error(`CSV Parsing error: ${result.errors[0].message}`);
+    }
+    return result.data || [];
+  };
 
  let parsed: any[] = [];
  let formatType = 'JSON';
@@ -5653,374 +5631,52 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  )}
 
  {/* MODAL 2: MANUAL STOCK ADJUSTMENT DIALOG */}
- {showAdjustModal && (
- <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
- <div className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm shadow-xl" onClick={() => setShowAdjustModal(false)} />
- <form
- onSubmit={handleAdjustSubmit}
- className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[32px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4"
- >
- <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-3">
- <h3 className="text-sm font-black text-m3-primary uppercase tracking-wider flex items-center gap-2">
- <Sliders className="h-5 w-5" />
- <span>Manual Stock Correction</span>
- </h3>
- <button type="button" onClick={() => setShowAdjustModal(false)} className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full">
- <X className="h-4.5 w-4.5" />
- </button>
- </div>
+  <StockAdjustmentModal
+    isOpen={showAdjustModal}
+    onClose={() => setShowAdjustModal(false)}
+    onSubmit={handleAdjustSubmit}
+    adjustProductName={adjustProductName}
+    adjustType={adjustType}
+    setAdjustType={setAdjustType}
+    adjustVal={adjustVal}
+    setAdjustVal={setAdjustVal}
+    adjustReason={adjustReason}
+    setAdjustReason={setAdjustReason}
+  />
 
- <div>
- <span className="text-[10px] text-m3-on-surface-variant font-bold uppercase tracking-wider block mb-0.5 select-none">Adjusting Product</span>
- <strong className="text-xs text-m3-on-surface font-extrabold max-w-[300px] truncate block">{adjustProductName}</strong>
- </div>
+  {/* MODAL: MANUAL STOCK LEDGER ENTRY DIALOG */}
+  <ManualLedgerModal
+    isOpen={showManualLedgerModal}
+    onClose={() => setShowManualLedgerModal(false)}
+    onSubmit={handleManualLedgerSubmit}
+    products={branchProducts}
+    branches={branches}
+    currentUser={currentUser}
+    manualLedgerProductId={manualLedgerProductId}
+    setManualLedgerProductId={setManualLedgerProductId}
+    manualLedgerBranchId={manualLedgerBranchId}
+    setManualLedgerBranchId={setManualLedgerBranchId}
+    manualLedgerType={manualLedgerType}
+    setManualLedgerType={setManualLedgerType}
+    manualLedgerQty={manualLedgerQty}
+    setManualLedgerQty={setManualLedgerQty}
+    manualLedgerRefNo={manualLedgerRefNo}
+    setManualLedgerRefNo={setManualLedgerRefNo}
+    manualLedgerRemarks={manualLedgerRemarks}
+    setManualLedgerRemarks={setManualLedgerRemarks}
+  />
 
- {/* Adjust Type segment */}
- <div className="space-y-1.5">
- <span className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-0.5 block select-none">Adjustment Type</span>
- <div className="grid grid-cols-2 gap-2">
- <button
- type="button"
- onClick={() => setAdjustType('ADD')}
- className={`py-2 px-3.5 rounded-xl border font-bold text-xs flex items-center justify-center gap-1.5 mt-1 transition-all ${
- adjustType === 'ADD' 
- ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500 font-extrabold shadow-sm' 
- : 'bg-m3-surface-lowest border-m3-outline-variant/35 text-m3-on-surface-variant'
- }`}
- >
- <Plus className="h-4 w-4 shrink-0" />
- <span>Receive Quantity (+)</span>
- </button>
- <button
- type="button"
- onClick={() => setAdjustType('SUB')}
- className={`py-2 px-3.5 rounded-xl border font-bold text-xs flex items-center justify-center gap-1.5 mt-1 transition-all ${
- adjustType === 'SUB' 
- ? 'bg-rose-500/15 border-rose-500 text-rose-500 font-extrabold shadow-sm' 
- : 'bg-m3-surface-lowest border-m3-outline-variant/35 text-m3-on-surface-variant'
- }`}
- >
- <Trash2 className="h-3.5 w-3.5 shrink-0" />
- <span>Deduct Quantity (-)</span>
- </button>
- </div>
- </div>
+  {/* MODAL 3: BARCODE & QR CODES VIEWER / PRINT DIALOG */}
+  <BarcodeModal
+    isOpen={showCodesModal}
+    onClose={() => setShowCodesModal(false)}
+    product={codesProduct}
+    onSimulatePrint={handleSimulatePrint}
+    printingCode={printingCode}
+    showToast={showToast}
+  />
 
- {/* Adjust Value input */}
- <div className="space-y-1 relative">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Quantity Delta count</label>
- <input
- type="number"
- required
- min={1}
- value={adjustVal ?? ''}
- onChange={e => setAdjustVal(Math.max(1, Number(e.target.value)))}
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono font-bold"
- />
- </div>
-
- {/* Adjust Reason log detail */}
- <div className="space-y-1 relative">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Adjustment Reason / Notes</label>
- <textarea
- required
- rows={3}
- value={adjustReason ?? ''}
- onChange={e => setAdjustReason(e.target.value)}
- placeholder="Adjustment reason / notes"
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans italic"
- />
- </div>
-
- <div className="flex justify-end gap-2 border-t border-m3-outline-variant/15 pt-4">
- <button
- type="button"
- onClick={() => setShowAdjustModal(false)}
- className="px-4 py-2.5 text-xs font-black uppercase tracking-wider rounded-full hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
- >
- Cancel
- </button>
- <button
- type="submit"
- className="m3-btn-primary px-5 py-2.5 text-xs shadow-md border"
- >
- Execute Stock Correction
- </button>
- </div>
- </form>
- </div>
- )}
-
- {/* MODAL: MANUAL STOCK LEDGER ENTRY DIALOG */}
- {showManualLedgerModal && (
- <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
- <div className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm shadow-xl" onClick={() => setShowManualLedgerModal(false)} />
- <form
- onSubmit={handleManualLedgerSubmit}
- className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-[32px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4"
- >
- <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-3">
- <h3 className="text-sm font-black text-m3-primary uppercase tracking-wider flex items-center gap-2">
- <Sliders className="h-5 w-5" />
- <span>Insert Manual Stock Ledger Entry</span>
- </h3>
- <button type="button" onClick={() => setShowManualLedgerModal(false)} className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full border-0 bg-transparent">
- <X className="h-4.5 w-4.5" />
- </button>
- </div>
-
- <p className="text-xs text-m3-on-surface-variant font-medium">
- Create a custom movement to adjust both physical multi-branch inventory tracking registers and cumulative catalog quantities instantly.
- </p>
-
- {/* Product selection dropdown */}
- <div className="space-y-1">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Select Catalogue Tile</label>
- <select
- required
- value={manualLedgerProductId ?? ''}
- onChange={e => setManualLedgerProductId(e.target.value)}
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface rounded-xl focus:outline-none transition-colors font-sans"
- >
- <option value="" disabled>-- Choose a product --</option>
- {branchProducts.map(p => (
- <option key={p.id} value={p.id}>
- {p.productName} ({p.sku || p.id.slice(-6)}) - Current Qty: {p.stockQuantity}
- </option>
- ))}
- </select>
- </div>
-
- {/* Grid for parameters */}
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
- {/* Branch Yard selector */}
- <div className="space-y-1">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Impacted Yard / Branch</label>
- {currentUser?.role === 'Admin' ? (
- <select
- required
- value={manualLedgerBranchId ?? ''}
- onChange={e => setManualLedgerBranchId(e.target.value)}
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface rounded-xl focus:outline-none transition-colors font-sans"
- >
- {branches.map(b => (
- <option key={b.id} value={b.id}>{b.name}</option>
- ))}
- </select>
- ) : (
- <div className="w-full bg-m3-surface-lowest/60 border border-m3-outline-variant/30 px-3 py-2 text-xs rounded-xl font-bold font-mono text-zinc-400">
- {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
- </div>
- )}
- </div>
-
- {/* Movement Type */}
- <div className="space-y-1">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Movement Ledger Type</label>
- <select
- required
- value={manualLedgerType ?? ''}
- onChange={e => setManualLedgerType(e.target.value as any)}
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface rounded-xl focus:outline-none transition-colors font-sans font-bold"
- >
- <option value="ADJUST">ADJUST (Signed variance +/-)</option>
- <option value="IN">IN (Receive to stock +)</option>
- <option value="OUT">OUT (Issue out / breakages -)</option>
- <option value="PURCHASE">PURCHASE (Direct replenishment +)</option>
- <option value="SALE">SALE (Floor sale issue out -)</option>
- <option value="TRANSFER">TRANSFER (Signed Inter-branch +/-)</option>
- </select>
- </div>
- </div>
-
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
- {/* Quantity */}
- <div className="space-y-1">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Quantity Delta count</label>
- <input
- type="number"
- required
- min={1}
- value={manualLedgerQty ?? ''}
- onChange={e => setManualLedgerQty(Math.max(1, Number(e.target.value)))}
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant/35 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-xl font-mono font-bold"
- />
- <span className="text-[9px] text-zinc-400 font-mono italic block pt-0.5 pl-1">
- Note: IN/PURCHASE adds. OUT/SALE subtracts automatically.
- </span>
- </div>
-
- {/* Reference No */}
- <div className="space-y-1">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Reference Code / Ticket ID</label>
- <input
- type="text"
- required
- placeholder="Reference Code / Ticket ID"
- value={manualLedgerRefNo ?? ''}
- onChange={e => setManualLedgerRefNo(e.target.value)}
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant/35 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-xl font-mono font-bold"
- />
- </div>
- </div>
-
- {/* Remarks / Reason */}
- <div className="space-y-1">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 select-none">Audit Sign-off Remarks</label>
- <textarea
- required
- rows={3}
- placeholder="Describe why this entry is being manually added (e.g., Audit mismatch on Cebu yard, physical breakage during transport, showroom sample allocation...)"
- value={manualLedgerRemarks ?? ''}
- onChange={e => setManualLedgerRemarks(e.target.value)}
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant/35 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-xl font-sans italic"
- />
- </div>
-
- <div className="flex justify-end gap-2 border-t border-m3-outline-variant/15 pt-4">
- <button
- type="button"
- onClick={() => setShowManualLedgerModal(false)}
- className="px-4 py-2.5 text-xs font-black uppercase tracking-wider rounded-full hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors border-0 bg-transparent cursor-pointer"
- >
- Cancel
- </button>
- <button
- type="submit"
- className="m3-btn-primary px-5 py-2.5 text-xs shadow-md border cursor-pointer font-black uppercase tracking-wider"
- >
- Apply Ledger Movement
- </button>
- </div>
- </form>
- </div>
- )}
-
- {/* MODAL 3: BARCODE & QR CODES VIEWER / PRINT DIALOG */}
- {showCodesModal && codesProduct && (
- <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
- <div className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm shadow-xl" onClick={() => setShowCodesModal(false)} />
- <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[32px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-center space-y-5">
- 
- <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-2.5 text-left">
- <h3 className="text-sm font-black text-m3-primary uppercase tracking-wide flex items-center gap-1.5">
- <Barcode className="h-5 w-5" /> Barcode Terminal Label
- </h3>
- <button type="button" onClick={() => setShowCodesModal(false)} className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full">
- <X className="h-4.5 w-4.5" />
- </button>
- </div>
-
- {/* Product specifications context summary */}
- <div className="text-left bg-m3-surface-lowest p-4 rounded-2xl border border-m3-outline-variant/15 space-y-3">
- <div>
- <div className="text-[9px] text-m3-primary/95 font-black uppercase tracking-wider">{codesProduct.category}</div>
- <strong className="text-sm text-m3-on-surface block font-extrabold leading-tight mt-0.5">{codesProduct.productName}</strong>
- <p className="text-[10px] text-zinc-400 mt-1">Brand: <span className="font-semibold text-zinc-350">{codesProduct.brand || 'TilePoint'}</span> • Design: <span className="font-semibold text-zinc-350">{codesProduct.designName || 'N/A'}</span></p>
- </div>
-
- <div className="grid grid-cols-2 gap-2 border-t border-m3-outline-variant/15 pt-2.5 text-[10px] font-mono text-zinc-350">
- <div 
- className="bg-m3-surface-low p-2 rounded-xl border border-m3-outline-variant/10 hover:border-m3-primary/50 transition-colors cursor-pointer group rel"
- onClick={() => {
- navigator.clipboard.writeText(codesProduct.sku);
- showToast(`SKU ${codesProduct.sku} copied to clipboard!`);
- }}
- title="Click to copy SKU"
- >
- <div className="flex justify-between items-center mb-0.5">
- <span className="text-[8px] uppercase tracking-wider text-zinc-500 font-extrabold font-sans">Product SKU</span>
- <span className="text-[7.5px] text-m3-primary opacity-0 group-hover:opacity-100 transition-opacity font-bold font-sans">COPY</span>
- </div>
- <span className="font-bold text-m3-primary text-[11px] block truncate">{codesProduct.sku}</span>
- </div>
-
- <div className="bg-m3-surface-low p-2 rounded-xl border border-m3-outline-variant/10">
- <span className="block text-[8px] uppercase tracking-wider text-zinc-500 font-extrabold font-sans mb-0.5">Dimension (Size)</span>
- <span className="font-bold text-white text-[11px] block truncate">{codesProduct.size || 'N/A'}</span>
- </div>
-
- <div 
- className="bg-m3-surface-low p-2 rounded-xl border border-m3-outline-variant/10 hover:border-m3-primary/50 transition-colors cursor-pointer group rel"
- onClick={() => {
- navigator.clipboard.writeText(codesProduct.productCode);
- showToast(`Product Code ${codesProduct.productCode} copied to clipboard!`);
- }}
- title="Click to copy Product Code"
- >
- <div className="flex justify-between items-center mb-0.5">
- <span className="text-[8px] uppercase tracking-wider text-zinc-500 font-extrabold font-sans">Product Code</span>
- <span className="text-[7.5px] text-m3-primary opacity-0 group-hover:opacity-100 transition-opacity font-bold font-sans">COPY</span>
- </div>
- <span className="font-bold text-white text-[11px] block truncate">{codesProduct.productCode}</span>
- </div>
-
- {(() => {
- const isTile = (codesProduct.category || '').toLowerCase().includes('tile');
- const u = codesProduct.unit || 'pcs';
- return (
- <div className="bg-m3-surface-low p-2 rounded-xl border border-m3-outline-variant/10">
- <span className="block text-[8px] uppercase tracking-wider text-zinc-500 font-extrabold font-sans mb-0.5">
- {isTile ? 'Box Quantity' : 'Packaging Factor'}
- </span>
- <span className="font-bold text-white text-[11px] block truncate">
- {isTile ? `${codesProduct.boxQuantity || 1} Tiles / Box` : `${codesProduct.boxQuantity || 1} ${u}`}
- </span>
- </div>
- );
- })()}
- </div>
- </div>
-
- {/* Visual barcode layout */}
- <div className="flex flex-col items-center justify-center space-y-1.5 py-1">
- <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-1">
- <Barcode className="h-3.5 w-3.5 text-m3-primary" /> Barcode label
- </span>
- <StyledBarcode code={codesProduct.barcode} />
- </div>
-
- {/* Print action buttons */}
- <div className="flex flex-col gap-2 pt-2.5">
- <button
- type="button"
- onClick={handleSimulatePrint}
- disabled={printingCode}
- className="w-full flex items-center justify-center gap-2 py-3 border border-zinc-200/20 dark:border-zinc-700/50 hover:bg-m3-primary hover:text-white bg-m3-surface-lowest rounded-2xl text-xs font-black uppercase tracking-wider transition-all"
- >
- <Printer className="h-4 w-4 shrink-0" />
- <span>{printingCode ? 'Smart Spooling...' : 'Print Scannable Label'}</span>
- </button>
-
- <button
- type="button"
- onClick={() => {
- navigator.clipboard.writeText(codesProduct.barcode);
- showToast(`Barcode ${codesProduct.barcode} copied to clipboard!`);
- }}
- className="w-full text-center text-[10px] font-black uppercase tracking-wider py-2 bg-m3-surface-lowest hover:bg-m3-outline-variant/10 text-m3-primary rounded-xl transition-all border border-m3-outline-variant/10"
- >
- Copy Barcode Raw
- </button>
-
- <div className="text-[9px] text-zinc-500 font-medium leading-normal bg-m3-surface-lowest p-2 rounded-xl border border-m3-outline-variant/10 mt-1">
- Compatible with Zebra, Brother, & standard web spoolers. If popup blockers or safe sandboxed environments are detected, an automatic nested context fallback activates instantly.
- </div>
-
- <button
- type="button"
- onClick={() => setShowCodesModal(false)}
- className="w-full text-center text-xs font-bold py-1.5 hover:bg-m3-outline-variant/15 text-m3-on-surface-variant rounded-xl transition-all mt-1"
- >
- Close View
- </button>
- </div>
-
- </div>
- </div>
- )}
-
- {/* Confirmation soft-delete modal */}
+  {/* Confirmation soft-delete modal */}
  {confirmDeleteId && (
  <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
  <div className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm shadow-xl" onClick={() => setConfirmDeleteId(null)} />
@@ -6682,145 +6338,26 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  )}
 
  {/* MODAL 6: Bulk Damage Register Modal */}
- {showBulkDamageModal && (
- <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
- <div className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm shadow-xl" onClick={() => setShowBulkDamageModal(false)} />
- <form
- onSubmit={handleBulkSubmitDamage}
- className="relative w-full max-w-2xl rounded-[32px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4 max-h-[90vh] overflow-y-auto animate-scale-up"
- >
- {/* Header */}
- <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-3">
- <h3 className="text-sm font-black text-rose-500 uppercase tracking-wider flex items-center gap-2">
- <AlertTriangle className="h-5 w-5 text-rose-500 animate-pulse" />
- <span>Register Bulk Damages & Log Breakages</span>
- </h3>
- <button type="button" onClick={() => setShowBulkDamageModal(false)} className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full hover:bg-m3-outline-variant/15 transition-all">
- <X className="h-5 w-5" />
- </button>
- </div>
+  <BulkDamageModal
+    isOpen={showBulkDamageModal}
+    onClose={() => setShowBulkDamageModal(false)}
+    onSubmit={handleBulkSubmitDamage}
+    branches={branches}
+    branchStock={branchStock}
+    selectedProducts={getSelectedProducts()}
+    bulkDamageBranchId={bulkDamageBranchId}
+    setBulkDamageBranchId={setBulkDamageBranchId}
+    bulkDamageCategory={bulkDamageCategory}
+    setBulkDamageCategory={setBulkDamageCategory}
+    bulkDamageAction={bulkDamageAction}
+    setBulkDamageAction={setBulkDamageAction}
+    bulkDamageNotes={bulkDamageNotes}
+    setBulkDamageNotes={setBulkDamageNotes}
+    bulkDamageQuantities={bulkDamageQuantities}
+    setBulkDamageQuantities={setBulkDamageQuantities}
+  />
 
- {/* Config Fields Grid */}
- <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
- {/* Reporting Showroom/Warehouse Branch */}
- <div className="space-y-1">
- <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Reporting Branch</label>
- <select
- required
- value={bulkDamageBranchId ?? ''}
- onChange={e => setBulkDamageBranchId(e.target.value)}
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary p-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans"
- >
- {branches.filter(b => !b.isDeleted).map(b => (
- <option key={b.id} value={b.id}>{b.name} ({b.id})</option>
- ))}
- </select>
- </div>
-
- {/* Breakage Cause Category */}
- <div className="space-y-1">
- <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Damage Category</label>
- <select
- value={bulkDamageCategory ?? ''}
- onChange={e => setBulkDamageCategory(e.target.value)}
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary p-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans"
- >
- <option value="Warehouse Breakage">Warehouse Drop / Forklift Clash</option>
- <option value="BOA">BOA (Broken On Arrival from Supplier)</option>
- <option value="Showroom Casualty">Showroom Display Chipped</option>
- <option value="Delivery Transit">Transport Transit Fractures</option>
- </select>
- </div>
-
- {/* Action / Treatment */}
- <div className="space-y-1">
- <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Action / Treatment Taken</label>
- <select
- value={bulkDamageAction ?? ''}
- onChange={e => setBulkDamageAction(e.target.value)}
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary p-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans"
- >
- <option value="Disposed / Scrapped">Shattered - Disposed & Scrapped</option>
- <option value="Saved for Mosaic">Saved for Low-Cost Mosaic Sales</option>
- <option value="Claimed from Supplier / Insurance Code">Pending Supplier Cargo Claim / BOA Reimbursement</option>
- <option value="Returned for Credit">Returned to Supplier Warehouse for Credit Note</option>
- </select>
- </div>
- </div>
-
- {/* Selected Products Quantities list */}
- <div className="space-y-2">
- <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Damaged Quantities per Tile Code</label>
- <div className="bg-m3-surface-lowest border border-m3-outline-variant/15 rounded-2xl max-h-[240px] overflow-y-auto divide-y divide-m3-outline-variant/10 scrollbar-thin">
- {getSelectedProducts().map((pItem) => {
- const branchStockVal = branchStock.find(bs => bs.productId === pItem.id && bs.branchId === bulkDamageBranchId)?.quantity ?? 0;
- return (
- <div key={pItem.id} className="p-3 flex items-center justify-between gap-4 text-xs">
- <div className="flex-1 min-w-0">
- <div className="font-extrabold truncate text-m3-on-surface">{pItem.productName}</div>
- <div className="text-[10px] text-zinc-400 font-mono mt-0.5">
- SKU: {pItem.sku} • Stock in Branch: <span className="font-bold text-m3-primary">{branchStockVal} boxes</span>
- </div>
- </div>
- <div className="flex items-center gap-2 shrink-0">
- <span className="text-[10px] font-bold text-zinc-400 uppercase">Damaged Boxes:</span>
- <input
- type="number"
- min={1}
- max={9999}
- required
- value={bulkDamageQuantities[pItem.id] ?? 1}
- onChange={e => {
- const val = Math.max(1, parseInt(e.target.value) || 1);
- setBulkDamageQuantities(prev => ({
- ...prev,
- [pItem.id]: val
- }));
- }}
- className="w-16 bg-m3-surface-low border border-m3-outline-variant/30 rounded-lg text-center p-1 font-mono font-bold text-xs focus:border-m3-primary focus:outline-none"
- />
- </div>
- </div>
- );
- })}
- </div>
- </div>
-
- {/* Incident description */}
- <div className="space-y-1">
- <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Incident Description & Audit Remarks</label>
- <textarea
- required
- rows={2}
- value={bulkDamageNotes ?? ''}
- onChange={e => setBulkDamageNotes(e.target.value)}
- placeholder="Describe the incident causing the stock breakages or suppliers delivery issue..."
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant/20 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-xl font-sans"
- />
- </div>
-
- {/* Submit / Cancel Actions */}
- <div className="flex justify-end gap-2 border-t border-m3-outline-variant/15 pt-4">
- <button
- type="button"
- onClick={() => setShowBulkDamageModal(false)}
- className="px-4 py-2 text-xs font-black uppercase tracking-wider rounded-full hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
- >
- Cancel
- </button>
- <button
- type="submit"
- className="bg-rose-500 hover:bg-rose-600 text-white font-black uppercase tracking-wider px-5 py-2.5 rounded-full text-xs shadow-md cursor-pointer transition-all active:scale-95 flex items-center gap-1.5"
- >
- <Check className="h-4 w-4" />
- <span>Register Bulk Damages</span>
- </button>
- </div>
- </form>
- </div>
- )}
-
- {/* Success toast alert bar */}
+  {/* Success toast alert bar */}
  {toastMessage && (
  <div className="fixed bottom-6 right-6 bg-m3-on-surface text-m3-surface text-xs font-bold py-3 px-5 rounded-2xl shadow-2xl z-50 border border-m3-outline-variant/30 flex items-center gap-2 animate-bounce max-w-[280px]">
  <ShieldCheck className="h-4.5 w-4.5 text-m3-tertiary shrink-0" />
@@ -6829,363 +6366,27 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  )}
  
   {/* STOCK ALERT DIAGNOSTICS & ACTION HUB MODAL */}
-  {showStockAlertsModal && (
-    <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-3 md:p-6 animate-fade-in">
-      <div 
-        className="absolute inset-0 bg-gray-950/80 backdrop-blur-md transition-opacity" 
-        onClick={() => setShowStockAlertsModal(false)} 
-      />
-      
-      <div className="relative w-full max-w-5xl max-h-[92vh] flex flex-col rounded-[32px] border border-m3-outline-variant/30 shadow-2xl bg-m3-surface-low text-m3-on-surface overflow-hidden z-30">
-        
-        {/* Modal Header */}
-        <div className="p-5 md:p-6 border-b border-m3-outline-variant/15 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-m3-surface-low">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-rose-500/10 text-rose-500 shrink-0 border border-rose-500/20">
-              <ShieldAlert className="h-6 w-6 animate-pulse" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-black tracking-tight text-m3-on-surface uppercase font-sans">
-                  Stock Alert Diagnostics & Action Hub
-                </h2>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 self-end sm:self-center">
-            <button
-              onClick={async () => {
-                const branchLabel = selectedViewBranchId === 'consolidated' ? 'Consolidated' : (branches.find(b => b.id === selectedViewBranchId)?.name || selectedViewBranchId);
-                await exportStockAlertsToXLSX(modalFilteredAlertItems, branchLabel);
-                showToast(`Exported ${modalFilteredAlertItems.length} stock alert items to Excel (.XLSX)!`);
-              }}
-              disabled={modalFilteredAlertItems.length === 0}
-              className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
-              title="Export displayed stock alert items to Microsoft Excel (.XLSX)"
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              <span>Export XLSX</span>
-            </button>
-
-            <button
-              onClick={handleBulkQueueAlertsToPoCart}
-              disabled={modalFilteredAlertItems.length === 0}
-              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
-              title="Add all currently displayed alert items to the procurement restock queue"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Queue All to PO Restock ({modalFilteredAlertItems.length})</span>
-            </button>
-            
-            <button 
-              type="button" 
-              onClick={() => setShowStockAlertsModal(false)} 
-              className="p-2 rounded-full hover:bg-m3-surface-variant/40 text-m3-on-surface-variant hover:text-m3-on-surface transition-all cursor-pointer"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Modal Filter Tabs Bar */}
-        <div className="px-5 pt-4 pb-2 border-b border-m3-outline-variant/15 bg-m3-surface-low/80 flex flex-wrap items-center justify-between gap-3">
-          {/* Status Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-            <button
-              onClick={() => setStockAlertModalFilter('ALL')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
-                stockAlertModalFilter === 'ALL'
-                  ? 'bg-m3-primary text-white shadow-sm'
-                  : 'bg-m3-surface-variant/30 text-m3-on-surface-variant hover:bg-m3-surface-variant/60'
-              }`}
-            >
-              <span>All Alerts</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${stockAlertModalFilter === 'ALL' ? 'bg-white/20 text-white' : 'bg-m3-surface-variant/50'}`}>
-                {alertProductsList.length}
-              </span>
-            </button>
-
-            <button
-              onClick={() => setStockAlertModalFilter('OUT_OF_STOCK')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
-                stockAlertModalFilter === 'OUT_OF_STOCK'
-                  ? 'bg-red-600 text-white shadow-sm'
-                  : 'bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20'
-              }`}
-            >
-              <X className="h-3.5 w-3.5" />
-              <span>Out of Stock</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${stockAlertModalFilter === 'OUT_OF_STOCK' ? 'bg-white/20 text-white' : 'bg-red-500/20 text-red-500'}`}>
-                {stats.outOfStockCount}
-              </span>
-            </button>
-
-            <button
-              onClick={() => setStockAlertModalFilter('CRITICAL')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
-                stockAlertModalFilter === 'CRITICAL'
-                  ? 'bg-rose-600 text-white shadow-sm'
-                  : 'bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border border-rose-500/20'
-              }`}
-            >
-              <AlertCircle className="h-3.5 w-3.5" />
-              <span>Critical Warns</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${stockAlertModalFilter === 'CRITICAL' ? 'bg-white/20 text-white' : 'bg-rose-500/20 text-rose-500'}`}>
-                {stats.criticalStockCount}
-              </span>
-            </button>
-
-            <button
-              onClick={() => setStockAlertModalFilter('LOW')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
-                stockAlertModalFilter === 'LOW'
-                  ? 'bg-amber-600 text-white shadow-sm'
-                  : 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/20'
-              }`}
-            >
-              <AlertTriangle className="h-3.5 w-3.5" />
-              <span>Low Stock</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${stockAlertModalFilter === 'LOW' ? 'bg-white/20 text-white' : 'bg-amber-500/20 text-amber-500'}`}>
-                {stats.lowStockCount}
-              </span>
-            </button>
-          </div>
-
-          {/* Search & Category Filter Controls */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
-            <div className="flex items-center gap-1.5 flex-1 sm:w-64">
-              <span className="text-[11px] font-bold text-m3-on-surface-variant shrink-0 hidden md:inline">Search:</span>
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-m3-on-surface-variant" />
-                <input
-                  type="text"
-                  placeholder="Filter by code, item name, SKU..."
-                  value={stockAlertSearch ?? ''}
-                  onChange={e => setStockAlertSearch(e.target.value)}
-                  className="w-full pl-8 pr-8 py-1.5 bg-m3-surface-lowest border border-m3-outline-variant/30 text-m3-on-surface rounded-xl text-xs font-bold focus:outline-none focus:border-m3-primary"
-                  title="Live search filter for alert items by tile code, product name, SKU, or brand"
-                />
-                {stockAlertSearch && (
-                  <button
-                    type="button"
-                    onClick={() => setStockAlertSearch('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-bold text-m3-on-surface-variant shrink-0 hidden md:inline">Category:</span>
-              <select
-                value={stockAlertCategory ?? ''}
-                onChange={e => setStockAlertCategory(e.target.value)}
-                className="px-3 py-1.5 bg-m3-surface-lowest border border-m3-outline-variant/30 text-m3-on-surface rounded-xl text-xs font-bold focus:outline-none focus:border-m3-primary cursor-pointer"
-                title="Filter stock alerts by category"
-              >
-                <option value="All">All Categories</option>
-                {Array.from(new Set(products.map(p => p.category))).map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Modal Table Content Body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-3">
-          {modalFilteredAlertItems.length > 0 ? (
-            <div className="overflow-x-auto rounded-2xl border border-m3-outline-variant/20 bg-m3-surface-lowest">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-m3-surface-low border-b border-m3-outline-variant/20 text-[10px] font-black uppercase text-m3-on-surface-variant tracking-wider">
-                    <th className="py-3 px-4">Product Code & Item</th>
-                    <th className="py-3 px-4">Category & Brand</th>
-                    <th className="py-3 px-4 text-center">Stock Level vs Minimum</th>
-                    <th className="py-3 px-4 text-center">Deficit</th>
-                    <th className="py-3 px-4 text-center">Alert Status</th>
-                    <th className="py-3 px-4 text-right">Quick Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-m3-outline-variant/10 font-sans">
-                  {modalFilteredAlertItems.map(({ product, qty, threshold, alertType, deficit }) => {
-                    const isPoInCart = poCart.some(c => c.productId === product.id);
-
-                    return (
-                      <tr key={product.id} className="hover:bg-m3-surface-variant/10 transition-colors">
-                        {/* Product Code & Name */}
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-                            {product.image ? (
-                              <img
-                                src={product.image}
-                                alt={product.productName}
-                                className="w-9 h-9 rounded-xl object-cover border border-m3-outline-variant/30 shrink-0"
-                                referrerPolicy="no-referrer"
-                              />
-                            ) : (
-                              <div className="w-9 h-9 rounded-xl bg-m3-primary/10 text-m3-primary flex items-center justify-center font-black text-xs shrink-0">
-                                {product.productCode.slice(0, 3)}
-                              </div>
-                            )}
-                            <div>
-                              <div className="font-extrabold text-m3-on-surface text-xs leading-tight">
-                                {product.productName}
-                              </div>
-                              <div className="font-mono text-[10px] text-m3-on-surface-variant mt-0.5 flex items-center gap-1.5">
-                                <span className="font-bold text-m3-primary">{product.productCode}</span>
-                                {product.sku && <span>• SKU: {product.sku}</span>}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Category & Brand */}
-                        <td className="py-3 px-4 text-m3-on-surface-variant">
-                          <span className="font-bold text-m3-on-surface block text-[11px]">{product.category}</span>
-                          <span className="text-[10px]">{product.brand || 'Generic'}</span>
-                        </td>
-
-                        {/* Stock Level & Progress Bar */}
-                        <td className="py-3 px-4 text-center min-w-[140px]">
-                          <div className="space-y-1 max-w-[160px] mx-auto">
-                            <div className="flex justify-between text-[11px] font-mono font-bold">
-                              <span className={qty === 0 ? 'text-red-500 font-extrabold' : qty <= threshold * 0.5 ? 'text-rose-500' : 'text-amber-500'}>
-                                {qty} {product.unit || 'pcs'}
-                              </span>
-                              <span className="text-m3-on-surface-variant text-[10px]">
-                                Min: {threshold}
-                              </span>
-                            </div>
-                            {/* Meter Bar */}
-                            <div className="w-full h-1.5 bg-m3-surface-variant/40 rounded-full overflow-hidden">
-                              <div 
-                                className={`h-full transition-all duration-500 rounded-full ${
-                                  qty === 0 
-                                    ? 'bg-red-600 w-0' 
-                                    : qty <= threshold * 0.5 
-                                      ? 'bg-rose-500' 
-                                      : 'bg-amber-500'
-                                }`} 
-                                style={{ width: `${Math.min(100, Math.max(5, (qty / (threshold || 1)) * 100))}%` }}
-                              />
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Deficit */}
-                        <td className="py-3 px-4 text-center font-mono font-bold text-xs text-rose-500">
-                          {deficit > 0 ? `-${deficit} ${product.unit || 'pcs'}` : '0'}
-                        </td>
-
-                        {/* Alert Status Badge */}
-                        <td className="py-3 px-4 text-center">
-                          {alertType === 'OUT_OF_STOCK' && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-500/15 text-red-500 border border-red-500/30">
-                              <X className="h-3 w-3" /> Out of Stock
-                            </span>
-                          )}
-                          {alertType === 'CRITICAL' && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/15 text-rose-500 border border-rose-500/30">
-                              <AlertCircle className="h-3 w-3" /> Critical Warn
-                            </span>
-                          )}
-                          {alertType === 'LOW' && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-500 border border-amber-500/30">
-                              <AlertTriangle className="h-3 w-3" /> Low Stock
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Actions */}
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => handleQueueRestock(product.id)}
-                              className={`px-2.5 py-1.5 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer active:scale-95 ${
-                                isPoInCart
-                                  ? 'bg-emerald-500/20 text-emerald-600 border border-emerald-500/30'
-                                  : 'bg-m3-primary text-white hover:bg-m3-primary/90 shadow-2xs'
-                              }`}
-                              title="Add to PO Procurement Queue"
-                            >
-                              <Plus className="h-3.5 w-3.5" />
-                              <span>{isPoInCart ? 'In PO Queue' : '+ PO Queue'}</span>
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                handleOpenAdjust(product);
-                                setShowStockAlertsModal(false);
-                              }}
-                              className="px-2.5 py-1.5 bg-m3-surface-variant/40 hover:bg-m3-surface-variant/70 text-m3-on-surface rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer"
-                              title="Adjust stock quantity"
-                            >
-                              <Sliders className="h-3.5 w-3.5" />
-                              <span>Adjust</span>
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                setTerm(product.productCode);
-                                setHighlightedProductId(product.id);
-                                changeActiveSubTab('catalog');
-                                setShowStockAlertsModal(false);
-                              }}
-                              className="p-1.5 text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/10 rounded-lg transition-all cursor-pointer"
-                              title="Locate in catalog table"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="py-12 px-4 text-center rounded-2xl border border-dashed border-m3-outline-variant/30 bg-m3-surface-lowest space-y-3">
-              <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-500 mx-auto flex items-center justify-center">
-                <Check className="h-6 w-6 stroke-[3]" />
-              </div>
-              <div className="max-w-md mx-auto space-y-1">
-                <h4 className="font-extrabold text-sm text-m3-on-surface uppercase tracking-wide">
-                  No Stock Alerts Found
-                </h4>
-                <p className="text-xs text-m3-on-surface-variant">
-                  {stockAlertSearch || stockAlertCategory !== 'All' 
-                    ? 'No stock alert items match your search and category filters.' 
-                    : 'All inventory items in this branch scope are healthy and above minimum thresholds!'}
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Modal Footer */}
-        <div className="p-4 px-6 border-t border-m3-outline-variant/15 bg-m3-surface-low flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-4 text-m3-on-surface-variant font-mono">
-            <span>
-              Showing <strong className="text-m3-on-surface font-extrabold">{modalFilteredAlertItems.length}</strong> alert item(s)
-            </span>
-          </div>
-
-          <button
-            onClick={() => setShowStockAlertsModal(false)}
-            className="px-5 py-2 bg-m3-surface-variant/40 hover:bg-m3-surface-variant/70 text-m3-on-surface font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer w-full sm:w-auto text-center"
-          >
-            Close Diagnostics
-          </button>
-        </div>
-
-      </div>
-    </div>
-  )}
+  <StockAlertsModal
+    isOpen={showStockAlertsModal}
+    onClose={() => setShowStockAlertsModal(false)}
+    selectedViewBranchId={selectedViewBranchId}
+    branches={branches}
+    products={products}
+    alertProductsList={alertProductsList}
+    stats={stats}
+    poCart={poCart}
+    onQueueRestock={handleQueueRestock}
+    onBulkQueueAlerts={handleBulkQueueAlertsToPoCart}
+    onOpenAdjust={handleOpenAdjust}
+    onLocateInCatalog={(pCode, pId) => {
+      setTerm(pCode);
+      setHighlightedProductId(pId);
+      changeActiveSubTab("catalog");
+    }}
+    exportStockAlertsToXLSX={exportStockAlertsToXLSX}
+    showToast={showToast}
+    initialFilter={stockAlertModalFilter}
+  />
 
   {/* Reset/Synchronize Chemical Batches Confirmation Modal */}
   <ConfirmationModal

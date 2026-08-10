@@ -117,242 +117,207 @@ export function getContrastRatio(hex1: string, hex2: string) {
 
 // Generate the fully compliant light mode or dark mode schema
 export function generateThemeFromSeed(
- seedColor: string, 
- isDark: boolean,
- contrast: 'default' | 'medium' | 'high' = 'medium'
+  seedColor: string, 
+  isDark: boolean,
+  contrast: 'small' | 'default' | 'medium' | 'high' = 'medium'
 ): M3ThemeScheme {
- const rgb = hexToRgb(seedColor);
- const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
- const h = hsl.h;
- const s = hsl.s;
- const l = hsl.l;
+  const rgb = hexToRgb(seedColor);
+  const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+  const h = hsl.h;
+  const s = hsl.s;
+  const l = hsl.l;
 
- // Stable theme accents independently of contrast setting following user intent
- const accentContrast: any = contrast;
+  // Normalize contrast option: 'small' or 'default' maps to 'small'
+  const contrastMode = (contrast === 'small' || contrast === 'default') ? 'small' : contrast;
 
- if (!isDark) {
- // ---- LIGHT MODE ----
- 
- // Primary: Use the seed color adjusted for contrast
- let primaryL = l;
- if (accentContrast === 'medium') {
- primaryL = Math.max(0.12, l - 0.15); // Darker primary
- } else if (accentContrast === 'high') {
- primaryL = Math.max(0.08, l - 0.28); // Extremely dark primary for bold visibility
- } else {
- if (l > 0.6) {
- primaryL = 0.45; // Darken to assure safe contrast on lights
- } else if (l < 0.15) {
- primaryL = 0.35; // Brighten if too muddy
- }
- }
- const primaryHex = rgbToHex(...Object.values(hslToRgb(h, s, primaryL)) as [number, number, number]);
- 
- // On Primary: Determine based on luminance contrast ratio
- const primaryOnWhite = getContrastRatio(primaryHex, '#FFFFFF');
- const onPrimary = accentContrast === 'high' ? '#FFFFFF' : (primaryOnWhite >= 4.5 ? '#FFFFFF' : '#0B132B');
+  if (!isDark) {
+    // ---- LIGHT MODE ----
+    
+    // Primary: Preserve brand seed color fidelity!
+    let primaryL = l;
+    if (l > 0.58) {
+      primaryL = 0.46; // Gently adjust very light seeds for optimal contrast
+    } else if (l < 0.20) {
+      primaryL = 0.35; // Brighten very dark seeds
+    }
+    const primaryHex = rgbToHex(...Object.values(hslToRgb(h, s, primaryL)) as [number, number, number]);
+    
+    // On Primary: Determine text color on top of primary button
+    const primaryOnWhite = getContrastRatio(primaryHex, '#FFFFFF');
+    const onPrimary = primaryOnWhite >= 3.5 ? '#FFFFFF' : '#0B132B';
 
- // Primary container: very soft copy
- const primaryContainerL = accentContrast === 'high' ? 0.98 : (accentContrast === 'medium' ? 0.97 : 0.96);
- const primaryContainerSat = accentContrast === 'high' ? 0.05 : (accentContrast === 'medium' ? 0.15 : 0.24);
- const primaryContainerHex = rgbToHex(...Object.values(hslToRgb(h, Math.min(primaryContainerSat, s * 0.6), primaryContainerL)) as [number, number, number]);
- 
- // On Primary container: deep marine-like shade of the primary color
- const onPrimaryContainerL = accentContrast === 'high' ? 0.10 : (accentContrast === 'medium' ? 0.18 : 0.24);
- const onPrimaryContainerHex = rgbToHex(...Object.values(hslToRgb(h, Math.max(0.6, s), onPrimaryContainerL)) as [number, number, number]);
+    // Primary container: soft tinted background for primary badges/cards
+    const primaryContainerL = contrastMode === 'high' ? 0.98 : (contrastMode === 'medium' ? 0.95 : 0.93);
+    const primaryContainerSat = Math.min(s * 0.5, 0.20);
+    const primaryContainerHex = rgbToHex(...Object.values(hslToRgb(h, primaryContainerSat, primaryContainerL)) as [number, number, number]);
+    
+    // On Primary container
+    const onPrimaryContainerL = contrastMode === 'high' ? 0.08 : (contrastMode === 'medium' ? 0.15 : 0.22);
+    const onPrimaryContainerHex = rgbToHex(...Object.values(hslToRgb(h, Math.max(0.6, s), onPrimaryContainerL)) as [number, number, number]);
 
- // Secondary: Slate desaturated color supporting primary
- let secondaryL = 0.34;
- if (accentContrast === 'medium') secondaryL = 0.22;
- if (accentContrast === 'high') secondaryL = 0.12;
- const secondaryHex = rgbToHex(...Object.values(hslToRgb(h, 0.12, secondaryL)) as [number, number, number]);
- const secondaryOnWhite = getContrastRatio(secondaryHex, '#FFFFFF');
- const onSecondary = secondaryOnWhite >= 4.5 ? '#FFFFFF' : '#111827';
- 
- const secondaryContainerHex = rgbToHex(...Object.values(hslToRgb(h, 0.08, accentContrast === 'high' ? 0.98 : 0.94)) as [number, number, number]);
- const onSecondaryContainerHex = rgbToHex(...Object.values(hslToRgb(h, 0.15, accentContrast === 'high' ? 0.10 : 0.20)) as [number, number, number]);
+    // Secondary & Tertiary
+    const secondaryHex = rgbToHex(...Object.values(hslToRgb(h, 0.12, contrastMode === 'high' ? 0.15 : (contrastMode === 'medium' ? 0.24 : 0.34))) as [number, number, number]);
+    const onSecondary = '#FFFFFF';
+    const secondaryContainerHex = rgbToHex(...Object.values(hslToRgb(h, 0.08, contrastMode === 'high' ? 0.98 : (contrastMode === 'medium' ? 0.95 : 0.92))) as [number, number, number]);
+    const onSecondaryContainerHex = rgbToHex(...Object.values(hslToRgb(h, 0.15, contrastMode === 'high' ? 0.08 : (contrastMode === 'medium' ? 0.15 : 0.22))) as [number, number, number]);
 
- // Tertiary: Compliment color (rotate hue 120-150 deg)
- const tertiaryH = (h + 0.35) % 1;
- let tertiaryL = 0.34;
- if (accentContrast === 'medium') tertiaryL = 0.22;
- if (accentContrast === 'high') tertiaryL = 0.12;
- const tertiaryHex = rgbToHex(...Object.values(hslToRgb(tertiaryH, Math.min(0.5, s), tertiaryL)) as [number, number, number]);
- const onTertiary = getContrastRatio(tertiaryHex, '#FFFFFF') >= 4.5 ? '#FFFFFF' : '#0F2C2C';
- 
- const tertiaryContainerHex = rgbToHex(...Object.values(hslToRgb(tertiaryH, 0.12, accentContrast === 'high' ? 0.98 : 0.96)) as [number, number, number]);
- const onTertiaryContainerHex = rgbToHex(...Object.values(hslToRgb(tertiaryH, 0.4, accentContrast === 'high' ? 0.10 : 0.2)) as [number, number, number]);
+    const tertiaryH = (h + 0.35) % 1;
+    const tertiaryHex = rgbToHex(...Object.values(hslToRgb(tertiaryH, Math.min(0.5, s), contrastMode === 'high' ? 0.15 : (contrastMode === 'medium' ? 0.24 : 0.34))) as [number, number, number]);
+    const onTertiary = '#FFFFFF';
+    const tertiaryContainerHex = rgbToHex(...Object.values(hslToRgb(tertiaryH, 0.12, contrastMode === 'high' ? 0.98 : (contrastMode === 'medium' ? 0.95 : 0.92))) as [number, number, number]);
+    const onTertiaryContainerHex = rgbToHex(...Object.values(hslToRgb(tertiaryH, 0.4, contrastMode === 'high' ? 0.08 : (contrastMode === 'medium' ? 0.15 : 0.22))) as [number, number, number]);
 
- // Surface & Background (harmonized tinted background)
- let surfaceL = 0.95;
- if (contrast === 'high') {
- surfaceL = 0.99; // Crisp clear white background
- } else if (contrast === 'medium') {
- surfaceL = 0.97;
- }
- const surfaceHex = rgbToHex(...Object.values(hslToRgb(h, 0.06, surfaceL)) as [number, number, number]);
- 
- let onSurface = rgbToHex(...Object.values(hslToRgb(h, 0.16, 0.08)) as [number, number, number]); // Charcoal tinted hue
- let onSurfaceVariant = rgbToHex(...Object.values(hslToRgb(h, 0.12, 0.28)) as [number, number, number]);
- if (contrast === 'medium') {
- onSurface = '#05070B';
- onSurfaceVariant = '#151C26';
- } else if (contrast === 'high') {
- onSurface = '#000000';
- onSurfaceVariant = '#000000';
- }
+    // Surface & Background - Clear distinguishability between Small, Medium, and High
+    let surfaceHex = '#F4F6FA'; // Small: Soft, relaxed eggshell tint
+    let onSurface = '#1E293B'; // Small: Charcoal Slate
+    let onSurfaceVariant = '#64748B'; // Small: Slate-500
+    let lowest = '#FFFFFF';
+    let low = '#FAFBFD';
+    let container = '#F0F3F8';
+    let high = '#E4E8F0';
+    let outline = '#CBD5E1'; // Small: Soft border
+    let outlineVariant = '#E2E8F0'; // Small: Subtle divider
 
- // Surface Containers
- const lowest = contrast === 'high' ? '#FFFFFF' : rgbToHex(...Object.values(hslToRgb(h, 0.04, 0.98)) as [number, number, number]);
- const low = contrast === 'high' ? '#FFFFFF' : (contrast === 'medium' ? rgbToHex(...Object.values(hslToRgb(h, 0.04, 0.97)) as [number, number, number]) : rgbToHex(...Object.values(hslToRgb(h, 0.05, 0.96)) as [number, number, number]));
- const container = contrast === 'high' ? '#F2F2F2' : rgbToHex(...Object.values(hslToRgb(h, 0.08, 0.92)) as [number, number, number]);
- const high = contrast === 'high' ? '#E5E5E5' : rgbToHex(...Object.values(hslToRgb(h, 0.12, 0.86)) as [number, number, number]);
+    if (contrastMode === 'medium') {
+      surfaceHex = '#EAEFF5'; // Medium: Distinct, crisp background
+      onSurface = '#0F172A'; // Medium: Deep Slate-900 text
+      onSurfaceVariant = '#334155'; // Medium: Slate-700 text
+      lowest = '#FFFFFF';
+      low = '#F3F6FA';
+      container = '#E2E8F0';
+      high = '#D0D7E2';
+      outline = '#64748B'; // Medium: Defined dark borders
+      outlineVariant = '#94A3B8';
+    } else if (contrastMode === 'high') {
+      surfaceHex = '#F1F5F9'; // High: High-contrast crisp canvas
+      onSurface = '#000000'; // High: Maximum black text
+      onSurfaceVariant = '#000000'; // High: Maximum black text
+      lowest = '#FFFFFF';
+      low = '#FFFFFF';
+      container = '#E2E8F0';
+      high = '#CBD5E1';
+      outline = '#000000'; // High: High-contrast solid black outlines
+      outlineVariant = '#1E293B';
+    }
 
- // Outlines
- let outline = rgbToHex(...Object.values(hslToRgb(h, 0.14, 0.44)) as [number, number, number]);
- let outlineVariant = rgbToHex(...Object.values(hslToRgb(h, 0.09, 0.82)) as [number, number, number]);
- if (contrast === 'medium') {
- outline = '#2D3748';
- outlineVariant = '#A0AEC0';
- } else if (contrast === 'high') {
- outline = '#000000';
- outlineVariant = '#000000';
- }
+    return {
+      primary: primaryHex,
+      onPrimary,
+      primaryContainer: primaryContainerHex,
+      onPrimaryContainer: onPrimaryContainerHex,
+      
+      secondary: secondaryHex,
+      onSecondary,
+      secondaryContainer: secondaryContainerHex,
+      onSecondaryContainer: onSecondaryContainerHex,
+      
+      tertiary: tertiaryHex,
+      onTertiary,
+      tertiaryContainer: tertiaryContainerHex,
+      onTertiaryContainer: onTertiaryContainerHex,
+      
+      surface: surfaceHex,
+      onSurface,
+      onSurfaceVariant,
+      surfaceContainerLowest: lowest,
+      surfaceContainerLow: low,
+      surfaceContainer: container,
+      surfaceContainerHigh: high,
+      
+      outline,
+      outlineVariant
+    };
 
- return {
- primary: primaryHex,
- onPrimary,
- primaryContainer: primaryContainerHex,
- onPrimaryContainer: onPrimaryContainerHex,
- 
- secondary: secondaryHex,
- onSecondary,
- secondaryContainer: secondaryContainerHex,
- onSecondaryContainer: onSecondaryContainerHex,
- 
- tertiary: tertiaryHex,
- onTertiary,
- tertiaryContainer: tertiaryContainerHex,
- onTertiaryContainer: onTertiaryContainerHex,
- 
- surface: surfaceHex,
- onSurface,
- onSurfaceVariant,
- surfaceContainerLowest: lowest,
- surfaceContainerLow: low,
- surfaceContainer: container,
- surfaceContainerHigh: high,
- 
- outline,
- outlineVariant
- };
+  } else {
+    // ---- DARK MODE ----
+    
+    // Primary: Preserve brand seed color fidelity on dark mode!
+    let primaryL = l;
+    if (l < 0.45) {
+      primaryL = 0.65; // Brighten for dark background legibility
+    } else if (l > 0.80) {
+      primaryL = 0.72;
+    }
+    const primaryHex = rgbToHex(...Object.values(hslToRgb(h, Math.min(0.9, s * 1.1), primaryL)) as [number, number, number]);
+    const onPrimary = getContrastRatio(primaryHex, '#FFFFFF') >= 3.0 ? '#FFFFFF' : '#09101F';
 
- } else {
- // ---- DARK MODE ----
- 
- // Primary: make it a pastelized bright glowing tone
- let primaryL = l;
- if (accentContrast === 'medium') {
- primaryL = 0.78; // Extra glowing visibility
- } else if (accentContrast === 'high') {
- primaryL = 0.88; // Extreme high-visibility bright neon
- } else {
- if (l < 0.55) {
- primaryL = 0.65; 
- } else if (l > 0.85) {
- primaryL = 0.72; 
- }
- }
- const primaryHex = rgbToHex(...Object.values(hslToRgb(h, Math.min(0.9, s * 1.1), primaryL)) as [number, number, number]);
- const onPrimary = accentContrast === 'high' ? '#000000' : (getContrastRatio(primaryHex, '#FAFBFD') >= 3.0 ? '#FAFBFD' : '#09101F');
+    // Primary Container: dark sapphire-style underlay
+    const primaryContainerHex = rgbToHex(...Object.values(hslToRgb(h, Math.min(0.8, s * 0.9), contrastMode === 'high' ? 0.10 : (contrastMode === 'medium' ? 0.14 : 0.18))) as [number, number, number]);
+    const onPrimaryContainerHex = rgbToHex(...Object.values(hslToRgb(h, 0.35, contrastMode === 'high' ? 0.98 : (contrastMode === 'medium' ? 0.92 : 0.88))) as [number, number, number]);
 
- // Primary Container: dark sapphire-style underlay
- const primaryContainerHex = rgbToHex(...Object.values(hslToRgb(h, Math.min(0.8, s * 0.9), accentContrast === 'high' ? 0.08 : (accentContrast === 'medium' ? 0.12 : 0.18))) as [number, number, number]);
- const onPrimaryContainerHex = rgbToHex(...Object.values(hslToRgb(h, 0.35, accentContrast === 'high' ? 0.95 : (accentContrast === 'medium' ? 0.92 : 0.88))) as [number, number, number]);
+    // Secondary & Tertiary
+    const secondaryHex = rgbToHex(...Object.values(hslToRgb(h, 0.12, contrastMode === 'high' ? 0.90 : (contrastMode === 'medium' ? 0.80 : 0.68))) as [number, number, number]);
+    const onSecondary = '#0F172A';
+    const secondaryContainerHex = rgbToHex(...Object.values(hslToRgb(h, 0.10, contrastMode === 'high' ? 0.10 : (contrastMode === 'medium' ? 0.16 : 0.20))) as [number, number, number]);
+    const onSecondaryContainerHex = rgbToHex(...Object.values(hslToRgb(h, 0.15, contrastMode === 'high' ? 0.98 : (contrastMode === 'medium' ? 0.90 : 0.86))) as [number, number, number]);
 
- // Secondary
- let secondaryL = 0.68;
- if (accentContrast === 'medium') secondaryL = 0.80;
- if (accentContrast === 'high') secondaryL = 0.90;
- const secondaryHex = rgbToHex(...Object.values(hslToRgb(h, 0.12, secondaryL)) as [number, number, number]);
- const onSecondary = getContrastRatio(secondaryHex, '#FAFBFD') >= 3.0 ? '#FAFBFD' : '#0F172A';
- const secondaryContainerHex = rgbToHex(...Object.values(hslToRgb(h, 0.10, accentContrast === 'high' ? 0.08 : 0.20)) as [number, number, number]);
- const onSecondaryContainerHex = rgbToHex(...Object.values(hslToRgb(h, 0.15, accentContrast === 'high' ? 0.95 : 0.86)) as [number, number, number]);
+    const tertiaryH = (h + 0.35) % 1;
+    const tertiaryHex = rgbToHex(...Object.values(hslToRgb(tertiaryH, Math.min(0.7, s), contrastMode === 'high' ? 0.90 : (contrastMode === 'medium' ? 0.78 : 0.65))) as [number, number, number]);
+    const onTertiary = '#031E1E';
+    const tertiaryContainerHex = rgbToHex(...Object.values(hslToRgb(tertiaryH, 0.35, contrastMode === 'high' ? 0.10 : (contrastMode === 'medium' ? 0.16 : 0.22))) as [number, number, number]);
+    const onTertiaryContainerHex = rgbToHex(...Object.values(hslToRgb(tertiaryH, 0.25, contrastMode === 'high' ? 0.98 : (contrastMode === 'medium' ? 0.90 : 0.88))) as [number, number, number]);
 
- // Tertiary Complementary dark Mode highlight
- const tertiaryH = (h + 0.35) % 1;
- let tertiaryL = 0.65;
- if (accentContrast === 'medium') tertiaryL = 0.78;
- if (accentContrast === 'high') tertiaryL = 0.88;
- const tertiaryHex = rgbToHex(...Object.values(hslToRgb(tertiaryH, Math.min(0.7, s), tertiaryL)) as [number, number, number]);
- const onTertiary = getContrastRatio(tertiaryHex, '#FAFBFD') >= 3.0 ? '#FAFBFD' : '#031E1E';
- 
- const tertiaryContainerHex = rgbToHex(...Object.values(hslToRgb(tertiaryH, 0.35, accentContrast === 'high' ? 0.08 : 0.22)) as [number, number, number]);
- const onTertiaryContainerHex = rgbToHex(...Object.values(hslToRgb(tertiaryH, 0.25, accentContrast === 'high' ? 0.95 : 0.88)) as [number, number, number]);
+    // Surface & Background - Clear distinguishability between Small, Medium, and High
+    let surfaceHex = '#0F172A'; // Small: Soft midnight slate canvas
+    let onSurface = '#F8FAFC'; // Small: Light slate text
+    let onSurfaceVariant = '#94A3B8'; // Small: Slate-400 text
+    let lowest = '#070B14';
+    let low = '#131C2E';
+    let container = '#1E293B';
+    let high = '#334155';
+    let outline = '#334155'; // Small: Soft dark outlines
+    let outlineVariant = '#1E293B';
 
- // Surface & Background (gorgeous deep charcoal-tinted dark environment)
- let surfaceL = 0.06;
- if (contrast === 'high') {
- surfaceL = 0.01; // Solid pitch black
- } else if (contrast === 'medium') {
- surfaceL = 0.04;
- }
- const surfaceHex = rgbToHex(...Object.values(hslToRgb(h, 0.08, surfaceL)) as [number, number, number]);
- let onSurface = '#F3F4F6';
- let onSurfaceVariant = rgbToHex(...Object.values(hslToRgb(h, 0.10, 0.72)) as [number, number, number]);
- if (contrast === 'medium') {
- onSurface = '#FFFFFF';
- onSurfaceVariant = '#E2E8F0';
- } else if (contrast === 'high') {
- onSurface = '#FFFFFF';
- onSurfaceVariant = '#FFFFFF';
- }
+    if (contrastMode === 'medium') {
+      surfaceHex = '#0B0F17'; // Medium: Deeper dark background
+      onSurface = '#FFFFFF'; // Medium: Bright white text
+      onSurfaceVariant = '#CBD5E1'; // Medium: Slate-300 text
+      lowest = '#05080E';
+      low = '#0F172A';
+      container = '#1E293B';
+      high = '#334155';
+      outline = '#64748B'; // Medium: Crisp visible borders
+      outlineVariant = '#475569';
+    } else if (contrastMode === 'high') {
+      surfaceHex = '#000000'; // High: Pure pitch black OLED canvas
+      onSurface = '#FFFFFF'; // High: Maximum white text
+      onSurfaceVariant = '#FFFFFF'; // High: Maximum white text
+      lowest = '#000000';
+      low = '#0A0A0A';
+      container = '#141414';
+      high = '#262626';
+      outline = '#FFFFFF'; // High: Maximum white border outlines
+      outlineVariant = '#A3A3A3';
+    }
 
- // Surface containers
- const lowest = contrast === 'high' ? '#000000' : rgbToHex(...Object.values(hslToRgb(h, 0.08, 0.04)) as [number, number, number]);
- const low = contrast === 'high' ? '#000000' : (contrast === 'medium' ? rgbToHex(...Object.values(hslToRgb(h, 0.08, 0.06)) as [number, number, number]) : rgbToHex(...Object.values(hslToRgb(h, 0.09, 0.10)) as [number, number, number]));
- const container = contrast === 'high' ? '#111111' : rgbToHex(...Object.values(hslToRgb(h, 0.11, 0.14)) as [number, number, number]);
- const high = contrast === 'high' ? '#222222' : rgbToHex(...Object.values(hslToRgb(h, 0.13, 0.20)) as [number, number, number]);
-
- // Outlines
- let outline = rgbToHex(...Object.values(hslToRgb(h, 0.10, 0.36)) as [number, number, number]);
- let outlineVariant = rgbToHex(...Object.values(hslToRgb(h, 0.12, 0.22)) as [number, number, number]);
- if (contrast === 'medium') {
- outline = '#CBD5E1';
- outlineVariant = '#475569';
- } else if (contrast === 'high') {
- outline = '#FFFFFF';
- outlineVariant = '#FFFFFF';
- }
-
- return {
- primary: primaryHex,
- onPrimary,
- primaryContainer: primaryContainerHex,
- onPrimaryContainer: onPrimaryContainerHex,
- 
- secondary: secondaryHex,
- onSecondary,
- secondaryContainer: secondaryContainerHex,
- onSecondaryContainer: onSecondaryContainerHex,
- 
- tertiary: tertiaryHex,
- onTertiary,
- tertiaryContainer: tertiaryContainerHex,
- onTertiaryContainer: onTertiaryContainerHex,
- 
- surface: surfaceHex,
- onSurface,
- onSurfaceVariant,
- surfaceContainerLowest: lowest,
- surfaceContainerLow: low,
- surfaceContainer: container,
- surfaceContainerHigh: high,
- 
- outline,
- outlineVariant
- };
- }
+    return {
+      primary: primaryHex,
+      onPrimary,
+      primaryContainer: primaryContainerHex,
+      onPrimaryContainer: onPrimaryContainerHex,
+      
+      secondary: secondaryHex,
+      onSecondary,
+      secondaryContainer: secondaryContainerHex,
+      onSecondaryContainer: onSecondaryContainerHex,
+      
+      tertiary: tertiaryHex,
+      onTertiary,
+      tertiaryContainer: tertiaryContainerHex,
+      onTertiaryContainer: onTertiaryContainerHex,
+      
+      surface: surfaceHex,
+      onSurface,
+      onSurfaceVariant,
+      surfaceContainerLowest: lowest,
+      surfaceContainerLow: low,
+      surfaceContainer: container,
+      surfaceContainerHigh: high,
+      
+      outline,
+      outlineVariant
+    };
+  }
 }
 
 // Function to apply scheme to DOM

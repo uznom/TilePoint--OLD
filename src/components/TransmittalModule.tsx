@@ -47,6 +47,8 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  stockTransfers,
  triggerSystemProcessing,
  expenses,
+ importManualSalesReport,
+ importProducts,
  } = useDb();
 
  // Create Modal state
@@ -666,7 +668,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
 
  const executeLocalImport = async () => {
  if (!rawImportText.trim()) {
- showToast("Please paste a valid JSON transmittal packet.");
+ showToast("Please paste a valid JSON transmittal packet or sales report.");
  return;
  }
 
@@ -680,11 +682,29 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  JSON.stringify(parsed.contents || {}),
  `Imported cargo: ${parsed.notes || "No description"}. (Origin: ${parsed.sentFrom})`,
  );
+
+ // If payload contains embedded inventory stock tally or catalog items, sync them into active database
+ if (parsed.contents && (parsed.contents.inventoryCounts || parsed.contents.stocks)) {
+ const stockItems = parsed.contents.inventoryCounts || parsed.contents.stocks;
+ if (Array.isArray(stockItems) && stockItems.length > 0) {
+ importProducts(stockItems, undefined);
+ }
+ }
+
  setShowImportModal(false);
- showToast("Transmittal slip parsed, cataloged, and approved.");
+ showToast("Transmittal slip parsed, cataloged, and approved across all managers!");
+ } else if (parsed.branchName && parsed.reportingDate && Array.isArray(parsed.sales)) {
+ // Direct sales report JSON transmission from another branch manager
+ const res = importManualSalesReport(rawImportText);
+ if (res.success) {
+ setShowImportModal(false);
+ showToast(`Branch sales report for ${parsed.branchName} (${parsed.reportingDate}) successfully imported and synced with complete details!`);
+ } else {
+ showToast(`Sales Report Sync Error: ${res.error}`);
+ }
  } else {
  showToast(
- "Format Mismatch: Ledger packet lacks transmittal identification schema.",
+ "Format Mismatch: Payload must be a valid TilePoint Transmittal Slip or Branch Sales Report JSON.",
  );
  }
  } catch (err: any) {
