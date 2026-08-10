@@ -258,15 +258,17 @@ export interface LoyaltyConfig {
 }
 
 export interface SaleItem {
- id: string;
- saleId: string;
- productId: string;
- productName: string;
- quantity: number;
- unitPrice: number;
- total: number;
- isDeleted?: boolean;
- deletedAt?: string;
+  id: string;
+  saleId: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  discount?: number;
+  discountType?: string;
+  total: number;
+  isDeleted?: boolean;
+  deletedAt?: string;
 }
 
 export interface StockMovement {

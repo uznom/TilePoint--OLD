@@ -8,7 +8,6 @@ import crypto from 'crypto';
 import dotenv from 'dotenv';
 import mysql from 'mysql2/promise';
 import alasql from 'alasql';
-import Database from 'better-sqlite3';
 import { Server as SocketIOServer } from 'socket.io';
 
 dotenv.config();
@@ -68,6 +67,12 @@ app.use(express.urlencoded({ limit: '100mb', extended: true }));
 app.use((req, res, next) => {
   res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
   res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  if (useSsl) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    res.setHeader('Content-Security-Policy', 'upgrade-insecure-requests');
+  }
   
   if (req.path.startsWith('/api/')) {
     return next();
@@ -306,9 +311,22 @@ function ensureSqliteTable(tableName) {
   }
 }
 
-function initSqliteEngine() {
+let DatabaseClass = null;
+
+async function initSqliteEngine() {
   try {
-    sqliteDb = new Database(SQLITE_DB_PATH);
+    if (!DatabaseClass) {
+      try {
+        const mod = await import('better-sqlite3');
+        DatabaseClass = mod.default || mod;
+      } catch (importErr) {
+        console.warn('[SQLite Engine Warning] "better-sqlite3" package not loaded:', importErr.message);
+        console.warn('[SQLite Engine Notice] Running with AlaSQL embedded engine fallback. Run "npm install better-sqlite3" to enable native SQLite persistence.');
+        return;
+      }
+    }
+
+    sqliteDb = new DatabaseClass(SQLITE_DB_PATH);
     sqliteDb.pragma('journal_mode = WAL');
     sqliteDb.pragma('synchronous = NORMAL');
     sqliteDb.pragma('foreign_keys = OFF');
@@ -603,7 +621,7 @@ const TABLE_COLUMNS = {
   deliveries: ['id', 'saleId', 'saleNumber', 'customerName', 'contactNumber', 'houseNo', 'street', 'barangay', 'cityMunicipality', 'landmark', 'deliveryDate', 'deliveryTime', 'status', 'notes', 'truck', 'driver', 'helper', 'branchId', 'branchName', 'receiverName', 'customerSignature', 'deliveredAt', 'deliveredBy', 'createdAt', 'updatedAt'],
   damage_logs: ['id', 'productId', 'productName', 'branchId', 'quantity', 'reason', 'notes', 'reportedBy', 'actionTaken', 'category', 'branchName', 'reportedAt', 'productSku', 'unitType', 'isDeleted', 'deletedAt', 'createdAt'],
   ledger_entries: ['id', 'date', 'productId', 'productName', 'branchId', 'movementType', 'quantity', 'referenceNo', 'remarks', 'isDeleted', 'deletedAt'],
-  audit_logs: ['id', 'actionCode', 'description', 'module', 'userId', 'userName', 'username', 'referenceId', 'action', 'tableAffected', 'recordId', 'changePayload', 'timestamp', 'createdAt', 'branchId'],
+  audit_logs: ['id', 'actionCode', 'description', 'module', 'userId', 'username', 'referenceId', 'action', 'tableAffected', 'recordId', 'changePayload', 'timestamp', 'createdAt', 'branchId'],
   custom_corporate_bills: ['id', 'title', 'supplierId', 'purchaseOrderId', 'totalAmount', 'remainingBalance', 'frequency', 'nextDueDate', 'installmentsCount', 'status', 'notes', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
   transmittals: ['id', 'documentType', 'fromBranchId', 'toBranchId', 'submittedBy', 'status', 'payloadJson', 'notes', 'submittedAt', 'isDeleted'],
   members: ['id', 'fullName', 'phone', 'email', 'points', 'creditLimit', 'outstandingBalance', 'status', 'branchId', 'createdAt', 'updatedAt'],
@@ -2538,29 +2556,34 @@ app.get('/manifest.json', (req, res) => {
 });
 
 // Vite middleware setup or production static files
-if (process.env.NODE_ENV !== 'production') {
-  console.log('[Shared DB Server] Running in DEVELOPMENT mode with Vite middleware...');
-  const { createServer: createViteServer } = await import('vite');
-  const vite = await createViteServer({
-    server: {
-      middlewareMode: true,
-      hmr: process.env.DISABLE_HMR !== 'true'
-    },
-    appType: 'spa'
-  });
-  app.use(vite.middlewares);
-} else {
-  console.log('[Shared DB Server] Running in PRODUCTION mode serving static files...');
+const hasDistBuild = fs.existsSync(path.join(__dirname, 'dist', 'index.html'));
+if (process.env.NODE_ENV === 'production' || hasDistBuild) {
+  console.log('[Shared DB Server] Serving compiled production static files from dist/...');
   app.use(express.static(path.join(__dirname, 'dist')));
   
   app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
   });
+} else {
+  console.log('[Shared DB Server] Running in DEVELOPMENT mode with Vite middleware...');
+  try {
+    const { createServer: createViteServer } = await import('vite');
+    const vite = await createViteServer({
+      server: {
+        middlewareMode: true,
+        hmr: process.env.DISABLE_HMR === 'true' ? false : { server }
+      },
+      appType: 'spa'
+    });
+    app.use(vite.middlewares);
+  } catch (viteErr) {
+    console.warn('[Vite Middleware Warning]', viteErr.message);
+  }
 }
 
 // Initialize AlaSQL & SQLite Persistent Database Engines
 initAlasqlEngine();
-initSqliteEngine();
+await initSqliteEngine();
 
 server.listen(PORT, '0.0.0.0', async () => {
   await initDatabaseSchema();

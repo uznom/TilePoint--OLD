@@ -461,7 +461,6 @@ CREATE TABLE IF NOT EXISTS `audit_logs` (
   `description` TEXT NULL,
   `module` VARCHAR(64) NULL,
   `userId` VARCHAR(64) NULL,
-  `userName` VARCHAR(191) NULL,
   `username` VARCHAR(191) NULL,
   `referenceId` VARCHAR(191) NULL,
   `branchId` VARCHAR(64) NULL,

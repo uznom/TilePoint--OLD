@@ -480,15 +480,6 @@ function AppContent() {
  );
  }, [isSidebarExpanded, isSidebarMinimized]);
 
-  // Auto-collapse sidebar when in tablet viewport mode to save space while keeping icons visible
-  const prevViewportBreakpointRef = useRef<string>("");
-  useEffect(() => {
-    if (viewportBreakpoint === "tablet" && prevViewportBreakpointRef.current !== "tablet") {
-      setIsSidebarExpanded(false);
-    }
-    prevViewportBreakpointRef.current = viewportBreakpoint;
-  }, [viewportBreakpoint]);
-
  const [followSystemTheme, setFollowSystemTheme] = useState(() => {
  const saved = localStorage.getItem("tilepoint_follow_system_theme");
  return saved !== null ? saved === "true" : true;
@@ -593,106 +584,6 @@ function AppContent() {
  }
  }
  }, [activeTab, isSidebarMinimized, wasSidebarExpandedBeforeCheckout]);
-  // Auto-minimize the sidebar when a large modal or dialog is open in the DOM
-  const [isModalActive, setIsModalActive] = useState(false);
-  const wasSidebarExpandedBeforeModal = useRef(false);
-  const isSidebarMinimizedRef = useRef(isSidebarMinimized);
-
-  useEffect(() => {
-    isSidebarMinimizedRef.current = isSidebarMinimized;
-  }, [isSidebarMinimized]);
-
-  useEffect(() => {
-    const checkForModal = () => {
-      const elements = document.querySelectorAll(
-        '.fixed, [role="dialog"], [data-modal="true"], [id*="modal"], [class*="modal"], [class*="dialog"], [class*="backdrop"]'
-      );
-      let foundModal = false;
-
-      for (let i = 0; i < elements.length; i++) {
-        const el = elements[i] as HTMLElement;
-        if (el.offsetWidth === 0 && el.offsetHeight === 0) continue;
-        if (
-          el.id === "sidebar-nav" ||
-          el.id === "mobile-sidebar" ||
-          el.closest("#sidebar-nav") ||
-          el.closest("aside")
-        ) {
-          continue;
-        }
-
-        // Ignore small toast notifications, bottom alerts, floating action buttons
-        if (
-          el.classList.contains("animate-bounce") ||
-          el.classList.contains("animate-slide-left") ||
-          el.querySelector(".animate-bounce")
-        ) {
-          continue;
-        }
-
-        const rect = el.getBoundingClientRect();
-        // Ignore small toast popups (< 300px width AND < 150px height)
-        if (rect.width < 300 && rect.height < 150) continue;
-
-        // Ignore pure dropdown backdrops or tooltips without modal content
-        if (el.childElementCount === 0 && !el.getAttribute("role") && !el.classList.contains("fixed")) {
-          continue;
-        }
-
-        const isFixedCover =
-          (el.classList.contains("fixed") || el.classList.contains("absolute")) &&
-          (el.classList.contains("inset-0") || rect.width > 300) &&
-          rect.height > 200;
-
-        const hasModalCard = el.querySelector(
-          '[role="dialog"], form, table, input, textarea, button, [class*="max-w-"], [class*="rounded-"], [class*="bg-"]'
-        );
-        const isDialogRole = el.getAttribute("role") === "dialog";
-        const isModalDataAttr = el.getAttribute("data-modal") === "true";
-
-        if (isFixedCover || isDialogRole || isModalDataAttr || hasModalCard) {
-          const style = window.getComputedStyle(el);
-          if (style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0") {
-            foundModal = true;
-            break;
-          }
-        }
-      }
-
-      setIsModalActive((prev) => (prev !== foundModal ? foundModal : prev));
-    };
-
-    checkForModal();
-
-    const observer = new MutationObserver(() => {
-      checkForModal();
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["class", "style", "role", "data-modal"],
-    });
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (isModalActive) {
-      if (!isSidebarMinimizedRef.current) {
-        wasSidebarExpandedBeforeModal.current = true;
-        setIsSidebarMinimized(true);
-      }
-    } else {
-      if (wasSidebarExpandedBeforeModal.current) {
-        setIsSidebarMinimized(false);
-        wasSidebarExpandedBeforeModal.current = false;
-      }
-    }
-  }, [isModalActive]);
 
  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
@@ -722,14 +613,11 @@ function AppContent() {
  // Account settings states & Logout confirmatory dialogs
  const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
  const [colorContrast, setColorContrast] = useState<
- "default" | "medium" | "high"
+ "small" | "default" | "medium" | "high"
  >(() => {
- return (
- (localStorage.getItem("tilepoint-color-contrast") as
- | "default"
- | "medium"
- | "high") || "medium"
- );
+ const val = localStorage.getItem("tilepoint-color-contrast");
+ if (val === "small" || val === "default") return "small";
+ return (val as any) || "medium";
  });
 
  const [maximizeTextContrast, setMaximizeTextContrast] = useState<boolean>(
@@ -750,11 +638,8 @@ function AppContent() {
 
  useEffect(() => {
  const handleSync = () => {
- const contrast =
- (localStorage.getItem("tilepoint-color-contrast") as
- | "default"
- | "medium"
- | "high") || "medium";
+ const rawContrast = localStorage.getItem("tilepoint-color-contrast");
+ const contrast = (rawContrast === "small" || rawContrast === "default") ? "small" : ((rawContrast as any) || "medium");
  const maxText =
  localStorage.getItem("tilepoint-maximize-text-contrast") === "true";
  const savedSeed = localStorage.getItem("tilepoint_custom_theme_primary");
@@ -778,8 +663,6 @@ function AppContent() {
  setDisableBlurs(noBlur);
 
  // Apply the theme with latest contrast settings
- // If there is a saved custom seed, or if contrast is medium/high (even on the default sapphire theme), generate and apply the dynamic theme.
- if (savedSeed || contrast !== "default") {
  try {
  const activeSeed = savedSeed || "#155EEF";
  const scheme = generateThemeFromSeed(activeSeed, darkMode, contrast);
@@ -789,9 +672,6 @@ function AppContent() {
  "[M3 Dynamic Theme] Failed to apply color theme:",
  err,
  );
- }
- } else {
- resetM3ThemeOverride();
  }
 
  // Sync Font Size classes
@@ -1253,11 +1133,8 @@ function AppContent() {
  const savedSeed = localStorage.getItem("tilepoint_custom_theme_primary");
  if (savedSeed) {
  try {
- const contrast =
- (localStorage.getItem("tilepoint-color-contrast") as
- | "default"
- | "medium"
- | "high") || "medium";
+ const rawC = localStorage.getItem("tilepoint-color-contrast");
+ const contrast = (rawC === "small" || rawC === "default") ? "small" : ((rawC as any) || "medium");
  const scheme = generateThemeFromSeed(savedSeed, darkMode, contrast);
  applyM3ThemeToDOM(scheme);
  } catch (err) {
@@ -1699,13 +1576,14 @@ function AppContent() {
  animate={{
  width: isSidebarHidden ? 0 : isSidebarExpanded ? 288 : 80,
  }}
- transition={{
- type: "spring",
- stiffness: 340,
- damping: 28,
- mass: 0.8,
+ style={{
+ willChange: "width",
  }}
- className={`border-r border-m3-outline-variant/15 select-none android-glass-sidebar py-5 px-3 sticky top-0 flex flex-col justify-between h-screen transition-all ${
+ transition={{
+ duration: 0.25,
+ ease: [0.16, 1, 0.3, 1],
+ }}
+ className={`border-r border-m3-outline-variant/15 select-none android-glass-sidebar py-5 px-3 sticky top-0 flex flex-col justify-between h-screen transition-colors duration-200 ${
  isSidebarProfileDropdownOpen ? "z-[9999] overflow-visible" : "z-40 overflow-hidden"
  } ${
  isSidebarHidden ? "hidden" : "hidden md:flex"

@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useReceiptFontSize, ReceiptFontSizeControl } from './ReceiptFontSizeControl';
 import { useDb } from '../context/DbContext';
 import { Shift, UserRole } from '../types/db';
 import { formatCurrency } from '../utils/formatters';
@@ -24,6 +25,7 @@ interface ShiftModuleProps {
 }
 
 export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
+ const { fontClass: receiptFontClass } = useReceiptFontSize();
  const {
  shifts,
  activeShift,
@@ -75,6 +77,10 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
 
  const handleOpenLocalShift = (e: React.FormEvent) => {
  e.preventDefault();
+ if (activeShift) {
+ showToast(`An active shift drawer is already open for your account (${activeShift.id}). Please close your active shift before opening a new one.`);
+ return;
+ }
  const stVal = parseFloat(startCashInput) || 0;
  openShift(stVal);
  showToast(`Shift drawer opened successfully. Starting cash: ₱${stVal.toFixed(2)}`);
@@ -361,7 +367,8 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
  {showXReport && activeShift && shiftStats && (
  <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
  <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setShowXReport(false)} />
- <div className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl space-y-4 text-xs font-mono select-none bg-m3-surface-low text-m3-on-surface bir-receipt-container">
+ <div className={`relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl space-y-4 text-xs font-mono select-none bg-m3-surface-low text-m3-on-surface bir-receipt-container ${receiptFontClass}`}>
+ <ReceiptFontSizeControl mode="compact" className="my-1" />
  <div className="text-center pb-2.5 border-b border-dashed border-m3-outline-variant/30">
  <h4 className="font-extrabold text-sm uppercase tracking-widest text-m3-primary">X Report (Terminal Audit Only)</h4>
  
@@ -436,7 +443,8 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode }) => {
  {showZReport && activeShift && shiftStats && (
  <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
  <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setShowZReport(false)} />
- <div className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl space-y-4 text-xs font-mono select-none bg-m3-surface-low text-m3-on-surface bir-receipt-container">
+ <div className={`relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl space-y-4 text-xs font-mono select-none bg-m3-surface-low text-m3-on-surface bir-receipt-container ${receiptFontClass}`}>
+ <ReceiptFontSizeControl mode="compact" className="my-1" />
  <div className="text-center pb-2.5 border-b border-dashed border-m3-outline-variant/30">
  <h4 className="font-extrabold text-sm uppercase tracking-widest text-m3-tertiary">Z Report (Terminal Seal)</h4>
  

@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { ReceiptFontSizeControl } from './ReceiptFontSizeControl';
 import {
  Sliders,
  Eye,
@@ -172,8 +173,10 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  return (localStorage.getItem('tilepoint-text-size') as any) || 'normal';
  });
 
- const [colorContrast, setColorContrast] = useState<'default' | 'medium' | 'high'>(() => {
- return (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'medium';
+ const [colorContrast, setColorContrast] = useState<'small' | 'default' | 'medium' | 'high'>(() => {
+ const val = localStorage.getItem('tilepoint-color-contrast');
+ if (val === 'small' || val === 'default') return 'small';
+ return (val as any) || 'medium';
  });
 
  const [maximizeTextContrast, setMaximizeTextContrast] = useState<boolean>(() => {
@@ -523,9 +526,14 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
 
  {/* FONT SCALING REGION */}
  <div className="space-y-2">
+ <div className="flex justify-between items-center">
  <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">
- Font Size Multiplier Scale
+ System UI Font Size Multiplier
  </label>
+ <span className="text-[9px] font-mono text-emerald-500 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">
+ System UI Only (Receipts Excluded)
+ </span>
+ </div>
  <div className="grid grid-cols-3 gap-3">
  {[
  { id: 'small', name: 'Small (0.88x)', desc: 'Compact dense text scale' },
@@ -550,6 +558,9 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  </div>
  </div>
 
+ {/* RECEIPT FONT SIZE ADJUSTER */}
+ <ReceiptFontSizeControl mode="full" />
+
  {/* COLOR CONTRAST SELECTION */}
  <div className="space-y-2.5">
  <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">
@@ -557,13 +568,13 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  </label>
  <div className="w-full p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low space-y-3">
  <div className="grid grid-cols-3 gap-2 p-1.5 rounded-xl bg-m3-surface-container">
- {(['default', 'medium', 'high'] as const).map((level) => (
+ {(['small', 'medium', 'high'] as const).map((level) => (
  <button
  key={level}
  type="button"
  onClick={() => updateSetting('tilepoint-color-contrast', level)}
  className={`py-2 px-3 rounded-lg text-[11px] font-black capitalize transition-all cursor-pointer text-center ${
- colorContrast === level
+ (colorContrast === level || (level === 'small' && colorContrast === 'default'))
  ? 'bg-m3-primary text-m3-on-primary shadow-sm scale-[1.01]'
  : 'text-m3-on-surface-variant hover:bg-m3-on-surface/5'
  }`}

@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from "react";
+import { useReceiptFontSize, ReceiptFontSizeControl } from "./ReceiptFontSizeControl";
 import { formatCurrency } from "../utils/formatters";
 import { motion, AnimatePresence } from "motion/react";
 import { ConfirmationModal } from "./ConfirmationModal";
@@ -546,6 +547,8 @@ export default function AtposExtraModules({
  0,
  );
 
+ const { fontClass: receiptFontClass } = useReceiptFontSize();
+
  return (
  <div className="space-y-6">
  {/* Dynamic Module Header */}
@@ -571,8 +574,9 @@ export default function AtposExtraModules({
  <motion.div
  initial={{ scale: 0.95, opacity: 0 }}
  animate={{ scale: 1, opacity: 1 }}
- className="w-full max-w-sm bg-white text-zinc-900 rounded-2xl shadow-2xl p-5 font-mono text-xs border border-zinc-200 relative max-h-[85vh] overflow-y-auto bir-receipt-container scrollbar-thin"
+ className={`w-full max-w-sm bg-white text-zinc-900 rounded-2xl shadow-2xl p-5 font-mono text-xs border border-zinc-200 relative max-h-[85vh] overflow-y-auto bir-receipt-container scrollbar-thin ${receiptFontClass}`}
  >
+ <ReceiptFontSizeControl mode="compact" className="mb-3" />
  <div className="text-center pb-3 border-b-2 border-dashed border-zinc-300">
  <h3 className="font-extrabold text-sm tracking-wide">
  EMMAN TILE CENTER
@@ -3605,7 +3609,7 @@ export default function AtposExtraModules({
           <Percent className="h-4 w-4 text-amber-500 animate-pulse" />
           BIR Fiscal Ledgers & Books of Accounts
         </h3>
-        <p className="text-[11px] text-zinc-400 mt-0.5">
+        <p className="text-[11px] text-m3-on-surface-variant mt-0.5">
           Philippine BIR Tax compliance books. Select a book to audit X/Z readings, VAT, PWD, Senior, and Solo Parent discounts.
         </p>
       </div>
@@ -3635,14 +3639,14 @@ export default function AtposExtraModules({
                 : "bg-m3-surface-lowest hover:bg-m3-surface-high text-m3-on-surface/85 border-m3-outline-variant/10 hover:border-m3-outline-variant/25"
             }`}
           >
-            <div className={`p-1.5 rounded-lg ${isSelected ? "bg-m3-primary/20 text-m3-primary" : "bg-zinc-800 text-zinc-400"}`}>
+            <div className={`p-1.5 rounded-lg ${isSelected ? "bg-m3-primary/20 text-m3-primary" : "bg-m3-surface-high text-m3-on-surface-variant"}`}>
               <Icon className="h-4 w-4" />
             </div>
             <div className="pr-1">
               <span className="block text-[11px] font-bold leading-tight font-sans">
                 {tab.name}
               </span>
-              <span className="block text-[9px] text-zinc-400/80 leading-none mt-0.5 font-sans">
+              <span className="block text-[9px] text-m3-on-surface-variant/80 leading-none mt-0.5 font-sans">
                 {tab.desc}
               </span>
             </div>
@@ -3653,7 +3657,7 @@ export default function AtposExtraModules({
   </div>
  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
  <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-xs font-sans space-y-1">
- <span className="text-zinc-400 block font-bold uppercase tracking-wider text-[9px]">
+ <span className="text-m3-on-surface-variant block font-bold uppercase tracking-wider text-[9px]">
  Vatable Sales (Net of VAT)
  </span>
  <span className="text-sm font-black font-mono">
@@ -3664,7 +3668,7 @@ export default function AtposExtraModules({
  </span>
  </div>
  <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-xs font-sans space-y-1">
- <span className="text-zinc-400 block font-bold uppercase tracking-wider text-[9px]">
+ <span className="text-m3-on-surface-variant block font-bold uppercase tracking-wider text-[9px]">
  VAT-Exempt Sales Base
  </span>
  <span className="text-sm font-black font-mono">
@@ -3675,7 +3679,7 @@ export default function AtposExtraModules({
  </span>
  </div>
  <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-xs font-sans space-y-1">
- <span className="text-zinc-400 block font-bold uppercase tracking-wider text-[9px]">
+ <span className="text-m3-on-surface-variant block font-bold uppercase tracking-wider text-[9px]">
  12% Output VAT Amount
  </span>
  <span className="text-sm font-black text-amber-500 font-mono">
@@ -3686,7 +3690,7 @@ export default function AtposExtraModules({
  </span>
  </div>
  <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-xs font-sans space-y-1">
- <span className="text-zinc-400 block font-bold uppercase tracking-wider text-[9px]">
+ <span className="text-m3-on-surface-variant block font-bold uppercase tracking-wider text-[9px]">
  BIR Discounts & Deductions
  </span>
  <span className="text-sm font-black text-emerald-500 font-mono">
@@ -3697,7 +3701,7 @@ export default function AtposExtraModules({
  </span>
  </div>
  <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-xs font-sans space-y-1 col-span-2 sm:col-span-1">
- <span className="text-zinc-400 block font-bold uppercase tracking-wider text-[9px]">
+ <span className="text-m3-on-surface-variant block font-bold uppercase tracking-wider text-[9px]">
  Accredited Net Sales Due
  </span>
  <span className="text-sm font-black text-emerald-500 font-mono">

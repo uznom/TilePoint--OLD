@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useDb } from '../context/DbContext';
 import { Sparkles, Database, Upload, CheckCircle, HelpCircle, ArrowRight, Save, Plus, X } from 'lucide-react';
 import { Product } from '../types/db';
+import Papa from 'papaparse';
 
 export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
  const db = useDb();
@@ -121,85 +122,18 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  return;
  }
 
- // Reuse the exact same robust CSV parsing engine
- const parseCSV = (text: string): Array<Record<string, any>> => {
- const lines: string[] = [];
- let currentLine = '';
- let insideQuotes = false;
- 
- for (let i = 0; i < text.length; i++) {
- const char = text[i];
- if (char === '"' || char === "'") {
- insideQuotes = !insideQuotes;
- }
- if ((char === '\r' || char === '\n') && !insideQuotes) {
- if (currentLine.trim()) {
- lines.push(currentLine);
- }
- currentLine = '';
- if (char === '\r' && text[i + 1] === '\n') {
- i++;
- }
- } else {
- currentLine += char;
- }
- }
- if (currentLine.trim()) {
- lines.push(currentLine);
- }
-
- if (lines.length < 2) {
- throw new Error('CSV must contain a header row and at least one data row.');
- }
-
- const headerLine = lines[0];
- let delimiter = ',';
- const commaCount = (headerLine.match(/,/g) || []).length;
- const semiCount = (headerLine.match(/;/g) || []).length;
- const tabCount = (headerLine.match(/\t/g) || []).length;
- 
- if (semiCount > commaCount && semiCount > tabCount) {
- delimiter = ';';
- } else if (tabCount > commaCount && tabCount > semiCount) {
- delimiter = '\t';
- }
-
- const splitLine = (line: string): string[] => {
- const result: string[] = [];
- let cell = '';
- let inQuotes = false;
- for (let j = 0; j < line.length; j++) {
- const c = line[j];
- if (c === '"' || c === "'") {
- inQuotes = !inQuotes;
- } else if (c === delimiter && !inQuotes) {
- result.push(cell.trim());
- cell = '';
- } else {
- cell += c;
- }
- }
- result.push(cell.trim());
- return result;
- };
-
- const headers = splitLine(headerLine).map(h => h.replace(/^["']|["']$/g, '').trim());
- const rows: Array<Record<string, any>> = [];
-
- for (let k = 1; k < lines.length; k++) {
- const cells = splitLine(lines[k]);
- if (cells.length > 0 && cells.some(c => c)) {
- const rowObj: Record<string, any> = {};
- headers.forEach((header, index) => {
- const val = (cells[index] || '').replace(/^["']|["']$/g, '').trim();
- rowObj[header] = val;
- });
- rows.push(rowObj);
- }
- }
-
- return rows;
- };
+  // Reuse Papa.parse engine
+  const parseCSV = (text: string): Array<Record<string, any>> => {
+    const result = Papa.parse<Record<string, any>>(text, {
+      header: true,
+      skipEmptyLines: 'greedy',
+      transformHeader: (h) => h.replace(/^["']|["']$/g, '').trim(),
+    });
+    if ((!result.data || result.data.length === 0) && result.errors && result.errors.length > 0) {
+      throw new Error(`CSV Parsing error: ${result.errors[0].message}`);
+    }
+    return result.data || [];
+  };
 
  let parsed: any[] = [];
  try {

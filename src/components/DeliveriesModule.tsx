@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { useReceiptFontSize, ReceiptFontSizeControl } from './ReceiptFontSizeControl';
 import { useDb } from '../context/DbContext';
 import { formatCurrency } from '../utils/formatters';
 import { Delivery, DeliveryStatus, UserRole } from '../types/db';
@@ -52,6 +53,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  } = useDb();
 
  // Branch isolation state
+ const { fontClass: receiptFontClass } = useReceiptFontSize();
  const [selectedBranchId, setSelectedBranchId] = useState<string>(
  currentUser.branchAssignmentId || 'ALL'
  );
@@ -686,7 +688,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  )}
 
  {/* RECONCILIATION AUDIT STATUS CARD */}
- {reconciliationStats && (
+ {false && (
  <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-2xl p-3 px-4 text-xs shadow-xs flex flex-wrap items-center justify-between gap-3 font-sans">
  <div className="flex items-center gap-2.5">
  <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
@@ -1456,8 +1458,10 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  </button>
  </div>
 
+ <ReceiptFontSizeControl mode="compact" className="my-2" />
+
  {/* PRINTABLE DOCKET CONTAINER WITH DUAL COPIES & RECEIVER SIGNATURE */}
-  <div className="space-y-4 my-4 select-text text-left bir-receipt-container">
+ <div className={`space-y-4 my-4 select-text text-left bir-receipt-container ${receiptFontClass}`}>
     {renderDeliveryReceiptCopy("STORE COPY")}
 
     <div className="relative flex py-2 items-center">

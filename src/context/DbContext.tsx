@@ -1714,8 +1714,38 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return safeParse<Transmittal[]>("tp_transmittals", SEED_TRANSMITTALS);
  });
 
+ const sanitizeShifts = (shiftsList: Shift[]): Shift[] => {
+ if (!shiftsList || shiftsList.length === 0) return shiftsList;
+ const openShiftByCashier: Record<string, string> = {};
+ for (const s of shiftsList) {
+ const isOpen = s.status === "OPEN" || s.status === "Open" || (!s.closedAt && s.status !== "CLOSED");
+ if (isOpen && s.cashierId) {
+ if (!openShiftByCashier[s.cashierId]) {
+ openShiftByCashier[s.cashierId] = s.id;
+ }
+ }
+ }
+ let modified = false;
+ const sanitized = shiftsList.map((s) => {
+ const isOpen = s.status === "OPEN" || s.status === "Open" || (!s.closedAt && s.status !== "CLOSED");
+ if (isOpen && s.cashierId) {
+ const latestOpenId = openShiftByCashier[s.cashierId];
+ if (s.id !== latestOpenId) {
+ modified = true;
+ return {
+ ...s,
+ status: "CLOSED" as ShiftStatus,
+ closedAt: s.closedAt || new Date().toISOString(),
+ };
+ }
+ }
+ return s;
+ });
+ return modified ? sanitized : shiftsList;
+ };
+
  const [shifts, setShifts] = useState<Shift[]>(() => {
- return safeParse<Shift[]>("tp_shifts", SEED_SHIFTS);
+ return sanitizeShifts(safeParse<Shift[]>("tp_shifts", SEED_SHIFTS));
  });
 
  const [sales, setSales] = useState<Sale[]>(() => {
@@ -2102,13 +2132,15 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const activeShift = useMemo(() => {
  const openShift = currentUser
  ? shifts.find(
- (s) => s.cashierId === currentUser.id && s.status === "OPEN",
+ (s) =>
+ s.cashierId === currentUser.id &&
+ (s.status === "OPEN" || s.status === "Open" || (!s.closedAt && s.status !== "CLOSED")),
  )
  : null;
  return openShift || null;
  }, [shifts, currentUser]);
 
- // Heartbeat to update our active session timestamp every 8 seconds
+ // Heartbeat to update our active session timestamp every 20 seconds
  useEffect(() => {
  if (!isLoggedIn || !currentUser || !activeSessionId) return;
 
@@ -3239,8 +3271,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }
 
  if (success) {
- // Reset delay to baseline 15000ms
- currentSyncDelay.current = 15000;
+ // Reset delay to baseline 15000ms (or 20000ms for Staff role)
+ currentSyncDelay.current = currentUser?.role === UserRole.STAFF ? 20000 : 15000;
  // Trigger offline queue processing upon successful sync recovery
  processOfflineQueue();
  } else {
@@ -5943,6 +5975,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const uniqueNonces = Array.from(new Set(nextUsedNonces));
  localStorage.setItem("tp_used_nonces", JSON.stringify(uniqueNonces));
 
+ // Immediately push all imported sales report details to central server so all connected managers sync in real-time
+ forceSyncAllToServer().catch((err) => {
+   console.warn("[Manual Sales Report Import] Background server sync failed:", err);
+ });
+
  return { success: true };
  } catch (e: any) {
  return { success: false, error: `JSON parsing error: ${e.message || e}` };
@@ -7876,23 +7913,37 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  imported.forEach((p, i) => {
  const barcode =
  sanitizeInputText(p.barcode) || generateEan13Barcode();
+ const rawCode = sanitizeInputText(p.productCode);
  const productCode =
- sanitizeInputText(p.productCode) ||
+ rawCode ||
  barcode ||
- `TL-IMP-${Date.now()}-${i}`;
+ `TL-IMP-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 6)}`;
  const pName =
  sanitizeInputText(p.productName) || "Unnamed Imported Product";
+ const pSize = sanitizeInputText(p.size) || "N/A";
+ const pSku = sanitizeInputText(p.sku) || "";
 
  const normCode = productCode.toLowerCase().trim();
  const normName = pName.toLowerCase().trim();
  const normBarcode = barcode ? barcode.toLowerCase().trim() : "";
+ const normSku = pSku ? pSku.toLowerCase().trim() : "";
+ const normSize = pSize.toLowerCase().trim();
 
- // 1. Check if it already exists in the active database to prevent overwriting/duplicating
+ // 1. Check if it already exists in the active database
  const isDuplicateInDb = activeProducts.some(
- (prod) =>
- prod.productCode.toLowerCase().trim() === normCode ||
- (prod.barcode && normBarcode && prod.barcode.toLowerCase().trim() === normBarcode) ||
- prod.productName.toLowerCase().trim() === normName
+ (prod) => {
+   const dbCode = prod.productCode ? prod.productCode.toLowerCase().trim() : "";
+   const dbBarcode = prod.barcode ? prod.barcode.toLowerCase().trim() : "";
+   const dbSku = prod.sku ? prod.sku.toLowerCase().trim() : "";
+   const dbName = prod.productName ? prod.productName.toLowerCase().trim() : "";
+   const dbSize = prod.size ? prod.size.toLowerCase().trim() : "";
+
+   if (rawCode && dbCode && dbCode === normCode) return true;
+   if (p.barcode && dbBarcode && normBarcode && dbBarcode === normBarcode) return true;
+   if (normSku && dbSku && dbSku === normSku) return true;
+   if (dbName === normName && dbSize === normSize && dbCode === normCode && normCode !== "") return true;
+   return false;
+ }
  );
 
  if (isDuplicateInDb) {
@@ -7903,11 +7954,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  // 2. Check if it already duplicates within this imported dataset
  let isDuplicateInImport = false;
  for (const seenKey of seenKeysInImport) {
- const [sCode, sName, sBarcode] = seenKey.split("||");
+ const [sCode, sName, sBarcode, sSku, sSize] = seenKey.split("||");
  if (
- sCode === normCode ||
- (normBarcode && sBarcode && sBarcode === normBarcode) ||
- sName === normName
+ (rawCode && sCode === normCode) ||
+ (p.barcode && normBarcode && sBarcode && sBarcode === normBarcode) ||
+ (normSku && sSku && sSku === normSku) ||
+ (sName === normName && sSize === normSize && sCode === normCode && normCode !== "")
  ) {
  isDuplicateInImport = true;
  break;
@@ -7919,7 +7971,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return; // Strictly block/skip subsequent duplicated rows
  }
 
- seenKeysInImport.add(`${normCode}||${normName}||${normBarcode}`);
+ seenKeysInImport.add(`${normCode}||${normName}||${normBarcode}||${normSku}||${normSize}`);
  uniqueImported.push(p);
  });
 
@@ -8716,7 +8768,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  // Save sale items
- const newSaleItems: SaleItem[] = cartItems.map((item, idx) => {
+ const newSaleItems: SaleItem[] = cartItems.map((item: any, idx) => {
  const branchStockRec = getBranchStockRecord(item.product, userBranchId, branchStock, branches);
  const basePrice =
  branchStockRec &&
@@ -8728,6 +8780,26 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  (item as any).overridePrice !== undefined
  ? (item as any).overridePrice
  : basePrice;
+ const lineSubtotal = unitPrice * item.quantity;
+ let itemDiscount = 0;
+ const dType = item.discountType || "NONE";
+ const dVal = item.discountValue || 0;
+
+ if (dType === "FLAT") {
+ itemDiscount = Math.min(lineSubtotal, dVal);
+ } else if (dType === "PERCENT") {
+ itemDiscount = parseFloat((lineSubtotal * (dVal / 100)).toFixed(2));
+ } else if (dType === "SENIOR" || dType === "PWD") {
+ itemDiscount = parseFloat((lineSubtotal * 0.20).toFixed(2));
+ } else if (dType === "CONTRACT") {
+ itemDiscount = parseFloat((lineSubtotal * 0.10).toFixed(2));
+ } else if (item.discountAmount) {
+ itemDiscount = item.discountAmount;
+ }
+
+ itemDiscount = Math.min(lineSubtotal, Math.max(0, itemDiscount));
+ const itemTotal = parseFloat((lineSubtotal - itemDiscount).toFixed(2));
+
  return {
  id: `SLI-${saleId}-${idx}`,
  saleId,
@@ -8735,7 +8807,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  productName: item.product.productName,
  unitPrice,
  quantity: item.quantity,
- total: unitPrice * item.quantity,
+ discount: itemDiscount,
+ discountType: dType,
+ total: itemTotal,
  isDeleted: false,
  };
  });
@@ -9156,6 +9230,22 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  // SHIFT MANAGEMENT
  const openShift = (startCash: number) => {
+ if (!currentUser) return;
+
+ // Enforce single active open shift drawer per account
+ const existingOpenShift = shifts.find(
+ (s) =>
+ s.cashierId === currentUser.id &&
+ (s.status === "OPEN" || s.status === "Open" || (!s.closedAt && s.status !== "CLOSED")),
+ );
+
+ if (existingOpenShift) {
+ alert(
+ `Shift Drawer Notice: Account "${currentUser.fullName}" already has an active open shift drawer (${existingOpenShift.id}). You must close the current shift drawer before opening a new one.`,
+ );
+ return;
+ }
+
  const shiftId = `SH-${Date.now()}`;
  const newShift: Shift = {
  id: shiftId,
@@ -9174,74 +9264,98 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  shiftVatTotal: 0,
  shiftDiscountTotal: 0,
  };
- setShifts((prev) => [newShift, ...prev]);
+
+ setShifts((prev) => [
+ newShift,
+ ...prev.map((s) => {
+ if (
+ s.cashierId === currentUser.id &&
+ (s.status === "OPEN" || s.status === "Open" || (!s.closedAt && s.status !== "CLOSED"))
+ ) {
+ return {
+ ...s,
+ status: "CLOSED" as ShiftStatus,
+ closedAt: new Date().toISOString(),
+ };
+ }
+ return s;
+ }),
+ ]);
+
  addAuditLog(
  "SHIFT_OPEN",
- `Opened drawer shift with starting cash of ₱${startCash.toFixed(2)}`,
+ `Opened drawer shift (${shiftId}) with starting cash of ₱${startCash.toFixed(2)}`,
  "Shifts",
  shiftId,
  );
  };
 
-  const closeShift = (cashCount: number) => {
-    if (!activeShift) return;
+ const closeShift = (cashCount: number) => {
+ if (!activeShift) return;
 
-    // Enforce pre-closure backup snapshot in internal database records
-    const snapshotName = `Shift Close Auto-Snapshot - ${activeShift.id} - ${new Date().toLocaleDateString()}`;
-    generateSystemSnapshot(snapshotName);
+ // Enforce pre-closure backup snapshot in internal database records
+ const snapshotName = `Shift Close Auto-Snapshot - ${activeShift.id} - ${new Date().toLocaleDateString()}`;
+ generateSystemSnapshot(snapshotName);
 
-    const statsResult = getShiftReportStats(activeShift);
-    const expectedEndCash = statsResult.expectedEndCash;
-    const variance = cashCount - expectedEndCash;
+ const statsResult = getShiftReportStats(activeShift);
+ const expectedEndCash = statsResult.expectedEndCash;
+ const variance = cashCount - expectedEndCash;
+ const nowIso = new Date().toISOString();
 
-    setShifts((prev) =>
-      prev.map((s) => {
-        if (s.id === activeShift.id) {
-          return {
-            ...s,
-            status: "CLOSED" as ShiftStatus,
-            endCash: expectedEndCash,
-            cashCount,
-            variance,
-            shiftSalesTotal: statsResult.netTotal,
-            shiftSalesCount: statsResult.salesCount,
-            shiftVatTotal: statsResult.vatTotal,
-            shiftDiscountTotal: statsResult.discountTotal,
-            closedAt: new Date().toISOString(),
-          };
-        }
-        return s;
-      }),
-    );
+ setShifts((prev) =>
+ prev.map((s) => {
+ if (
+ s.id === activeShift.id ||
+ (currentUser &&
+ s.cashierId === currentUser.id &&
+ (s.status === "OPEN" || s.status === "Open" || (!s.closedAt && s.status !== "CLOSED")))
+ ) {
+ return {
+ ...s,
+ status: "CLOSED" as ShiftStatus,
+ endCash: s.id === activeShift.id ? expectedEndCash : s.endCash,
+ cashCount: s.id === activeShift.id ? cashCount : s.cashCount,
+ variance: s.id === activeShift.id ? variance : s.variance,
+ shiftSalesTotal: s.id === activeShift.id ? statsResult.netTotal : s.shiftSalesTotal,
+ shiftSalesCount: s.id === activeShift.id ? statsResult.salesCount : s.shiftSalesCount,
+ shiftVatTotal: s.id === activeShift.id ? statsResult.vatTotal : s.shiftVatTotal,
+ shiftDiscountTotal: s.id === activeShift.id ? statsResult.discountTotal : s.shiftDiscountTotal,
+ closedAt: s.closedAt || nowIso,
+ };
+ }
+ return s;
+ }),
+ );
 
-    addAuditLog(
-      "SHIFT_CLOSE",
-      `Closed active shift. Counted ₱${cashCount.toFixed(2)} vs Expected ₱${expectedEndCash.toFixed(2)} (Variance: ₱${variance.toFixed(2)})`,
-      "Shifts",
-      activeShift.id,
-    );
-  };
+ addAuditLog(
+ "SHIFT_CLOSE",
+ `Closed active shift (${activeShift.id}). Counted ₱${cashCount.toFixed(2)} vs Expected ₱${expectedEndCash.toFixed(2)} (Variance: ₱${variance.toFixed(2)})`,
+ "Shifts",
+ activeShift.id,
+ );
+ };
 
-  const forceCloseAllShifts = () => {
-    setShifts((prev) =>
-      prev.map((s) => {
-        if (s.status === "Open" || !s.closedAt) {
-          return {
-            ...s,
-            status: "CLOSED" as any,
-            closedAt: new Date().toISOString(),
-          };
-        }
-        return s;
-      })
-    );
-    addAuditLog(
-      "SHIFT_FORCE_CLOSE_ALL",
-      "Forced closure of all open/unclosed drawer shifts via System Operations Center.",
-      "Shifts",
-      "ALL"
-    );
-  };
+ const forceCloseAllShifts = () => {
+ const nowIso = new Date().toISOString();
+ setShifts((prev) =>
+ prev.map((s) => {
+ if (s.status === "OPEN" || s.status === "Open" || !s.closedAt || s.status !== "CLOSED") {
+ return {
+ ...s,
+ status: "CLOSED" as ShiftStatus,
+ closedAt: s.closedAt || nowIso,
+ };
+ }
+ return s;
+ }),
+ );
+ addAuditLog(
+ "SHIFT_FORCE_CLOSE_ALL",
+ "Forced closure of all open/unclosed drawer shifts via System Operations Center.",
+ "Shifts",
+ "ALL",
+ );
+ };
 
   const getShiftReportStats = (shift: Shift) => {
     // Net sales made inside this shift

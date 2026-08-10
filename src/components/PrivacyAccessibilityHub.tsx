@@ -108,8 +108,10 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  return (localStorage.getItem('tilepoint-text-size') as any) || 'normal';
  });
  
- const [colorContrast, setColorContrast] = useState<'default' | 'medium' | 'high'>(() => {
- return (localStorage.getItem('tilepoint-color-contrast') as 'default' | 'medium' | 'high') || 'medium';
+ const [colorContrast, setColorContrast] = useState<'small' | 'default' | 'medium' | 'high'>(() => {
+ const val = localStorage.getItem('tilepoint-color-contrast');
+ if (val === 'small' || val === 'default') return 'small';
+ return (val as any) || 'medium';
  });
 
  const [maximizeTextContrast, setMaximizeTextContrast] = useState<boolean>(() => {
@@ -860,18 +862,18 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
 
  {/* M3 Segmented chips */}
  <div className="grid grid-cols-3 gap-1.5 p-1 rounded-lg bg-m3-surface-container">
- {(['default', 'medium', 'high'] as const).map((level) => (
+ {(['small', 'medium', 'high'] as const).map((level) => (
  <button
  key={level}
  type="button"
- onClick={() => setColorContrast(level)}
+ onClick={() => setColorContrast(level as any)}
  className={`py-1.5 px-2 rounded-md text-[10.5px] font-bold capitalize transition-all cursor-pointer ${
- colorContrast === level
+ (colorContrast === level || (level === 'small' && (colorContrast as string) === 'default'))
  ? 'bg-m3-primary text-m3-on-primary shadow-sm'
  : 'text-m3-on-surface-variant hover:bg-m3-on-surface/5'
  }`}
  >
- {level}
+ {level} Contrast
  </button>
  ))}
  </div>
