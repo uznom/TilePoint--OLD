@@ -1977,6 +1977,18 @@ export const PosModule: React.FC<PosModuleProps> = ({
     </div>
   );
 
+  const getCleanCashierName = (cashierNameRaw?: string, cashierIdRaw?: string) => {
+    if (cashierIdRaw) {
+      const foundUser = users?.find((u) => u.id === cashierIdRaw);
+      if (foundUser?.fullName) return foundUser.fullName;
+    }
+    if (!cashierNameRaw) return "Cashier";
+    return cashierNameRaw
+      .replace(/^(Cashier|Admin|Manager|Staff)\s*[-:]?\s*/i, "")
+      .replace(/\s*\((Cashier|Admin|Manager|Staff)\)$/i, "")
+      .trim() || "Cashier";
+  };
+
   const renderPosSalesReceipt = () => (
     <div className="px-5 py-5 bg-m3-surface-lowest border border-dashed border-m3-outline-variant/40 rounded-2xl text-[11px] leading-relaxed space-y-3 select-text text-m3-on-surface text-left shadow-xs print:border-none print:shadow-none print:p-0">
       <div className="text-center font-bold tracking-tight border-b border-dashed border-m3-outline-variant/30 pb-3 flex flex-col items-center justify-center space-y-1">
@@ -2026,7 +2038,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
         </div>
         <div className="flex justify-between">
           <span>Cashier Name:</span>
-          <span>{activeReceipt?.cashierName}</span>
+          <span className="font-bold">{getCleanCashierName(activeReceipt?.cashierName, activeReceipt?.cashierId)}</span>
         </div>
         <div className="flex justify-between">
           <span>Buyer:</span>
@@ -2043,29 +2055,37 @@ export const PosModule: React.FC<PosModuleProps> = ({
         </div>
 
         {receiptItems.length > 0 ? (
-          receiptItems.map((it, idx) => (
-            <div
-              key={idx}
-              className="text-m3-on-surface space-y-0.5 pt-1.5 pb-1.5 border-b border-dotted border-m3-outline-variant/10 last:border-0"
-            >
-              <div className="font-bold text-[9.5px] break-words">
-                {it.productName}
+          <>
+            {receiptItems.map((it, idx) => (
+              <div
+                key={idx}
+                className="text-m3-on-surface space-y-0.5 pt-1.5 pb-1.5 border-b border-dotted border-m3-outline-variant/10 last:border-0"
+              >
+                <div className="font-bold text-[9.5px] break-words">
+                  {it.productName}
+                </div>
+                <div className="flex justify-between text-[8.5px] text-m3-on-surface-variant">
+                  <span>
+                    {formatCurrency(it.unitPrice)} x {it.quantity}
+                    {(it.discount || 0) > 0 && (
+                      <span className="text-amber-600 dark:text-amber-400 font-bold ml-1">
+                        (Disc: -{formatCurrency(it.discount!)})
+                      </span>
+                    )}
+                  </span>
+                  <span className="font-bold text-m3-on-surface">
+                    {formatCurrency(it.total)}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between text-[8.5px] text-m3-on-surface-variant">
-                <span>
-                  {formatCurrency(it.unitPrice)} x {it.quantity}
-                  {(it.discount || 0) > 0 && (
-                    <span className="text-amber-600 dark:text-amber-400 font-bold ml-1">
-                      (Disc: -{formatCurrency(it.discount!)})
-                    </span>
-                  )}
-                </span>
-                <span className="font-bold text-m3-on-surface">
-                  {formatCurrency(it.total)}
-                </span>
-              </div>
+            ))}
+            <div className="flex justify-between font-extrabold text-[9.5px] border-t border-dashed border-m3-outline-variant/30 pt-1.5 mt-1 text-m3-on-surface">
+              <span>Total Items Bought:</span>
+              <span className="font-mono text-m3-primary font-black">
+                {receiptItems.reduce((sum, item) => sum + (item.quantity || 0), 0)} pcs ({receiptItems.length} {receiptItems.length === 1 ? 'line' : 'lines'})
+              </span>
             </div>
-          ))
+          </>
         ) : (
           <p className="text-[9px] text-m3-on-surface-variant italic">
             Hardware ledger invoice saved correctly.
@@ -2248,8 +2268,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
           <span className="font-mono font-bold text-black">{activeReceipt.saleNumber}</span>
         </div>
         <div className="text-right">
-          <span className="text-[7.5px] font-black uppercase text-gray-500 block">Date & Time</span>
-          <span className="font-bold text-black">{new Date(activeReceipt.createdAt).toLocaleDateString()}</span>
+          <span className="text-[7.5px] font-black uppercase text-gray-500 block">Cashier / Date</span>
+          <span className="font-bold text-black">{getCleanCashierName(activeReceipt.cashierName, activeReceipt.cashierId)} • {new Date(activeReceipt.createdAt).toLocaleDateString()}</span>
         </div>
       </div>
 
@@ -2299,6 +2319,15 @@ export const PosModule: React.FC<PosModuleProps> = ({
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr className="border-t border-black text-[8.5px] font-black">
+              <td className="py-1 text-black">Total Items Bought:</td>
+              <td className="py-1 text-right font-mono text-black">
+                {receiptItems.reduce((sum, item) => sum + (item.quantity || 0), 0)} pcs ({receiptItems.length} {receiptItems.length === 1 ? 'line' : 'lines'})
+              </td>
+              <td></td>
+            </tr>
+          </tfoot>
         </table>
       </div>
 

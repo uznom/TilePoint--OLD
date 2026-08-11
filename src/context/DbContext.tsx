@@ -534,6 +534,21 @@ interface DbContextType {
  ) => void;
  deleteProduct: (id: string) => void;
  deleteDamageLog: (id: string) => void;
+  bulkDeleteProducts: (ids: string[]) => void;
+  restoreProduct: (id: string) => void;
+  deleteUser: (id: string) => void;
+  restoreUser: (id: string) => void;
+  restoreBranch: (id: string) => void;
+  restoreSupplier: (id: string) => void;
+  restoreBrand: (id: string) => void;
+  restoreSale: (id: string) => void;
+  restorePurchaseOrder: (id: string) => void;
+  restoreTransmittal: (id: string) => void;
+  restoreExpense: (id: string) => void;
+  restoreDamageLog: (id: string) => void;
+  purgeArchivedItem: (type: string, id: string) => void;
+  bulkRestoreItems: (items: { type: string; id: string }[]) => void;
+
  importProducts: (imported: Product[], branchMapping?: Record<string, string>) => {
  success: boolean;
  count: number;
@@ -1064,6 +1079,54 @@ const mergeParkedSales = (local: any[], remote: any[], deletedSet?: Set<string>)
  return Array.from(map.values());
 };
 
+const DEFAULT_SEED_DELIVERIES: Delivery[] = [
+ {
+ id: "DEL-1001",
+ saleId: "INV-1001",
+ saleNumber: "TP-INV-1001",
+ customerName: "Juan Dela Cruz",
+ contactNumber: "09171234567",
+ houseNo: "Block 12 Lot 4",
+ street: "Magsaysay Ave",
+ barangay: "Central San Jose",
+ cityMunicipality: "Dipolog City",
+ landmark: "Near Central Elementary School",
+ deliveryDate: new Date(Date.now() + 86400000).toISOString().split("T")[0],
+ deliveryTime: "10:00 AM",
+ status: "SCHEDULED",
+ notes: "Please call 30 mins before arrival. Handle tiles carefully.",
+ createdAt: new Date(Date.now() - 172800000).toISOString(),
+ updatedAt: new Date(Date.now() - 86400000).toISOString(),
+ truck: "Isuzu Forward Elf (6-Wheeler) - ABC 1234",
+ driver: "Pedro Penduko",
+ helper: "Mark Banderas",
+ branchId: "B1",
+ branchName: "Dipolog Main Yard"
+ },
+ {
+ id: "DEL-1002",
+ saleId: "INV-1002",
+ saleNumber: "TP-INV-1002",
+ customerName: "Maria Santos",
+ contactNumber: "09189876543",
+ houseNo: "Purok 3",
+ street: "National Highway",
+ barangay: "Sta. Filomena",
+ cityMunicipality: "Dipolog City",
+ landmark: "Opposite Shell Gas Station",
+ deliveryDate: new Date().toISOString().split("T")[0],
+ deliveryTime: "02:00 PM",
+ status: "IN_TRANSIT",
+ notes: "Express freight delivery.",
+ createdAt: new Date(Date.now() - 86400000).toISOString(),
+ updatedAt: new Date().toISOString(),
+ truck: "Canter Heavy Truck - XYZ 9876",
+ driver: "Juan Tamad",
+ helper: "Jose Rizal",
+ branchId: "B1",
+ branchName: "Dipolog Main Yard"
+ }
+];
 
 export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  children,
@@ -2018,7 +2081,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  });
 
  const [deliveries, setDeliveries] = useState<Delivery[]>(() => {
- return safeParse<Delivery[]>("tp_deliveries", []);
+ const parsed = safeParse<Delivery[]>("tp_deliveries", []);
+ if (parsed && parsed.length > 0) return parsed;
+ return DEFAULT_SEED_DELIVERIES;
  });
 
  const [damageLogs, setDamageLogs] = useState<DamageLog[]>(() => {
@@ -6411,7 +6476,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  setStockTransfers([]);
  setLedgerEntries([]);
  setBranchSalesReports([]);
- setDeliveries([]);
+ setDeliveries(DEFAULT_SEED_DELIVERIES);
  setCustomBills([]);
  setBranches((prev) => prev.map((b) => ({ ...b, monthlySales: 0 })));
 
@@ -6419,7 +6484,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  localStorage.removeItem("atpos_v2_expenses");
  localStorage.removeItem("atpos_v2_returns");
  localStorage.removeItem("tp_branch_sales_reports");
- localStorage.removeItem("tp_deliveries");
+ localStorage.setItem("tp_deliveries", JSON.stringify(DEFAULT_SEED_DELIVERIES));
  localStorage.removeItem("atpos_v2_custom_bills");
 
  if (mode === "all") {
@@ -6466,27 +6531,6 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const generateMasterForensicBackup = () => {
- return {
- users: [],
- branches: [],
- suppliers: [],
- products: [],
- purchaseOrders: [],
- poItems: [],
- transmittals: [],
- shifts: [],
- sales: [],
- saleItems: [],
- movements: [],
- auditLogs: [],
- parkedSales: [],
- stockTransfers: [],
- branchStock: [],
- ledgerEntries: [],
- branchSalesReports: [],
- deliveries: [],
- simulationModeActive: false,
- };
  const dayMs = 24 * 60 * 60 * 1000;
  const now = Date.now();
  const tMinus = (days: number) => new Date(now - days * dayMs).toISOString();
@@ -6934,6 +6978,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  },
  ];
 
+ const sampleDeliveriesList = DEFAULT_SEED_DELIVERIES;
+
  const sampleMovementsList: InventoryMovement[] = [
  {
  id: "M-1",
@@ -7164,7 +7210,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  branchStock: branchStockList,
  ledgerEntries: ledgerEntriesList,
  branchSalesReports: [],
- deliveries: [],
+ deliveries: DEFAULT_SEED_DELIVERIES,
  simulationModeActive: true,
  };
  };
@@ -7231,6 +7277,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  localStorage.setItem(
  "tp_ledger_entries",
  JSON.stringify(data.ledgerEntries),
+ );
+
+ setDeliveries(data.deliveries || DEFAULT_SEED_DELIVERIES);
+ localStorage.setItem(
+ "tp_deliveries",
+ JSON.stringify(data.deliveries || DEFAULT_SEED_DELIVERIES),
  );
 
  setSimulationModeActive(true);
@@ -7903,83 +7955,334 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  );
  };
 
+  const bulkDeleteProducts = (ids: string[]) => {
+    const idSet = new Set(ids);
+    setProducts((prev) =>
+      prev.map((p) =>
+        idSet.has(p.id)
+          ? {
+              ...p,
+              isDeleted: true,
+              updatedAt: new Date().toISOString(),
+              updatedBy: currentUser?.fullName || "System",
+            }
+          : p,
+      ),
+    );
+    addAuditLog(
+      "PRODUCT_BULK_DELETE",
+      `Bulk soft-deleted ${ids.length} products to Archives`,
+      "Products",
+      "BULK",
+    );
+  };
+
+  const restoreProduct = (id: string) => {
+    setProducts((prev) =>
+      prev.map((p) =>
+        p.id === id
+          ? {
+              ...p,
+              isDeleted: false,
+              updatedAt: new Date().toISOString(),
+              updatedBy: currentUser?.fullName || "System",
+            }
+          : p,
+      ),
+    );
+    const target = products.find((p) => p.id === id);
+    addAuditLog(
+      "PRODUCT_RESTORE",
+      `Restored product ${target?.productName || id} from Archives`,
+      "Products",
+      id,
+    );
+  };
+
+  const deleteUser = (id: string) => {
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === id
+          ? {
+              ...u,
+              isDeleted: true,
+              status: "Inactive",
+              updatedAt: new Date().toISOString(),
+            }
+          : u,
+      ),
+    );
+    const target = users.find((u) => u.id === id);
+    addAuditLog(
+      "USER_DELETE",
+      `Soft-deleted staff member ${target?.fullName || id}`,
+      "Users",
+      id,
+    );
+  };
+
+  const restoreUser = (id: string) => {
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === id
+          ? {
+              ...u,
+              isDeleted: false,
+              status: "Active",
+              updatedAt: new Date().toISOString(),
+            }
+          : u,
+      ),
+    );
+    const target = users.find((u) => u.id === id);
+    addAuditLog(
+      "USER_RESTORE",
+      `Restored staff member ${target?.fullName || id} from Archives`,
+      "Users",
+      id,
+    );
+  };
+
+  const restoreBranch = (id: string) => {
+    setBranches((prev) =>
+      prev.map((b) =>
+        b.id === id
+          ? { ...b, isDeleted: false, updatedAt: new Date().toISOString() }
+          : b,
+      ),
+    );
+    const target = branches.find((b) => b.id === id);
+    addAuditLog(
+      "BRANCH_RESTORE",
+      `Restored branch ${target?.name || id} from Archives`,
+      "Branches",
+      id,
+    );
+  };
+
+  const restoreSupplier = (id: string) => {
+    setSuppliers((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, isDeleted: false } : s)),
+    );
+    const target = suppliers.find((s) => s.id === id);
+    addAuditLog(
+      "SUPPLIER_RESTORE",
+      `Restored supplier ${target?.name || id} from Archives`,
+      "Suppliers",
+      id,
+    );
+  };
+
+  const restoreBrand = (id: string) => {
+    setBrands((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, isDeleted: false } : b)),
+    );
+    const target = brands.find((b) => b.id === id);
+    addAuditLog(
+      "BRAND_RESTORE",
+      `Restored brand ${target?.name || id} from Archives`,
+      "Brands",
+      id,
+    );
+  };
+
+  const restoreSale = (id: string) => {
+    setSales((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, isDeleted: false, deletedAt: undefined } : s)),
+    );
+    addAuditLog(
+      "SALE_RESTORE",
+      `Restored sale/invoice ${id} from Archives`,
+      "Sales",
+      id,
+    );
+  };
+
+  const restorePurchaseOrder = (id: string) => {
+    setPurchaseOrders((prev) =>
+      prev.map((po) => (po.id === id ? { ...po, isDeleted: false, deletedAt: undefined } : po)),
+    );
+    addAuditLog(
+      "PO_RESTORE",
+      `Restored purchase order ${id} from Archives`,
+      "PurchaseOrders",
+      id,
+    );
+  };
+
+  const restoreTransmittal = (id: string) => {
+    setTransmittals((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, isDeleted: false, deletedAt: undefined } : t)),
+    );
+    addAuditLog(
+      "TRANSMITTAL_RESTORE",
+      `Restored transmittal ${id} from Archives`,
+      "Transmittals",
+      id,
+    );
+  };
+
+  const restoreExpense = (id: string) => {
+    setExpenses((prev) =>
+      prev.map((ex) => (ex.id === id ? { ...ex, isDeleted: false, deletedAt: undefined } : ex)),
+    );
+    addAuditLog(
+      "EXPENSE_RESTORE",
+      `Restored expense ${id} from Archives`,
+      "Expenses",
+      id,
+    );
+  };
+
+  const restoreDamageLog = (id: string) => {
+    setDamageLogs((prev) =>
+      prev.map((log) => (log.id === id ? { ...log, isDeleted: false, deletedAt: undefined } : log)),
+    );
+    addAuditLog(
+      "DAMAGE_LOG_RESTORE",
+      `Restored damage log ${id} from Archives`,
+      "DamageLogs",
+      id,
+    );
+  };
+
+  const purgeArchivedItem = (type: string, id: string) => {
+    switch (type) {
+      case "product":
+        setProducts((prev) => prev.filter((p) => p.id !== id));
+        break;
+      case "user":
+        setUsers((prev) => prev.filter((u) => u.id !== id));
+        break;
+      case "branch":
+        setBranches((prev) => prev.filter((b) => b.id !== id));
+        break;
+      case "supplier":
+        setSuppliers((prev) => prev.filter((s) => s.id !== id));
+        break;
+      case "brand":
+        setBrands((prev) => prev.filter((b) => b.id !== id));
+        break;
+      case "sale":
+        setSales((prev) => prev.filter((s) => s.id !== id));
+        break;
+      case "purchaseOrder":
+        setPurchaseOrders((prev) => prev.filter((po) => po.id !== id));
+        break;
+      case "transmittal":
+        setTransmittals((prev) => prev.filter((t) => t.id !== id));
+        break;
+      case "expense":
+        setExpenses((prev) => prev.filter((ex) => ex.id !== id));
+        break;
+      case "damageLog":
+        setDamageLogs((prev) => prev.filter((d) => d.id !== id));
+        break;
+    }
+    addAuditLog(
+      "ARCHIVE_PERMANENT_PURGE",
+      `Permanently purged archived ${type} record ${id}`,
+      "Archives",
+      id,
+    );
+  };
+
+  const bulkRestoreItems = (items: { type: string; id: string }[]) => {
+    items.forEach((item) => {
+      switch (item.type) {
+        case "product":
+          restoreProduct(item.id);
+          break;
+        case "user":
+          restoreUser(item.id);
+          break;
+        case "branch":
+          restoreBranch(item.id);
+          break;
+        case "supplier":
+          restoreSupplier(item.id);
+          break;
+        case "brand":
+          restoreBrand(item.id);
+          break;
+        case "sale":
+          restoreSale(item.id);
+          break;
+        case "purchaseOrder":
+          restorePurchaseOrder(item.id);
+          break;
+        case "transmittal":
+          restoreTransmittal(item.id);
+          break;
+        case "expense":
+          restoreExpense(item.id);
+          break;
+        case "damageLog":
+          restoreDamageLog(item.id);
+          break;
+      }
+    });
+    addAuditLog(
+      "ARCHIVE_BULK_RESTORE",
+      `Bulk restored ${items.length} items from Archives`,
+      "Archives",
+      "BULK",
+    );
+  };
+
+
  const importProducts = (imported: Product[], branchMapping?: Record<string, string>) => {
  try {
- const activeProducts = products.filter((prod) => !prod.isDeleted);
  const uniqueImported: Product[] = [];
- const blockedDuplicates: string[] = [];
- const seenKeysInImport = new Set<string>();
+ const seenCodes = new Set<string>();
+ const seenBarcodes = new Set<string>();
+ const seenSkus = new Set<string>();
+
+ products.forEach((prod) => {
+   if (prod.productCode) seenCodes.add(prod.productCode.toLowerCase().trim());
+   if (prod.barcode) seenBarcodes.add(prod.barcode.toLowerCase().trim());
+   if (prod.sku) seenSkus.add(prod.sku.toLowerCase().trim());
+ });
 
  imported.forEach((p, i) => {
- const barcode =
- sanitizeInputText(p.barcode) || generateEan13Barcode();
- const rawCode = sanitizeInputText(p.productCode);
- const productCode =
- rawCode ||
- barcode ||
- `TL-IMP-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 6)}`;
- const pName =
- sanitizeInputText(p.productName) || "Unnamed Imported Product";
- const pSize = sanitizeInputText(p.size) || "N/A";
- const pSku = sanitizeInputText(p.sku) || "";
+   const rawCode = sanitizeInputText(p.productCode);
+   const rawBarcode = sanitizeInputText(p.barcode);
+   const rawSku = sanitizeInputText(p.sku);
+   const rawName = sanitizeInputText(p.productName) || "Unnamed Imported Product";
 
- const normCode = productCode.toLowerCase().trim();
- const normName = pName.toLowerCase().trim();
- const normBarcode = barcode ? barcode.toLowerCase().trim() : "";
- const normSku = pSku ? pSku.toLowerCase().trim() : "";
- const normSize = pSize.toLowerCase().trim();
+   let barcode = rawBarcode;
+   if (!barcode || seenBarcodes.has(barcode.toLowerCase().trim())) {
+     barcode = generateEan13Barcode();
+   }
+   seenBarcodes.add(barcode.toLowerCase().trim());
 
- // 1. Check if it already exists in the active database
- const isDuplicateInDb = activeProducts.some(
- (prod) => {
-   const dbCode = prod.productCode ? prod.productCode.toLowerCase().trim() : "";
-   const dbBarcode = prod.barcode ? prod.barcode.toLowerCase().trim() : "";
-   const dbSku = prod.sku ? prod.sku.toLowerCase().trim() : "";
-   const dbName = prod.productName ? prod.productName.toLowerCase().trim() : "";
-   const dbSize = prod.size ? prod.size.toLowerCase().trim() : "";
+   let productCode = rawCode || barcode || `TL-IMP-${Date.now()}-${i}`;
+   if (seenCodes.has(productCode.toLowerCase().trim())) {
+     productCode = `${productCode}-${i + 1}`;
+   }
+   seenCodes.add(productCode.toLowerCase().trim());
 
-   if (rawCode && dbCode && dbCode === normCode) return true;
-   if (p.barcode && dbBarcode && normBarcode && dbBarcode === normBarcode) return true;
-   if (normSku && dbSku && dbSku === normSku) return true;
-   if (dbName === normName && dbSize === normSize && dbCode === normCode && normCode !== "") return true;
-   return false;
- }
- );
+   let sku = rawSku || (barcode ? `SKU-${barcode}` : `SKU-IMP-${Date.now()}-${i}`);
+   if (seenSkus.has(sku.toLowerCase().trim())) {
+     sku = `${sku}-${i + 1}`;
+   }
+   seenSkus.add(sku.toLowerCase().trim());
 
- if (isDuplicateInDb) {
- blockedDuplicates.push(pName);
- return; // Strictly block/skip to protect existing product stock levels
- }
-
- // 2. Check if it already duplicates within this imported dataset
- let isDuplicateInImport = false;
- for (const seenKey of seenKeysInImport) {
- const [sCode, sName, sBarcode, sSku, sSize] = seenKey.split("||");
- if (
- (rawCode && sCode === normCode) ||
- (p.barcode && normBarcode && sBarcode && sBarcode === normBarcode) ||
- (normSku && sSku && sSku === normSku) ||
- (sName === normName && sSize === normSize && sCode === normCode && normCode !== "")
- ) {
- isDuplicateInImport = true;
- break;
- }
- }
-
- if (isDuplicateInImport) {
- blockedDuplicates.push(`${pName} (duplicate in file)`);
- return; // Strictly block/skip subsequent duplicated rows
- }
-
- seenKeysInImport.add(`${normCode}||${normName}||${normBarcode}||${normSku}||${normSize}`);
- uniqueImported.push(p);
+   uniqueImported.push({
+     ...p,
+     id: p.id || `P-IMPORT-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 6)}`,
+     productCode,
+     barcode,
+     sku,
+     productName: rawName
+   });
  });
 
  if (uniqueImported.length === 0) {
  return {
  success: false,
  count: 0,
- error: `All ${imported.length} product entries were blocked because they already exist in your active inventory catalog. Duplicate overrides are prevented to secure your current stock counts.`
+ error: `No valid product entries found to import.`
  };
  }
 
@@ -8035,8 +8338,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const correctUnitName = (rawUnit: string): string => {
-   if (!rawUnit) return "PCS";
+   if (!rawUnit) return "Unit";
    const clean = rawUnit.toUpperCase().trim();
+   if (clean === "TILES" || clean === "TILE" || clean === "TILES/BOX" || clean === "TILE/BOX") {
+     return "Unit";
+   }
    const unitMapping: Record<string, string> = {
      "PCS": "PCS",
      "PC": "PCS",
@@ -8159,7 +8465,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  size,
  designName: correctProductName(sanitizeInputText(p.designName) || p.productName || pName),
  supplierId: sanitizeInputText(p.supplierId) || "central",
- unit: correctUnitName(sanitizeInputText(p.unit) || "Boxes"),
+ unit: correctUnitName(sanitizeInputText(p.unit) || "Unit"),
  origin: p.origin ? sanitizeInputText(p.origin) : undefined,
 
  boxQuantity: sanitizeAndValidateNumber(
@@ -8186,19 +8492,15 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  });
 
   // Compute new products state synchronously
-  const currentCodes = products.reduce(
-    (acc, current) => {
-      acc[current.productCode] = current;
-      return acc;
-    },
-    {} as Record<string, Product>,
-  );
-
+  const productMap = new Map<string, Product>();
+  products.forEach((prod) => {
+    productMap.set(prod.id, prod);
+  });
   sanitized.forEach((item) => {
-    currentCodes[item.productCode] = item;
+    productMap.set(item.id, item);
   });
 
-  const nextProducts = Object.values(currentCodes);
+  const nextProducts = Array.from(productMap.values());
   setProducts(nextProducts);
 
   // Synchronize newly imported products with branch stock
@@ -8329,13 +8631,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
    });
  }
 
- const blockedMsg = blockedDuplicates.length > 0 
- ? ` (${blockedDuplicates.length} duplicate entries blocked)`
- : "";
-
  addAuditLog(
  "PRODUCT_BULK_IMPORT",
- `Bulk-imported ${sanitized.length} products successfully${blockedMsg}`,
+ `Bulk-imported ${sanitized.length} products successfully`,
  "Products",
  "BULK",
  );
@@ -10265,6 +10563,21 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       updateProduct,
       deleteProduct,
       deleteDamageLog,
+
+      bulkDeleteProducts,
+      restoreProduct,
+      deleteUser,
+      restoreUser,
+      restoreBranch,
+      restoreSupplier,
+      restoreBrand,
+      restoreSale,
+      restorePurchaseOrder,
+      restoreTransmittal,
+      restoreExpense,
+      restoreDamageLog,
+      purgeArchivedItem,
+      bulkRestoreItems,
       importProducts,
       holdSale,
       resumeParkedSale,

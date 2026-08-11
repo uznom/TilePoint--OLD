@@ -43,6 +43,7 @@ import {
   prefetchModule,
 } from "./components/LazyModules";
 import { PageLoadingFallback } from "./components/PageLoadingFallback";
+import { ArchivesModule } from "./components/ArchivesModule";
 
 import { TutorialOnboarding } from "./components/TutorialOnboarding";
 import { PrivacyAccessibilityHub } from "./components/PrivacyAccessibilityHub";
@@ -157,6 +158,12 @@ export const sidebarCategoryTree = [
  { id: "reconciliation-transmission", name: "Reconciliation & Transmission", roles: ADMIN_MANAGER },
  { id: "bir-xz", name: "Search X&Z Reading", roles: ADMIN_MANAGER },
  { id: "bir-summary", name: "BIR Summary Report", roles: ADMIN_MANAGER },
+ { id: "bir-pwd", name: "PWD Book (20%)", roles: ADMIN_MANAGER },
+ { id: "bir-senior20", name: "Senior Citizen (20%)", roles: ADMIN_MANAGER },
+ { id: "bir-senior5", name: "Senior Citizen (5%)", roles: ADMIN_MANAGER },
+ { id: "bir-solo", name: "Solo Parent (10%)", roles: ADMIN_MANAGER },
+ { id: "bir-athletes", name: "National Athletes", roles: ADMIN_MANAGER },
+ { id: "bir-regular", name: "Regular Promos", roles: ADMIN_MANAGER },
  ],
  },
  {
@@ -222,6 +229,7 @@ export const sidebarCategoryTree = [
  { id: "branches", name: "Branches Profile", roles: ADMIN_MANAGER },
  { id: "users", name: "Employee Directory", roles: ADMIN_MANAGER },
  { id: "system-settings", name: "System Settings", roles: ADMIN_MANAGER },
+		{ id: "archives", name: "Archives", roles: ADMIN_MANAGER },
  { id: "tutorials", name: "Operational Walkthrough", roles: ALL_ROLES },
  ],
  },
@@ -2199,7 +2207,10 @@ function AppContent() {
  {activeTab === "branches" && (
  <BranchModule darkMode={darkMode} />
  )}
- {activeTab === "system-settings" && (
+ {activeTab === "archives" && (
+							<ArchivesModule darkMode={darkMode} />
+						)}
+						{activeTab === "system-settings" && (
  <SystemSettingsModule
  darkMode={darkMode}
  setDarkMode={handleToggleDarkMode}

@@ -53,6 +53,33 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  };
 
  const processSelectedFile = (file: File) => {
+ if (file.name.endsWith('.csv') || file.type === 'text/csv' || file.type === 'application/vnd.ms-excel') {
+ const rows: Array<Record<string, any>> = [];
+ Papa.parse<Record<string, any>>(file, {
+ header: true,
+ skipEmptyLines: 'greedy',
+ transformHeader: (h) => h.replace(/^["']|["']$/g, '').trim(),
+ chunk: (results) => {
+ if (results.data && results.data.length > 0) {
+ rows.push(...results.data);
+ }
+ },
+ complete: () => {
+ const unparsed = Papa.unparse(rows);
+ setRawImportText(unparsed);
+ setImportStatus({
+ type: 'success',
+ message: `Streamed & parsed "${file.name}" (${(file.size / 1024).toFixed(1)} KB) - ${rows.length.toLocaleString()} items ready for review and migration!`
+ });
+ },
+ error: (err) => {
+ setImportStatus({
+ type: 'error',
+ message: `Failed to stream parse CSV file: ${err.message}`
+ });
+ }
+ });
+ } else {
  const reader = new FileReader();
  reader.onload = (event) => {
  const text = event.target?.result as string;
@@ -65,6 +92,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  }
  };
  reader.readAsText(file);
+ }
  };
 
  const handleCompleteWithBranches = () => {
@@ -122,17 +150,33 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  return;
  }
 
-  // Reuse Papa.parse engine
+  // Reuse Papa.parse engine with streaming chunking for memory safety
   const parseCSV = (text: string): Array<Record<string, any>> => {
-    const result = Papa.parse<Record<string, any>>(text, {
+    const rows: Array<Record<string, any>> = [];
+    let parseError: string | null = null;
+
+    Papa.parse<Record<string, any>>(text, {
       header: true,
       skipEmptyLines: 'greedy',
       transformHeader: (h) => h.replace(/^["']|["']$/g, '').trim(),
+      chunk: (results) => {
+        if (results.data && results.data.length > 0) {
+          rows.push(...results.data);
+        }
+        if (results.errors && results.errors.length > 0 && !parseError) {
+          parseError = results.errors[0].message;
+        }
+      },
+      complete: () => {},
+      error: (err: any) => {
+        parseError = err.message;
+      }
     });
-    if ((!result.data || result.data.length === 0) && result.errors && result.errors.length > 0) {
-      throw new Error(`CSV Parsing error: ${result.errors[0].message}`);
+
+    if (rows.length === 0 && parseError) {
+      throw new Error(`CSV Parsing error: ${parseError}`);
     }
-    return result.data || [];
+    return rows;
   };
 
  let parsed: any[] = [];
@@ -267,7 +311,7 @@ export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onCl
  category: item.category || 'Porcelain Tiles',
  brand,
  supplierId: item.supplierId || 'S1',
- unit: item.unit || 'PCS',
+ unit: item.unit || 'Unit',
  size,
  boxQuantity: item.boxQuantity || (size !== 'N/A' ? 4 : 1),
  coveragePerBox: item.coveragePerBox || (size !== 'N/A' ? 1.44 : undefined),
