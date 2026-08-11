@@ -212,7 +212,7 @@ export async function runPreflightValidation(
             sellingPrice: item.pricing?.sellingPrice ?? item.sellingPrice ?? 0,
             stockQuantity: item.stock?.stockQuantity ?? item.stockQuantity ?? 0,
             size: item.size,
-            unit: item.uom || item.unit || 'PCS',
+            unit: item.uom || item.unit || 'Unit',
             origin: origin || item.origin,
           }));
         } else if (Array.isArray(parsedPayload)) {
@@ -238,6 +238,33 @@ export async function runPreflightValidation(
     try {
       const csvRows = parseCSVRows(trimmed);
       formatDetected = 'CSV Table Roster';
+
+      if (csvRows.length > 0) {
+        // Critical Column Header Validation
+        const rawHeaders = Object.keys(csvRows[0]);
+        const mappedHeaderKeys = new Set<string>();
+        rawHeaders.forEach(h => {
+          const cleanH = h.toLowerCase().trim();
+          const mapped = HEADER_MAPPINGS[cleanH];
+          if (mapped) mappedHeaderKeys.add(mapped);
+        });
+
+        const hasIdentifierHeader = ['productName', 'productCode', 'sku', 'barcode'].some(k => mappedHeaderKeys.has(k));
+        const hasPricingOrStockHeader = ['costPrice', 'sellingPrice', 'stockQuantity', 'category', 'unit'].some(k => mappedHeaderKeys.has(k));
+
+        if (!hasIdentifierHeader) {
+          validationIssues.push(
+            `CSV Header Error: Missing critical product identifier column (e.g. 'Product Name', 'Product Code', 'SKU', 'Barcode'). Found headers: [${rawHeaders.slice(0, 8).join(', ')}]`
+          );
+        }
+
+        if (!hasPricingOrStockHeader) {
+          validationWarnings.push(
+            `CSV Header Warning: Missing standard pricing ('Cost Price', 'Selling Price') or stock ('Stock Quantity') columns. Missing fields will default to 0.`
+          );
+        }
+      }
+
       rawProductsList = csvRows.map((row) => {
         const mappedRow: Record<string, any> = {};
         Object.keys(row).forEach((key) => {
@@ -246,9 +273,12 @@ export async function runPreflightValidation(
           if (mappedKey) {
             const numericFields = ['costPrice', 'sellingPrice', 'stockQuantity', 'minimumStock', 'boxQuantity', 'markupPercent'];
             if (numericFields.includes(mappedKey)) {
-              const cleanVal = String(row[key]).replace(/[$,₱ %]/g, '').replace(/,/g, '');
+              const rawValStr = String(row[key] ?? '').trim();
+              const cleanVal = rawValStr.replace(/[$,₱ %]/g, '').replace(/,/g, '');
               const valNum = parseFloat(cleanVal);
+              mappedRow[`_raw_${mappedKey}`] = rawValStr;
               mappedRow[mappedKey] = isNaN(valNum) ? 0 : valNum;
+              mappedRow[`_isInvalidNum_${mappedKey}`] = rawValStr !== '' && isNaN(valNum);
             } else {
               mappedRow[mappedKey] = row[key];
             }
@@ -263,7 +293,7 @@ export async function runPreflightValidation(
     }
   }
 
-  // 3. Evaluate Record Integrity
+  // 3. Evaluate Record Integrity and Data Types
   const totalRecordsCount = rawProductsList.length;
   let validRecordsCount = 0;
   let invalidRecordsCount = 0;
@@ -273,12 +303,42 @@ export async function runPreflightValidation(
   }
 
   rawProductsList.forEach((item, index) => {
-    const pName = item.productName || item.name || item.tileName || item.title;
+    const pName = item.productName || item.name || item.tileName || item.title || item.productCode || item.sku;
+    let recordHasError = false;
+
     if (!pName || String(pName).trim() === '') {
-      invalidRecordsCount++;
-      if (validationIssues.length < 5) {
-        validationIssues.push(`Record #${index + 1}: Missing product name field.`);
+      recordHasError = true;
+      if (validationIssues.length < 8) {
+        validationIssues.push(`Record #${index + 1}: Missing mandatory product name / identifier.`);
       }
+    }
+
+    // Data type validation for numeric fields
+    const numericFields = [
+      { key: 'costPrice', label: 'Cost Price' },
+      { key: 'sellingPrice', label: 'Selling Price' },
+      { key: 'stockQuantity', label: 'Stock Quantity' },
+      { key: 'minimumStock', label: 'Minimum Stock' },
+      { key: 'boxQuantity', label: 'Box Quantity' },
+      { key: 'markupPercent', label: 'Markup %' }
+    ];
+
+    numericFields.forEach(({ key, label }) => {
+      if (item[`_isInvalidNum_${key}`]) {
+        recordHasError = true;
+        if (validationIssues.length < 12) {
+          validationIssues.push(`Record #${index + 1} (${pName || 'Unnamed'}): Invalid data type for '${label}' - expected numeric value, found '${item[`_raw_${key}`]}'.`);
+        }
+      } else if (typeof item[key] === 'number' && item[key] < 0 && ['costPrice', 'sellingPrice', 'stockQuantity'].includes(key)) {
+        recordHasError = true;
+        if (validationIssues.length < 12) {
+          validationIssues.push(`Record #${index + 1} (${pName || 'Unnamed'}): Incompatible value for '${label}' - cannot be negative (${item[key]}).`);
+        }
+      }
+    });
+
+    if (recordHasError) {
+      invalidRecordsCount++;
     } else {
       validRecordsCount++;
     }

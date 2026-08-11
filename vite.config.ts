@@ -5,7 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    base: './',
+    base: '/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
@@ -27,7 +27,7 @@ export default defineConfig(() => {
       },
     },
     optimizeDeps: {
-      include: ['react-router-dom', 'xlsx']
+      include: ['react-router-dom', 'xlsx', 'papaparse']
     },
     build: {
       chunkSizeWarningLimit: 3000

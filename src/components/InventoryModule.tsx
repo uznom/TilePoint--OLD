@@ -99,6 +99,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  createProduct,
  updateProduct,
  deleteProduct,
+    bulkDeleteProducts,
  importProducts,
  createBranch,
  currentUser,
@@ -594,7 +595,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  const [isCustomCategoryInput, setIsCustomCategoryInput] = useState(false);
  const [brand, setBrand] = useState('');
  const [supplierId, setSupplierId] = useState('');
- const [unit, setUnit] = useState('Box');
+ const [unit, setUnit] = useState('Unit');
  const [size, setSize] = useState('');
  const [boxQuantity, setBoxQuantity] = useState<number>(1);
  const [coveragePerBox, setCoveragePerBox] = useState<number>(0);
@@ -699,6 +700,13 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  const [preflightReport, setPreflightReport] = useState<PreflightReport | null>(null);
  const [isAnalyzingPreflight, setIsAnalyzingPreflight] = useState(false);
 
+ // CSV Import state with non-dismissable progress bar
+ const [isImportingProgress, setIsImportingProgress] = useState(false);
+ const [importProgressPercent, setImportProgressPercent] = useState(0);
+ const [importProgressStatus, setImportProgressStatus] = useState('');
+ const [importProgressSubtext, setImportProgressSubtext] = useState('');
+ const [importTotalRecords, setImportTotalRecords] = useState(0);
+
  const handleRunPreflightManual = async () => {
  if (!rawImportText.trim()) {
  showToast('Please enter or upload JSON / CSV data first.');
@@ -745,6 +753,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
  // Bulk Damage Register Modal state
  const [showBulkDamageModal, setShowBulkDamageModal] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
  const [bulkDamageBranchId, setBulkDamageBranchId] = useState('B1');
  const [bulkDamageQuantities, setBulkDamageQuantities] = useState<Record<string, number>>({});
  const [bulkDamageCategory, setBulkDamageCategory] = useState('Warehouse Breakage');
@@ -1264,7 +1273,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  setIsCustomCategoryInput(false);
  setBrand('');
  setSupplierId(suppliers[0]?.id || 'S1');
- setUnit('Box');
+ setUnit('Unit');
  setSize('');
  setBoxQuantity(1);
  setCoveragePerBox(0);
@@ -2240,9 +2249,15 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  }
 
  if (currentReport.status === 'FAIL') {
- showToast('Commit Rejected: Pre-flight schema or cryptographic signature validation failed.');
+ showToast('Commit Rejected: Pre-flight schema, critical column header or data type validation failed.');
  return;
  }
+
+ // Lock UI and show non-dismissable progress bar overlay
+ setIsImportingProgress(true);
+ setImportProgressPercent(10);
+ setImportProgressStatus('Initializing Import Engine...');
+ setImportProgressSubtext('Allocating memory buffers & preparing database transaction...');
 
  // If full database backup snapshot was uploaded, commit directly using atomic restore
  if (currentReport.parsedFullSnapshot) {
@@ -2299,7 +2314,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  productName: item.productName,
  brand: item.brand,
  size: item.size,
- unit: item.uom || item.unit || 'PCS',
+ unit: item.uom || item.unit || 'Unit',
  origin: origin || item.origin,
  };
  if (item.pricing) {
@@ -2461,28 +2476,32 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  isDistributionBranch: false,
  staffCount: 3
  })));
+ setIsImportingProgress(false);
  setShowBranchConfigs(true);
  setShowImportModal(false);
  setShowPortabilityHubModal(false);
  showToast(`Detected ${newLocations.length} brand new branch location(s) in CSV! Please map or configure them to finalize.`);
  } else {
- await triggerSystemProcessing(
- `Executing Legacy ERP OS Data Importer (${formatType})...`,
- 1600,
- 'db',
- undefined,
- `Parsing ${formatType}, validating product columns, and updating regional catalog tables...`
- );
+ setImportProgressPercent(75);
+ setImportProgressStatus('Committing Catalog Records to Database...');
+ setImportProgressSubtext('Saving product rows, updating barcodes and branch stock balances...');
+ await new Promise((r) => setTimeout(r, 300));
 
  const sanitizedParsed = parsed.map(item => ({
  ...item,
  origin: item.origin || importTargetBranchId
  }));
  const result = importProducts(sanitizedParsed);
+
+ setImportProgressPercent(100);
+ setImportProgressStatus('Import Complete!');
+ setImportProgressSubtext(`Successfully imported ${result.count} tile products.`);
+ await new Promise((r) => setTimeout(r, 350));
+
  if (result.success) {
  setShowImportModal(false);
  setShowPortabilityHubModal(false);
- showToast(`Successfully migrated ${result.count} tile products from old ERP OS system!`);
+ showToast(`Successfully migrated ${result.count} tile products into inventory!`);
  } else {
  showToast(`Import Failure: ${result.error}`);
  }
@@ -2492,6 +2511,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  }
  } catch (e: any) {
  showToast(`Migration Error: ${e.message || 'Failed parsing input data'}. Check layout / columns.`);
+ } finally {
+ setIsImportingProgress(false);
  }
  };
 
@@ -2506,14 +2527,13 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  return;
  }
 
+ setIsImportingProgress(true);
+ setImportProgressPercent(25);
+ setImportProgressStatus('Registering Outpost Branches & Catalog...');
+ setImportProgressSubtext('Instantiating regional stores and mapping inventories...');
+
  try {
- await triggerSystemProcessing(
- `Registering Branches & Migrating Catalog...`,
- 1800,
- 'db',
- undefined,
- `Instantiating regional stores, mapping inventories, and synching product lines...`
- );
+ await new Promise((r) => setTimeout(r, 200));
 
  // Create new branches only
  let newCount = 0;
@@ -2535,6 +2555,11 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  }
  });
 
+ setImportProgressPercent(60);
+ setImportProgressStatus('Mapping Branch Stock References...');
+ setImportProgressSubtext('Associating imported items with selected branch locations...');
+ await new Promise((r) => setTimeout(r, 200));
+
  // Build branch mapping dictionary: [detectedLocation.toLowerCase()] -> targetBranchId
  const branchMapping: Record<string, string> = {};
  pendingBranches.forEach(b => {
@@ -2546,8 +2571,17 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  }
  });
 
+ setImportProgressPercent(85);
+ setImportProgressStatus('Saving Catalog & Stock Ledgers...');
+ await new Promise((r) => setTimeout(r, 200));
+
  // Import products passing our override mapping dictionary
  const result = importProducts(pendingProducts, branchMapping);
+
+ setImportProgressPercent(100);
+ setImportProgressStatus('Branch Mapping & Import Complete!');
+ await new Promise((r) => setTimeout(r, 300));
+
  if (result.success) {
  if (newCount > 0) {
  showToast(`Successfully registered ${newCount} new branches and migrated ${result.count} tile products!`);
@@ -2562,6 +2596,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  }
  } catch (e: any) {
  showToast(`Error: ${e.message || 'Verification failed.'}`);
+ } finally {
+ setIsImportingProgress(false);
  }
  };
 
@@ -2833,7 +2869,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     <option value="consolidated">HQ Consolidated (HQ Master)</option>
   )}
   {branches.filter(b => !b.isDeleted && (isAdminUser || b.id === (currentUser?.branchAssignmentId || 'B1'))).map((b) => (
-    <option key={b.id} value={b.id}>{b.name.replace("Emman Tile Center ", "Branch: ")}</option>
+    <option key={b.id} value={b.id}>{b.name.replace("Emman Tile Center ", "Branch: ")}{b.address ? ` (${b.address})` : ''}</option>
   ))}
   </select>
  </div>
@@ -2912,7 +2948,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  </div>
 
  {/* Bulk Operations Panel */}
- {getSelectedProducts().length > 0 && (
+ {!hasActiveShift && getSelectedProducts().length > 0 && (
  <div className="bg-m3-surface-low border border-m3-outline-variant/25 p-3.5 rounded-[22px] flex flex-wrap items-center justify-between gap-3 shadow-md animate-fade-in mb-3">
  <div className="flex items-center gap-2">
  <div className="h-2 w-2 rounded-full bg-m3-primary animate-pulse" />
@@ -2964,17 +3000,19 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <table className={`w-full text-left border-collapse table-auto text-xs transition-all ${isCompactColumns ? 'min-w-[700px]' : 'min-w-[1280px]'}`}>
  <thead>
  <tr className="border-b border-m3-outline-variant/20 bg-m3-surface/30 text-[10px] uppercase font-bold text-m3-on-surface-variant tracking-wider">
- {/* Checkbox column header */}
- <th className="py-3 px-2 w-10 text-center select-none bg-m3-surface-low/30 border-r border-m3-outline-variant/10">
- <input
- type="checkbox"
- checked={paginatedProducts.length > 0 && paginatedProducts.every(p => !!selectedProdIds[p.id])}
- onChange={handleToggleSelectAll}
- className="rounded border-zinc-300 dark:border-zinc-700 text-m3-primary focus:ring-m3-primary/35 cursor-pointer h-3.5 w-3.5 disabled:opacity-30 disabled:cursor-not-allowed"
- title="Select/Deselect visible"
- disabled={!allowedToModify}
- />
- </th>
+  {/* Checkbox column header */}
+  {!hasActiveShift && (
+    <th className="py-3 px-2 w-10 text-center select-none bg-m3-surface-low/30 border-r border-m3-outline-variant/10">
+      <input
+        type="checkbox"
+        checked={paginatedProducts.length > 0 && paginatedProducts.every(p => !!selectedProdIds[p.id])}
+        onChange={handleToggleSelectAll}
+        className="rounded border-zinc-300 dark:border-zinc-700 text-m3-primary focus:ring-m3-primary/35 cursor-pointer h-3.5 w-3.5 disabled:opacity-30 disabled:cursor-not-allowed"
+        title="Select/Deselect visible"
+        disabled={!allowedToModify}
+      />
+    </th>
+  )}
  <th className="py-3 px-2 w-10 text-center bg-m3-surface-low/40 select-none"></th>
   <th className="py-3 px-4">Code / SKU</th>
  {!isCompactColumns && <th className="py-3 px-4">Identifier codes</th>}
@@ -2992,7 +3030,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
  {paginatedProducts.length === 0 ? (
   <tr>
-    <td colSpan={10} className="py-12 text-center text-sm font-medium text-m3-on-surface-variant/70">
+    <td colSpan={hasActiveShift ? 9 : 10} className="py-12 text-center text-sm font-medium text-m3-on-surface-variant/70">
       No products found matching the search criteria or selected branch filter.
     </td>
   </tr>
@@ -3000,7 +3038,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   <>
     {catalogPaddingTop > 0 && (
       <tr style={{ height: catalogPaddingTop }}>
-        <td colSpan={isCompactColumns ? 8 : 14} className="p-0 border-0" />
+        <td colSpan={hasActiveShift ? (isCompactColumns ? 7 : 13) : (isCompactColumns ? 8 : 14)} className="p-0 border-0" />
       </tr>
     )}
     {visibleCatalogIndices.map((idx) => {
@@ -3042,6 +3080,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  title="Click to expand/collapse full tile specifications"
  >
  {/* Checkbox Selection column */}
+{!hasActiveShift && (
  <td className="py-3.5 px-2 text-center bg-m3-surface-low/10 border-r border-m3-outline-variant/10" onClick={e => e.stopPropagation()}>
  <input
  type="checkbox"
@@ -3060,6 +3099,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  disabled={!allowedToModify}
  />
  </td>
+              )}
  
  {/* Expand/Collapse Toggle Button column */}
  <td className="py-3.5 px-2 text-center bg-m3-surface-low/15" onClick={e => e.stopPropagation()}>
@@ -3263,7 +3303,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <AnimatePresence initial={false}>
  {isExpanded && (
  <tr key={`${p.id}-expanded-details`}>
- <td colSpan={isCompactColumns ? 8 : 14} className="p-4 bg-m3-surface-low border-b border-m3-outline-variant/20">
+ <td colSpan={hasActiveShift ? (isCompactColumns ? 7 : 13) : (isCompactColumns ? 8 : 14)} className="p-4 bg-m3-surface-low border-b border-m3-outline-variant/20">
  <motion.div
  initial={{ height: 0, opacity: 0 }}
  animate={{ height: "auto", opacity: 1 }}
@@ -3411,7 +3451,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
   })}
   {catalogPaddingBottom > 0 && (
     <tr style={{ height: catalogPaddingBottom }}>
-      <td colSpan={isCompactColumns ? 8 : 14} className="p-0 border-0" />
+      <td colSpan={hasActiveShift ? (isCompactColumns ? 7 : 13) : (isCompactColumns ? 8 : 14)} className="p-0 border-0" />
     </tr>
   )}
   </>
@@ -6143,7 +6183,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary p-2.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans"
  >
  {branches.filter(b => !b.isDeleted).map(b => (
- <option key={b.id} value={b.id}>{b.name}</option>
+ <option key={b.id} value={b.id}>{b.name}{b.address ? ` (${b.address})` : ''}</option>
  ))}
  </select>
  {currentUser.role !== 'Admin' && (
@@ -6161,7 +6201,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  >
  <option value="" disabled>Select target branch...</option>
  {branches.filter(b => !b.isDeleted && b.id !== transferSource).map(b => (
- <option key={b.id} value={b.id}>{b.name}</option>
+ <option key={b.id} value={b.id}>{b.name}{b.address ? ` (${b.address})` : ''}</option>
  ))}
  </select>
  </div>
@@ -6411,6 +6451,62 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     onConfirm={handleExecuteRemoveBatch}
     onCancel={() => setConfirmDeleteBatchId(null)}
   />
+
+  {/* Non-dismissable High-Priority CSV Import Progress Modal Overlay */}
+  {isImportingProgress && (
+    <div
+      className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md pointer-events-auto select-none font-sans"
+      onKeyDown={(e) => e.preventDefault()}
+    >
+      <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[28px] p-8 shadow-2xl w-full max-w-md text-center space-y-6 animate-scale-up border-t-4 border-t-m3-primary">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-m3-primary/10 border border-m3-primary/30 text-m3-primary shadow-inner">
+          <RefreshCw className="h-8 w-8 animate-spin text-m3-primary" />
+        </div>
+
+        <div className="space-y-2">
+          <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest font-mono bg-m3-primary/10 px-3 py-1 rounded-full border border-m3-primary/20">
+            HIGH-PRIORITY INVENTORY IMPORT
+          </span>
+          <h3 className="text-base font-extrabold text-m3-on-surface">
+            {importProgressStatus || 'Migrating CSV Data Records...'}
+          </h3>
+          <p className="text-xs text-m3-on-surface-variant font-medium leading-relaxed">
+            {importProgressSubtext || 'Processing CSV rows, verifying data types, and updating catalog tables.'}
+          </p>
+        </div>
+
+        {/* Progress Bar Container */}
+        <div className="space-y-2 px-1">
+          <div className="flex justify-between items-center text-xs font-mono font-extrabold">
+            <span className="text-m3-on-surface-variant uppercase tracking-wider text-[11px]">CSV Migration Status</span>
+            <span className="text-m3-primary text-sm font-black">{Math.min(100, Math.max(0, importProgressPercent))}%</span>
+          </div>
+
+          <div className="h-4 w-full bg-m3-surface-variant/40 rounded-full overflow-hidden p-[2px] border border-m3-outline-variant/25 shadow-inner">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-m3-primary to-purple-600 transition-all duration-300 shadow-sm"
+              style={{ width: `${Math.min(100, Math.max(0, importProgressPercent))}%` }}
+            />
+          </div>
+
+          <div className="flex justify-between items-center text-[10px] font-mono text-m3-on-surface-variant/80 pt-1">
+            <span>{importTotalRecords > 0 ? `${importTotalRecords.toLocaleString()} Total Items` : 'Stream Processing'}</span>
+            <span className="text-rose-500 dark:text-rose-400 font-black uppercase tracking-wider flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-ping" />
+              LOCKED UNTIL FINISHED
+            </span>
+          </div>
+        </div>
+
+        <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-left text-xs text-amber-700 dark:text-amber-300 font-medium flex items-center gap-3">
+          <ShieldAlert className="h-5 w-5 shrink-0 text-amber-500" />
+          <p className="text-[11px] leading-tight font-sans">
+            Please wait while the import completes. System window closure and user interactions are locked to ensure data integrity.
+          </p>
+        </div>
+      </div>
+    </div>
+  )}
   </div>
  );
 };
