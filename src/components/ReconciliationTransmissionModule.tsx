@@ -8,8 +8,7 @@ import { useDb } from "../context/DbContext";
 import { UserRole } from "../types/db";
 import { DailyReconciliationModule } from "./DailyReconciliationModule";
 import { SalesTransmissionModule } from "./SalesTransmissionModule";
-import { RefreshCw, Send, Upload, ShieldCheck, HelpCircle } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { RefreshCw, Send, Upload, ShieldCheck } from "lucide-react";
 
 interface ReconciliationTransmissionModuleProps {
   darkMode: boolean;

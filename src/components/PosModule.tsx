@@ -13,7 +13,7 @@ import { isProductInBranch, getBranchStockQuantity, getBranchStockRecord, isSame
 import { formatCurrency } from "../utils/formatters";
 import { createSearchIndex, searchIndex } from "../utils/searchIndex";
 import { useVirtualList } from "../hooks/useVirtualList";
-import { useReceiptFontSize, ReceiptFontSizeControl } from "./ReceiptFontSizeControl";
+import { useReceiptFontSize } from "./ReceiptFontSizeControl";
 import {
  ShoppingCart,
  Trash2,
@@ -668,7 +668,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  );
 
  // Keyboard shortcut assistant status
- const [showHotkeysHelp, setShowHotkeysHelp] = useState(false);
+ const [_showHotkeysHelp, _setShowHotkeysHelp] = useState(false);
  const [shortcutsCollapsed, setShortcutsCollapsed] = useState(true);
 
  // Mobile section toggle tab for responsive flow
@@ -759,7 +759,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  const searchInputRef = useRef<HTMLInputElement>(null);
 
  // All product categories for filters
- const categories = [
+ const _categories = [
  "All",
  ...Array.from(
  new Set(products.filter((p) => !p.isDeleted).map((p) => p.category)),
@@ -776,7 +776,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  );
  }, [products]);
 
- const filteredProducts = React.useMemo(() => {
+ const _filteredProducts = React.useMemo(() => {
  const activeProducts = posSearchIndex.filter((entry) => {
  const p = entry.item;
  if (p.isDeleted) return false;
@@ -869,7 +869,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  useEffect(() => {
  const handleKeyDown = (e: KeyboardEvent) => {
  const activeEl = document.activeElement;
- const isInput =
+ const _isInput =
  activeEl?.tagName === "INPUT" || activeEl?.tagName === "TEXTAREA";
 
  if (e.key === "F1") {
@@ -1967,7 +1967,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  };
  }, [filteredSales]);
 
-  const renderThermalCutSeparator = (label: string = "AUTO-CUT • PAPER SEPARATION") => (
+  const _renderThermalCutSeparator = (label: string = "AUTO-CUT • PAPER SEPARATION") => (
     <div 
       className="my-3 py-2 border-y-2 border-dashed border-gray-400 dark:border-gray-500 bg-gray-50 dark:bg-gray-800/40 rounded-lg text-center flex items-center justify-center gap-2 font-mono text-[8.5px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-300 print:bg-white print:text-black print:border-black bir-receipt-cut-separator"
       style={{ pageBreakAfter: 'always', breakAfter: 'page' }}
@@ -3341,45 +3341,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant px-3 py-1.5 text-xs text-m3-on-surface font-mono font-bold focus:outline-none focus:border-m3-primary transition-colors disabled:opacity-45 disabled:cursor-not-allowed rounded-t-lg"
  />
 
- {paymentMethod === "Cash" && grandTotal > 0 && (
- <div className="space-y-1.5 mt-1.5">
- <div className="flex flex-wrap items-center gap-1">
- <button
- type="button"
- onClick={() => setAmountTendered(grandTotal.toString())}
- className="text-[9px] font-black uppercase bg-m3-primary/15 text-m3-primary px-2 py-0.5 rounded border border-m3-primary/30 hover:bg-m3-primary/25 active:scale-95 transition-all cursor-pointer shadow-sm"
- >
- Exact (₱{grandTotal.toFixed(2)})
- </button>
- {[100, 200, 500, 1000, 2000].map((val) => (
- <button
- key={`bill-${val}`}
- type="button"
- onClick={() => setAmountTendered(val.toString())}
- className="text-[9px] font-black bg-zinc-800 hover:bg-zinc-700 text-white px-2 py-0.5 rounded shadow-sm border border-zinc-700 active:scale-95 transition-all cursor-pointer"
- >
- ₱{val}
- </button>
- ))}
- </div>
- <div className="flex flex-wrap items-center gap-1">
- <span className="text-[8.5px] font-black uppercase text-zinc-400 font-mono mr-1">Quick Add:</span>
- {[50, 100, 500, 1000].map((val) => (
- <button
- key={`add-${val}`}
- type="button"
- onClick={() => {
- const current = parseFloat(amountTendered) || 0;
- setAmountTendered((current + val).toString());
- }}
- className="text-[9px] font-black bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded shadow-sm active:scale-95 transition-all cursor-pointer"
- >
- +₱{val}
- </button>
- ))}
- </div>
- </div>
- )}
+
  </div>
  </div>
 
@@ -4534,9 +4496,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
       </button>
     )}
   </div>
-
-  {/* Receipt Font Size Adjuster Control */}
-  <ReceiptFontSizeControl mode="compact" className="mb-1.5" />
 
   {/* Receipt Content Container */}
   <div className={`space-y-3 my-2 select-text text-left max-h-[50vh] overflow-y-auto bir-receipt-container scrollbar-thin p-1 ${receiptFontClass}`}>

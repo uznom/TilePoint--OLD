@@ -1,12 +1,7 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useState, useEffect } from 'react';
 import { useDb, useDbProducts, useDbBranchStock } from '../context/DbContext';
 import { DamageLog, DamageCategory, DamageActionTaken, UserRole, Product } from '../types/db';
-import { isProductInBranch } from '../lib/branchUtils';
+import { isProductInBranch, getBranchOptionLabel } from '../lib/branchUtils';
 import { motion, AnimatePresence } from 'motion/react';
 import { useResponsivePageSize, TablePagination } from './TablePagination';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -378,7 +373,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
   >
   <option value="">-- Choose Showroom Branch --</option>
   {branches.map(b => (
-  <option key={b.id} value={b.id}>{b.name} ({b.address.split(',')[0]})</option>
+  <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
   ))}
   </select>
   ) : (
@@ -542,7 +537,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
   >
   <option value="All">All Branches</option>
   {branches.map(b => (
-  <option key={b.id} value={b.id}>{b.name}</option>
+  <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
   ))}
   </select>
   ) : (

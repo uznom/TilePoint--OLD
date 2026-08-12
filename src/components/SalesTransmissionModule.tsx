@@ -1,3 +1,4 @@
+import { getBranchOptionLabel } from '../lib/branchUtils';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -7,7 +8,7 @@ import React, { useState, useMemo } from 'react';
 import { useDb, encryptString, decryptString, getSecuritySecretKey, preprocessAndVerifyClipboardText, isStrictInboundReportSchema, unwrapInboundPayload } from '../context/DbContext';
 import { saveFileToBackup } from '../lib/fileBackupHelper';
 import { exportSalesTransmittalToXLSX } from '../lib/excelExportHelper';
-import { UserRole, BranchSalesReport, Sale, SaleItem } from '../types/db';
+import { UserRole, BranchSalesReport, Sale } from '../types/db';
 import { ActionButton } from './ActionButton';
 import { ConfirmationModal } from './ConfirmationModal';
 import {
@@ -23,15 +24,10 @@ import {
   Building2,
   TrendingUp,
   Search,
-  Calendar,
-  Layers,
-  Sparkles,
   Check,
   FileJson,
-  Plus,
   RefreshCw,
   FolderOpen,
-  Share2,
   Copy,
   Printer,
   Mail,
@@ -173,8 +169,8 @@ interface SalesTransmissionModuleProps {
  showOnlyImport?: boolean;
 }
 
-export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = ({ darkMode, hideManualImport = false, showOnlyImport = false }) => {
- const { currentUser, branches, users, sales, saleItems, branchSalesReports, rollbackSnapshots, performRollbackToSnapshot, transmitSalesReport, importManualSalesReport, auditSalesReport, addAuditLog, shifts, expenses, deliveries, purchaseOrders, products, auditLogs, members, productReturns, branchStock } = useDb();
+export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = ({ darkMode: _darkMode, hideManualImport = false, showOnlyImport = false }) => {
+ const { currentUser, branches, users, sales, saleItems, branchSalesReports, rollbackSnapshots, performRollbackToSnapshot, transmitSalesReport, importManualSalesReport, auditSalesReport, addAuditLog, shifts, expenses, deliveries, purchaseOrders, products, auditLogs } = useDb();
 
  // Selected date for compiling current branch report
  const [reportingDate, setReportingDate] = useState(() => {
@@ -183,7 +179,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  });
 
  // Local active branch when compiling (only admins/HQ can toggle this; branch personnel are locked)
- const [selectedBranchId, setSelectedBranchId] = useState(() => {
+ const [selectedBranchId] = useState(() => {
  return currentUser.branchAssignmentId || 'B1';
  });
 
@@ -1472,7 +1468,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  >
  <option value="ALL">All Branches</option>
  {branches.map(b => (
- <option key={b.id} value={b.id}>{b.name}</option>
+ <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
  ))}
  </select>
  ) : (
@@ -2873,21 +2869,6 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  />
  </div>
  );
-
- // Helper helper labels
- function getBranchNameLabel(id: string | null) {
- if (!id || id === "B1" || id === "main" || id === "Corporate Office") {
- const stored = localStorage.getItem("tilepoint_company_name_v1");
- if (stored) return stored;
- }
- const b = branches.find((br) => br.id === id);
- if (!b) {
- const stored = localStorage.getItem("tilepoint_company_name_v1");
- if (stored) return stored;
- return "ETC_DIPOLOG MAIN";
- }
- return b.name;
- }
 };
 
 // Internal minimal fallback components to bypass missing import icons

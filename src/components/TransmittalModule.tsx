@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useDb } from "../context/DbContext";
 import { isProductInBranch } from "../lib/branchUtils";
 import { formatCurrency } from "../utils/formatters";
@@ -20,15 +20,14 @@ import {
  FileCheck,
  ShieldCheck,
  Printer,
- FileText,
 } from "lucide-react";
 
 interface TransmittalModuleProps {
- darkMode: boolean;
+ darkMode?: boolean;
 }
 
 export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
- darkMode,
+ darkMode: _darkMode,
 }) => {
  const {
  transmittals,
@@ -724,12 +723,9 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  if (data.recordCounts) {
  const summary = data.recordCounts;
  const stocks = data.inventoryStocks || [];
- const staffList = data.cashierDirectory || [];
  const shiftsList = data.cashierShifts || [];
  const salesList = data.salesHistory || [];
  const expensesList = data.expenseLedger || [];
- const movementsList = data.inventoryMovements || [];
- const transfersList = data.stockTransfers || [];
 
  return (
  <div className="space-y-4 text-xs animate-fade-in print:text-black">

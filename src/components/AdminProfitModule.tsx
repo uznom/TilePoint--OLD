@@ -1,3 +1,4 @@
+import { getBranchOptionLabel } from '../lib/branchUtils';
 import React, { useState, useMemo } from "react";
 import { useDb } from "../context/DbContext";
 import { UserRole } from "../types/db";
@@ -550,7 +551,7 @@ export function AdminProfitModule({
             >
               <option value="all">Consolidated (All Branches)</option>
               {branches.filter(b => !b.isDeleted).map(b => (
-                <option key={b.id} value={b.id}>{b.name}</option>
+                <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
               ))}
             </select>
           </div>
@@ -948,7 +949,7 @@ export function AdminProfitModule({
                   className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 text-xs px-3 py-2 rounded-xl text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary cursor-pointer font-medium"
                 >
                   {branches.filter(b => !b.isDeleted).map(b => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
+                    <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
                   ))}
                 </select>
               </div>

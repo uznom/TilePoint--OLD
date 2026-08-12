@@ -12,6 +12,7 @@ import {
   Check 
 } from 'lucide-react';
 import { Branch, Product } from '../../types/db';
+import { getBranchOptionLabel } from '../../lib/branchUtils';
 
 export interface AlertProductItem {
   product: Product;
@@ -70,7 +71,7 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
         filter === 'ALL' ||
         (filter === 'OUT_OF_STOCK' && item.alertType === 'OUT_OF_STOCK') ||
         (filter === 'CRITICAL' && item.alertType === 'CRITICAL') ||
-        (filter === 'LOW' && item.alertType === 'LOW');
+        (filter === 'LOW' && (item.alertType === 'LOW' || item.alertType === 'CRITICAL'));
 
       if (!matchFilter) return false;
 
@@ -112,6 +113,9 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
               <h2 className="text-lg font-black tracking-tight text-m3-on-surface uppercase font-sans">
                 Stock Alert Diagnostics & Action Hub
               </h2>
+              <span className="text-xs font-bold text-m3-primary font-mono block">
+                Scope: {selectedViewBranchId === 'consolidated' ? 'HQ Consolidated (All Branches)' : getBranchOptionLabel(branches.find(b => b.id === selectedViewBranchId))}
+              </span>
             </div>
           </div>
 

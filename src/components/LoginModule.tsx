@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useDb } from '../context/DbContext';
+import { SimpleProgressBar } from './SimpleProgressBar';
 import { 
  Lock, 
  User, 
@@ -32,7 +33,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 
 export const LoginModule: React.FC = () => {
- const { login, isRateLimited, rateLimitTimeLeft, users, resetLockout, serverConnected } = useDb();
+ const { login, isRateLimited, rateLimitTimeLeft, users, resetLockout, serverConnected, clearServerErrorState } = useDb();
 
  const [username, setUsername] = useState('');
  const [password, setPassword] = useState('');
@@ -70,6 +71,7 @@ export const LoginModule: React.FC = () => {
   setErrorMsg(null);
   setIsSQLiBlocked(false);
   setIsSubmitting(true);
+  clearServerErrorState();
 
   // Check SQL keywords
   const lowerUser = username.toLowerCase();
@@ -128,7 +130,8 @@ export const LoginModule: React.FC = () => {
 
     {/* SECURE FORM: Max width matching a clean desktop login width */}
     <div className="w-full max-w-md flex flex-col gap-6">
-     <div className="m3-card !rounded-3xl border-m3-outline-variant/40 bg-m3-surface-low shadow-xl flex flex-col p-6 md:p-8">
+     <div className="m3-card !rounded-3xl border-m3-outline-variant/40 bg-m3-surface-low shadow-xl flex flex-col p-6 md:p-8 overflow-hidden relative">
+      <SimpleProgressBar isLoading={isSubmitting} className="absolute top-0 left-0 right-0 h-1" />
       <div className="flex flex-col mb-6 text-left">
        <h3 className="text-xl font-extrabold text-m3-on-surface flex items-center gap-2">
         <Lock className="h-5 w-5 text-m3-primary" /> Key Verification

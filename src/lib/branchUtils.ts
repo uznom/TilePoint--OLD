@@ -69,12 +69,16 @@ export function getBranchStockQuantity(
   branches: Branch[] | undefined | null
 ): number {
   if (!p) return 0;
-  if (!targetBranchId || targetBranchId === 'consolidated' || targetBranchId === 'all' || targetBranchId === 'ALL') {
-    return p.stockQuantity ?? 0;
-  }
-
   const safeBranchStock = branchStock || [];
   const safeBranches = branches || [];
+
+  if (!targetBranchId || targetBranchId === 'consolidated' || targetBranchId === 'all' || targetBranchId === 'ALL') {
+    const pStockRecs = safeBranchStock.filter(bs => bs && bs.productId === p.id);
+    if (pStockRecs.length > 0) {
+      return pStockRecs.reduce((sum, bs) => sum + (bs.quantity ?? 0), 0);
+    }
+    return p.stockQuantity ?? 0;
+  }
 
   const bsRec = getBranchStockRecord(p, targetBranchId, safeBranchStock, safeBranches);
   if (bsRec) {
@@ -96,7 +100,9 @@ export function getBranchStockQuantity(
   );
 
   if (isTargetPrimary) {
-    return p.stockQuantity ?? 0;
+    const otherRecs = safeBranchStock.filter(bs => bs && bs.productId === p.id && bs.branchId !== targetBranchId && bs.branchId !== 'B1');
+    const otherBranchSum = otherRecs.reduce((sum, bs) => sum + (bs.quantity ?? 0), 0);
+    return Math.max(0, (p.stockQuantity ?? 0) - otherBranchSum);
   }
 
   return 0;
@@ -120,7 +126,6 @@ export function isProductInBranch(
   const safeBranchStock = branchStock || [];
   const safeBranches = branches || [];
 
-  // 1. Check if an explicit branchStock record exists for this product and branch
   const targetBranch = safeBranches.find(b => b && (
     b.id === targetBranchId ||
     slugifyBranchStr(b.name) === slugifyBranchStr(targetBranchId) ||
@@ -130,34 +135,82 @@ export function isProductInBranch(
   const targetNameSlug = slugifyBranchStr(targetBranch?.name);
   const targetCodeSlug = slugifyBranchStr(targetBranch?.branchCode);
 
-  const bsRec = safeBranchStock.find(bs => {
-    if (!bs || bs.productId !== p.id) return false;
-    if (bs.branchId === targetBranchId) return true;
-    if (targetBranch && bs.branchId === targetBranch.id) return true;
-    const bsBranchSlug = slugifyBranchStr(bs.branchId);
-    if (targetIdSlug && bsBranchSlug === targetIdSlug) return true;
-    if (targetNameSlug && bsBranchSlug === targetNameSlug) return true;
-    if (targetCodeSlug && bsBranchSlug === targetCodeSlug) return true;
-    return false;
-  });
+  const primaryBranchId = (typeof window !== 'undefined' && localStorage.getItem("tilepoint_primary_branch_id")) || "B1";
+  const primaryBranch = safeBranches.find(b => b && b.id === primaryBranchId) || safeBranches.find(b => b && b.id === 'B1') || safeBranches[0];
+  const isTargetPrimary = primaryBranch && (
+    targetBranchId === primaryBranch.id ||
+    targetBranchId === 'B1' ||
+    (targetBranch && targetBranch.id === primaryBranch.id)
+  );
 
-  if (bsRec) {
-    return true;
-  }
-
-  // 2. Check if product is explicitly assigned to a DIFFERENT restricted branch
+  // 1. If product is explicitly assigned to a specific branch
   const prodBranchId = (p as any).branchAssignmentId || (p as any).branchId;
   if (prodBranchId && prodBranchId !== 'all' && prodBranchId !== 'ALL' && prodBranchId !== 'consolidated') {
     const prodBranchSlug = slugifyBranchStr(prodBranchId);
-    if (prodBranchSlug && targetIdSlug && prodBranchSlug !== targetIdSlug &&
-        (!targetNameSlug || prodBranchSlug !== targetNameSlug) &&
-        (!targetCodeSlug || prodBranchSlug !== targetCodeSlug)) {
-      return false;
+    const matchesTarget = (prodBranchSlug && targetIdSlug && prodBranchSlug === targetIdSlug) ||
+                          (targetNameSlug && prodBranchSlug === targetNameSlug) ||
+                          (targetCodeSlug && prodBranchSlug === targetCodeSlug) ||
+                          (isTargetPrimary && (prodBranchSlug === 'b1' || prodBranchId === primaryBranchId));
+    if (matchesTarget) {
+      return true;
     }
+    // If assigned to a different branch, check if it has been transferred or stocked at target branch
+    const hasTargetStock = safeBranchStock.some(bs => {
+      if (!bs || bs.productId !== p.id) return false;
+      const bsBranchSlug = slugifyBranchStr(bs.branchId);
+      const isBsTarget = bs.branchId === targetBranchId ||
+                         (targetBranch && bs.branchId === targetBranch.id) ||
+                         (targetIdSlug && bsBranchSlug === targetIdSlug) ||
+                         (targetNameSlug && bsBranchSlug === targetNameSlug) ||
+                         (targetCodeSlug && bsBranchSlug === targetCodeSlug);
+      return isBsTarget && ((bs.quantity ?? 0) > 0 || bs.lowStockThresholdOverride !== undefined);
+    });
+    return hasTargetStock;
   }
 
-  // 3. Otherwise, product is available across all active branches
-  return true;
+  // 2. Unassigned / global product: check if an explicit branchStock record exists for target branch
+  const hasTargetStockRec = safeBranchStock.some(bs => {
+    if (!bs || bs.productId !== p.id) return false;
+    const bsBranchSlug = slugifyBranchStr(bs.branchId);
+    const isBsTarget = bs.branchId === targetBranchId ||
+                       (targetBranch && bs.branchId === targetBranch.id) ||
+                       (targetIdSlug && bsBranchSlug === targetIdSlug) ||
+                       (targetNameSlug && bsBranchSlug === targetNameSlug) ||
+                       (targetCodeSlug && bsBranchSlug === targetCodeSlug) ||
+                       (isTargetPrimary && (bs.branchId === 'B1' || bsBranchSlug === 'b1'));
+    return isBsTarget;
+  });
+
+  if (hasTargetStockRec) {
+    return true;
+  }
+
+  // 3. Check if product has active branchStock records for OTHER branches
+  const hasOtherBranchStock = safeBranchStock.some(bs => {
+    if (!bs || bs.productId !== p.id) return false;
+    const bsBranchSlug = slugifyBranchStr(bs.branchId);
+    const isBsTarget = bs.branchId === targetBranchId ||
+                       (targetBranch && bs.branchId === targetBranch.id) ||
+                       (targetIdSlug && bsBranchSlug === targetIdSlug) ||
+                       (targetNameSlug && bsBranchSlug === targetNameSlug) ||
+                       (targetCodeSlug && bsBranchSlug === targetCodeSlug);
+    return !isBsTarget && (bs.quantity ?? 0) > 0;
+  });
+
+  // If product has stock allocated at other branches:
+  // Primary HQ branch gets unallocated remainder if any; non-primary branches return false
+  if (hasOtherBranchStock) {
+    if (isTargetPrimary) {
+      const otherBranchSum = safeBranchStock
+        .filter(bs => bs && bs.productId === p.id && bs.branchId !== targetBranchId && bs.branchId !== 'B1')
+        .reduce((sum, bs) => sum + (bs.quantity ?? 0), 0);
+      return (p.stockQuantity ?? 0) - otherBranchSum > 0;
+    }
+    return false;
+  }
+
+  // 4. Unassigned product with no branchStock records anywhere defaults to Primary HQ branch ('B1')
+  return isTargetPrimary;
 }
 
 /**
@@ -183,4 +236,16 @@ export function isSameBranch(
   }
 
   return false;
+}
+
+/**
+ * Formats branch labels as "Branch Name (Location)" for dropdown selectors and UI badges.
+ * e.g., "tilepoint (Main Headquarters, Dipolog City)"
+ */
+export function getBranchOptionLabel(b: { name?: string; address?: string; branchCode?: string; id?: string } | undefined | null): string {
+  if (!b) return 'Unknown Branch';
+  const rawName = b.name || `Branch ${b.id || ''}`;
+  const cleanName = rawName.startsWith('Emman Tile Center ') ? rawName.replace('Emman Tile Center ', '') : rawName;
+  const location = b.address || b.branchCode || 'Main Location';
+  return `${cleanName} (${location})`;
 }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, X, Check } from 'lucide-react';
 import { Branch, Product, BranchStock } from '../../types/db';
+import { getBranchOptionLabel } from '../../lib/branchUtils';
 
 interface BulkDamageModalProps {
   isOpen: boolean;
@@ -77,7 +78,7 @@ export const BulkDamageModal: React.FC<BulkDamageModalProps> = React.memo(({
               className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary p-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans cursor-pointer"
             >
               {branches.filter(b => !b.isDeleted).map(b => (
-                <option key={b.id} value={b.id}>{b.name} ({b.id})</option>
+                <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
               ))}
             </select>
           </div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sliders, X } from 'lucide-react';
 import { Branch, Product, User } from '../../types/db';
+import { getBranchOptionLabel } from '../../lib/branchUtils';
 
 interface ManualLedgerModalProps {
   isOpen: boolean;
@@ -103,7 +104,7 @@ export const ManualLedgerModal: React.FC<ManualLedgerModalProps> = React.memo(({
                 className="w-full bg-m3-surface-lowest border border-m3-outline-variant/50 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface rounded-xl focus:outline-none transition-colors font-sans cursor-pointer"
               >
                 {branches.map(b => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
+                  <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
                 ))}
               </select>
             ) : (

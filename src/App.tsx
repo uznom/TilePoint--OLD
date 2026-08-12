@@ -9,6 +9,7 @@ import { DbProvider, useDb, DbSnapshot } from "./context/DbContext";
 import { UserRole, User } from "./types/db";
 import { motion, AnimatePresence, MotionConfig } from "motion/react";
 import { SkeletalLoader } from "./components/SkeletalLoader";
+import { SimpleProgressBar } from "./components/SimpleProgressBar";
 import { LoginModule } from "./components/LoginModule";
 import { SetupModule } from "./components/SetupModule";
 import {
@@ -250,6 +251,7 @@ function AppContent() {
  isConfigured,
  isHydrating,
  isSystemHydrating,
+  isSystemProcessing,
  dbSnapshots,
  createDbSnapshot,
  restoreDbSnapshot,
@@ -1267,6 +1269,7 @@ function AppContent() {
  : "bg-m3-surface text-m3-on-surface"
  }`}
  >
+ <SimpleProgressBar isLoading={isSystemProcessing} className="fixed top-0 left-0 right-0 z-[100]" />
  {/* Dynamic Ambient Background Color Accent Glow using core M3 primary color token */}
  <div className="absolute top-[-10%] right-[-10%] w-[55vw] h-[55vw] rounded-full bg-m3-primary/[0.04] dark:bg-m3-primary/[0.07] blur-[130px] pointer-events-none z-0 transition-colors duration-500" />
  <div className="absolute bottom-[-10%] left-[-10%] w-[48vw] h-[48vw] rounded-full bg-m3-primary/[0.03] dark:bg-m3-primary/[0.05] blur-[110px] pointer-events-none z-0 transition-colors duration-500" />
@@ -2159,7 +2162,9 @@ function AppContent() {
  <Suspense fallback={<PageLoadingFallback />}>
  {activeTab === "tutorials" && <TutorialOnboarding />}
  {activeTab === "dashboard" && (
+ <React.Suspense fallback={<PageLoadingFallback />}>
  <Dashboard darkMode={darkMode} onNavigate={changeTab} />
+ </React.Suspense>
  )}
  {activeTab === "profit-analytics" && (
  <AdminProfitModule

@@ -21,7 +21,6 @@ import {
  CaseSensitive,
  Keyboard,
  ShieldAlert,
- Flame,
  Accessibility,
  MapPin,
  Code,
@@ -404,12 +403,12 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  const [snapshotName, setSnapshotName] = useState('');
  const [selectedRuleset, setSelectedRuleset] = useState<'firestore' | 'storage'>('firestore');
  const [ruleEnforcementProfile, setRuleEnforcementProfile] = useState<'strict' | 'audit' | 'open'>('strict');
- const [importText, setImportText] = useState('');
+ const [_importText, _setImportText] = useState('');
  const [backupActionStatus, setBackupActionStatus] = useState<string | null>(null);
  const [isExportingFullDb, setIsExportingFullDb] = useState(false);
  const [isExportingXlsx, setIsExportingXlsx] = useState(false);
- const [isSeedingMasterLogs, setIsSeedingMasterLogs] = useState(false);
- const [isExportingForensic, setIsExportingForensic] = useState(false);
+ const [_isSeedingMasterLogs, _setIsSeedingMasterLogs] = useState(false);
+ const [_isExportingForensic, _setIsExportingForensic] = useState(false);
  const [rulesAlert, setRulesAlert] = useState<string | null>(null);
  const [isShowingHandbook, setIsShowingHandbook] = useState(false);
  const [activeFaq, setActiveFaq] = useState<number | null>(null);
@@ -459,7 +458,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
 
  const anyChapterVisible = ch1Visible || ch2Visible || ch3Visible || ch4Visible || ch5Visible || ch6Visible || ch7Visible || ch8Visible;
  const [toastMessage, setToastMessage] = useState<string | null>(null);
- const triggerToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
+ const triggerToast = (message: string, _type: 'success' | 'info' | 'error' = 'success') => {
  setToastMessage(message);
  setTimeout(() => setToastMessage(null), 3000);
  };
@@ -471,7 +470,7 @@ export function PrivacyAccessibilityHub({ darkMode, hideFloatingButton = false }
  const [filenamePattern, setFilenamePattern] = useState<string>(() => {
  return localStorage.getItem("tp_device_backup_pattern") || "tilepoint_full_backup";
  });
- const [enforcePermanentRetention, setEnforcePermanentRetention] = useState<boolean>(() => {
+ const [enforcePermanentRetention, _setEnforcePermanentRetention] = useState<boolean>(() => {
  const val = localStorage.getItem("tp_enforce_permanent_retention");
  return val === null ? true : val === "true";
  });
@@ -2743,7 +2742,7 @@ startxref
  const cleanPath = deviceBackupPath.replace(/\/+$/, "") + "/";
  const stamp = Date.now();
  const finalFilename = `${filenamePattern}_${stamp}.json`;
- const fullSimulatedPath = `${cleanPath}${finalFilename}`;
+ const _fullSimulatedPath = `${cleanPath}${finalFilename}`;
 
  setTimeout(() => {
  const payload = {

@@ -8,15 +8,11 @@ import {
  BookOpen, 
  ShoppingCart, 
  Layers, 
- TrendingUp, 
  Truck, 
- HelpCircle, 
  CheckCircle2, 
  ChevronRight, 
  Sparkles,
- Building2,
  LockKeyhole,
- FileText,
  MousePointerClick,
  UserCheck,
  Printer
@@ -751,7 +747,7 @@ export const TutorialOnboarding: React.FC = () => {
  
  {/* Steps indicator nodes */}
  <div className="flex items-center gap-1.5 pb-4 border-b border-m3-outline-variant/15 overflow-x-auto">
- {selectedTopic.steps.map((st, sidx) => (
+ {selectedTopic.steps.map((_st, sidx) => (
  <button
  id={`tutorial-${selectedTopicId}-progress-${sidx}`}
  key={sidx}

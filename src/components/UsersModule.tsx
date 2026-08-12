@@ -1,3 +1,4 @@
+import { getBranchOptionLabel } from '../lib/branchUtils';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -18,9 +19,7 @@ import {
  X,
  MapPin,
  Mail,
- ShieldAlert,
  Activity,
- Wifi,
  Laptop,
  PowerOff,
  Clock,
@@ -28,10 +27,10 @@ import {
 } from 'lucide-react';
 
 interface UsersModuleProps {
- darkMode: boolean;
+ darkMode?: boolean;
 }
 
-export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
+export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode }) => {
  const {
  users,
  branches,
@@ -677,7 +676,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode }) => {
  className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md cursor-pointer"
  >
  {branches.filter(b => isUserAdmin || b.id === userBranchId).map(b => (
- <option key={b.id} value={b.id}>{b.name}</option>
+ <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
  ))}
  </select>
  </div>

@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from "react";
 import { useDb } from "../context/DbContext";
-import { UserRole } from "../types/db";
 import {
  ResponsiveContainer,
  AreaChart,
@@ -20,13 +19,9 @@ import {
  Layers,
  Building,
  Activity,
- Calendar,
- Filter,
  BarChart3,
- CalendarDays,
  Percent,
  Sparkles,
- ArrowRight
 } from "lucide-react";
 
 interface ProfitAnalyticsProps {
@@ -42,7 +37,7 @@ export function ProfitAnalytics({
  selectedBranchId,
  setSelectedBranchId,
  getBranchName,
- showToastMsg,
+ showToastMsg: _showToastMsg,
 }: ProfitAnalyticsProps) {
  const {
  sales,
@@ -313,7 +308,6 @@ export function ProfitAnalytics({
  })();
 
  Object.entries(parsedInstallments).forEach(([poId, insts]) => {
- const bill = customBills?.find((b) => b.id === poId);
  const po = purchaseOrders?.find((p) => p.id === poId);
  const branchId = po?.branchId || "corporate";
 

@@ -6,17 +6,14 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useDb, useDbProducts, useDbBranchStock } from '../context/DbContext';
 import { Product } from '../types/db';
-import { isProductInBranch, getBranchStockQuantity, getBranchStockRecord } from '../lib/branchUtils';
+import { getBranchStockQuantity, getBranchStockRecord } from '../lib/branchUtils';
 import { formatCurrency } from '../utils/formatters';
-import { isTileProduct, calculateTileCoverage } from '../utils/productUtils';
+import { isTileProduct } from '../utils/productUtils';
 import {
  QrCode,
  Search,
- Moon,
- Sun,
  Power,
  Package,
- Layers,
  Sparkles,
  Info,
  CheckCircle,
@@ -36,19 +33,18 @@ import {
  Check,
  ChevronDown,
  Accessibility,
- Palette
 } from 'lucide-react';
 import { ExpressiveTooltip } from './ExpressiveTooltip';
 
 interface StaffPortalProps {
- darkMode: boolean;
- setDarkMode: (dark: boolean) => void;
+ darkMode?: boolean;
+ setDarkMode?: (dark: boolean) => void;
 }
 
-export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode }) => {
+export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, setDarkMode: _setDarkMode }) => {
  const products = useDbProducts();
  const branchStock = useDbBranchStock();
- const { currentUser, logout, branches, addAuditLog, holdSale } = useDb();
+ const { currentUser, logout, branches, holdSale } = useDb();
 
  // Customer order cart states
  const [staffCart, setStaffCart] = useState<{ product: Product; quantity: number }[]>([]);
@@ -86,7 +82,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
 
  // Calculated variables
  const [calcAreaSqm, setCalcAreaSqm] = useState(0);
- const [calcTilesPlain, setCalcTilesPlain] = useState(0);
+ const [_calcTilesPlain, setCalcTilesPlain] = useState(0);
  const [calcTilesWithWastage, setCalcTilesWithWastage] = useState(0);
  const [calcBoxesNeeded, setCalcBoxesNeeded] = useState(0);
 
@@ -137,15 +133,6 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode, setDarkMode 
 			p.category.toLowerCase().includes(q)
 		);
 	}, [searchQuery, staffBranchProducts]);
-
-	// Catalog category filter (memoized)
-	const displayedCatalogProducts = useMemo(() => {
-		return staffBranchProducts.filter(p => {
-			if (catalogCategory === 'TILES') return isTileProduct(p);
-			if (catalogCategory === 'SUPPLIES') return !isTileProduct(p);
-			return true;
-		});
-	}, [staffBranchProducts, catalogCategory]);
 
  // Standard Web Audio synthesizer beep sound
  const playBeep = () => {

@@ -6,7 +6,7 @@ import { formatCurrency, formatUnits } from '../utils/formatters';
 
 import React, { useState, useEffect } from 'react';
 import { useDb } from '../context/DbContext';
-import { isProductInBranch, getBranchStockQuantity } from '../lib/branchUtils';
+import { isProductInBranch, getBranchStockQuantity, getBranchOptionLabel } from '../lib/branchUtils';
 import {
  Package,
  FolderOpen,
@@ -72,7 +72,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  checkoutSale,
  simulationModeActive,
  users,
- productReturns
+ productReturns,
+ getBranchStockStats
  } = useDb();
 
  const [hoveredBar, setHoveredBar] = useState<number | null>(null);
@@ -141,115 +142,161 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
 
 
- // Resolve current active branch filter based on user role and Admin select choice
- const activeBranchId = currentUser.role === UserRole.ADMIN
- ? (selectedBranchId === 'all' ? null : selectedBranchId)
- : currentUser.branchAssignmentId;
+ // --- MEMOIZED SELECTOR FOR BRANCH-SPECIFIC DATA ---
+  const branchDataSelector = React.useMemo(() => {
+    const isAdmin = currentUser.role === UserRole.ADMIN || (currentUser.role as any) === "Admin";
+    const activeBranchId = isAdmin
+      ? (selectedBranchId === "all" ? null : selectedBranchId)
+      : currentUser.branchAssignmentId;
 
- // Enforce branch-level isolation for non-admin users
- const filteredSales = currentUser.role === UserRole.ADMIN
- ? (selectedBranchId === 'all' ? sales : sales.filter(s => s.branchId === selectedBranchId))
- : sales.filter(s => s.branchId === currentUser.branchAssignmentId);
+    const filteredSales = isAdmin
+      ? (selectedBranchId === "all" ? sales : sales.filter(s => s.branchId === selectedBranchId))
+      : sales.filter(s => s.branchId === currentUser.branchAssignmentId);
 
- const filteredPurchaseOrders = currentUser.role === UserRole.ADMIN
- ? (selectedBranchId === 'all' ? purchaseOrders : purchaseOrders.filter(po => po.branchId === selectedBranchId))
- : purchaseOrders.filter(po => po.branchId === currentUser.branchAssignmentId);
+    const filteredPurchaseOrders = isAdmin
+      ? (selectedBranchId === "all" ? purchaseOrders : purchaseOrders.filter(po => po.branchId === selectedBranchId))
+      : purchaseOrders.filter(po => po.branchId === currentUser.branchAssignmentId);
 
- // Helper to resolve specific product stock count within current active filter context
- const getProductStockForCurrentContext = (pId: string) => {
- const p = products.find(item => item.id === pId);
- if (!p) return 0;
- if (activeBranchId) {
- return getBranchStockQuantity(p, activeBranchId, branchStock, branches);
- }
- return p.stockQuantity;
- };
+    const getProductStockForCurrentContext = (pId: string) => {
+      const p = products.find(item => item.id === pId);
+      if (!p) return 0;
+      if (activeBranchId) {
+        return getBranchStockQuantity(p, activeBranchId, branchStock, branches);
+      }
+      return p.stockQuantity;
+    };
 
- // Date comparison helpers
- const isSameDay = (dateVal: string | number | Date | undefined, targetDate: Date) => {
- if (!dateVal) return false;
- const d = new Date(dateVal);
- if (isNaN(d.getTime())) return false;
- return d.getFullYear() === targetDate.getFullYear() &&
- d.getMonth() === targetDate.getMonth() &&
- d.getDate() === targetDate.getDate();
- };
+    const isSameDay = (dateVal: string | number | Date | undefined, targetDate: Date) => {
+      if (!dateVal) return false;
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return false;
+      return d.getFullYear() === targetDate.getFullYear() &&
+        d.getMonth() === targetDate.getMonth() &&
+        d.getDate() === targetDate.getDate();
+    };
 
- const isSameMonth = (dateVal: string | number | Date | undefined, targetYear: number, targetMonth: number) => {
- if (!dateVal) return false;
- const d = new Date(dateVal);
- if (isNaN(d.getTime())) return false;
- return d.getFullYear() === targetYear && d.getMonth() === targetMonth;
- };
+    const isSameMonth = (dateVal: string | number | Date | undefined, targetYear: number, targetMonth: number) => {
+      if (!dateVal) return false;
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return false;
+      return d.getFullYear() === targetYear && d.getMonth() === targetMonth;
+    };
 
- // Product Returns filtering helper for current view context
- const filteredReturns = (productReturns || []).filter(r => {
- if (r.isDeleted) return false;
- if (activeBranchId) {
- const matchingSale = sales.find(s => s.id === r.saleId);
- if (matchingSale && matchingSale.branchId !== activeBranchId) return false;
- }
- return true;
- });
+    const filteredReturns = (productReturns || []).filter(r => {
+      if (r.isDeleted) return false;
+      if (activeBranchId) {
+        const matchingSale = sales.find(s => s.id === r.saleId);
+        if (matchingSale && matchingSale.branchId !== activeBranchId) return false;
+      }
+      return true;
+    });
 
- // Today's Sales (Net of Returns)
- const now = new Date();
- const todaySalesItems = filteredSales.filter(s => s.createdAt && !s.isDeleted && isSameDay(s.createdAt, now));
- const todayReturnsSum = filteredReturns.filter(r => isSameDay(r.dateTime, now)).reduce((acc, curr) => acc + (Number(curr.amountRefunded) || 0), 0);
- const computedTodaySales = Math.max(0, todaySalesItems.reduce((acc, curr) => acc + (Number(curr.grandTotal) || 0), 0) - todayReturnsSum);
+    const now = new Date();
+    const todaySalesItems = filteredSales.filter(s => s.createdAt && !s.isDeleted && isSameDay(s.createdAt, now));
+    const todayReturnsSum = filteredReturns.filter(r => isSameDay(r.dateTime, now)).reduce((acc, curr) => acc + (Number(curr.amountRefunded) || 0), 0);
+    const computedTodaySales = Math.max(0, todaySalesItems.reduce((acc, curr) => acc + (Number(curr.grandTotal) || 0), 0) - todayReturnsSum);
 
- // Weekly Sales (Net of Returns)
- const sevenDaysAgo = new Date();
- sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
- const weeklySalesItems = filteredSales.filter(s => s.createdAt && !s.isDeleted && new Date(s.createdAt) >= sevenDaysAgo);
- const weeklyReturnsSum = filteredReturns.filter(r => r.dateTime && !isNaN(new Date(r.dateTime).getTime()) && new Date(r.dateTime) >= sevenDaysAgo).reduce((acc, curr) => acc + (Number(curr.amountRefunded) || 0), 0);
- const computedWeeklySales = Math.max(0, weeklySalesItems.reduce((acc, curr) => acc + (Number(curr.grandTotal) || 0), 0) - weeklyReturnsSum);
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const weeklySalesItems = filteredSales.filter(s => s.createdAt && !s.isDeleted && new Date(s.createdAt) >= sevenDaysAgo);
+    const weeklyReturnsSum = filteredReturns.filter(r => r.dateTime && !isNaN(new Date(r.dateTime).getTime()) && new Date(r.dateTime) >= sevenDaysAgo).reduce((acc, curr) => acc + (Number(curr.amountRefunded) || 0), 0);
+    const computedWeeklySales = Math.max(0, weeklySalesItems.reduce((acc, curr) => acc + (Number(curr.grandTotal) || 0), 0) - weeklyReturnsSum);
 
- // Monthly Revenue (current month, Net of Returns)
- const monthlySalesItems = filteredSales.filter(s => s.createdAt && !s.isDeleted && isSameMonth(s.createdAt, now.getFullYear(), now.getMonth()));
- const monthlyReturnsSum = filteredReturns.filter(r => isSameMonth(r.dateTime, now.getFullYear(), now.getMonth())).reduce((acc, curr) => acc + (Number(curr.amountRefunded) || 0), 0);
- const computedMonthlyRevenue = Math.max(0, monthlySalesItems.reduce((acc, curr) => acc + (Number(curr.grandTotal) || 0), 0) - monthlyReturnsSum);
+    const monthlySalesItems = filteredSales.filter(s => s.createdAt && !s.isDeleted && isSameMonth(s.createdAt, now.getFullYear(), now.getMonth()));
+    const monthlyReturnsSum = filteredReturns.filter(r => isSameMonth(r.dateTime, now.getFullYear(), now.getMonth())).reduce((acc, curr) => acc + (Number(curr.amountRefunded) || 0), 0);
+    const computedMonthlyRevenue = Math.max(0, monthlySalesItems.reduce((acc, curr) => acc + (Number(curr.grandTotal) || 0), 0) - monthlyReturnsSum);
 
- // Corporate aggregate metric calculation (All branches, Net of Returns)
- const corporateTodayReturns = (productReturns || []).filter(r => !r.isDeleted && isSameDay(r.dateTime, now)).reduce((acc, r) => acc + (Number(r.amountRefunded) || 0), 0);
- const corporateMonthlyReturns = (productReturns || []).filter(r => !r.isDeleted && isSameMonth(r.dateTime, now.getFullYear(), now.getMonth())).reduce((acc, r) => acc + (Number(r.amountRefunded) || 0), 0);
- const corporateTodaySales = Math.max(0, sales.filter(s => s.createdAt && !s.isDeleted && isSameDay(s.createdAt, now)).reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0) - corporateTodayReturns);
- const corporateMonthlyRevenue = Math.max(0, sales.filter(s => s.createdAt && !s.isDeleted && isSameMonth(s.createdAt, now.getFullYear(), now.getMonth())).reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0) - corporateMonthlyReturns);
- const activeBranchesCount = branches.filter(b => !b.isDeleted).length;
+    const corporateTodayReturns = (productReturns || []).filter(r => !r.isDeleted && isSameDay(r.dateTime, now)).reduce((acc, r) => acc + (Number(r.amountRefunded) || 0), 0);
+    const corporateMonthlyReturns = (productReturns || []).filter(r => !r.isDeleted && isSameMonth(r.dateTime, now.getFullYear(), now.getMonth())).reduce((acc, r) => acc + (Number(r.amountRefunded) || 0), 0);
+    const corporateTodaySales = Math.max(0, sales.filter(s => s.createdAt && !s.isDeleted && isSameDay(s.createdAt, now)).reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0) - corporateTodayReturns);
+    const corporateMonthlyRevenue = Math.max(0, sales.filter(s => s.createdAt && !s.isDeleted && isSameMonth(s.createdAt, now.getFullYear(), now.getMonth())).reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0) - corporateMonthlyReturns);
+    const activeBranchesCount = branches.filter(b => !b.isDeleted).length;
 
- // Inventory value computed dynamically based on cost basis and selected branch
- const totalInventoryCostValue = branchStock
- .filter(bs => !activeBranchId || bs.branchId === activeBranchId)
- .reduce((acc, bs) => {
- const product = products.find(p => p.id === bs.productId && !p.isDeleted);
- return acc + (product ? bs.quantity * product.costPrice : 0);
- }, 0);
+    const branchStockStats = getBranchStockStats(activeBranchId || 'consolidated');
+    const totalInventoryCostValue = branchStockStats.totalValue;
 
- const activeProducts = products.filter(p => !p.isDeleted && isProductInBranch(p, activeBranchId, branchStock, branches));
- 
- // Quantitative lists for health drilling using context-aware stock counts
- const lowStockProducts = activeProducts.filter(p => {
- const stock = getProductStockForCurrentContext(p.id);
- return stock > 0 && stock <= p.minimumStock;
- });
- const outOfStockProducts = activeProducts.filter(p => getProductStockForCurrentContext(p.id) === 0);
- const criticalStockProducts = activeProducts.filter(p => {
- const stock = getProductStockForCurrentContext(p.id);
- return stock > 0 && stock <= 10;
- });
+    const activeProducts = products.filter(p => !p.isDeleted && isProductInBranch(p, activeBranchId, branchStock, branches));
 
- const stats = {
- ...globalStats,
- todaySales: computedTodaySales,
- weeklySales: computedWeeklySales,
- monthlyRevenue: computedMonthlyRevenue,
- totalProducts: activeProducts.length,
- lowStockCount: lowStockProducts.length,
- outOfStockCount: outOfStockProducts.length,
- criticalStockCount: criticalStockProducts.length,
- };
+    const lowStockProducts = branchStockStats.lowStockProducts;
+    const outOfStockProducts = branchStockStats.outOfStockProducts;
+    const criticalStockProducts = branchStockStats.criticalProducts;
 
- const pendingOrders = filteredPurchaseOrders.filter(po => po.status === 'Pending' || po.status === 'Ordered');
+    const stats = {
+      ...globalStats,
+      todaySales: computedTodaySales,
+      weeklySales: computedWeeklySales,
+      monthlyRevenue: computedMonthlyRevenue,
+      totalProducts: branchStockStats.totalProducts,
+      totalItems: branchStockStats.totalItems,
+      totalValue: branchStockStats.totalValue,
+      lowStockCount: branchStockStats.lowStockCount,
+      outOfStockCount: branchStockStats.outOfStockCount,
+      criticalStockCount: branchStockStats.criticalCount,
+    };
+
+    const pendingOrders = filteredPurchaseOrders.filter(po => po.status === "Pending" || po.status === "Ordered");
+
+    return {
+      activeBranchId,
+      filteredSales,
+      filteredPurchaseOrders,
+      filteredReturns,
+      getProductStockForCurrentContext,
+      computedTodaySales,
+      computedWeeklySales,
+      computedMonthlyRevenue,
+      corporateTodaySales,
+      corporateMonthlyRevenue,
+      activeBranchesCount,
+      totalInventoryCostValue,
+      activeProducts,
+      lowStockProducts,
+      outOfStockProducts,
+      criticalStockProducts,
+      stats,
+      pendingOrders,
+      todaySalesItems,
+      now,
+      isSameDay,
+      isSameMonth,
+    };
+  }, [
+    selectedBranchId,
+    currentUser.role,
+    currentUser.branchAssignmentId,
+    sales,
+    purchaseOrders,
+    products,
+    branchStock,
+    branches,
+    productReturns,
+    globalStats,
+  ]);
+
+  const {
+    activeBranchId,
+    filteredSales,
+    filteredPurchaseOrders,
+    filteredReturns,
+    getProductStockForCurrentContext,
+    computedTodaySales,
+    computedWeeklySales,
+    computedMonthlyRevenue,
+    corporateTodaySales,
+    corporateMonthlyRevenue,
+    activeBranchesCount,
+    totalInventoryCostValue,
+    activeProducts,
+    lowStockProducts,
+    outOfStockProducts,
+    criticalStockProducts,
+    stats,
+    pendingOrders,
+    todaySalesItems,
+    now,
+    isSameDay,
+    isSameMonth,
+  } = branchDataSelector;
 
  // Chart values calculation
  const getWeeklyChartData = () => {
@@ -709,7 +756,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  >
  <option value="all">All Branches (Consolidated)</option>
  {branches.filter(b => !b.isDeleted).map((b) => (
- <option key={b.id} value={b.id}>{b.name}</option>
+ <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
  ))}
  </select>
  ) : (
@@ -1182,7 +1229,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <span className="text-xs font-bold text-m3-on-surface">{name}</span>
  </div>
  <div className="text-right">
- <span className="text-xs font-black font-mono text-emerald-600 dark:text-emerald-400">{formatCurrency(sum)}</span>
+ <span className="text-xs font-black font-mono text-emerald-600 dark:text-emerald-400">{formatCurrency(Number(sum))}</span>
  </div>
  </div>
  ));

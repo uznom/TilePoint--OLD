@@ -6,19 +6,15 @@
 import React, { useState, useEffect } from "react";
 import { useDb } from "../context/DbContext";
 import {
- Server,
  Shield,
  User,
  MapPin,
  ArrowRight,
  ArrowLeft,
  CheckCircle2,
- Terminal,
  Database,
- Lock,
  Eye,
  EyeOff,
- Phone,
  ShieldCheck,
  Cpu,
  RefreshCw,
@@ -304,7 +300,7 @@ export const SetupModule: React.FC = () => {
  "info",
  );
 
- let savedToServer = false;
+ let _savedToServer = false;
  try {
  // Force network write synchronization immediately to commit configuration records to server-db.json
  const saveResponse = await fetch("/api/db", {
@@ -319,7 +315,8 @@ export const SetupModule: React.FC = () => {
  // Ensure the response is actual JSON and not static fallback HTML (e.g. from Vercel rewrite rules)
  const contentType = saveResponse.headers.get("content-type") || "";
  if (saveResponse.ok && !contentType.includes("text/html")) {
- savedToServer = true;
+ _savedToServer = true;
+ console.log("[Onboarding] Successfully saved initial bootstrap config to server", _savedToServer);
  } else {
  console.warn("[Onboarding] Server response not OK or returned HTML fallback (e.g. Vercel). Proceeding with client-side offline storage.");
  }

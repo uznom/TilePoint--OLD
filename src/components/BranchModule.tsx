@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ReceiptFontSizeControl, useReceiptFontSize } from './ReceiptFontSizeControl';
+import { useReceiptFontSize } from './ReceiptFontSizeControl';
 import { useDb } from '../context/DbContext';
 import { Branch, UserRole } from '../types/db';
 import { useResponsivePageSize, TablePagination } from './TablePagination';
@@ -66,26 +66,18 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
   const isUserManager = currentUser?.role === UserRole.MANAGER || String(currentUser?.role).toLowerCase() === 'manager';
   const isUserAdminOrManager = isUserAdmin || isUserManager;
 
-  const isCorporateWideUser =
-    !currentUser?.branchAssignmentId ||
-    currentUser.branchAssignmentId === 'consolidated' ||
-    currentUser.branchAssignmentId === 'ALL' ||
-    currentUser.branchAssignmentId === 'all' ||
-    currentUser.branchAssignmentId === '' ||
-    isUserAdmin ||
-    isUserManager;
+  // Only Admin accounts get corporate-wide access across all branches
+  const isCorporateWideUser = isUserAdmin;
 
   const userBranchId = currentUser?.branchAssignmentId || primaryBranchId;
 
   const activeBranches = branches.filter((b) => !isBranchDeleted(b));
 
-  const visibleBranches = activeBranches.filter(
-    (b) =>
-      isCorporateWideUser ||
-      b.id === userBranchId ||
-      b.id === primaryBranchId ||
-      activeBranches.length === 1
-  );
+  // Managers and Employees cannot see or access any other branch except their assigned branch
+  const visibleBranches = activeBranches.filter((b) => {
+    if (isUserAdmin) return true;
+    return b.id === userBranchId || b.id === currentUser?.branchAssignmentId;
+  });
 
   const getDynamicBranchManager = (branchId: string) => {
     const assigned = users.filter(u => u.branchAssignmentId === branchId && u.status === 'Active');
@@ -522,9 +514,9 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  )}
  </div>
 
- {/* Grid displays of branches */}
+ {/* Horizontal scrolling displays of branches */}
  <div className="space-y-4">
- <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+ <div className="flex overflow-x-auto gap-6 pb-4 snap-x scrollbar-thin max-w-full">
  {visibleBranches
  .slice((branchPage - 1) * branchPageSize, branchPage * branchPageSize)
  .map((b) => {
@@ -533,7 +525,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  return (
  <div
  key={b.id}
- className="m3-card shadow-sm transition-all duration-250 relative overflow-hidden flex flex-col justify-between"
+ className="m3-card shadow-sm transition-all duration-250 relative overflow-hidden flex flex-col justify-between shrink-0 min-w-[320px] md:min-w-[420px] snap-start"
  >
  {/* Top outline band */}
  <div className="flex items-start justify-between border-b border-m3-outline-variant/15 pb-3">
@@ -1026,8 +1018,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode }) => {
  </div>
 
  {/* RECEIPT FONT SIZE CONTROL */}
- <ReceiptFontSizeControl mode="full" className="mt-4" />
-
+ 
  <div className="flex justify-end pt-2">
  <button
  type="submit"

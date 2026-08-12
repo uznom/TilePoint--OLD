@@ -413,16 +413,31 @@ if (typeof window !== "undefined" && window.localStorage && !(window.localStorag
  console.warn("[System Guard] LocalStorage interceptor error:", e);
 }
 
-interface SummaryStats {
- totalProducts: number;
- totalCategories: number;
- totalSuppliers: number;
- lowStockCount: number;
- outOfStockCount: number;
- todaySales: number;
- weeklySales: number;
- monthlyRevenue: number;
- activeCashiers: number;
+export interface BranchStockStats {
+  totalItems: number;
+  totalProducts: number;
+  totalValue: number;
+  lowStockCount: number;
+  criticalCount: number;
+  outOfStockCount: number;
+  lowStockProducts: Product[];
+  criticalProducts: Product[];
+  outOfStockProducts: Product[];
+}
+
+export interface SummaryStats {
+  totalProducts: number;
+  totalCategories: number;
+  totalSuppliers: number;
+  lowStockCount: number;
+  criticalCount: number;
+  outOfStockCount: number;
+  totalItems: number;
+  totalValue: number;
+  todaySales: number;
+  weeklySales: number;
+  monthlyRevenue: number;
+  activeCashiers: number;
 }
 
 interface DbContextType {
@@ -677,6 +692,8 @@ interface DbContextType {
  };
  getBranchStockQuantity: (productId: string, targetBranchId?: string) => number;
  getProductStockCount: (productId: string) => number;
+ getBranchStockStats: (selectedBranchId?: string) => BranchStockStats;
+ filterBranchStockByBranch: (selectedBranchId?: string) => InventoryLocationStock[];
  revalidateStockCounts: (
  affectedItems?: { productId: string; branchId?: string; quantityDelta?: number }[]
  ) => Promise<void>;
@@ -876,7 +893,7 @@ export interface IngestionSnapshot {
 
 const DbContext = createContext<DbContextType | undefined>(undefined);
 
-const GUEST_USER: User = {
+const _GUEST_USER: User = {
  id: "G1",
  avatarInitials: "??",
  fullName: "Guest User",
@@ -2041,7 +2058,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  id: `B1_${p.id}`,
  branchId: "B1",
  productId: p.id,
- quantity: p.stockQuantity,
+ quantity: Math.round(p.stockQuantity * 0.3),
  });
  initial.push({
  id: `B2_${p.id}`,
@@ -2159,7 +2176,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
   );
   };
 
-  const CATEGORY_DISPLAY_LABELS: Record<ArchivableCategory, string> = {
+  const _CATEGORY_DISPLAY_LABELS: Record<ArchivableCategory, string> = {
   auditLogs: "Audit Trail & Activity Logs",
   movements: "Stock Movement Ledger",
   sales: "Historical Sales Invoices",
@@ -2283,7 +2300,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  (s) => s.userId === currentUser.id && s.id !== activeSessionId,
  );
  if (hasConcurrentSession) {
- const mySessionInList = freshSessions.some(
+ const _mySessionInList = freshSessions.some(
  (s) => s.id === activeSessionId,
  );
  const concurrentSession = freshSessions.find(
@@ -2320,7 +2337,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  });
 
  // Set of active branch IDs for quick O(1) membership checks
- const activeBranchIds = new Set(
+ const _activeBranchIds = new Set(
  branches.filter((b) => !b.isDeleted).map((b) => b.id)
  );
 
@@ -2571,7 +2588,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }
  };
 
- const [offlineQueue, setOfflineQueue] = useState<any[]>(() => {
+ const [_offlineQueue, setOfflineQueue] = useState<any[]>(() => {
  try {
  const txQ = localStorage.getItem("tp_transaction_sync_queue");
  if (txQ) return JSON.parse(txQ);
@@ -3775,7 +3792,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const writeQueue = useRef<Promise<any>>(Promise.resolve());
  const stockTransactionLock = useRef<Promise<any>>(Promise.resolve());
 
- const runStockTransaction = async <T,>(fn: () => Promise<T> | T): Promise<T> => {
+ const _runStockTransaction = async <T,>(fn: () => Promise<T> | T): Promise<T> => {
  let resolveLock: () => void;
  const nextLock = new Promise<void>((res) => {
  resolveLock = res;
@@ -6978,7 +6995,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  },
  ];
 
- const sampleDeliveriesList = DEFAULT_SEED_DELIVERIES;
+ const _sampleDeliveriesList = DEFAULT_SEED_DELIVERIES;
 
  const sampleMovementsList: InventoryMovement[] = [
  {
@@ -8811,6 +8828,89 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return prod ? prod.stockQuantity : 0;
  }, [products]);
 
+ const getBranchStockStats = useCallback((selectedBranchId?: string): BranchStockStats => {
+ const targetBranchId = selectedBranchId || currentUser?.branchAssignmentId || 'consolidated';
+ const isConsolidated = !targetBranchId || targetBranchId === 'consolidated' || targetBranchId === 'all' || targetBranchId === 'ALL';
+
+ const activeBranchProducts = products.filter(
+ (p) => !p.isDeleted && isProductInBranch(p, targetBranchId, branchStock, branches)
+ );
+
+ let totalItems = 0;
+ let totalValue = 0;
+ let lowStockCount = 0;
+ let criticalCount = 0;
+ let outOfStockCount = 0;
+
+ const lowStockProducts: Product[] = [];
+ const criticalProducts: Product[] = [];
+ const outOfStockProducts: Product[] = [];
+
+ activeBranchProducts.forEach((p) => {
+ const qty = getBranchStockQuantity(p, targetBranchId, branchStock, branches);
+ const bsRec = getBranchStockRecord(p, targetBranchId, branchStock, branches);
+ const threshold = (!isConsolidated && bsRec?.lowStockThresholdOverride !== undefined)
+ ? bsRec.lowStockThresholdOverride
+ : p.minimumStock;
+
+ totalItems += qty;
+ totalValue += qty * (p.costPrice || 0);
+
+ if (qty === 0) {
+ outOfStockCount++;
+ outOfStockProducts.push(p);
+ } else {
+ if (qty <= threshold) {
+ lowStockCount++;
+ lowStockProducts.push(p);
+ }
+ if (qty <= threshold * 0.5) {
+ criticalCount++;
+ criticalProducts.push(p);
+ }
+ }
+ });
+
+ console.log(`[useDb:getBranchStockStats] Scope: "${targetBranchId}" (Consolidated=${isConsolidated}) | Products in scope: ${activeBranchProducts.length}/${products.length} | Physical Items: ${totalItems} | Valuation: ₱${totalValue.toLocaleString()} | Consolidated branchStock Total: ${branchStock.length}`);
+
+ return {
+ totalItems,
+ totalProducts: activeBranchProducts.length,
+ totalValue,
+ lowStockCount,
+ criticalCount,
+ outOfStockCount,
+ lowStockProducts,
+ criticalProducts,
+ outOfStockProducts,
+ };
+ }, [products, branchStock, branches, currentUser?.branchAssignmentId]);
+
+ const filterBranchStockByBranch = useCallback((selectedBranchId?: string): InventoryLocationStock[] => {
+ const isConsolidated = !selectedBranchId || selectedBranchId === 'consolidated' || selectedBranchId === 'all' || selectedBranchId === 'ALL';
+ if (isConsolidated) {
+ console.log(`[useDb:filterBranchStockByBranch] Scope: "CONSOLIDATED" | Returning full consolidated branchStock array (${branchStock.length} records)`);
+ return branchStock;
+ }
+ const targetBranch = branches.find(b => b.id === selectedBranchId);
+ const uSlug = slugifyBranchStr(selectedBranchId);
+ const uNameSlug = slugifyBranchStr(targetBranch?.name);
+ const uCodeSlug = slugifyBranchStr(targetBranch?.branchCode);
+
+ const filtered = branchStock.filter(bs => {
+ if (bs.branchId === selectedBranchId) return true;
+ const bsSlug = slugifyBranchStr(bs.branchId);
+ if (bsSlug === uSlug) return true;
+ if (uNameSlug && bsSlug === uNameSlug) return true;
+ if (uCodeSlug && bsSlug === uCodeSlug) return true;
+ return false;
+ });
+
+ console.log(`[useDb:filterBranchStockByBranch] Scope: "${selectedBranchId}" (${targetBranch?.name || 'Unknown'}) | Consolidated total: ${branchStock.length} records | Branch-filtered count: ${filtered.length} records`);
+
+ return filtered;
+ }, [branchStock, branches]);
+
  const getInventoryContext = useCallback((productId: string, targetBranchId?: string) => {
  const bId = targetBranchId || currentUser?.branchAssignmentId || "B1";
  const bsKey = `bs:${bId}:${productId}`;
@@ -9455,7 +9555,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  prev.map((s) => {
  if (s.id === activeShift.id) {
  // Subtract from totals
- const voidedSubtotal = targetSale.subtotal;
+ const _voidedSubtotal = targetSale.subtotal;
  const voidedVat = targetSale.vat;
  const voidedDiscount = targetSale.discount;
  return {
@@ -10401,8 +10501,14 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // CALCULATE LIVE SYSTEM KPIs (Memoized to prevent UI stuttering on non-related updates)
   const stats = useMemo((): SummaryStats => {
+ const effectiveBranch = (currentUser?.role as any) === 'Admin' || currentUser?.role === UserRole.ADMIN
+ ? (currentUser.branchAssignmentId && currentUser.branchAssignmentId !== 'ALL' && currentUser.branchAssignmentId !== 'consolidated' ? currentUser.branchAssignmentId : 'consolidated')
+ : (currentUser?.branchAssignmentId || 'B1');
+
+ const branchStats = getBranchStockStats(effectiveBranch);
+
  const activeProducts = filteredProducts.filter((p) => !p.isDeleted);
- const totalProducts = activeProducts.length;
+ const totalProducts = branchStats.totalProducts;
 
  // Unique non-deleted product categories
  const totalCategories = Array.from(
@@ -10411,12 +10517,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  const totalSuppliers = suppliers.filter((s) => !s.isDeleted).length;
 
- const lowStockCount = activeProducts.filter(
- (p) => p.stockQuantity > 0 && p.stockQuantity <= p.minimumStock,
- ).length;
- const outOfStockCount = activeProducts.filter(
- (p) => p.stockQuantity === 0,
- ).length;
+ const lowStockCount = branchStats.lowStockCount;
+ const criticalCount = branchStats.criticalCount;
+ const outOfStockCount = branchStats.outOfStockCount;
+ const totalItems = branchStats.totalItems;
+ const totalValue = branchStats.totalValue;
 
  // Sales sums
  const now = new Date();
@@ -10495,13 +10600,16 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  totalCategories,
  totalSuppliers,
  lowStockCount,
+ criticalCount,
  outOfStockCount,
+ totalItems,
+ totalValue,
  todaySales,
  weeklySales,
  monthlyRevenue,
  activeCashiers,
  };
- }, [filteredProducts, suppliers, sales, users, productReturns]);
+ }, [filteredProducts, suppliers, sales, users, productReturns, getBranchStockStats, currentUser]);
 
    const contextValue = useMemo(
     () => ({
@@ -10686,6 +10794,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       getInventory: getInventoryContext,
       getBranchStockQuantity: getBranchStockQuantityContext,
       getProductStockCount: getProductStockCountContext,
+      getBranchStockStats,
+      filterBranchStockByBranch,
       revalidateStockCounts,
     }),
     [
@@ -10754,6 +10864,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       getInventoryContext,
       getBranchStockQuantityContext,
       getProductStockCountContext,
+      getBranchStockStats,
+      filterBranchStockByBranch,
       revalidateStockCounts,
     ]
   );
@@ -10809,6 +10921,8 @@ export function useDbInventory() {
     getInventory: db.getInventory,
     getBranchStockQuantity: db.getBranchStockQuantity,
     getProductStockCount: db.getProductStockCount,
+    getBranchStockStats: db.getBranchStockStats,
+    filterBranchStockByBranch: db.filterBranchStockByBranch,
     revalidateStockCounts: db.revalidateStockCounts,
   }), [
     db.products,
@@ -10816,8 +10930,20 @@ export function useDbInventory() {
     db.getInventory,
     db.getBranchStockQuantity,
     db.getProductStockCount,
+    db.getBranchStockStats,
+    db.filterBranchStockByBranch,
     db.revalidateStockCounts,
   ]);
+}
+
+/**
+ * Custom memoized hook to calculate branch-specific stock metrics on demand when selectedBranchId changes
+ */
+export function useBranchStockStats(selectedBranchId?: string): BranchStockStats {
+  const db = useDb();
+  return useMemo(() => {
+    return db.getBranchStockStats(selectedBranchId);
+  }, [db, selectedBranchId]);
 }
 
 /**

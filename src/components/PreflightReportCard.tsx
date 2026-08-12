@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, ShieldAlert, AlertTriangle, CheckCircle, Database, MapPin, ArrowRight, RefreshCw, Layers, Check } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, AlertTriangle, CheckCircle, MapPin, RefreshCw, Check } from 'lucide-react';
 import { PreflightReport } from '../lib/preflightValidator';
 import { ExpressiveTooltip } from './ExpressiveTooltip';
 
@@ -64,7 +64,7 @@ export const PreflightReportCard: React.FC<PreflightReportCardProps> = ({
     return 'rose';
   };
 
-  const color = getStatusColor();
+  const _color = getStatusColor();
 
   return (
     <div className="space-y-4 font-sans text-left animate-fade-in">

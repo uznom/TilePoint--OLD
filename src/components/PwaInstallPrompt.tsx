@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Download, Monitor, Sparkles, Smartphone, CheckCircle, X, ShieldCheck } from 'lucide-react';
+import { Download, Monitor, Sparkles, X, ShieldCheck } from 'lucide-react';
 import { useDb } from '../context/DbContext';
 
 export const PwaInstallPrompt: React.FC = () => {

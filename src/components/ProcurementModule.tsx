@@ -14,7 +14,6 @@ import {
  Truck,
  Plus,
  X,
- MapPin,
  ShieldCheck,
  AlertTriangle,
  Building2,
@@ -26,7 +25,6 @@ import {
  Package,
  Tag,
  Printer,
- Download,
  Settings2,
  ChevronRight,
  Calendar,
@@ -34,12 +32,11 @@ import {
 } from "lucide-react";
 
 interface ProcurementModuleProps {
- darkMode: boolean;
+ darkMode?: boolean;
  defaultTab?: "po" | "suppliers";
 }
 
 export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
- darkMode,
  defaultTab = "po",
 }) => {
  const products = useDbProducts();
@@ -3985,7 +3982,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  !p.isDeleted &&
  p.supplierId === selectedSupplierCatalog.id,
  )
- .map((p, idx) => (
+ .map((p) => (
  <tr
  key={p.id}
  className="hover:bg-m3-surface-low/30 font-medium"

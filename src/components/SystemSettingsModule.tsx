@@ -4,7 +4,6 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ReceiptFontSizeControl } from './ReceiptFontSizeControl';
 import {
  Sliders,
  Eye,
@@ -13,7 +12,6 @@ import {
  CaseSensitive,
  Layers,
  Keyboard,
- Check,
  RotateCcw,
  Settings,
  ShieldAlert,
@@ -21,15 +19,8 @@ import {
  Clock,
  Lock,
  Shield,
- Trash2,
- Database,
- ShieldCheck,
- Search,
  Moon,
  Sun,
- Building2,
- Percent,
- Receipt
 } from 'lucide-react';
 import { useDb } from '../context/DbContext';
 import { UserRole } from '../types/db';
@@ -128,23 +119,9 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  followSystemTheme = false,
  setFollowSystemTheme
 }) => {
- const { currentUser, updateCurrentUser, truncateDatabase, isRowClearingBlocked, getRowClearingBlockedReason, forceCloseAllShifts, auditLogs } = useDb();
+ const { currentUser, updateCurrentUser, truncateDatabase, isRowClearingBlocked, getRowClearingBlockedReason, forceCloseAllShifts } = useDb();
  const isAuthorized = currentUser && (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER);
  const [forceUnlockReset, setForceUnlockReset] = useState(false);
-
- const [auditSearchTerm, setAuditSearchTerm] = useState('');
- const safeLogs = auditLogs || [];
- const filteredAuditLogs = safeLogs.filter(log => {
- if (!auditSearchTerm.trim()) return true;
- const term = auditSearchTerm.toLowerCase();
- return (
- (log.action || '').toLowerCase().includes(term) ||
- (log.actionCode || '').toLowerCase().includes(term) ||
- (log.description || '').toLowerCase().includes(term) ||
- (log.username || '').toLowerCase().includes(term) ||
- (log.tableAffected || '').toLowerCase().includes(term)
- );
- });
 
  // Enterprise details states
  const [companyName, setCompanyName] = useState<string>(() => {
@@ -559,8 +536,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
  </div>
 
  {/* RECEIPT FONT SIZE ADJUSTER */}
- <ReceiptFontSizeControl mode="full" />
-
+ 
  {/* COLOR CONTRAST SELECTION */}
  <div className="space-y-2.5">
  <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">

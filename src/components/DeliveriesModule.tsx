@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useReceiptFontSize, ReceiptFontSizeControl } from './ReceiptFontSizeControl';
+import { useReceiptFontSize } from './ReceiptFontSizeControl';
 import { useDb } from '../context/DbContext';
 import { formatCurrency } from '../utils/formatters';
 import { Delivery, DeliveryStatus, UserRole } from '../types/db';
@@ -1458,8 +1458,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode }) 
  </button>
  </div>
 
- <ReceiptFontSizeControl mode="compact" className="my-2" />
-
+ 
  {/* PRINTABLE DOCKET CONTAINER WITH DUAL COPIES & RECEIVER SIGNATURE */}
  <div className={`space-y-4 my-4 select-text text-left bir-receipt-container ${receiptFontClass}`}>
     {renderDeliveryReceiptCopy("STORE COPY")}

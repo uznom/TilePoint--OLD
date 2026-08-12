@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { useReceiptFontSize, ReceiptFontSizeControl } from "./ReceiptFontSizeControl";
+import { useReceiptFontSize } from "./ReceiptFontSizeControl";
 import { formatCurrency } from "../utils/formatters";
 import { motion, AnimatePresence } from "motion/react";
 import { ConfirmationModal } from "./ConfirmationModal";
@@ -576,7 +576,7 @@ export default function AtposExtraModules({
  animate={{ scale: 1, opacity: 1 }}
  className={`w-full max-w-sm bg-white text-zinc-900 rounded-2xl shadow-2xl p-5 font-mono text-xs border border-zinc-200 relative max-h-[85vh] overflow-y-auto bir-receipt-container scrollbar-thin ${receiptFontClass}`}
  >
- <ReceiptFontSizeControl mode="compact" className="mb-3" />
+ 
  <div className="text-center pb-3 border-b-2 border-dashed border-zinc-300">
  <h3 className="font-extrabold text-sm tracking-wide">
  EMMAN TILE CENTER
