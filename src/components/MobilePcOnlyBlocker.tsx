@@ -39,7 +39,7 @@ export function MobilePcOnlyBlocker({ tabId, onForceEnable }: MobilePcOnlyBlocke
  "Detailed system-wide security audit trails and logs with high table column density."
  ],
  color: "from-blue-500/20 to-indigo-500/10",
- accentColor: "text-blue-500 border-blue-500/20 bg-blue-500/10",
+ accentColor: "text-m3-primary border-m3-primary/20 bg-m3-primary/10",
  metricText: ""
  };
  case "profit-analytics":

@@ -2634,9 +2634,9 @@ export default function AtposExtraModules({
  saveCustomBills(updatedBills);
  } else if (payVal.poId.startsWith("SIM-")) {
  if (isFullyPaid) {
- alert(`ERP Credit settled in full! Simulated invoice ${payVal.poNumber} is now fully paid.`);
+ alert(`ERP Credit settled in full! Invoice ${payVal.poNumber} is now fully paid.`);
  } else {
- alert(`Installment Posted! Paid ₱${payAmountNum.toLocaleString()} via ${partialPaymentMethod.toUpperCase()} for simulated invoice ${payVal.poNumber}. Remaining: ₱${(remaining - payAmountNum).toLocaleString()}`);
+ alert(`Installment Posted! Paid ₱${payAmountNum.toLocaleString()} via ${partialPaymentMethod.toUpperCase()} for invoice ${payVal.poNumber}. Remaining: ₱${(remaining - payAmountNum).toLocaleString()}`);
  }
  } else {
  if (isFullyPaid) {

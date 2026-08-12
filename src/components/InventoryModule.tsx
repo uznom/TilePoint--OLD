@@ -265,8 +265,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
      return isProductInBranch(p, activeBranchId, branchStock, branches);
    });
 
-   console.log(`[InventoryModule:branchProducts] Active Branch Scope: "${activeBranchId}" | Total Catalog Products: ${products.length} | Scoped Products Count: ${scopedProducts.length} | Consolidated branchStock Total: ${branchStock.length} | Scoped branchStock Total: ${filteredBranchStock.length}`);
-
+   
    return scopedProducts;
  }, [products, activeBranchId, branchStock, branches, filteredBranchStock]);
   // Highlight and filter product for "Inspect Section" interactions
@@ -1116,8 +1115,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  }
  });
 
- console.log(`[InventoryModule:stats] Active Branch Scope: "${selectedViewBranchId}" | Scoped SKUs: ${nonDeleted.length} | Total Physical Items: ${totalItems} | Valuation: ₱${totalValue.toLocaleString()} | Low Stock: ${lowStock} | Critical Stock: ${criticalStock} | Out of Stock: ${outOfStock}`);
-
+ 
  return {
  totalSKUs: nonDeleted.length,
  totalItems,
@@ -1383,7 +1381,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  category: finalCategory,
  brand: isRegisteringNewSupplier ? newSupplierName.trim() : (brand.trim() || 'Generic'),
  supplierId: finalSupplierId,
- unit: unit.trim() || 'Box',
+ unit: unit.trim() || 'Unit',
  size: size.trim() || 'N/A',
  boxQuantity: Number(boxQuantity),
  coveragePerBox: Number(coveragePerBox),
@@ -2546,8 +2544,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
 
  return (
  <div className="space-y-6 animate-fade-in text-m3-on-surface">
- <SimpleProgressBar isLoading={isSystemProcessing || isImportingProgress || isBranchLoading || isFetching} className="rounded-full shadow-sm" />
- <style>{`
+  <style>{`
  @keyframes borderPulseTwice {
  0%, 100% { border-color: rgba(244, 63, 94, 0.2); box-shadow: 0 0 0 0px rgba(244, 63, 94, 0); }
  25%, 75% { border-color: rgba(244, 63, 94, 1); box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.45); }
@@ -2676,7 +2673,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  </div>
  <div>
  <span className="text-[10px] text-m3-on-surface-variant font-extrabold uppercase tracking-wide">Total Physical Stock</span>
- <div className="text-xl font-black">{stats.totalItems.toLocaleString()} <span className="text-xs font-bold text-m3-on-surface-variant/80 font-mono">({stats.totalSKUs} SKUs)</span></div>
+ <div className="text-xl font-black">{stats.totalSKUs.toLocaleString()} <span className="text-sm font-bold text-m3-on-surface-variant font-mono">SKUs</span></div>
  </div>
  </div>
 
@@ -2707,7 +2704,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <div className={`p-3 rounded-2xl ${
  stats.lowStockCount > 0 
  ? 'bg-amber-500/15 text-amber-500 animate-pulse' 
- : 'bg-zinc-500/10 text-zinc-400'
+ : 'bg-m3-outline-variant/15 text-m3-on-surface-variant'
  }`}>
  <AlertTriangle className="h-5 w-5" />
  </div>
@@ -2733,7 +2730,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <div className={`p-3 rounded-2xl ${
  stats.criticalStockCount > 0 
  ? 'bg-rose-500/15 text-rose-500 animate-bounce' 
- : 'bg-zinc-500/10 text-zinc-400'
+ : 'bg-m3-outline-variant/15 text-m3-on-surface-variant'
  }`}>
  <AlertCircle className="h-5 w-5" />
  </div>
@@ -2756,7 +2753,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  }`}
  title="Click to view all Out of Stock items in Stock Alert Diagnostics Modal"
  >
- <div className="p-3 rounded-2xl bg-zinc-500/10 text-zinc-400">
+ <div className="p-3 rounded-2xl bg-m3-outline-variant/15 text-m3-on-surface-variant">
  <X className="h-5 w-5 font-black" />
  </div>
  <div>
@@ -2811,6 +2808,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
       handleDeleteTrigger={handleDeleteTrigger}
       updateBranchLowStockThreshold={updateBranchLowStockThreshold}
       showToast={showToast}
+      isLoading={isBranchLoading || isFetching}
     />
   )}
 
@@ -2863,7 +2861,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   Interactive Expiration Calendar
                 </span>
                 {calendarSelectedDay && (
-                  <span className="text-[10px] font-mono bg-m3-primary/10 text-m3-primary px-2 py-0.5 rounded-full font-bold border border-m3-primary/20 flex items-center gap-1">
+                  <span className="text-[10px] font-mono bg-m3-primary/10 text-m3-primary px-2 py-0.5 rounded-full font-bold border border-m3-outline-variant/30 flex items-center gap-1">
                     Selected: {calendarSelectedDay}
                     <button 
                       onClick={() => setCalendarSelectedDay(null)}
@@ -3119,7 +3117,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
               <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
                 {filteredBatches.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-8 text-center text-zinc-400 italic">
+                    <td colSpan={9} className="py-8 text-center text-m3-on-surface-variant italic">
                       No chemical stock batches match the active filters or selected date. Click "Register Chemical Stock Batch" to log a new record.
                     </td>
                   </tr>
@@ -3142,7 +3140,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                           <span className="text-[9px] font-mono text-m3-primary font-bold">{pCode}</span>
                         </td>
 
-                        <td className="py-3 px-4 font-mono text-center font-bold text-zinc-700 dark:text-zinc-300">
+                        <td className="py-3 px-4 font-mono text-center font-bold text-m3-on-surface dark:text-m3-on-surface-variant">
                           #{b.batchNumber}
                         </td>
 
@@ -3150,11 +3148,11 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                           {b.quantity} {pUnit}
                         </td>
 
-                        <td className="py-3 px-4 font-mono text-center text-zinc-500 font-semibold">
+                        <td className="py-3 px-4 font-mono text-center text-m3-on-surface-variant font-semibold">
                           {b.manufactureDate}
                         </td>
 
-                        <td className="py-3 px-4 font-mono text-center text-zinc-700 dark:text-zinc-300 font-bold">
+                        <td className="py-3 px-4 font-mono text-center text-m3-on-surface dark:text-m3-on-surface-variant font-bold">
                           {b.expiryDate}
                         </td>
 
@@ -3174,7 +3172,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                           </span>
                         </td>
 
-                        <td className="py-3 px-4 font-sans text-zinc-500 italic font-medium max-w-[200px] truncate" title={b.remarks}>
+                        <td className="py-3 px-4 font-sans text-m3-on-surface-variant italic font-medium max-w-[200px] truncate" title={b.remarks}>
                           {b.remarks || "N/A"}
                         </td>
 
@@ -3198,7 +3196,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                                   e.stopPropagation();
                                   handleRemoveBatch(b.id);
                                 }}
-                                className="p-1 hover:bg-rose-500/10 hover:text-rose-500 text-zinc-400 rounded-full transition-colors cursor-pointer"
+                                className="p-1 hover:bg-rose-500/10 hover:text-rose-500 text-m3-on-surface-variant rounded-full transition-colors cursor-pointer"
                                 title="Remove batch log entry"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -4145,7 +4143,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
                   <p>
                     <strong>Supplier Note:</strong> No specific supplier record is linked to this product (Brand: <strong>{prod?.brand || 'Default Chemical Supplier'}</strong>).
                   </p>
-                  <p className="text-[10px] text-zinc-400 mt-1">
+                  <p className="text-[10px] text-m3-on-surface-variant mt-1">
                     You can assign a registered supplier to this product from the Catalog module edit page.
                   </p>
                 </div>
@@ -4312,7 +4310,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  ))}
  </select>
  ) : (
- <div className="w-full bg-m3-surface-lowest/60 border border-m3-outline-variant/15 px-3 py-2 text-xs rounded-xl font-bold font-mono text-zinc-400">
+ <div className="w-full bg-m3-surface-lowest/60 border border-m3-outline-variant/15 px-3 py-2 text-xs rounded-xl font-bold font-mono text-m3-on-surface-variant">
  {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
  </div>
  )}
@@ -5070,7 +5068,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  {isRowClearingBlocked() ? (
  <div className="bg-amber-500/15 border border-amber-500/30 p-3 rounded-xl text-left space-y-1 mt-2">
  <span className="text-[10px] font-black uppercase text-amber-500 font-mono tracking-wider block">️ Archiving Blocked</span>
- <p className="text-[10.5px] text-zinc-300 leading-normal font-sans">
+ <p className="text-[10.5px] text-m3-on-surface-variant leading-normal font-sans">
  Row-clearing and product archiving are disabled because the register has: <strong className="text-amber-400 font-black">{getRowClearingBlockedReason()}</strong>.
  </p>
  </div>
@@ -5125,7 +5123,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  </div>
  <button
  onClick={() => setShowPortabilityHubModal(false)}
- className="text-zinc-500 hover:text-rose-500 p-2 hover:bg-rose-500/10 rounded-full transition-all text-xl cursor-pointer font-black"
+ className="text-m3-on-surface-variant hover:text-rose-500 p-2 hover:bg-rose-500/10 rounded-full transition-all text-xl cursor-pointer font-black"
  >
  
  </button>
@@ -5268,7 +5266,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  </div>
  <button
  onClick={() => setShowBranchConfigs(false)}
- className="text-zinc-500 hover:text-rose-500 p-2 hover:bg-rose-500/10 rounded-full transition-all text-xl cursor-pointer font-black"
+ className="text-m3-on-surface-variant hover:text-rose-500 p-2 hover:bg-rose-500/10 rounded-full transition-all text-xl cursor-pointer font-black"
  >
  
  </button>
@@ -5529,7 +5527,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  ))}
  </select>
  {currentUser.role !== 'Admin' && (
- <span className="text-[9px] text-zinc-400 pl-1">{branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name}</span>
+ <span className="text-[9px] text-m3-on-surface-variant pl-1">{branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name}</span>
  )}
  </div>
 
@@ -5575,7 +5573,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <span className="text-[10px] font-extrabold text-m3-secondary uppercase tracking-wider block">Add Items to Transfer Order</span>
  <div className="flex flex-col sm:flex-row gap-3">
  <div className="flex-1 space-y-1">
- <span className="text-[9px] text-zinc-500 font-bold block">Select Ceramic Product</span>
+ <span className="text-[9px] text-m3-on-surface-variant font-bold block">Select Ceramic Product</span>
  <select
  value={tempProductId ?? ''}
  onChange={e => setTempProductId(e.target.value)}
@@ -5586,14 +5584,14 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  const stockInBranch = branchStock.find(bs => bs.productId === p.id && bs.branchId === transferSource)?.quantity || 0;
  return (
  <option key={p.id} value={p.id}>
- {p.productName} ({p.size}) [&nbsp;Stock: {stockInBranch} {p.unit || 'Boxes'}&nbsp;]
+ {p.productName} ({p.size}) [&nbsp;Stock: {stockInBranch} {p.unit || 'Unit'}&nbsp;]
  </option>
  );
  })}
  </select>
  </div>
  <div className="w-full sm:w-28 space-y-1">
- <span className="text-[9px] text-zinc-500 font-bold block">Request Qty (Boxes)</span>
+ <span className="text-[9px] text-m3-on-surface-variant font-bold block">Request Qty (Boxes)</span>
  <input
  type="number"
  min={1}
@@ -5650,14 +5648,14 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  <div key={idx} className="flex justify-between items-center p-2.5 text-xs text-m3-on-surface">
  <div className="flex flex-col">
  <span className="font-extrabold">{prodDetails ? prodDetails.productName : 'Unknown Tile'}</span>
- <span className="text-[10px] text-zinc-400 font-mono">Product Code: {prodDetails ? prodDetails.productCode : item.productId}</span>
+ <span className="text-[10px] text-m3-on-surface-variant font-mono">Product Code: {prodDetails ? prodDetails.productCode : item.productId}</span>
  </div>
  <div className="flex items-center gap-4">
  <span className="font-mono font-black text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-md">{item.quantity} boxes</span>
  <button
  type="button"
  onClick={() => setTransferItems(prev => prev.filter((_, i) => i !== idx))}
- className="text-zinc-400 hover:text-rose-500 p-1 cursor-pointer transition-colors hover:bg-rose-500/10 rounded-full"
+ className="text-m3-on-surface-variant hover:text-rose-500 p-1 cursor-pointer transition-colors hover:bg-rose-500/10 rounded-full"
  >
  <Trash2 className="h-4 w-4" />
  </button>
@@ -5667,7 +5665,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
  })}
  </div>
  ) : (
- <div className="text-center py-6 text-zinc-400 text-xs italic bg-m3-surface-low rounded-xl border border-dashed border-m3-outline-variant/20">
+ <div className="text-center py-6 text-m3-on-surface-variant text-xs italic bg-m3-surface-low rounded-xl border border-dashed border-m3-outline-variant/20">
  Item queue empty. Select tile and request quantity to populate list.
  </div>
  )}
@@ -5777,7 +5775,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
     alertType="warning"
     confirmText="Purge & Synchronize"
     cancelText="Cancel"
-    message="Are you sure you want to purge legacy simulation data and synchronize chemical batches directly with live catalog products?"
+    message="Are you sure you want to synchronize chemical batches directly with live catalog products?"
     onConfirm={handleExecuteResetSimulationBatches}
     onCancel={() => setConfirmResetBatchesModal(false)}
   />
@@ -5800,8 +5798,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
       className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md pointer-events-auto select-none font-sans"
       onKeyDown={(e) => e.preventDefault()}
     >
-      <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[28px] p-8 shadow-2xl w-full max-w-md text-center space-y-6 animate-scale-up border-t-4 border-t-m3-primary">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-m3-primary/10 border border-m3-primary/30 text-m3-primary shadow-inner">
+      <div className="bg-m3-surface-low border border-m3-outline-variant/30 rounded-[28px] p-8 shadow-2xl w-full max-w-md text-center space-y-6 animate-scale-up border-t-4 border-t-zinc-700 dark:border-t-zinc-300">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-m3-outline-variant/15 border border-m3-outline-variant/30 text-zinc-800 dark:text-zinc-200 shadow-inner">
           <RefreshCw className="h-8 w-8 animate-spin text-m3-primary" />
         </div>
 
@@ -5821,12 +5819,12 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({ darkMode, init
         <div className="space-y-2 px-1">
           <div className="flex justify-between items-center text-xs font-mono font-extrabold">
             <span className="text-m3-on-surface-variant uppercase tracking-wider text-[11px]">CSV Migration Status</span>
-            <span className="text-m3-primary text-sm font-black">{Math.min(100, Math.max(0, importProgressPercent))}%</span>
+            <span className="text-zinc-800 dark:text-zinc-200 text-sm font-black">{Math.min(100, Math.max(0, importProgressPercent))}%</span>
           </div>
 
           <div className="h-4 w-full bg-m3-surface-variant/40 rounded-full overflow-hidden p-[2px] border border-m3-outline-variant/25 shadow-inner">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-m3-primary to-purple-600 transition-all duration-300 shadow-sm"
+              className="h-full rounded-full bg-zinc-800 dark:bg-zinc-200 transition-all duration-300 shadow-sm"
               style={{ width: `${Math.min(100, Math.max(0, importProgressPercent))}%` }}
             />
           </div>

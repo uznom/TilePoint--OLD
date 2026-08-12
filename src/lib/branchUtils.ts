@@ -37,12 +37,19 @@ export function getBranchStockRecord(
   const targetNameSlug = slugifyBranchStr(targetBranch?.name);
   const targetCodeSlug = slugifyBranchStr(targetBranch?.branchCode);
 
-  const primaryBranchId = (typeof window !== 'undefined' && localStorage.getItem("tilepoint_primary_branch_id")) || "B1";
-  const primaryBranch = safeBranches.find(b => b && b.id === primaryBranchId) || safeBranches.find(b => b && b.id === 'B1') || safeBranches[0];
+  const primaryBranchId = (typeof window !== 'undefined' && localStorage.getItem("tilepoint_primary_branch_id")) || "";
+  const primaryBranch = safeBranches.find(b => b && !b.isDeleted && (b.id === primaryBranchId || (b as any).isPrimary)) ||
+                        safeBranches.find(b => b && !b.isDeleted) ||
+                        safeBranches[0];
+  const primaryId = primaryBranch?.id;
+  const primarySlug = primaryBranch ? slugifyBranchStr(primaryBranch.id) : '';
+  const primaryNameSlug = primaryBranch ? slugifyBranchStr(primaryBranch.name) : '';
+  const primaryCodeSlug = primaryBranch ? slugifyBranchStr(primaryBranch.branchCode) : '';
+
   const isTargetPrimary = primaryBranch && (
-    targetBranchId === primaryBranch.id ||
-    targetBranchId === 'B1' ||
-    (targetBranch && targetBranch.id === primaryBranch.id)
+    targetBranchId === primaryId ||
+    (targetBranch && targetBranch.id === primaryId) ||
+    (targetIdSlug && (targetIdSlug === primarySlug || targetIdSlug === primaryNameSlug || targetIdSlug === primaryCodeSlug))
   );
 
   return safeBranchStock.find(bs => {
@@ -53,7 +60,7 @@ export function getBranchStockRecord(
     if (targetIdSlug && bsBranchSlug === targetIdSlug) return true;
     if (targetNameSlug && bsBranchSlug === targetNameSlug) return true;
     if (targetCodeSlug && bsBranchSlug === targetCodeSlug) return true;
-    if (isTargetPrimary && (bs.branchId === 'B1' || bsBranchSlug === 'b1')) return true;
+    if (isTargetPrimary && (bs.branchId === primaryId || bsBranchSlug === primarySlug || bsBranchSlug === primaryNameSlug || bsBranchSlug === primaryCodeSlug)) return true;
     return false;
   });
 }
@@ -74,38 +81,86 @@ export function getBranchStockQuantity(
 
   if (!targetBranchId || targetBranchId === 'consolidated' || targetBranchId === 'all' || targetBranchId === 'ALL') {
     const pStockRecs = safeBranchStock.filter(bs => bs && bs.productId === p.id);
-    if (pStockRecs.length > 0) {
-      return pStockRecs.reduce((sum, bs) => sum + (bs.quantity ?? 0), 0);
-    }
-    return p.stockQuantity ?? 0;
+    const sumBS = pStockRecs.reduce((sum, bs) => sum + (bs.quantity ?? 0), 0);
+    return Math.max(p.stockQuantity ?? 0, sumBS);
   }
 
-  const bsRec = getBranchStockRecord(p, targetBranchId, safeBranchStock, safeBranches);
-  if (bsRec) {
-    return bsRec.quantity ?? 0;
-  }
+  const primaryBranchId = (typeof window !== 'undefined' && localStorage.getItem("tilepoint_primary_branch_id")) || "";
+  const primaryBranch = safeBranches.find(b => b && !b.isDeleted && (b.id === primaryBranchId || (b as any).isPrimary)) ||
+                        safeBranches.find(b => b && !b.isDeleted) ||
+                        safeBranches[0];
+  const primaryId = primaryBranch?.id;
+  const primarySlug = primaryBranch ? slugifyBranchStr(primaryBranch.id) : '';
+  const primaryNameSlug = primaryBranch ? slugifyBranchStr(primaryBranch.name) : '';
+  const primaryCodeSlug = primaryBranch ? slugifyBranchStr(primaryBranch.branchCode) : '';
 
-  // Primary HQ branch check
-  const primaryBranchId = (typeof window !== 'undefined' && localStorage.getItem("tilepoint_primary_branch_id")) || "B1";
-  const primaryBranch = safeBranches.find(b => b && b.id === primaryBranchId) || safeBranches.find(b => b && b.id === 'B1') || safeBranches[0];
   const targetBranch = safeBranches.find(b => b && (
     b.id === targetBranchId ||
     slugifyBranchStr(b.name) === slugifyBranchStr(targetBranchId) ||
     slugifyBranchStr(b.branchCode) === slugifyBranchStr(targetBranchId)
   ));
   const isTargetPrimary = primaryBranch && (
-    targetBranchId === primaryBranch.id ||
-    targetBranchId === 'B1' ||
-    (targetBranch && targetBranch.id === primaryBranch.id)
+    targetBranchId === primaryId ||
+    (targetBranch && targetBranch.id === primaryId) ||
+    (slugifyBranchStr(targetBranchId) && (
+      slugifyBranchStr(targetBranchId) === primarySlug ||
+      slugifyBranchStr(targetBranchId) === primaryNameSlug ||
+      slugifyBranchStr(targetBranchId) === primaryCodeSlug
+    ))
   );
 
-  if (isTargetPrimary) {
-    const otherRecs = safeBranchStock.filter(bs => bs && bs.productId === p.id && bs.branchId !== targetBranchId && bs.branchId !== 'B1');
-    const otherBranchSum = otherRecs.reduce((sum, bs) => sum + (bs.quantity ?? 0), 0);
-    return Math.max(0, (p.stockQuantity ?? 0) - otherBranchSum);
+  const bsRec = getBranchStockRecord(p, targetBranchId, safeBranchStock, safeBranches);
+  const explicitQty = bsRec ? (bsRec.quantity ?? 0) : 0;
+
+  // Check explicit product assignment (branchAssignmentId, branchId, or origin)
+  const prodBranchId = (p as any).branchAssignmentId || (p as any).branchId || p.origin;
+  if (prodBranchId && prodBranchId !== 'all' && prodBranchId !== 'ALL' && prodBranchId !== 'consolidated') {
+    const targetIdSlug = slugifyBranchStr(targetBranchId);
+    const targetNameSlug = slugifyBranchStr(targetBranch?.name);
+    const targetCodeSlug = slugifyBranchStr(targetBranch?.branchCode);
+    const prodSlug = slugifyBranchStr(prodBranchId);
+
+    const matchesTarget = (prodBranchId === targetBranchId) ||
+                          (targetBranch && prodBranchId === targetBranch.id) ||
+                          (targetIdSlug && prodSlug === targetIdSlug) ||
+                          (targetNameSlug && prodSlug === targetNameSlug) ||
+                          (targetCodeSlug && prodSlug === targetCodeSlug) ||
+                          (isTargetPrimary && (prodBranchId === primaryId || prodSlug === primarySlug || prodSlug === primaryNameSlug || prodSlug === primaryCodeSlug));
+
+    if (matchesTarget) {
+      // Product belongs to target branch. Return explicitQty if recorded, else fallback to p.stockQuantity
+      return bsRec ? (bsRec.quantity ?? 0) : (p.stockQuantity ?? 0);
+    } else {
+      // Product explicitly belongs to ANOTHER branch.
+      // Return explicitQty if transferred/stocked here, else 0
+      return explicitQty;
+    }
   }
 
-  return 0;
+  // Unassigned product fallback for primary branch
+  if (isTargetPrimary) {
+    const targetIdSlug = slugifyBranchStr(targetBranchId);
+    const targetNameSlug = slugifyBranchStr(targetBranch?.name);
+    const targetCodeSlug = slugifyBranchStr(targetBranch?.branchCode);
+
+    const otherRecs = safeBranchStock.filter(bs => {
+      if (!bs || bs.productId !== p.id) return false;
+      if (bs.branchId === targetBranchId) return false;
+      if (targetBranch && bs.branchId === targetBranch.id) return false;
+      const bsBranchSlug = slugifyBranchStr(bs.branchId);
+      if (targetIdSlug && bsBranchSlug === targetIdSlug) return false;
+      if (targetNameSlug && bsBranchSlug === targetNameSlug) return false;
+      if (targetCodeSlug && bsBranchSlug === targetCodeSlug) return false;
+      if (bs.branchId === primaryId || bsBranchSlug === primarySlug || bsBranchSlug === primaryNameSlug || bsBranchSlug === primaryCodeSlug) return false;
+      return true;
+    });
+
+    const otherBranchSum = otherRecs.reduce((sum, bs) => sum + (bs.quantity ?? 0), 0);
+    const unallocated = Math.max(0, (p.stockQuantity ?? 0) - otherBranchSum);
+    return Math.max(explicitQty, unallocated);
+  }
+
+  return explicitQty;
 }
 
 /**
@@ -135,26 +190,35 @@ export function isProductInBranch(
   const targetNameSlug = slugifyBranchStr(targetBranch?.name);
   const targetCodeSlug = slugifyBranchStr(targetBranch?.branchCode);
 
-  const primaryBranchId = (typeof window !== 'undefined' && localStorage.getItem("tilepoint_primary_branch_id")) || "B1";
-  const primaryBranch = safeBranches.find(b => b && b.id === primaryBranchId) || safeBranches.find(b => b && b.id === 'B1') || safeBranches[0];
+  const primaryBranchId = (typeof window !== 'undefined' && localStorage.getItem("tilepoint_primary_branch_id")) || "";
+  const primaryBranch = safeBranches.find(b => b && !b.isDeleted && (b.id === primaryBranchId || (b as any).isPrimary)) ||
+                        safeBranches.find(b => b && !b.isDeleted) ||
+                        safeBranches[0];
+  const primaryId = primaryBranch?.id;
+  const primarySlug = primaryBranch ? slugifyBranchStr(primaryBranch.id) : '';
+  const primaryNameSlug = primaryBranch ? slugifyBranchStr(primaryBranch.name) : '';
+  const primaryCodeSlug = primaryBranch ? slugifyBranchStr(primaryBranch.branchCode) : '';
+
   const isTargetPrimary = primaryBranch && (
-    targetBranchId === primaryBranch.id ||
-    targetBranchId === 'B1' ||
-    (targetBranch && targetBranch.id === primaryBranch.id)
+    targetBranchId === primaryId ||
+    (targetBranch && targetBranch.id === primaryId) ||
+    (targetIdSlug && (targetIdSlug === primarySlug || targetIdSlug === primaryNameSlug || targetIdSlug === primaryCodeSlug))
   );
 
-  // 1. If product is explicitly assigned to a specific branch
-  const prodBranchId = (p as any).branchAssignmentId || (p as any).branchId;
+  // 1. If product is explicitly assigned to a specific branch (via branchAssignmentId, branchId, or origin)
+  const prodBranchId = (p as any).branchAssignmentId || (p as any).branchId || p.origin;
   if (prodBranchId && prodBranchId !== 'all' && prodBranchId !== 'ALL' && prodBranchId !== 'consolidated') {
     const prodBranchSlug = slugifyBranchStr(prodBranchId);
-    const matchesTarget = (prodBranchSlug && targetIdSlug && prodBranchSlug === targetIdSlug) ||
+    const matchesTarget = (prodBranchId === targetBranchId) ||
+                          (targetBranch && prodBranchId === targetBranch.id) ||
+                          (prodBranchSlug && targetIdSlug && prodBranchSlug === targetIdSlug) ||
                           (targetNameSlug && prodBranchSlug === targetNameSlug) ||
                           (targetCodeSlug && prodBranchSlug === targetCodeSlug) ||
-                          (isTargetPrimary && (prodBranchSlug === 'b1' || prodBranchId === primaryBranchId));
+                          (isTargetPrimary && (prodBranchId === primaryId || prodBranchSlug === primarySlug || prodBranchSlug === primaryNameSlug || prodBranchSlug === primaryCodeSlug));
     if (matchesTarget) {
       return true;
     }
-    // If assigned to a different branch, check if it has been transferred or stocked at target branch
+    // If assigned to a different branch, check if it has been transferred or explicitly stocked at target branch
     const hasTargetStock = safeBranchStock.some(bs => {
       if (!bs || bs.productId !== p.id) return false;
       const bsBranchSlug = slugifyBranchStr(bs.branchId);
@@ -177,7 +241,7 @@ export function isProductInBranch(
                        (targetIdSlug && bsBranchSlug === targetIdSlug) ||
                        (targetNameSlug && bsBranchSlug === targetNameSlug) ||
                        (targetCodeSlug && bsBranchSlug === targetCodeSlug) ||
-                       (isTargetPrimary && (bs.branchId === 'B1' || bsBranchSlug === 'b1'));
+                       (isTargetPrimary && (bs.branchId === primaryId || bsBranchSlug === primarySlug || bsBranchSlug === primaryNameSlug || bsBranchSlug === primaryCodeSlug));
     return isBsTarget;
   });
 
@@ -202,7 +266,7 @@ export function isProductInBranch(
   if (hasOtherBranchStock) {
     if (isTargetPrimary) {
       const otherBranchSum = safeBranchStock
-        .filter(bs => bs && bs.productId === p.id && bs.branchId !== targetBranchId && bs.branchId !== 'B1')
+        .filter(bs => bs && bs.productId === p.id && bs.branchId !== targetBranchId && bs.branchId !== primaryId)
         .reduce((sum, bs) => sum + (bs.quantity ?? 0), 0);
       return (p.stockQuantity ?? 0) - otherBranchSum > 0;
     }

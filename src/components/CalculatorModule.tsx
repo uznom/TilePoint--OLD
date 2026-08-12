@@ -215,7 +215,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  setSearchQuery(e.target.value);
  setShowProductDropdown(true);
  }}
- className="w-full bg-m3-surface dark:bg-zinc-900/60 border border-m3-outline-variant/30 rounded-xl pl-9.5 pr-4 py-2.5 text-xs text-m3-on-surface dark:text-zinc-100 placeholder-m3-on-surface-variant/50 focus:outline-none focus:ring-1 focus:ring-m3-primary font-medium"
+ className="w-full bg-m3-surface dark:bg-m3-surface-low/60 border border-m3-outline-variant/30 rounded-xl pl-9.5 pr-4 py-2.5 text-xs text-m3-on-surface dark:text-m3-on-surface placeholder-m3-on-surface-variant/50 focus:outline-none focus:ring-1 focus:ring-m3-primary font-medium"
  />
  </div>
  {selectedProduct && (
@@ -236,7 +236,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  className="fixed inset-0 z-40" 
  onClick={() => setShowProductDropdown(false)} 
  />
- <div className="absolute left-0 right-0 mt-1.5 max-h-56 overflow-y-auto bg-m3-surface dark:bg-zinc-900 border border-m3-outline-variant/30 rounded-xl shadow-2xl z-50 divide-y divide-m3-outline-variant/15">
+ <div className="absolute left-0 right-0 mt-1.5 max-h-56 overflow-y-auto bg-m3-surface dark:bg-m3-surface-low border border-m3-outline-variant/30 rounded-xl shadow-2xl z-50 divide-y divide-m3-outline-variant/15">
  {tileProducts.length > 0 ? (
  tileProducts.map((p) => (
  <div
@@ -245,8 +245,8 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  className="p-3 hover:bg-m3-primary/10 cursor-pointer transition-colors text-left flex items-center justify-between text-xs"
  >
  <div>
- <p className="font-extrabold text-m3-on-surface dark:text-zinc-100">{p.productName}</p>
- <p className="text-[10px] text-m3-on-surface-variant dark:text-zinc-400 mt-0.5">
+ <p className="font-extrabold text-m3-on-surface dark:text-m3-on-surface">{p.productName}</p>
+ <p className="text-[10px] text-m3-on-surface-variant dark:text-m3-on-surface-variant mt-0.5">
  Code: <span className="font-mono">{p.productCode}</span> • Size: <span className="font-bold">{p.size || 'Unspecified'}</span> • Box Qty: <span className="font-bold">{p.boxQuantity || 4} pcs</span>
  </p>
  </div>
@@ -255,13 +255,13 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  {p.stockQuantity <= 0 ? (
 	<span className="text-[9px] font-black uppercase text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20 ml-1">NO STOCKS</span>
 ) : (
-	<span className="text-[10px] text-m3-on-surface-variant dark:text-zinc-400">Stock: {p.stockQuantity}</span>
+	<span className="text-[10px] text-m3-on-surface-variant dark:text-m3-on-surface-variant">Stock: {p.stockQuantity}</span>
 )}
  </div>
  </div>
  ))
  ) : (
- <div className="p-4 text-center text-m3-on-surface-variant dark:text-zinc-400 text-xs italic">
+ <div className="p-4 text-center text-m3-on-surface-variant dark:text-m3-on-surface-variant text-xs italic">
  No matching tile products found in inventory.
  </div>
  )}
@@ -274,8 +274,8 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  <div className="mt-3 p-3 bg-m3-primary/10 border border-m3-primary/20 rounded-xl flex items-center justify-between animate-fade-in text-xs">
  <div>
  <span className="text-[9px] uppercase font-black tracking-widest text-m3-primary block">Linked Product</span>
- <p className="font-black text-m3-on-surface dark:text-zinc-100 mt-0.5">{selectedProduct.productName}</p>
- <p className="text-[10px] text-m3-on-surface-variant dark:text-zinc-400 mt-0.5 font-mono">
+ <p className="font-black text-m3-on-surface dark:text-m3-on-surface mt-0.5">{selectedProduct.productName}</p>
+ <p className="text-[10px] text-m3-on-surface-variant dark:text-m3-on-surface-variant mt-0.5 font-mono">
  Price: ₱{selectedProduct.sellingPrice} per {selectedProduct.unit} • Size: {selectedProduct.size || 'Auto'} • Pack Qty: {boxQuantity} pcs/box
  </p>
  </div>
@@ -295,7 +295,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  <div className="flex items-center gap-2 mb-4 border-b border-m3-outline-variant/15 pb-3">
  <Ruler className="h-5 w-5 text-m3-primary" />
  <div>
- <h4 className="text-xs font-black uppercase tracking-wider text-m3-on-surface dark:text-zinc-100">Dimensional Inputs</h4>
+ <h4 className="text-xs font-black uppercase tracking-wider text-m3-on-surface dark:text-m3-on-surface">Dimensional Inputs</h4>
  
  </div>
  </div>
@@ -304,26 +304,26 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  {/* Length and Width */}
  <div className="grid grid-cols-2 gap-3">
  <div className="space-y-1">
- <label className="text-[10px] font-black uppercase text-m3-on-surface-variant dark:text-zinc-400">Room Length (m)</label>
+ <label className="text-[10px] font-black uppercase text-m3-on-surface-variant dark:text-m3-on-surface-variant">Room Length (m)</label>
  <input
  type="number"
  step="0.01"
  min="0"
  value={roomLength ?? ''}
  onChange={(e) => setRoomLength(e.target.value)}
- className="w-full bg-m3-surface dark:bg-zinc-900/60 border border-m3-outline-variant/30 text-xs px-3.5 py-2.5 rounded-xl font-mono text-m3-on-surface dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-m3-primary text-center font-bold"
+ className="w-full bg-m3-surface dark:bg-m3-surface-low/60 border border-m3-outline-variant/30 text-xs px-3.5 py-2.5 rounded-xl font-mono text-m3-on-surface dark:text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary text-center font-bold"
  placeholder="4.0"
  />
  </div>
  <div className="space-y-1">
- <label className="text-[10px] font-black uppercase text-m3-on-surface-variant dark:text-zinc-400">Room Width (m)</label>
+ <label className="text-[10px] font-black uppercase text-m3-on-surface-variant dark:text-m3-on-surface-variant">Room Width (m)</label>
  <input
  type="number"
  step="0.01"
  min="0"
  value={roomWidth ?? ''}
  onChange={(e) => setRoomWidth(e.target.value)}
- className="w-full bg-m3-surface dark:bg-zinc-900/60 border border-m3-outline-variant/30 text-xs px-3.5 py-2.5 rounded-xl font-mono text-m3-on-surface dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-m3-primary text-center font-bold"
+ className="w-full bg-m3-surface dark:bg-m3-surface-low/60 border border-m3-outline-variant/30 text-xs px-3.5 py-2.5 rounded-xl font-mono text-m3-on-surface dark:text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary text-center font-bold"
  placeholder="3.5"
  />
  </div>
@@ -331,7 +331,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
 
  {/* Tile Size Selector & Shortcuts */}
  <div className="space-y-2 pt-2">
- <span className="text-[10px] font-black uppercase text-m3-on-surface-variant dark:text-zinc-400 block">Tile Size Selector</span>
+ <span className="text-[10px] font-black uppercase text-m3-on-surface-variant dark:text-m3-on-surface-variant block">Tile Size Selector</span>
  
  {/* Standard shortcuts */}
  <div className="grid grid-cols-3 gap-1.5">
@@ -345,7 +345,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  className={`py-1.5 px-2 rounded-lg border text-[10px] font-bold text-center cursor-pointer transition-all ${
  isActive
  ? 'bg-m3-primary/10 border-m3-primary text-m3-primary font-black shadow-inner'
- : 'bg-m3-surface dark:bg-zinc-900/40 border-m3-outline-variant/25 text-m3-on-surface-variant dark:text-zinc-400 hover:text-m3-on-surface dark:hover:text-zinc-100 hover:border-m3-outline-variant/45'
+ : 'bg-m3-surface dark:bg-m3-surface-low/40 border-m3-outline-variant/25 text-m3-on-surface-variant dark:text-m3-on-surface-variant hover:text-m3-on-surface dark:hover:text-zinc-100 hover:border-m3-outline-variant/45'
  }`}
  >
  {sc.label}
@@ -357,33 +357,33 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  {/* Manual Size Entry */}
  <div className="grid grid-cols-3 gap-2.5 pt-1">
  <div className="space-y-1">
- <label className="text-[9px] font-bold text-m3-on-surface-variant dark:text-zinc-400 uppercase">Length (cm)</label>
+ <label className="text-[9px] font-bold text-m3-on-surface-variant dark:text-m3-on-surface-variant uppercase">Length (cm)</label>
  <input
  type="number"
  min="1"
  value={tileLength ?? ''}
  onChange={(e) => setTileLength(e.target.value)}
- className="w-full bg-m3-surface dark:bg-zinc-900/60 border border-m3-outline-variant/30 text-xs p-2 rounded-lg font-mono text-m3-on-surface dark:text-zinc-100 text-center focus:outline-none focus:ring-1 focus:ring-m3-primary font-bold"
+ className="w-full bg-m3-surface dark:bg-m3-surface-low/60 border border-m3-outline-variant/30 text-xs p-2 rounded-lg font-mono text-m3-on-surface dark:text-m3-on-surface text-center focus:outline-none focus:ring-1 focus:ring-m3-primary font-bold"
  />
  </div>
  <div className="space-y-1">
- <label className="text-[9px] font-bold text-m3-on-surface-variant dark:text-zinc-400 uppercase">Width (cm)</label>
+ <label className="text-[9px] font-bold text-m3-on-surface-variant dark:text-m3-on-surface-variant uppercase">Width (cm)</label>
  <input
  type="number"
  min="1"
  value={tileWidth ?? ''}
  onChange={(e) => setTileWidth(e.target.value)}
- className="w-full bg-m3-surface dark:bg-zinc-900/60 border border-m3-outline-variant/30 text-xs p-2 rounded-lg font-mono text-m3-on-surface dark:text-zinc-100 text-center focus:outline-none focus:ring-1 focus:ring-m3-primary font-bold"
+ className="w-full bg-m3-surface dark:bg-m3-surface-low/60 border border-m3-outline-variant/30 text-xs p-2 rounded-lg font-mono text-m3-on-surface dark:text-m3-on-surface text-center focus:outline-none focus:ring-1 focus:ring-m3-primary font-bold"
  />
  </div>
  <div className="space-y-1">
- <label className="text-[9px] font-bold text-m3-on-surface-variant dark:text-zinc-400 uppercase">Pcs / Box</label>
+ <label className="text-[9px] font-bold text-m3-on-surface-variant dark:text-m3-on-surface-variant uppercase">Pcs / Box</label>
  <input
  type="number"
  min="1"
  value={boxQuantity ?? ''}
  onChange={(e) => setBoxQuantity(e.target.value)}
- className="w-full bg-m3-surface dark:bg-zinc-900/60 border border-m3-outline-variant/30 text-xs p-2 rounded-lg font-mono text-m3-on-surface dark:text-zinc-100 text-center focus:outline-none focus:ring-1 focus:ring-m3-primary font-bold"
+ className="w-full bg-m3-surface dark:bg-m3-surface-low/60 border border-m3-outline-variant/30 text-xs p-2 rounded-lg font-mono text-m3-on-surface dark:text-m3-on-surface text-center focus:outline-none focus:ring-1 focus:ring-m3-primary font-bold"
  />
  </div>
  </div>
@@ -393,7 +393,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  <div className="pt-3 border-t border-m3-outline-variant/15 flex items-center justify-between">
  <div>
  <span className="text-[10px] font-black uppercase text-m3-on-surface dark:text-zinc-300 block">Waste Margin Override</span>
- <span className="text-[9px] text-m3-on-surface-variant dark:text-zinc-400">Append +10% standard reserve for corner trims & shards</span>
+ <span className="text-[9px] text-m3-on-surface-variant dark:text-m3-on-surface-variant">Append +10% standard reserve for corner trims & shards</span>
  </div>
 
  <button
@@ -422,7 +422,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  <div className="flex items-center justify-between mb-4.5 border-b border-m3-outline-variant/15 pb-3">
  <div className="flex items-center gap-2">
  <Boxes className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
- <h4 className="text-xs font-black uppercase tracking-wider text-m3-on-surface dark:text-zinc-100">Instant Packing Output</h4>
+ <h4 className="text-xs font-black uppercase tracking-wider text-m3-on-surface dark:text-m3-on-surface">Instant Packing Output</h4>
  </div>
  <span className="text-[9.5px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 rounded-full font-bold">
  LEDGER RATIO OK
@@ -432,8 +432,8 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  {/* The result card layout */}
  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
  {/* Surface Area */}
- <div className="p-4 rounded-2xl bg-m3-surface dark:bg-zinc-900/40 border border-m3-outline-variant/20 text-center">
- <span className="text-[9px] font-extrabold uppercase text-m3-on-surface-variant dark:text-zinc-400 block tracking-wider">Total Area</span>
+ <div className="p-4 rounded-2xl bg-m3-surface dark:bg-m3-surface-low/40 border border-m3-outline-variant/20 text-center">
+ <span className="text-[9px] font-extrabold uppercase text-m3-on-surface-variant dark:text-m3-on-surface-variant block tracking-wider">Total Area</span>
  <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 font-mono">
  {calculations.areaSqm} <span className="text-xs">m²</span>
  </div>
@@ -446,15 +446,15 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  <Sparkles className="h-3 w-3 animate-spin" style={{ animationDuration: '6s' }} />
  </div>
  <span className="text-[9px] font-extrabold uppercase text-m3-primary block tracking-wider">Boxes Needed</span>
- <div className="text-2xl font-black text-m3-on-surface dark:text-zinc-100 mt-1 font-mono">
+ <div className="text-2xl font-black text-m3-on-surface dark:text-m3-on-surface mt-1 font-mono">
  {calculations.boxesNeeded} <span className="text-xs">Boxes</span>
  </div>
  <span className="text-[9px] text-m3-primary/80 font-bold block mt-0.5">Auto-rounded up</span>
  </div>
 
  {/* Estimated Loose Breakage Pieces */}
- <div className="p-4 rounded-2xl bg-m3-surface dark:bg-zinc-900/40 border border-m3-outline-variant/20 text-center">
- <span className="text-[9px] font-extrabold uppercase text-m3-on-surface-variant dark:text-zinc-400 block tracking-wider">Est. Breakage</span>
+ <div className="p-4 rounded-2xl bg-m3-surface dark:bg-m3-surface-low/40 border border-m3-outline-variant/20 text-center">
+ <span className="text-[9px] font-extrabold uppercase text-m3-on-surface-variant dark:text-m3-on-surface-variant block tracking-wider">Est. Breakage</span>
  <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 font-mono">
  {calculations.looseBreakage} <span className="text-xs">pcs</span>
  </div>
@@ -463,16 +463,16 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  </div>
 
  {/* Tiling detail ledger statistics */}
- <div className="bg-m3-surface-container/60 dark:bg-zinc-900/50 rounded-xl p-3 border border-m3-outline-variant/20 space-y-1.5 text-xs">
- <div className="flex justify-between items-center text-[10.5px] text-m3-on-surface-variant dark:text-zinc-400">
+ <div className="bg-m3-surface-container/60 dark:bg-m3-surface-low/50 rounded-xl p-3 border border-m3-outline-variant/20 space-y-1.5 text-xs">
+ <div className="flex justify-between items-center text-[10.5px] text-m3-on-surface-variant dark:text-m3-on-surface-variant">
  <span>Single tile layout surface:</span>
  <span className="font-mono font-bold text-m3-on-surface dark:text-zinc-200">{calculations.tileAreaSqm.toFixed(4)} m² ({tileLength}x{tileWidth} cm)</span>
  </div>
- <div className="flex justify-between items-center text-[10.5px] text-m3-on-surface-variant dark:text-zinc-400">
+ <div className="flex justify-between items-center text-[10.5px] text-m3-on-surface-variant dark:text-m3-on-surface-variant">
  <span>Net tile count required (Perfect layout):</span>
  <span className="font-mono font-bold text-m3-on-surface dark:text-zinc-200">{calculations.perfectTilesCount} pcs</span>
  </div>
- <div className="flex justify-between items-center text-[10.5px] text-m3-on-surface-variant dark:text-zinc-400">
+ <div className="flex justify-between items-center text-[10.5px] text-m3-on-surface-variant dark:text-m3-on-surface-variant">
  <span>Gross tiles required (With {isWasteOverride ? '10%' : '0%'} waste):</span>
  <span className="font-mono font-bold text-m3-on-surface dark:text-zinc-200">{calculations.tilesWithWaste} pcs</span>
  </div>
@@ -486,7 +486,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  </div>
 
  {/* Layout representation */}
- <div className="mt-4 pt-3.5 border-t border-m3-outline-variant/15 flex items-center gap-2 text-[10px] text-m3-on-surface-variant dark:text-zinc-400">
+ <div className="mt-4 pt-3.5 border-t border-m3-outline-variant/15 flex items-center gap-2 text-[10px] text-m3-on-surface-variant dark:text-m3-on-surface-variant">
  <Info className="h-4.5 w-4.5 text-m3-primary shrink-0" />
  <span>Calculated pack logic is optimized for batch shade consistency from wholesale tile crates.</span>
  </div>
@@ -502,8 +502,8 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  <Check className="h-4.5 w-4.5" />
  </div>
  <div>
- <h5 className="text-[11px] font-black text-m3-on-surface dark:text-zinc-100 uppercase tracking-wide">Add To Active Check</h5>
- <p className="text-[10px] text-m3-on-surface-variant dark:text-zinc-400">
+ <h5 className="text-[11px] font-black text-m3-on-surface dark:text-m3-on-surface uppercase tracking-wide">Add To Active Check</h5>
+ <p className="text-[10px] text-m3-on-surface-variant dark:text-m3-on-surface-variant">
  {selectedProduct 
  ? `Ready to push ${selectedProduct.unit?.toLowerCase().includes('box') ? calculations.boxesNeeded : calculations.tilesWithWaste} ${selectedProduct.unit} into invoice.`
  : 'Please search and select an inventory product above to commit the quantities.'}

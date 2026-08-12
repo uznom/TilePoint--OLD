@@ -23,7 +23,7 @@ import {
 } from "../lib/crypto";
 import { saveFileToBackup } from "../lib/fileBackupHelper";
 import { generateEan13Barcode } from "../utils/barcodeGenerator";
-import { isProductInBranch, slugifyBranchStr, getBranchStockQuantity, getBranchStockRecord } from "../lib/branchUtils";
+import { isProductInBranch, slugifyBranchStr, getBranchStockQuantity, getBranchStockRecord, isSameBranch } from "../lib/branchUtils";
 import { sqliteDatabaseService } from "../services/sqliteDatabaseService";
 import { dbSyncWorkerClient } from "../services/dbSyncWorkerClient";
 import {
@@ -446,6 +446,20 @@ interface DbContextType {
  setCurrentUser: (user: User | null) => void;
  updateCurrentUser: (updates: Partial<User>) => void;
  validateInventoryAccess: (item: any) => boolean;
+  logBranchAccessScope: (
+    operation: string,
+    entityName: string,
+    targetBranchId?: string | null,
+    recordId?: string | null,
+    additionalDetails?: any
+  ) => {
+    userRole: string;
+    userBranch: string;
+    targetBranch: string;
+    isAllowed: boolean;
+    scope: string;
+    message: string;
+  };
  isLoggedIn: boolean;
  login: (
  username: string,
@@ -920,7 +934,7 @@ function safeParse<T>(key: string, defaultValue: T): T {
  }
 }
 
-// Initial Seed data constants
+// Production Seed collections (Clean empty initial states)
 const SEED_BRANCHES: Branch[] = [];
 const SEED_USERS: User[] = [];
 const SEED_SUPPLIERS: Supplier[] = [];
@@ -934,39 +948,7 @@ const SEED_PO_ITEMS: PurchaseOrderItem[] = [];
 const SEED_TRANSMITTALS: Transmittal[] = [];
 const SEED_MOVEMENTS: InventoryMovement[] = [];
 const SEED_AUDIT_LOGS: AuditLog[] = [];
-
-// Synchronous automatic local storage purge for production reset (v15)
-if (
- typeof window !== "undefined" &&
- localStorage.getItem("tp_simulation_purged_final_v15") !== "true"
-) {
- const keysToPurge = [
- "tp_users",
- "tp_branches",
- "tp_suppliers",
- "tp_products",
- "tp_purchase_orders",
- "tp_po_items",
- "tp_transmittals",
- "tp_shifts",
- "tp_sales",
- "tp_sale_items",
- "tp_movements",
- "tp_audit_logs",
- "tp_parked_sales",
- "tp_stock_transfers",
- "tp_branch_stock",
- "tp_ledger_entries",
- "atpos_v2_members_list",
- "atpos_v2_expenses",
- "atpos_v2_returns",
- "tp_current_user",
- "tp_is_logged_in",
- "tp_is_configured",
- ];
- keysToPurge.forEach((k) => localStorage.removeItem(k));
- localStorage.setItem("tp_simulation_purged_final_v15", "true");
-}
+const DEFAULT_SEED_DELIVERIES: Delivery[] = [];
 
 /**
  * Highly secure sanitation and verification helpers to prevent XSS script injections,
@@ -1095,55 +1077,6 @@ const mergeParkedSales = (local: any[], remote: any[], deletedSet?: Set<string>)
  });
  return Array.from(map.values());
 };
-
-const DEFAULT_SEED_DELIVERIES: Delivery[] = [
- {
- id: "DEL-1001",
- saleId: "INV-1001",
- saleNumber: "TP-INV-1001",
- customerName: "Juan Dela Cruz",
- contactNumber: "09171234567",
- houseNo: "Block 12 Lot 4",
- street: "Magsaysay Ave",
- barangay: "Central San Jose",
- cityMunicipality: "Dipolog City",
- landmark: "Near Central Elementary School",
- deliveryDate: new Date(Date.now() + 86400000).toISOString().split("T")[0],
- deliveryTime: "10:00 AM",
- status: "SCHEDULED",
- notes: "Please call 30 mins before arrival. Handle tiles carefully.",
- createdAt: new Date(Date.now() - 172800000).toISOString(),
- updatedAt: new Date(Date.now() - 86400000).toISOString(),
- truck: "Isuzu Forward Elf (6-Wheeler) - ABC 1234",
- driver: "Pedro Penduko",
- helper: "Mark Banderas",
- branchId: "B1",
- branchName: "Dipolog Main Yard"
- },
- {
- id: "DEL-1002",
- saleId: "INV-1002",
- saleNumber: "TP-INV-1002",
- customerName: "Maria Santos",
- contactNumber: "09189876543",
- houseNo: "Purok 3",
- street: "National Highway",
- barangay: "Sta. Filomena",
- cityMunicipality: "Dipolog City",
- landmark: "Opposite Shell Gas Station",
- deliveryDate: new Date().toISOString().split("T")[0],
- deliveryTime: "02:00 PM",
- status: "IN_TRANSIT",
- notes: "Express freight delivery.",
- createdAt: new Date(Date.now() - 86400000).toISOString(),
- updatedAt: new Date().toISOString(),
- truck: "Canter Heavy Truck - XYZ 9876",
- driver: "Juan Tamad",
- helper: "Jose Rizal",
- branchId: "B1",
- branchName: "Dipolog Main Yard"
- }
-];
 
 export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  children,
@@ -1281,7 +1214,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const isSetup =
  typeof window !== "undefined" &&
  localStorage.getItem("tilepoint_onboarded_setup") === "true";
- return safeParse<User[]>("tp_users", isSetup ? SEED_USERS : []);
+ return safeParse<User[]>("tp_users", []);
  });
 
  // Dynamic seed passwords initialization
@@ -1528,16 +1461,61 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return { success: true };
  };
 
+  const logBranchAccessScope = (
+    operation: string,
+    entityName: string,
+    targetBranchId?: string | null,
+    recordId?: string | null,
+    additionalDetails?: any
+  ) => {
+    const userRole = currentUser?.role || "GUEST";
+    const userBranch = currentUser?.branchAssignmentId || activeBranch?.id || "UNASSIGNED";
+    const targetBranch = targetBranchId || "GLOBAL";
+
+    const isUnlimitedScope =
+      userRole === UserRole.ADMIN ||
+      userBranch === "ALL" ||
+      userBranch === "consolidated";
+
+    const isAllowed =
+      isUnlimitedScope ||
+      targetBranch === "GLOBAL" ||
+      targetBranch === "ALL" ||
+      targetBranch === "consolidated" ||
+      targetBranch === userBranch;
+
+    const scopeDescription = isUnlimitedScope
+      ? "CONSOLIDATED (ALL BRANCHES)"
+      : `BRANCH SPECIFIC (${userBranch})`;
+
+    const statusLabel = isAllowed ? "ALLOWED" : "DENIED (CROSS-BRANCH ACCESS RESTRICTED)";
+
+    const message = `[Branch Scope Diagnostic] [${operation.toUpperCase()}] Entity: ${entityName} | Record: ${recordId || "N/A"} | Target Branch: ${targetBranch} | User: ${currentUser?.username || "Anonymous"} (${userRole}) | User Branch: ${userBranch} | Scope: ${scopeDescription} | Status: ${statusLabel}`;
+
+    console.log(message);
+
+    return {
+      userRole,
+      userBranch,
+      targetBranch,
+      isAllowed,
+      scope: scopeDescription,
+      message,
+      additionalDetails
+    };
+  };
+
   const validateInventoryAccess = (item: any): boolean => {
+    const targetB = item?.currentBranchId || item?.branchId;
+    logBranchAccessScope("READ", "InventoryAccessCheck", targetB, item?.id || item?.productId);
     if (!currentUser) return false;
     // Admins and Managers have unrestricted access to all branch stock data
     if (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER) return true;
     
     // Check if the currentBranchId (or fallback branchId) matches the user's branchAssignmentId
-    const currentBranchId = item?.currentBranchId || item?.branchId;
-    if (!currentBranchId) return true;
+    if (!targetB) return true;
     
-    return currentBranchId === currentUser.branchAssignmentId;
+    return targetB === currentUser.branchAssignmentId;
   };
 
  const logout = () => {
@@ -2040,47 +2018,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  });
 
  const [branchStock, setBranchStock] = useState<InventoryLocationStock[]>(
- () => {
- try {
- const cached = localStorage.getItem("tp_branch_stock");
- if (cached) return JSON.parse(cached);
- } catch (e) {
- console.error(
- "Error loading tp_branch_stock, building default layout",
- e,
- );
- }
-
- const initial: InventoryLocationStock[] = [];
- const productsSource = products && products.length > 0 ? products : [];
- productsSource.forEach((p) => {
- initial.push({
- id: `B1_${p.id}`,
- branchId: "B1",
- productId: p.id,
- quantity: Math.round(p.stockQuantity * 0.3),
- });
- initial.push({
- id: `B2_${p.id}`,
- branchId: "B2",
- productId: p.id,
- quantity: Math.round(p.stockQuantity * 0.35),
- });
- initial.push({
- id: `B3_${p.id}`,
- branchId: "B3",
- productId: p.id,
- quantity: Math.round(p.stockQuantity * 0.2),
- });
- initial.push({
- id: `B4_${p.id}`,
- branchId: "B4",
- productId: p.id,
- quantity: Math.round(p.stockQuantity * 0.15),
- });
- });
- return initial;
- },
+   () => {
+     return safeParse<InventoryLocationStock[]>("tp_branch_stock", []);
+   },
  );
 
  const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>(() => {
@@ -2097,11 +2037,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return safeParse<IngestionSnapshot[]>("tp_ingestion_snapshots", []);
  });
 
- const [deliveries, setDeliveries] = useState<Delivery[]>(() => {
- const parsed = safeParse<Delivery[]>("tp_deliveries", []);
- if (parsed && parsed.length > 0) return parsed;
- return DEFAULT_SEED_DELIVERIES;
- });
+  const [deliveries, setDeliveries] = useState<Delivery[]>(() => {
+    return safeParse<Delivery[]>("tp_deliveries", []);
+  });
 
  const [damageLogs, setDamageLogs] = useState<DamageLog[]>(() => {
  return safeParse<DamageLog[]>("tp_damage_logs", []);
@@ -6548,782 +6486,39 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const generateMasterForensicBackup = () => {
- const dayMs = 24 * 60 * 60 * 1000;
- const now = Date.now();
- const tMinus = (days: number) => new Date(now - days * dayMs).toISOString();
-
- const simUsersList: User[] = [
- {
- id: "sim_admin",
- avatarInitials: "EA",
- fullName: "Erica Manaban",
- username: "admin",
- email: "admin@tilepoint.com",
- role: UserRole.ADMIN,
- branchAssignmentId: "B1",
- status: "Active",
- managerPin: "9999",
- passwordHash:
- "$argon2-pbkdf2$i=2500$s=admin_salt$h=58a74e5ad6b5d90947e4edec09033cd96c66a8dbbf679cbbf2b7f3b5bc2f122c", // Matches 'admin123'
- createdAt: tMinus(7),
- updatedAt: tMinus(7),
- },
- {
- id: "sim_manager",
- avatarInitials: "JD",
- fullName: "Juan Dela Cruz",
- username: "manager",
- email: "manager@tilepoint.com",
- role: UserRole.MANAGER,
- branchAssignmentId: "B1",
- status: "Active",
- managerPin: "1111",
- passwordHash:
- "$argon2-pbkdf2$i=2500$s=manager_salt$h=51d08eacdfaef2c0a96ef5497214cc9ef21b3cd96628efbe999f8d1033230def", // Matches 'tilepoint'
- createdAt: tMinus(7),
- updatedAt: tMinus(7),
- },
- {
- id: "sim_cashier",
- avatarInitials: "CS",
- fullName: "Carla Santos",
- username: "cashier",
- email: "cashier@tilepoint.com",
- role: UserRole.CASHIER,
- branchAssignmentId: "B1",
- status: "Active",
- passwordHash:
- "$argon2-pbkdf2$i=2500$s=cashier_salt$h=a6bc29daef7612f0a1da4b72ef1244bb62b3fd96cf12ef9e342fa79ea123f4f1", // Matches 'tilepoint'
- createdAt: tMinus(7),
- updatedAt: tMinus(7),
- },
- {
- id: "sim_staff",
- avatarInitials: "TG",
- fullName: "Tomas Gomez",
- username: "staff",
- email: "staff@tilepoint.com",
- role: UserRole.STAFF,
- branchAssignmentId: "B1",
- status: "Active",
- passwordHash:
- "$argon2-pbkdf2$i=2500$s=staff_salt$h=db23caadaef412f8a9ea34faea515ccf8a09cf93bf11e2ce0063fa79ea34f9a1", // Matches 'tilepoint'
- createdAt: tMinus(7),
- updatedAt: tMinus(7),
- },
- ];
-
- const simBranchesList: Branch[] = [
- {
- id: "B1",
- name: "tilepoint",
- manager: "Erica Manaban",
- address: "Main Headquarters, Dipolog City",
- phone: "0999-999-9999",
- monthlySales: 24150,
- staffCount: 4,
- activeCashiers: 1,
- createdAt: tMinus(7),
- updatedAt: tMinus(7),
- isDeleted: false,
- },
- {
- id: "B2",
- name: "Manila Outlet Depot",
- manager: "Santi Santos",
- address: "Manila Pier Block 12",
- phone: "0911-222-3333",
- monthlySales: 0,
- staffCount: 2,
- activeCashiers: 0,
- createdAt: tMinus(7),
- updatedAt: tMinus(7),
- isDeleted: false,
- },
- ];
-
- const simSuppliersList: Supplier[] = [
- {
- id: "S1",
- name: "Global Tile Imports",
- contactPerson: "Charles Wu",
- phone: "0915-111-2222",
- email: "charles.wu@globalimports.com.ph",
- address: "Port Area Manila",
- createdAt: tMinus(7),
- isDeleted: false,
- },
- {
- id: "S2",
- name: "Sinclair Ceramic Glazes",
- contactPerson: "Glenda Gomez",
- phone: "0917-888-9999",
- email: "glenda@sinclairceramic.com.ph",
- address: "Cebu Industrial Park",
- createdAt: tMinus(7),
- isDeleted: false,
- },
- ];
-
- const simProductsList: Product[] = [
- {
- id: "P1",
- productCode: "TP-GR-CARRARA",
- sku: "SKU-CARRARA-6060",
- barcode: "4801122334455",
- qrCode: "QR-CARRARA-01",
- designName: "Polished Granite Carrara",
- productName: "Polished Granite Carrara 60x60 cm",
- category: "Granite",
- brand: "TilePoint Premium",
- supplierId: "S1",
- unit: "Box",
- size: "60x60 cm",
- boxQuantity: 4,
- coveragePerBox: 1.44,
- costPrice: 850,
- sellingPrice: 1250,
- stockQuantity: 935,
- minimumStock: 50,
- isDeleted: false,
- createdAt: tMinus(6),
- updatedAt: tMinus(3),
- createdBy: "admin",
- updatedBy: "admin",
- },
- {
- id: "P2",
- productCode: "TP-CE-WHITE",
- sku: "SKU-WHITE-3060",
- barcode: "4802233445566",
- qrCode: "QR-WHITE-02",
- designName: "Glossy White Ceramic",
- productName: "Glossy White Ceramic 30x60 cm",
- category: "Ceramic",
- brand: "TilePoint Standard",
- supplierId: "S2",
- unit: "Box",
- size: "30x60 cm",
- boxQuantity: 8,
- coveragePerBox: 1.44,
- costPrice: 450,
- sellingPrice: 675,
- stockQuantity: 492,
- minimumStock: 30,
- isDeleted: false,
- createdAt: tMinus(6),
- updatedAt: tMinus(3),
- createdBy: "admin",
- updatedBy: "admin",
- },
- {
- id: "P3",
- productCode: "TP-TC-RUSTIC",
- sku: "SKU-RUSTIC-4040",
- barcode: "4803344556677",
- qrCode: "QR-RUSTIC-03",
- designName: "Rustic Terra Cotta",
- productName: "Rustic Terra Cotta 40x40 cm",
- category: "Terra Cotta",
- brand: "ClayWorks",
- supplierId: "S2",
- unit: "Box",
- size: "40x40 cm",
- boxQuantity: 6,
- coveragePerBox: 0.96,
- costPrice: 520,
- sellingPrice: 780,
- stockQuantity: 300,
- minimumStock: 25,
- isDeleted: false,
- createdAt: tMinus(6),
- updatedAt: tMinus(3),
- createdBy: "admin",
- updatedBy: "admin",
- },
- ];
-
- const simAuditLogs: AuditLog[] = [
- {
- id: "L-1",
- timestamp: tMinus(7),
- userId: "sim_admin",
- username: "admin",
- action: "SYSTEM_INSTALL",
- description:
- "Clean installation approved. Initialized master database with tilepoint credentials.",
- tableAffected: "System",
- recordId: "INSTALLER",
- },
- {
- id: "L-2",
- timestamp: tMinus(6),
- userId: "sim_admin",
- username: "admin",
- action: "BRANCH_CREATE",
- description:
- "Created primary distribution branch node [tilepoint] (HQ).",
- tableAffected: "Branches",
- recordId: "B1",
- },
- {
- id: "L-3",
- timestamp: tMinus(6),
- userId: "sim_admin",
- username: "admin",
- action: "USER_CREATE",
- description:
- "Provisioned Security Roles: Admin, Manager, Cashier, and Staff personnel mappings.",
- tableAffected: "Users",
- recordId: "sim_manager",
- },
- {
- id: "L-4",
- timestamp: tMinus(5),
- userId: "sim_admin",
- username: "admin",
- action: "SUPPLIER_CREATE",
- description:
- "Added active general supplier [Global Tile Imports] to the system register.",
- tableAffected: "Suppliers",
- recordId: "S1",
- },
- {
- id: "L-5",
- timestamp: tMinus(5),
- userId: "sim_admin",
- username: "admin",
- action: "PRODUCT_CREATE",
- description:
- "Registered product code: TP-GR-CARRARA with standard pricing ₱1,250.00.",
- tableAffected: "Products",
- recordId: "P1",
- },
- {
- id: "L-6",
- timestamp: tMinus(5),
- userId: "sim_admin",
- username: "admin",
- action: "PRODUCT_CREATE",
- description:
- "Registered product code: TP-CE-WHITE with standard pricing ₱675.00.",
- tableAffected: "Products",
- recordId: "P2",
- },
- {
- id: "L-7",
- timestamp: tMinus(4),
- userId: "sim_manager",
- username: "manager",
- action: "PO_CREATE",
- description:
- "Created Purchase Order: PO-202606-101 to consolidate S1 imports (1000 boxes Carrara).",
- tableAffected: "PurchaseOrders",
- recordId: "PO-202606-101",
- },
- {
- id: "L-8",
- timestamp: tMinus(4),
- userId: "sim_admin",
- username: "admin",
- action: "PO_STATUS_CHANGE",
- description:
- "Approved purchase ledger state for PO-202606-101 with verified cost allocation.",
- tableAffected: "PurchaseOrders",
- recordId: "PO-202606-101",
- },
- {
- id: "L-9",
- timestamp: tMinus(3),
- userId: "sim_manager",
- username: "manager",
- action: "PO_RECEIVE",
- description:
- "Consolidated intake of 1000 units Carrara. Physical stock adjusted on site.",
- tableAffected: "PurchaseOrders",
- recordId: "PO-202606-101",
- },
- {
- id: "L-10",
- timestamp: tMinus(3),
- userId: "sim_cashier",
- username: "cashier",
- action: "SHIFT_OPEN",
- description:
- "Opened register console drawer. Base capital cash amount: ₱5,000.00.",
- tableAffected: "Shifts",
- recordId: "SHIFT-001",
- },
- {
- id: "L-11",
- timestamp: tMinus(3),
- userId: "sim_cashier",
- username: "cashier",
- action: "POS_CHECKOUT",
- description:
- "Approved POS customer invoice INV-1001 for 15 boxes Carrara. Sum: ₱18,750.00.",
- tableAffected: "Sales",
- recordId: "INV-1001",
- },
- {
- id: "L-12",
- timestamp: tMinus(3),
- userId: "sim_cashier",
- username: "cashier",
- action: "POS_CHECKOUT",
- description:
- "Approved POS customer invoice INV-1002 for 8 boxes Glossy White. Sum: ₱5,400.00.",
- tableAffected: "Sales",
- recordId: "INV-1002",
- },
- {
- id: "L-13",
- timestamp: tMinus(3),
- userId: "sim_cashier",
- username: "cashier",
- action: "SHIFT_CLOSE",
- description:
- "Closed register drawer shift. Balance counted: ₱29,150.00 vs expected. Zero variance.",
- tableAffected: "Shifts",
- recordId: "SHIFT-001",
- },
- {
- id: "L-14",
- timestamp: tMinus(2),
- userId: "sim_manager",
- username: "manager",
- action: "TRANSFER_CREATE",
- description:
- "Dispatched inter-branch stock allocation from HQ to Manila Outlet (50 units Carrara).",
- tableAffected: "StockTransfer",
- recordId: "TRSF-202606-501",
- },
- {
- id: "L-15",
- timestamp: tMinus(2),
- userId: "sim_admin",
- username: "admin",
- action: "TRANSFER_UPDATE",
- description:
- "Approved stock transfer allocation TRSF-202606-501. Marked In Transit.",
- tableAffected: "StockTransfer",
- recordId: "TRSF-202606-501",
- },
- {
- id: "L-16",
- timestamp: tMinus(1),
- userId: "sim_manager",
- username: "manager",
- action: "TRANSMITTAL_SUBMIT",
- description:
- "Uploaded daily Sales report transmittal document for verification.",
- tableAffected: "Transmittals",
- recordId: "TRANSM-9002",
- },
- {
- id: "L-17",
- timestamp: tMinus(1),
- userId: "sim_admin",
- username: "admin",
- action: "SECURITY_LIMIT",
- description:
- "Brute Force Rate Limiter block initialized for anomalous terminal connection attempt.",
- tableAffected: "Users",
- recordId: "SYSTEM",
- },
- ];
-
- const sampleSalesList: Sale[] = [
- {
- id: "INV-1001",
- saleNumber: "TP-INV-1001",
- shiftId: "SHIFT-001",
- branchId: "B1",
- cashierId: "sim_cashier",
- cashierName: "Carla Santos",
- customerName: "Juan Dela Cruz",
- subtotal: 16741.07,
- vat: 2008.93,
- discount: 0,
- grandTotal: 18750.0,
- paymentMethod: "Cash",
- amountTendered: 19000,
- changeAmount: 250,
- createdAt: tMinus(3),
- isDeleted: false,
- },
- {
- id: "INV-1002",
- saleNumber: "TP-INV-1002",
- shiftId: "SHIFT-001",
- branchId: "B1",
- cashierId: "sim_cashier",
- cashierName: "Carla Santos",
- customerName: "Maria Santos",
- subtotal: 4821.43,
- vat: 578.57,
- discount: 0,
- grandTotal: 5400.0,
- paymentMethod: "GCash",
- amountTendered: 5400,
- changeAmount: 0,
- createdAt: tMinus(3),
- isDeleted: false,
- },
- ];
-
- const sampleSaleItemsList: SaleItem[] = [
- {
- id: "SITEM-1",
- saleId: "INV-1001",
- productId: "P1",
- productName: "Polished Granite Carrara 60x60 cm",
- unitPrice: 1250,
- quantity: 15,
- total: 18750,
- isDeleted: false,
- },
- {
- id: "SITEM-2",
- saleId: "INV-1002",
- productId: "P2",
- productName: "Glossy White Ceramic 30x60 cm",
- unitPrice: 675,
- quantity: 8,
- total: 5400,
- isDeleted: false,
- },
- ];
-
- const _sampleDeliveriesList = DEFAULT_SEED_DELIVERIES;
-
- const sampleMovementsList: InventoryMovement[] = [
- {
- id: "M-1",
- productId: "P1",
- type: "IN",
- quantity: 1000,
- referenceId: "PO-202606-101",
- notes: "Initial warehouse intake for supplier PO-101",
- timestamp: tMinus(3),
- userId: "sim_manager",
- username: "manager",
- },
- {
- id: "M-2",
- productId: "P1",
- type: "OUT",
- quantity: -15,
- referenceId: "INV-1001",
- notes: "POS Sold x15 to Juan Dela Cruz",
- timestamp: tMinus(3),
- userId: "sim_cashier",
- username: "cashier",
- },
- {
- id: "M-3",
- productId: "P2",
- type: "OUT",
- quantity: -8,
- referenceId: "INV-1002",
- notes: "POS Sold x8 to Maria Santos",
- timestamp: tMinus(3),
- userId: "sim_cashier",
- username: "cashier",
- },
- {
- id: "M-4",
- productId: "P1",
- type: "TRANSFER",
- quantity: -50,
- sourceBranchId: "B1",
- destinationBranchId: "B2",
- referenceId: "TRSF-202606-501",
- notes: "Outward inter-branch allocation dispatch",
- timestamp: tMinus(2),
- userId: "sim_manager",
- username: "manager",
- },
- ];
-
- const sampleStockTransfersList: StockTransfer[] = [
- {
- id: "TRSF-202606-501",
- transferNo: "TRSF-202606-501",
- fromBranchId: "B1",
- toBranchId: "B2",
- transferType: "Redistribution",
- requestedBy: "manager",
- approvedBy: "admin",
- status: "In Transit",
- reason: "Consolidating branch stock levels for Carrara series demand",
- createdAt: tMinus(2),
- updatedAt: tMinus(2),
- items: [
- {
- id: "TITEM-1",
- transferId: "TRSF-202606-501",
- productId: "P1",
- productName: "Polished Granite Carrara 60x60 cm",
- quantity: 50,
- },
- ],
- },
- ];
-
- const samplePurchaseOrdersList: PurchaseOrder[] = [
- {
- id: "PO-202606-101",
- poNumber: "PO-202606-101",
- supplierId: "S1",
- branchId: "B1",
- status: "Completed",
- requestedBy: "Juan Dela Cruz",
- date: tMinus(4),
- notes: "Intake stock order for Carrara launch",
- createdAt: tMinus(4),
- updatedAt: tMinus(3),
- },
- ];
-
- const samplePoItemsList: PurchaseOrderItem[] = [
- {
- id: "PO-ITEM-1",
- poId: "PO-202606-101",
- productId: "P1",
- costPrice: 850,
- quantityRequested: 1000,
- quantityReceived: 1000,
- },
- ];
-
- const branchStockList: InventoryLocationStock[] = [
- {
- id: "B1_P1",
- branchId: "B1",
- productId: "P1",
- quantity: 935,
- },
- {
- id: "B1_P2",
- branchId: "B1",
- productId: "P2",
- quantity: 492,
- },
- {
- id: "B1_P3",
- branchId: "B1",
- productId: "P3",
- quantity: 300,
- },
- {
- id: "B2_P1",
- branchId: "B2",
- productId: "P1",
- quantity: 50,
- },
- ];
-
- const ledgerEntriesList: LedgerEntry[] = [
- {
- id: "LDR-1",
- date: tMinus(3),
- productId: "P1",
- productName: "Polished Granite Carrara 60x60 cm",
- branchId: "B1",
- movementType: "IN",
- quantity: 1000,
- referenceNo: "PO-202606-101",
- remarks: "Direct warehouse stock intake",
- },
- {
- id: "LDR-2",
- date: tMinus(3),
- productId: "P1",
- productName: "Polished Granite Carrara 60x60 cm",
- branchId: "B1",
- movementType: "SALE",
- quantity: -15,
- referenceNo: "TP-INV-1001",
- remarks: "Sales Invoice checkout",
- },
- {
- id: "LDR-3",
- date: tMinus(3),
- productId: "P2",
- productName: "Glossy White Ceramic 30x60 cm",
- branchId: "B1",
- movementType: "SALE",
- quantity: -8,
- referenceNo: "TP-INV-1002",
- remarks: "Sales Invoice checkout",
- },
- {
- id: "LDR-4",
- date: tMinus(2),
- productId: "P1",
- productName: "Polished Granite Carrara 60x60 cm",
- branchId: "B1",
- movementType: "TRANSFER",
- quantity: -50,
- referenceNo: "TRSF-202606-501",
- remarks: "Outward inter-branch transfer dispatch",
- },
- ];
-
- const shiftsList: Shift[] = [
- {
- id: "SHIFT-001",
- cashierId: "sim_cashier",
- cashierName: "Carla Santos",
- branchId: "B1",
- status: "CLOSED",
- startCash: 5000,
- endCash: 29150,
- cashCount: 29150,
- variance: 0,
- openedAt: tMinus(3),
- closedAt: tMinus(3),
- shiftSalesCount: 2,
- shiftSalesTotal: 24150,
- shiftVatTotal: 2587.5,
- shiftDiscountTotal: 0,
- },
- ];
-
- const transmittalsList: Transmittal[] = [
- {
- id: "TRANSM-9002",
- documentType: "Daily Sales Report",
- fromBranchId: "B1",
- toBranchId: "B1",
- submittedBy: "manager",
- status: "Approved",
- payloadJson: JSON.stringify({
- reportingDate: tMinus(3),
- totalSalesAmount: 24150,
- }),
- submittedAt: tMinus(1),
- isDeleted: false,
- },
- ];
-
- return {
- isConfigured: true,
- users: simUsersList,
- branches: simBranchesList,
- suppliers: simSuppliersList,
- products: simProductsList,
- purchaseOrders: samplePurchaseOrdersList,
- poItems: samplePoItemsList,
- transmittals: transmittalsList,
- shifts: shiftsList,
- sales: sampleSalesList,
- saleItems: sampleSaleItemsList,
- movements: sampleMovementsList,
- auditLogs: simAuditLogs,
- parkedSales: [],
- stockTransfers: sampleStockTransfersList,
- branchStock: branchStockList,
- ledgerEntries: ledgerEntriesList,
- branchSalesReports: [],
- deliveries: DEFAULT_SEED_DELIVERIES,
- simulationModeActive: true,
- };
+   return {
+     isConfigured,
+     users,
+     branches,
+     suppliers,
+     products,
+     purchaseOrders,
+     poItems,
+     transmittals,
+     shifts,
+     sales,
+     saleItems,
+     movements,
+     auditLogs,
+     parkedSales,
+     stockTransfers,
+     branchStock,
+     ledgerEntries,
+     branchSalesReports,
+     deliveries,
+     simulationModeActive: false,
+   };
  };
 
  const importMasterForensicBackup = async () => {
- return;
- const data = generateMasterForensicBackup();
-
- createDbSnapshot("Auto-Snapshot Before Master Forensic Import");
-
- setIsConfigured(true);
- localStorage.setItem("tp_is_configured", "true");
- localStorage.setItem("tilepoint_company_name_v1", "tilepoint");
-
- setUsers(data.users);
- localStorage.setItem("tp_users", JSON.stringify(data.users));
-
- setBranches(data.branches);
- localStorage.setItem("tp_branches", JSON.stringify(data.branches));
-
- setSuppliers(data.suppliers);
- localStorage.setItem("tp_suppliers", JSON.stringify(data.suppliers));
-
- setProducts(data.products);
- localStorage.setItem("tp_products", JSON.stringify(data.products));
-
- setPurchaseOrders(data.purchaseOrders);
- localStorage.setItem(
- "tp_purchase_orders",
- JSON.stringify(data.purchaseOrders),
- );
-
- setPoItems(data.poItems);
- localStorage.setItem("tp_po_items", JSON.stringify(data.poItems));
-
- setTransmittals(data.transmittals);
- localStorage.setItem("tp_transmittals", JSON.stringify(data.transmittals));
-
- setShifts(data.shifts);
- localStorage.setItem("tp_shifts", JSON.stringify(data.shifts));
-
- setSales(data.sales);
- localStorage.setItem("tp_sales", JSON.stringify(data.sales));
-
- setSaleItems(data.saleItems);
- localStorage.setItem("tp_sale_items", JSON.stringify(data.saleItems));
-
- setMovements(data.movements);
- localStorage.setItem("tp_movements", JSON.stringify(data.movements));
-
- setAuditLogs(data.auditLogs);
- localStorage.setItem("tp_audit_logs", JSON.stringify(data.auditLogs));
-
- setStockTransfers(data.stockTransfers);
- localStorage.setItem(
- "tp_stock_transfers",
- JSON.stringify(data.stockTransfers),
- );
-
- setBranchStock(data.branchStock);
- localStorage.setItem("tp_branch_stock", JSON.stringify(data.branchStock));
-
- setLedgerEntries(data.ledgerEntries);
- localStorage.setItem(
- "tp_ledger_entries",
- JSON.stringify(data.ledgerEntries),
- );
-
- setDeliveries(data.deliveries || DEFAULT_SEED_DELIVERIES);
- localStorage.setItem(
- "tp_deliveries",
- JSON.stringify(data.deliveries || DEFAULT_SEED_DELIVERIES),
- );
-
- setSimulationModeActive(true);
- localStorage.setItem("tp_simulation_mode_active", "true");
-
- setCurrentUser(data.users[0]);
- setIsLoggedIn(true);
- sessionStorage.setItem("tp_is_logged_in", "true");
- sessionStorage.setItem("tp_current_user", JSON.stringify(data.users[0]));
- localStorage.setItem("tp_is_logged_in", "true");
- localStorage.setItem("tp_current_user", JSON.stringify(data.users[0]));
-
- addAuditLog(
- "DB_BACKUP_RESTORE",
- "Imported complete Master Forensic Database Suite and System Audit Logs successfully.",
- "SYSTEM",
- "FORENSIC_MASTER",
- );
+   return;
  };
 
  // USERS
   const createUser = async (
     userFields: Omit<User, "id" | "createdAt" | "updatedAt">,
   ) => {
+    logBranchAccessScope("CREATE", "User", userFields.branchAssignmentId, userFields.username);
     let passwordHash = userFields.passwordHash;
     if (!passwordHash) {
       const salt = (userFields.username || "user") + "_salt_tok";
@@ -7368,6 +6563,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const updateUser = (id: string, updates: Partial<User>) => {
+    logBranchAccessScope("UPDATE", "User", updates.branchAssignmentId, id);
     let updatedUser: User | null = null;
     setUsers((prev) => {
       return prev.map((u) => {
@@ -7462,6 +6658,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const updateBranch = (id: string, updates: Partial<Branch>) => {
+    logBranchAccessScope("UPDATE", "Branch", id, updates.name);
  const newId = updates.id;
  const hasIdChanged = newId !== undefined && newId !== id;
 
@@ -7587,6 +6784,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const deleteBranch = (id: string) => {
+    logBranchAccessScope("DELETE", "Branch", id);
  setBranches((prev) =>
  prev.map((b) =>
  b.id === id
@@ -7628,6 +6826,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const updateSupplier = (id: string, updates: Partial<Supplier>) => {
+    logBranchAccessScope("UPDATE", "Supplier", "GLOBAL", id);
  setSuppliers((prev) =>
  prev.map((s) => (s.id === id ? { ...s, ...updates } : s)),
  );
@@ -7640,6 +6839,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const deleteSupplier = (id: string) => {
+    logBranchAccessScope("DELETE", "Supplier", "GLOBAL", id);
  setSuppliers((prev) =>
  prev.map((s) => (s.id === id ? { ...s, isDeleted: true } : s)),
  );
@@ -7676,6 +6876,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const updateBrand = (id: string, updates: Partial<Brand>) => {
+    logBranchAccessScope("UPDATE", "Brand", "GLOBAL", id);
  setBrands((prev) =>
  prev.map((b) => (b.id === id ? { ...b, ...updates } : b)),
  );
@@ -7688,6 +6889,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const deleteBrand = (id: string) => {
+    logBranchAccessScope("DELETE", "Brand", "GLOBAL", id);
  setBrands((prev) =>
  prev.map((b) => (b.id === id ? { ...b, isDeleted: true } : b)),
  );
@@ -7719,7 +6921,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  size: sanitizeInputText(prodFields.size),
  designName: sanitizeInputText(prodFields.designName || "Standard"),
  supplierId: sanitizeInputText(prodFields.supplierId || "central"),
- unit: sanitizeInputText(prodFields.unit) || "Boxes",
+ unit: sanitizeInputText(prodFields.unit) || "Unit",
  origin: prodFields.origin
  ? sanitizeInputText(prodFields.origin)
  : undefined,
@@ -7935,6 +7137,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const deleteProduct = (id: string) => {
+    logBranchAccessScope("DELETE", "Product", null, id);
  const original = products.find((p) => p.id === id);
  setProducts((prev) =>
  prev.map((p) =>
@@ -7957,6 +7160,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const deleteDamageLog = (id: string) => {
+    logBranchAccessScope("DELETE", "DamageLog", null, id);
  setDamageLogs((prev) =>
  prev.map((log) =>
  log.id === id
@@ -7973,6 +7177,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
   const bulkDeleteProducts = (ids: string[]) => {
+    logBranchAccessScope("DELETE", "Product (Bulk)", null, ids.join(","));
     const idSet = new Set(ids);
     setProducts((prev) =>
       prev.map((p) =>
@@ -8017,6 +7222,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const deleteUser = (id: string) => {
+    logBranchAccessScope("DELETE", "User", null, id);
     setUsers((prev) =>
       prev.map((u) =>
         u.id === id
@@ -8828,88 +8034,101 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return prod ? prod.stockQuantity : 0;
  }, [products]);
 
- const getBranchStockStats = useCallback((selectedBranchId?: string): BranchStockStats => {
- const targetBranchId = selectedBranchId || currentUser?.branchAssignmentId || 'consolidated';
- const isConsolidated = !targetBranchId || targetBranchId === 'consolidated' || targetBranchId === 'all' || targetBranchId === 'ALL';
+  // Memoized selector for branch stock stats.
+  // Recalculates only when branch-specific stock, ledger entries, products, or branches change.
+  const branchStockStatsSelector = useMemo(() => {
+    const statsCache = new Map<string, BranchStockStats>();
 
- const activeBranchProducts = products.filter(
- (p) => !p.isDeleted && isProductInBranch(p, targetBranchId, branchStock, branches)
- );
+    return (selectedBranchId?: string): BranchStockStats => {
+      const targetBranchId = selectedBranchId || currentUser?.branchAssignmentId || 'consolidated';
+      const key = (targetBranchId || 'consolidated').trim().toLowerCase();
 
- let totalItems = 0;
- let totalValue = 0;
- let lowStockCount = 0;
- let criticalCount = 0;
- let outOfStockCount = 0;
+      const existing = statsCache.get(key);
+      if (existing) {
+        return existing;
+      }
 
- const lowStockProducts: Product[] = [];
- const criticalProducts: Product[] = [];
- const outOfStockProducts: Product[] = [];
+      const isConsolidated = !targetBranchId || targetBranchId === 'consolidated' || targetBranchId === 'all' || targetBranchId === 'ALL';
 
- activeBranchProducts.forEach((p) => {
- const qty = getBranchStockQuantity(p, targetBranchId, branchStock, branches);
- const bsRec = getBranchStockRecord(p, targetBranchId, branchStock, branches);
- const threshold = (!isConsolidated && bsRec?.lowStockThresholdOverride !== undefined)
- ? bsRec.lowStockThresholdOverride
- : p.minimumStock;
+      const activeBranchProducts = products.filter(
+        (p) => !p.isDeleted && isProductInBranch(p, targetBranchId, branchStock, branches)
+      );
 
- totalItems += qty;
- totalValue += qty * (p.costPrice || 0);
+      let totalItems = 0;
+      let totalValue = 0;
+      let lowStockCount = 0;
+      let criticalCount = 0;
+      let outOfStockCount = 0;
 
- if (qty === 0) {
- outOfStockCount++;
- outOfStockProducts.push(p);
- } else {
- if (qty <= threshold) {
- lowStockCount++;
- lowStockProducts.push(p);
- }
- if (qty <= threshold * 0.5) {
- criticalCount++;
- criticalProducts.push(p);
- }
- }
- });
+      const lowStockProducts: Product[] = [];
+      const criticalProducts: Product[] = [];
+      const outOfStockProducts: Product[] = [];
 
- console.log(`[useDb:getBranchStockStats] Scope: "${targetBranchId}" (Consolidated=${isConsolidated}) | Products in scope: ${activeBranchProducts.length}/${products.length} | Physical Items: ${totalItems} | Valuation: ₱${totalValue.toLocaleString()} | Consolidated branchStock Total: ${branchStock.length}`);
+      activeBranchProducts.forEach((p) => {
+        const qty = getBranchStockQuantity(p, targetBranchId, branchStock, branches);
+        const bsRec = getBranchStockRecord(p, targetBranchId, branchStock, branches);
+        const threshold = (!isConsolidated && bsRec?.lowStockThresholdOverride !== undefined)
+          ? bsRec.lowStockThresholdOverride
+          : p.minimumStock;
 
- return {
- totalItems,
- totalProducts: activeBranchProducts.length,
- totalValue,
- lowStockCount,
- criticalCount,
- outOfStockCount,
- lowStockProducts,
- criticalProducts,
- outOfStockProducts,
- };
- }, [products, branchStock, branches, currentUser?.branchAssignmentId]);
+        totalItems += qty;
+        totalValue += qty * (p.costPrice || 0);
 
- const filterBranchStockByBranch = useCallback((selectedBranchId?: string): InventoryLocationStock[] => {
- const isConsolidated = !selectedBranchId || selectedBranchId === 'consolidated' || selectedBranchId === 'all' || selectedBranchId === 'ALL';
- if (isConsolidated) {
- console.log(`[useDb:filterBranchStockByBranch] Scope: "CONSOLIDATED" | Returning full consolidated branchStock array (${branchStock.length} records)`);
- return branchStock;
- }
- const targetBranch = branches.find(b => b.id === selectedBranchId);
- const uSlug = slugifyBranchStr(selectedBranchId);
- const uNameSlug = slugifyBranchStr(targetBranch?.name);
- const uCodeSlug = slugifyBranchStr(targetBranch?.branchCode);
+        if (qty === 0) {
+          outOfStockCount++;
+          outOfStockProducts.push(p);
+        } else {
+          if (qty <= threshold) {
+            lowStockCount++;
+            lowStockProducts.push(p);
+          }
+          if (qty <= threshold * 0.5) {
+            criticalCount++;
+            criticalProducts.push(p);
+          }
+        }
+      });
 
- const filtered = branchStock.filter(bs => {
- if (bs.branchId === selectedBranchId) return true;
- const bsSlug = slugifyBranchStr(bs.branchId);
- if (bsSlug === uSlug) return true;
- if (uNameSlug && bsSlug === uNameSlug) return true;
- if (uCodeSlug && bsSlug === uCodeSlug) return true;
- return false;
- });
+      const calculatedStats: BranchStockStats = {
+        totalItems,
+        totalProducts: activeBranchProducts.length,
+        totalValue,
+        lowStockCount,
+        criticalCount,
+        outOfStockCount,
+        lowStockProducts,
+        criticalProducts,
+        outOfStockProducts,
+      };
 
- console.log(`[useDb:filterBranchStockByBranch] Scope: "${selectedBranchId}" (${targetBranch?.name || 'Unknown'}) | Consolidated total: ${branchStock.length} records | Branch-filtered count: ${filtered.length} records`);
+      statsCache.set(key, calculatedStats);
+      return calculatedStats;
+    };
+  }, [products, branchStock, branches, movements, ledgerEntries, currentUser?.branchAssignmentId]);
 
- return filtered;
- }, [branchStock, branches]);
+  const getBranchStockStats = useCallback((selectedBranchId?: string): BranchStockStats => {
+    return branchStockStatsSelector(selectedBranchId);
+  }, [branchStockStatsSelector]);
+
+  const filterBranchStockByBranch = useCallback((selectedBranchId?: string): InventoryLocationStock[] => {
+    const isConsolidated = !selectedBranchId || selectedBranchId === 'consolidated' || selectedBranchId === 'all' || selectedBranchId === 'ALL';
+    if (isConsolidated) {
+      return branchStock;
+    }
+    const targetBranch = branches.find(b => b.id === selectedBranchId);
+    const uSlug = slugifyBranchStr(selectedBranchId);
+    const uNameSlug = slugifyBranchStr(targetBranch?.name);
+    const uCodeSlug = slugifyBranchStr(targetBranch?.branchCode);
+
+    return branchStock.filter(bs => {
+      if (bs.branchId === selectedBranchId) return true;
+      const bsSlug = slugifyBranchStr(bs.branchId);
+      if (bsSlug === uSlug) return true;
+      if (uNameSlug && bsSlug === uNameSlug) return true;
+      if (uCodeSlug && bsSlug === uCodeSlug) return true;
+      return false;
+    });
+  }, [branchStock, branches]);
 
  const getInventoryContext = useCallback((productId: string, targetBranchId?: string) => {
  const bId = targetBranchId || currentUser?.branchAssignmentId || "B1";
@@ -9140,6 +8359,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     );
   }
 
+  logBranchAccessScope("CREATE", "Sale (POS Checkout)", userBranchId, saleId);
   const newSale: Sale = {
  id: saleId,
  saleNumber: saleNum,
@@ -9236,7 +8456,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  id: `${userBranchId}_${item.product.id}`,
  branchId: userBranchId,
  productId: item.product.id,
- quantity: Math.max(0, (item.product.stockQuantity ?? 0) - item.quantity),
+ quantity: Math.max(0, getBranchStockQuantityContext(item.product.id, userBranchId) - item.quantity),
  version: 1,
  updatedAt: nowIso,
  });
@@ -9832,7 +9052,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }
  }
 
- const poId = `PO-${Date.now()}`;
+ logBranchAccessScope("CREATE", "PurchaseOrder", branchId, null);
+  const poId = `PO-${Date.now()}`;
 
  // Find maximum numeric sequence suffix or total count of existing purchase orders to increment
  let nextNum = purchaseOrders.length + 1;
@@ -9892,6 +9113,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const updatePOStatus = (id: string, status: POStatus) => {
+    logBranchAccessScope("UPDATE", "PurchaseOrder", null, id, { status });
  setPurchaseOrders((prev) =>
  prev.map((po) =>
  po.id === id
@@ -10070,6 +9292,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const updateTransmittalStatus = (id: string, status: TransmittalStatus) => {
+  logBranchAccessScope("UPDATE", "Transmittal", null, id, { status });
  setTransmittals((prev) =>
  prev.map((t) => (t.id === id ? { ...t, status } : t)),
  );
@@ -10088,7 +9311,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  itemsInput: { productId: string; quantity: number }[],
  reason: string,
  ) => {
- const id = `ST-${Date.now()}`;
+ logBranchAccessScope("CREATE", "StockTransfer", fromBranchId, null, { toBranchId });
+  const id = `ST-${Date.now()}`;
  const transferNo = `ST-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(
  Math.random() * 1000,
  )
@@ -10131,6 +9355,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const updateStockTransferStatus = (id: string, status: TransferStatus) => {
+  logBranchAccessScope("UPDATE", "StockTransfer", null, id, { status });
  setStockTransfers((prev) =>
  prev.map((t) => {
  if (t.id === id) {
@@ -10161,7 +9386,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  version: (bs.version || 0) + 1,
  updatedAt: new Date().toISOString(),
  };
- if (t.fromBranchId === "B1") {
+ if (isSameBranch(t.fromBranchId, (localStorage.getItem("tilepoint_primary_branch_id") || "B1"), branches)) {
  setProducts((prods) =>
  prods.map((prod) =>
  prod.id === bs.productId
@@ -10180,7 +9405,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  updatedAt: new Date().toISOString(),
  };
  updatedStock.push(newBs);
- if (t.fromBranchId === "B1") {
+ if (isSameBranch(t.fromBranchId, (localStorage.getItem("tilepoint_primary_branch_id") || "B1"), branches)) {
  setProducts((prods) =>
  prods.map((prod) =>
  prod.id === item.productId
@@ -10249,7 +9474,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  version: (bs.version || 0) + 1,
  updatedAt: new Date().toISOString(),
  };
- if (t.toBranchId === "B1") {
+ if (isSameBranch(t.toBranchId, (localStorage.getItem("tilepoint_primary_branch_id") || "B1"), branches)) {
  setProducts((prods) =>
  prods.map((prod) =>
  prod.id === bs.productId
@@ -10269,7 +9494,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  updatedAt: new Date().toISOString(),
  };
  updatedStock.push(newBs);
- if (t.toBranchId === "B1") {
+ if (isSameBranch(t.toBranchId, (localStorage.getItem("tilepoint_primary_branch_id") || "B1"), branches)) {
  setProducts((prods) =>
  prods.map((prod) =>
  prod.id === item.productId
@@ -10402,6 +9627,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  // ADDITIONAL SOFT DELETES SYSTEM ACTIONS
  // ==========================================
  const deletePurchaseOrder = (id: string) => {
+    logBranchAccessScope("DELETE", "PurchaseOrder", null, id);
  setPurchaseOrders((prev) =>
  prev.map((po) =>
  po.id === id ? { ...po, isDeleted: true, deletedAt: new Date().toISOString() } : po
@@ -10416,6 +9642,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const deleteStockTransfer = (id: string) => {
+    logBranchAccessScope("DELETE", "StockTransfer", null, id);
  setStockTransfers((prev) =>
  prev.map((st) =>
  st.id === id ? { ...st, isDeleted: true, deletedAt: new Date().toISOString() } : st
@@ -10430,6 +9657,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const deleteTransmittal = (id: string) => {
+    logBranchAccessScope("DELETE", "Transmittal", null, id);
  setTransmittals((prev) =>
  prev.map((t) =>
  t.id === id ? { ...t, isDeleted: true, deletedAt: new Date().toISOString() } : t
@@ -10617,6 +9845,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       setCurrentUser,
       updateCurrentUser,
       validateInventoryAccess,
+      logBranchAccessScope,
       isLoggedIn,
       login,
       logout,
@@ -10940,10 +10169,10 @@ export function useDbInventory() {
  * Custom memoized hook to calculate branch-specific stock metrics on demand when selectedBranchId changes
  */
 export function useBranchStockStats(selectedBranchId?: string): BranchStockStats {
-  const db = useDb();
+  const { getBranchStockStats } = useDb();
   return useMemo(() => {
-    return db.getBranchStockStats(selectedBranchId);
-  }, [db, selectedBranchId]);
+    return getBranchStockStats(selectedBranchId);
+  }, [getBranchStockStats, selectedBranchId]);
 }
 
 /**

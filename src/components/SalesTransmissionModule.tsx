@@ -76,7 +76,7 @@ export function validateAndMapInboundReport(rawParsed: any): { errors: string[];
  const id = String(s.id || s.saleNumber || `S-${Date.now()}-${idx}`).trim();
  const saleNumber = String(s.saleNumber || s.id || `INV-${Date.now()}-${idx}`).trim();
  const shiftId = String(s.shiftId || 'SHIFT-1').trim();
- const branchId = String(s.branchId || parsed.branchId || 'B1').trim();
+ const branchId = String(s.branchId || parsed.branchId || 'main').trim();
  const cashierId = String(s.cashierId || 'U1').trim();
  const cashierName = String(s.cashierName || 'Cashier').trim();
 
@@ -180,7 +180,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
 
  // Local active branch when compiling (only admins/HQ can toggle this; branch personnel are locked)
  const [selectedBranchId] = useState(() => {
- return currentUser.branchAssignmentId || 'B1';
+ return currentUser.branchAssignmentId || (branches && branches[0]?.id) || '';
  });
 
  const [rollbackTargetSnap, setRollbackTargetSnap] = useState<{ id: string; num: number } | null>(null);
@@ -339,7 +339,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  // Search filter for Admin report list
  const [adminSearchQuery, setAdminSearchQuery] = useState('');
  const [adminBranchFilter, setAdminBranchFilter] = useState(
-   currentUser.role === UserRole.ADMIN ? 'ALL' : (currentUser.branchAssignmentId || 'B1')
+   currentUser.role === UserRole.ADMIN ? 'ALL' : (currentUser.branchAssignmentId || (branches && branches[0]?.id) || '')
  );
  const [adminStatusFilter, setAdminStatusFilter] = useState('ALL');
 
@@ -522,14 +522,14 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
 
  // Get current active branch metadata
  const currentBranchMeta = useMemo(() => {
- const id = currentUser?.role === UserRole.ADMIN ? selectedBranchId : (currentUser?.branchAssignmentId || 'B1');
+ const id = currentUser?.role === UserRole.ADMIN ? selectedBranchId : (currentUser?.branchAssignmentId || (branches && branches[0]?.id) || '');
  const found = (branches || []).find(b => b.id === id) || (branches || [])[0];
- return found || { id: id || 'B1', name: 'Main Branch', manager: '', address: '', phone: '' };
+ return found || { id: id || (branches && branches[0]?.id) || '', name: 'Main Branch', manager: '', address: '', phone: '' };
  }, [branches, currentUser, selectedBranchId]);
 
  // Aggregate stats of untransmitted local sales for the selected date on active branch
  const compiledLocalSalesData = useMemo(() => {
-  const targetBranchId = currentBranchMeta?.id || 'B1';
+  const targetBranchId = currentBranchMeta?.id || (branches && branches[0]?.id) || '';
   const localSales = sales.filter(s => {
   if (s.isDeleted) return false;
   if (s.branchId !== targetBranchId) return false;

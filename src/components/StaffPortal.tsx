@@ -492,7 +492,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
  type="text"
  value={searchQuery ?? ''}
  onChange={e => setSearchQuery(e.target.value)}
- placeholder="Search catalog or simulation SKU..."
+ placeholder="Search catalog or product SKU..."
  className="w-full bg-m3-surface border-2 border-m3-outline-variant/40 px-10 py-3.5 text-sm placeholder-m3-on-surface-variant/50 focus:outline-none focus:border-m3-primary text-m3-on-surface font-extrabold tracking-wide rounded-2xl"
  />
  {searchQuery && (
@@ -811,7 +811,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
  <div>
  <h4 className="text-xs font-extrabold text-m3-on-surface">No Product Queried</h4>
  <p className="text-[10px] text-zinc-505 mt-1 max-w-[240px] mx-auto leading-normal font-medium">
- Type details above or tap any Quick-Scan bar in the floor list simulation below to pull stock data instantly.
+ Type details above or tap any Quick-Scan bar in the floor list below to pull stock data instantly.
  </p>
  </div>
  </div>
@@ -1102,7 +1102,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
  <div>
  <h4 className="text-xs font-extrabold text-m3-on-surface">Queue is currently vacant</h4>
  <p className="text-[10px] text-zinc-505 mt-1 font-semibold leading-normal">
- Add catalog or simulation items on the scanner workspace to stage customer orders.
+ Add catalog items on the scanner workspace to stage customer orders.
  </p>
  </div>
  <button
@@ -1248,7 +1248,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
  {/* 4. TWO-WAY TRANSPORTS HANDSHAKE MODAL BLOCKER & VERIFICATION ALERT */}
  {isTransmitting && (
  <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center z-[1000] p-6 text-center animate-fade-in select-none">
- <div className="bg-zinc-900 border border-emerald-500/30 p-8 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl relative overflow-hidden">
+ <div className="bg-m3-surface-low border border-emerald-500/30 p-8 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl relative overflow-hidden">
  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 animate-pulse" />
  <div className="flex justify-center">
  <Loader2 className="h-10 w-10 text-emerald-500 animate-spin" />
@@ -1262,7 +1262,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
  )}
 
  {showSuccessAlert && (
- <div className="fixed top-6 right-6 left-6 mx-auto max-w-sm bg-zinc-900 border-2 border-emerald-500 text-white p-4 rounded-2xl shadow-2xl z-[1000] flex items-center gap-3 animate-bounce select-none">
+ <div className="fixed top-6 right-6 left-6 mx-auto max-w-sm bg-m3-surface-low border-2 border-emerald-500 text-white p-4 rounded-2xl shadow-2xl z-[1000] flex items-center gap-3 animate-bounce select-none">
  <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-xl">
  <CheckCircle className="h-5 w-5" />
  </div>

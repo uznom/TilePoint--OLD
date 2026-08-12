@@ -71,9 +71,11 @@ export interface CatalogStockLedgerProps {
   handleDeleteTrigger: (productId: string, productName: string) => void;
   updateBranchLowStockThreshold: (productId: string, branchId: string, limit: number) => void;
   showToast: (msg: string) => void;
+  isLoading?: boolean;
 }
 
 export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
+  isLoading = false,
   branchProducts,
   branchStock,
   branches,
@@ -239,7 +241,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
             {term && (
               <button
                 onClick={() => setTerm('')}
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-zinc-400 hover:text-rose-500 cursor-pointer text-xs font-black transition-colors"
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-m3-on-surface-variant hover:text-rose-500 cursor-pointer text-xs font-black transition-colors"
                 title="Clear search"
               >
                 ✕
@@ -378,7 +380,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
             </button>
             <button
               onClick={() => setSelectedProdIds({})}
-              className="px-3 py-1.5 rounded-xl text-zinc-400 hover:text-rose-500 text-[11px] font-bold uppercase tracking-wider cursor-pointer transition-all hover:bg-m3-surface-lowest"
+              className="px-3 py-1.5 rounded-xl text-m3-on-surface-variant hover:text-rose-500 text-[11px] font-bold uppercase tracking-wider cursor-pointer transition-all hover:bg-m3-surface-lowest"
             >
               Clear Selection
             </button>
@@ -406,7 +408,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                       type="checkbox"
                       checked={paginatedProducts.length > 0 && paginatedProducts.every(p => !!selectedProdIds[p.id])}
                       onChange={handleToggleSelectAll}
-                      className="rounded border-zinc-300 dark:border-zinc-700 text-m3-primary focus:ring-m3-primary/35 cursor-pointer h-3.5 w-3.5 disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="rounded border-m3-outline-variant text-m3-primary focus:ring-m3-primary/35 cursor-pointer h-3.5 w-3.5 disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Select/Deselect visible"
                       disabled={!allowedToModify}
                     />
@@ -427,7 +429,26 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
-              {paginatedProducts.length === 0 ? (
+              {isLoading ? (
+                <>
+                  {Array.from({ length: 6 }).map((_, idx) => (
+                    <tr key={idx} className="animate-pulse border-b border-m3-outline-variant/10 bg-m3-surface-low/20">
+                      {!hasActiveShift && (
+                        <td className="py-4 px-2 text-center"><div className="h-4 w-4 bg-m3-outline-variant/20 rounded mx-auto" /></td>
+                      )}
+                      <td className="py-4 px-2 text-center"><div className="h-4 w-4 bg-m3-outline-variant/20 rounded mx-auto" /></td>
+                      <td className="py-4 px-4"><div className="h-4 w-28 bg-m3-outline-variant/25 rounded mb-1.5" /><div className="h-3 w-20 bg-m3-outline-variant/15 rounded" /></td>
+                      <td className="py-4 px-4"><div className="h-4 w-36 bg-m3-outline-variant/25 rounded mb-1.5" /><div className="h-3 w-16 bg-m3-outline-variant/15 rounded" /></td>
+                      <td className="py-4 px-4"><div className="h-5 w-24 bg-m3-outline-variant/20 rounded-full" /></td>
+                      <td className="py-4 px-4"><div className="h-4 w-16 bg-m3-outline-variant/20 rounded" /></td>
+                      <td className="py-4 px-4"><div className="h-4 w-14 bg-m3-outline-variant/20 rounded ms-auto" /></td>
+                      <td className="py-4 px-4"><div className="h-4 w-16 bg-m3-outline-variant/20 rounded ms-auto" /></td>
+                      <td className="py-4 px-4"><div className="h-6 w-20 bg-m3-outline-variant/20 rounded-lg mx-auto" /></td>
+                      <td className="py-4 px-4"><div className="h-7 w-20 bg-m3-outline-variant/20 rounded-xl mx-auto" /></td>
+                    </tr>
+                  ))}
+                </>
+              ) : paginatedProducts.length === 0 ? (
                 <tr>
                   <td colSpan={hasActiveShift ? 9 : 10} className="py-12 text-center text-sm font-medium text-m3-on-surface-variant/70">
                     No products found matching the search criteria or selected branch filter.
@@ -495,7 +516,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                                     [p.id]: !prev[p.id]
                                   }));
                                 }}
-                                className="rounded border-zinc-300 dark:border-zinc-700 text-m3-primary focus:ring-m3-primary/35 cursor-pointer h-3.5 w-3.5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                className="rounded border-m3-outline-variant text-m3-primary focus:ring-m3-primary/35 cursor-pointer h-3.5 w-3.5 disabled:opacity-30 disabled:cursor-not-allowed"
                                 disabled={!allowedToModify}
                               />
                             </td>
@@ -524,7 +545,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
 
                           {/* Scannable keys info */}
                           {!isCompactColumns && (
-                            <td className="py-3.5 px-4 font-mono text-[10px] text-zinc-500 select-all">
+                            <td className="py-3.5 px-4 font-mono text-[10px] text-m3-on-surface-variant select-all">
                               <div>BC: {p.barcode}</div>
                             </td>
                           )}
@@ -624,12 +645,12 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                           <td className="py-3.5 px-4 text-center font-mono text-sm font-extrabold">
                             <div className={
                               qty === 0
-                                ? 'text-zinc-400 dark:text-zinc-600'
+                                ? 'text-m3-on-surface-variant dark:text-m3-on-surface-variant'
                                 : qty <= threshold
                                 ? 'text-m3-primary tracking-wide'
                                 : 'text-m3-on-surface'
                             }>
-                              {qty} <span className="text-[10px] text-m3-on-surface-variant font-normal">Boxes</span>
+                              {qty} <span className="text-[10px] text-m3-on-surface-variant font-normal">{p.unit || "Unit"}</span>
                             </div>
                           </td>
 
@@ -652,7 +673,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                             <div className="flex gap-0.5 justify-center">
                               <button
                                 onClick={() => handleOpenCodesModal(p)}
-                                className="p-1.5 text-zinc-500 hover:text-m3-primary hover:bg-m3-outline-variant/15 transition-all rounded-full cursor-pointer shrink-0"
+                                className="p-1.5 text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-outline-variant/15 transition-all rounded-full cursor-pointer shrink-0"
                                 title="View / Print Barcode Label"
                               >
                                 <Barcode className="h-4 w-4" />
@@ -660,7 +681,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
 
                               <button
                                 onClick={() => handleQueueRestock(p.id)}
-                                className="p-1.5 text-zinc-500 hover:text-amber-500 hover:bg-amber-500/10 transition-all rounded-full cursor-pointer shrink-0"
+                                className="p-1.5 text-m3-on-surface-variant hover:text-amber-500 hover:bg-amber-500/10 transition-all rounded-full cursor-pointer shrink-0"
                                 title="Queue Restock in Sourcing Desk (+50 Units)"
                               >
                                 <Truck className="h-4 w-4" />
@@ -670,14 +691,14 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                                 <>
                                   <button
                                     onClick={() => handleOpenAdjust(p)}
-                                    className="p-1.5 text-zinc-500 hover:text-emerald-500 hover:bg-m3-outline-variant/15 transition-all rounded-full cursor-pointer shrink-0"
+                                    className="p-1.5 text-m3-on-surface-variant hover:text-emerald-500 hover:bg-m3-outline-variant/15 transition-all rounded-full cursor-pointer shrink-0"
                                     title="Quick Stock Adjustment Intake/outtake"
                                   >
                                     <Sliders className="h-4 w-4" />
                                   </button>
                                   <button
                                     onClick={() => handleOpenEdit(p)}
-                                    className="p-1.5 text-zinc-500 hover:text-m3-primary hover:bg-m3-outline-variant/15 transition-all rounded-full cursor-pointer shrink-0"
+                                    className="p-1.5 text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-outline-variant/15 transition-all rounded-full cursor-pointer shrink-0"
                                     title="Edit specs"
                                   >
                                     <Edit2 className="h-4 w-4" />
@@ -685,7 +706,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                                   {!hasActiveShift && (
                                     <button
                                       onClick={() => handleDeleteTrigger(p.id, p.productName)}
-                                      className="p-1.5 text-zinc-500 hover:text-rose-500 hover:bg-rose-500/10 transition-all rounded-full cursor-pointer shrink-0"
+                                      className="p-1.5 text-m3-on-surface-variant hover:text-rose-500 hover:bg-rose-500/10 transition-all rounded-full cursor-pointer shrink-0"
                                       title="Soft-delete listings"
                                     >
                                       <Trash2 className="h-4 w-4" />
@@ -717,13 +738,13 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                                         <div className="space-y-1">
                                           <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest block">Primary SKU Details</span>
                                           <strong className="text-sm text-m3-on-surface block leading-tight">{p.productName}</strong>
-                                          <span className="text-[10px] text-zinc-400 font-mono block">ID Key: {p.id}</span>
+                                          <span className="text-[10px] text-m3-on-surface-variant font-mono block">ID Key: {p.id}</span>
                                         </div>
                                       </div>
 
                                       <div className="pt-2">
                                         <StyledBarcode code={p.barcode} />
-                                        <span className="text-[9px] font-mono font-bold text-zinc-400 block mt-1.5 text-center">SCAN BARCODE: {p.barcode}</span>
+                                        <span className="text-[9px] font-mono font-bold text-m3-on-surface-variant block mt-1.5 text-center">SCAN BARCODE: {p.barcode}</span>
                                       </div>
                                     </div>
 
@@ -732,55 +753,55 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                                       <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest block">Dimensional Specifications</span>
                                       <div className="grid grid-cols-2 gap-3 text-xs font-semibold">
                                         <div>
-                                          <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Brand Name</span>
+                                          <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Brand Name</span>
                                           <span className="text-m3-on-surface">{p.brand || 'No registered brand'}</span>
                                         </div>
                                         <div>
-                                          <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Catalog Category</span>
+                                          <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Catalog Category</span>
                                           <span className="text-m3-on-surface">{p.category}</span>
                                         </div>
                                         <div>
-                                          <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Dimensions / Size</span>
+                                          <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Dimensions / Size</span>
                                           <span className="text-m3-on-surface">{p.size || 'Unspecified'}</span>
                                         </div>
                                         <div>
-                                          <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Box Coverage</span>
+                                          <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Box Coverage</span>
                                           <span className="text-m3-primary">{p.coveragePerBox ? `${p.coveragePerBox} m²` : '0.00 m²'}</span>
                                         </div>
                                         <div>
-                                          <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Pcs / Package</span>
+                                          <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Pcs / Package</span>
                                           <span className="text-m3-on-surface">{p.boxQuantity} pieces</span>
                                         </div>
                                         <div>
-                                          <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Safety Threshold</span>
+                                          <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Safety Threshold</span>
                                           <span className="text-amber-500 font-mono">{p.minimumStock} {p.unit}</span>
                                         </div>
                                         <div className="border-t border-m3-outline-variant/10 pt-2 col-span-2 grid grid-cols-2 gap-2">
                                           {canSeeFinancialCostsAndSources && (
                                             <div>
-                                              <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Unit Cost</span>
-                                              <span className="text-zinc-500 font-mono text-xs">{formatCurrency(p.costPrice)}</span>
+                                              <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Unit Cost</span>
+                                              <span className="text-m3-on-surface-variant font-mono text-xs">{formatCurrency(p.costPrice)}</span>
                                             </div>
                                           )}
                                           <div>
-                                            <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Selling Retail</span>
+                                            <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Selling Retail</span>
                                             <span className="text-m3-primary font-mono text-xs font-extrabold">{formatCurrency(p.sellingPrice)}</span>
                                           </div>
                                           <div>
-                                            <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Markup %</span>
+                                            <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Markup %</span>
                                             <span className="text-emerald-500 font-mono text-xs font-bold">
                                               {p.markupPercent !== undefined ? `${p.markupPercent}%` : (p.costPrice > 0 ? `${Math.round(((p.sellingPrice - p.costPrice) / p.costPrice) * 100 * 10) / 10}%` : '50%')}
                                             </span>
                                           </div>
                                           <div>
-                                            <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Tax Type</span>
+                                            <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Tax Type</span>
                                             <span className="text-teal-500 font-sans text-xs font-bold">
                                               {p.taxType || '12% VAT'}
                                             </span>
                                           </div>
                                           {p.origin && canSeeFinancialCostsAndSources && (
                                             <div className="col-span-2 pt-2 border-t border-m3-outline-variant/10">
-                                              <span className="text-[9px] text-zinc-400 font-black uppercase block leading-none mb-1">Acquired From / Origin</span>
+                                              <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Acquired From / Origin</span>
                                               <span className="text-amber-500 dark:text-amber-400 font-bold text-[11px] block">{p.origin}</span>
                                             </div>
                                           )}
@@ -808,13 +829,13 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                                               <div key={b.id} className="flex flex-col md:flex-row justify-between md:items-center gap-2 text-xs p-3 rounded-xl bg-m3-surface border border-m3-outline-variant/10 shadow-3xs">
                                                 <div className="flex flex-col">
                                                   <span className="font-extrabold text-[10px] text-m3-on-surface uppercase tracking-tight">{b.name.replace('Emman Tile Center ', '')}</span>
-                                                  <span className="text-[8px] text-zinc-400 font-mono uppercase">Current Balance: <strong className="text-m3-on-surface">{qty} {p.unit || 'Boxes'}</strong></span>
+                                                  <span className="text-[8px] text-m3-on-surface-variant font-mono uppercase">Current Balance: <strong className="text-m3-on-surface">{qty} {p.unit || 'Unit'}</strong></span>
                                                 </div>
 
                                                 <div className="flex items-center gap-2">
                                                   {/* Alert limit settings for each branch */}
                                                   <div className="flex items-center gap-1 bg-m3-surface-low px-2 py-1 rounded-lg border border-m3-outline-variant/20">
-                                                    <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider">Alert Threshold:</span>
+                                                    <span className="text-[9px] text-m3-on-surface-variant font-bold uppercase tracking-wider">Alert Threshold:</span>
                                                     <input
                                                       type="number"
                                                       className="w-12 bg-m3-surface-lowest text-xs font-mono font-bold text-center border-b border-m3-outline-variant text-m3-on-surface py-0.5"
@@ -828,7 +849,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                                                   </div>
 
                                                   <span className={`font-mono font-black text-xs px-2.5 py-1 rounded-lg border ${statusBg}`}>
-                                                    {qty} {p.unit || 'Boxes'}
+                                                    {qty} {p.unit || 'Unit'}
                                                   </span>
                                                 </div>
                                               </div>

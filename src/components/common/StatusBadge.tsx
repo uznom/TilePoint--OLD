@@ -95,17 +95,17 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       dotColor: 'bg-rose-400',
     },
     draft: {
-      bg: 'bg-zinc-800/80',
-      text: 'text-zinc-400',
-      border: 'border-zinc-700/50',
+      bg: 'bg-m3-surface-low',
+      text: 'text-m3-on-surface-variant',
+      border: 'border-m3-outline-variant/50',
       dotColor: 'bg-zinc-400',
     },
   };
 
   const style = statusStyles[normStatus] || {
-    bg: 'bg-zinc-800/80',
-    text: 'text-zinc-300',
-    border: 'border-zinc-700/50',
+    bg: 'bg-m3-surface-low',
+    text: 'text-m3-on-surface-variant',
+    border: 'border-m3-outline-variant/50',
     dotColor: 'bg-zinc-400',
   };
 

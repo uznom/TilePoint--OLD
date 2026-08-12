@@ -440,7 +440,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                 : toast.type === "error"
                 ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                : "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                : "bg-m3-primary/10 text-m3-primary border-m3-primary/20"
             }`}
           >
             {toast.type === "success" ? (

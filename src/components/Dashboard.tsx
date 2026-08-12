@@ -87,7 +87,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
  // Admin Drill-down & Analytics States
  const [selectedBranchId, setSelectedBranchId] = useState<string>(
-   currentUser.role === UserRole.ADMIN || (currentUser.role as any) === 'Admin' ? 'all' : (currentUser.branchAssignmentId || 'B1')
+   currentUser.role === UserRole.ADMIN || (currentUser.role as any) === 'Admin' ? 'all' : (currentUser.branchAssignmentId || (branches && branches[0]?.id) || '')
  );
 
  useEffect(() => {
@@ -95,9 +95,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
    if (isAdmin) {
      setSelectedBranchId('all');
    } else {
-     setSelectedBranchId(currentUser.branchAssignmentId || 'B1');
+     setSelectedBranchId(currentUser.branchAssignmentId || (branches && branches[0]?.id) || '');
    }
- }, [currentUser.id, currentUser.role, currentUser.branchAssignmentId]);
+ }, [currentUser.id, currentUser.role, currentUser.branchAssignmentId, branches]);
  const [branchSortKey, setBranchSortKey] = useState<'sales' | 'growth' | 'name' | 'staff'>('sales');
  const [branchSortOrder, setBranchSortOrder] = useState<'asc' | 'desc'>('desc');
  const [bestsellerSortBy, setBestsellerSortBy] = useState<'qty' | 'revenue'>('qty');
@@ -458,15 +458,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  .slice(0, 4);
 
  const getBranchName = (id: string | null) => {
- if (!id || id === "B1" || id === "main" || id === "Corporate Hub") {
  const stored = localStorage.getItem("tilepoint_company_name_v1");
+ if (!id || id === "main" || id === "Corporate Hub") {
  if (stored) return stored;
  }
  const b = branches.find((br) => br.id === id);
  if (!b) {
- const stored = localStorage.getItem("tilepoint_company_name_v1");
  if (stored) return stored;
- return "ETC_DIPOLOG MAIN";
+ return branches[0]?.name || "Main Store";
  }
  return b.name;
  };
@@ -487,15 +486,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  .filter(s => s.branchId === b.id && !s.isDeleted && isSameMonth(s.createdAt, now.getFullYear(), now.getMonth()))
  .reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0) - currentMonthReturns);
 
+ const prevMonthSales = sales
+ .filter(s => s.branchId === b.id && !s.isDeleted && isSameMonth(s.createdAt, now.getFullYear(), now.getMonth() - 1))
+ .reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
+
  const totalSales = currentMonthSales;
- 
- let textGrowth = "+12%";
- let growth = 12;
- let trend: 'up' | 'down' = 'up';
- if (b.id === 'B1') { textGrowth = "+12%"; growth = 12; trend = 'up'; }
- else if (b.id === 'B2') { textGrowth = "+8%"; growth = 8; trend = 'up'; }
- else if (b.id === 'B3') { textGrowth = "-5%"; growth = -5; trend = 'down'; }
- else if (b.id === 'B4') { textGrowth = "+3.5%"; growth = 3.5; trend = 'up'; }
+ const baseDiff = prevMonthSales > 0 ? ((currentMonthSales - prevMonthSales) / prevMonthSales) * 100 : (currentMonthSales > 0 ? 10 : 0);
+ const growth = Math.round(baseDiff * 10) / 10;
+ const textGrowth = `${growth >= 0 ? '+' : ''}${growth}%`;
+ const trend: 'up' | 'down' = growth >= 0 ? 'up' : 'down';
 
  return {
  ...b,
@@ -586,7 +585,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
     const diffTime = now.getTime() - lastSaleDate.getTime();
     const daysUnsold = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
 
-    if (daysUnsold >= 30 && b.id !== 'B1') {
+    const primaryBranch = branches.find(br => (br as any).isPrimary || !br.isDeleted) || branches[0];
+    if (daysUnsold >= 30 && primaryBranch && b.id !== primaryBranch.id) {
      let riskLevel: 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
      let suggestedAction = 'Consolidate directly to Main hub';
      if (daysUnsold >= 120) {
@@ -605,7 +605,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
       daysUnsold,
       riskLevel,
       suggestedAction,
-      targetBranchId: 'B1'
+      targetBranchId: primaryBranch.id
      });
     }
    });
@@ -761,7 +761,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </select>
  ) : (
  <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-2xl text-xs font-mono font-bold p-3 text-m3-on-surface min-w-[210px]">
- {branches.find(b => b.id === (currentUser.branchAssignmentId || 'B1'))?.name || 'N/A'}
+ {branches.find(b => b.id === (currentUser.branchAssignmentId || branches[0]?.id))?.name || 'N/A'}
  </div>
  )}
  </div>
@@ -845,7 +845,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  className="px-3.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded-xl text-xs font-black uppercase tracking-wider border border-emerald-500/30 active:scale-95 transition-all flex items-center gap-1 cursor-pointer shadow-sm"
  title="Generates a mock transaction of today instantly to test the real-time pipeline"
  >
- Simulate checkout
+ Quick Checkout
  </button>
  )}
 
@@ -1301,7 +1301,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  return (
  <tr>
  <td colSpan={6} className="p-8 text-center text-xs text-zinc-500 font-mono">
- No transaction filters match. Try clearing filters or simulate a customer checkout.
+ No transaction filters match. Try clearing filters or recording a customer checkout.
  </td>
  </tr>
  );
@@ -1588,14 +1588,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  {sortedBranchPerformance.map((b, idx) => {
  const branchQuota = b.monthlySales || 2000000;
  const achievement = Math.min(100, (b.totalSales / branchQuota) * 100);
- const barColor = b.id === 'B1' ? 'bg-m3-primary' : b.id === 'B2' ? 'bg-emerald-500' : b.id === 'B3' ? 'bg-amber-500' : 'bg-m3-tertiary';
+ const branchColors = ['bg-m3-primary', 'bg-emerald-500', 'bg-amber-500', 'bg-m3-tertiary', 'bg-cyan-500', 'bg-violet-500'];
+ const barColor = branchColors[idx % branchColors.length];
  const isEditing = editingBranchId === b.id;
 
  return (
  <tr key={idx} className="hover:bg-m3-primary/5 transition-colors">
  <td className="py-3">
  {isEditing ? (
- <div className="flex flex-col gap-2 p-2 bg-zinc-900 border border-m3-outline-variant/30 rounded-2xl animate-fade-in text-[11px] max-w-xs">
+ <div className="flex flex-col gap-2 p-2 bg-m3-surface-low border border-m3-outline-variant/30 rounded-2xl animate-fade-in text-[11px] max-w-xs">
  <span className="font-bold text-m3-primary uppercase font-mono">Adjust Parameters ({b.id})</span>
  
  <div className="flex flex-col gap-1">
@@ -1805,7 +1806,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  {bestsellingProducts.length === 0 ? (
  <tr>
  <td colSpan={5} className="py-8 text-center text-zinc-400 italic font-medium">
- No items have been checkout simulated yet under this branch/view-port.
+ No items have been recorded or sold yet under this branch/view-port.
  </td>
  </tr>
  ) : (
@@ -1866,7 +1867,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
 
  if (matchingExcessStock) {
  const donorBranch = branches.find(b => b.id === matchingExcessStock.branchId);
- const destinationBranchId = activeBranchId || 'B1'; // fall back to main branch context if none chosen
+ const destinationBranchId = activeBranchId || (branches[0]?.id || ''); // fall back to main branch context if none chosen
  const localStock = getProductStockForCurrentContext(shortageProd.id);
  return (
  <div key={index} className="p-3 bg-emerald-500/5 border border-emerald-500/15 rounded-xl space-y-2">
@@ -2186,7 +2187,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  ).map((p, idx) => {
  const itemBranchStocks = branchStock.filter(bs => bs.productId === p.id);
  const excessBranches = itemBranchStocks.filter(bs => bs.quantity > 25);
- const currentBranchId = currentUser.branchAssignmentId || 'B1';
+ const currentBranchId = currentUser.branchAssignmentId || (branches[0]?.id || '');
  
  return (
  <div key={idx} className="p-4 bg-m3-surface-lowest rounded-2xl border border-m3-outline-variant/15 text-xs flex flex-col justify-between gap-3 shadow-sm hover:border-m3-primary/30 transition-all">
@@ -2401,7 +2402,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  <span className="text-xs font-bold text-m3-primary">•</span>
  <span>
  {simulationModeActive 
- ? "Select a day below to simulate a high-value bulk transaction in real-time."
+ ? "Select a day below to examine that day's specific transactional volume."
  : "Select a day below to examine that day's specific transactional volume."
  }
  </span>
@@ -2627,19 +2628,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ darkMode, onNavigate }) =>
  </div>
  
  <div className="grid grid-cols-3 gap-3 mt-2 text-center font-mono">
- <div className="p-2.5 rounded-xl bg-zinc-900 border border-m3-outline-variant/15">
+ <div className="p-2.5 rounded-xl bg-m3-surface-low border border-m3-outline-variant/15">
  <span className="text-[9px] text-zinc-400 block uppercase">Record Type:</span>
  <span className="text-[11px] font-black text-white mt-1 block">
  {monthlyChartData[selectedForecastMonth].isPredicted ? "ESTIMATION" : "HISTORIC"}
  </span>
  </div>
- <div className="p-2.5 rounded-xl bg-zinc-900 border border-m3-outline-variant/15">
+ <div className="p-2.5 rounded-xl bg-m3-surface-low border border-m3-outline-variant/15">
  <span className="text-[9px] text-zinc-400 block uppercase">Projected Value:</span>
  <span className="text-[11px] font-black text-emerald-400 mt-1 block">
  ₱{monthlyChartData[selectedForecastMonth].revenue.toLocaleString()}
  </span>
  </div>
- <div className="p-2.5 rounded-xl bg-zinc-900 border border-m3-outline-variant/15">
+ <div className="p-2.5 rounded-xl bg-m3-surface-low border border-m3-outline-variant/15">
  <span className="text-[9px] text-zinc-400 block uppercase">Weight factor:</span>
  <span className="text-[11px] font-black text-white mt-1 block">
  {monthlyChartData[selectedForecastMonth].isPredicted ? "ARIMA EXP" : "HQ LEDGER"}

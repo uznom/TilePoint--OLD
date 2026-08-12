@@ -125,7 +125,7 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
           subtitle: `Role: ${u.role} • Username: @${u.username}`,
           details: `Email: ${u.email || 'N/A'} • Branch: ${u.branchAssignmentId || 'Central'}`,
           deletedAt: u.updatedAt,
-          badgeColor: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+          badgeColor: 'bg-m3-primary/10 text-m3-primary border-m3-primary/20',
         });
       });
 
@@ -204,7 +204,7 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
           subtitle: `Supplier: ${po.supplierName || po.supplierId} • Status: ${po.status}`,
           details: `Total Cost: $${(po.totalAmount || 0).toLocaleString()} • Items: ${po.items?.length || 0}`,
           deletedAt: po.deletedAt || po.createdAt,
-          badgeColor: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
+          badgeColor: 'bg-m3-primary/10 text-m3-primary border-m3-primary/20',
         });
       });
 
@@ -453,7 +453,7 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
             <div className="text-[10px] uppercase font-bold text-m3-on-surface-variant tracking-wider">
               Staff / Other
             </div>
-            <div className="text-lg font-black text-blue-600 dark:text-blue-400">{counts.user + counts.branch}</div>
+            <div className="text-lg font-black text-m3-primary">{counts.user + counts.branch}</div>
           </div>
         </div>
       </div>

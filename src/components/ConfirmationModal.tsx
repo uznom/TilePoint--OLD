@@ -72,7 +72,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          className={`relative w-full max-w-md bg-zinc-900 border ${style.border} rounded-2xl p-6 shadow-2xl text-zinc-100 font-sans overflow-hidden`}
+          className={`relative w-full max-w-md bg-m3-surface-low border ${style.border} rounded-2xl p-6 shadow-2xl text-m3-on-surface font-sans overflow-hidden`}
         >
           {/* Top header & badge */}
           <div className="flex items-start justify-between gap-3 mb-4">
@@ -92,24 +92,24 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             <button
               type="button"
               onClick={onCancel}
-              className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition cursor-pointer"
+              className="p-1.5 text-m3-on-surface-variant hover:text-white hover:bg-m3-outline-variant/20 rounded-lg transition cursor-pointer"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
 
           {/* Body message */}
-          <div className="text-xs text-zinc-300 leading-relaxed my-3 font-normal">
+          <div className="text-xs text-m3-on-surface-variant leading-relaxed my-3 font-normal">
             {typeof message === 'string' ? <p>{message}</p> : message}
           </div>
 
           {/* Footer action buttons */}
-          <div className="flex items-center justify-end gap-2.5 mt-6 pt-4 border-t border-zinc-800">
+          <div className="flex items-center justify-end gap-2.5 mt-6 pt-4 border-t border-m3-outline-variant/30">
             <button
               type="button"
               onClick={onCancel}
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-xl text-xs font-extrabold text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 transition cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 rounded-xl text-xs font-extrabold text-m3-on-surface-variant hover:text-white bg-m3-surface-container hover:bg-m3-outline-variant/20 transition cursor-pointer disabled:opacity-50"
             >
               {cancelText}
             </button>

@@ -6,7 +6,7 @@
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
-  /* Register M3 color tokens */
+  /* Register M3 color tokens with direct references to M3 CSS variables */
   --color-m3-primary: var(--m3-primary);
   --color-m3-on-primary: var(--m3-on-primary);
   --color-m3-primary-container: var(--m3-primary-container);
@@ -67,6 +67,10 @@
   --m3-surface-container-low: #F3F6FA; /* Soft, restful slate-gray card layout (no pure white blinding lights) */
   --m3-surface-container: #E4E8F0;
   --m3-surface-container-high: #D0D7E2;
+
+  --m3-surface-lowest: var(--m3-surface-container-lowest);
+  --m3-surface-low: var(--m3-surface-container-low);
+  --m3-surface-high: var(--m3-surface-container-high);
   
   --m3-outline: #475467;          /* Eye-safe secondary elements and inputs boundary borders */
   --m3-outline-variant: #C2CBD6;  /* Explicit card & structural layout grid grid lines */
@@ -98,6 +102,10 @@
   --m3-surface-container-low: #131A22;
   --m3-surface-container: #1E293B;
   --m3-surface-container-high: #334155;
+
+  --m3-surface-lowest: var(--m3-surface-container-lowest);
+  --m3-surface-low: var(--m3-surface-container-low);
+  --m3-surface-high: var(--m3-surface-container-high);
   
   --m3-outline: #475569;
   --m3-outline-variant: #334155;
@@ -646,8 +654,7 @@ textarea:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus {
 }
 
 .dark .android-glass {
-  background-color: rgba(19, 26, 34, 0.60);
-  background-color: color-mix(in srgb, var(--m3-surface-container-low) 60%, transparent);
+  background-color: color-mix(in oklab, #110c0c 50%, #0000006b);
   backdrop-filter: blur(24px) saturate(120%);
   -webkit-backdrop-filter: blur(24px) saturate(120%);
   border: 1px solid rgba(194, 203, 214, 0.30);
@@ -655,22 +662,19 @@ textarea:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus {
 }
 
 .dark .android-glass-header {
-  background-color: rgba(30, 41, 59, 0.65);
-  background-color: color-mix(in srgb, var(--m3-surface-container) 65%, transparent);
+  background-color: color-mix(in oklab, #110c0c 50%, #0000006b);
   backdrop-filter: blur(30px) saturate(130%);
   -webkit-backdrop-filter: blur(30px) saturate(130%);
 }
 
 .dark .android-glass-sidebar {
-  background-color: rgba(19, 26, 34, 0.55);
-  background-color: color-mix(in srgb, var(--m3-surface-low) 55%, transparent);
+  background-color: color-mix(in oklab, #110c0c 50%, #0000006b);
   backdrop-filter: blur(32px);
   -webkit-backdrop-filter: blur(32px);
 }
 
 .dark .android-glass-card {
-  background-color: rgba(19, 26, 34, 0.45);
-  background-color: color-mix(in srgb, var(--m3-surface-container-low) 45%, transparent);
+  background-color: color-mix(in oklab, #110c0c 50%, #0000006b);
   backdrop-filter: blur(20px) saturate(115%);
   -webkit-backdrop-filter: blur(20px) saturate(115%);
   border: 1px solid rgba(194, 203, 214, 0.25);
@@ -679,8 +683,7 @@ textarea:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus {
 }
 
 .dark .android-glass-card:hover {
-  background-color: rgba(19, 26, 34, 0.45);
-  background-color: color-mix(in srgb, var(--m3-surface-container-low) 45%, transparent);
+  background-color: color-mix(in oklab, #110c0c 50%, #0000006b);
   border-color: rgba(194, 203, 214, 0.25);
   border-color: color-mix(in srgb, var(--m3-outline-variant) 25%, transparent);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.03);
@@ -688,8 +691,7 @@ textarea:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus {
 }
 
 .dark .android-glass-modal {
-  background-color: rgba(19, 26, 34, 0.75);
-  background-color: color-mix(in srgb, var(--m3-surface-container-low) 75%, transparent);
+  background-color: color-mix(in oklab, #110c0c 50%, #0000006b);
   backdrop-filter: blur(28px) saturate(125%);
   -webkit-backdrop-filter: blur(28px) saturate(125%);
   border: 1px solid rgba(194, 203, 214, 0.40);
@@ -1236,6 +1238,18 @@ html.accessibility-no-blur body {
 /* Solid background for idle clock screen */
 html.accessibility-no-blur #desktop-m3-expressive-idle-screen {
   background-color: var(--m3-surface) !important;
+}
+
+/* Global uniform background-color for all backdrop-blur elements */
+html:not(.accessibility-no-blur) [class*="backdrop-blur"]:not(.backdrop-blur-none),
+html:not(.accessibility-no-blur) .backdrop-blur,
+html:not(.accessibility-no-blur) .backdrop-blur-sm,
+html:not(.accessibility-no-blur) .backdrop-blur-md,
+html:not(.accessibility-no-blur) .backdrop-blur-lg,
+html:not(.accessibility-no-blur) .backdrop-blur-xl,
+html:not(.accessibility-no-blur) .backdrop-blur-2xl,
+html:not(.accessibility-no-blur) .backdrop-blur-3xl {
+  background-color: color-mix(in oklab, #110c0c 50%, #0000006b) !important;
 }
 
 /* Hide all dynamic background glowing blobs and shapes on the idle screen to maintain single solid color background */

@@ -4014,7 +4014,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  <span
  className={`px-2 py-0.5 rounded-full text-[10px] ${p.stockQuantity <= p.minimumStock ? "bg-amber-500/10 text-amber-500" : "bg-green-500/10 text-green-500"}`}
  >
- {p.stockQuantity} {p.unit || "Box"}
+ {p.stockQuantity} {p.unit || "Unit"}
  </span>
  </td>
  </tr>

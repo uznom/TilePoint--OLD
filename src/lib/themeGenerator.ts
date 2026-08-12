@@ -167,37 +167,39 @@ export function generateThemeFromSeed(
     const tertiaryContainerHex = rgbToHex(...Object.values(hslToRgb(tertiaryH, 0.12, contrastMode === 'high' ? 0.98 : (contrastMode === 'medium' ? 0.95 : 0.92))) as [number, number, number]);
     const onTertiaryContainerHex = rgbToHex(...Object.values(hslToRgb(tertiaryH, 0.4, contrastMode === 'high' ? 0.08 : (contrastMode === 'medium' ? 0.15 : 0.22))) as [number, number, number]);
 
-    // Surface & Background - Clear distinguishability between Small, Medium, and High
-    let surfaceHex = '#F4F6FA'; // Small: Soft, relaxed eggshell tint
-    let onSurface = '#1E293B'; // Small: Charcoal Slate
-    let onSurfaceVariant = '#64748B'; // Small: Slate-500
-    let lowest = '#FFFFFF';
-    let low = '#FAFBFD';
-    let container = '#F0F3F8';
-    let high = '#E4E8F0';
-    let outline = '#CBD5E1'; // Small: Soft border
-    let outlineVariant = '#E2E8F0'; // Small: Subtle divider
+    // Surface & Background - Dynamic M3 Tonal Palette derived from seed color hue (h)
+    const surfaceSat = Math.min(s * 0.25, 0.08); // Subtle, eye-safe tint from seed hue
+    
+    let surfaceHex = rgbToHex(...Object.values(hslToRgb(h, surfaceSat, 0.96)) as [number, number, number]);
+    let onSurface = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.3, 0.12), 0.12)) as [number, number, number]);
+    let onSurfaceVariant = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.25, 0.10), 0.38)) as [number, number, number]);
+    let lowest = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.15, 0.04), 0.99)) as [number, number, number]);
+    let low = rgbToHex(...Object.values(hslToRgb(h, surfaceSat, 0.98)) as [number, number, number]);
+    let container = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.35, 0.10), 0.90)) as [number, number, number]);
+    let high = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.35, 0.12), 0.85)) as [number, number, number]);
+    let outline = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.2, 0.08), 0.75)) as [number, number, number]);
+    let outlineVariant = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.2, 0.08), 0.85)) as [number, number, number]);
 
     if (contrastMode === 'medium') {
-      surfaceHex = '#EAEFF5'; // Medium: Distinct, crisp background
-      onSurface = '#0F172A'; // Medium: Deep Slate-900 text
-      onSurfaceVariant = '#334155'; // Medium: Slate-700 text
+      surfaceHex = rgbToHex(...Object.values(hslToRgb(h, surfaceSat, 0.93)) as [number, number, number]);
+      onSurface = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.3, 0.12), 0.08)) as [number, number, number]);
+      onSurfaceVariant = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.25, 0.10), 0.22)) as [number, number, number]);
       lowest = '#FFFFFF';
-      low = '#F3F6FA';
-      container = '#E2E8F0';
-      high = '#D0D7E2';
-      outline = '#64748B'; // Medium: Defined dark borders
-      outlineVariant = '#94A3B8';
+      low = rgbToHex(...Object.values(hslToRgb(h, surfaceSat, 0.96)) as [number, number, number]);
+      container = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.35, 0.10), 0.88)) as [number, number, number]);
+      high = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.35, 0.12), 0.82)) as [number, number, number]);
+      outline = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.2, 0.08), 0.45)) as [number, number, number]);
+      outlineVariant = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.2, 0.08), 0.65)) as [number, number, number]);
     } else if (contrastMode === 'high') {
-      surfaceHex = '#F1F5F9'; // High: High-contrast crisp canvas
-      onSurface = '#000000'; // High: Maximum black text
-      onSurfaceVariant = '#000000'; // High: Maximum black text
+      surfaceHex = rgbToHex(...Object.values(hslToRgb(h, surfaceSat, 0.97)) as [number, number, number]);
+      onSurface = '#000000';
+      onSurfaceVariant = '#000000';
       lowest = '#FFFFFF';
       low = '#FFFFFF';
-      container = '#E2E8F0';
-      high = '#CBD5E1';
-      outline = '#000000'; // High: High-contrast solid black outlines
-      outlineVariant = '#1E293B';
+      container = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.35, 0.10), 0.88)) as [number, number, number]);
+      high = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.35, 0.12), 0.80)) as [number, number, number]);
+      outline = '#000000';
+      outlineVariant = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.2, 0.08), 0.15)) as [number, number, number]);
     }
 
     return {
@@ -257,36 +259,38 @@ export function generateThemeFromSeed(
     const tertiaryContainerHex = rgbToHex(...Object.values(hslToRgb(tertiaryH, 0.35, contrastMode === 'high' ? 0.10 : (contrastMode === 'medium' ? 0.16 : 0.22))) as [number, number, number]);
     const onTertiaryContainerHex = rgbToHex(...Object.values(hslToRgb(tertiaryH, 0.25, contrastMode === 'high' ? 0.98 : (contrastMode === 'medium' ? 0.90 : 0.88))) as [number, number, number]);
 
-    // Surface & Background - Clear distinguishability between Small, Medium, and High
-    let surfaceHex = '#0F172A'; // Small: Soft midnight slate canvas
-    let onSurface = '#F8FAFC'; // Small: Light slate text
-    let onSurfaceVariant = '#94A3B8'; // Small: Slate-400 text
-    let lowest = '#070B14';
-    let low = '#131C2E';
-    let container = '#1E293B';
-    let high = '#334155';
-    let outline = '#334155'; // Small: Soft dark outlines
-    let outlineVariant = '#1E293B';
+    // Surface & Background - Dynamic M3 Tonal Palette derived from seed color hue (h)
+    const surfaceSat = Math.min(s * 0.3, 0.12); // Subtle dark tint from seed hue
+    
+    let surfaceHex = rgbToHex(...Object.values(hslToRgb(h, surfaceSat, 0.09)) as [number, number, number]);
+    let onSurface = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.15, 0.06), 0.95)) as [number, number, number]);
+    let onSurfaceVariant = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.15, 0.06), 0.72)) as [number, number, number]);
+    let lowest = rgbToHex(...Object.values(hslToRgb(h, surfaceSat, 0.05)) as [number, number, number]);
+    let low = rgbToHex(...Object.values(hslToRgb(h, surfaceSat, 0.12)) as [number, number, number]);
+    let container = rgbToHex(...Object.values(hslToRgb(h, surfaceSat, 0.18)) as [number, number, number]);
+    let high = rgbToHex(...Object.values(hslToRgb(h, surfaceSat, 0.24)) as [number, number, number]);
+    let outline = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.15, 0.08), 0.28)) as [number, number, number]);
+    let outlineVariant = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.15, 0.08), 0.18)) as [number, number, number]);
 
     if (contrastMode === 'medium') {
-      surfaceHex = '#0B0F17'; // Medium: Deeper dark background
-      onSurface = '#FFFFFF'; // Medium: Bright white text
-      onSurfaceVariant = '#CBD5E1'; // Medium: Slate-300 text
-      lowest = '#05080E';
-      low = '#0F172A';
-      container = '#1E293B';
-      high = '#334155';
-      outline = '#64748B'; // Medium: Crisp visible borders
-      outlineVariant = '#475569';
+      surfaceHex = rgbToHex(...Object.values(hslToRgb(h, surfaceSat, 0.06)) as [number, number, number]);
+      onSurface = '#FFFFFF';
+      onSurfaceVariant = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.15, 0.06), 0.82)) as [number, number, number]);
+      lowest = rgbToHex(...Object.values(hslToRgb(h, surfaceSat, 0.03)) as [number, number, number]);
+      low = rgbToHex(...Object.values(hslToRgb(h, surfaceSat, 0.09)) as [number, number, number]);
+      container = rgbToHex(...Object.values(hslToRgb(h, surfaceSat, 0.16)) as [number, number, number]);
+      high = rgbToHex(...Object.values(hslToRgb(h, surfaceSat, 0.22)) as [number, number, number]);
+      outline = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.15, 0.08), 0.45)) as [number, number, number]);
+      outlineVariant = rgbToHex(...Object.values(hslToRgb(h, Math.min(s * 0.15, 0.08), 0.32)) as [number, number, number]);
     } else if (contrastMode === 'high') {
-      surfaceHex = '#000000'; // High: Pure pitch black OLED canvas
-      onSurface = '#FFFFFF'; // High: Maximum white text
-      onSurfaceVariant = '#FFFFFF'; // High: Maximum white text
+      surfaceHex = '#000000';
+      onSurface = '#FFFFFF';
+      onSurfaceVariant = '#FFFFFF';
       lowest = '#000000';
       low = '#0A0A0A';
       container = '#141414';
       high = '#262626';
-      outline = '#FFFFFF'; // High: Maximum white border outlines
+      outline = '#FFFFFF';
       outlineVariant = '#A3A3A3';
     }
 
@@ -359,7 +363,11 @@ export function applyM3ThemeToDOM(scheme: M3ThemeScheme) {
  root.style.setProperty('--m3-surface-container-low', scheme.surfaceContainerLow);
  root.style.setProperty('--m3-surface-container', scheme.surfaceContainer);
  root.style.setProperty('--m3-surface-container-high', scheme.surfaceContainerHigh);
- 
+
+ root.style.setProperty('--m3-surface-lowest', scheme.surfaceContainerLowest);
+ root.style.setProperty('--m3-surface-low', scheme.surfaceContainerLow);
+ root.style.setProperty('--m3-surface-high', scheme.surfaceContainerHigh);
+
  root.style.setProperty('--m3-outline', scheme.outline);
  root.style.setProperty('--m3-outline-variant', scheme.outlineVariant);
 }
@@ -373,10 +381,12 @@ export function resetM3ThemeOverride() {
  'tertiary', 'on-tertiary', 'tertiary-container', 'on-tertiary-container',
  'surface', 'on-surface', 'on-surface-variant',
  'surface-container-lowest', 'surface-container-low', 'surface-container', 'surface-container-high',
+ 'surface-lowest', 'surface-low', 'surface-high',
  'surface-container-rgb', 'hover-overlay',
  'outline', 'outline-variant'
  ];
  vars.forEach(v => {
  root.style.removeProperty(`--m3-${v}`);
+ root.style.removeProperty(`--color-m3-${v}`);
  });
 }

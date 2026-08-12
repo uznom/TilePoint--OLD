@@ -1213,7 +1213,7 @@ export function AdminProfitModule({
                           downloadWindowsLauncherScript();
                           showToastMsg("Downloaded TilePoint Windows Launcher (.cmd)", "info");
                         }}
-                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                        className="px-3 py-1.5 bg-m3-primary hover:opacity-90 text-m3-on-primary text-[10px] font-extrabold uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
                       >
                         <Terminal className="h-3 w-3" />
                         <span>Windows Launcher (.cmd)</span>

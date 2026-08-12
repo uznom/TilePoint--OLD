@@ -396,8 +396,8 @@ export const SetupModule: React.FC = () => {
  <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(245,158,11,0.08),rgba(255,255,255,0))]" />
  <div className="absolute inset-0 opacity-5 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
 
- <div className="w-full max-w-xl bg-white dark:bg-[#14161f] border border-zinc-200 dark:border-zinc-800/80 rounded-[24px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.1)] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden relative z-10">
- <div className="bg-gradient-to-r from-zinc-100 via-zinc-50 to-zinc-100 dark:from-zinc-900 dark:via-[#181a24] dark:to-zinc-900 px-6 py-5 border-b border-zinc-200 dark:border-zinc-800/60 flex items-center justify-between">
+ <div className="w-full max-w-xl bg-white dark:bg-[#14161f] border border-zinc-200 dark:border-m3-outline-variant/30/80 rounded-[24px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.1)] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden relative z-10">
+ <div className="bg-gradient-to-r from-zinc-100 via-zinc-50 to-zinc-100 dark:from-zinc-900 dark:via-[#181a24] dark:to-zinc-900 px-6 py-5 border-b border-zinc-200 dark:border-m3-outline-variant/30/60 flex items-center justify-between">
  <div className="flex items-center gap-3">
  <div className="p-2.5 bg-amber-500/10 rounded-xl border border-amber-500/20 text-amber-500">
  <Cpu className="h-5 w-5" />
@@ -419,7 +419,7 @@ export const SetupModule: React.FC = () => {
  </div>
 
  {!isDeploying && (
- <div className="grid grid-cols-3 text-center border-b border-zinc-200 dark:border-zinc-800/30 bg-zinc-50/50 dark:bg-[#11131c]">
+ <div className="grid grid-cols-3 text-center border-b border-zinc-200 dark:border-m3-outline-variant/30/30 bg-zinc-50/50 dark:bg-[#11131c]">
  <div
  className={`py-3 text-[10px] uppercase font-black tracking-wider transition-colors duration-300 border-b-2 ${step === 1 ? "border-amber-500 text-amber-500 bg-amber-500/[0.02]" : "border-transparent text-zinc-400 dark:text-zinc-500"}`}
  >
@@ -473,7 +473,7 @@ export const SetupModule: React.FC = () => {
  value={fullName ?? ''}
  onChange={(e) => setFullName(e.target.value)}
  placeholder="Full name"
- className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-sans"
+ className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-m3-outline-variant/30/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-sans"
  />
  </div>
 
@@ -487,7 +487,7 @@ export const SetupModule: React.FC = () => {
  value={username ?? ''}
  onChange={(e) => setUsername(e.target.value)}
  placeholder="Username / ID"
- className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-mono"
+ className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-m3-outline-variant/30/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-mono"
  />
  </div>
  <div className="space-y-1">
@@ -499,7 +499,7 @@ export const SetupModule: React.FC = () => {
  value={email ?? ''}
  onChange={(e) => setEmail(e.target.value)}
  placeholder="Email address"
- className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-sans"
+ className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-m3-outline-variant/30/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-sans"
  />
  </div>
  </div>
@@ -515,7 +515,7 @@ export const SetupModule: React.FC = () => {
  value={password ?? ''}
  onChange={(e) => setPassword(e.target.value)}
  placeholder="Min 6 alphanumeric characters"
- className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl pl-3 pr-10 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-sans"
+ className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-m3-outline-variant/30/80 rounded-xl pl-3 pr-10 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-sans"
  />
  <button
  type="button"
@@ -543,7 +543,7 @@ export const SetupModule: React.FC = () => {
  setManagerPin(e.target.value.replace(/\D/g, ""))
  }
  placeholder="4-Digits"
- className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors text-center font-mono tracking-widest"
+ className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-m3-outline-variant/30/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors text-center font-mono tracking-widest"
  />
  </div>
  </div>
@@ -575,7 +575,7 @@ export const SetupModule: React.FC = () => {
  value={branchId ?? ''}
  onChange={(e) => setBranchId(e.target.value)}
  placeholder="Branch ID (e.g. B1)"
- className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-mono"
+ className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-m3-outline-variant/30/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-mono"
  />
  <p className="text-[9px] text-zinc-500 dark:text-zinc-400 pl-0.5">
  Unique system key (alphanumeric/underscore). Defaults to <b>B1</b> if left unchanged.
@@ -591,7 +591,7 @@ export const SetupModule: React.FC = () => {
  value={branchName ?? ''}
  onChange={(e) => setBranchName(e.target.value)}
  placeholder="Branch Name"
- className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors"
+ className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-m3-outline-variant/30/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors"
  />
  </div>
 
@@ -604,7 +604,7 @@ export const SetupModule: React.FC = () => {
  value={branchAddress ?? ''}
  onChange={(e) => setBranchAddress(e.target.value)}
  placeholder="Street, City, Province"
- className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors"
+ className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-m3-outline-variant/30/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors"
  />
  </div>
 
@@ -617,7 +617,7 @@ export const SetupModule: React.FC = () => {
  value={branchPhone ?? ''}
  onChange={(e) => setBranchPhone(e.target.value)}
  placeholder="Phone number"
- className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-mono"
+ className="w-full bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-m3-outline-variant/30/80 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500/80 transition-colors font-mono"
  />
  </div>
 
@@ -625,8 +625,8 @@ export const SetupModule: React.FC = () => {
  <label className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 pl-0.5">
  Store Brand Logo
  </label>
- <div className="flex items-center gap-4 bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-zinc-800/80 rounded-xl p-3">
- <div className="relative w-14 h-14 rounded-lg border border-dashed border-zinc-300 dark:border-zinc-800 bg-zinc-100 dark:bg-[#11131c] flex items-center justify-center overflow-hidden shrink-0">
+ <div className="flex items-center gap-4 bg-zinc-50 dark:bg-[#181a24] border border-zinc-200 dark:border-m3-outline-variant/30/80 rounded-xl p-3">
+ <div className="relative w-14 h-14 rounded-lg border border-dashed border-zinc-300 dark:border-m3-outline-variant/30 bg-zinc-100 dark:bg-[#11131c] flex items-center justify-center overflow-hidden shrink-0">
  {storeLogo ? (
  <img
  src={storeLogo}
@@ -682,8 +682,8 @@ export const SetupModule: React.FC = () => {
  </p>
  </div>
 
- <div className="bg-zinc-50 dark:bg-[#11131c] rounded-xl border border-zinc-200 dark:border-zinc-800/50 overflow-hidden text-xs font-mono">
- <div className="bg-zinc-150 dark:bg-zinc-900/60 px-4 py-2 border-b border-zinc-200 dark:border-zinc-800/50 text-[10px] text-zinc-500 dark:text-zinc-400 font-extrabold uppercase tracking-widest flex justify-between">
+ <div className="bg-zinc-50 dark:bg-[#11131c] rounded-xl border border-zinc-200 dark:border-m3-outline-variant/30 overflow-hidden text-xs font-mono">
+ <div className="bg-zinc-150 dark:bg-m3-surface-low/60 px-4 py-2 border-b border-zinc-200 dark:border-m3-outline-variant/30 text-[10px] text-zinc-500 dark:text-zinc-400 font-extrabold uppercase tracking-widest flex justify-between">
  <span>Setup Summary</span>
  <span className="text-emerald-600 dark:text-emerald-400">Confirmed</span>
  </div>
@@ -715,7 +715,7 @@ export const SetupModule: React.FC = () => {
  <span className="text-zinc-500 font-sans">
  Branch Logo:
  </span>
- <div className="w-8 h-8 rounded border border-zinc-300 dark:border-zinc-800 overflow-hidden bg-zinc-100 dark:bg-white/5 flex items-center justify-center p-0.5">
+ <div className="w-8 h-8 rounded border border-zinc-300 dark:border-m3-outline-variant/30 overflow-hidden bg-zinc-100 dark:bg-white/5 flex items-center justify-center p-0.5">
  <img
  src={storeLogo}
  alt="Logo preview"
@@ -768,12 +768,12 @@ export const SetupModule: React.FC = () => {
  </div>
  )}
 
- <div className="flex justify-between gap-4 pt-4 border-t border-zinc-200 dark:border-zinc-800/40">
+ <div className="flex justify-between gap-4 pt-4 border-t border-zinc-200 dark:border-m3-outline-variant/30/40">
  {step > 1 ? (
  <button
  type="button"
  onClick={handleBack}
- className="px-4 py-2 border border-zinc-300 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-700 bg-zinc-100 dark:bg-zinc-900/30 rounded-xl text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 flex items-center gap-2 transition-all cursor-pointer"
+ className="px-4 py-2 border border-zinc-300 dark:border-m3-outline-variant/30 hover:border-zinc-400 dark:hover:border-zinc-700 bg-zinc-100 dark:bg-m3-surface-low/30 rounded-xl text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 flex items-center gap-2 transition-all cursor-pointer"
  >
  <ArrowLeft className="h-3.5 w-3.5" />
  Back
@@ -824,7 +824,7 @@ export const SetupModule: React.FC = () => {
  {installProgress}%
  </span>
  </div>
- <div className="w-full h-2 bg-zinc-200 dark:bg-zinc-900 rounded-full overflow-hidden border border-zinc-300 dark:border-zinc-800">
+ <div className="w-full h-2 bg-zinc-200 dark:bg-m3-surface-low rounded-full overflow-hidden border border-zinc-300 dark:border-m3-outline-variant/30">
  <motion.div
  className="h-full bg-gradient-to-r from-amber-500 to-amber-400"
  initial={{ width: "0%" }}

@@ -52,7 +52,7 @@ export const LoginModule: React.FC = () => {
  const getRoleBadge = (roleStr?: string) => {
   const r = (roleStr || '').toLowerCase();
   if (r.includes('admin')) return { label: 'Administrator', icon: ShieldCheck, color: 'text-purple-500 bg-purple-500/10 border-purple-500/20' };
-  if (r.includes('manager')) return { label: 'Store Manager', icon: UserCheck, color: 'text-blue-500 bg-blue-500/10 border-blue-500/20' };
+  if (r.includes('manager')) return { label: 'Store Manager', icon: UserCheck, color: 'text-m3-primary bg-m3-primary/10 border-m3-primary/20' };
   if (r.includes('cashier')) return { label: 'Cashier Terminal', icon: Receipt, color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' };
   return { label: 'Staff Member', icon: HardHat, color: 'text-amber-500 bg-amber-500/10 border-amber-500/20' };
  };
@@ -158,17 +158,10 @@ export const LoginModule: React.FC = () => {
        <div className="mb-5 p-4 rounded-xl bg-red-500/15 text-red-500 border border-red-500/30 text-xs font-extrabold text-center flex flex-col justify-center items-center gap-2">
         <ShieldAlert className="h-6 w-6 animate-bounce" />
         <span>SECURITY LOCK ACTIVE: Excessive failed validation tokens.</span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center gap-2">
           <span className="text-[10px] uppercase font-mono block px-2.5 py-1 bg-red-500/10 rounded-full text-red-500 border border-red-500/20">
            Cooldown locks: {rateLimitTimeLeft}s remaining
           </span>
-          <button
-            type="button"
-            onClick={resetLockout}
-            className="text-[10px] uppercase font-bold px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-full transition-colors cursor-pointer"
-          >
-            Reset Lockout
-          </button>
         </div>
        </div>
       )}

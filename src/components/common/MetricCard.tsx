@@ -27,7 +27,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   className = '',
 }) => {
   const badgeStyles = {
-    default: 'bg-zinc-800/80 text-zinc-300 border-zinc-700/60',
+    default: 'bg-m3-surface-low text-m3-on-surface-variant border-m3-outline-variant/60',
     success: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
     warning: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
     danger: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
