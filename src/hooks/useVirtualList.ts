@@ -21,7 +21,7 @@ export function useVirtualList({
 
     const updateHeight = () => {
       if (el.clientHeight > 0) {
-        setContainerHeight(el.clientHeight);
+        setContainerHeight((prev) => (prev !== el.clientHeight ? el.clientHeight : prev));
       }
     };
 

@@ -1,0 +1,194 @@
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'motion/react';
+
+export type HeroModalSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | 'full';
+
+export interface HeroModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+  size?: HeroModalSize;
+  isDismissable?: boolean;
+  hideCloseButton?: boolean;
+  backdrop?: 'transparent' | 'opaque' | 'blur';
+  zIndex?: number;
+  containerClassName?: string;
+  className?: string;
+  id?: string;
+}
+
+export const HeroModal: React.FC<HeroModalProps> & {
+  Header: React.FC<React.HTMLAttributes<HTMLDivElement>>;
+  Body: React.FC<React.HTMLAttributes<HTMLDivElement>>;
+  Footer: React.FC<React.HTMLAttributes<HTMLDivElement>>;
+} = ({
+  isOpen,
+  onClose,
+  children,
+  size = 'md',
+  isDismissable = true,
+  hideCloseButton = false,
+  backdrop = 'blur',
+  zIndex = 50,
+  containerClassName = '',
+  className = '',
+  id,
+}) => {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isDismissable && isOpen) {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, isDismissable, onClose]);
+
+  const getSizeClasses = () => {
+    switch (size) {
+      case 'xs':
+        return 'max-w-xs';
+      case 'sm':
+        return 'max-w-sm';
+      case 'lg':
+        return 'max-w-2xl';
+      case 'xl':
+        return 'max-w-3xl';
+      case '2xl':
+        return 'max-w-4xl';
+      case '3xl':
+        return 'max-w-5xl';
+      case '4xl':
+        return 'max-w-6xl';
+      case '5xl':
+        return 'max-w-7xl';
+      case 'full':
+        return 'max-w-full m-2 h-[calc(100%-1rem)]';
+      case 'md':
+      default:
+        return 'max-w-lg';
+    }
+  };
+
+  const getBackdropClasses = () => {
+    switch (backdrop) {
+      case 'transparent':
+        return 'bg-transparent';
+      case 'opaque':
+        return 'bg-black/60 dark:bg-black/75';
+      case 'blur':
+      default:
+        return 'bg-black/60 dark:bg-black/75 backdrop-blur-md';
+    }
+  };
+
+  const modalContent = (
+    <AnimatePresence>
+      {isOpen && (
+        <div
+          id={id}
+          style={{ zIndex }}
+          className={`fixed inset-0 flex items-center justify-center p-4 sm:p-6 overflow-y-auto ${containerClassName}`}
+        >
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={isDismissable ? onClose : undefined}
+            className={`fixed inset-0 ${getBackdropClasses()}`}
+          />
+
+          {/* Modal Card */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className={`relative w-full ${getSizeClasses()} bg-content1 rounded-2xl shadow-2xl border border-divider/40 overflow-hidden z-10 flex flex-col max-h-[90vh] ${className}`}
+          >
+            {!hideCloseButton && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="absolute top-4 right-4 z-20 p-1.5 rounded-full text-default-400 hover:text-foreground hover:bg-default-100 transition-colors cursor-pointer"
+                title="Close"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            )}
+            {children}
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(modalContent, document.body);
+};
+
+HeroModal.Header = ({ children, className = '', ...props }) => (
+  <div
+    className={`px-6 py-5 border-b border-divider font-bold text-base sm:text-lg text-foreground flex items-center gap-3 ${className}`}
+    {...props}
+  >
+    {children}
+  </div>
+);
+
+HeroModal.Body = ({ children, className = '', ...props }) => (
+  <div className={`px-6 py-5 overflow-y-auto flex-1 text-foreground ${className}`} {...props}>
+    {children}
+  </div>
+);
+
+HeroModal.Footer = ({ children, className = '', ...props }) => (
+  <div
+    className={`px-6 py-4 border-t border-divider bg-content2/50 flex items-center justify-end gap-3 ${className}`}
+    {...props}
+  >
+    {children}
+  </div>
+);
+
+export const ModalContent: React.FC<{ children?: React.ReactNode | ((onClose: () => void) => React.ReactNode); className?: string }> = ({
+  children,
+}) => {
+  return <>{typeof children === 'function' ? children(() => {}) : children}</>;
+};
+ModalContent.displayName = 'ModalContent';
+
+export const Modal = HeroModal;
+export const ModalHeader = HeroModal.Header;
+export const ModalBody = HeroModal.Body;
+export const ModalFooter = HeroModal.Footer;
+
+export function useDisclosure(defaultIsOpen = false) {
+  const [isOpen, setIsOpen] = React.useState(defaultIsOpen);
+  const onOpen = React.useCallback(() => setIsOpen(true), []);
+  const onClose = React.useCallback(() => setIsOpen(false), []);
+  const onOpenChange = React.useCallback(() => setIsOpen((prev) => !prev), []);
+
+  return {
+    isOpen,
+    onOpen,
+    onClose,
+    onOpenChange,
+    setIsOpen,
+  };
+}
+
+export default HeroModal;
+

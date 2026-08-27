@@ -138,6 +138,9 @@ export const TutorialOnboarding: React.FC = () => {
  const [activeStepIdx, setActiveStepIdx] = useState(0);
 
  const selectedTopic = TUTORIALS_DATA.find(t => t.id === selectedTopicId) || TUTORIALS_DATA[0];
+ const safeSteps = selectedTopic?.steps || [];
+ const safeActiveStepIdx = Math.min(Math.max(0, activeStepIdx), Math.max(0, safeSteps.length - 1));
+ const currentStep = safeSteps[safeActiveStepIdx] || { title: 'Operational Step', description: 'Proceed with standard operational protocol.' };
 
  const handleSelectTopic = (id: string) => {
  setSelectedTopicId(id);
@@ -414,7 +417,7 @@ export const TutorialOnboarding: React.FC = () => {
  </div>
  
  <div class="guideline-tip" style="margin-top: 2.5cm;">
- <strong>Manual Administration Directive:</strong> Erica Manaban, as local general administrator, holds sole authority to authorize departures from standard procedures. Unreported drawer discrepancies will undergo procedural inquiry.
+ <strong>Manual Administration Directive:</strong> Authorized System Administrators hold sole authority to authorize departures from standard procedures. Unreported drawer discrepancies will undergo procedural inquiry.
  </div>
  </div>
 
@@ -643,33 +646,33 @@ export const TutorialOnboarding: React.FC = () => {
  };
 
  return (
- <div className="space-y-6 max-w-5xl mx-auto p-2" id="tilepoint-tutorials-panel">
+ <div className="space-y-6 w-full min-h-full p-1 sm:p-2 md:p-4" id="tilepoint-tutorials-panel">
  
  {/* Dynamic Header Badge */}
- <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-gradient-to-r from-m3-primary/5 via-m3-secondary-container/15 to-transparent rounded-2xl border border-m3-outline-variant/30 relative overflow-hidden">
- <div className="absolute top-0 right-0 p-12 bg-m3-primary/5 rounded-full blur-2xl pointer-events-none" />
+ <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-gradient-to-r from-primary/5 via-content2/15 to-transparent rounded-2xl border border-divider/30 relative overflow-hidden">
+ <div className="absolute top-0 right-0 p-12 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
  <div className="space-y-1 relative z-10">
- <div className="inline-flex items-center gap-1 text-[10px] uppercase font-black tracking-wider text-m3-primary bg-m3-primary/10 px-2.5 py-1 rounded-full border border-m3-primary/20">
+ <div className="inline-flex items-center gap-1 text-[10px] uppercase font-black tracking-wider text-primary bg-primary/10 px-2.5 py-1 rounded-full border border-primary/20">
  <Sparkles className="h-3 w-3" /> System Academy Guide
  </div>
- <h2 className="text-xl md:text-2xl font-black text-m3-on-surface uppercase tracking-tight">Onboarding Walkthrough</h2>
- <p className="text-xs text-m3-on-surface-variant max-w-xl font-medium">
+ <h2 className="text-xl md:text-2xl font-black text-foreground uppercase tracking-tight">Onboarding Walkthrough</h2>
+ <p className="text-xs text-default-500 max-w-xl font-medium">
  Welcome to the official interactive tutorial suite. Understand the transactional, logs, and logistical functions of your newly created enterprise setup.
  </p>
  </div>
  <div className="flex flex-wrap items-center gap-3 relative z-10 shrink-0">
- <div className="flex items-center gap-2 bg-m3-surface p-2.5 rounded-xl border border-m3-outline-variant/30 shadow-sm">
- <BookOpen className="h-5 w-5 text-m3-primary" />
+ <div className="flex items-center gap-2 bg-background p-2.5 rounded-xl border border-divider/30 shadow-sm">
+ <BookOpen className="h-5 w-5 text-primary" />
  <div className="text-left">
- <div className="text-[10px] font-black uppercase text-m3-on-surface-variant">Active Manual</div>
- <div className="text-xs font-bold text-m3-on-surface">Digital Operation Procedures</div>
+ <div className="text-[10px] font-black uppercase text-default-500">Active Manual</div>
+ <div className="text-xs font-bold text-foreground">Digital Operation Procedures</div>
  </div>
  </div>
 
  <button
  type="button"
  onClick={handlePrintCompleteManual}
- className="flex items-center gap-2 px-4 py-2.5 bg-m3-primary hover:bg-m3-primary/95 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-md hover:shadow-lg active:scale-95 cursor-pointer border border-transparent"
+ className="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary/95 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-md hover:shadow-lg active:scale-95 cursor-pointer border border-transparent"
  title="Download or Print complete Ops & Instructions handbook to PDF format"
  >
  <Printer className="h-4 w-4 shrink-0" />
@@ -694,51 +697,51 @@ export const TutorialOnboarding: React.FC = () => {
  onClick={() => handleSelectTopic(topic.id)}
  className={`w-full text-left p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-3.5 group select-none ${
  isSelected 
- ? 'bg-m3-primary-container/20 border-m3-primary/50 text-m3-on-surface' 
- : 'bg-m3-surface-low border-m3-outline-variant/30 hover:bg-m3-primary/5 text-m3-on-surface-variant'
+ ? 'bg-primary-50/20 border-primary/50 text-foreground' 
+ : 'bg-content1 border-divider/30 hover:bg-primary/5 text-default-500'
  }`}
  >
- <div className={`p-2 rounded-xl border m3-shape-asymmetric transition-transform group-hover:scale-105 ${
- isSelected ? 'bg-m3-primary text-m3-on-primary border-transparent' : 'bg-m3-surface-high border-m3-outline-variant/40'
+ <div className={`p-2 rounded-xl border rounded-large transition-transform group-hover:scale-105 ${
+ isSelected ? 'bg-primary text-primary-foreground border-transparent' : 'bg-content3 border-divider/40'
  }`}>
  <Icon className="h-4.5 w-4.5" />
  </div>
  <div className="space-y-0.5">
- <span className="text-[9.5px] uppercase font-mono font-bold text-m3-primary tracking-wider">{topic.category}</span>
+ <span className="text-[9.5px] uppercase font-bold text-primary tracking-wider">{topic.category}</span>
  <h3 className="text-xs font-black tracking-tight">{topic.title}</h3>
- <p className="text-[11px] line-clamp-2 leading-snug font-medium text-m3-on-surface-variant/80">{topic.shortDesc}</p>
+ <p className="text-[11px] line-clamp-2 leading-snug font-medium text-default-500/80">{topic.shortDesc}</p>
  </div>
  </button>
  );
  })}
  </div>
 
- <div className="p-4 bg-m3-surface-high/30 rounded-xl border border-m3-outline-variant/20 space-y-2.5">
- <h4 className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface flex items-center gap-1.5">
- <UserCheck className="h-3.5 w-3.5 text-m3-primary" /> Active Setup Information
+ <div className="p-4 bg-content3/30 rounded-xl border border-divider/20 space-y-2.5">
+ <h4 className="text-[10px] font-black uppercase tracking-wider text-foreground flex items-center gap-1.5">
+ <UserCheck className="h-3.5 w-3.5 text-primary" /> Active Setup Information
  </h4>
- <p className="text-[10.5px] text-m3-on-surface-variant font-medium leading-relaxed">
+ <p className="text-[10.5px] text-default-500 font-medium leading-relaxed">
  This sandbox POS environment is configured for offline-resilient local operation. Transactions are stored directly in your browser's persistent localStorage structure.
  </p>
  </div>
  </div>
 
  {/* Right Tutorial detail stage */}
- <div className="lg:col-span-8 bg-m3-surface-low rounded-2xl border border-m3-outline-variant/30 overflow-hidden shadow-sm">
+ <div className="lg:col-span-8 bg-content1 rounded-2xl border border-divider/30 overflow-hidden shadow-sm">
  
  {/* Detail stage top bar */}
- <div className="px-6 py-4 bg-m3-surface-high/50 border-b border-m3-outline-variant/20 flex items-center justify-between">
+ <div className="px-6 py-4 bg-content3/50 border-b border-divider/20 flex items-center justify-between">
  <div className="flex items-center gap-2">
- <div className="p-2 bg-m3-primary/10 rounded-lg text-m3-primary">
+ <div className="p-2 bg-primary/10 rounded-lg text-primary">
  <BookOpen className="h-4 w-4" />
  </div>
  <div>
- <span className="text-[9.5px] font-mono uppercase text-m3-primary px-1.5 py-0.5 bg-m3-primary/10 rounded">Active Module</span>
- <h3 className="text-xs font-black text-m3-on-surface uppercase tracking-tight mt-0.5">{selectedTopic.title}</h3>
+ <span className="text-[9.5px] uppercase text-primary px-1.5 py-0.5 bg-primary/10 rounded">Active Module</span>
+ <h3 className="text-xs font-black text-foreground uppercase tracking-tight mt-0.5">{selectedTopic.title}</h3>
  </div>
  </div>
- <div className="text-right text-[10px] font-mono text-m3-on-surface-variant">
- <span>Procedure {activeStepIdx + 1} of {selectedTopic.steps.length}</span>
+ <div className="text-right text-[10px] text-default-500">
+ <span>Procedure {safeActiveStepIdx + 1} of {safeSteps.length}</span>
  </div>
  </div>
 
@@ -746,22 +749,22 @@ export const TutorialOnboarding: React.FC = () => {
  <div className="p-6 md:p-8 space-y-6">
  
  {/* Steps indicator nodes */}
- <div className="flex items-center gap-1.5 pb-4 border-b border-m3-outline-variant/15 overflow-x-auto">
- {selectedTopic.steps.map((_st, sidx) => (
+ <div className="flex items-center gap-1.5 pb-4 border-b border-divider/15 overflow-x-auto">
+ {safeSteps.map((_st, sidx) => (
  <button
  id={`tutorial-${selectedTopicId}-progress-${sidx}`}
  key={sidx}
  onClick={() => setActiveStepIdx(sidx)}
- className={`px-3 py-1.5 rounded-full text-[10px] font-mono font-bold tracking-wider cursor-pointer uppercase border transition-all ${
- sidx === activeStepIdx
- ? 'bg-m3-primary text-m3-on-primary border-transparent'
- : sidx < activeStepIdx
- ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
- : 'bg-m3-surface hover:bg-m3-primary/5 text-m3-on-surface-variant border-m3-outline-variant/30'
+ className={`px-3 py-1.5 rounded-full text-[10px] font-bold tracking-wider cursor-pointer uppercase border transition-all ${
+ sidx === safeActiveStepIdx
+ ? 'bg-primary text-primary-foreground border-transparent'
+ : sidx < safeActiveStepIdx
+ ? 'bg-primary/10 text-primary border-primary/20'
+ : 'bg-background hover:bg-primary/5 text-default-500 border-divider/30'
  }`}
  >
  <span className="flex items-center gap-1">
- {sidx < activeStepIdx ? <CheckCircle2 className="h-3 w-3" /> : null}
+ {sidx < safeActiveStepIdx ? <CheckCircle2 className="h-3 w-3" /> : null}
  Step {sidx + 1}
  </span>
  </button>
@@ -771,49 +774,49 @@ export const TutorialOnboarding: React.FC = () => {
  {/* Selected Step Description Screen */}
  <div className="space-y-4">
  <div className="space-y-1.5">
- <span className="text-[10px] uppercase font-black tracking-widest text-m3-primary font-mono block">Action Workflow • Stage {activeStepIdx + 1}</span>
- <h2 className="text-lg font-black tracking-tight text-m3-on-surface leading-tight">
- {selectedTopic.steps[activeStepIdx].title}
+ <span className="text-[10px] uppercase font-black tracking-widest text-primary block">Action Workflow • Stage {safeActiveStepIdx + 1}</span>
+ <h2 className="text-lg font-black tracking-tight text-foreground leading-tight">
+ {currentStep.title}
  </h2>
  </div>
  
- <div className="text-xs text-m3-on-surface-variant leading-relaxed font-sans font-medium bg-m3-surface-high/40 p-4 rounded-xl border border-m3-outline-variant/15">
- {selectedTopic.steps[activeStepIdx].description}
+ <div className="text-xs text-default-500 leading-relaxed font-sans font-medium bg-content3/40 p-4 rounded-xl border border-divider/15">
+ {currentStep.description}
  </div>
 
- {selectedTopic.steps[activeStepIdx].actionTip && (
- <div className="p-3.5 bg-m3-primary/5 rounded-xl border border-m3-primary/10 flex items-start gap-2.5 text-left">
- <MousePointerClick className="h-4.5 w-4.5 text-m3-primary shrink-0 mt-0.5" />
- <p className="text-[11px] text-m3-on-surface-variant leading-normal">
- <span className="font-black text-m3-primary uppercase mr-1 inline-block text-[10px]">Reference Guideline:</span> 
- {selectedTopic.steps[activeStepIdx].actionTip}
+ {currentStep.actionTip && (
+ <div className="p-3.5 bg-primary/5 rounded-xl border border-primary/10 flex items-start gap-2.5 text-left">
+ <MousePointerClick className="h-4.5 w-4.5 text-primary shrink-0 mt-0.5" />
+ <p className="text-[11px] text-default-500 leading-normal">
+ <span className="font-black text-primary uppercase mr-1 inline-block text-[10px]">Reference Guideline:</span> 
+ {currentStep.actionTip}
  </p>
  </div>
  )}
  </div>
 
  {/* Stepper buttons */}
- <div className="flex items-center justify-between pt-6 border-t border-m3-outline-variant/15">
+ <div className="flex items-center justify-between pt-6 border-t border-divider/15">
  <button
  id={`tutorial-${selectedTopicId}-prev`}
- disabled={activeStepIdx === 0}
+ disabled={safeActiveStepIdx === 0}
  onClick={() => setActiveStepIdx(prev => Math.max(0, prev - 1))}
- className="px-4 py-2 text-xs font-bold uppercase rounded-xl border border-m3-outline-variant/40 hover:bg-m3-primary/5 transition-all text-m3-on-surface disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+ className="px-4 py-2 text-xs font-bold uppercase rounded-xl border border-divider/40 hover:bg-primary/5 transition-all text-foreground disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
  >
  Previous Step
  </button>
 
- {activeStepIdx < selectedTopic.steps.length - 1 ? (
+ {safeActiveStepIdx < safeSteps.length - 1 ? (
  <button
  id={`tutorial-${selectedTopicId}-next`}
- onClick={() => setActiveStepIdx(prev => Math.min(selectedTopic.steps.length - 1, prev + 1))}
- className="px-5 py-2 bg-m3-primary hover:bg-m3-primary/95 text-m3-on-primary font-extrabold text-xs uppercase tracking-wider rounded-xl cursor-pointer flex items-center gap-1 shadow-sm transition-all shadow-m3-primary/10"
+ onClick={() => setActiveStepIdx(prev => Math.min(safeSteps.length - 1, prev + 1))}
+ className="px-5 py-2 bg-primary hover:bg-primary/95 text-primary-foreground font-extrabold text-xs uppercase tracking-wider rounded-xl cursor-pointer flex items-center gap-1 shadow-sm transition-all shadow-primary/25/10"
  >
  Next Step
  <ChevronRight className="h-3.5 w-3.5" />
  </button>
  ) : (
- <div className="p-2 py-1 bg-emerald-500/10 rounded-lg border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+ <div className="p-2 py-1 bg-primary/10 rounded-lg border border-primary/20 text-primary text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
  <CheckCircle2 className="h-4 w-4" /> Operations Manual Complete
  </div>
  )}
@@ -824,3 +827,5 @@ export const TutorialOnboarding: React.FC = () => {
  </div>
  );
 };
+
+export default TutorialOnboarding;

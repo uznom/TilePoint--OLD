@@ -82,8 +82,8 @@ export const HoldToConfirmButton: React.FC<HoldToConfirmButtonProps> = ({
  };
  case 'primary':
  return {
- bg: 'bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary border-m3-primary/30',
- progressBg: 'bg-m3-primary',
+ bg: 'bg-primary/10 hover:bg-primary/20 text-primary border-primary/30',
+ progressBg: 'bg-primary',
  };
  default:
  return {

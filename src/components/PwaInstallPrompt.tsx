@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Download, Monitor, Sparkles, X, ShieldCheck } from 'lucide-react';
 import { useDb } from '../context/DbContext';
+import { HeroButton } from './common/ui/HeroButton';
 
 export const PwaInstallPrompt: React.FC = () => {
  const { isLoggedIn } = useDb();
@@ -171,29 +172,29 @@ export const PwaInstallPrompt: React.FC = () => {
  exit={{ opacity: 0, y: 30, scale: 0.95 }}
  transition={{ type: 'spring', damping: 25, stiffness: 350 }}
  style={{
- boxShadow: '0 20px 40px rgba(var(--m3-primary-rgb, 21, 94, 239), 0.16), 0 4px 16px rgba(0, 0, 0, 0.15)',
- backgroundColor: 'var(--m3-surface-container-high, #334155)',
- borderColor: 'var(--m3-outline-variant, rgba(255, 255, 255, 0.12))'
+ boxShadow: '0 20px 40px rgba(var(--heroui-primary-rgb, 0, 111, 238), 0.16), 0 4px 16px rgba(0, 0, 0, 0.15)',
+ backgroundColor: 'var(--heroui-content3)',
+ borderColor: 'var(--heroui-divider))'
  }}
- className="w-full rounded-3xl border p-5 flex flex-col gap-4 backdrop-blur-2xl bg-opacity-95 pointer-events-auto"
+ className="w-full rounded-2xl border p-5 flex flex-col gap-4 backdrop-blur-2xl bg-opacity-95 pointer-events-auto"
  >
  {/* Header Banner */}
  <div className="flex justify-between items-start gap-3">
  <div className="flex gap-3">
  <div 
  style={{
- backgroundColor: 'rgba(var(--m3-primary-rgb, 21, 94, 239), 0.12)'
+ backgroundColor: 'rgba(var(--heroui-primary-rgb, 0, 111, 238), 0.12)'
  }}
- className="p-3 rounded-2xl flex items-center justify-center text-[var(--m3-primary)] animate-pulse"
+ className="p-3 rounded-2xl flex items-center justify-center text-[var(--heroui-primary)] animate-pulse"
  >
  <Download className="h-5 w-5" />
  </div>
  <div>
- <h3 className="text-sm font-black text-[var(--m3-on-surface)] leading-snug flex items-center gap-1.5">
+ <h3 className="text-sm font-black text-[var(--heroui-foreground)] leading-snug flex items-center gap-1.5">
  Install TilePoint App
  <Sparkles className="h-3.5 w-3.5 text-amber-500 animate-spin" style={{ animationDuration: '4s' }} />
  </h3>
- <p className="text-[11px] text-[var(--m3-on-surface-variant)] leading-snug mt-0.5">
+ <p className="text-[11px] text-[var(--heroui-default-500)] leading-snug mt-0.5">
  Run TilePoint ATP-OS directly from your device dock with instant launch, robust offline capabilities & full showroom speeds.
  </p>
  </div>
@@ -201,7 +202,7 @@ export const PwaInstallPrompt: React.FC = () => {
  
  <button 
  onClick={handleDismiss}
- className="p-1 rounded-full text-[var(--m3-on-surface-variant)] hover:bg-m3-outline-variant/10 hover:text-[var(--m3-on-surface)] transition-colors cursor-pointer"
+ className="p-1 rounded-full text-[var(--heroui-default-500)] hover:bg-default-100 hover:text-[var(--heroui-foreground)] transition-colors cursor-pointer"
  >
  <X className="h-4 w-4" />
  </button>
@@ -211,29 +212,29 @@ export const PwaInstallPrompt: React.FC = () => {
  {isIOS ? (
  <div 
  style={{
- backgroundColor: 'rgba(var(--m3-primary-rgb, 21, 94, 239), 0.05)',
- borderColor: 'rgba(var(--m3-primary-rgb, 21, 94, 239), 0.15)'
+ backgroundColor: 'rgba(var(--heroui-primary-rgb, 0, 111, 238), 0.05)',
+ borderColor: 'rgba(var(--heroui-primary-rgb, 0, 111, 238), 0.15)'
  }}
- className="p-3.5 rounded-2xl border text-[11px] text-[var(--m3-on-surface-variant)] space-y-2 leading-relaxed"
+ className="p-3.5 rounded-2xl border text-[11px] text-[var(--heroui-default-500)] space-y-2 leading-relaxed"
  >
- <p className="font-extrabold text-[var(--m3-primary)] uppercase tracking-wider text-[9px]">
+ <p className="font-extrabold text-[var(--heroui-primary)] uppercase tracking-wider text-[9px]">
  iOS Safari Installation Guide:
  </p>
  <ol className="list-decimal list-inside space-y-1">
- <li>Tap the <span className="font-black text-[var(--m3-primary)]">"Share"</span> button at the bottom navigation screen.</li>
- <li>Scroll and select <span className="font-black text-[var(--m3-on-surface)]">"Add to Home Screen"</span>.</li>
- <li>Tap <span className="font-black text-[var(--m3-primary)]">"Add"</span> in the top-right corner to activate.</li>
+ <li>Tap the <span className="font-black text-[var(--heroui-primary)]">"Share"</span> button at the bottom navigation screen.</li>
+ <li>Scroll and select <span className="font-black text-[var(--heroui-foreground)]">"Add to Home Screen"</span>.</li>
+ <li>Tap <span className="font-black text-[var(--heroui-primary)]">"Add"</span> in the top-right corner to activate.</li>
  </ol>
  </div>
  ) : (
  /* Features List */
- <div className="grid grid-cols-2 gap-2 text-[10px] text-[var(--m3-on-surface-variant)] font-sans">
- <div className="flex items-center gap-1.5 bg-m3-surface/10 p-2 rounded-xl border border-m3-outline-variant/5">
- <Monitor className="h-3.5 w-3.5 text-[var(--m3-primary)]" />
+ <div className="grid grid-cols-2 gap-2 text-[10px] text-[var(--heroui-default-500)] font-sans">
+ <div className="flex items-center gap-1.5 bg-background/10 p-2 rounded-xl border border-divider/5">
+ <Monitor className="h-3.5 w-3.5 text-[var(--heroui-primary)]" />
  <span>Desktop App</span>
  </div>
- <div className="flex items-center gap-1.5 bg-m3-surface/10 p-2 rounded-xl border border-m3-outline-variant/5">
- <ShieldCheck className="h-3.5 w-3.5 text-[var(--m3-primary)]" />
+ <div className="flex items-center gap-1.5 bg-background/10 p-2 rounded-xl border border-divider/5">
+ <ShieldCheck className="h-3.5 w-3.5 text-[var(--heroui-primary)]" />
  <span>Offline Ready</span>
  </div>
  </div>
@@ -242,23 +243,23 @@ export const PwaInstallPrompt: React.FC = () => {
  {/* Actions Footer */}
  {!isIOS && (
  <div className="flex gap-2 font-sans mt-1">
- <button
+ <HeroButton
+ variant="flat"
+ size="sm"
  onClick={handleDismiss}
- className="flex-1 py-2.5 rounded-xl border border-m3-outline-variant text-xs text-[var(--m3-on-surface-variant)] font-bold hover:bg-m3-outline-variant/10 hover:text-[var(--m3-on-surface)] transition-colors cursor-pointer"
+ className="flex-1"
  >
  Later
- </button>
- <button
+ </HeroButton>
+ <HeroButton
+ variant="primary"
+ size="sm"
  onClick={handleInstallClick}
- style={{
- backgroundColor: 'var(--m3-primary, #0d9384)',
- boxShadow: '0 4px 12px rgba(var(--m3-primary-rgb, 21, 94, 239), 0.25)'
- }}
- className="flex-1 py-2.5 rounded-xl text-xs font-black text-white hover:brightness-110 active:scale-95 transition-all outline-none border border-m3-primary flex items-center justify-center gap-1.5 cursor-pointer"
+ startIcon={<Download className="h-3.5 w-3.5" />}
+ className="flex-1 font-black shadow-sm"
  >
- <Download className="h-3.5 w-3.5" />
  Install App
- </button>
+ </HeroButton>
  </div>
  )}
  </motion.div>

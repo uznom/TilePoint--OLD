@@ -1,9 +1,10 @@
 /**
- * SQLite Database Service Module
+ * MySQL Database Service Module
  *
- * Provides a high-performance service interface to the 'better-sqlite3' persistent
- * SQLite database engine running on the TilePoint server backend.
- * Replaces direct reliance on fragile browser-only localStorage for core ERP operations.
+ * Provides a high-performance, resilient client interface to the MySQL database engine
+ * running on the TilePoint server backend.
+ * Handles high-frequency real-time stock lookups, atomic POS transactions, audit trails,
+ * and stock transfers directly via MySQL endpoints.
  */
 
 export interface BranchStockRecord {
@@ -11,6 +12,8 @@ export interface BranchStockRecord {
   productName: string;
   productCode: string;
   sku?: string;
+  product_sku?: string;
+  category_id?: string;
   barcode?: string;
   category?: string;
   brand?: string;
@@ -74,20 +77,24 @@ export interface AuditTrailPayload {
   createdAt?: string;
 }
 
-export interface SqliteStatusResponse {
+export interface MysqlStatusResponse {
   success: boolean;
   engine: string;
-  dbPath: string;
-  sizeBytes: number;
-  sizeFormatted: string;
+  active: boolean;
+  host: string;
+  database: string;
   totalTables: number;
   totalRecords: number;
   tableCounts: Record<string, number>;
-  journalMode: string;
+  poolStatus?: {
+    connectionLimit: number;
+    activeConnections?: number;
+    idleConnections?: number;
+  };
   error?: string;
 }
 
-class SqliteDatabaseService {
+class MysqlDatabaseService {
   private activeBranchId: string = 'B1';
   private stockCache: Map<string, { data: BranchStockRecord[]; count: number; timestamp: number }> = new Map();
   private readonly CACHE_TTL_MS = 5000; // 5s short-term cache for rapid UI stock checks
@@ -117,17 +124,39 @@ class SqliteDatabaseService {
     this.stockCache.clear();
   }
 
+  private getHeaders(contentType?: string): Record<string, string> {
+    const headers: Record<string, string> = {};
+    if (contentType) {
+      headers['Content-Type'] = contentType;
+    }
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('tp_session_token') || sessionStorage.getItem('tp_session_token');
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        headers['X-Session-Token'] = token;
+      }
+      const clientId = localStorage.getItem('tp_active_session_id') || sessionStorage.getItem('tp_active_session_id');
+      if (clientId) {
+        headers['X-Client-ID'] = clientId;
+      }
+    }
+    return headers;
+  }
+
   /**
-   * Fetches real-time branch stock levels with indexed database lookups and high-frequency caching.
+   * Fetches real-time branch stock levels with indexed MySQL database lookups.
+   * Leverages explicit indexes on (product_sku, category_id, sku, category, branchId).
    */
   public async fetchBranchStocks(
     branchId?: string,
     options: {
       productId?: string;
       sku?: string;
+      product_sku?: string;
       barcode?: string;
       search?: string;
       category?: string;
+      category_id?: string;
       limit?: number;
       offset?: number;
       bypassCache?: boolean;
@@ -135,7 +164,9 @@ class SqliteDatabaseService {
   ): Promise<{ success: boolean; count: number; data: BranchStockRecord[]; error?: string }> {
     try {
       const targetBranch = branchId || this.activeBranchId;
-      const cacheKey = `${targetBranch}:${options.productId || ''}:${options.sku || ''}:${options.barcode || ''}:${options.category || ''}:${options.search || ''}:${options.limit || 200}:${options.offset || 0}`;
+      const targetSku = options.product_sku || options.sku || '';
+      const targetCat = options.category_id || options.category || '';
+      const cacheKey = `${targetBranch}:${options.productId || ''}:${targetSku}:${options.barcode || ''}:${targetCat}:${options.search || ''}:${options.limit || 200}:${options.offset || 0}`;
 
       if (!options.bypassCache) {
         const cached = this.stockCache.get(cacheKey);
@@ -147,14 +178,18 @@ class SqliteDatabaseService {
       const params = new URLSearchParams();
       params.set('branchId', targetBranch);
       if (options.productId) params.set('productId', options.productId);
+      if (options.product_sku) params.set('product_sku', options.product_sku);
       if (options.sku) params.set('sku', options.sku);
       if (options.barcode) params.set('barcode', options.barcode);
       if (options.search) params.set('search', options.search);
+      if (options.category_id) params.set('category_id', options.category_id);
       if (options.category) params.set('category', options.category);
       if (options.limit) params.set('limit', options.limit.toString());
       if (options.offset) params.set('offset', options.offset.toString());
 
-      const res = await fetch(`/api/sqlite/branch-stock?${params.toString()}`);
+      const res = await fetch(`/api/db/branch-stock?${params.toString()}`, {
+        headers: this.getHeaders()
+      });
       if (!res.ok) {
         throw new Error(`HTTP error ${res.status}`);
       }
@@ -164,11 +199,15 @@ class SqliteDatabaseService {
       }
       return json;
     } catch (err: any) {
-      console.warn('[SqliteDatabaseService] fetchBranchStocks failed, falling back to /api/db/inventory/lookup:', err.message);
+      console.warn('[MysqlDatabaseService] fetchBranchStocks failed, falling back to /api/db/inventory/lookup:', err.message);
       try {
         const fallbackParams = new URLSearchParams({ branchId: branchId || this.activeBranchId });
         if (options.search) fallbackParams.set('search', options.search);
-        const fbRes = await fetch(`/api/db/inventory/lookup?${fallbackParams.toString()}`);
+        if (options.sku || options.product_sku) fallbackParams.set('sku', (options.product_sku || options.sku)!);
+        if (options.category || options.category_id) fallbackParams.set('category', (options.category_id || options.category)!);
+        const fbRes = await fetch(`/api/db/inventory/lookup?${fallbackParams.toString()}`, {
+          headers: this.getHeaders()
+        });
         const fbJson = await fbRes.json();
         return { success: fbJson.success || false, count: fbJson.data?.length || 0, data: fbJson.data || [] };
       } catch (fbErr: any) {
@@ -178,7 +217,45 @@ class SqliteDatabaseService {
   }
 
   /**
-   * Fast targeted product stock retrieval by Product ID using SQLite indexes.
+   * Directly queries the inventory table leveraging explicit product_sku and category_id indexes.
+   * Ideal for large data operations, bulk imports, and catalog searches.
+   */
+  public async fetchInventoryBySkuOrCategory(options: {
+    product_sku?: string;
+    category_id?: string;
+    sku?: string;
+    category?: string;
+    branchId?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ success: boolean; count: number; data: BranchStockRecord[]; error?: string }> {
+    try {
+      const params = new URLSearchParams();
+      if (options.product_sku) params.set('product_sku', options.product_sku);
+      if (options.sku) params.set('sku', options.sku);
+      if (options.category_id) params.set('category_id', options.category_id);
+      if (options.category) params.set('category', options.category);
+      if (options.branchId) params.set('branchId', options.branchId);
+      if (options.search) params.set('search', options.search);
+      if (options.limit) params.set('limit', options.limit.toString());
+      if (options.offset) params.set('offset', options.offset.toString());
+
+      const res = await fetch(`/api/db/inventory?${params.toString()}`, {
+        headers: this.getHeaders()
+      });
+      if (!res.ok) {
+        throw new Error(`HTTP error ${res.status}`);
+      }
+      return await res.json();
+    } catch (err: any) {
+      console.warn('[MysqlDatabaseService] fetchInventoryBySkuOrCategory fallback to branch-stock:', err.message);
+      return this.fetchBranchStocks(options.branchId, options);
+    }
+  }
+
+  /**
+   * Fast targeted product stock retrieval by Product ID using MySQL indexes.
    */
   public async fetchSingleProductStock(
     productId: string,
@@ -192,16 +269,16 @@ class SqliteDatabaseService {
   }
 
   /**
-   * Saves a POS sale transaction atomically into better-sqlite3.
-   * Updates inventory levels and logs audit movements in a single transaction, then invalidates stock cache.
+   * Saves a POS sale transaction atomically into MySQL.
+   * Updates inventory levels and logs audit movements in MySQL transactions, then invalidates stock cache.
    */
   public async saveSaleLog(
     salePayload: SaleRecordPayload
   ): Promise<{ success: boolean; id?: string; message?: string; error?: string }> {
     try {
-      const res = await fetch('/api/sqlite/sales', {
+      const res = await fetch('/api/db/sales', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: this.getHeaders('application/json'),
         body: JSON.stringify(salePayload)
       });
 
@@ -214,13 +291,13 @@ class SqliteDatabaseService {
       const json = await res.json();
       return json;
     } catch (err: any) {
-      console.error('[SqliteDatabaseService] saveSaleLog failed:', err.message);
+      console.error('[MysqlDatabaseService] saveSaleLog failed:', err.message);
       return { success: false, error: err.message };
     }
   }
 
   /**
-   * Records an audit trail log entry into the better-sqlite3 engine.
+   * Records an audit trail log entry into MySQL.
    */
   public async logAuditTrail(
     audit: AuditTrailPayload
@@ -232,9 +309,9 @@ class SqliteDatabaseService {
         createdAt: audit.createdAt || new Date().toISOString()
       };
 
-      const res = await fetch('/api/sqlite/audit-trails', {
+      const res = await fetch('/api/db/audit-trails', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: this.getHeaders('application/json'),
         body: JSON.stringify(payload)
       });
 
@@ -244,13 +321,13 @@ class SqliteDatabaseService {
 
       return await res.json();
     } catch (err: any) {
-      console.error('[SqliteDatabaseService] logAuditTrail failed:', err.message);
+      console.error('[MysqlDatabaseService] logAuditTrail failed:', err.message);
       return { success: false, error: err.message };
     }
   }
 
   /**
-   * Retrieves audit trails and inventory movements from better-sqlite3 using indexed filtering.
+   * Retrieves audit trails and inventory movements from MySQL using indexed filtering.
    */
   public async getAuditTrails(
     filters: {
@@ -275,7 +352,9 @@ class SqliteDatabaseService {
       if (filters.entityType) params.set('entityType', filters.entityType);
       if (filters.limit) params.set('limit', filters.limit.toString());
 
-      const res = await fetch(`/api/sqlite/audit-trails?${params.toString()}`);
+      const res = await fetch(`/api/db/audit-trails?${params.toString()}`, {
+        headers: this.getHeaders()
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.json();
     } catch (err: any) {
@@ -284,7 +363,7 @@ class SqliteDatabaseService {
   }
 
   /**
-   * Retrieves stock transfers from better-sqlite3 using indexed branchId and timestamp filtering.
+   * Retrieves stock transfers from MySQL using indexed branchId and timestamp filtering.
    */
   public async getStockTransfers(
     filters: {
@@ -307,7 +386,9 @@ class SqliteDatabaseService {
       if (filters.endDate) params.set('endDate', filters.endDate);
       if (filters.limit) params.set('limit', filters.limit.toString());
 
-      const res = await fetch(`/api/sqlite/stock-transfers?${params.toString()}`);
+      const res = await fetch(`/api/db/stock-transfers?${params.toString()}`, {
+        headers: this.getHeaders()
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.json();
     } catch (err: any) {
@@ -316,15 +397,15 @@ class SqliteDatabaseService {
   }
 
   /**
-   * Saves or updates a stock transfer record atomically into better-sqlite3.
+   * Saves or updates a stock transfer record atomically into MySQL.
    */
   public async saveStockTransfer(
     transferPayload: Record<string, any>
   ): Promise<{ success: boolean; id?: string; message?: string; error?: string }> {
     try {
-      const res = await fetch('/api/sqlite/stock-transfers', {
+      const res = await fetch('/api/db/stock-transfers', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: this.getHeaders('application/json'),
         body: JSON.stringify(transferPayload)
       });
       if (!res.ok) {
@@ -333,35 +414,85 @@ class SqliteDatabaseService {
       }
       return await res.json();
     } catch (err: any) {
-      console.error('[SqliteDatabaseService] saveStockTransfer failed:', err.message);
+      console.error('[MysqlDatabaseService] saveStockTransfer failed:', err.message);
       return { success: false, error: err.message };
     }
   }
 
   /**
-   * Retrieves current better-sqlite3 database health metrics, WAL status, index count, and storage size.
+   * Flushes offline outbox mutations to the backend inside a single atomic ACID batch transaction.
    */
-  public async getDatabaseStatus(): Promise<SqliteStatusResponse> {
+  public async syncOfflineBatchMutations(options: {
+    mutations: Array<{
+      id: string;
+      type: string;
+      payload: any;
+      timestamp?: string;
+    }>;
+    terminalId?: string;
+    branchId?: string;
+  }): Promise<{
+    success: boolean;
+    total: number;
+    processed: number;
+    skipped: number;
+    failed: number;
+    hash?: string;
+    error?: string;
+  }> {
     try {
-      const res = await fetch('/api/db/sqlite-status');
+      const res = await fetch('/api/db/sync-batch', {
+        method: 'POST',
+        headers: this.getHeaders('application/json'),
+        body: JSON.stringify({
+          mutations: options.mutations,
+          terminalId: options.terminalId,
+          branchId: options.branchId || this.activeBranchId
+        })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(errData.error || `HTTP ${res.status}`);
+      }
+      return await res.json();
+    } catch (err: any) {
+      console.error('[MysqlDatabaseService] syncOfflineBatchMutations error:', err.message);
+      return {
+        success: false,
+        total: options.mutations.length,
+        processed: 0,
+        skipped: 0,
+        failed: options.mutations.length,
+        error: err.message
+      };
+    }
+  }
+
+  /**
+   * Retrieves current MySQL database health metrics, connection pool status, and table counts.
+   */
+  public async getDatabaseStatus(): Promise<MysqlStatusResponse> {
+    try {
+      const res = await fetch('/api/db/mysql-status', {
+        headers: this.getHeaders()
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.json();
     } catch (err: any) {
       return {
         success: false,
-        engine: 'better-sqlite3',
-        dbPath: '',
-        sizeBytes: 0,
-        sizeFormatted: '0.00 MB',
+        engine: 'MySQL',
+        active: false,
+        host: '127.0.0.1',
+        database: 'tilepoint_db',
         totalTables: 0,
         totalRecords: 0,
         tableCounts: {},
-        journalMode: 'UNKNOWN',
         error: err.message
       };
     }
   }
 }
 
-export const sqliteDatabaseService = new SqliteDatabaseService();
-export default sqliteDatabaseService;
+export const mysqlDatabaseService = new MysqlDatabaseService();
+export default mysqlDatabaseService;

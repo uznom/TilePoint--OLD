@@ -6,8 +6,8 @@ interface SimpleProgressBarProps {
 }
 
 /**
- * Minimalist, clutter-free animated progress bar.
- * Designed without metadata, text, or percentages.
+ * Minimalist, clutter-free animated progress bar below the browser URL/header bar.
+ * Designed with smooth continuous GPU-accelerated motion that never freezes.
  */
 export const SimpleProgressBar: React.FC<SimpleProgressBarProps> = ({
   isLoading = true,
@@ -16,23 +16,14 @@ export const SimpleProgressBar: React.FC<SimpleProgressBarProps> = ({
   if (!isLoading) return null;
 
   return (
-    <div className={`w-full h-1 bg-m3-outline-variant/20 overflow-hidden relative ${className}`}>
-      <div className="h-full bg-gradient-to-r from-m3-primary via-emerald-500 to-m3-primary w-full animate-[shimmer_1.5s_infinite_linear] origin-left" style={{
-        animation: 'progressIndeterminate 1.5s infinite ease-in-out'
-      }} />
-      <style>{`
-        @keyframes progressIndeterminate {
-          0% {
-            transform: translateX(-100%) scaleX(0.2);
-          }
-          50% {
-            transform: translateX(0%) scaleX(0.6);
-          }
-          100% {
-            transform: translateX(100%) scaleX(0.2);
-          }
-        }
-      `}</style>
+    <div
+      role="progressbar"
+      aria-label="System processing"
+      aria-busy="true"
+      className={`w-full h-1 bg-default-100 overflow-hidden relative simple-progress-bar ${className}`}
+    >
+      <div className="simple-progress-indicator h-full w-full bg-gradient-to-r from-primary via-emerald-500 to-primary" />
     </div>
   );
 };
+

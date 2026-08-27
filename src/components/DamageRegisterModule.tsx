@@ -1,32 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { useDb, useDbProducts, useDbBranchStock } from '../context/DbContext';
-import { DamageLog, DamageCategory, DamageActionTaken, UserRole, Product } from '../types/db';
-import { isProductInBranch, getBranchOptionLabel } from '../lib/branchUtils';
-import { motion, AnimatePresence } from 'motion/react';
-import { useResponsivePageSize, TablePagination } from './TablePagination';
-import { ConfirmationModal } from './ConfirmationModal';
 import {
- AlertTriangle,
- Plus,
- Search,
- Trash2,
- Trash,
- Sliders,
- Calendar,
- FileText,
- User,
- ShieldAlert,
- Archive,
- Info,
- DollarSign,
- Layers,
- ArrowDownCircle,
- Truck,
- Store,
- RefreshCcw,
- Check,
- X
+AlertTriangle,
+Archive,
+DollarSign,
+Info,
+Layers,
+Plus,
+Search,
+ShieldAlert,
+Sliders,
+Trash,
+Trash2,
+X
 } from 'lucide-react';
+import { AnimatePresence,motion } from 'motion/react';
+import React,{ useEffect,useState } from 'react';
+import { useDb,useDbBranchStock,useDbProducts } from '../context/DbContext';
+import { getBranchOptionLabel,isProductInBranch } from '../lib/branchUtils';
+import { DamageActionTaken,DamageCategory,UserRole } from '../types/db';
+import { ConfirmationModal } from './ConfirmationModal';
+import { TablePagination,useResponsivePageSize } from './TablePagination';
 
 interface DamageRegisterModuleProps {
  darkMode: boolean;
@@ -41,7 +33,6 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  createDamageLog,
  deleteDamageLog,
  currentUser,
- addAuditLog,
  isRowClearingBlocked,
  getRowClearingBlockedReason,
  } = useDb();
@@ -158,18 +149,17 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  return matchesSearch && matchesCategory && matchesBranch;
  });
 
- // Calculate Aggregates
-  const statsTotalShatteredBoxes = damageLogs
-    .filter(l => !l.isDeleted && l.unitType === 'Box')
+  // Calculate Aggregates dynamically based on filtered logs (respects branch and search filters)
+  const statsTotalShatteredBoxes = filteredLogs
+    .filter(l => l.unitType === 'Box')
     .reduce((sum, curr) => sum + Number(curr.quantity || 0), 0);
 
-  const statsTotalShatteredPieces = damageLogs
-    .filter(l => !l.isDeleted && l.unitType === 'Piece')
+  const statsTotalShatteredPieces = filteredLogs
+    .filter(l => l.unitType === 'Piece')
     .reduce((sum, curr) => sum + Number(curr.quantity || 0), 0);
 
   // Financial impact calculation (estimate)
-  const statsFinancialImpact = damageLogs
-    .filter(l => !l.isDeleted)
+  const statsFinancialImpact = filteredLogs
     .reduce((sum, curr) => {
       const prod = products.find(p => p.id === curr.productId);
       if (!prod) return sum;
@@ -179,24 +169,23 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
     }, 0);
 
   // Count by Category
-  const categorySummaryCount = damageLogs
-    .filter(l => !l.isDeleted)
+  const categorySummaryCount = filteredLogs
     .reduce((acc, curr) => {
       acc[curr.category] = (acc[curr.category] || 0) + Number(curr.quantity || 0);
       return acc;
     }, {} as Record<DamageCategory, number>);
 
  return (
- <div className="space-y-6 max-w-7xl mx-auto p-2" id="tilepoint-damage-logs-panel">
+ <div className="space-y-6 w-full animate-fade-in text-foreground p-2" id="tilepoint-damage-logs-panel">
  
  {/* Dynamic Upper Header Card */}
- <div className="relative rounded-3xl overflow-hidden bg-m3-surface-container-high border border-m3-outline-variant/30 px-6 py-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
+ <div className="relative rounded-2xl overflow-hidden bg-content3 border border-divider/30 px-6 py-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
  <div className="absolute top-0 right-0 p-12 bg-rose-500/5 rounded-full blur-2xl pointer-events-none" />
  <div className="space-y-1 relative z-10">
  <div className="inline-flex items-center gap-1 text-[10px] uppercase font-black tracking-wider text-rose-500 bg-rose-500/10 px-2.5 py-1 rounded-full border border-rose-500/20">
  <AlertTriangle className="h-3 w-3" /> Materials Breakage Registry
  </div>
- <h2 className="text-xl md:text-2xl font-black text-m3-on-surface uppercase tracking-tight">Broken & BOA Damage Register</h2>
+ <h2 className="text-xl md:text-2xl font-black text-foreground uppercase tracking-tight">Broken & BOA Damage Register</h2>
  </div>
  <div className="flex relative z-10 shrink-0">
  <button
@@ -220,46 +209,46 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
  
  {/* Total Shattered Boxes */}
- <div className="bg-m3-surface-container-low border border-m3-outline-variant/20 p-5 rounded-2xl flex items-center gap-4">
+ <div className="bg-content1 border border-divider/20 p-5 rounded-2xl flex items-center gap-4">
  <div className="p-3.5 bg-rose-500/10 text-rose-500 rounded-xl">
  <Layers className="h-6 w-6" />
  </div>
  <div>
- <span className="block text-[10px] text-m3-on-surface-variant uppercase font-bold tracking-wider">Shattered Cartons (Boxes)</span>
- <span className="text-2xl font-black font-mono text-m3-on-surface">{statsTotalShatteredBoxes} <span className="text-[10px] font-sans text-rose-500">boxes</span></span>
+ <span className="block text-[10px] text-default-500 uppercase font-bold tracking-wider">Shattered Cartons (Boxes)</span>
+ <span className="text-2xl font-black text-foreground">{statsTotalShatteredBoxes} <span className="text-[10px] font-sans text-rose-500">boxes</span></span>
  </div>
  </div>
 
  {/* Total Shattered Pieces */}
- <div className="bg-m3-surface-container-low border border-m3-outline-variant/20 p-5 rounded-2xl flex items-center gap-4">
+ <div className="bg-content1 border border-divider/20 p-5 rounded-2xl flex items-center gap-4">
  <div className="p-3.5 bg-amber-500/10 text-amber-500 rounded-xl">
  <Trash className="h-6 w-6" />
  </div>
  <div>
- <span className="block text-[10px] text-m3-on-surface-variant uppercase font-bold tracking-wider">Broken Local Pieces</span>
- <span className="text-2xl font-black font-mono text-m3-on-surface">{statsTotalShatteredPieces} <span className="text-[10px] font-sans text-amber-500">pcs</span></span>
+ <span className="block text-[10px] text-default-500 uppercase font-bold tracking-wider">Broken Local Pieces</span>
+ <span className="text-2xl font-black text-foreground">{statsTotalShatteredPieces} <span className="text-[10px] font-sans text-amber-500">pcs</span></span>
  </div>
  </div>
 
  {/* Estimated Cost of Damages */}
- <div className="bg-m3-surface-container-low border border-m3-outline-variant/20 p-5 rounded-2xl flex items-center gap-4">
+ <div className="bg-content1 border border-divider/20 p-5 rounded-2xl flex items-center gap-4">
  <div className="p-3.5 bg-emerald-500/10 text-emerald-500 rounded-xl">
  <DollarSign className="h-6 w-6" />
  </div>
  <div>
- <span className="block text-[10px] text-m3-on-surface-variant uppercase font-bold tracking-wider">Estimated Total Loss</span>
- <span className="text-2xl font-black font-mono text-emerald-500">₱{statsFinancialImpact.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+ <span className="block text-[10px] text-default-500 uppercase font-bold tracking-wider">Estimated Total Loss</span>
+ <span className="text-2xl font-black text-emerald-500">₱{statsFinancialImpact.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
  </div>
  </div>
 
  {/* Total Incurred Incidents */}
- <div className="bg-m3-surface-container-low border border-m3-outline-variant/20 p-5 rounded-2xl flex items-center gap-4">
- <div className="p-3.5 bg-zinc-500/10 text-m3-on-surface rounded-xl">
+ <div className="bg-content1 border border-divider/20 p-5 rounded-2xl flex items-center gap-4">
+ <div className="p-3.5 bg-zinc-500/10 text-foreground rounded-xl">
  <ShieldAlert className="h-6 w-6" />
  </div>
  <div>
- <span className="block text-[10px] text-m3-on-surface-variant uppercase font-bold tracking-wider">Incident Log Counter</span>
- <span className="text-2xl font-black font-mono text-m3-on-surface">{damageLogs.length} <span className="text-[10px] font-sans text-zinc-400">records</span></span>
+ <span className="block text-[10px] text-default-500 uppercase font-bold tracking-wider">Incident Log Counter</span>
+ <span className="text-2xl font-black text-foreground">{filteredLogs.length} <span className="text-[10px] font-sans text-zinc-400">records</span></span>
  </div>
  </div>
 
@@ -272,38 +261,38 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  initial={{ opacity: 0, y: -20 }}
  animate={{ opacity: 1, y: 0 }}
  exit={{ opacity: 0, y: -20 }}
- className="bg-m3-surface-container-high border border-rose-500/20 rounded-2xl p-6 shadow-xl relative"
+ className="bg-content3 border border-rose-500/20 rounded-2xl p-6 shadow-xl relative"
  >
  <div className="absolute top-4 right-4">
  <button 
  onClick={() => setShowAddForm(false)}
- className="p-1 px-2.5 rounded-lg border border-m3-outline-variant/30 hover:bg-m3-surface-container-highest transition text-xs font-bold uppercase tracking-wider"
+ className="p-1 px-2.5 rounded-lg border border-divider/30 hover:bg-content4 transition text-xs font-bold uppercase tracking-wider"
  >
  Close
  </button>
  </div>
 
- <div className="border-b border-m3-outline-variant/30 pb-3 mb-5 flex items-center gap-2">
+ <div className="border-b border-divider/30 pb-3 mb-5 flex items-center gap-2">
  <AlertTriangle className="h-5 w-5 text-rose-500" />
  <div>
- <h3 className="text-sm font-black uppercase text-m3-on-surface">Log Material Damage/Breakage</h3>
+ <h3 className="text-sm font-black uppercase text-foreground">Log Material Damage/Breakage</h3>
  </div>
  </div>
 
  <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
  
  {/* Left Column: Product Selection Search deck */}
- <div className="space-y-3 bg-m3-surface-container-lowest p-4 rounded-xl border border-m3-outline-variant/20">
+ <div className="space-y-3 bg-content1 p-4 rounded-xl border border-divider/20">
  <label className="block text-[10px] uppercase font-black text-rose-500 tracking-wider">1. Search & Choose Product SKU</label>
  
  <div className="relative">
- <Search className="absolute left-3 top-2.5 h-4 w-4 text-m3-on-surface-variant" />
+ <Search className="absolute left-3 top-2.5 h-4 w-4 text-default-500" />
  <input
  type="text"
  placeholder="Type name, brand, or SKU..."
  value={productSearch ?? ''}
  onChange={(e) => setProductSearch(e.target.value)}
- className="w-full pl-9 pr-4 py-2 text-xs font-medium rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none focus:ring-1 focus:ring-rose-500"
+ className="w-full pl-9 pr-4 py-2 text-xs font-medium rounded-lg border border-default-200/40 bg-background focus:outline-none focus:ring-1 focus:ring-rose-500"
  />
  </div>
 
@@ -321,15 +310,15 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  className={`w-full p-2.5 rounded-lg border text-left flex items-center justify-between transition-all ${
  isSelected 
  ? 'border-rose-600 bg-rose-500/10 text-rose-500' 
- : 'border-m3-outline-variant/20 bg-m3-surface hover:bg-m3-surface-container'
+ : 'border-divider/20 bg-background hover:bg-content2'
  }`}
  >
  <div>
  <div className="text-[11px] font-bold truncate max-w-[170px]">{p.productName}</div>
- <div className="text-[9px] font-mono text-zinc-500 mt-0.5">{p.sku} | {p.size}</div>
+ <div className="text-[9px] text-zinc-500 mt-0.5">{p.sku} | {p.size}</div>
  </div>
  <div className="text-right">
- <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-md ${p.stockQuantity <= p.minimumStock ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+ <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${p.stockQuantity <= p.minimumStock ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
  {p.stockQuantity} box
  </span>
  </div>
@@ -346,15 +335,15 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <span className="font-bold text-zinc-800 dark:text-zinc-200 block">Selected Product Meta Details:</span>
  <div className="flex justify-between mt-1 text-zinc-600 dark:text-zinc-400">
  <span>Dimensions size:</span>
- <span className="font-mono">{selectedProductMeta.size}</span>
+ <span className="">{selectedProductMeta.size}</span>
  </div>
  <div className="flex justify-between text-zinc-600 dark:text-zinc-400">
  <span>Tiles per Box:</span>
- <span className="font-mono">{selectedProductMeta.boxQuantity} pieces</span>
+ <span className="">{selectedProductMeta.boxQuantity} pieces</span>
  </div>
  <div className="flex justify-between text-zinc-600 dark:text-zinc-400">
  <span>Product Category:</span>
- <span className="font-mono">{selectedProductMeta.category}</span>
+ <span className="">{selectedProductMeta.category}</span>
  </div>
  </div>
  )}
@@ -369,7 +358,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
   <select
   value={selectedBranchId ?? ''}
   onChange={(e) => setSelectedBranchId(e.target.value)}
-  className="w-full p-2.5 text-xs font-semibold rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none focus:ring-1 focus:ring-rose-500"
+  className="w-full p-2.5 text-xs font-semibold rounded-lg border border-default-200/40 bg-background focus:outline-none focus:ring-1 focus:ring-rose-500"
   >
   <option value="">-- Choose Showroom Branch --</option>
   {branches.map(b => (
@@ -377,7 +366,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
   ))}
   </select>
   ) : (
-  <div className="w-full p-2.5 text-xs font-black font-mono bg-m3-surface border border-m3-outline-variant/20 text-m3-on-surface rounded-lg">
+ <div className="w-full p-2.5 text-xs font-black bg-background border border-divider/20 text-foreground rounded-lg">
   {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
   </div>
   )}
@@ -391,19 +380,19 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  min={1}
  value={quantity ?? ''}
  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 0))}
- className="w-full p-2.5 text-xs font-black font-mono rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none focus:ring-1 focus:ring-rose-500"
+ className="w-full p-2.5 text-xs font-black rounded-lg border border-default-200/40 bg-background focus:outline-none focus:ring-1 focus:ring-rose-500"
  />
  </div>
  <div>
  <label className="block text-[10px] uppercase font-black text-zinc-400 tracking-wider mb-1.5">Unit Standard</label>
- <div className="flex rounded-lg border border-m3-outline/40 overflow-hidden bg-m3-surface h-[38px] items-center p-0.5">
+ <div className="flex rounded-lg border border-default-200/40 overflow-hidden bg-background h-[38px] items-center p-0.5">
  <button
  type="button"
  onClick={() => setUnitType('Box')}
  className={`flex-1 h-full rounded text-[10px] uppercase font-black tracking-wider transition-all ${
  unitType === 'Box' 
  ? 'bg-rose-600 text-white shadow-xs' 
- : 'hover:bg-m3-surface-container text-zinc-500'
+ : 'hover:bg-content2 text-zinc-500'
  }`}
  >
  Carton (Box)
@@ -414,7 +403,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  className={`flex-1 h-full rounded text-[10px] uppercase font-black tracking-wider transition-all ${
  unitType === 'Piece' 
  ? 'bg-rose-600 text-white shadow-xs' 
- : 'hover:bg-m3-surface-container text-zinc-500'
+ : 'hover:bg-content2 text-zinc-500'
  }`}
  >
  Piece (Tile)
@@ -428,7 +417,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <select
  value={category ?? ''}
  onChange={(e) => setCategory(e.target.value as DamageCategory)}
- className="w-full p-2.5 text-xs font-semibold rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none focus:ring-1 focus:ring-rose-500"
+ className="w-full p-2.5 text-xs font-semibold rounded-lg border border-default-200/40 bg-background focus:outline-none focus:ring-1 focus:ring-rose-500"
  >
  <option value="Warehouse Breakage">Warehouse Drop / Forklift Clash</option>
  <option value="BOA">BOA (Broken On Arrival from Supplier)</option>
@@ -448,7 +437,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <select
  value={actionTaken ?? ''}
  onChange={(e) => setActionTaken(e.target.value as DamageActionTaken)}
- className="w-full p-2.5 text-xs font-semibold rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none focus:ring-1 focus:ring-rose-500"
+ className="w-full p-2.5 text-xs font-semibold rounded-lg border border-default-200/40 bg-background focus:outline-none focus:ring-1 focus:ring-rose-500"
  >
  <option value="Disposed / Scrapped">Shattered - Disposed & Scrapped</option>
  <option value="Saved for Mosaic">Saved for Low-Cost Mosaic Sales</option>
@@ -464,7 +453,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  value={notes ?? ''}
  onChange={(e) => setNotes(e.target.value)}
  rows={3}
- className="w-full p-2.5 text-xs font-medium rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none focus:ring-1 focus:ring-rose-500 placeholder:text-zinc-500"
+ className="w-full p-2.5 text-xs font-medium rounded-lg border border-default-200/40 bg-background focus:outline-none focus:ring-1 focus:ring-rose-500 placeholder:text-zinc-500"
  />
  </div>
  </div>
@@ -489,10 +478,10 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
  
  {/* Left Side: Filter Panels */}
- <div className="space-y-4 bg-m3-surface-container-low border border-m3-outline-variant/20 p-5 rounded-2xl h-fit">
- <div className="flex items-center gap-2 border-b border-m3-outline-variant/30 pb-2 mb-3">
- <Sliders className="h-4 w-4 text-m3-primary" />
- <h3 className="text-xs font-black uppercase text-m3-on-surface">Audit Filter Panel</h3>
+ <div className="space-y-4 bg-content1 border border-divider/20 p-5 rounded-2xl h-fit">
+ <div className="flex items-center gap-2 border-b border-divider/30 pb-2 mb-3">
+ <Sliders className="h-4 w-4 text-primary" />
+ <h3 className="text-xs font-black uppercase text-foreground">Audit Filter Panel</h3>
  </div>
 
  {/* Text Filter */}
@@ -505,7 +494,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  placeholder="Product, SKU, notes..."
  value={searchTerm ?? ''}
  onChange={(e) => setSearchTerm(e.target.value)}
- className="w-full pl-8 pr-3 py-1.5 text-xs font-medium rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none focus:ring-1 focus:ring-rose-500"
+ className="w-full pl-8 pr-3 py-1.5 text-xs font-medium rounded-lg border border-default-200/40 bg-background focus:outline-none focus:ring-1 focus:ring-rose-500"
  />
  </div>
  </div>
@@ -516,7 +505,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <select
  value={categoryFilter ?? ''}
  onChange={(e) => setCategoryFilter(e.target.value)}
- className="w-full p-2 text-xs font-semibold rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none"
+ className="w-full p-2 text-xs font-semibold rounded-lg border border-default-200/40 bg-background focus:outline-none"
  >
  <option value="All">All Breakage Causes</option>
  <option value="Warehouse Breakage">Warehouse Drop / Forklift</option>
@@ -533,7 +522,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
   <select
   value={branchFilter ?? ''}
   onChange={(e) => setBranchFilter(e.target.value)}
-  className="w-full p-2 text-xs font-semibold rounded-lg border border-m3-outline/40 bg-m3-surface focus:outline-none"
+  className="w-full p-2 text-xs font-semibold rounded-lg border border-default-200/40 bg-background focus:outline-none"
   >
   <option value="All">All Branches</option>
   {branches.map(b => (
@@ -541,31 +530,31 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
   ))}
   </select>
   ) : (
-  <div className="w-full p-2 text-xs font-semibold rounded-lg border border-m3-outline-variant/30 bg-m3-surface/60 text-m3-on-surface font-mono">
+ <div className="w-full p-2 text-xs font-semibold rounded-lg border border-divider/30 bg-background/60 text-foreground ">
   {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
   </div>
   )}
  </div>
 
  {/* Category Quick stats bar */}
- <div className="border-t border-m3-outline-variant/30 pt-4 mt-2">
+ <div className="border-t border-divider/30 pt-4 mt-2">
  <span className="text-[9px] uppercase font-black text-zinc-400 tracking-wider block mb-2">Category Breakdowns</span>
  <div className="space-y-2 text-xs">
  <div className="flex justify-between items-center bg-rose-500/5 p-1.5 rounded-lg text-rose-500">
  <span className="font-extrabold text-[9px] uppercase tracking-wider">Broken on Arrival</span>
- <span className="font-mono font-black">{categorySummaryCount['BOA'] || 0} units</span>
+ <span className=" font-black">{categorySummaryCount['BOA'] || 0} units</span>
  </div>
  <div className="flex justify-between items-center bg-amber-500/5 p-1.5 rounded-lg text-amber-500">
  <span className="font-extrabold text-[9px] uppercase tracking-wider">Warehouse Drop</span>
- <span className="font-mono font-black">{categorySummaryCount['Warehouse Breakage'] || 0} units</span>
+ <span className=" font-black">{categorySummaryCount['Warehouse Breakage'] || 0} units</span>
  </div>
- <div className="flex justify-between items-center bg-m3-primary/5 p-1.5 rounded-lg text-m3-primary">
+ <div className="flex justify-between items-center bg-primary/5 p-1.5 rounded-lg text-primary">
  <span className="font-extrabold text-[9px] uppercase tracking-wider">Delivery Transit</span>
- <span className="font-mono font-black">{categorySummaryCount['Delivery Transit'] || 0} units</span>
+ <span className=" font-black">{categorySummaryCount['Delivery Transit'] || 0} units</span>
  </div>
  <div className="flex justify-between items-center bg-purple-500/5 p-1.5 rounded-lg text-purple-600">
  <span className="font-extrabold text-[9px] uppercase tracking-wider">Showroom Casualty</span>
- <span className="font-mono font-black">{categorySummaryCount['Showroom Casualty'] || 0} units</span>
+ <span className=" font-black">{categorySummaryCount['Showroom Casualty'] || 0} units</span>
  </div>
  </div>
  </div>
@@ -573,40 +562,40 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
 
  {/* Right Side: Chronological Incidents Table */}
  <div className="lg:col-span-3 space-y-4">
- <div className="bg-m3-surface-container-low border border-m3-outline-variant/20 rounded-2xl overflow-hidden shadow-sm">
- <div className="bg-m3-surface-container px-5 py-4 border-b border-m3-outline-variant/30 flex items-center justify-between">
+ <div className="bg-content1 border border-divider/20 rounded-2xl overflow-hidden shadow-sm">
+ <div className="bg-content2 px-5 py-4 border-b border-divider/30 flex items-center justify-between">
  <div>
- <h3 className="text-xs font-black uppercase text-m3-on-surface">Audit Logs & Breakage Journal</h3>
+ <h3 className="text-xs font-black uppercase text-foreground">Audit Logs & Breakage Journal</h3>
  <p className="text-[10px] text-zinc-400">Total matched index: {filteredLogs.length} incident entries.</p>
  </div>
  
  <div className="flex items-center gap-1">
- <span className="text-[10px] uppercase font-black text-zinc-400 bg-m3-surface px-2 py-1 rounded border border-m3-outline-variant/40">Chronological</span>
+ <span className="text-[10px] uppercase font-black text-zinc-400 bg-background px-2 py-1 rounded border border-divider/40">Chronological</span>
  </div>
  </div>
 
  <div className="overflow-x-auto">
- <table className="w-full border-collapse text-left">
+ <table className="w-full border-collapse text-left min-w-[760px]">
  <thead>
- <tr className="bg-m3-surface-container border-b border-m3-outline-variant/20">
- <th className="py-2.5 px-4 text-[10px] font-black uppercase text-zinc-400 tracking-wider">Incident ID</th>
- <th className="py-2.5 px-4 text-[10px] font-black uppercase text-zinc-400 tracking-wider">Timestamp</th>
- <th className="py-2.5 px-4 text-[10px] font-black uppercase text-zinc-400 tracking-wider">Product SKU / Code</th>
- <th className="py-2.5 px-4 text-[10px] font-black uppercase text-zinc-400 tracking-wider">Showroom Branch</th>
- <th className="py-2.5 px-4 text-[10px] font-black uppercase text-zinc-400 tracking-wider text-right">Quantity</th>
- <th className="py-2.5 px-4 text-[10px] font-black uppercase text-zinc-400 tracking-wider">Breakage Reason</th>
- <th className="py-2.5 px-4 text-[10px] font-black uppercase text-zinc-400 tracking-wider">Action / Treatment</th>
- <th className="py-2.5 px-4 text-[10px] font-black uppercase text-zinc-400 tracking-wider text-center">Actions</th>
+ <tr className="bg-content2 border-b border-divider/20">
+ <th className="py-3 px-4 text-[10px] font-black uppercase text-zinc-400 tracking-wider">Incident ID</th>
+ <th className="py-3 px-4 text-[10px] font-black uppercase text-zinc-400 tracking-wider">Timestamp</th>
+ <th className="py-3 px-4 text-[10px] font-black uppercase text-zinc-400 tracking-wider">Product SKU / Code</th>
+ <th className="py-3 px-4 text-[10px] font-black uppercase text-zinc-400 tracking-wider">Showroom Branch</th>
+ <th className="py-3 px-4 text-[10px] font-black uppercase text-zinc-400 tracking-wider text-right">Quantity</th>
+ <th className="py-3 px-4 text-[10px] font-black uppercase text-zinc-400 tracking-wider">Breakage Reason</th>
+ <th className="py-3 px-4 text-[10px] font-black uppercase text-zinc-400 tracking-wider">Action / Treatment</th>
+ <th className="py-3 px-4 text-[10px] font-black uppercase text-zinc-400 tracking-wider text-center">Actions</th>
  </tr>
  </thead>
- <tbody className="divide-y divide-m3-outline-variant/20">
+ <tbody className="divide-y divide-divider/20">
  {filteredLogs
  .slice((damagePage - 1) * damagePageSize, damagePage * damagePageSize)
  .map(log => {
  let catColorAndLabel = 'bg-zinc-500/10 text-zinc-500 border-zinc-500/20';
  if (log.category === 'BOA') catColorAndLabel = 'bg-rose-500/10 text-rose-500 border-rose-500/20';
  if (log.category === 'Warehouse Breakage') catColorAndLabel = 'bg-amber-500/10 text-amber-500 border-amber-500/20';
- if (log.category === 'Delivery Transit') catColorAndLabel = 'bg-m3-primary/10 text-m3-primary border-m3-primary/20';
+ if (log.category === 'Delivery Transit') catColorAndLabel = 'bg-primary/10 text-primary border-primary/20';
  if (log.category === 'Showroom Casualty') catColorAndLabel = 'bg-purple-500/10 text-purple-600 border-purple-500/20';
 
  let actionLabelColor = 'text-zinc-650 bg-zinc-200/40';
@@ -615,36 +604,36 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  if (log.actionTaken === 'Claimed from Supplier / Insurance Code') actionLabelColor = 'text-rose-700 bg-rose-100';
 
  return (
- <tr key={log.id} className="hover:bg-m3-surface-container-high transition text-xs font-semibold">
- <td className="py-3 px-4 font-mono font-black text-zinc-400">
+ <tr key={log.id} className="hover:bg-content3 transition text-xs font-semibold">
+ <td className="py-3.5 px-4 font-black text-zinc-400 font-mono text-[11px]">
  {log.id.slice(0, 12)}
  </td>
- <td className="py-3 px-4 text-zinc-500 whitespace-nowrap">
+ <td className="py-3.5 px-4 text-zinc-500 whitespace-nowrap">
  {new Date(log.reportedAt || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour12: true, hour: 'numeric', minute: 'numeric' })}
  </td>
- <td className="py-3 px-4">
- <span className="block font-black text-m3-on-surface truncate max-w-[170px]">{log.productName}</span>
- <span className="text-[9.5px] font-mono text-zinc-500 uppercase block mt-0.5">{log.productSku}</span>
+ <td className="py-3.5 px-4">
+ <span className="block font-black text-foreground max-w-[220px] truncate">{log.productName}</span>
+ <span className="text-[9.5px] text-zinc-500 uppercase block mt-0.5 font-mono">{log.productSku}</span>
  </td>
- <td className="py-3 px-4 whitespace-nowrap text-zinc-700 dark:text-zinc-300">
+ <td className="py-3.5 px-4 whitespace-nowrap text-zinc-700 dark:text-zinc-300">
  {log.branchName}
  </td>
- <td className="py-3 px-4 text-right">
- <span className="font-extrabold font-mono text-rose-500 text-sm">-{Math.abs(Number(log.quantity) || 0)}</span>
+ <td className="py-3.5 px-4 text-right whitespace-nowrap">
+ <span className="font-extrabold text-rose-500 text-sm">-{Math.abs(Number(log.quantity) || 0)}</span>
  <span className="text-[9px] uppercase block tracking-wider font-extrabold text-zinc-400 mt-0.5">{log.unitType}s</span>
  </td>
- <td className="py-3 px-4 whitespace-nowrap">
- <span className={`px-2 py-0.5 text-[9.5px] font-extrabold uppercase border rounded-full ${catColorAndLabel}`}>
+ <td className="py-3.5 px-4 whitespace-nowrap">
+ <span className={`px-2.5 py-1 text-[9.5px] font-extrabold uppercase border rounded-full inline-block ${catColorAndLabel}`}>
  {log.category === 'BOA' ? 'BOA Supplier' : log.category}
  </span>
  </td>
- <td className="py-3 px-4">
- <span className={`px-2 py-0.5 text-[9.5px] font-bold rounded block text-center truncate max-w-[120px] ${actionLabelColor}`}>
+ <td className="py-3.5 px-4 min-w-[140px]">
+ <span className={`px-2 py-0.5 text-[9.5px] font-bold rounded block text-center truncate max-w-[180px] ${actionLabelColor}`}>
  {log.actionTaken}
  </span>
- <span className="text-[9px] text-zinc-500 block truncate max-w-[160px] italic mt-1" title={log.notes}>"{log.notes}"</span>
+ <span className="text-[9px] text-zinc-500 block truncate max-w-[200px] italic mt-1" title={log.notes}>"{log.notes}"</span>
  </td>
- <td className="py-3 px-4 text-center">
+ <td className="py-3.5 px-4 text-center">
  <button
  onClick={() => {
  if (isRowClearingBlocked()) {
@@ -653,7 +642,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  }
  setConfirmTargetId(log.id);
  }}
- className="p-1 hover:bg-red-500/10 text-red-500 rounded transition border-0 cursor-pointer bg-transparent disabled:opacity-40"
+ className="p-1.5 hover:bg-red-500/10 text-red-500 rounded-lg transition border-0 cursor-pointer bg-transparent disabled:opacity-40"
  title={isRowClearingBlocked() ? `Deactivated: register is holding ${getRowClearingBlockedReason()}` : "Soft-delete damage log"}
  disabled={isRowClearingBlocked()}
  >
@@ -666,7 +655,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
 
  {filteredLogs.length === 0 && (
  <tr>
- <td colSpan={8} className="text-center py-12 text-zinc-400 italic bg-m3-surface-container-low">
+ <td colSpan={8} className="text-center py-12 text-zinc-400 italic bg-content1">
  <Archive className="h-8 w-8 mx-auto stroke-[1.5] text-zinc-300 mb-2" />
  No breakage incidents or BOA claims are found matching current filters.
  </td>

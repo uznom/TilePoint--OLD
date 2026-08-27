@@ -1,5 +1,6 @@
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
+import { HeroChip } from './ui/HeroChip';
 
 export interface HeaderBarProps {
   id?: string;
@@ -25,45 +26,48 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   children,
   className = '',
 }) => {
-  const badgeClasses = {
-    primary: 'bg-m3-primary/10 text-m3-primary border-m3-primary/30',
-    secondary: 'bg-m3-secondary/10 text-m3-secondary border-m3-secondary/30',
-    accent: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
-    outline: 'border-m3-outline text-m3-on-surface-variant',
+  const getBadgeVariant = () => {
+    switch (badge?.variant) {
+      case 'secondary':
+        return 'secondary';
+      case 'accent':
+        return 'warning';
+      case 'outline':
+        return 'outline';
+      case 'primary':
+      default:
+        return 'primary';
+    }
   };
 
   return (
     <div
       id={id}
-      className={`flex flex-col gap-4 rounded-2xl border border-m3-outline/20 bg-m3-surface-container-high/90 p-5 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between ${className}`}
+      className={`bg-content1 border border-divider/25 flex flex-col gap-4 rounded-2xl p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between transition-all duration-300 ${className}`}
     >
       <div className="flex items-center gap-3.5">
         {Icon && (
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-m3-primary/15 text-m3-primary shadow-inner">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary shadow-inner">
             <Icon className="h-6 w-6" />
           </div>
         )}
         <div className="space-y-0.5">
           <div className="flex items-center gap-2.5">
-            <h2 className="text-xl font-black tracking-tight text-m3-on-surface">{title}</h2>
+            <h2 className="text-xl font-black tracking-tight text-foreground">{title}</h2>
             {badge && (
-              <span
-                className={`rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest ${
-                  badgeClasses[badge.variant || 'primary']
-                }`}
-              >
+              <HeroChip variant={getBadgeVariant()} size="sm">
                 {badge.text}
-              </span>
+              </HeroChip>
             )}
           </div>
           {subtitle && (
-            <p className="text-xs font-medium text-m3-on-surface-variant">{subtitle}</p>
+            <p className="text-xs font-medium text-default-500">{subtitle}</p>
           )}
         </div>
       </div>
 
       {(actions || children) && (
-        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+        <div className="flex flex-wrap items-center gap-2 sm:self-center">
           {actions}
           {children}
         </div>
@@ -71,3 +75,5 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
     </div>
   );
 };
+
+export default HeaderBar;

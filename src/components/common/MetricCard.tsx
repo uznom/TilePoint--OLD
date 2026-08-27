@@ -1,5 +1,7 @@
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
+import { HeroCard } from './ui/HeroCard';
+import { HeroChip } from './ui/HeroChip';
 
 export interface MetricCardProps {
   id?: string;
@@ -26,26 +28,36 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   isPositiveTrend,
   className = '',
 }) => {
-  const badgeStyles = {
-    default: 'bg-m3-surface-low text-m3-on-surface-variant border-m3-outline-variant/60',
-    success: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    warning: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    danger: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
-    info: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+  const getChipVariant = () => {
+    switch (badgeVariant) {
+      case 'success':
+        return 'success';
+      case 'warning':
+        return 'warning';
+      case 'danger':
+        return 'danger';
+      case 'info':
+        return 'info';
+      case 'default':
+      default:
+        return 'neutral';
+    }
   };
 
   return (
-    <div
+    <HeroCard
       id={id}
-      className={`relative overflow-hidden rounded-xl border border-m3-outline/20 bg-m3-surface-container-high p-5 shadow-sm transition-all duration-200 hover:border-m3-primary/30 ${className}`}
+      variant="bordered"
+      isHoverable
+      className={`bg-content1 border border-divider/25 p-5 relative overflow-hidden shadow-sm ${className}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-wider text-m3-on-surface-variant">
+          <p className="text-xs font-semibold uppercase tracking-wider text-default-500">
             {title}
           </p>
           <div className="flex items-baseline gap-2">
-            <h3 className="text-2xl font-black tracking-tight text-m3-on-surface">{value}</h3>
+            <h3 className="text-2xl font-black tracking-tight text-foreground">{value}</h3>
             {trendValue && (
               <span
                 className={`text-xs font-bold ${
@@ -57,12 +69,12 @@ export const MetricCard: React.FC<MetricCardProps> = ({
             )}
           </div>
           {subtitle && (
-            <p className="text-xs text-m3-on-surface-variant/80">{subtitle}</p>
+            <p className="text-xs text-default-500/80">{subtitle}</p>
           )}
         </div>
 
         {Icon && (
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-m3-primary/10 text-m3-primary">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <Icon className="h-5 w-5" />
           </div>
         )}
@@ -70,13 +82,13 @@ export const MetricCard: React.FC<MetricCardProps> = ({
 
       {badgeText && (
         <div className="mt-3 flex items-center gap-1.5">
-          <span
-            className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider ${badgeStyles[badgeVariant]}`}
-          >
+          <HeroChip variant={getChipVariant()} size="sm">
             {badgeText}
-          </span>
+          </HeroChip>
         </div>
       )}
-    </div>
+    </HeroCard>
   );
 };
+
+export default MetricCard;

@@ -4,8 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     
-    <!-- Strict Anti-Crawler and Web Scraper Directives & HTTPS Security -->
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests" />
+    <!-- Strict Anti-Crawler and Web Scraper Directives -->
     <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noodp, noydir" />
     <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet, max-image-preview:none, max-snippet:0" />
     <meta name="bingbot" content="noindex, nofollow, noarchive, nosnippet" />
@@ -13,11 +12,52 @@
     <meta name="duckduckbot" content="noindex, nofollow" />
     <meta name="baiduspider" content="noindex, nofollow" />
     <meta name="yandexbot" content="noindex, nofollow" />
-    <meta name="referrer" content="no-referrer" />
     
     <title>TilePoint - POS & Multi-Branch Ledger</title>
     
-    <!-- PWA Metadata & Favicons -->
+    <!-- Zero-FOUC (Flash of Unstyled Content) HeroUI Theme Pre-init -->
+    <script>
+      (function() {
+        try {
+          const root = document.documentElement;
+          const rawConfig = localStorage.getItem('tilepoint_heroui_theme_config');
+          let isDark = false;
+          let baseColor = '#006FEE';
+          let uiStyle = localStorage.getItem('tilepoint-ui-style') || 'translucent';
+
+          if (rawConfig) {
+            try {
+              const cfg = JSON.parse(rawConfig);
+              if (cfg.baseColor) baseColor = cfg.baseColor;
+              if (cfg.uiStyle) uiStyle = cfg.uiStyle;
+              if (cfg.mode === 'dark') isDark = true;
+              else if (cfg.mode === 'light') isDark = false;
+              else if (cfg.mode === 'system') isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            } catch (_) {}
+          } else {
+            const savedDark = localStorage.getItem('tilepoint_dark_theme');
+            if (savedDark !== null) {
+              isDark = savedDark === 'true';
+            } else {
+              isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            }
+          }
+
+          if (isDark) {
+            root.classList.add('dark');
+          } else {
+            root.classList.remove('dark');
+          }
+
+          root.setAttribute('data-ui-style', uiStyle);
+          root.classList.add('ui-style-' + uiStyle);
+          root.style.setProperty('--heroui-primary', baseColor);
+          root.style.setProperty('--color-primary', baseColor);
+        } catch (_) {}
+      })();
+    </script>
+
+    <!-- PWA Metadata & Favicons (Local Assets) -->
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="apple-touch-icon" href="/icon.svg" />
     <link rel="manifest" href="/manifest.json" />
@@ -29,56 +69,23 @@
     <meta name="apple-mobile-web-app-title" content="TilePoint" />
     <meta name="application-name" content="TilePoint" />
   </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-    
-    <!-- Service Worker registration script -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js', { scope: '/' })
-            .then((registration) => {
-              console.log('[PWA] TilePoint PWA Service Worker registered successfully:', registration.scope);
-              
-              // Handle update checking on intervals to make sure updates are processed proactively
-              setInterval(() => {
-                registration.update().catch((err) => {
-                  console.debug('[PWA Update Check] Update check skipped or network busy:', err);
-                });
-              }, 120000); // check for updates every 120 seconds
-
-              registration.addEventListener('updatefound', () => {
-                const installingWorker = registration.installing;
-                if (installingWorker) {
-                  installingWorker.addEventListener('statechange', () => {
-                    if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                      console.log('[PWA Update Core] New update downloaded. Triggering skipWaiting...');
-                      installingWorker.postMessage({ action: 'skipWaiting' });
-                    }
-                  });
-                }
-              });
-            })
-            .catch((error) => {
-              if (error && (error.name === 'SecurityError' || String(error).includes('SSL') || String(error).includes('SecurityError'))) {
-                console.info('[PWA] Service Worker registration paused (Self-Signed SSL Certificate on LAN IP). TilePoint operating in web mode. To enable full PWA offline caching on LAN IP, trust tilepoint-ca.crt in Windows Root store or use Chrome flag #unsafely-treat-insecure-origin-as-secure.');
-              } else {
-                console.warn('[PWA] TilePoint PWA Service Worker registration failed:', error);
-              }
-            });
-        });
-
-        let refreshing = false;
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          if (!refreshing) {
-            refreshing = true;
-            console.log('[PWA Lifecycle] Controller changed. Reloading page...');
-            window.location.reload();
+  <body class="bg-[#F8FAFC] dark:bg-[#0B0F13] text-[#0F172A] dark:text-[#F8FAFC]">
+    <div id="root">
+      <!-- High-performance Initial Loading Shell (replaced on React mount) -->
+      <div id="initial-loader" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0F172A;color:#FFFFFF;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;z-index:99999;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:16px;">
+          <div style="width:40px;height:40px;border:3px solid rgba(255,255,255,0.15);border-top:3px solid #006FEE;border-radius:50%;animation:tp-spin 0.8s linear infinite;"></div>
+          <div style="font-size:13px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#94A3B8;">Loading TilePoint ERP...</div>
+        </div>
+        <style>
+          @keyframes tp-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
           }
-        });
-      }
-    </script>
+        </style>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
 

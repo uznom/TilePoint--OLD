@@ -414,26 +414,26 @@ export function ProfitAnalytics({
  <div className="space-y-6" id="profit-analytics-section">
  
  {/* Timeframe Controls Header */}
- <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-m3-surface-low p-4.5 rounded-[24px] border border-m3-outline-variant/35 shadow-sm">
+ <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-content1 p-4.5 rounded-2xl border border-divider/35 shadow-sm">
  <div className="flex items-center gap-2.5">
- <div className="p-2 bg-m3-primary/10 rounded-xl text-m3-primary shrink-0">
+ <div className="p-2 bg-primary/10 rounded-xl text-primary shrink-0">
  <BarChart3 className="h-5 w-5" />
  </div>
  <div>
- <h4 className="text-sm font-black text-m3-on-surface uppercase tracking-wide">P&L Financial Timeline</h4>
+ <h4 className="text-sm font-black text-foreground uppercase tracking-wide">P&L Financial Timeline</h4>
  
  </div>
  </div>
 
  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
  {/* Timeframe filter buttons */}
- <div className="flex bg-zinc-200/50 dark:bg-zinc-950/40 p-1 rounded-xl border border-m3-outline-variant/15 text-xs font-bold gap-1">
+ <div className="flex bg-zinc-200/50 dark:bg-background/40 p-1 rounded-xl border border-divider/15 text-xs font-bold gap-1">
  <button
  onClick={() => handlePeriodChange("7d")}
  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
  selectedPeriod === "7d"
- ? "bg-m3-primary text-m3-on-primary font-black shadow"
- : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+ ? "bg-primary text-primary-foreground font-black shadow"
+ : "text-default-500 dark:text-default-500 hover:text-zinc-800 dark:hover:text-foreground"
  }`}
  >
  7 Days
@@ -442,8 +442,8 @@ export function ProfitAnalytics({
  onClick={() => handlePeriodChange("15d")}
  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
  selectedPeriod === "15d"
- ? "bg-m3-primary text-m3-on-primary font-black shadow"
- : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+ ? "bg-primary text-primary-foreground font-black shadow"
+ : "text-default-500 dark:text-default-500 hover:text-zinc-800 dark:hover:text-foreground"
  }`}
  >
  15 Days
@@ -452,8 +452,8 @@ export function ProfitAnalytics({
  onClick={() => handlePeriodChange("30d")}
  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
  selectedPeriod === "30d"
- ? "bg-m3-primary text-m3-on-primary font-black shadow"
- : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+ ? "bg-primary text-primary-foreground font-black shadow"
+ : "text-default-500 dark:text-default-500 hover:text-zinc-800 dark:hover:text-foreground"
  }`}
  >
  30 Days
@@ -462,8 +462,8 @@ export function ProfitAnalytics({
  onClick={() => handlePeriodChange("monthly")}
  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
  selectedPeriod === "monthly"
- ? "bg-m3-primary text-m3-on-primary font-black shadow"
- : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+ ? "bg-primary text-primary-foreground font-black shadow"
+ : "text-default-500 dark:text-default-500 hover:text-zinc-800 dark:hover:text-foreground"
  }`}
  >
  6 Months
@@ -472,8 +472,8 @@ export function ProfitAnalytics({
  onClick={() => handlePeriodChange("all-time")}
  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
  selectedPeriod === "all-time"
- ? "bg-m3-primary text-m3-on-primary font-black shadow"
- : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+ ? "bg-primary text-primary-foreground font-black shadow"
+ : "text-default-500 dark:text-default-500 hover:text-zinc-800 dark:hover:text-foreground"
  }`}
  >
  All-Time (12M)
@@ -481,11 +481,11 @@ export function ProfitAnalytics({
  </div>
 
  {/* Chart visual type toggle */}
- <div className="flex bg-zinc-200/50 dark:bg-zinc-950/40 p-1 rounded-xl border border-m3-outline-variant/15 text-xs font-bold gap-1">
+ <div className="flex bg-zinc-200/50 dark:bg-background/40 p-1 rounded-xl border border-divider/15 text-xs font-bold gap-1">
  <button
  onClick={() => setChartType("area")}
  className={`px-2.5 py-1.5 rounded-lg cursor-pointer transition-all ${
- chartType === "area" ? "bg-m3-primary text-m3-on-primary font-black shadow-sm" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+ chartType === "area" ? "bg-primary text-primary-foreground font-black shadow-sm" : "text-default-500 dark:text-default-500 hover:text-zinc-800 dark:hover:text-foreground"
  }`}
  title="Area Chart"
  >
@@ -494,7 +494,7 @@ export function ProfitAnalytics({
  <button
  onClick={() => setChartType("bar")}
  className={`px-2.5 py-1.5 rounded-lg cursor-pointer transition-all ${
- chartType === "bar" ? "bg-m3-primary text-m3-on-primary font-black shadow-sm" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+ chartType === "bar" ? "bg-primary text-primary-foreground font-black shadow-sm" : "text-default-500 dark:text-default-500 hover:text-zinc-800 dark:hover:text-foreground"
  }`}
  title="Bar Chart"
  >
@@ -503,18 +503,18 @@ export function ProfitAnalytics({
  </div>
 
   {/* Branch Selector Dropdown */}
-  <div className="flex bg-zinc-200/50 dark:bg-zinc-950/40 p-1 rounded-xl border border-m3-outline-variant/15 text-xs font-bold items-center px-2">
-  <Building className="h-3.5 w-3.5 text-m3-primary mr-1 shrink-0" />
+  <div className="flex bg-zinc-200/50 dark:bg-background/40 p-1 rounded-xl border border-divider/15 text-xs font-bold items-center px-2">
+  <Building className="h-3.5 w-3.5 text-primary mr-1 shrink-0" />
   <select
   value={selectedBranchId ?? ''}
   onChange={(e) => setSelectedBranchId(e.target.value)}
-  className="bg-transparent text-m3-on-surface dark:text-zinc-200 text-xs font-bold focus:outline-none cursor-pointer py-1"
+  className="bg-transparent text-foreground dark:text-foreground text-xs font-bold focus:outline-none cursor-pointer py-1"
   >
-  <option value="all" className="bg-m3-surface text-m3-on-surface dark:bg-zinc-900 dark:text-zinc-100 font-bold">
+  <option value="all" className="bg-background text-foreground dark:bg-content1 dark:text-foreground font-bold">
   Consolidated (All Branches)
   </option>
   {branches.filter((b) => !b.isDeleted).map((b) => (
-  <option key={b.id} value={b.id} className="bg-m3-surface text-m3-on-surface dark:bg-zinc-900 dark:text-zinc-100">
+  <option key={b.id} value={b.id} className="bg-background text-foreground dark:bg-content1 dark:text-foreground">
   {b.name}
   </option>
   ))}
@@ -526,10 +526,10 @@ export function ProfitAnalytics({
  {/* Timeframe aggregation summary cards */}
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
  {/* Revenue */}
- <div className="p-4 bg-m3-surface-low border border-m3-outline-variant/30 rounded-2xl flex items-center justify-between">
+ <div className="p-4 bg-content1 border border-divider/30 rounded-2xl flex items-center justify-between">
  <div>
- <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 dark:text-zinc-300">Timeframe Revenue</span>
- <div className="text-xl font-black text-emerald-500 mt-1 font-mono">
+ <span className="text-[10px] font-extrabold uppercase tracking-widest text-default-500 dark:text-default-700">Timeframe Revenue</span>
+ <div className="text-xl font-black text-emerald-500 mt-1 ">
  ₱{totals.revenue.toLocaleString()}
  </div>
  
@@ -540,10 +540,10 @@ export function ProfitAnalytics({
  </div>
 
  {/* COGS */}
- <div className="p-4 bg-m3-surface-low border border-m3-outline-variant/30 rounded-2xl flex items-center justify-between">
+ <div className="p-4 bg-content1 border border-divider/30 rounded-2xl flex items-center justify-between">
  <div>
- <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 dark:text-zinc-300">Total COGS Cost</span>
- <div className="text-xl font-black text-amber-500 mt-1 font-mono">
+ <span className="text-[10px] font-extrabold uppercase tracking-widest text-default-500 dark:text-default-700">Total COGS Cost</span>
+ <div className="text-xl font-black text-amber-500 mt-1 ">
  ₱{totals.cogs.toLocaleString()}
  </div>
  
@@ -554,10 +554,10 @@ export function ProfitAnalytics({
  </div>
 
  {/* Expenses */}
- <div className="p-4 bg-m3-surface-low border border-m3-outline-variant/30 rounded-2xl flex items-center justify-between">
+ <div className="p-4 bg-content1 border border-divider/30 rounded-2xl flex items-center justify-between">
  <div>
- <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 dark:text-zinc-300">OpEx & Losses</span>
- <div className="text-xl font-black text-rose-500 mt-1 font-mono">
+ <span className="text-[10px] font-extrabold uppercase tracking-widest text-default-500 dark:text-default-700">OpEx & Losses</span>
+ <div className="text-xl font-black text-rose-500 mt-1 ">
  ₱{totals.expenses.toLocaleString()}
  </div>
  
@@ -568,19 +568,19 @@ export function ProfitAnalytics({
  </div>
 
  {/* Net Profit */}
- <div className={`p-4 bg-m3-surface-low border rounded-2xl flex items-center justify-between ${
+ <div className={`p-4 bg-content1 border rounded-2xl flex items-center justify-between ${
  totals.netProfit >= 0 ? "border-emerald-500/30" : "border-rose-500/30"
  }`}>
  <div>
- <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 dark:text-zinc-300">Net Retained Profit</span>
- <div className={`text-xl font-black mt-1 font-mono ${
+ <span className="text-[10px] font-extrabold uppercase tracking-widest text-default-500 dark:text-default-700">Net Retained Profit</span>
+ <div className={`text-xl font-black mt-1 ${
  totals.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"
  }`}>
  ₱{totals.netProfit.toLocaleString()}
  </div>
  <div className="flex items-center gap-1 mt-0.5">
- <Percent className="h-3 w-3 text-zinc-400 dark:text-zinc-300" />
- <span className="text-[9px] font-black uppercase text-zinc-400 dark:text-zinc-300 font-mono">
+ <Percent className="h-3 w-3 text-default-500 dark:text-default-700" />
+ <span className="text-[9px] font-black uppercase text-default-500 dark:text-default-700 ">
  Margin: {totals.margin.toFixed(1)}%
  </span>
  </div>
@@ -594,13 +594,13 @@ export function ProfitAnalytics({
  </div>
 
  {/* Main Interactive Recharts Chart Component */}
- <div className="p-5.5 bg-white dark:bg-zinc-950 dark:bg-gradient-to-br dark:from-zinc-950/20 dark:to-zinc-900/20 border border-m3-outline-variant/25 dark:border-m3-outline-variant/30 rounded-[28px] overflow-hidden shadow-none dark:shadow-none">
+ <div className="p-5.5 bg-white dark:bg-background dark:bg-gradient-to-br dark:from-zinc-950/20 dark:to-zinc-900/20 border border-divider/25 dark:border-divider/30 rounded-2xl overflow-hidden shadow-none dark:shadow-none">
  <div className="flex items-center justify-between mb-4.5">
- <h5 className="text-xs font-black uppercase tracking-wider text-m3-primary flex items-center gap-1.5">
- <Activity className="h-4 w-4 text-m3-primary" />
+ <h5 className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
+ <Activity className="h-4 w-4 text-primary" />
  Financial Health Trend Matrix ({selectedPeriod === "monthly" ? "6 Months View" : `${selectedPeriod} Boundaries`})
  </h5>
- <span className="text-[9.5px] font-bold font-mono px-2 py-0.5 rounded-md bg-m3-surface-low/50 dark:bg-m3-surface-high border border-m3-outline-variant/20 text-zinc-600 dark:text-zinc-400">
+ <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-md bg-content1/50 dark:bg-content3 border border-divider/20 text-default-600 dark:text-default-500">
  Active Port: {selectedBranchId === "all" ? "Consolidated All Branches" : getBranchName(selectedBranchId)}
  </span>
  </div>
@@ -626,40 +626,40 @@ export function ProfitAnalytics({
  <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
  </linearGradient>
  </defs>
- <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "#27272a" : "#e4e4e7"} opacity={0.5} />
+ <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)"} />
  <XAxis 
  dataKey="date" 
- stroke={darkMode ? "#71717a" : "#52525b"} 
+ stroke={darkMode ? "#A1A1AA" : "#71717A"} 
  fontSize={10.5} 
  tickLine={false} 
  dy={10}
- fontFamily="JetBrains Mono, monospace"
+ fontFamily="'Plus Jakarta Sans', ui-sans-serif, sans-serif"
  />
  <YAxis 
- stroke={darkMode ? "#71717a" : "#52525b"} 
+ stroke={darkMode ? "#A1A1AA" : "#71717A"} 
  fontSize={10} 
  tickLine={false}
  axisLine={false}
  tickFormatter={(val) => `₱${(val / 1000).toFixed(0)}k`}
- fontFamily="JetBrains Mono, monospace"
+ fontFamily="'Plus Jakarta Sans', ui-sans-serif, sans-serif"
  />
  <Tooltip
  contentStyle={{
- backgroundColor: darkMode ? "#18181b" : "#ffffff",
- borderColor: darkMode ? "#3f3f46" : "#e4e4e7",
+ backgroundColor: darkMode ? "#18181B" : "#FFFFFF",
+ borderColor: darkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.1)",
  borderRadius: "14px",
- color: darkMode ? "#f4f4f5" : "#18181b",
+ color: darkMode ? "#ECEDEE" : "#18181B",
  fontSize: "11px",
- fontFamily: "Inter, sans-serif",
- boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.08)"
+ fontFamily: "'Plus Jakarta Sans', ui-sans-serif, sans-serif",
+ boxShadow: "0 12px 28px -4px rgba(0, 0, 0, 0.18)"
  }}
  labelStyle={{
- color: darkMode ? "#f4f4f5" : "#18181b",
+ color: darkMode ? "#ECEDEE" : "#18181B",
  fontWeight: "bold",
  marginBottom: "4px"
  }}
  itemStyle={{
- color: darkMode ? "#e4e4e7" : "#3f3f46"
+ color: darkMode ? "#D4D4D8" : "#3F3F46"
  }}
  formatter={(value: any) => [`₱${value.toLocaleString()}`, ""]}
  />
@@ -668,7 +668,7 @@ export function ProfitAnalytics({
  height={36} 
  iconType="circle"
  iconSize={8}
- wrapperStyle={{ fontSize: "11px", fontFamily: "Inter, sans-serif", fontWeight: "bold" }}
+ wrapperStyle={{ fontSize: "11px", fontFamily: "'Plus Jakarta Sans', ui-sans-serif, sans-serif", fontWeight: "bold" }}
  />
  <Area 
  type="monotone" 
@@ -701,40 +701,40 @@ export function ProfitAnalytics({
  data={timelineData}
  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
  >
- <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "#27272a" : "#e4e4e7"} opacity={0.5} />
+ <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)"} />
  <XAxis 
  dataKey="date" 
- stroke={darkMode ? "#71717a" : "#52525b"} 
+ stroke={darkMode ? "#A1A1AA" : "#71717A"} 
  fontSize={10.5} 
  tickLine={false}
  dy={10}
- fontFamily="JetBrains Mono, monospace"
+ fontFamily="'Plus Jakarta Sans', ui-sans-serif, sans-serif"
  />
  <YAxis 
- stroke={darkMode ? "#71717a" : "#52525b"} 
+ stroke={darkMode ? "#A1A1AA" : "#71717A"} 
  fontSize={10} 
  tickLine={false}
  axisLine={false}
  tickFormatter={(val) => `₱${(val / 1000).toFixed(0)}k`}
- fontFamily="JetBrains Mono, monospace"
+ fontFamily="'Plus Jakarta Sans', ui-sans-serif, sans-serif"
  />
  <Tooltip
  contentStyle={{
- backgroundColor: darkMode ? "#18181b" : "#ffffff",
- borderColor: darkMode ? "#3f3f46" : "#e4e4e7",
+ backgroundColor: darkMode ? "#18181B" : "#FFFFFF",
+ borderColor: darkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.1)",
  borderRadius: "14px",
- color: darkMode ? "#f4f4f5" : "#18181b",
+ color: darkMode ? "#ECEDEE" : "#18181B",
  fontSize: "11px",
- fontFamily: "Inter, sans-serif",
- boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.08)"
+ fontFamily: "'Plus Jakarta Sans', ui-sans-serif, sans-serif",
+ boxShadow: "0 12px 28px -4px rgba(0, 0, 0, 0.18)"
  }}
  labelStyle={{
- color: darkMode ? "#f4f4f5" : "#18181b",
+ color: darkMode ? "#ECEDEE" : "#18181B",
  fontWeight: "bold",
  marginBottom: "4px"
  }}
  itemStyle={{
- color: darkMode ? "#e4e4e7" : "#3f3f46"
+ color: darkMode ? "#D4D4D8" : "#3F3F46"
  }}
  formatter={(value: any) => [`₱${value.toLocaleString()}`, ""]}
  />
@@ -743,7 +743,7 @@ export function ProfitAnalytics({
  height={36} 
  iconType="circle"
  iconSize={8}
- wrapperStyle={{ fontSize: "11px", fontFamily: "Inter, sans-serif", fontWeight: "bold" }}
+ wrapperStyle={{ fontSize: "11px", fontFamily: "'Plus Jakarta Sans', ui-sans-serif, sans-serif", fontWeight: "bold" }}
  />
  <Bar dataKey="Revenue" fill="#10b981" radius={[4, 4, 0, 0]} />
  <Bar dataKey="COGS" fill="#f59e0b" radius={[4, 4, 0, 0]} />
@@ -753,8 +753,8 @@ export function ProfitAnalytics({
  </ResponsiveContainer>
  </div>
 
- <div className="mt-4 pt-3.5 border-t border-m3-outline-variant/15 flex flex-wrap gap-4 items-center justify-between text-[10.5px] text-zinc-600 dark:text-zinc-400 font-sans font-medium">
- <div className="flex items-center gap-1.5 font-bold text-zinc-700 dark:text-zinc-300">
+ <div className="mt-4 pt-3.5 border-t border-divider/15 flex flex-wrap gap-4 items-center justify-between text-[10.5px] text-default-600 dark:text-default-500 font-sans font-medium">
+ <div className="flex items-center gap-1.5 font-bold text-default-700 dark:text-default-700">
  <Sparkles className="h-4 w-4 text-emerald-500" />
  
  </div>

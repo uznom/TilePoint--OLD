@@ -1,887 +1,687 @@
 import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useDb } from '../context/DbContext';
-import { Sparkles, Database, Upload, CheckCircle, HelpCircle, ArrowRight, Save, Plus, X } from 'lucide-react';
+import { Sparkles, Upload, CheckCircle, ArrowRight, X } from 'lucide-react';
 import { Product } from '../types/db';
 import Papa from 'papaparse';
+import { HeroButton } from './common/ui';
 
-export const OnboardingSetupWizard: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
- const db = useDb();
- 
- // Local wizard navigation
- // 'welcome' -> 'question' -> 'yes_migrate' | 'no_enter' | 'blank_confirm' | 'configure_branches'
- const [step, setStep] = useState<'welcome' | 'question' | 'yes_migrate' | 'no_enter' | 'blank_confirm' | 'configure_branches'>('welcome');
- const [rawImportText, setRawImportText] = useState('');
- const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
- const [isDragging, setIsDragging] = useState(false);
- const [pendingProducts, setPendingProducts] = useState<Product[]>([]);
- 
- interface PendingBranch {
- name: string;
- manager: string;
- address: string;
- phone: string;
- isDistributionBranch: boolean;
- staffCount: number;
- }
- const [pendingBranches, setPendingBranches] = useState<PendingBranch[]>([]);
+interface OnboardingSetupWizardProps {
+  onClose?: () => void;
+  onComplete?: () => void;
+}
 
- const fileInputRef = useRef<HTMLInputElement>(null);
+export const OnboardingSetupWizard: React.FC<OnboardingSetupWizardProps> = ({ onClose, onComplete }) => {
+  const db = useDb();
+  
+  // Wizard navigation steps: 'welcome' | 'yes_migrate' | 'configure_branches'
+  const [step, setStep] = useState<'welcome' | 'yes_migrate' | 'configure_branches'>('welcome');
+  const [rawImportText, setRawImportText] = useState('');
+  const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
+  const [isDragging, setIsDragging] = useState(false);
+  const [pendingProducts, setPendingProducts] = useState<Product[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  interface PendingBranch {
+    name: string;
+    manager: string;
+    address: string;
+    phone: string;
+    isDistributionBranch: boolean;
+    staffCount: number;
+  }
+  const [pendingBranches, setPendingBranches] = useState<PendingBranch[]>([]);
 
- const handleDragOver = (e: React.DragEvent) => {
- e.preventDefault();
- setIsDragging(true);
- };
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
- const handleDragLeave = () => {
- setIsDragging(false);
- };
-
- const handleDrop = (e: React.DragEvent) => {
- e.preventDefault();
- setIsDragging(false);
- const file = e.dataTransfer.files?.[0];
- if (file) {
- processSelectedFile(file);
- }
- };
-
- const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
- const file = e.target.files?.[0];
- if (file) {
- processSelectedFile(file);
- }
- };
-
- const processSelectedFile = (file: File) => {
- if (file.name.endsWith('.csv') || file.type === 'text/csv' || file.type === 'application/vnd.ms-excel') {
- const rows: Array<Record<string, any>> = [];
- Papa.parse<Record<string, any>>(file, {
- header: true,
- skipEmptyLines: 'greedy',
- transformHeader: (h) => h.replace(/^["']|["']$/g, '').trim(),
- chunk: (results) => {
- if (results.data && results.data.length > 0) {
- rows.push(...results.data);
- }
- },
- complete: () => {
- const unparsed = Papa.unparse(rows);
- setRawImportText(unparsed);
- setImportStatus({
- type: 'success',
- message: `Streamed & parsed "${file.name}" (${(file.size / 1024).toFixed(1)} KB) - ${rows.length.toLocaleString()} items ready for review and migration!`
- });
- },
- error: (err) => {
- setImportStatus({
- type: 'error',
- message: `Failed to stream parse CSV file: ${err.message}`
- });
- }
- });
- } else {
- const reader = new FileReader();
- reader.onload = (event) => {
- const text = event.target?.result as string;
- if (text) {
- setRawImportText(text);
- setImportStatus({
- type: 'success',
- message: `Successfully loaded "${file.name}" (${(file.size / 1024).toFixed(1)} KB) - Review items and Migrate!`
- });
- }
- };
- reader.readAsText(file);
- }
- };
-
- const handleCompleteWithBranches = () => {
- const invalid = pendingBranches.some(b => !b.manager.trim() || !b.address.trim() || !b.phone.trim());
- if (invalid) {
- setImportStatus({
- type: 'error',
- message: 'Please complete all details (Manager, Address, Phone) for each newly detected branch location.'
- });
- return;
- }
-
- const newBranchesList = pendingBranches.map((b, idx) => ({
- id: `B-${Date.now()}-${idx}-${Math.floor(Math.random() * 1000)}`,
- name: b.name,
- manager: b.manager,
- address: b.address,
- phone: b.phone,
- monthlySales: 0,
- staffCount: b.staffCount,
- activeCashiers: 1,
- isDistributionBranch: b.isDistributionBranch,
- createdAt: new Date().toISOString(),
- updatedAt: new Date().toISOString(),
- isDeleted: false
- }));
-
- db.completeOnboarding(pendingProducts, newBranchesList);
-
- setImportStatus({
- type: 'success',
- message: `Successfully registered ${pendingBranches.length} branches and migrated ${pendingProducts.length} listings!`
- });
-
- setTimeout(() => {
- window.location.reload();
- }, 1500);
- };
- 
- // Single product registration form states
- const [newProdName, setNewProdName] = useState('');
- const [newProdCode, setNewProdCode] = useState('');
- const [newProdPrice, setNewProdPrice] = useState('150');
- const [newProdCost, setNewProdCost] = useState('100');
- const [newProdQty, setNewProdQty] = useState('50');
- const [newProdCategory, setNewProdCategory] = useState('Ceramic Tiles');
- const [newProdBrand, setNewProdBrand] = useState('Generic');
-
- 
-
- const handleImportMigrate = () => {
- const trimmedInput = rawImportText.trim();
- if (!trimmedInput) {
- setImportStatus({ type: 'error', message: 'Please paste CSV rows or JSON data.' });
- return;
- }
-
-  // Reuse Papa.parse engine with streaming chunking for memory safety
-  const parseCSV = (text: string): Array<Record<string, any>> => {
-    const rows: Array<Record<string, any>> = [];
-    let parseError: string | null = null;
-
-    Papa.parse<Record<string, any>>(text, {
-      header: true,
-      skipEmptyLines: 'greedy',
-      transformHeader: (h) => h.replace(/^["']|["']$/g, '').trim(),
-      chunk: (results) => {
-        if (results.data && results.data.length > 0) {
-          rows.push(...results.data);
-        }
-        if (results.errors && results.errors.length > 0 && !parseError) {
-          parseError = results.errors[0].message;
-        }
-      },
-      complete: () => {},
-      error: (err: any) => {
-        parseError = err.message;
-      }
-    });
-
-    if (rows.length === 0 && parseError) {
-      throw new Error(`CSV Parsing error: ${parseError}`);
-    }
-    return rows;
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
   };
 
- let parsed: any[] = [];
- try {
- if (trimmedInput.startsWith('[') || trimmedInput.startsWith('{')) {
- const jsonParsed = JSON.parse(trimmedInput);
- parsed = Array.isArray(jsonParsed) ? jsonParsed : [jsonParsed];
- } else {
- const csvRows = parseCSV(trimmedInput);
- const headerMapping: Record<string, string> = {
- 'product name': 'productName',
- 'product_name': 'productName',
- 'name': 'productName',
- 'tile name': 'productName',
- 'tile': 'productName',
- 'item name': 'productName',
- 'product': 'productName',
- 'product code': 'productCode',
- 'product_code': 'productCode',
- 'code': 'productCode',
- 'item code': 'productCode',
- 'sku': 'sku',
- 'sku code': 'sku',
- 'sku_code': 'sku',
- 'skucode': 'sku',
- 'barcode': 'barcode',
- 'bar code': 'barcode',
- 'bar_code': 'barcode',
- 'category': 'category',
- 'cat': 'category',
- 'group': 'category',
- 'brand': 'brand',
- 'brand_name': 'brand',
- 'manufacturer': 'brand',
- 'cost': 'costPrice',
- 'cost price': 'costPrice',
- 'cost_price': 'costPrice',
- 'p price': 'costPrice',
- 'p_price': 'costPrice',
- 'purchase price': 'costPrice',
- 'selling price': 'sellingPrice',
- 'selling_price': 'sellingPrice',
- 'selling': 'sellingPrice',
- 'price': 'sellingPrice',
- 'rate': 'sellingPrice',
- 'retail': 'sellingPrice',
- 's price': 'sellingPrice',
- 's_price': 'sellingPrice',
- 'size': 'size',
- 'dimensions': 'size',
- 'dimension': 'size',
- 'stock': 'stockQuantity',
- 'quantity': 'stockQuantity',
- 'qty': 'stockQuantity',
- 'stock quantity': 'stockQuantity',
- 'stock_quantity': 'stockQuantity',
- 'min stock': 'minimumStock',
- 'minimum stock': 'minimumStock',
- 'min_stock': 'minimumStock',
- 'minimum_stock': 'minimumStock',
- 'alert level': 'minimumStock',
- 'alert_level': 'minimumStock',
- 'design': 'designName',
- 'design name': 'designName',
- 'design_name': 'designName',
- 'supplier': 'supplierId',
- 'supplier id': 'supplierId',
- 'supplier_id': 'supplierId',
- 'unit': 'unit',
- 'uom': 'unit',
- 'box qty': 'boxQuantity',
- 'box quantity': 'boxQuantity',
- 'box_quantity': 'boxQuantity',
- 'location': 'origin',
- 'origin': 'origin'
- };
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
 
- parsed = csvRows.map(row => {
- const mappedRow: Record<string, any> = {};
- Object.keys(row).forEach(key => {
- const cleanKey = key.toLowerCase().trim();
- const mappedKey = headerMapping[cleanKey];
- if (mappedKey) {
- const numericFields = ['costPrice', 'sellingPrice', 'stockQuantity', 'minimumStock', 'boxQuantity', 'coveragePerBox'];
- if (numericFields.includes(mappedKey)) {
- const cleanVal = String(row[key]).replace(/[$,₱ ]/g, '').replace(/,/g, '');
- const valNum = parseFloat(cleanVal);
- mappedRow[mappedKey] = isNaN(valNum) ? 0 : valNum;
- } else {
- mappedRow[mappedKey] = row[key];
- }
- } else {
- mappedRow[key] = row[key];
- }
- });
- return mappedRow;
- });
- }
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processSelectedFile(file);
+    }
+  };
 
- if (parsed.length > 0) {
- // Build clean Product array with necessary UUID handles & fallback defaults
- const cleanProducts: Product[] = parsed.map((item, idx) => {
- const barcode = item.barcode || `480MIG000${idx + 1}`;
- const brand = item.brand || 'Generic';
- const pName = item.productName || 'Imported Legacy Tile';
- 
- // Extrapolate size if not set e.g. from productName "20X30 # SENEPA BEIGE"
- let size = item.size;
- if (!size && pName) {
- const sizeMatch = pName.match(/(\d+(?:\.\d+)?)\s*[xX]\s*(\d+(?:\.\d+)?)/);
- if (sizeMatch) {
- size = `${sizeMatch[1]}x${sizeMatch[2]} cm`;
- }
- }
- if (!size) {
- const catLower = (item.category || '').toLowerCase();
- const isTile = catLower.includes('tile') || catLower.includes('slab') || catLower.includes('stone');
- size = isTile ? '60x60 cm' : 'N/A';
- }
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processSelectedFile(file);
+    }
+  };
 
- const productCode = item.productCode || barcode || `PC-MIG-${idx + 1}`;
- const sku = item.sku || (barcode ? `SKU-${barcode}` : `SKU-MIG-${idx + 1}`);
+  const processSelectedFile = (file: File) => {
+    if (file.name.endsWith('.csv') || file.type === 'text/csv' || file.type === 'application/vnd.ms-excel') {
+      const rows: Array<Record<string, any>> = [];
+      Papa.parse<Record<string, any>>(file, {
+        header: true,
+        skipEmptyLines: 'greedy',
+        transformHeader: (h) => h.replace(/^["']|["']$/g, '').trim(),
+        chunk: (results) => {
+          if (results.data && results.data.length > 0) {
+            rows.push(...results.data);
+          }
+        },
+        complete: () => {
+          const unparsed = Papa.unparse(rows);
+          setRawImportText(unparsed);
+          setImportStatus({
+            type: 'success',
+            message: `Streamed & parsed "${file.name}" (${(file.size / 1024).toFixed(1)} KB) - ${rows.length.toLocaleString()} items ready for review and migration!`
+          });
+        },
+        error: (err) => {
+          setImportStatus({
+            type: 'error',
+            message: `Failed to stream parse CSV file: ${err.message}`
+          });
+        }
+      });
+    } else {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const text = event.target?.result as string;
+        if (text) {
+          setRawImportText(text);
+          setImportStatus({
+            type: 'success',
+            message: `Successfully loaded "${file.name}" (${(file.size / 1024).toFixed(1)} KB) - Review items and Migrate!`
+          });
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
 
- return {
- id: item.id || `P-IMPORT-${Math.random().toString(36).substring(2, 9)}`,
- productCode,
- sku,
- barcode,
- qrCode: item.qrCode || `URL:MIG-${idx + 1}`,
- designName: item.designName || pName,
- productName: pName,
- category: item.category || 'Porcelain Tiles',
- brand,
- supplierId: item.supplierId || 'S1',
- unit: item.unit || 'Unit',
- size,
- boxQuantity: item.boxQuantity || (size !== 'N/A' ? 4 : 1),
- coveragePerBox: item.coveragePerBox || (size !== 'N/A' ? 1.44 : undefined),
- costPrice: Number(item.costPrice) || 0,
- sellingPrice: Number(item.sellingPrice) || 0,
- stockQuantity: Number(item.stockQuantity) || 0,
- minimumStock: Number(item.minimumStock) || 0,
- origin: item.origin || undefined,
- isDeleted: false,
- createdAt: new Date().toISOString(),
- updatedAt: new Date().toISOString(),
- createdBy: 'system-initial',
- updatedBy: 'system-initial'
- };
- });
+  const handleCompleteWithBranches = () => {
+    const invalid = pendingBranches.some(b => !b.manager.trim() || !b.address.trim() || !b.phone.trim());
+    if (invalid) {
+      setImportStatus({
+        type: 'error',
+        message: 'Please complete all details (Manager, Address, Phone) for each newly detected branch location.'
+      });
+      return;
+    }
 
- // Auto-detect new locations/branches from imported product origin data
- const uniqueLocations = Array.from(new Set(
- cleanProducts.map(p => p.origin?.trim()).filter(Boolean)
- )) as string[];
+    const newBranchesList = pendingBranches.map((b, idx) => ({
+      id: `B-${Date.now()}-${idx}-${Math.floor(Math.random() * 1000)}`,
+      name: b.name,
+      manager: b.manager,
+      address: b.address,
+      phone: b.phone,
+      monthlySales: 0,
+      staffCount: b.staffCount,
+      activeCashiers: 1,
+      isDistributionBranch: b.isDistributionBranch,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isDeleted: false
+    }));
 
- const existingBranchNames = (db.branches || []).filter(b => !b.isDeleted).map(b => b.name.toLowerCase().trim());
- const newLocations = uniqueLocations.filter(loc => !existingBranchNames.includes(loc.toLowerCase().trim()));
+    db.completeOnboarding(pendingProducts, newBranchesList);
 
- if (newLocations.length > 0) {
- setPendingProducts(cleanProducts);
- setPendingBranches(newLocations.map(name => ({
- name,
- manager: 'Operational Branch Manager',
- address: 'Region Branch Site, Dipolog City',
- phone: '+63 920 123 4567',
- isDistributionBranch: false,
- staffCount: 3
- })));
- setStep('configure_branches');
- } else {
- db.completeOnboarding(cleanProducts);
- 
- setImportStatus({
- type: 'success',
- message: `Successfully parsed and loaded ${cleanProducts.length} Tile Products. Priming system...`
- });
+    setImportStatus({
+      type: 'success',
+      message: `Successfully registered ${pendingBranches.length} branches and migrated ${pendingProducts.length} listings!`
+    });
 
- setTimeout(() => {
- window.location.reload();
- }, 1200);
- }
+    setTimeout(() => {
+      if (onComplete) {
+        onComplete();
+      } else if (onClose) {
+        onClose();
+      } else {
+        window.location.reload();
+      }
+    }, 1200);
+  };
 
- } else {
- setImportStatus({ type: 'error', message: 'No valid records parsed from data payload.' });
- }
- } catch (e: any) {
- setImportStatus({ type: 'error', message: `Migration error: ${e.message || 'Malformed schema'}` });
- }
- };
+  const handleImportMigrate = () => {
+    const trimmedInput = rawImportText.trim();
+    if (!trimmedInput) {
+      setImportStatus({ type: 'error', message: 'Please paste CSV rows or JSON data.' });
+      return;
+    }
 
- const handleRegisterFirstProduct = () => {
- if (!newProdName.trim() || !newProdCode.trim()) {
- setImportStatus({ type: 'error', message: 'Product Name and Code are required to proceed.' });
- return;
- }
+    try {
+      let parsed: any[] = [];
+      if (trimmedInput.startsWith('[') && trimmedInput.endsWith(']')) {
+        parsed = JSON.parse(trimmedInput);
+      } else {
+        const results = Papa.parse<Record<string, any>>(trimmedInput, {
+          header: true,
+          skipEmptyLines: 'greedy',
+          transformHeader: (h) => h.replace(/^["']|["']$/g, '').trim()
+        });
+        const csvRows = results.data;
+        if (!csvRows || csvRows.length === 0) {
+          setImportStatus({ type: 'error', message: 'No valid data rows found in CSV.' });
+          return;
+        }
 
- const singleProduct: Product = {
- id: `P-${Math.random().toString(36).substring(2, 9)}`,
- productCode: newProdCode,
- sku: `SKU-${newProdCode}`,
- barcode: `480000${Math.floor(100000 + Math.random() * 900000)}`,
- qrCode: `URL:${newProdCode}`,
- designName: newProdName,
- productName: newProdName,
- category: newProdCategory,
- brand: newProdBrand,
- supplierId: 'S1',
- unit: 'Boxes',
- size: '60x60 cm',
- boxQuantity: 4,
- coveragePerBox: 1.44,
- costPrice: Number(newProdCost) || 100,
- sellingPrice: Number(newProdPrice) || 150,
- stockQuantity: Number(newProdQty) || 50,
- minimumStock: 10,
- isDeleted: false,
- createdAt: new Date().toISOString(),
- updatedAt: new Date().toISOString(),
- createdBy: 'system-initial',
- updatedBy: 'system-initial'
- };
+        const headerMapping: Record<string, string> = {
+          'product name': 'productName',
+          'product_name': 'productName',
+          'name': 'productName',
+          'item name': 'productName',
+          'title': 'productName',
+          'description': 'productName',
+          'product code': 'productCode',
+          'product_code': 'productCode',
+          'code': 'productCode',
+          'item code': 'productCode',
+          'sku': 'sku',
+          'sku code': 'sku',
+          'sku_code': 'sku',
+          'skucode': 'sku',
+          'barcode': 'barcode',
+          'bar code': 'barcode',
+          'bar_code': 'barcode',
+          'category': 'category',
+          'cat': 'category',
+          'group': 'category',
+          'brand': 'brand',
+          'brand_name': 'brand',
+          'manufacturer': 'brand',
+          'cost': 'costPrice',
+          'cost price': 'costPrice',
+          'cost_price': 'costPrice',
+          'p price': 'costPrice',
+          'p_price': 'costPrice',
+          'purchase price': 'costPrice',
+          'selling price': 'sellingPrice',
+          'selling_price': 'sellingPrice',
+          'selling': 'sellingPrice',
+          'price': 'sellingPrice',
+          'rate': 'sellingPrice',
+          'retail': 'sellingPrice',
+          's price': 'sellingPrice',
+          's_price': 'sellingPrice',
+          'size': 'size',
+          'dimensions': 'size',
+          'dimension': 'size',
+          'stock': 'stockQuantity',
+          'quantity': 'stockQuantity',
+          'qty': 'stockQuantity',
+          'stock quantity': 'stockQuantity',
+          'stock_quantity': 'stockQuantity',
+          'min stock': 'minimumStock',
+          'minimum stock': 'minimumStock',
+          'min_stock': 'minimumStock',
+          'minimum_stock': 'minimumStock',
+          'alert level': 'minimumStock',
+          'alert_level': 'minimumStock',
+          'design': 'designName',
+          'design name': 'designName',
+          'design_name': 'designName',
+          'supplier': 'supplierId',
+          'supplier id': 'supplierId',
+          'supplier_id': 'supplierId',
+          'unit': 'unit',
+          'uom': 'unit',
+          'box qty': 'boxQuantity',
+          'box quantity': 'boxQuantity',
+          'box_quantity': 'boxQuantity',
+          'location': 'origin',
+          'origin': 'origin'
+        };
 
- db.completeOnboarding([singleProduct]);
+        parsed = csvRows.map(row => {
+          const mappedRow: Record<string, any> = {};
+          Object.keys(row).forEach(key => {
+            const cleanKey = key.toLowerCase().trim();
+            const mappedKey = headerMapping[cleanKey];
+            if (mappedKey) {
+              const numericFields = ['costPrice', 'sellingPrice', 'stockQuantity', 'minimumStock', 'boxQuantity', 'coveragePerBox'];
+              if (numericFields.includes(mappedKey)) {
+                const cleanVal = String(row[key]).replace(/[$,₱ ]/g, '').replace(/,/g, '');
+                const valNum = parseFloat(cleanVal);
+                mappedRow[mappedKey] = isNaN(valNum) ? 0 : valNum;
+              } else {
+                mappedRow[mappedKey] = row[key];
+              }
+            } else {
+              mappedRow[key] = row[key];
+            }
+          });
+          return mappedRow;
+        });
+      }
 
- setImportStatus({
- type: 'success',
- message: 'Product registered! Initializing empty transactional logs...'
- });
+      if (parsed.length > 0) {
+        const cleanProducts: Product[] = parsed.map((item, idx) => {
+          const barcode = item.barcode || `480MIG000${idx + 1}`;
+          const brand = item.brand || 'Generic';
+          const pName = item.productName || 'Imported Legacy Tile';
+          
+          let size = item.size;
+          if (!size && pName) {
+            const sizeMatch = pName.match(/(\d+(?:\.\d+)?)\s*[xX]\s*(\d+(?:\.\d+)?)/);
+            if (sizeMatch) {
+              size = `${sizeMatch[1]}x${sizeMatch[2]} cm`;
+            }
+          }
+          if (!size) {
+            const catLower = (item.category || '').toLowerCase();
+            const isTile = catLower.includes('tile') || catLower.includes('slab') || catLower.includes('stone');
+            size = isTile ? '60x60 cm' : 'N/A';
+          }
 
- setTimeout(() => {
- window.location.reload();
- }, 1200);
- };
+          const productCode = item.productCode || barcode || `PC-MIG-${idx + 1}`;
+          const sku = item.sku || (barcode ? `SKU-${barcode}` : `SKU-MIG-${idx + 1}`);
 
- const handleInitializeFreshBlank = () => {
- db.completeOnboarding([]);
- setImportStatus({
- type: 'success',
- message: 'System cleared and primed with a fresh system journal. Launching...'
- });
- setTimeout(() => {
- window.location.reload();
- }, 1200);
- };
+          return {
+            id: item.id || `P-IMPORT-${Math.random().toString(36).substring(2, 9)}`,
+            productCode,
+            sku,
+            barcode,
+            qrCode: item.qrCode || `URL:MIG-${idx + 1}`,
+            designName: item.designName || pName,
+            productName: pName,
+            category: item.category || 'Porcelain Tiles',
+            brand,
+            supplierId: item.supplierId || 'S1',
+            unit: item.unit || 'Unit',
+            size,
+            boxQuantity: item.boxQuantity || (size !== 'N/A' ? 4 : 1),
+            coveragePerBox: item.coveragePerBox || (size !== 'N/A' ? 1.44 : undefined),
+            costPrice: Number(item.costPrice) || 0,
+            sellingPrice: Number(item.sellingPrice) || 0,
+            stockQuantity: Number(item.stockQuantity) || 0,
+            minimumStock: Number(item.minimumStock) || 0,
+            origin: item.origin || undefined,
+            isDeleted: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            createdBy: 'system-initial',
+            updatedBy: 'system-initial'
+          };
+        });
 
- return (
- <div className="fixed inset-0 bg-m3-surface/95 backdrop-blur-md flex items-center justify-center z-[9999] p-4 font-sans select-none text-left">
- <div className="relative w-full max-w-2xl bg-m3-surface-low border border-m3-outline-variant rounded-[32px] p-6 sm:p-8 shadow-2xl text-m3-on-surface max-h-[90vh] overflow-y-auto">
- 
- {onClose && (
- <button
- type="button"
- onClick={onClose}
- className="absolute top-6 right-6 p-2 rounded-full hover:bg-m3-surface-container text-m3-on-surface-variant hover:text-white transition-all cursor-pointer z-50 border border-transparent hover:border-slate-700"
- title="Close Setup Wizard"
- >
- <X className="h-5 w-5" />
- </button>
- )}
- 
- {/* Wizard Header decor */}
- <div className="absolute top-0 right-12 w-32 h-32 bg-m3-primary/10 rounded-full blur-3xl pointer-events-none" />
- <div className="absolute bottom-0 left-12 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        const uniqueLocations = Array.from(new Set(
+          cleanProducts.map(p => p.origin?.trim()).filter(Boolean)
+        )) as string[];
 
- {/* STEP Rendering */}
- {step === 'welcome' && (
- <div className="space-y-6 text-center py-6 animate-fade-in">
- <div className="h-16 w-16 bg-gradient-to-tr from-m3-primary to-m3-primary/80 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-m3-primary/15">
- <Sparkles className="h-8 w-8 text-white animate-pulse" />
- </div>
- <div className="space-y-2">
- <span className="text-[10px] font-black uppercase tracking-widest text-m3-primary font-mono bg-m3-primary/10 px-3 py-1.5 rounded-full">
- Setup Assistant
- </span>
- <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">
- Welcome to TilePoint ERP OS!
- </h1>
- <p className="text-xs sm:text-sm text-m3-on-surface-variant max-w-md mx-auto leading-relaxed">
- Let's configure your workspace register. Get ready to experience tile retail automation, coverage intelligence, and compliant tax registers.
- </p>
- </div>
+        const existingBranchNames = (db.branches || []).filter(b => !b.isDeleted).map(b => b.name.toLowerCase().trim());
+        const newLocations = uniqueLocations.filter(loc => !existingBranchNames.includes(loc.toLowerCase().trim()));
 
- <div className="h-px bg-m3-surface-container max-w-xs mx-auto" />
+        if (newLocations.length > 0) {
+          setPendingProducts(cleanProducts);
+          setPendingBranches(newLocations.map(name => ({
+            name,
+            manager: 'Operational Branch Manager',
+            address: 'Regional Branch Site, Main City',
+            phone: '+63 920 123 4567',
+            isDistributionBranch: false,
+            staffCount: 3
+          })));
+          setStep('configure_branches');
+        } else {
+          db.completeOnboarding(cleanProducts);
+          
+          setImportStatus({
+            type: 'success',
+            message: `Successfully parsed and loaded ${cleanProducts.length} Tile Products. Priming system...`
+          });
 
- <button
- onClick={() => setStep('question')}
- className="py-3 px-6 bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary font-extrabold text-xs tracking-wider uppercase rounded-full shadow-lg shadow-m3-primary/20 active:scale-95 transition-all inline-flex items-center gap-2 cursor-pointer"
- >
- <span>Get Started</span>
- <ArrowRight className="h-4 w-4" />
- </button>
- </div>
- )}
+          setTimeout(() => {
+            if (onComplete) {
+              onComplete();
+            } else if (onClose) {
+              onClose();
+            } else {
+              window.location.reload();
+            }
+          }, 1200);
+        }
 
- {step === 'question' && (
- <div className="space-y-6 animate-fade-in text-m3-on-surface">
- <div className="space-y-2 text-center">
- <span className="text-[10px] font-black uppercase tracking-widest text-[#E2E8F0] font-mono bg-m3-surface-container px-3 py-1 rounded-full">
- Database Step 1 of 2
- </span>
- <h2 className="text-xl sm:text-2xl font-black text-white">Do you have an older legacy ERP / stock ledger?</h2>
- <p className="text-xs text-m3-on-surface-variant max-w-sm mx-auto">
- We support automated bulk migration from older cash register exports (pasted CSV or JSON arrays).
- </p>
- </div>
+      } else {
+        setImportStatus({ type: 'error', message: 'No valid records parsed from data payload.' });
+      }
+    } catch (e: any) {
+      setImportStatus({ type: 'error', message: `Migration error: ${e.message || 'Malformed schema'}` });
+    }
+  };
 
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
- <button
- onClick={() => setStep('yes_migrate')}
- className="p-5 bg-gradient-to-br from-m3-primary-container/20 to-m3-primary-container/10 border border-m3-primary/20 hover:border-m3-primary/50 rounded-2xl text-left transition-all space-y-3 shadow-md group active:scale-98 cursor-pointer"
- >
- <div className="h-10 w-10 bg-m3-primary/10 rounded-xl flex items-center justify-center text-m3-primary group-hover:bg-m3-primary group-hover:text-m3-on-primary transition-all">
- <Database className="h-5 w-5" />
- </div>
- <div>
- <h4 className="text-xs font-black uppercase tracking-wider text-white">Yes, I want to migrate</h4>
- <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
- Instantly parse raw spreadsheets or backup files into your TilePoint product catalog catalog.
- </p>
- </div>
- </button>
+  const handleLetsGo = async () => {
+    setIsSubmitting(true);
+    try {
+      localStorage.setItem('tilepoint_onboarded_setup', 'true');
+      localStorage.setItem('tp_is_configured', 'true');
+      localStorage.setItem('tp_first_login_done', 'true');
+      await db.completeOnboarding();
+      if (onComplete) {
+        onComplete();
+      } else if (onClose) {
+        onClose();
+      } else {
+        window.location.reload();
+      }
+    } catch (err) {
+      console.warn('[Onboarding] Error completing onboarding:', err);
+      if (onComplete) {
+        onComplete();
+      } else if (onClose) {
+        onClose();
+      } else {
+        window.location.reload();
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
- <button
- onClick={() => setStep('no_enter')}
- className="p-5 bg-gradient-to-br from-emerald-950/40 to-emerald-900/40 border border-emerald-500/20 hover:border-emerald-500/50 rounded-2xl text-left transition-all space-y-3 shadow-md group active:scale-98 cursor-pointer"
- >
- <div className="h-10 w-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-all">
- <HelpCircle className="h-5 w-5" />
- </div>
- <div>
- <h4 className="text-xs font-black uppercase tracking-wider text-white">No, start brand new</h4>
- <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
- Start fresh without bulk records. You can enter catalogs one-by-one or launch blank.
- </p>
- </div>
- </button>
- </div>
+  const content = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 font-sans select-none text-left animate-fade-in">
+      {/* Full-Screen Uniform Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
+        onClick={onClose} 
+      />
+      <div className="relative w-full max-w-2xl bg-content1 border border-divider/30 rounded-2xl p-6 sm:p-8 shadow-2xl text-foreground max-h-[90vh] overflow-y-auto z-10">
+        
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-6 right-6 p-2 rounded-full hover:bg-content2 text-default-500 hover:text-white transition-all cursor-pointer z-50 border border-transparent hover:border-slate-700"
+            title="Close Setup Wizard"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
+        
+        {/* Wizard Header decor */}
+        <div className="absolute top-0 right-12 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-12 w-40 h-40 bg-secondary/10 rounded-full blur-3xl pointer-events-none" />
 
- <div className="flex justify-between items-center pt-4 border-t border-m3-outline-variant">
- <button
- onClick={() => setStep('welcome')}
- className="text-[10px] font-bold text-m3-on-surface-variant hover:text-white uppercase tracking-wider transition-colors cursor-pointer"
- >
- Back To Welcome
- </button>
- </div>
- </div>
- )}
+        {/* STEP Rendering */}
+        {step === 'welcome' && (
+          <div className="space-y-6 animate-fade-in text-foreground py-2">
+            <div className="space-y-3 text-center">
+              <div className="h-14 w-14 bg-primary rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-primary/25/15">
+                <Sparkles className="h-7 w-7 text-white animate-pulse" />
+              </div>
+              <div className="space-y-1.5">
+ <span className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 px-3 py-1.5 rounded-full">
+                  Setup Assistant
+                </span>
+                <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">
+                  Welcome to TilePoint ERP OS!
+                </h1>
+                <p className="text-xs text-default-500 max-w-md mx-auto leading-relaxed pt-1">
+                  Your enterprise tile sales, stock inventory, and multi-branch operations platform is ready.
+                </p>
+              </div>
+            </div>
 
- {step === 'yes_migrate' && (
-        <div className="space-y-5 animate-fade-in text-left">
-          <div className="space-y-1 text-center sm:text-left">
-            <h3 className="text-lg font-black uppercase tracking-wider text-m3-primary flex items-center justify-center sm:justify-start gap-2">
-              <Upload className="h-5 w-5" />
-              Legacy Product Importer Hub
-            </h3>
-            <p className="text-xs text-m3-on-surface-variant">
-              Paste raw values or drag & drop files to import into the catalog!
-            </p>
+            <div className="pt-4 flex flex-col items-center justify-center gap-3">
+              <HeroButton
+                type="button"
+                disabled={isSubmitting}
+                onClick={handleLetsGo}
+                variant="primary"
+                size="lg"
+                endIcon={<ArrowRight className="h-4 w-4" />}
+                className="py-3.5 px-10 font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/25/25"
+              >
+                {isSubmitting ? 'Starting...' : "Let's Go"}
+              </HeroButton>
+              
+              <button
+                type="button"
+                onClick={() => setStep('yes_migrate')}
+                className="text-[11px] font-bold text-default-500 hover:text-primary uppercase tracking-wider transition-colors cursor-pointer pt-2"
+              >
+                Import Legacy CSV / JSON Records &rarr;
+              </button>
+            </div>
           </div>
+        )}
 
-          <div className="space-y-3">
- <div 
- onDragOver={handleDragOver}
- onDragLeave={handleDragLeave}
- onDrop={handleDrop}
- onClick={() => fileInputRef.current?.click()}
- className={`p-6 border-2 border-dashed rounded-2xl text-center space-y-2 transition-all cursor-pointer ${
- isDragging 
- ? 'border-m3-primary bg-m3-primary/10' 
- : 'border-m3-outline-variant hover:border-slate-700 bg-m3-surface-low/50'
- }`}
- >
- <input 
- type="file" 
- ref={fileInputRef} 
- onChange={handleFileSelect} 
- className="hidden" 
- accept=".csv,.json,.txt"
- />
- <Upload className="h-6 w-6 text-m3-primary mx-auto animate-bounce" />
- <div>
- <p className="text-xs font-black uppercase tracking-wide text-m3-on-surface">Drag &amp; Drop Old ERP OS File Here</p>
- <p className="text-[10px] text-m3-on-surface-variant mt-1 select-none">
- Drop your spreadsheet .csv or ledger backup .json file, or click inside to browse local files
- </p>
- </div>
- </div>
+        {step === 'yes_migrate' && (
+          <div className="space-y-5 animate-fade-in text-left">
+            <div className="space-y-1 text-center sm:text-left">
+              <h3 className="text-lg font-black uppercase tracking-wider text-primary flex items-center justify-center sm:justify-start gap-2">
+                <Upload className="h-5 w-5" />
+                Legacy Product Importer Hub
+              </h3>
+              <p className="text-xs text-default-500">
+                Paste raw values or drag &amp; drop files to import into the catalog!
+              </p>
+            </div>
 
- <div className="space-y-1">
- <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 pl-1 block">Or Paste Raw Clipboard text below:</span>
- <textarea
- value={rawImportText ?? ''}
- onChange={(e) => setRawImportText(e.target.value)}
- rows={6}
- placeholder={`Product Name,Product Code,Cost Price,Selling Price,Quantity,Category\n"Legacy Premium Marble",L-PM-01,150,220,100,"Marble"\n"Eco Slate Tile",E-SL-02,80,130,150,"Porcelain"`}
- className="w-full bg-m3-surface border border-m3-outline-variant p-3 text-xs font-mono text-m3-on-surface rounded-xl focus:border-m3-primary focus:outline-none transition-all placeholder:text-slate-600 leading-normal"
- />
- </div>
- </div>
+            <div className="space-y-3">
+              <div 
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`p-6 border-2 border-dashed rounded-2xl text-center space-y-2 transition-all cursor-pointer ${
+                  isDragging 
+                    ? 'border-primary bg-primary/10' 
+                    : 'border-divider hover:border-slate-700 bg-content1/50'
+                }`}
+              >
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileSelect} 
+                  className="hidden" 
+                  accept=".csv,.json,.txt"
+                />
+                <Upload className="h-6 w-6 text-primary mx-auto animate-bounce" />
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wide text-foreground">Drag &amp; Drop Old ERP OS File Here</p>
+                  <p className="text-[10px] text-default-500 mt-1 select-none">
+                    Drop your spreadsheet .csv or ledger backup .json file, or click inside to browse local files
+                  </p>
+                </div>
+              </div>
 
- {importStatus.type && (
- <div className={`p-3 rounded-xl border text-xs font-medium ${
- importStatus.type === 'success' 
- ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
- : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
- }`}>
- {importStatus.message}
- </div>
- )}
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 pl-1 block">Or Paste Raw Clipboard text below:</span>
+                <textarea
+                  value={rawImportText ?? ''}
+                  onChange={(e) => setRawImportText(e.target.value)}
+                  rows={6}
+                  placeholder={`Product Name,Product Code,Cost Price,Selling Price,Quantity,Category\n"Legacy Premium Marble",L-PM-01,150,220,100,"Marble"\n"Eco Slate Tile",E-SL-02,80,130,150,"Porcelain"`}
+ className="w-full bg-background border border-divider p-3 text-xs text-foreground rounded-xl focus:border-primary focus:outline-none transition-all placeholder:text-slate-600 leading-normal"
+                />
+              </div>
+            </div>
 
- <div className="flex flex-wrap gap-3 justify-between items-center pt-4 border-t border-m3-outline-variant">
- <button
- onClick={() => {
- setStep('question');
- setImportStatus({ type: null, message: '' });
- }}
- className="text-[10px] font-bold text-m3-on-surface-variant hover:text-white uppercase tracking-wider transition-colors cursor-pointer"
- >
- Back
- </button>
- <button
- onClick={handleImportMigrate}
- className="py-2.5 px-5 bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary font-extrabold text-[11px] tracking-wider uppercase rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
- >
- <CheckCircle className="h-4 w-4" />
- <span>Verify & Migrate Data</span>
- </button>
- </div>
- </div>
- )}
+            {importStatus.type && (
+              <div className={`p-3 rounded-xl border text-xs font-medium ${
+                importStatus.type === 'success' 
+                  ? 'bg-primary/10 border-primary/20 text-primary' 
+                  : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+              }`}>
+                {importStatus.message}
+              </div>
+            )}
 
- {step === 'no_enter' && (
- <div className="space-y-5 animate-fade-in text-m3-on-surface">
- <div className="space-y-1 text-center sm:text-left">
- <h3 className="text-lg font-black uppercase tracking-wider text-emerald-400 flex items-center justify-center sm:justify-start gap-2">
- <Plus className="h-5 w-5" />
- Register First Tile Catalog
- </h3>
- <p className="text-xs text-m3-on-surface-variant">
- Register initial tile inventory rows or launch system immediately as a fresh empty terminal.
- </p>
- </div>
+            <div className="flex flex-wrap gap-3 justify-between items-center pt-4 border-t border-divider">
+              <HeroButton
+                variant="flat"
+                size="sm"
+                onClick={() => {
+                  setStep('welcome');
+                  setImportStatus({ type: null, message: '' });
+                }}
+                className="text-[10px] font-bold uppercase tracking-wider"
+              >
+                Back
+              </HeroButton>
+              <HeroButton
+                variant="primary"
+                size="md"
+                onClick={handleImportMigrate}
+                startIcon={<CheckCircle className="h-4 w-4" />}
+                className="font-extrabold text-[11px] tracking-wider uppercase rounded-xl shadow-md"
+              >
+                Verify &amp; Migrate Data
+              </HeroButton>
+            </div>
+          </div>
+        )}
 
- {/* Prompt form for first catalog entry */}
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 bg-m3-surface/40 p-4 rounded-2xl border border-m3-outline-variant">
- <div className="space-y-1">
- <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">Product Name / Design</label>
- <input
- type="text"
- placeholder="Product name"
- value={newProdName ?? ''}
- onChange={e => setNewProdName(e.target.value)}
- className="w-full bg-m3-surface border border-m3-outline-variant focus:border-emerald-500 rounded-xl px-3 py-1.5 text-xs focus:outline-none text-m3-on-surface transition-colors"
- />
- </div>
+        {step === 'configure_branches' && (
+          <div className="space-y-5 animate-fade-in text-foreground text-left max-h-[70vh] overflow-y-auto pr-2">
+            <div className="space-y-1 text-center sm:text-left">
+              <h3 className="text-lg font-black uppercase tracking-wider text-amber-400 flex items-center justify-center sm:justify-start gap-2">
+                New Branch Outlets Detected!
+              </h3>
+              <p className="text-xs text-default-500">
+                We found locations in your imported records that are not yet created in TilePoint. Please fill in their operational details to complete the migration:
+              </p>
+            </div>
 
- <div className="space-y-1">
- <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">Product System Code</label>
- <input
- type="text"
- placeholder="Product system code"
- value={newProdCode ?? ''}
- onChange={e => setNewProdCode(e.target.value)}
- className="w-full bg-m3-surface border border-m3-outline-variant focus:border-emerald-500 rounded-xl px-3 py-1.5 text-xs focus:outline-none text-m3-on-surface transition-colors bg-transparent"
- />
- </div>
+            <div className="space-y-4 pt-2">
+              {pendingBranches.map((pb, idx) => (
+                <div key={idx} className="p-4 rounded-2xl bg-content1/85 border border-divider space-y-3">
+                  <div className="pb-2 border-b border-divider flex justify-between items-center">
+                    <span className="text-xs font-black uppercase tracking-wider text-amber-400">
+                      Detected Branch {idx + 1}: {pb.name}
+                    </span>
+ <span className="text-[10px] bg-content2 text-default-500 px-2 py-0.5 rounded font-bold">Import Location</span>
+                  </div>
 
- <div className="space-y-1">
- <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">Selling Price (PHP)</label>
- <input
- type="number"
- placeholder="150"
- value={newProdPrice ?? ''}
- onChange={e => setNewProdPrice(e.target.value)}
- className="w-full bg-m3-surface border border-m3-outline-variant focus:border-emerald-500 rounded-xl px-3 py-1.5 text-xs focus:outline-none text-m3-on-surface transition-colors bg-transparent"
- />
- </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-default-500 block pl-1">Manager In Charge *</label>
+                      <input
+                        type="text"
+                        value={pb.manager ?? ''}
+                        onChange={(e) => {
+                          const updated = [...pendingBranches];
+                          updated[idx].manager = e.target.value;
+                          setPendingBranches(updated);
+                        }}
+                        required
+                        className="w-full bg-background border border-divider focus:border-primary rounded-xl px-3 py-2 focus:outline-none text-foreground transition-colors"
+                        placeholder="Manager name"
+                      />
+                    </div>
 
- <div className="space-y-1">
- <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">Stock Quantity (Boxes)</label>
- <input
- type="number"
- placeholder="50"
- value={newProdQty ?? ''}
- onChange={e => setNewProdQty(e.target.value)}
- className="w-full bg-m3-surface border border-m3-outline-variant focus:border-emerald-500 rounded-xl px-3 py-1.5 text-xs focus:outline-none text-m3-on-surface transition-colors bg-transparent"
- />
- </div>
- </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-default-500 block pl-1">Branch Contact Number *</label>
+                      <input
+                        type="text"
+                        value={pb.phone ?? ''}
+                        onChange={(e) => {
+                          const updated = [...pendingBranches];
+                          updated[idx].phone = e.target.value;
+                          setPendingBranches(updated);
+                        }}
+                        required
+                        className="w-full bg-background border border-divider focus:border-primary rounded-xl px-3 py-2 focus:outline-none text-foreground transition-colors"
+                        placeholder="Phone number"
+                      />
+                    </div>
 
- {importStatus.type && (
- <div className={`p-3 rounded-xl border text-xs font-medium ${
- importStatus.type === 'success' 
- ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
- : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
- }`}>
- {importStatus.message}
- </div>
- )}
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="text-[10px] font-bold uppercase text-default-500 block pl-1">Full Dispatch Address *</label>
+                      <input
+                        type="text"
+                        value={pb.address ?? ''}
+                        onChange={(e) => {
+                          const updated = [...pendingBranches];
+                          updated[idx].address = e.target.value;
+                          setPendingBranches(updated);
+                        }}
+                        required
+                        className="w-full bg-background border border-divider focus:border-primary rounded-xl px-3 py-2 focus:outline-none text-foreground transition-colors"
+                        placeholder="Street, District, City"
+                      />
+                    </div>
 
- <div className="flex flex-col sm:flex-row gap-3 justify-between sm:items-center pt-2">
- <button
- onClick={() => setStep('blank_confirm')}
- className="text-[10px] font-mono text-emerald-400/80 hover:text-emerald-400 underline uppercase tracking-wider block text-left pt-1 font-bold"
- >
- No, Skip this & Start 100% Blank System &rarr;
- </button>
- </div>
+                    <div className="flex items-center gap-2 pt-1">
+                      <input
+                        type="checkbox"
+                        id={`wizard-dist-hub-${idx}`}
+                        checked={pb.isDistributionBranch}
+                        onChange={(e) => {
+                          const updated = [...pendingBranches];
+                          updated[idx].isDistributionBranch = e.target.checked;
+                          setPendingBranches(updated);
+                        }}
+                        className="rounded border-divider focus:ring-opacity-50 text-primary"
+                      />
+                      <label htmlFor={`wizard-dist-hub-${idx}`} className="text-[10px] text-default-500 font-bold uppercase cursor-pointer select-none">
+                        Is Distribution Hub?
+                      </label>
+                    </div>
 
- <div className="flex justify-between items-center pt-4 border-t border-m3-outline-variant">
- <button
- onClick={() => {
- setStep('question');
- setImportStatus({ type: null, message: '' });
- }}
- className="text-[10px] font-bold text-m3-on-surface-variant hover:text-white uppercase tracking-wider transition-colors cursor-pointer"
- >
- Back
- </button>
- <button
- onClick={handleRegisterFirstProduct}
- className="py-2 px-4.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] tracking-wider uppercase rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
- >
- <Save className="h-4 w-4" />
- <span>Initialize Catalog</span>
- </button>
- </div>
- </div>
- )}
+                    <div className="flex items-center gap-2 pt-1">
+                      <label className="text-[10px] text-default-500 font-bold uppercase block select-none">
+                        Allocated Staff:
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={pb.staffCount ?? ''}
+                        onChange={(e) => {
+                          const updated = [...pendingBranches];
+                          updated[idx].staffCount = parseInt(e.target.value) || 3;
+                          setPendingBranches(updated);
+                        }}
+ className="w-16 bg-background border border-divider focus:border-primary rounded-xl px-2 py-1 focus:outline-none text-foreground transition-colors text-center text-xs "
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
 
- {step === 'blank_confirm' && (
- <div className="space-y-6 animate-fade-in text-center py-4 text-m3-on-surface">
- <div className="h-12 w-12 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto shadow-md">
- <Database className="h-6 w-6" />
- </div>
- <div className="space-y-2">
- <h3 className="text-lg font-black uppercase text-white tracking-wide">Confirm Blank Initial System</h3>
- <p className="text-xs text-m3-on-surface-variant max-w-sm mx-auto leading-relaxed">
- This primes a completely empty ledger. You won't find any pre-loaded tile products or transaction details. 100% compliant fresh start!
- </p>
- </div>
+            {importStatus.type && (
+              <div className={`p-3 rounded-xl border text-xs font-medium ${
+                importStatus.type === 'success' 
+                  ? 'bg-primary/10 border-primary/20 text-primary' 
+                  : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+              }`}>
+                {importStatus.message}
+              </div>
+            )}
 
- <div className="flex justify-center gap-3.5 pt-4">
- <button
- type="button"
- onClick={() => setStep('no_enter')}
- className="py-2.5 px-4 bg-m3-surface-container hover:bg-slate-700 text-m3-on-surface-variant font-bold text-[11px] tracking-wider uppercase rounded-xl transition-all cursor-pointer"
- >
- Back
- </button>
+            <div className="flex justify-between items-center pt-4 border-t border-divider">
+              <HeroButton
+                variant="flat"
+                size="sm"
+                onClick={() => {
+                  setStep('yes_migrate');
+                  setImportStatus({ type: null, message: '' });
+                }}
+                className="text-[10px] font-bold uppercase tracking-wider"
+              >
+                Back To Upload
+              </HeroButton>
+              <HeroButton
+                variant="primary"
+                size="md"
+                onClick={handleCompleteWithBranches}
+                startIcon={<CheckCircle className="h-4 w-4" />}
+                className="font-extrabold text-[11px] tracking-wider uppercase rounded-xl shadow-md"
+              >
+                Initialize Branches &amp; Catalog
+              </HeroButton>
+            </div>
+          </div>
+        )}
 
- <button
- type="button"
- onClick={handleInitializeFreshBlank}
- className="py-2.5 px-5 bg-gradient-to-r from-emerald-600 to-m3-primary hover:from-emerald-500 hover:to-m3-primary/90 text-white font-black text-[11px] tracking-wider uppercase rounded-xl shadow-lg shadow-m3-primary/15 transition-all cursor-pointer"
- >
- Launch Empty ERP OS
- </button>
- </div>
- </div>
- )}
+      </div>
+    </div>
+  );
 
- {step === 'configure_branches' && (
- <div className="space-y-5 animate-fade-in text-m3-on-surface text-left max-h-[70vh] overflow-y-auto pr-2">
- <div className="space-y-1 text-center sm:text-left">
- <h3 className="text-lg font-black uppercase tracking-wider text-amber-400 flex items-center justify-center sm:justify-start gap-2">
- New Branch Outlets Detected!
- </h3>
- <p className="text-xs text-m3-on-surface-variant">
- We found locations in your imported records that are not yet created in TilePoint. Please fill in their operational details to complete the migration:
- </p>
- </div>
-
- <div className="space-y-4 pt-2">
- {pendingBranches.map((pb, idx) => (
- <div key={idx} className="p-4 rounded-2xl bg-m3-surface-low/85 border border-m3-outline-variant space-y-3">
- <div className="pb-2 border-b border-m3-outline-variant flex justify-between items-center">
- <span className="text-xs font-black uppercase tracking-wider text-amber-400">
- Detected Branch {idx + 1}: {pb.name}
- </span>
- <span className="text-[10px] bg-m3-surface-container text-m3-on-surface-variant px-2 py-0.5 rounded font-mono font-bold">Import Location</span>
- </div>
-
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
- <div className="space-y-1">
- <label className="text-[10px] font-bold uppercase text-m3-on-surface-variant block pl-1">Manager In Charge *</label>
- <input
- type="text"
- value={pb.manager ?? ''}
- onChange={(e) => {
- const updated = [...pendingBranches];
- updated[idx].manager = e.target.value;
- setPendingBranches(updated);
- }}
- required
- className="w-full bg-m3-surface border border-m3-outline-variant focus:border-m3-primary rounded-xl px-3 py-2 focus:outline-none text-m3-on-surface transition-colors"
- placeholder="Manager name"
- />
- </div>
-
- <div className="space-y-1">
- <label className="text-[10px] font-bold uppercase text-m3-on-surface-variant block pl-1">Branch Contact Number *</label>
- <input
- type="text"
- value={pb.phone ?? ''}
- onChange={(e) => {
- const updated = [...pendingBranches];
- updated[idx].phone = e.target.value;
- setPendingBranches(updated);
- }}
- required
- className="w-full bg-m3-surface border border-m3-outline-variant focus:border-m3-primary rounded-xl px-3 py-2 focus:outline-none text-m3-on-surface transition-colors"
- placeholder="Phone number"
- />
- </div>
-
- <div className="space-y-1 sm:col-span-2">
- <label className="text-[10px] font-bold uppercase text-m3-on-surface-variant block pl-1">Full Dispatch Address *</label>
- <input
- type="text"
- value={pb.address ?? ''}
- onChange={(e) => {
- const updated = [...pendingBranches];
- updated[idx].address = e.target.value;
- setPendingBranches(updated);
- }}
- required
- className="w-full bg-m3-surface border border-m3-outline-variant focus:border-m3-primary rounded-xl px-3 py-2 focus:outline-none text-m3-on-surface transition-colors"
- placeholder="Street, District, City"
- />
- </div>
-
- <div className="flex items-center gap-2 pt-1">
- <input
- type="checkbox"
- id={`wizard-dist-hub-${idx}`}
- checked={pb.isDistributionBranch}
- onChange={(e) => {
- const updated = [...pendingBranches];
- updated[idx].isDistributionBranch = e.target.checked;
- setPendingBranches(updated);
- }}
- className="rounded border-m3-outline-variant focus:ring-opacity-50 text-m3-primary"
- />
- <label htmlFor={`wizard-dist-hub-${idx}`} className="text-[10px] text-m3-on-surface-variant font-bold uppercase cursor-pointer select-none">
- Is Distribution Hub?
- </label>
- </div>
-
- <div className="flex items-center gap-2 pt-1">
- <label className="text-[10px] text-m3-on-surface-variant font-bold uppercase block select-none">
- Allocated Staff:
- </label>
- <input
- type="number"
- min={1}
- max={50}
- value={pb.staffCount ?? ''}
- onChange={(e) => {
- const updated = [...pendingBranches];
- updated[idx].staffCount = parseInt(e.target.value) || 3;
- setPendingBranches(updated);
- }}
- className="w-16 bg-m3-surface border border-m3-outline-variant focus:border-m3-primary rounded-xl px-2 py-1 focus:outline-none text-m3-on-surface transition-colors text-center text-xs font-mono"
- />
- </div>
- </div>
- </div>
- ))}
- </div>
-
- {importStatus.type && (
- <div className={`p-3 rounded-xl border text-xs font-medium ${
- importStatus.type === 'success' 
- ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
- : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
- }`}>
- {importStatus.message}
- </div>
- )}
-
- <div className="flex justify-between items-center pt-4 border-t border-m3-outline-variant">
- <button
- onClick={() => {
- setStep('yes_migrate');
- setImportStatus({ type: null, message: '' });
- }}
- className="text-[10px] font-bold text-m3-on-surface-variant hover:text-white uppercase tracking-wider transition-colors cursor-pointer"
- >
- Back To Upload
- </button>
- <button
- onClick={handleCompleteWithBranches}
- className="py-2.5 px-5 bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary font-extrabold text-[11px] tracking-wider uppercase rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
- >
- <CheckCircle className="h-4 w-4" />
- <span>Initialize Branches & Catalog</span>
- </button>
- </div>
- </div>
- )}
-
- </div>
- </div>
- );
+  return typeof document !== 'undefined' ? createPortal(content, document.body) : null;
 };

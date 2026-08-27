@@ -12,12 +12,12 @@ import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/500.css';
 import '@fontsource/jetbrains-mono/600.css';
 import '@fontsource/jetbrains-mono/400-italic.css';
-import '@fontsource-variable/roboto-flex/index.css';
 import { BrowserRouter } from 'react-router-dom';
-import App from './App.tsx';
-import { ErrorBoundary } from './components/ErrorBoundary.tsx';
+import App from './App';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { applyHeroUIThemeToDOM } from './lib/herouiThemeEngine';
+import { registerServiceWorker, clearAllAppCaches, activateUpdate, getServiceWorkerStatus } from './services/serviceWorkerRegistration';
 import './index.css';
-import './diagnoseTheme.ts';
 
 // --- Robust Browser Fallback for Private Browsing / Blocked Storage Mode ---
 try {
@@ -58,8 +58,16 @@ try {
  });
 }
 
-// --- Browser environment check and polyfill for older browser versions ---
+// --- PWA Service Worker Registration & Browser Polyfills ---
 if (typeof window !== 'undefined') {
+  // Register Enterprise Service Worker for offline UI asset & static data caching
+  registerServiceWorker();
+
+  // Expose operational management helpers to window for diagnostics
+  (window as any).clearAppCaches = clearAllAppCaches;
+  (window as any).activateServiceWorkerUpdate = activateUpdate;
+  (window as any).getServiceWorkerStatus = getServiceWorkerStatus;
+
   window.addEventListener('unhandledrejection', (event) => {
     const reason = event?.reason;
     const msg = typeof reason === 'string' ? reason : (reason?.message || '');
@@ -93,13 +101,68 @@ if (typeof window !== 'undefined' && !(window as any).requestIdleCallback) {
  };
 }
 
-createRoot(document.getElementById('root')!).render(
- <StrictMode>
- <ErrorBoundary>
- <BrowserRouter>
- <App />
- </BrowserRouter>
- </ErrorBoundary>
- </StrictMode>,
-);
+if (typeof window !== 'undefined') {
+  (window as any).resetDB = async function (mode = 'all') {
+    console.log(`[TilePoint Reset] Initiating database reset (mode: ${mode})...`);
+    try {
+      const token = localStorage.getItem('token') || '';
+      const res = await fetch('/api/db/truncate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ mode, force: true }),
+      });
+      const data = await res.json();
+      console.log('[TilePoint Reset] Server wipe response:', data);
+    } catch (err) {
+      console.warn('[TilePoint Reset] Server truncate warning:', err);
+    }
+
+    try { localStorage.clear(); } catch (_) {}
+    try { sessionStorage.clear(); } catch (_) {}
+    try { localStorage.setItem('tp_is_configured', 'false'); } catch (_) {}
+    try { localStorage.setItem('tilepoint_onboarded_setup', 'false'); } catch (_) {}
+    try {
+      if (typeof indexedDB !== 'undefined') {
+        indexedDB.deleteDatabase('TilePointBackupDB');
+      }
+    } catch (_) {}
+
+    console.log('[TilePoint Reset] Local and server data cleared. Rebooting...');
+    window.location.href = '/';
+  };
+  (window as any).resetDatabase = (window as any).resetDB;
+}
+
+const rootEl = document.getElementById('root');
+if (rootEl) {
+  try {
+    // Ensure HeroUI theme CSS variables, UI style mode, and DOM attributes are applied before React mount
+    applyHeroUIThemeToDOM();
+    createRoot(rootEl).render(
+      <StrictMode>
+        <ErrorBoundary>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </ErrorBoundary>
+      </StrictMode>,
+    );
+  } catch (err) {
+    console.error('[TilePoint Startup] Fatal mount error caught:', err);
+    rootEl.innerHTML = `
+      <div style="min-height:100vh;background:#0F172A;color:#FFFFFF;display:flex;align-items:center;justify-content:center;padding:24px;font-family:sans-serif;">
+        <div style="max-width:480px;background:#1E293B;border:1px solid rgba(239,68,68,0.3);border-radius:16px;padding:24px;text-align:center;">
+          <h2 style="color:#EF4444;margin:0 0 8px 0;font-size:18px;">Application Launch Recovery</h2>
+          <p style="color:#94A3B8;font-size:13px;margin:0 0 16px 0;">A startup initialization fault occurred. Click below to reset local state and reload.</p>
+          <button onclick="window.resetDB ? window.resetDB() : (localStorage.clear(), location.reload())" style="background:#006FEE;color:#FFFFFF;border:none;border-radius:8px;padding:10px 20px;font-weight:600;cursor:pointer;">
+            Reset & Reload App
+          </button>
+        </div>
+      </div>
+    `;
+  }
+}
 

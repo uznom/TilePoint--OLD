@@ -4,60 +4,83 @@ import React from 'react';
 type ComponentModule = { default: React.ComponentType<any> };
 type ModuleLoader = () => Promise<ComponentModule>;
 
+// Helper to safely extract default or named component export regardless of ESM/CJS format
+const resolveModule = (m: any, preferredName?: string): ComponentModule => {
+  if (!m) throw new Error('Dynamic module resolved to empty object');
+  if (preferredName && m[preferredName]) {
+    return { default: m[preferredName] };
+  }
+  if (m.default) {
+    return { default: m.default };
+  }
+  const fallbackKey = Object.keys(m).find((k) => typeof m[k] === 'function' || (typeof m[k] === 'object' && m[k] !== null));
+  if (fallbackKey && m[fallbackKey]) {
+    return { default: m[fallbackKey] };
+  }
+  return { default: m };
+};
+
 // Map of all dynamic module loaders indexed by canonical key and sub-tab IDs
 const MODULE_LOADERS: Record<string, ModuleLoader> = {
-  dashboard: () => import('./Dashboard').then((m) => ({ default: m.Dashboard })),
-  'profit-analytics': () => import('./AdminProfitModule').then((m) => ({ default: m.AdminProfitModule })),
-  pos: () => import('./PosModule').then((m) => ({ default: m.PosModule })),
-  inventory: () => import('./InventoryModule').then((m) => ({ default: m.InventoryModule })),
-  'inventory-stocks': () => import('./InventoryModule').then((m) => ({ default: m.InventoryModule })),
-  'inventory-adjustments': () => import('./InventoryModule').then((m) => ({ default: m.InventoryModule })),
-  'inventory-transfer': () => import('./InventoryModule').then((m) => ({ default: m.InventoryModule })),
-  'inventory-logistics': () => import('./InventoryModule').then((m) => ({ default: m.InventoryModule })),
-  'inventory-import': () => import('./InventoryModule').then((m) => ({ default: m.InventoryModule })),
-  'inventory-expiry': () => import('./InventoryModule').then((m) => ({ default: m.InventoryModule })),
-  'inventory-branch-prices': () => import('./InventoryModule').then((m) => ({ default: m.InventoryModule })),
-  procurement: () => import('./ProcurementModule').then((m) => ({ default: m.ProcurementModule })),
-  'procurement-po': () => import('./ProcurementModule').then((m) => ({ default: m.ProcurementModule })),
-  transmittal: () => import('./TransmittalModule').then((m) => ({ default: m.TransmittalModule })),
-  shift: () => import('./ShiftModule').then((m) => ({ default: m.ShiftModule })),
-  branches: () => import('./BranchModule').then((m) => ({ default: m.BranchModule })),
-  users: () => import('./UsersModule').then((m) => ({ default: m.UsersModule })),
-  'system-settings': () => import('./SystemSettingsModule').then((m) => ({ default: m.SystemSettingsModule })),
-  calculator: () => import('./CalculatorModule').then((m) => ({ default: m.CalculatorModule })),
-  'staff-portal': () => import('./StaffPortal').then((m) => ({ default: m.StaffPortal })),
-  'atpos-extra': () => import('./AtposExtraModules') as Promise<ComponentModule>,
-  deliveries: () => import('./DeliveriesModule').then((m) => ({ default: m.DeliveriesModule })),
-  'deliveries-panel': () => import('./DeliveriesModule').then((m) => ({ default: m.DeliveriesModule })),
-  'sales-transmission': () => import('./SalesTransmissionModule').then((m) => ({ default: m.SalesTransmissionModule })),
-  'daily-reconciliation': () => import('./DailyReconciliationModule').then((m) => ({ default: m.DailyReconciliationModule })),
-  'reconciliation-transmission': () => import('./ReconciliationTransmissionModule').then((m) => ({ default: m.ReconciliationTransmissionModule })),
-  'damage-register': () => import('./DamageRegisterModule').then((m) => ({ default: m.DamageRegisterModule })),
-  'inventory-damage': () => import('./DamageRegisterModule').then((m) => ({ default: m.DamageRegisterModule })),
-  'adjustments-void': () => import('./PosModule').then((m) => ({ default: m.PosModule })),
-  'adjustments-return': () => import('./AtposExtraModules') as Promise<ComponentModule>,
-  adjustments: () => import('./AtposExtraModules') as Promise<ComponentModule>,
-  members: () => import('./AtposExtraModules') as Promise<ComponentModule>,
-  'members-manage': () => import('./AtposExtraModules') as Promise<ComponentModule>,
-  'members-receivables': () => import('./AtposExtraModules') as Promise<ComponentModule>,
-  'members-loyalty': () => import('./AtposExtraModules') as Promise<ComponentModule>,
-  'members-search-sales': () => import('./AtposExtraModules') as Promise<ComponentModule>,
-  expenses: () => import('./AtposExtraModules') as Promise<ComponentModule>,
-  'expenses-add': () => import('./AtposExtraModules') as Promise<ComponentModule>,
-  'expenses-search': () => import('./AtposExtraModules') as Promise<ComponentModule>,
-  supplier: () => import('./ProcurementModule').then((m) => ({ default: m.ProcurementModule })),
-  'suppliers-manage': () => import('./ProcurementModule').then((m) => ({ default: m.ProcurementModule })),
-  'suppliers-credits': () => import('./AtposExtraModules') as Promise<ComponentModule>,
-  'suppliers-calendar': () => import('./AtposExtraModules') as Promise<ComponentModule>,
-  bir: () => import('./AtposExtraModules') as Promise<ComponentModule>,
-  'bir-xz': () => import('./AtposExtraModules') as Promise<ComponentModule>,
-  'bir-summary': () => import('./AtposExtraModules') as Promise<ComponentModule>,
-  'bir-pwd': () => import('./AtposExtraModules') as Promise<ComponentModule>,
-  'bir-athletes': () => import('./AtposExtraModules') as Promise<ComponentModule>,
-  'bir-solo': () => import('./AtposExtraModules') as Promise<ComponentModule>,
-  'bir-senior20': () => import('./AtposExtraModules') as Promise<ComponentModule>,
-  'bir-senior5': () => import('./AtposExtraModules') as Promise<ComponentModule>,
-  'bir-regular': () => import('./AtposExtraModules') as Promise<ComponentModule>,
+  dashboard: () => import('./Dashboard').then((m) => resolveModule(m, 'Dashboard')),
+  'profit-analytics': () => import('./AdminProfitModule').then((m) => resolveModule(m, 'AdminProfitModule')),
+  analytics: () => import('./AdminProfitModule').then((m) => resolveModule(m, 'AdminProfitModule')),
+  pos: () => import('./PosModule').then((m) => resolveModule(m, 'PosModule')),
+  ledger: () => import('./PosModule').then((m) => resolveModule(m, 'PosModule')),
+  inventory: () => import('./InventoryModule').then((m) => resolveModule(m, 'InventoryModule')),
+  'inventory-stocks': () => import('./InventoryModule').then((m) => resolveModule(m, 'InventoryModule')),
+  'inventory-adjustments': () => import('./InventoryModule').then((m) => resolveModule(m, 'InventoryModule')),
+  'inventory-transfer': () => import('./InventoryModule').then((m) => resolveModule(m, 'InventoryModule')),
+  'inventory-logistics': () => import('./InventoryModule').then((m) => resolveModule(m, 'InventoryModule')),
+  'inventory-import': () => import('./InventoryModule').then((m) => resolveModule(m, 'InventoryModule')),
+  'inventory-expiry': () => import('./InventoryModule').then((m) => resolveModule(m, 'InventoryModule')),
+  'inventory-branch-prices': () => import('./InventoryModule').then((m) => resolveModule(m, 'InventoryModule')),
+  procurement: () => import('./ProcurementModule').then((m) => resolveModule(m, 'ProcurementModule')),
+  'procurement-po': () => import('./ProcurementModule').then((m) => resolveModule(m, 'ProcurementModule')),
+  transmittal: () => import('./TransmittalModule').then((m) => resolveModule(m, 'TransmittalModule')),
+  shift: () => import('./ShiftModule').then((m) => resolveModule(m, 'ShiftModule')),
+  shifts: () => import('./ShiftModule').then((m) => resolveModule(m, 'ShiftModule')),
+  branches: () => import('./BranchModule').then((m) => resolveModule(m, 'BranchModule')),
+  archives: () => import('./ArchivesModule').then((m) => resolveModule(m, 'ArchivesModule')),
+  users: () => import('./UsersModule').then((m) => resolveModule(m, 'UsersModule')),
+  'system-settings': () => import('./SystemSettingsModule').then((m) => resolveModule(m, 'SystemSettingsModule')),
+  settings: () => import('./SystemSettingsModule').then((m) => resolveModule(m, 'SystemSettingsModule')),
+  calculator: () => import('./CalculatorModule').then((m) => resolveModule(m, 'CalculatorModule')),
+  'staff-portal': () => import('./StaffPortal').then((m) => resolveModule(m, 'StaffPortal')),
+  portal: () => import('./StaffPortal').then((m) => resolveModule(m, 'StaffPortal')),
+  'atpos-extra': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  deliveries: () => import('./DeliveriesModule').then((m) => resolveModule(m, 'DeliveriesModule')),
+  'deliveries-panel': () => import('./DeliveriesModule').then((m) => resolveModule(m, 'DeliveriesModule')),
+  'sales-transmission': () => import('./SalesTransmissionModule').then((m) => resolveModule(m, 'SalesTransmissionModule')),
+  'daily-reconciliation': () => import('./DailyReconciliationModule').then((m) => resolveModule(m, 'DailyReconciliationModule')),
+  'reconciliation-transmission': () => import('./ReconciliationTransmissionModule').then((m) => resolveModule(m, 'ReconciliationTransmissionModule')),
+  'damage-register': () => import('./DamageRegisterModule').then((m) => resolveModule(m, 'DamageRegisterModule')),
+  'inventory-damage': () => import('./DamageRegisterModule').then((m) => resolveModule(m, 'DamageRegisterModule')),
+  'adjustments-void': () => import('./PosModule').then((m) => resolveModule(m, 'PosModule')),
+  'adjustments-return': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  adjustments: () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  members: () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  'members-manage': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  'members-receivables': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  'members-loyalty': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  'members-search-sales': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  expenses: () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  'expenses-add': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  'expenses-search': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  supplier: () => import('./ProcurementModule').then((m) => resolveModule(m, 'ProcurementModule')),
+  'suppliers-manage': () => import('./ProcurementModule').then((m) => resolveModule(m, 'ProcurementModule')),
+  'suppliers-credits': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  'suppliers-calendar': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  bir: () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  'bir-xz': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  'bir-summary': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  'bir-pwd': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  'bir-athletes': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  'bir-solo': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  'bir-senior20': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  'bir-senior5': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  'bir-regular': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  tutorials: () => import('./TutorialOnboarding').then((m) => resolveModule(m, 'TutorialOnboarding')),
 };
 
 const PATH_ALIAS_MAP: Record<string, string> = {
@@ -104,12 +127,21 @@ export function getOrLoadModule(rawKey: string): Promise<ComponentModule> {
     return Promise.reject(new Error(`No loader found for module "${key}"`));
   }
 
-  const promise = loader().catch((err) => {
-    // Evict failed load attempt so subsequent retries can re-trigger dynamic import
-    modulePromiseCache.delete(key);
-    throw err;
-  });
+  const loadWithRetry = async (retries = 2): Promise<ComponentModule> => {
+    try {
+      return await loader();
+    } catch (err) {
+      if (retries > 0) {
+        await new Promise((r) => setTimeout(r, 300));
+        return loadWithRetry(retries - 1);
+      }
+      modulePromiseCache.delete(key);
+      console.error(`[LazyModules] Failed to load module chunk "${key}":`, err);
+      throw err;
+    }
+  };
 
+  const promise = loadWithRetry();
   modulePromiseCache.set(key, promise);
   return promise;
 }
@@ -123,6 +155,7 @@ export const LazyProcurementModule = React.lazy(() => getOrLoadModule('procureme
 export const LazyTransmittalModule = React.lazy(() => getOrLoadModule('transmittal'));
 export const LazyShiftModule = React.lazy(() => getOrLoadModule('shift'));
 export const LazyBranchModule = React.lazy(() => getOrLoadModule('branches'));
+export const LazyArchivesModule = React.lazy(() => getOrLoadModule('archives'));
 export const LazyUsersModule = React.lazy(() => getOrLoadModule('users'));
 export const LazySystemSettingsModule = React.lazy(() => getOrLoadModule('system-settings'));
 export const LazyCalculatorModule = React.lazy(() => getOrLoadModule('calculator'));
@@ -133,6 +166,7 @@ export const LazySalesTransmissionModule = React.lazy(() => getOrLoadModule('sal
 export const LazyDailyReconciliationModule = React.lazy(() => getOrLoadModule('daily-reconciliation'));
 export const LazyReconciliationTransmissionModule = React.lazy(() => getOrLoadModule('reconciliation-transmission'));
 export const LazyDamageRegisterModule = React.lazy(() => getOrLoadModule('damage-register'));
+export const LazyTutorialOnboarding = React.lazy(() => getOrLoadModule('tutorials'));
 
 // Priority Tiers for pre-fetching during app idle time
 export const HIGH_PRIORITY_MODULES = ['pos', 'dashboard', 'shift', 'calculator', 'inventory'];
@@ -249,4 +283,54 @@ export function scheduleIdlePrefetch(): void {
       }, 4000);
     }, 2500);
   }, 1500);
+}
+
+/**
+ * Robust cleanup routine executed whenever activeTab transitions.
+ * Aggressively tears down detached DOM references, focus trees, audio/speech synthesis,
+ * floating popups, and dispatches lifecycle events for modules to release caches.
+ */
+export function performTabTransitionCleanup(fromTab: string, toTab: string): void {
+  if (typeof window === 'undefined') return;
+
+  // 1. Defocus active element to prevent the browser from holding detached DOM node references
+  try {
+    if (document.activeElement && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  } catch (_) {
+    // Ignore DOM detachment errors
+  }
+
+  // 2. Terminate any active speech synthesis or media playback from inactive modules
+  try {
+    if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+    }
+  } catch (_) {
+    // Ignore media errors
+  }
+
+  // 3. Dispatch system-wide transition cleanup event so active module subscriptions / timers / workers can dispose
+  try {
+    const cleanupEvent = new CustomEvent('tp_tab_transition_cleanup', {
+      detail: {
+        fromTab,
+        toTab,
+        timestamp: Date.now(),
+      },
+    });
+    window.dispatchEvent(cleanupEvent);
+  } catch (_) {
+    // Ignore dispatch errors
+  }
+
+  // 4. Force browser GC hint if exposed in runtime environment (e.g. Electron / Chromium flags)
+  try {
+    if (typeof (window as any).gc === 'function') {
+      (window as any).gc();
+    }
+  } catch (_) {
+    // Ignore GC call errors
+  }
 }

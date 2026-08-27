@@ -3,65 +3,56 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { useDb, useDbProducts, useDbBranchStock } from "../context/DbContext";
-import { Product, Sale, SaleItem, UserRole, Member } from "../types/db";
+import {
+AlertCircle,
+Calculator,
+Calendar,
+CheckCircle,
+ChevronDown,
+ChevronUp,
+Download,
+FileText,
+History,
+Keyboard,
+Loader2,
+Lock,
+LockKeyhole,
+Printer,
+RefreshCw,
+RotateCcw,
+Scissors,
+Search,
+ShieldAlert,
+ShieldCheck,
+ShoppingBag,
+ShoppingCart,
+Sparkles,
+Trash2,
+Truck,
+UserPlus,
+Users,
+X
+} from "lucide-react";
+import { AnimatePresence,motion } from "motion/react";
+import React,{ useCallback,useEffect,useRef,useState } from "react";
+import { useDb,useDbBranchStock,useDbProducts } from "../context/DbContext";
+import { useVirtualList } from "../hooks/useVirtualList";
+import { getBranchStockQuantity,getBranchStockRecord,isProductInBranch,isSameBranch } from "../lib/branchUtils";
 import { verifyPasswordWithToken } from "../lib/crypto";
 import { saveFileToBackup } from "../lib/fileBackupHelper";
-import { isProductInBranch, getBranchStockQuantity, getBranchStockRecord, isSameBranch } from "../lib/branchUtils";
+import { Member,Product,Sale,UserRole } from "../types/db";
 import { formatCurrency } from "../utils/formatters";
-import { createSearchIndex, searchIndex } from "../utils/searchIndex";
-import { useVirtualList } from "../hooks/useVirtualList";
-import { useReceiptFontSize } from "./ReceiptFontSizeControl";
-import {
- ShoppingCart,
- Trash2,
- Sparkles,
- CheckCircle,
- Printer,
- Lock,
- Keyboard,
- X,
- ShieldCheck,
-  RotateCcw,
- History,
- LockKeyhole,
- ShoppingBag,
- Truck,
- FileText,
- ChevronDown,
- ChevronUp,
- ShieldAlert,
- Calculator,
- Search,
- Building2,
- Loader2,
- Calendar,
- Download,
- Users,
- CreditCard,
-  QrCode,
-  Wallet,
-  Smartphone,
-  ArrowRight,
-  UserPlus,
-  Plus,
-  Minus,
-  Scissors,
-  RefreshCw,
-  AlertCircle,
-} from "lucide-react";
 import { CalculatorModule } from "./CalculatorModule";
-import { ExpressiveTooltip } from "./ExpressiveTooltip";
+import { ToastNotification } from "./ToastNotification";
+import { useReceiptFontSize } from "./ReceiptFontSizeControl";
 
 import { formatTin } from '../utils/formatters';
 
 interface PosModuleProps {
- darkMode: boolean;
- onNavigate: (tab: string) => void;
- viewMode?: "checkout" | "ledger";
- showImmersiveControls?: boolean;
+  darkMode: boolean;
+  onNavigate: (tab: string) => void;
+  viewMode?: "checkout" | "ledger";
+  showImmersiveControls?: boolean;
 }
 
 const CartQtyInput: React.FC<{
@@ -124,18 +115,16 @@ const CartQtyInput: React.FC<{
  onChange={handleChange}
  onBlur={handleBlur}
  onKeyDown={handleKeyDown}
- className={`w-12 text-center bg-transparent border-y-0 border-x border-m3-outline-variant/30 text-xs font-mono font-black ${
- quantity < 0 ? "text-rose-500 bg-rose-500/10 font-bold" : "text-m3-on-surface"
- } focus:outline-none focus:bg-m3-surface-low rounded-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
+ className={`w-12 text-center bg-transparent border-y-0 border-x border-divider/30 text-xs font-black ${
+ quantity < 0 ? "text-rose-500 bg-rose-500/10 font-bold" : "text-foreground"
+ } focus:outline-none focus:bg-content1 rounded-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
  />
  );
 };
 
 export const PosModule: React.FC<PosModuleProps> = ({
  darkMode,
- onNavigate,
- viewMode,
- showImmersiveControls = true,
+ onNavigate: _onNavigate, viewMode,
 }) => {
  const rawProducts = useDbProducts();
  const branchStock = useDbBranchStock();
@@ -151,15 +140,14 @@ export const PosModule: React.FC<PosModuleProps> = ({
  holdSale,
  resumeParkedSale,
  parkedSales,
- setParkedSales,
  sales,
  saleItems,
  users,
  addAuditLog,
  currentUser,
  createDelivery,
+		discountSchemes,
  deliveries,
- triggerSystemProcessing,
  branches,
  syncFromSharedServer,
  syncStatus,
@@ -282,7 +270,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  creditLimit: limitNum,
  outstandingBalance: 0,
  status: "Active",
- branchId: currentUser?.branchAssignmentId || "ETC_DIPOLOG MAIN",
+  branchId: currentUser?.branchAssignmentId || branches[0]?.id || "main",
  createdAt: new Date().toISOString(),
  };
 
@@ -351,14 +339,17 @@ export const PosModule: React.FC<PosModuleProps> = ({
  const [selectedSaleDetail, setSelectedSaleDetail] = useState<Sale | null>(
  null,
  );
- const [selectedPoolBranchId, setSelectedPoolBranchId] = useState<string>(
-    currentUser?.role === "Admin" ? "All" : (currentUser?.branchAssignmentId || "B1")
-  );
  const [ledgerSearchQuery, setLedgerSearchQuery] = useState("");
  const [ledgerPaymentFilter, setLedgerPaymentFilter] = useState<string>("All");
  const [ledgerDateFilter, setLedgerDateFilter] = useState<string>("");
  const [isStatsCollapsed, setIsStatsCollapsed] = useState(false);
  const { fontClass: receiptFontClass } = useReceiptFontSize();
+
+  const [selectedPoolBranchId, _setSelectedPoolBranchId] = useState<string>("All");
+  const [selectedCategory, _setSelectedCategory] = useState<string>("All");
+  const [searchTerm, _setSearchTerm] = useState("");
+  const [_barcodeAddFeedback, setBarcodeAddFeedback] = useState<string | null>(null);
+
 
  // Cart & POS Screen States
  const [cart, setCart] = useState<
@@ -378,20 +369,23 @@ export const PosModule: React.FC<PosModuleProps> = ({
  return [];
  }
  });
- const [searchTerm, setSearchTerm] = useState("");
- const [selectedCategory, setSelectedCategory] = useState("All");
  const [customerName, setCustomerName] = useState(() => {
  return (
  localStorage.getItem("tp_active_customer_name") || "Walk-in Customer"
  );
  });
+ const [customerAddress, setCustomerAddress] = useState(() => {
+ return localStorage.getItem("tp_active_customer_address") || "";
+ });
+ const [customerTin, setCustomerTin] = useState(() => {
+ return localStorage.getItem("tp_active_customer_tin") || "";
+ });
+ const [businessStyle, setBusinessStyle] = useState(() => {
+ return localStorage.getItem("tp_active_business_style") || "";
+ });
  const [customerNotes, setCustomerNotes] = useState(() => {
  return localStorage.getItem("tp_active_customer_notes") || "";
  });
- const [isCategoryFilterCollapsed, setIsCategoryFilterCollapsed] =
- useState(false);
- const [isCustomerMetadataCollapsed, setIsCustomerMetadataCollapsed] =
- useState(false);
   const [paymentRef, setPaymentRef] = useState("");
 
  // Active Cart Write-Through Persistence to survive page refreshes and browser glitches
@@ -403,6 +397,18 @@ export const PosModule: React.FC<PosModuleProps> = ({
  useEffect(() => {
  localStorage.setItem("tp_active_customer_name", customerName);
  }, [customerName]);
+
+ useEffect(() => {
+ localStorage.setItem("tp_active_customer_address", customerAddress);
+ }, [customerAddress]);
+
+ useEffect(() => {
+ localStorage.setItem("tp_active_customer_tin", customerTin);
+ }, [customerTin]);
+
+ useEffect(() => {
+ localStorage.setItem("tp_active_business_style", businessStyle);
+ }, [businessStyle]);
 
  useEffect(() => {
  localStorage.setItem("tp_active_customer_notes", customerNotes);
@@ -447,7 +453,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
  const [overridePriceInput, setOverridePriceInput] = useState("");
 
  // Checkout payment inputs
- const [paymentMethod, setPaymentMethod] = useState<"Cash" | "GCash" | "Maya" | "Card / Bank Terminal" | "Member Credit">("Cash");
+ const [paymentMethod, setPaymentMethod] = useState<string>("Cash");
+  
+
  const [amountTendered, setAmountTendered] = useState<string>("");
  const [changeAmount, setChangeAmount] = useState<number>(0);
  const [errorMessage, setErrorMessage] = useState("");
@@ -667,9 +675,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  // Barcode quick search/scanner states
  const [barcodeSearchTerm, setBarcodeSearchTerm] = useState("");
- const [barcodeAddFeedback, setBarcodeAddFeedback] = useState<string | null>(
- null,
- );
 
  // Keyboard shortcut assistant status
  const [_showHotkeysHelp, _setShowHotkeysHelp] = useState(false);
@@ -683,6 +688,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
  // Custom modal input states (replacing prompt)
  const [showCustomerModal, setShowCustomerModal] = useState(false);
  const [customerModalInput, setCustomerModalInput] = useState("");
+ const [customerModalAddressInput, setCustomerModalAddressInput] = useState("");
+ const [customerModalTinInput, setCustomerModalTinInput] = useState("");
+ const [customerModalBusinessStyleInput, setCustomerModalBusinessStyleInput] = useState("");
+ const [customerModalNotesInput, setCustomerModalNotesInput] = useState("");
 
  // Sub-navigation state derived from the parent layout sidebar tab selection
  const activeSubModule = viewMode || "checkout";
@@ -739,10 +748,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
     });
  if (newSales.length > 0) {
  const newest = newSales[newSales.length - 1];
- showToast(`⚡ NEW YARD ORDER RECEIVED: ${newest.customerName || "Walk-in Customer"}`);
+ showToast(`NEW YARD ORDER RECEIVED: ${newest.customerName || "Walk-in Customer"}`);
  playNotificationSound();
  } else if (parkedSales.length < prevParkedSalesRef.current.length) {
- showToast("🔄 Queue synchronized: Hold order processed/resumed");
+ showToast("Queue synchronized: Hold order processed/resumed");
  }
  }
  prevParkedSalesRef.current = parkedSales;
@@ -762,36 +771,15 @@ export const PosModule: React.FC<PosModuleProps> = ({
  // Search input referencer for hotkey focus
  const searchInputRef = useRef<HTMLInputElement>(null);
 
- // All product categories for filters
- const _categories = [
- "All",
- ...Array.from(
- new Set(products.filter((p) => !p.isDeleted).map((p) => p.category)),
- ),
- ];
+	// Map products
 
- // Map products
- const userBranchId = activePosBranchId;
+	// All product categories for filters in current branch
+	
 
- // Pre-indexed search index for POS product catalog
- const posSearchIndex = React.useMemo(() => {
- return createSearchIndex(products, (p) =>
- `${p.productName} ${p.productCode} ${p.barcode || ''} ${p.sku || ''} ${p.designName || ''} ${p.category || ''}`
- );
- }, [products]);
+	// Pre-indexed search index for POS product catalog
+	
 
- const _filteredProducts = React.useMemo(() => {
- const activeProducts = posSearchIndex.filter((entry) => {
- const p = entry.item;
- if (p.isDeleted) return false;
- return isProductInBranch(p, userBranchId, branchStock, branches);
- });
-
- const matches = searchIndex(activeProducts, searchTerm);
- return matches.filter(
- (p) => selectedCategory === "All" || p.category === selectedCategory
- );
- }, [posSearchIndex, searchTerm, selectedCategory, userBranchId, branchStock, branches]);
+	
 
  // Dynamic Surcharges, VAT (12%), and Discounts compliant with Philippine and contractor standards
  const getItemDiscount = useCallback(
@@ -872,9 +860,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  // POS Shortcuts Keylogger integration
  useEffect(() => {
  const handleKeyDown = (e: KeyboardEvent) => {
- const activeEl = document.activeElement;
- const _isInput =
- activeEl?.tagName === "INPUT" || activeEl?.tagName === "TEXTAREA";
+ 
 
  if (e.key === "F1") {
  e.preventDefault();
@@ -891,6 +877,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
  } else if (e.key === "F5") {
  e.preventDefault();
  setCustomerModalInput(customerName);
+ setCustomerModalAddressInput(customerAddress);
+ setCustomerModalTinInput(customerTin);
+ setCustomerModalBusinessStyleInput(businessStyle);
+ setCustomerModalNotesInput(customerNotes);
  setShowCustomerModal(true);
  } else if (e.key === "F6") {
  e.preventDefault();
@@ -1019,6 +1009,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
  }
  setCart([]);
  setCustomerName("Walk-in Customer");
+ setCustomerAddress("");
+ setCustomerTin("");
+ setBusinessStyle("");
  setCustomerNotes("");
  setDiscountValue(0);
  setDiscountType("NONE");
@@ -1030,6 +1023,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
  try {
  localStorage.removeItem("tp_active_cart");
  localStorage.removeItem("tp_active_customer_name");
+ localStorage.removeItem("tp_active_customer_address");
+ localStorage.removeItem("tp_active_customer_tin");
+ localStorage.removeItem("tp_active_business_style");
  localStorage.removeItem("tp_active_customer_notes");
  localStorage.removeItem("tp_pos_session_checkpoint");
  localStorage.removeItem("tp_pending_delivery_draft");
@@ -1112,7 +1108,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  const res = resumeParkedSale(parkedId, currentUser?.fullName || currentUser?.username || "Cashier");
 
  if (!res.success) {
- showToast(res.error || "⚠️ This transaction was already resumed on another register.");
+ showToast(res.error || "This transaction was already resumed on another register.");
  setResumingParkedId(null);
  return;
  }
@@ -1353,8 +1349,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  for (const item of cart) {
  const serverProd = freshProducts.find((p: any) => p.id === item.product.id) || item.product;
  const serverQty = getBranchStockQuantity(serverProd, targetBranchId, freshBranchStock, freshBranches);
- const localQty = getBranchStockQuantity(item.product, targetBranchId, branchStock, branches);
- const effectiveQty = Math.max(serverQty, localQty);
+ const effectiveQty = serverQty;
 
  if (effectiveQty < item.quantity) {
  await syncFromSharedServer();
@@ -1389,15 +1384,18 @@ export const PosModule: React.FC<PosModuleProps> = ({
     cart,
     customerName,
     finalNotes,
- finalDiscount,
- paymentMethod,
- parseFloat(amountTendered) || netPayable,
- vat,
- idempKey,
- discountType,
- activePosBranchId,
- pointsToRedeem,
- );
+    finalDiscount,
+    paymentMethod,
+    parseFloat(amountTendered) || netPayable,
+    vat,
+    idempKey,
+    discountType,
+    activePosBranchId,
+    pointsToRedeem,
+    customerAddress,
+    customerTin,
+    businessStyle,
+  );
   setPointsToRedeem(0);
 
  setDeliveryNotes(customerNotes || "");
@@ -1583,6 +1581,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
  e.preventDefault();
  const inputName = customerModalInput.trim() || "Walk-in Customer";
  setCustomerName(inputName);
+ setCustomerAddress(customerModalAddressInput.trim());
+ setCustomerTin(customerModalTinInput.trim());
+ setBusinessStyle(customerModalBusinessStyleInput.trim());
+ setCustomerNotes(customerModalNotesInput.trim());
  setShowCustomerModal(false);
 
  if (
@@ -1853,32 +1855,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  if (foundUserByPin) {
  isAuthorized = true;
  authorizerName = foundUserByPin.fullName;
- } else {
- // 2. Validate fallback values for seed profiles or general manager overrides
- const isEricaPin = input === "4321";
- const isJuanPin = input === "9988";
- const isTomasPin = input === "1122";
- const isDemoPin =
- input === "1234" || input === "0000" || input === "8888";
-
- if (isEricaPin) {
- const erica = users.find((u) => u.username === "erica_admin");
- authorizerName = erica ? erica.fullName : "Erica Manaban (Admin)";
- isAuthorized = true;
- } else if (isJuanPin) {
- const juan = users.find((u) => u.username === "juan_mgr");
- authorizerName = juan ? juan.fullName : "Juan Gomez (Manager)";
- isAuthorized = true;
- } else if (isTomasPin) {
- const tomas = users.find((u) => u.username === "tomas_mgr");
- authorizerName = tomas ? tomas.fullName : "Tomas Santos (Manager)";
- isAuthorized = true;
- } else if (isDemoPin) {
- authorizerName = "Global Manager (Demo)";
- isAuthorized = true;
- }
- }
-
+  }
  if (!isAuthorized) {
  setSecurityPinError("Invalid Manager PIN. Verification failed.");
  return;
@@ -1986,31 +1963,16 @@ export const PosModule: React.FC<PosModuleProps> = ({
  };
  }, [filteredSales]);
 
-  const _renderThermalCutSeparator = (label: string = "AUTO-CUT • PAPER SEPARATION") => (
-    <div 
-      className="my-3 py-2 border-y-2 border-dashed border-gray-400 dark:border-gray-500 bg-gray-50 dark:bg-gray-800/40 rounded-lg text-center flex items-center justify-center gap-2 font-mono text-[8.5px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-300 print:bg-white print:text-black print:border-black bir-receipt-cut-separator"
-      style={{ pageBreakAfter: 'always', breakAfter: 'page' }}
-    >
-      <Scissors className="h-3.5 w-3.5 text-rose-500 print:text-black transform -rotate-90 animate-pulse shrink-0" />
-      <span>✂ {label} ✂</span>
-    </div>
-  );
 
-  const getCleanCashierName = (cashierNameRaw?: string, cashierIdRaw?: string) => {
-    if (cashierIdRaw) {
-      const foundUser = users?.find((u) => u.id === cashierIdRaw);
-      if (foundUser?.fullName) return foundUser.fullName;
-    }
-    if (!cashierNameRaw) return "Cashier";
-    return cashierNameRaw
-      .replace(/^(Cashier|Admin|Manager|Staff)\s*[-:]?\s*/i, "")
-      .replace(/\s*\((Cashier|Admin|Manager|Staff)\)$/i, "")
-      .trim() || "Cashier";
+  const getCleanCashierName = (name?: string, id?: string) => {
+    if (name && name.trim()) return name.trim();
+    const u = users.find((user) => user.id === id);
+    return u?.fullName || "Staff Cashier";
   };
 
   const renderPosSalesReceipt = () => (
-    <div className="px-5 py-5 bg-m3-surface-lowest border border-dashed border-m3-outline-variant/40 rounded-2xl text-[11px] leading-relaxed space-y-3 select-text text-m3-on-surface text-left shadow-xs print:border-none print:shadow-none print:p-0">
-      <div className="text-center font-bold tracking-tight border-b border-dashed border-m3-outline-variant/30 pb-3 flex flex-col items-center justify-center space-y-1">
+    <div data-receipt-print="true" className="receipt-container px-5 py-5 bg-content1 border border-dashed border-divider/40 rounded-2xl text-[11px] leading-relaxed space-y-3 select-text text-foreground text-left shadow-xs print:border-none print:shadow-none print:p-0 print:text-black">
+      <div className="text-center font-bold tracking-tight border-b border-dashed border-divider/30 pb-3 flex flex-col items-center justify-center space-y-1">
         {receiptBranch?.storeLogo ? (
           <div 
             className="mb-1.5 w-auto flex items-center justify-center"
@@ -2024,28 +1986,28 @@ export const PosModule: React.FC<PosModuleProps> = ({
             />
           </div>
         ) : (
-          <h4 className="text-xs font-black text-m3-primary tracking-widest font-mono uppercase mb-0.5">
-            {receiptBranch?.name || "EMMAN TILE CENTER"}
+          <h4 className="text-xs font-black text-primary tracking-widest font-mono uppercase mb-0.5">
+            {receiptBranch?.name || branches[0]?.name || localStorage.getItem("tilepoint_company_name_v1") || "MAIN STORE"}
           </h4>
         )}
         
-        <div className="text-[9px] text-m3-on-surface-variant font-semibold mt-0.5 leading-tight">
-          {receiptBranch?.address || "Sta.Filomena,DipologCity"}
+        <div className="text-[9px] text-default-500 font-semibold mt-0.5 leading-tight">
+          {receiptBranch?.address || branches[0]?.address || "Store Address"}
         </div>
         
-        <div className="text-[8px] text-m3-on-surface-variant/80 mt-0.5 font-mono">
+        <div className="text-[8px] text-default-500/80 mt-0.5 font-mono">
           Contact: {receiptBranch?.phone || "0000"} • TIN {formatTin(receiptBranch?.tin) || "000 111 222"}
         </div>
 
-        <div className="inline-block mt-1 bg-m3-primary/10 text-m3-primary border border-m3-primary/30 px-2.5 py-0.5 rounded font-mono font-black text-[9px] uppercase tracking-widest print:bg-black print:text-white">
+        <div className="inline-block mt-1 bg-primary/10 text-primary border border-primary/30 px-2.5 py-0.5 rounded font-mono font-black text-[9px] uppercase tracking-widest print:bg-black print:text-white">
           OFFICIAL SALES RECEIPT
         </div>
       </div>
 
-      <div className="text-[10px] space-y-1.5 border-b border-dashed border-m3-outline-variant/30 pb-2 font-medium">
+      <div className="text-[10px] space-y-1.5 border-b border-dashed border-divider/30 pb-2 font-medium">
         <div className="flex justify-between">
           <span>Invoice Ref:</span>
-          <span className="font-mono font-bold text-m3-primary print:text-black">
+          <span className="font-mono font-bold text-primary print:text-black">
             {activeReceipt?.saleNumber}
           </span>
         </div>
@@ -2065,10 +2027,34 @@ export const PosModule: React.FC<PosModuleProps> = ({
             {activeReceipt?.customerName}
           </span>
         </div>
+        {activeReceipt?.customerAddress && (
+          <div className="flex justify-between">
+            <span>Address:</span>
+            <span className="font-medium text-right max-w-[65%] truncate">
+              {activeReceipt.customerAddress}
+            </span>
+          </div>
+        )}
+        {activeReceipt?.customerTin && (
+          <div className="flex justify-between">
+            <span>Buyer TIN:</span>
+            <span className="font-mono font-bold">
+              {activeReceipt.customerTin}
+            </span>
+          </div>
+        )}
+        {activeReceipt?.businessStyle && (
+          <div className="flex justify-between">
+            <span>Bus. Style:</span>
+            <span className="font-medium">
+              {activeReceipt.businessStyle}
+            </span>
+          </div>
+        )}
       </div>
 
-      <div className="space-y-1.5 font-mono text-[9px] border-b border-dashed border-m3-outline-variant/30 pb-2">
-        <div className="flex justify-between font-extrabold text-m3-on-surface-variant border-b border-dashed border-m3-outline-variant/20 pb-1">
+      <div className="space-y-1.5 font-mono text-[9px] border-b border-dashed border-divider/30 pb-2">
+        <div className="flex justify-between font-extrabold text-default-500 border-b border-dashed border-divider/20 pb-1">
           <span>Item Details</span>
           <span>Amount</span>
         </div>
@@ -2078,12 +2064,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
             {receiptItems.map((it, idx) => (
               <div
                 key={idx}
-                className="text-m3-on-surface space-y-0.5 pt-1.5 pb-1.5 border-b border-dotted border-m3-outline-variant/10 last:border-0"
+                className="text-foreground space-y-0.5 pt-1.5 pb-1.5 border-b border-dotted border-divider/10 last:border-0"
               >
                 <div className="font-bold text-[9.5px] break-words">
                   {it.productName}
                 </div>
-                <div className="flex justify-between text-[8.5px] text-m3-on-surface-variant">
+                <div className="flex justify-between text-[8.5px] text-default-500">
                   <span>
                     {formatCurrency(it.unitPrice)} x {it.quantity}
                     {(it.discount || 0) > 0 && (
@@ -2092,69 +2078,69 @@ export const PosModule: React.FC<PosModuleProps> = ({
                       </span>
                     )}
                   </span>
-                  <span className="font-bold text-m3-on-surface">
+                  <span className="font-bold text-foreground">
                     {formatCurrency(it.total)}
                   </span>
                 </div>
               </div>
             ))}
-            <div className="flex justify-between font-extrabold text-[9.5px] border-t border-dashed border-m3-outline-variant/30 pt-1.5 mt-1 text-m3-on-surface">
+            <div className="flex justify-between font-extrabold text-[9.5px] border-t border-dashed border-divider/30 pt-1.5 mt-1 text-foreground">
               <span>Total Items Bought:</span>
-              <span className="font-mono text-m3-primary font-black">
+              <span className="font-mono text-primary font-black">
                 {receiptItems.reduce((sum, item) => sum + (item.quantity || 0), 0)} pcs ({receiptItems.length} {receiptItems.length === 1 ? 'line' : 'lines'})
               </span>
             </div>
           </>
         ) : (
-          <p className="text-[9px] text-m3-on-surface-variant italic">
+          <p className="text-[9px] text-default-500 italic">
             Hardware ledger invoice saved correctly.
           </p>
         )}
       </div>
 
-      <div className="space-y-1 text-[10px] border-b border-dashed border-m3-outline-variant/30 pb-2 font-mono">
-        <div className="flex justify-between text-m3-on-surface-variant">
+      <div className="space-y-1 text-[10px] border-b border-dashed border-divider/30 pb-2 font-mono">
+        <div className="flex justify-between text-default-500">
           <span>VATable Sales:</span>
           <span>
             {activeReceipt && (Number(activeReceipt.vat) || 0) > 0
-              ? formatCurrency((Number(activeReceipt.subtotal) || 0) - (Number(activeReceipt.vat) || 0))
+              ? formatCurrency((Number(activeReceipt.grandTotal || activeReceipt.subtotal) || 0) - (Number(activeReceipt.vat) || 0))
               : "₱0.00"}
           </span>
         </div>
-        <div className="flex justify-between text-m3-on-surface-variant">
+        <div className="flex justify-between text-default-500">
           <span>VAT-Exempt Sales:</span>
           <span>
             {activeReceipt && (Number(activeReceipt.vat) || 0) === 0
-              ? formatCurrency(activeReceipt.subtotal)
+              ? formatCurrency(activeReceipt.grandTotal || activeReceipt.subtotal)
               : "₱0.00"}
           </span>
         </div>
-        <div className="flex justify-between text-m3-on-surface-variant">
+        <div className="flex justify-between text-default-500">
           <span>Zero-Rated Sales:</span>
           <span>₱0.00</span>
         </div>
-        <div className="flex justify-between text-m3-on-surface-variant">
+        <div className="flex justify-between text-default-500">
           <span>12% Output VAT:</span>
           <span>{formatCurrency(activeReceipt?.vat)}</span>
         </div>
         {activeReceipt && (Number(activeReceipt.discount) || 0) > 0 && (
-          <div className="flex justify-between text-m3-primary font-bold">
+          <div className="flex justify-between text-primary font-bold">
             <span>BIR Discount Applied:</span>
             <span>-{formatCurrency(activeReceipt.discount)}</span>
           </div>
         )}
-        <div className="flex justify-between font-black text-m3-on-surface text-xs pt-1 border-t border-dotted border-m3-outline-variant/20">
+        <div className="flex justify-between font-black text-foreground text-xs pt-1 border-t border-dotted border-divider/20">
           <span>GRAND TOTAL DUE:</span>
           <span>{formatCurrency(activeReceipt?.grandTotal)}</span>
         </div>
       </div>
 
       {(activeReceiptMember || (activeReceipt?.pointsRedeemed || 0) > 0 || (activeReceipt?.pointsEarned || 0) > 0) && (
-        <div className="space-y-1 text-[9.5px] border-b border-dashed border-m3-outline-variant/30 pb-2 font-mono text-m3-on-surface-variant">
+        <div className="space-y-1 text-[9.5px] border-b border-dashed border-divider/30 pb-2 font-mono text-default-500">
           <div className="font-extrabold text-[9px] text-amber-500 uppercase flex items-center justify-between">
             <span>Customer Loyalty Points</span>
             {activeReceiptMember && (
-              <span className="text-[8px] text-m3-on-surface-variant font-sans normal-case font-semibold">
+              <span className="text-[8px] text-default-500 font-sans normal-case font-semibold">
                 {activeReceiptMember.fullName}
               </span>
             )}
@@ -2180,16 +2166,16 @@ export const PosModule: React.FC<PosModuleProps> = ({
         </div>
       )}
 
-      <div className="space-y-1 text-[10px] font-mono text-m3-on-surface-variant font-medium border-t border-dashed border-m3-outline-variant/30 pt-2">
+      <div className="space-y-1 text-[10px] font-mono text-default-500 font-medium border-t border-dashed border-divider/30 pt-2">
         <div className="flex justify-between items-center">
           <span>Payment Method:</span>
-          <span className="text-m3-on-surface font-black uppercase bg-m3-primary/10 text-m3-primary px-2 py-0.5 rounded text-[9.5px]">
+          <span className="text-foreground font-black uppercase bg-primary/10 text-primary px-2 py-0.5 rounded text-[9.5px]">
             {activeReceipt?.paymentMethod || "CASH"}
           </span>
         </div>
         <div className="flex justify-between">
           <span>Amount Tendered:</span>
-          <span className="text-m3-on-surface font-bold">
+          <span className="text-foreground font-bold">
             {formatCurrency(activeReceipt?.amountTendered || activeReceipt?.grandTotal)}
           </span>
         </div>
@@ -2204,24 +2190,24 @@ export const PosModule: React.FC<PosModuleProps> = ({
       </div>
 
       {(receiptBranch?.receiptFacebook || receiptBranch?.receiptPromoText || receiptBranch?.receiptQrBase64) && (
-        <div className="border-t border-dashed border-m3-outline-variant/40 pt-3 mt-3 space-y-3.5">
+        <div className="border-t border-dashed border-divider/40 pt-3 mt-3 space-y-3.5">
           {receiptBranch.receiptFacebook && (
-            <div className="text-center font-mono text-[8px] text-m3-on-surface-variant flex flex-col items-center justify-center space-y-0.5">
-              <span className="font-extrabold uppercase text-m3-primary text-[8.5px] tracking-wide">Follow us on Facebook</span>
-              <span className="font-bold text-m3-on-surface select-all">{receiptBranch.receiptFacebook}</span>
+            <div className="text-center font-mono text-[8px] text-default-500 flex flex-col items-center justify-center space-y-0.5">
+              <span className="font-extrabold uppercase text-primary text-[8.5px] tracking-wide">Follow us on Facebook</span>
+              <span className="font-bold text-foreground select-all">{receiptBranch.receiptFacebook}</span>
             </div>
           )}
 
           {receiptBranch.receiptPromoText && (
-            <div className="text-center font-mono text-[8.5px] text-m3-on-surface-variant flex flex-col items-center justify-center space-y-0.5 px-2 bg-m3-surface-low/30 py-1 rounded">
+            <div className="text-center font-mono text-[8.5px] text-default-500 flex flex-col items-center justify-center space-y-0.5 px-2 bg-content1/30 py-1 rounded">
               <span className="font-extrabold uppercase text-amber-500 text-[8.5px] tracking-wide">Special Offer / Promo</span>
-              <p className="leading-snug text-center font-black text-m3-on-surface">{receiptBranch.receiptPromoText}</p>
+              <p className="leading-snug text-center font-black text-foreground">{receiptBranch.receiptPromoText}</p>
             </div>
           )}
 
           {receiptBranch.receiptQrBase64 && (
             <div className="flex flex-col items-center justify-center space-y-1.5 pt-1">
-              <span className="text-[7.5px] uppercase font-mono font-extrabold text-m3-on-surface-variant tracking-wider">Scan to Answer Survey & Feedback</span>
+              <span className="text-[7.5px] uppercase font-mono font-extrabold text-default-500 tracking-wider">Scan to Answer Survey & Feedback</span>
               <div className="h-24 w-24 border-2 border-black p-1 bg-white rounded flex items-center justify-center">
                 <img
                   src={receiptBranch.receiptQrBase64}
@@ -2235,15 +2221,32 @@ export const PosModule: React.FC<PosModuleProps> = ({
         </div>
       )}
 
-      <div className="text-center font-mono text-[7px] text-m3-on-surface-variant/70 uppercase tracking-widest pt-3 border-t border-dotted border-m3-outline-variant/30 mt-3.5">
+      {(receiptBranch?.receiptReturnPolicy || receiptBranch?.receiptNonReturnablePolicy) && (
+        <div className="text-center text-[7.5px] border-t border-dashed border-divider/30 pt-2 space-y-1 font-sans text-default-500">
+          {receiptBranch.receiptReturnPolicy && (
+            <div>
+              <span className="font-extrabold uppercase text-foreground tracking-wider block text-[7px]">Return & Exchange Policy:</span>
+              <span>{receiptBranch.receiptReturnPolicy}</span>
+            </div>
+          )}
+          {receiptBranch.receiptNonReturnablePolicy && (
+            <div className="italic text-default-500/80">
+              <span className="font-extrabold not-italic text-foreground uppercase text-[7px] block">Notice:</span>
+              <span>{receiptBranch.receiptNonReturnablePolicy}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="text-center font-mono text-[7px] text-default-500/70 uppercase tracking-widest pt-3 border-t border-dotted border-divider/30 mt-3.5">
         {receiptBranch?.receiptThankYou ? (
-          <span className="font-black text-m3-on-surface text-[8px] tracking-tight block mb-1 normal-case font-mono">
+          <span className="font-black text-foreground text-[8px] tracking-tight block mb-1 normal-case font-mono">
             {receiptBranch.receiptThankYou}
           </span>
         ) : (
-          `Thank you for shopping at ${receiptBranch?.name || "Emman Tile Center"}!`
+          `Thank you for shopping at ${receiptBranch?.name || branches[0]?.name || localStorage.getItem("tilepoint_company_name_v1") || "our store"}!`
         )}
-        <div className="mt-1 lowercase font-sans text-[7.5px] italic text-m3-on-surface-variant">This serves as an official customer transaction acknowledgment.</div>
+        <div className="mt-1 lowercase font-sans text-[7.5px] italic text-default-500">This serves as an official customer transaction acknowledgment.</div>
       </div>
     </div>
   );
@@ -2262,11 +2265,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
           </div>
         ) : (
           <h4 className="text-xs font-black tracking-wider uppercase font-mono text-black">
-            {receiptBranch?.name || "EMMAN TILE CENTER"}
+            {receiptBranch?.name || branches[0]?.name || localStorage.getItem("tilepoint_company_name_v1") || "MAIN STORE"}
           </h4>
         )}
         <p className="text-[9px] font-semibold text-gray-700">
-          {receiptBranch?.address || "Sta. Filomena, Dipolog City"}
+          {receiptBranch?.address || branches[0]?.address || "Store Address"}
         </p>
         <p className="text-[8px] font-mono text-gray-600">
           Contact: {receiptBranch?.phone || "0000"} | TIN: {receiptBranch?.tin || "000-000-000"}
@@ -2303,6 +2306,18 @@ export const PosModule: React.FC<PosModuleProps> = ({
             <span className="font-mono font-bold text-black">{activeReceiptDelivery?.contactNumber || "N/A"}</span>
           </div>
         </div>
+        {activeReceipt.customerAddress && (
+          <div className="pt-1 border-t border-gray-200">
+            <span className="text-[7.5px] font-extrabold uppercase text-gray-500 block">Billing Address</span>
+            <span className="font-semibold text-gray-900 block truncate">{activeReceipt.customerAddress}</span>
+          </div>
+        )}
+        {activeReceipt.customerTin && (
+          <div className="pt-1 border-t border-gray-200 flex justify-between">
+            <span className="text-[7.5px] font-extrabold uppercase text-gray-500">Buyer TIN:</span>
+            <span className="font-mono font-bold text-black">{activeReceipt.customerTin}</span>
+          </div>
+        )}
         {activeReceiptDelivery && (
           <div className="pt-1 border-t border-gray-200">
             <span className="text-[7.5px] font-extrabold uppercase text-gray-500 block">Unloading Destination</span>
@@ -2382,9 +2397,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
       <div className="absolute inset-0 flex items-center" aria-hidden="true">
         <div className="w-full border-t-2 border-dashed border-gray-400 dark:border-zinc-600 print:border-black" />
       </div>
-      <div className="relative flex items-center gap-1.5 bg-gray-100 dark:bg-zinc-800 print:bg-white px-3 py-1 rounded-full border border-gray-300 dark:border-m3-outline-variant print:border-black shadow-xs font-mono text-[8.5px] font-black uppercase text-gray-700 dark:text-gray-300 print:text-black">
+      <div className="relative flex items-center gap-1.5 bg-gray-100 dark:bg-zinc-800 print:bg-white px-3 py-1 rounded-full border border-gray-300 dark:border-divider print:border-black shadow-xs font-mono text-[8.5px] font-black uppercase text-gray-700 dark:text-gray-300 print:text-black">
         <Scissors className="h-3 w-3 text-amber-500 print:text-black shrink-0" />
-        <span>✂ AUTO-CUT • {label} ✂</span>
+        <span>AUTO-CUT • {label}</span>
       </div>
     </div>
   );
@@ -2397,17 +2412,17 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <div className={`flex flex-col w-full gap-4 ${activeSubModule === "checkout" ? "h-full overflow-y-auto lg:overflow-hidden pb-1" : "min-h-fit overflow-visible"}`}>
  {/* FIX: WRAPPED THE ENTIRE ROW IN A CONDITIONAL BLOCK TO HIDE IT IN POS CHECKOUT MODE */}
  {activeSubModule !== "checkout" && (
- <div className="flex border-b border-m3-outline-variant/20 pb-3.5 items-center justify-between mb-2 text-left sticky top-0 bg-m3-surface/90 backdrop-blur-md z-20 pt-2 shadow-sm rounded-b-xl px-2 flex-shrink-0">
+ <div className="flex border-b border-divider/20 pb-3.5 items-center justify-between mb-2 text-left sticky top-0 bg-background/90 backdrop-blur-md z-20 pt-2 shadow-sm rounded-b-xl px-2 flex-shrink-0">
  <div>
- <h2 className="text-sm font-black uppercase tracking-widest text-m3-primary pl-1 flex items-center gap-2">
+ <h2 className="text-sm font-black uppercase tracking-widest text-primary pl-1 flex items-center gap-2">
  {(activeSubModule as string) === "checkout" ? (
  <>
- <ShoppingCart className="h-4.5 w-4.5 text-emerald-400" />
+ <ShoppingCart className="h-4.5 w-4.5 text-primary" />
  <span>ERP OS TERMINAL CHECKOUT MODE</span>
  </>
  ) : (
  <>
- <History className="h-4.5 w-4.5 text-m3-primary" />
+ <History className="h-4.5 w-4.5 text-primary" />
  <span>DAILY SALES LEDGER & VOID TERMINAL (ERP OS)</span>
  </>
  )}
@@ -2417,12 +2432,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  <div className="flex items-center gap-3">
  {activeShift ? (
- <div className="flex items-center gap-3 bg-m3-surface-low border border-m3-outline-variant/30 p-1.5 pl-3.5 rounded-full shadow-sm">
+ <div className="flex items-center gap-3 bg-content1 border border-divider/30 p-1.5 pl-3.5 rounded-full shadow-sm">
  <div className="flex flex-col text-right">
  <span className="text-[8px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
  Shift Active
  </span>
- <span className="text-[10px] font-bold text-m3-on-surface font-sans">
+ <span className="text-[10px] font-bold text-foreground font-sans">
  {activeShift.cashierName}
  </span>
  </div>
@@ -2466,11 +2481,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
                 <span className="text-xs font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-400">
                   Safe Transaction Commit: Abandoned Session Restored
                 </span>
-                <span className="text-[9.5px] font-mono px-2 py-0.5 bg-emerald-200/70 dark:bg-emerald-500/20 text-emerald-900 dark:text-emerald-300 rounded-md font-bold">
+ <span className="text-[9.5px] px-2 py-0.5 bg-emerald-200/70 dark:bg-emerald-500/20 text-emerald-900 dark:text-emerald-300 rounded-md font-bold">
                   {recoveredSession.lastSavedAt}
                 </span>
               </div>
-              <p className="text-xs text-emerald-950 dark:text-m3-on-surface font-medium mt-0.5">
+              <p className="text-xs text-emerald-950 dark:text-foreground font-medium mt-0.5">
                 Hydration Safeguard recovered an uncommitted POS checkout session with <strong className="text-emerald-800 dark:text-emerald-300">{recoveredSession.itemCount} item(s)</strong> worth <strong className="text-emerald-800 dark:text-emerald-300">₱{recoveredSession.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> for customer <strong className="text-emerald-800 dark:text-emerald-300">"{recoveredSession.customerName}"</strong>.
                 {recoveredSession.hasDeliveryDraft && " (Includes active delivery schedule draft)"}
               </p>
@@ -2503,13 +2518,13 @@ export const PosModule: React.FC<PosModuleProps> = ({
         </div>
       )}
  {/* MOBILE ONLY TAB SWITCHER */}
- <div className="flex lg:hidden bg-m3-surface-low border border-m3-outline-variant/15 p-1 rounded-2xl w-full gap-1 flex-shrink-0">
+ <div className="flex lg:hidden bg-content1 border border-divider/15 p-1 rounded-2xl w-full gap-1 flex-shrink-0">
  <button
  onClick={() => setMobilePosTab("basket")}
  className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 ${
  mobilePosTab === "basket"
- ? "bg-m3-primary text-m3-on-primary shadow-sm font-black"
- : "text-m3-on-surface-variant hover:bg-m3-primary/5"
+ ? "bg-primary text-primary-foreground shadow-sm font-black"
+ : "text-default-500 hover:bg-primary/5"
  }`}
  >
  <ShoppingCart className="h-4 w-4" />
@@ -2519,14 +2534,14 @@ export const PosModule: React.FC<PosModuleProps> = ({
  onClick={() => setMobilePosTab("queue")}
  className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 relative ${
  mobilePosTab === "queue"
- ? "bg-m3-primary text-m3-on-primary shadow-sm font-black"
- : "text-m3-on-surface-variant hover:bg-m3-primary/5"
+ ? "bg-primary text-primary-foreground shadow-sm font-black"
+ : "text-default-500 hover:bg-primary/5"
  }`}
  >
  <History className="h-4 w-4" />
  <span>Hold Queue ({branchParkedSales.length})</span>
  {branchParkedSales.length > 0 && (
- <span className="absolute -top-1 right-2 bg-rose-500 text-white font-mono text-[9px] h-4.5 min-w-[18px] px-1 rounded-full flex items-center justify-center font-black border-2 border-m3-surface-low shadow">
+ <span className="absolute -top-1 right-2 bg-rose-500 text-white text-[9px] h-4.5 min-w-[18px] px-1 rounded-full flex items-center justify-center font-black border-2 border-divider shadow">
  {branchParkedSales.length}
  </span>
  )}
@@ -2534,15 +2549,15 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
 
  {/* MAIN GRID FRAMEWORK: ATTACHED DIRECTLY TO VIEWPORT */}
- <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 animate-fade-in text-m3-on-surface items-stretch flex-1 min-h-0 lg:h-full overflow-y-auto lg:overflow-hidden">
+ <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 animate-fade-in text-foreground items-stretch flex-1 min-h-0 lg:h-full overflow-y-auto lg:overflow-hidden">
  {/* LEFT COLUMN: HOLD QUEUE */}
  <div
- className={`lg:col-span-4 bg-m3-surface-low p-3.5 sm:p-4 rounded-2xl sm:rounded-[28px] border border-m3-outline-variant/20 shadow-sm space-y-4 text-left self-stretch flex flex-col h-full overflow-hidden min-h-0 ${
+ className={`lg:col-span-4 bg-content1 p-3.5 sm:p-4 rounded-2xl sm:rounded-2xl border border-divider/20 shadow-sm space-y-4 text-left self-stretch flex flex-col h-full overflow-hidden min-h-0 ${
  mobilePosTab === "queue" ? "block" : "hidden lg:flex"
  }`}
  >
- <div className="border-b border-m3-outline-variant/15 pb-2 cursor-default flex-shrink-0">
- <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest flex items-center justify-between gap-1.5 w-full">
+ <div className="border-b border-divider/15 pb-2 cursor-default flex-shrink-0">
+ <h3 className="text-xs font-black text-primary uppercase tracking-widest flex items-center justify-between gap-1.5 w-full">
  <div className="flex items-center gap-1.5">
  <span className="relative flex h-2 w-2">
  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -2568,12 +2583,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
  await syncFromSharedServer(true);
  showToast("Queue state refreshed from central register!");
  } catch (_) {
- showToast("⚠️ Unable to reach sync server.");
+ showToast("Unable to reach sync server.");
  } finally {
  setTimeout(() => setIsManualSyncingQueue(false), 600);
  }
  }}
- className="inline-flex items-center gap-1 px-2 py-0.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary border border-m3-primary/25 rounded-md text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer active:scale-95"
+ className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 rounded-md text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer active:scale-95"
  title="Force refresh hold queue state from server"
  >
  <RefreshCw className={`h-3 w-3 ${isManualSyncingQueue ? "animate-spin" : ""}`} />
@@ -2581,7 +2596,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </button>
  </div>
  </h3>
- <p className="text-[10px] text-m3-on-surface-variant font-semibold mt-1 leading-tight">
+ <p className="text-[10px] text-default-500 font-semibold mt-1 leading-tight">
  Materials staged on-the-floor by floor staff are queued below.
  Select to load basket inside terminal drawer.
  </p>
@@ -2596,26 +2611,26 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <div
  key={park.id}
  onClick={() => !isCurrentResuming && handleResume(park.id)}
- className={`p-3.5 bg-m3-surface border border-m3-outline-variant/35 hover:border-m3-primary rounded-2xl flex flex-col justify-between shadow-sm cursor-pointer transition-all group relative overflow-hidden text-left gap-2 ${
+ className={`p-3.5 bg-background border border-divider/35 hover:border-primary rounded-2xl flex flex-col justify-between shadow-sm cursor-pointer transition-all group relative overflow-hidden text-left gap-2 ${
  isCurrentResuming ? "opacity-60 pointer-events-none" : ""
  }`}
  >
- <div className="absolute top-0 bottom-0 left-0 w-1 bg-m3-primary" />
+ <div className="absolute top-0 bottom-0 left-0 w-1 bg-primary" />
  <div>
  <div className="flex items-center justify-between gap-1">
- <div className="text-xs font-extrabold text-m3-on-surface leading-snug group-hover:text-m3-primary transition-colors">
+ <div className="text-xs font-extrabold text-foreground leading-snug group-hover:text-primary transition-colors">
  {park.customerName}
  </div>
  {park.heldBy && (
- <span className="text-[9px] font-bold px-1.5 py-0.5 bg-m3-primary/10 text-m3-primary rounded border border-m3-primary/20">
+ <span className="text-[9px] font-bold px-1.5 py-0.5 bg-primary/10 text-primary rounded border border-primary/20">
  {park.heldBy}
  </span>
  )}
  </div>
- <p className="text-[10px] text-m3-on-surface-variant mt-1 flex items-center gap-1 font-mono font-bold">
+ <p className="text-[10px] text-default-500 mt-1 flex items-center gap-1 font-bold">
  <span>{park.timestamp}</span>
  <span>•</span>
- <span className="text-m3-primary">
+ <span className="text-primary">
  {park.items?.length || 0} tile sets
  </span>
  </p>
@@ -2629,7 +2644,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <button
  type="button"
  disabled={isCurrentResuming}
- className="w-full py-1.5 text-[9.5px] font-black uppercase tracking-widest bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 transition-colors rounded-xl flex items-center justify-center gap-1 cursor-pointer shadow-sm mt-1 disabled:opacity-50"
+ className="w-full py-1.5 text-[9.5px] font-black uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/95 transition-colors rounded-xl flex items-center justify-center gap-1 cursor-pointer shadow-sm mt-1 disabled:opacity-50"
  >
  {isCurrentResuming ? "Claiming Order..." : "Resume Staged Order \u2192"}
  </button>
@@ -2638,9 +2653,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
  })}
  </div>
  ) : (
- <div className="py-10 px-4 text-center text-xs text-m3-on-surface-variant font-bold border border-dashed border-m3-outline-variant/20 rounded-2xl bg-m3-surface-lowest flex flex-col items-center justify-center gap-2 min-h-[180px] h-full">
- <History className="h-5 w-5 text-m3-on-surface-variant" />
- <span className="animate-pulse text-m3-on-surface-variant leading-relaxed">
+ <div className="py-10 px-4 text-center text-xs text-default-500 font-bold border border-dashed border-divider/20 rounded-2xl bg-content1 flex flex-col items-center justify-center gap-2 min-h-[180px] h-full">
+ <History className="h-5 w-5 text-default-500" />
+ <span className="animate-pulse text-default-500 leading-relaxed">
  Staged Lobby Clear: Waiting for floor staff to upload
  material hold queues from customer devices.
  </span>
@@ -2649,24 +2664,24 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
 
  {/* Keyboard Shortcuts & Interactive Speed-Dials */}
- <div className="border-t border-m3-outline-variant/15 pt-3 mt-auto flex-shrink-0 space-y-2.5">
+ <div className="border-t border-divider/15 pt-3 mt-auto flex-shrink-0 space-y-2.5">
  <button
  type="button"
  onClick={() => setShortcutsCollapsed(!shortcutsCollapsed)}
- className="flex items-center justify-between w-full hover:bg-m3-surface-high/15 p-1.5 rounded-xl transition-all cursor-pointer text-left"
+ className="flex items-center justify-between w-full hover:bg-content3/15 p-1.5 rounded-xl transition-all cursor-pointer text-left"
  >
- <span className="text-[10px] font-black text-m3-primary uppercase tracking-widest flex items-center gap-1.5 font-sans">
- <Keyboard className="h-3.5 w-3.5 text-m3-primary animate-pulse" />
+ <span className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-1.5 font-sans">
+ <Keyboard className="h-3.5 w-3.5 text-primary animate-pulse" />
  <span>POS Checkout Speed-Dials</span>
  </span>
  <div className="flex items-center gap-2">
- <span className="text-[9px] bg-m3-primary/10 text-m3-primary px-2 py-0.5 rounded-full font-black uppercase tracking-wider font-mono">
+ <span className="text-[9px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-black uppercase tracking-wider ">
  Active Hotkeys
  </span>
  {shortcutsCollapsed ? (
- <ChevronDown className="h-4 w-4 text-m3-primary transition-transform duration-200" />
+ <ChevronDown className="h-4 w-4 text-primary transition-transform duration-200" />
  ) : (
- <ChevronUp className="h-4 w-4 text-m3-primary transition-transform duration-200" />
+ <ChevronUp className="h-4 w-4 text-primary transition-transform duration-200" />
  )}
  </div>
  </button>
@@ -2676,10 +2691,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <div className="grid grid-cols-2 gap-2">
  {[
  { key: "F1", desc: "Void Current Sale", action: () => handleCancelSale(), bg: "hover:bg-rose-500/10 hover:border-rose-500/30 text-rose-600 dark:text-rose-400" },
- { key: "F2", desc: "Focus Search Catalog", action: () => handleFocusSearch(), bg: "hover:bg-m3-primary/10 hover:border-m3-primary/30 text-m3-primary" },
+ { key: "F2", desc: "Focus Search Catalog", action: () => handleFocusSearch(), bg: "hover:bg-primary/10 hover:border-primary/30 text-primary" },
  { key: "F3", desc: "Hold Order Stash", action: () => handleHold(), bg: "hover:bg-amber-500/10 hover:border-amber-500/30 text-amber-600 dark:text-amber-400" },
- { key: "F4", desc: "View Parked Sales", action: () => handleViewParkedSales(), bg: "hover:bg-m3-primary/10 hover:border-m3-primary/30 text-m3-primary" },
- { key: "F5", desc: "Assign Customer Name", action: () => { setCustomerModalInput(customerName); setShowCustomerModal(true); }, bg: "hover:bg-m3-primary/10 hover:border-m3-primary/30 text-m3-primary" },
+ { key: "F4", desc: "View Parked Sales", action: () => handleViewParkedSales(), bg: "hover:bg-primary/10 hover:border-primary/30 text-primary" },
+ { key: "F5", desc: "Assign Customer Details", action: () => { setCustomerModalInput(customerName); setCustomerModalAddressInput(customerAddress); setCustomerModalTinInput(customerTin); setCustomerModalBusinessStyleInput(businessStyle); setCustomerModalNotesInput(customerNotes); setShowCustomerModal(true); }, bg: "hover:bg-primary/10 hover:border-primary/30 text-primary" },
  { key: "F6", desc: "Apply Code/Discount", action: () => { setDiscountInput(""); setShowDiscountModal(true); }, bg: "hover:bg-teal-500/10 hover:border-teal-500/30 text-teal-600 dark:text-teal-400" },
  { key: "F7", desc: "Pay / Settle Sale", action: () => handlePaySettleSale(), bg: "hover:bg-emerald-500/10 hover:border-emerald-500/30 text-emerald-600 dark:text-emerald-400" },
  { key: "F8", desc: "Reprint Last Receipt", action: () => handleReprintLastReceipt(), bg: "hover:bg-purple-500/10 hover:border-purple-500/30 text-purple-600 dark:text-purple-400" },
@@ -2690,24 +2705,24 @@ export const PosModule: React.FC<PosModuleProps> = ({
  } else {
  setShowShiftModal(true);
  }
- }, bg: "hover:bg-m3-tertiary/10 hover:border-m3-tertiary/30 text-m3-tertiary" }
+ }, bg: "hover:bg-secondary/10 hover:border-secondary/30 text-secondary" }
  ].map((sh, index) => (
  <button
  key={index}
  type="button"
  onClick={sh.action}
- className={`flex items-center gap-2 p-2 bg-m3-surface border border-m3-outline-variant/15 rounded-xl text-left transition-all active:scale-[0.98] group cursor-pointer ${sh.bg}`}
+ className={`flex items-center gap-2 p-2 bg-background border border-divider/15 rounded-xl text-left transition-all active:scale-[0.98] group cursor-pointer ${sh.bg}`}
  >
- <kbd className="px-1.5 py-0.5 text-[9px] font-black font-mono bg-m3-surface-high/60 text-m3-on-surface border border-m3-outline-variant/30 rounded shadow-sm group-hover:bg-m3-primary group-hover:text-white group-hover:border-m3-primary transition-colors flex-shrink-0">
+ <kbd className="px-1.5 py-0.5 text-[9px] font-black bg-content3/60 text-foreground border border-divider/30 rounded shadow-sm group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-colors flex-shrink-0">
  {sh.key}
  </kbd>
- <span className="text-[10px] font-bold tracking-tight text-m3-on-surface-variant leading-tight truncate">
+ <span className="text-[10px] font-bold tracking-tight text-default-500 leading-tight truncate">
  {sh.desc}
  </span>
  </button>
  ))}
  </div>
- <p className="text-[8.5px] text-m3-on-surface-variant text-center font-mono">
+ <p className="text-[8.5px] text-default-500 text-center ">
  Press physical keys directly, or click above as interactive speed dials.
  </p>
  </div>
@@ -2721,12 +2736,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
  mobilePosTab === "basket" ? "block" : "hidden lg:flex"
  }`}
  >
- <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-[28px] border border-m3-outline-variant/35 bg-m3-surface-low shadow-sm flex flex-col h-full overflow-hidden min-h-0">
+ <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-2xl border border-divider/35 bg-content1 shadow-sm flex flex-col h-full overflow-hidden min-h-0">
  {/* Header Metadata block */}
  <div className="flex-shrink-0 space-y-2.5">
- <div className="border-b border-m3-outline-variant/15 pb-2">
+ <div className="border-b border-divider/15 pb-2">
  <div className="flex flex-wrap items-center justify-between gap-2 pl-1 mb-1">
- <h3 className="text-xs font-black text-m3-primary uppercase tracking-widest flex items-center gap-2">
+ <h3 className="text-xs font-black text-primary uppercase tracking-widest flex items-center gap-2">
  <ShoppingCart className="h-4 w-4" />
  <span>Active Order list of materials</span>
  {syncStatus?.[activePosBranchId || "B1"] === "Syncing" && (
@@ -2743,24 +2758,28 @@ export const PosModule: React.FC<PosModuleProps> = ({
  className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer transition-colors px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[9.5px]"
  title="Open Tile Coverage Calculator"
  >
- <Calculator className="h-3.5 w-3.5 text-emerald-400" />
+ <Calculator className="h-3.5 w-3.5 text-primary" />
  <span>Tile Calculator</span>
  </button>
- <span className="text-m3-on-surface-variant">•</span>
+ <span className="text-default-500">•</span>
  <button
  type="button"
- onClick={() =>
- setIsCustomerMetadataCollapsed(
- !isCustomerMetadataCollapsed,
- )
- }
- className="text-m3-primary hover:text-m3-primary/85 flex items-center gap-1 cursor-pointer transition-colors"
+ onClick={() => {
+ setCustomerModalInput(customerName);
+ setCustomerModalAddressInput(customerAddress);
+ setCustomerModalTinInput(customerTin);
+ setCustomerModalBusinessStyleInput(businessStyle);
+ setCustomerModalNotesInput(customerNotes);
+ setShowCustomerModal(true);
+ }}
+ className="text-primary hover:text-primary/85 flex items-center gap-1.5 cursor-pointer transition-colors px-2.5 py-1 bg-primary/10 border border-primary/25 rounded-full text-[9.5px]"
+ title="Assign Customer Profile & Project Note (F5)"
  >
- {isCustomerMetadataCollapsed
- ? "Show Profile"
- : "Hide Profile"}
+ <Users className="h-3.5 w-3.5 text-primary" />
+ <span className="max-w-[130px] truncate">{customerName && customerName !== "Walk-in Customer" ? customerName : "Walk-in Buyer"}</span>
+ <span className="text-[8px] bg-primary text-black px-1 rounded font-black">F5</span>
  </button>
- <span className="text-m3-on-surface-variant">•</span>
+ <span className="text-default-500">•</span>
  <button
  type="button"
  onClick={handleCancelSale}
@@ -2772,179 +2791,27 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  </div>
 
- {/* Customer context assignment */}
- <div className="mb-4 bg-m3-surface-low/60 border border-m3-outline-variant/25 p-3 rounded-2xl shadow-sm">
- <button
- type="button"
- onClick={() =>
- setIsCustomerMetadataCollapsed(
- !isCustomerMetadataCollapsed,
- )
- }
- className="w-full flex items-center justify-between text-left focus:outline-none group pb-1.5 border-b border-m3-outline-variant/10 cursor-pointer"
- >
- <span className="text-[10px] font-black text-m3-primary uppercase tracking-widest pl-1 block select-none">
- Customer Info & Project Assignment{" "}
- {customerName && customerName !== "Walk-in Customer"
- ? `(${customerName})`
- : ""}
- </span>
- <div className="flex items-center gap-1 text-[9px] text-m3-on-surface-variant group-hover:text-m3-primary transition-colors font-bold uppercase tracking-wider">
- <span>
- {isCustomerMetadataCollapsed ? "Show" : "Hide"}
- </span>
- {isCustomerMetadataCollapsed ? (
- <ChevronDown className="h-3 w-3" />
- ) : (
- <ChevronUp className="h-3 w-3" />
- )}
- </div>
- </button>
-
- <AnimatePresence initial={false}>
- {!isCustomerMetadataCollapsed && (
- <motion.div
- initial={{ opacity: 0, height: 0 }}
- animate={{ opacity: 1, height: "auto" }}
- exit={{ opacity: 0, height: 0 }}
- transition={{ duration: 0.15 }}
- className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2 overflow-visible relative pb-1"
- >
- <div className="relative pl-0">
- <label className="text-[9px] font-bold text-m3-on-surface-variant uppercase tracking-widest pl-1 block mb-1">
- Customer Profile
- </label>
- <input
- type="text"
- value={customerName ?? ''}
- onChange={(e) =>
- setCustomerName(e.target.value.slice(0, 100))
- }
- onKeyDown={(e) => {
- if (e.key === "Enter") {
- const trimmed = customerName.trim();
- if (
- trimmed &&
- trimmed.toLowerCase() !== "walk-in customer" &&
- trimmed.toLowerCase() !== "walk-in" &&
- !members.some((m) => m.fullName.toLowerCase() === trimmed.toLowerCase())
- ) {
- setNewMemberName(trimmed);
- setAddMemberError("");
- setShowAddMemberModal(true);
- }
- }
- }}
- maxLength={100}
- placeholder="Customer Name / Walk-in"
- className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-bold"
- />
- {customerName.trim().length > 0 &&
- customerName.toLowerCase() !== "walk-in customer" &&
- customerName.toLowerCase() !== "walk-in" &&
- (() => {
- const trimmed = customerName.trim();
- const exactMatch = members.some((m) => m.fullName.toLowerCase() === trimmed.toLowerCase());
- const matchedMembers = members.filter(
- (m) =>
- m.status === "Active" &&
- m.fullName.toLowerCase() !== trimmed.toLowerCase() &&
- (m.fullName.toLowerCase().includes(trimmed.toLowerCase()) ||
- m.phone.includes(trimmed) ||
- m.email.toLowerCase().includes(trimmed.toLowerCase()))
- );
-
- if (exactMatch && matchedMembers.length === 0) return null;
-
- return (
- <div className="absolute left-0 right-0 mt-1 bg-m3-surface-low border border-m3-outline-variant/35 rounded-xl shadow-lg z-30 max-h-48 overflow-y-auto divide-y divide-m3-outline-variant/10 text-xs font-sans">
- {!exactMatch && (
- <button
- type="button"
- onClick={() => {
- setNewMemberName(trimmed);
- setAddMemberError("");
- setShowAddMemberModal(true);
- }}
- className="w-full text-left px-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 font-extrabold flex justify-between items-center transition-colors cursor-pointer border-0"
- >
- <span className="flex items-center gap-1.5 text-[11px]">
- <UserPlus className="h-3.5 w-3.5" />
- <span>{trimmed} - add as member?</span>
- </span>
- <span className="text-[9px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-black uppercase">
- + Add
- </span>
- </button>
- )}
- {matchedMembers.length > 0 && (
- <>
- <div className="p-1 text-[8.5px] font-bold uppercase tracking-wider text-m3-primary bg-m3-primary/5 px-2">
- Matching Registered Members (Click to Select)
- </div>
- {matchedMembers.slice(0, 5).map((m) => (
- <button
- type="button"
- key={m.id}
- onClick={() => {
- setCustomerName(m.fullName);
- }}
- className="w-full text-left px-2.5 py-1.5 hover:bg-m3-primary/10 text-[11px] font-bold text-m3-on-surface flex justify-between items-center transition-colors border-0 bg-transparent cursor-pointer"
- >
- <div>
- <span>{m.fullName}</span>
- <span className="text-[9px] text-m3-on-surface-variant font-normal block">{m.phone}</span>
- </div>
- <span className="text-[9px] bg-emerald-500/10 text-emerald-500 px-1 rounded">Select</span>
- </button>
- ))}
- </>
- )}
- </div>
- );
- })()}
- </div>
- <div className="relative pl-0">
- <label className="text-[9px] font-bold text-m3-on-surface-variant uppercase tracking-widest pl-1 block mb-1">
- Ticket Note / Project Assign (Optional)
- </label>
- <input
- type="text"
- value={customerNotes ?? ''}
- onChange={(e) =>
- setCustomerNotes(e.target.value.slice(0, 100))
- }
- maxLength={100}
- placeholder="Project note or description"
- className="w-full bg-m3-surface border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-lg font-bold"
- />
- </div>
- </motion.div>
- )}
- </AnimatePresence>
- </div>
-
  {/* Barcode scan input search bar */}
  {!products.some((p) => !p.isDeleted) ? (
  <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl text-left font-sans shadow-inner">
  <div className="flex items-center gap-2 text-amber-500 font-extrabold text-xs uppercase tracking-wider mb-1">
- <span className="text-sm">️</span> Scanner Locked / Catalog Empty
+ <span className="text-sm"></span> Scanner Locked / Catalog Empty
  </div>
- <p className="text-[10.5px] text-m3-on-surface-variant font-medium leading-relaxed">
- The Rapid Barcode Laser Scanner is inactive because there are no products in the inventory catalog. Please navigate to the <strong className="text-m3-primary font-bold">Inventory Module</strong> to add or import tile products first.
+ <p className="text-[10.5px] text-default-500 font-medium leading-relaxed">
+ The Rapid Barcode Laser Scanner is inactive because there are no products in the inventory catalog. Please navigate to the <strong className="text-primary font-bold">Inventory Module</strong> to add or import tile products first.
  </p>
  </div>
  ) : (
  <form
  onSubmit={handleBarcodeSubmit}
- className="bg-m3-surface-low border border-m3-primary/15 hover:border-m3-primary/35 p-2.5 rounded-2xl transition-all relative"
+ className="bg-content1 border border-primary/15 hover:border-primary/35 p-2.5 rounded-2xl transition-all relative"
  >
- <div className="flex flex-col md:flex-row gap-2 items-center">
+ <div className="flex flex-col md:flex-row gap-2 items-end">
  <div className="flex-1 w-full text-left">
- <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block mb-1.5">
+ <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block mb-1.5">
  Rapid Barcode Laser Scanner / Item SKU Input
  </label>
- <div className="relative font-sans">
+ <div className="relative font-sans flex items-center">
  <input ref={searchInputRef}
  type="text"
  value={barcodeSearchTerm ?? ''}
@@ -2952,23 +2819,26 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setBarcodeSearchTerm(e.target.value)
  }
  placeholder="Type product name, SKU, or custom design and press Enter..."
- className="w-full bg-m3-surface-lowest text-xs text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary/50 border border-m3-outline-variant/30 px-3.5 py-1.5 pr-12 rounded-xl placeholder-zinc-500 font-bold"
+ className="w-full bg-content1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 border border-divider/30 pl-3.5 pr-24 py-1.5 rounded-xl placeholder-zinc-500 font-bold h-9 shadow-inner"
  />
+ <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-auto">
  {barcodeSearchTerm && (
  <button
  type="button"
  onClick={() => setBarcodeSearchTerm("")}
- className="absolute right-16 top-1.5 text-m3-on-surface-variant hover:text-rose-500 text-xs font-black px-1"
+ className="text-default-500 hover:text-rose-500 text-xs font-black p-0.5 rounded-full hover:bg-default-100 transition-colors cursor-pointer"
+ title="Clear search"
  >
- 
+ ✕
  </button>
  )}
- <span className="absolute right-3 top-2 text-m3-on-surface-variant text-[9px] uppercase font-mono font-bold select-none pointer-events-none">
- [ ENTER ]
+ <span className="px-1.5 py-0.5 rounded-md bg-background border border-divider/30 text-default-500 text-[9px] font-extrabold uppercase select-none tracking-wider shadow-2xs pointer-events-none">
+ ↵ Enter
  </span>
+ </div>
 
  {barcodeSearchTerm.trim().length > 0 && (
- <div className="absolute left-0 right-0 mt-2 bg-m3-surface-lowest border border-m3-outline-variant/60 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-m3-outline-variant/20 text-xs max-h-[180px] overflow-y-auto">
+ <div className="absolute left-0 right-0 mt-2 bg-content1 border border-divider/60 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-divider/20 text-xs max-h-[180px] overflow-y-auto">
  {(() => {
  const matched = products.filter(
  (p) =>
@@ -2993,7 +2863,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  );
  if (matched.length === 0) {
  return (
- <div className="p-4 text-center text-m3-on-surface-variant font-bold text-xs italic">
+ <div className="p-4 text-center text-default-500 font-bold text-xs italic">
  No compatible tiles or SKU listings match "{barcodeSearchTerm}"
  </div>
  );
@@ -3018,13 +2888,13 @@ export const PosModule: React.FC<PosModuleProps> = ({
  3000,
  );
  }}
- className="p-2.5 hover:bg-m3-primary/10 cursor-pointer flex justify-between items-center transition-colors text-left"
+ className="p-2.5 hover:bg-primary/10 cursor-pointer flex justify-between items-center transition-colors text-left"
  >
  <div className="space-y-0.5">
- <div className="font-extrabold text-m3-on-surface text-xs">
+ <div className="font-extrabold text-foreground text-xs">
  {p.productName}
  </div>
- <div className="text-[10px] text-m3-on-surface-variant font-mono font-bold">
+ <div className="text-[10px] text-default-500 font-bold">
  SKU: {p.sku} • Stock: {p.stockQuantity}
  </div>
  </div>
@@ -3044,7 +2914,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  <button
  type="submit"
- className="w-full md:w-auto px-4 py-1.5 bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer self-end shrink-0 transition-all flex items-center gap-1.5 h-[32px] shadow-sm justify-center"
+ className="w-full md:w-auto px-4 bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shrink-0 transition-all flex items-center gap-1.5 h-9 shadow-sm justify-center active:scale-95"
  >
  SKU Scan
  </button>
@@ -3054,7 +2924,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
 
  {/* DYNAMIC INDEPENDENT OVERFLOW SCROLL TRACK */}
- <div className="flex-1 h-0 overflow-auto my-3 pr-1 space-y-1.5 border border-m3-outline-variant/10 rounded-2xl p-2.5 bg-m3-surface/20 scrollbar-thin"><div className="min-w-[550px] w-full pb-1">
+ <div className="flex-1 h-0 overflow-auto my-3 pr-1 space-y-1.5 border border-divider/10 rounded-2xl p-2.5 bg-background/20 scrollbar-thin"><div className="min-w-[550px] w-full pb-1">
  <AnimatePresence initial={false}>
  {cart.map((item, idx) => (
  <motion.div
@@ -3067,16 +2937,16 @@ export const PosModule: React.FC<PosModuleProps> = ({
  stiffness: 450,
  damping: 30,
  }}
- className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 py-2.5 border-b border-m3-outline-variant/10 last:border-0 pl-1 overflow-hidden"
+ className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 py-2.5 border-b border-divider/10 last:border-0 pl-1 overflow-hidden"
  >
  <div className="space-y-1 text-left w-full sm:w-auto">
- <h5 className="text-sm font-black leading-tight text-m3-on-surface">
+ <h5 className="text-sm font-black leading-tight text-foreground">
  {item.product.productName}
  </h5>
- <div className="text-xs text-m3-on-surface-variant flex flex-wrap items-center gap-1.5 font-mono font-bold">
+ <div className="text-xs text-default-500 flex flex-wrap items-center gap-1.5 font-bold">
  {item.overridePrice !== undefined ? (
  <>
- <span className="text-m3-on-surface-variant line-through text-xs">
+ <span className="text-default-500 line-through text-xs">
  {formatCurrency(getBranchPrice(item.product))}
  </span>
  <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-md shadow-2xs">
@@ -3084,20 +2954,20 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </span>
  </>
  ) : (
- <span className="text-m3-on-surface-variant text-xs">
+ <span className="text-default-500 text-xs">
  {formatCurrency(getBranchPrice(item.product))}
  </span>
  )}
  <span>/{item.product.unit}</span>
  <span>•</span>
- <span className="text-m3-primary text-xs">
+ <span className="text-primary text-xs">
  SKU: {item.product.sku}
  </span>
  <span>•</span>
  <button
  type="button"
  onClick={() => handleTriggerPriceOverride(idx)}
- className="text-[11px] font-extrabold text-m3-primary hover:bg-m3-primary/20 bg-m3-primary/10 border border-m3-primary/30 px-2.5 py-1 rounded-md transition-colors uppercase cursor-pointer"
+ className="text-[11px] font-extrabold text-primary hover:bg-primary/20 bg-primary/10 border border-primary/30 px-2.5 py-1 rounded-md transition-colors uppercase cursor-pointer"
  >
  Override Price
  </button>
@@ -3142,7 +3012,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  const userBranchId = activePosBranchId;
  const currentMaxStock = products.find((p) => p.id === item.product.id)?.stockQuantity ?? getBranchStockQuantity(item.product, userBranchId, branchStock, branches);
  return (
- <div className="flex items-center border border-m3-outline-variant rounded-lg overflow-hidden shrink-0 bg-m3-surface">
+ <div className="flex items-center border border-divider rounded-lg overflow-hidden shrink-0 bg-background">
  <button
  type="button"
  title="Decrement quantity"
@@ -3155,7 +3025,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  currentMaxStock,
  );
  }}
- className="px-2 py-0.5 hover:bg-m3-outline-variant/20 text-xs font-mono font-bold text-m3-on-surface cursor-pointer"
+ className="px-2 py-0.5 hover:bg-default-100 text-xs font-bold text-foreground cursor-pointer"
  >
  -
  </button>
@@ -3178,7 +3048,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  currentMaxStock,
  );
  }}
- className="px-2 py-0.5 hover:bg-m3-outline-variant/20 text-xs font-mono font-bold text-m3-on-surface cursor-pointer"
+ className="px-2 py-0.5 hover:bg-default-100 text-xs font-bold text-foreground cursor-pointer"
  >
  +
  </button>
@@ -3192,10 +3062,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
  currentMaxStock,
  )
  }
- className={`px-1.5 py-0.5 text-[10px] font-mono font-black border-l border-m3-outline-variant/30 cursor-pointer transition-colors ${
+ className={`px-1.5 py-0.5 text-[10px] font-black border-l border-divider/30 cursor-pointer transition-colors ${
  item.quantity < 0
  ? "bg-rose-500/20 text-rose-500 hover:bg-rose-500/30"
- : "text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-outline-variant/20"
+ : "text-default-500 hover:text-primary hover:bg-default-100"
  }`}
  >
  +/-
@@ -3205,7 +3075,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  })()}
 
  <div className="flex items-center gap-3">
- <span className="text-xs font-black font-mono min-w-[80px] text-right text-m3-on-surface">
+ <span className="text-xs font-black min-w-[80px] text-right text-foreground">
  ₱
  {(
  (Number(item.overridePrice !== undefined && item.overridePrice !== null
@@ -3218,7 +3088,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <button
  type="button"
  onClick={() => removeFromCart(item.product.id)}
- className="text-m3-on-surface-variant hover:text-red-500 p-1 rounded-full hover:bg-red-500/10 transition-colors"
+ className="text-default-500 hover:text-red-500 p-1 rounded-full hover:bg-red-500/10 transition-colors"
  >
  <Trash2 className="h-3.5 w-3.5" />
  </button>
@@ -3229,18 +3099,18 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </AnimatePresence>
 
  {cart.length === 0 && (
- <div className="text-center py-12 text-m3-on-surface-variant text-xs flex flex-col items-center justify-center gap-2 font-bold min-h-[160px] h-full">
- <ShoppingCart className="h-8 w-8 text-m3-primary/30" />
- <span className="max-w-xs leading-relaxed text-m3-on-surface-variant">
+ <div className="text-center py-12 text-default-500 text-xs flex flex-col items-center justify-center gap-2 font-bold min-h-[160px] h-full">
+ <ShoppingCart className="h-8 w-8 text-primary/30" />
+ <span className="max-w-xs leading-relaxed text-default-500">
  Active Cashier billing basket is empty. Select a staged
  ticket from the hold queue to begin.
  </span>
  <button
  type="button"
  onClick={() => setShowTileCalculatorModal(true)}
- className="mt-3 py-2 px-4 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 text-[10.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+ className="mt-3 py-2 px-4 bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary text-[10.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
  >
- <Calculator className="h-4 w-4 text-emerald-400" />
+ <Calculator className="h-4 w-4 text-primary" />
  <span>Open Tile Calculator</span>
  </button>
  </div>
@@ -3249,39 +3119,39 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
 
  {/* Fixed operational footer calculation layer */}
- <div className="flex-shrink-0 border-t border-m3-outline-variant/20 pt-3 grid grid-cols-1 xl:grid-cols-12 gap-5">
+ <div className="flex-shrink-0 border-t border-divider/20 pt-3 grid grid-cols-1 xl:grid-cols-12 gap-5">
  <div className="xl:col-span-5 xl:space-y-1 pt-0.5">
- <div className="flex justify-between text-xs font-bold text-m3-on-surface-variant">
+ <div className="flex justify-between text-xs font-bold text-default-500">
  <span>
  {discountType === "SENIOR" || discountType === "PWD"
  ? "VAT-Exempt Sales"
  : "VATable Sales (Net)"}
  </span>
- <span className="font-mono">{formatCurrency(subtotal - vat)}</span>
+ <span className="">{formatCurrency(grandTotal - vat)}</span>
  </div>
- <div className="flex justify-between text-xs font-bold text-m3-on-surface-variant mt-0.5">
+ <div className="flex justify-between text-xs font-bold text-default-500 mt-0.5">
  <span>
  {discountType === "SENIOR" || discountType === "PWD"
  ? "12% Output VAT (Exempt)"
  : "12% Output VAT"}
  </span>
- <span className="font-mono">{formatCurrency(vat)}</span>
+ <span className="">{formatCurrency(vat)}</span>
  </div>
 
  {discountAmount > 0 && (
  <div className="flex justify-between text-xs font-black text-emerald-500 mt-0.5">
  <span>Discount Voucher Applied</span>
- <span className="font-mono">
+ <span className="">
  -{formatCurrency(discountAmount)}
  </span>
  </div>
  )}
 
- <div className="flex justify-between text-sm font-black border-t border-dashed border-m3-outline-variant/30 pt-2 mt-1.5">
- <span className="text-m3-on-surface text-xs uppercase tracking-wide">
+ <div className="flex justify-between text-sm font-black border-t border-dashed border-divider/30 pt-2 mt-1.5">
+ <span className="text-foreground text-xs uppercase tracking-wide">
  GRAND TOTAL DUE
  </span>
- <span className="font-mono text-m3-primary text-lg font-extrabold">
+ <span className=" text-primary text-lg font-extrabold">
  ₱
  {(Number(grandTotal) || 0).toLocaleString(undefined, {
  minimumFractionDigits: 2,
@@ -3295,7 +3165,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setDiscountInput("");
  setShowDiscountModal(true);
  }}
- className="w-full mt-2.5 flex items-center justify-center gap-2 text-xs py-2 px-3 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary font-extrabold rounded-xl border border-m3-primary/30 uppercase tracking-wider transition-colors cursor-pointer shadow-2xs"
+ className="w-full mt-2.5 flex items-center justify-center gap-2 text-xs py-2 px-3 bg-primary/10 hover:bg-primary/20 text-primary font-extrabold rounded-xl border border-primary/30 uppercase tracking-wider transition-colors cursor-pointer shadow-2xs"
  >
  <Sparkles className="h-3.5 w-3.5" /> Apply Cardholder Discount
  (F6)
@@ -3304,11 +3174,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  <div
  id="checkout-action-panel"
- className="xl:col-span-7 bg-m3-surface p-3.5 rounded-2xl border border-m3-outline-variant/35 space-y-2.5 shadow-inner text-left"
+ className="xl:col-span-7 bg-background p-3.5 rounded-2xl border border-divider/35 space-y-2.5 shadow-inner text-left"
  >
  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
  <div className="sm:col-span-6 space-y-1">
- <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">
+ <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">
  Settlement Method
  </label>
  <div className="grid grid-cols-3 gap-1.5">
@@ -3318,7 +3188,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
       { name: `GCash`, label: `GCash`, color: `border-sky-500/25 text-sky-600 dark:text-sky-400 bg-sky-500/5`, activeColor: `bg-sky-600 border-sky-600 text-white` },
       { name: `Maya`, label: `Maya`, color: `border-green-500/25 text-green-600 dark:text-green-400 bg-green-500/5`, activeColor: `bg-green-600 border-green-600 text-white` },
       { name: `Card / Bank Terminal`, label: `Card / Bank Terminal`, color: `border-violet-500/25 text-violet-600 dark:text-violet-400 bg-violet-500/5`, activeColor: `bg-violet-600 border-violet-600 text-white` },
-      { name: `Member Credit`, label: `Member`, color: `border-m3-primary/25 text-m3-primary bg-m3-primary/5`, activeColor: `bg-m3-primary border-m3-primary text-white` },
+      { name: `Member Credit`, label: `Member`, color: `border-primary/25 text-primary bg-primary/5`, activeColor: `bg-primary border-primary text-white` },
     ] as const
   ).map((method) => (
     <button
@@ -3335,7 +3205,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
       className={`py-1.5 px-0.5 text-[9px] rounded-lg border font-black select-none text-center transition-all cursor-pointer ${
         paymentMethod === method.name
           ? `${method.activeColor} shadow-md scale-[1.02]`
-          : `bg-m3-surface-lowest border-m3-outline-variant/40 hover:bg-m3-outline-variant/20 ${method.color}`
+          : `bg-content1 border-divider/40 hover:bg-default-100 ${method.color}`
       }`}
     >
       <span className="flex items-center justify-center gap-1">
@@ -3347,7 +3217,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
 
  <div className="sm:col-span-6 space-y-1">
- <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">
+ <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">
  Amount Tendered (PHP)
  </label>
  <input
@@ -3357,7 +3227,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={amountTendered ?? ''}
  onChange={(e) => setAmountTendered(e.target.value)}
  placeholder={grandTotal.toFixed(0)}
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant px-3 py-1.5 text-xs text-m3-on-surface font-mono font-bold focus:outline-none focus:border-m3-primary transition-colors disabled:opacity-45 disabled:cursor-not-allowed rounded-t-lg"
+ className="w-full bg-content1 border-b-2 border-divider px-3 py-1.5 text-xs text-foreground font-bold focus:outline-none focus:border-primary transition-colors disabled:opacity-45 disabled:cursor-not-allowed rounded-lg"
  />
 
 
@@ -3365,11 +3235,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
 
 {paymentMethod !== "Cash" && paymentMethod !== "Member Credit" && (
-        <div className="p-3 bg-m3-surface-low border border-m3-outline-variant/30 rounded-xl space-y-2 mt-2 font-sans animate-fade-in text-xs text-left">
+        <div className="p-3 bg-content1 border border-divider/30 rounded-xl space-y-2 mt-2 font-sans animate-fade-in text-xs text-left">
           {/* Verification Reference Number Field */}
           <div className="space-y-1">
             <div className="flex justify-between items-center">
-              <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">
+              <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">
                 {paymentMethod === "Card / Bank Terminal" ? "Receipt Reference / Approval No." : "Payment Reference Number"}
               </label>
             </div>
@@ -3383,7 +3253,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                     ? "Enter printed receipt reference or card approval code"
                     : `Enter 13-digit reference number from ${paymentMethod} payment`
                 }
-                className="w-full bg-m3-surface-lowest border border-m3-outline-variant/60 rounded-lg px-3 py-1.5 text-xs text-m3-on-surface font-mono font-bold focus:outline-none focus:border-m3-primary transition-all"
+ className="w-full bg-content1 border border-divider/60 rounded-lg px-3 py-1.5 text-xs text-foreground font-bold focus:outline-none focus:border-primary transition-all"
               />
               {paymentRef.trim() && (
                 <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-emerald-500 text-[10px] font-bold select-none">
@@ -3397,7 +3267,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
         {paymentMethod === "Cash" &&
  parseFloat(amountTendered) >= grandTotal && (
- <div className="p-1.5 px-3 bg-m3-tertiary-container border border-m3-tertiary/25 text-m3-on-tertiary-container rounded-lg flex justify-between items-center text-xs font-mono font-extrabold animate-fade-in mb-1">
+ <div className="p-1.5 px-3 bg-secondary-50 border border-secondary/25 text-secondary-700 rounded-lg flex justify-between items-center text-xs font-extrabold animate-fade-in mb-1">
  <span className="text-[9px] font-bold uppercase tracking-wider">
  CHANGE DISPENSE:
  </span>
@@ -3420,8 +3290,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
 						: 0;
 
 					return (
-						<div className="p-3 bg-m3-surface-low border border-m3-outline-variant/30 rounded-xl space-y-2 mt-2 font-sans animate-fade-in text-xs text-left">
-							<div className="flex items-center justify-between font-bold text-[11px] text-m3-primary uppercase tracking-wider">
+						<div className="p-3 bg-content1 border border-divider/30 rounded-xl space-y-2 mt-2 font-sans animate-fade-in text-xs text-left">
+							<div className="flex items-center justify-between font-bold text-[11px] text-primary uppercase tracking-wider">
 								<div className="flex items-center gap-1.5">
 									<Users className="h-4 w-4" />
 									<span>Member Account & Loyalty Desk</span>
@@ -3434,7 +3304,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 											setAddMemberError("");
 											setShowAddMemberModal(true);
 										}}
-										className="px-2 py-0.5 bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary text-[10px] font-bold rounded-lg flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
+										className="px-2 py-0.5 bg-primary hover:bg-primary/90 text-primary-foreground text-[10px] font-bold rounded-lg flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
 									>
 										<UserPlus className="h-3 w-3" />
 										<span>+ Member</span>
@@ -3444,25 +3314,25 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
 							{matchingMember ? (
 								<div className="space-y-2">
-									<div className="space-y-1 bg-m3-surface-lowest p-2.5 rounded-lg border border-m3-outline-variant/15">
+									<div className="space-y-1 bg-content1 p-2.5 rounded-lg border border-divider/15">
 										<div className="flex justify-between items-center">
-											<span className="text-m3-on-surface-variant dark:text-m3-on-surface-variant">Account:</span>
-											<span className="font-extrabold text-m3-on-surface">{matchingMember.fullName}</span>
+											<span className="text-default-500 dark:text-default-500">Account:</span>
+											<span className="font-extrabold text-foreground">{matchingMember.fullName}</span>
 										</div>
 
 										{paymentMethod === "Member Credit" && (
 											<>
 												<div className="flex justify-between items-center text-[11px]">
-													<span className="text-m3-on-surface-variant dark:text-m3-on-surface-variant">Credit Limit:</span>
-													<span className="font-mono font-bold text-m3-on-surface">₱{(Number(matchingMember.creditLimit) || 0).toLocaleString()}</span>
+													<span className="text-default-500 dark:text-default-500">Credit Limit:</span>
+													<span className=" font-bold text-foreground">₱{(Number(matchingMember.creditLimit) || 0).toLocaleString()}</span>
 												</div>
 												<div className="flex justify-between items-center text-[11px]">
-													<span className="text-m3-on-surface-variant dark:text-m3-on-surface-variant">Outstanding Debt:</span>
-													<span className="font-mono font-bold text-amber-500">₱{(Number(matchingMember.outstandingBalance) || 0).toLocaleString()}</span>
+													<span className="text-default-500 dark:text-default-500">Outstanding Debt:</span>
+													<span className=" font-bold text-amber-500">₱{(Number(matchingMember.outstandingBalance) || 0).toLocaleString()}</span>
 												</div>
-												<div className="border-t border-m3-outline-variant/10 my-1 pt-1 flex justify-between items-center">
-													<span className="font-bold text-m3-on-surface-variant dark:text-m3-on-surface-variant">Available Credit:</span>
-													<span className={`font-mono font-black ${(Number(matchingMember.creditLimit) || 0) - (Number(matchingMember.outstandingBalance) || 0) >= grandTotal ? 'text-emerald-500' : 'text-rose-500'}`}>
+												<div className="border-t border-divider/10 my-1 pt-1 flex justify-between items-center">
+													<span className="font-bold text-default-500 dark:text-default-500">Available Credit:</span>
+													<span className={` font-black ${(Number(matchingMember.creditLimit) || 0) - (Number(matchingMember.outstandingBalance) || 0) >= grandTotal ? 'text-emerald-500' : 'text-rose-500'}`}>
 														₱{((Number(matchingMember.creditLimit) || 0) - (Number(matchingMember.outstandingBalance) || 0)).toLocaleString()}
 													</span>
 												</div>
@@ -3471,28 +3341,28 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
 										{matchingMember.status !== "Active" ? (
 											<div className="text-[10px] text-rose-500 font-bold bg-rose-500/10 p-1 px-2 rounded mt-1 border border-rose-500/20">
-												⚠️ Account is suspended.
+												Account is suspended.
 											</div>
 										) : paymentMethod === "Member Credit" && matchingMember.creditLimit - matchingMember.outstandingBalance < grandTotal ? (
 											<div className="text-[10px] text-rose-500 font-bold bg-rose-500/10 p-1 px-2 rounded mt-1 border border-rose-500/20">
-												⚠️ Purchase exceeds available credit limit.
+												Purchase exceeds available credit limit.
 											</div>
 										) : null}
 									</div>
 
 									{/* COMPACT LOYALTY POINTS DISPLAY */}
-									<div className="bg-m3-surface-lowest p-2 rounded-lg border border-m3-outline-variant/20 space-y-1.5 text-xs">
+									<div className="bg-content1 p-2 rounded-lg border border-divider/20 space-y-1.5 text-xs">
 										<div className="flex items-center justify-between text-[11px]">
-											<span className="text-m3-on-surface-variant font-medium">
-												Available Points: <strong className="text-amber-500 font-mono">{matchingMember.points || 0}</strong>
+											<span className="text-default-500 font-medium">
+												Available Points: <strong className="text-amber-500 ">{matchingMember.points || 0}</strong>
 												{projectedEarnedPts > 0 && (
-													<span className="text-emerald-500 font-mono text-[10.5px] ml-1.5 font-bold">
+													<span className="text-emerald-500 text-[10.5px] ml-1.5 font-bold">
 														(+{projectedEarnedPts} earned)
 													</span>
 												)}
 											</span>
 											{(matchingMember.points || 0) > 0 && (
-												<span className="text-[10px] font-mono text-m3-on-surface-variant">
+												<span className="text-[10px] text-default-500">
 													(₱{((matchingMember.points || 0) * ptValPhp).toFixed(2)})
 												</span>
 											)}
@@ -3500,7 +3370,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
 										{/* Point Redemption Input */}
 										{(matchingMember.points || 0) > 0 && grandTotal > 0 && (
-											<div className="flex items-center gap-1.5 pt-1 border-t border-m3-outline-variant/15">
+											<div className="flex items-center gap-1.5 pt-1 border-t border-divider/15">
 												<input
 													type="number"
 													min="0"
@@ -3512,7 +3382,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 														setPointsToRedeem(Math.max(0, Math.min(val, maxAllowed)));
 													}}
 													placeholder="Enter points to redeem"
-													className="w-full bg-m3-surface-high border border-m3-outline-variant/30 rounded-md px-2 py-1 text-xs font-mono font-bold text-m3-on-surface focus:outline-none focus:border-amber-500"
+													className="w-full bg-content3 border border-divider/30 rounded-md px-2 py-1 text-xs font-bold text-foreground focus:outline-none focus:border-amber-500"
 												/>
 												<button
 													type="button"
@@ -3534,7 +3404,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 													</button>
 												)}
 												{pointsToRedeem > 0 && (
-													<span className="text-[10px] font-mono font-bold text-emerald-500 whitespace-nowrap">
+													<span className="text-[10px] font-bold text-emerald-500 whitespace-nowrap">
 														-₱{(pointsToRedeem * ptValPhp).toFixed(2)}
 													</span>
 												)}
@@ -3544,10 +3414,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
 								</div>
 							) : (
 								<div className="space-y-1.5">
-									<div className="text-[10px] text-m3-on-surface-variant font-bold uppercase tracking-wider px-1">
+									<div className="text-[10px] text-default-500 font-bold uppercase tracking-wider px-1">
 										Select Active Member Account:
 									</div>
-									<div className="max-h-36 overflow-y-auto space-y-1 border border-m3-outline-variant/15 rounded-lg p-1 bg-m3-surface-lowest">
+									<div className="max-h-36 overflow-y-auto space-y-1 border border-divider/15 rounded-lg p-1 bg-content1">
 										{members.filter(m => m.status === "Active").map((m) => (
 											<button
 												type="button"
@@ -3555,14 +3425,14 @@ export const PosModule: React.FC<PosModuleProps> = ({
 												onClick={() => {
 													setCustomerName(m.fullName);
 												}}
-												className="w-full text-left p-1.5 px-2 hover:bg-m3-primary/10 rounded text-[11px] font-bold text-m3-on-surface flex justify-between items-center cursor-pointer border-0 bg-transparent transition-colors"
+												className="w-full text-left p-1.5 px-2 hover:bg-primary/10 rounded text-[11px] font-bold text-foreground flex justify-between items-center cursor-pointer border-0 bg-transparent transition-colors"
 											>
 												<span>{m.fullName}</span>
-												<span className="font-mono text-[10px] text-amber-500">⭐ {m.points || 0} pts | Ceiling: ₱{(Number(m?.creditLimit) || 0).toLocaleString()}</span>
+												<span className=" text-[10px] text-amber-500">{m.points || 0} pts | Ceiling: ₱{(Number(m?.creditLimit) || 0).toLocaleString()}</span>
 											</button>
 										))}
 										{members.filter(m => m.status === "Active").length === 0 && (
-											<p className="text-center p-2 text-m3-on-surface-variant dark:text-m3-on-surface-variant text-[10px] italic">No active corporate members found.</p>
+											<p className="text-center p-2 text-default-500 dark:text-default-500 text-[10px] italic">No active corporate members found.</p>
 										)}
 									</div>
 								</div>
@@ -3581,7 +3451,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <button
  type="button"
  onClick={handleCancelSale}
- className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-black uppercase tracking-wider border border-zinc-750 shadow-sm"
+ className="px-3.5 py-2.5 sm:py-1.5 min-h-[42px] bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-white rounded-xl text-xs font-black uppercase tracking-wider border border-zinc-700 shadow-sm cursor-pointer transition-all shrink-0"
  >
  Cancel
  </button>
@@ -3589,11 +3459,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
  type="button"
  disabled={cart.length === 0 || isCheckingOut}
  onClick={clientCheckout}
- className="flex-1 py-1.5 bg-m3-primary hover:bg-m3-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-m3-on-primary text-xs font-black uppercase tracking-widest rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+ className="flex-1 py-2.5 sm:py-1.5 min-h-[42px] bg-primary hover:bg-primary/90 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed text-primary-foreground text-xs font-black uppercase tracking-widest rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
  >
  {isCheckingOut ? (
  <>
- <Loader2 className="h-3 w-3 animate-spin text-m3-on-primary" />
+ <Loader2 className="h-3 w-3 animate-spin text-primary-foreground" />
  <span>Processing...</span>
  </>
  ) : (
@@ -3609,12 +3479,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  ) : (
  /* DAILY SALES LEDGER & VOID TERMINAL (SUB-MODULE TAB) */
- <div className="flex-1 min-h-0 border border-m3-outline-variant/30 rounded-[28px] bg-m3-surface-low p-5 sm:p-6 text-left flex flex-col gap-6 animate-fade-in shadow-lg overflow-visible">
+ <div className="flex-1 min-h-0 border border-divider/30 rounded-2xl bg-content1 p-5 sm:p-6 text-left flex flex-col gap-6 animate-fade-in shadow-lg overflow-visible">
  
  {/* Title Section */}
- <div className="flex flex-col md:flex-row md:items-center md:justify-between border-b border-m3-outline-variant/20 pb-4 gap-4">
+ <div className="flex flex-col md:flex-row md:items-center md:justify-between border-b border-divider/20 pb-4 gap-4">
  <div>
- <h3 className="text-sm font-black text-rose-500 flex items-center gap-2 uppercase tracking-widest pl-1 font-mono">
+ <h3 className="text-sm font-black text-rose-500 flex items-center gap-2 uppercase tracking-widest pl-1 ">
  <LockKeyhole className="h-5 w-5 animate-pulse text-rose-500" />
  <span>Corporate Daily Sales Ledger & Void Terminal</span>
  </h3>
@@ -3625,7 +3495,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <button
  type="button"
  onClick={() => setIsStatsCollapsed(!isStatsCollapsed)}
- className="flex items-center justify-center gap-2 px-3.5 py-2 bg-m3-surface hover:bg-m3-surface-high border border-m3-outline-variant/40 text-m3-primary text-[11px] font-sans font-black uppercase tracking-wider rounded-xl transition-all shadow-sm cursor-pointer shrink-0"
+ className="flex items-center justify-center gap-2 px-3.5 py-2 bg-background hover:bg-content3 border border-divider/40 text-primary text-[11px] font-sans font-black uppercase tracking-wider rounded-xl transition-all shadow-sm cursor-pointer shrink-0"
  title="Toggle statistics visibility"
  >
  {isStatsCollapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
@@ -3635,7 +3505,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <button
  type="button"
  onClick={handleExportLedgerToExcel}
- className="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-sans font-black uppercase tracking-wider rounded-xl transition-all shadow-sm cursor-pointer border-0 shrink-0"
+ className="flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-[11px] font-sans font-black uppercase tracking-wider rounded-xl transition-all shadow-sm cursor-pointer border-0 shrink-0"
  title="Export current filtered sales report as a formatted Excel spreadsheet"
  >
  <Download className="h-3.5 w-3.5" />
@@ -3656,45 +3526,45 @@ export const PosModule: React.FC<PosModuleProps> = ({
   {/* Quick Stats Grid Dashboard */}
   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
  {/* Stat 1: Net Revenue */}
- <div className="bg-m3-surface border border-m3-outline-variant/15 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
- <span className="text-[10px] text-m3-on-surface-variant font-black uppercase tracking-wider font-mono">Net Settled Revenue</span>
+ <div className="bg-background border border-divider/15 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+ <span className="text-[10px] text-default-500 font-black uppercase tracking-wider ">Net Settled Revenue</span>
  <div className="mt-2 flex items-baseline gap-1">
- <span className="text-lg font-black text-emerald-500 font-mono">
+ <span className="text-lg font-black text-emerald-500 ">
  ₱{(Number(ledgerStats?.netRevenue) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
  </span>
  </div>
- <span className="text-[9px] text-m3-on-surface-variant font-bold font-sans mt-1">Excludes voided invoices</span>
+ <span className="text-[9px] text-default-500 font-bold font-sans mt-1">Excludes voided invoices</span>
  </div>
 
  {/* Stat 2: Active Tickets */}
- <div className="bg-m3-surface border border-m3-outline-variant/15 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
- <span className="text-[10px] text-m3-on-surface-variant font-black uppercase tracking-wider font-mono">Settled Sales</span>
+ <div className="bg-background border border-divider/15 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+ <span className="text-[10px] text-default-500 font-black uppercase tracking-wider ">Settled Sales</span>
  <div className="mt-2 flex items-baseline gap-1">
- <span className="text-lg font-black text-m3-primary font-mono">{ledgerStats.activeCount}</span>
- <span className="text-xs text-m3-on-surface-variant font-bold font-sans"> invoices</span>
+ <span className="text-lg font-black text-primary ">{ledgerStats.activeCount}</span>
+ <span className="text-xs text-default-500 font-bold font-sans"> invoices</span>
  </div>
- <span className="text-[9px] text-m3-on-surface-variant font-bold font-sans mt-1">Completed settlements</span>
+ <span className="text-[9px] text-default-500 font-bold font-sans mt-1">Completed settlements</span>
  </div>
 
  {/* Stat 3: Total Discounts */}
- <div className="bg-m3-surface border border-m3-outline-variant/15 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
- <span className="text-[10px] text-rose-500 font-black uppercase tracking-wider font-mono">Discounts Deducted</span>
+ <div className="bg-background border border-divider/15 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+ <span className="text-[10px] text-rose-500 font-black uppercase tracking-wider ">Discounts Deducted</span>
  <div className="mt-2 flex items-baseline gap-1">
- <span className="text-lg font-black text-rose-500 font-mono">
+ <span className="text-lg font-black text-rose-500 ">
  ₱{(Number(ledgerStats?.totalDiscount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
  </span>
  </div>
- <span className="text-[9px] text-m3-on-surface-variant font-bold font-sans mt-1">Promotional markdowns</span>
+ <span className="text-[9px] text-default-500 font-bold font-sans mt-1">Promotional markdowns</span>
  </div>
 
  {/* Stat 4: Voided count */}
- <div className="bg-m3-surface border border-m3-outline-variant/15 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
- <span className="text-[10px] text-rose-500 font-black uppercase tracking-wider font-mono">Voided &amp; Reclaimed</span>
+ <div className="bg-background border border-divider/15 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+ <span className="text-[10px] text-rose-500 font-black uppercase tracking-wider ">Voided &amp; Reclaimed</span>
  <div className="mt-2 flex items-baseline gap-1">
- <span className="text-lg font-black text-amber-500 font-mono">{ledgerStats.voidedCount}</span>
- <span className="text-xs text-m3-on-surface-variant font-bold font-sans"> tickets</span>
+ <span className="text-lg font-black text-amber-500 ">{ledgerStats.voidedCount}</span>
+ <span className="text-xs text-default-500 font-bold font-sans"> tickets</span>
  </div>
- <span className="text-[9px] text-m3-on-surface-variant font-bold font-sans mt-1">Reversed stock quantities</span>
+ <span className="text-[9px] text-default-500 font-bold font-sans mt-1">Reversed stock quantities</span>
  </div>
  </div>
  </motion.div>
@@ -3702,14 +3572,14 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </AnimatePresence>
 
  {/* Refactored Filter Controls Deck Card */}
- <div className="bg-m3-surface/60 border border-m3-outline-variant/20 rounded-2xl p-4">
+ <div className="bg-background/60 border border-divider/20 rounded-2xl p-4">
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
  
  {/* Search Field */}
  <div className="flex flex-col gap-1.5">
- <span className="text-[10px] text-m3-on-surface-variant font-black uppercase tracking-wider font-mono">Search ledger</span>
+ <span className="text-[10px] text-default-500 font-black uppercase tracking-wider ">Search ledger</span>
  <div className="relative">
- <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-m3-on-surface-variant" />
+ <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-default-500" />
  <input
  type="text"
  value={ledgerSearchQuery ?? ''}
@@ -3718,7 +3588,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setSalesPage(1);
  }}
  placeholder="Search invoice, customer, payment..."
- className="w-full bg-m3-surface border border-m3-outline-variant/40 focus:border-m3-primary pl-9 pr-8 py-2 text-[11px] font-sans font-black text-zinc-200 placeholder-zinc-500 rounded-xl outline-none focus:ring-1 focus:ring-m3-primary transition-all shadow-sm"
+ className="w-full bg-background border border-divider/40 focus:border-primary pl-9 pr-8 py-2 text-[11px] font-sans font-black text-zinc-200 placeholder-zinc-500 rounded-xl outline-none focus:ring-1 focus:ring-primary transition-all shadow-sm"
  />
  {ledgerSearchQuery && (
  <button
@@ -3727,7 +3597,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setLedgerSearchQuery("");
  setSalesPage(1);
  }}
- className="absolute right-2.5 top-2.5 text-m3-on-surface-variant hover:text-m3-on-surface-variant border-0 bg-transparent cursor-pointer"
+ className="absolute right-2.5 top-2.5 text-default-500 hover:text-default-500 border-0 bg-transparent cursor-pointer"
  >
  <X className="h-3.5 w-3.5" />
  </button>
@@ -3737,8 +3607,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  {/* Payment Filter */}
  <div className="flex flex-col gap-1.5">
- <span className="text-[10px] text-m3-on-surface-variant font-black uppercase tracking-wider font-mono flex items-center gap-1.5">
- <span className="h-2 w-2 bg-m3-primary rounded-full animate-pulse" />
+ <span className="text-[10px] text-default-500 font-black uppercase tracking-wider flex items-center gap-1.5">
+ <span className="h-2 w-2 bg-primary rounded-full animate-pulse" />
  <span>Payment Method</span>
  </span>
  <select
@@ -3747,7 +3617,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setLedgerPaymentFilter(e.target.value);
  setSalesPage(1);
  }}
- className="w-full text-[11px] font-sans font-black bg-m3-surface border border-m3-outline-variant/40 focus:border-m3-primary px-3 py-2 rounded-xl text-m3-primary focus:outline-none uppercase tracking-wider transition-colors cursor-pointer shadow-sm"
+ className="w-full text-[11px] font-sans font-black bg-background border border-divider/40 focus:border-primary px-3 py-2 rounded-xl text-primary focus:outline-none uppercase tracking-wider transition-colors cursor-pointer shadow-sm"
  >
  <option value="All">All Payments</option>
   <option value="Cash">Cash Only</option>
@@ -3759,8 +3629,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  {/* Date Selector */}
  <div className="flex flex-col gap-1.5">
- <span className="text-[10px] text-m3-on-surface-variant font-black uppercase tracking-wider font-mono flex items-center gap-1.5">
- <Calendar className="h-3.5 w-3.5 text-m3-primary" />
+ <span className="text-[10px] text-default-500 font-black uppercase tracking-wider flex items-center gap-1.5">
+ <Calendar className="h-3.5 w-3.5 text-primary" />
  <span>Go to Date</span>
  </span>
  <div className="relative flex items-center gap-1">
@@ -3771,7 +3641,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setLedgerDateFilter(e.target.value);
  setSalesPage(1);
  }}
- className="w-full text-[11px] font-sans font-black bg-m3-surface border border-m3-outline-variant/40 focus:border-m3-primary px-3 py-1.5 rounded-xl text-m3-primary focus:outline-none uppercase tracking-wider transition-colors cursor-pointer shadow-sm"
+ className="w-full text-[11px] font-sans font-black bg-background border border-divider/40 focus:border-primary px-3 py-1.5 rounded-xl text-primary focus:outline-none uppercase tracking-wider transition-colors cursor-pointer shadow-sm"
  />
  {ledgerDateFilter && (
  <button
@@ -3780,7 +3650,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setLedgerDateFilter("");
  setSalesPage(1);
  }}
- className="absolute right-2 top-2.5 p-0.5 bg-zinc-800 hover:bg-zinc-700 text-m3-on-surface-variant hover:text-zinc-200 rounded transition-colors border-0 cursor-pointer flex items-center justify-center"
+ className="absolute right-2 top-2.5 p-0.5 bg-zinc-800 hover:bg-zinc-700 text-default-500 hover:text-zinc-200 rounded transition-colors border-0 cursor-pointer flex items-center justify-center"
  title="Clear Date"
  >
  <X className="h-3 w-3" />
@@ -3792,11 +3662,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  </div>
 
- <div className="flex-1 min-h-0 flex flex-col rounded-xl border border-m3-outline-variant/20 shadow-inner bg-m3-surface overflow-hidden">
- <div ref={salesVirtualRef} onScroll={handleSalesVirtualScroll} className="overflow-auto scrollbar-thin scrollbar-thumb-m3-outline-variant h-[58vh] md:h-[64vh] lg:h-[68vh] min-h-[380px]">
+ <div className="flex-1 min-h-0 flex flex-col rounded-xl border border-divider/20 shadow-inner bg-background overflow-hidden">
+ <div ref={salesVirtualRef} onScroll={handleSalesVirtualScroll} className="overflow-auto scrollbar-thin scrollbar-thumb-divider h-[58vh] md:h-[64vh] lg:h-[68vh] min-h-[380px]">
  <table className="w-full text-left border-collapse table-auto text-xs min-w-[1000px] font-sans">
  <thead>
- <tr className="border-b border-m3-outline-variant/30 bg-m3-surface/30 text-[9px] uppercase font-black text-m3-on-surface-variant tracking-wider">
+ <tr className="border-b border-divider/30 bg-background/30 text-[9px] uppercase font-black text-default-500 tracking-wider">
  <th className="py-3 px-4 w-28">Ref Invoice</th>
  <th className="py-3 px-4">timestamp settled</th>
  <th className="py-3 px-4">Client Profile</th>
@@ -3810,12 +3680,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </th>
  </tr>
  </thead>
- <tbody className="divide-y divide-m3-outline-variant/10 font-mono text-[11px] text-m3-on-surface-variant">
+ <tbody className="divide-y divide-divider/10 text-[11px] text-default-500">
  {filteredSales.length === 0 ? (
  <tr>
  <td
  colSpan={9}
- className="py-12 text-center text-m3-on-surface-variant font-sans font-bold"
+ className="py-12 text-center text-default-500 font-sans font-bold"
  >
  {ledgerSearchQuery
  ? `No matching sales invoice ledgers found for "${ledgerSearchQuery}".`
@@ -3836,31 +3706,31 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <tr
  key={s.id || vIdx}
  onClick={() => setSelectedSaleDetail(s)}
- className={`hover:bg-m3-surface-low/90 hover:text-white cursor-pointer transition-colors font-bold ${s.isDeleted ? "bg-red-500/5 text-m3-on-surface-variant line-through decoration-rose-500" : ""}`}
+ className={`hover:bg-content1/90 hover:text-white cursor-pointer transition-colors font-bold ${s.isDeleted ? "bg-red-500/5 text-default-500 line-through decoration-rose-500" : ""}`}
  title="Click to view full transaction invoice ledger details"
  >
- <td className="py-3 px-4 text-m3-primary font-black uppercase hover:underline">
+ <td className="py-3 px-4 text-primary font-black uppercase hover:underline">
  {s.saleNumber}
  </td>
  <td
- className="py-3 px-4 text-zinc-550 font-sans font-medium hover:text-emerald-500"
+ className="py-3 px-4 text-zinc-550 font-sans font-medium hover:text-primary"
  title="Settled instant transaction date"
  >
  {(s.createdAt && !isNaN(new Date(s.createdAt).getTime())) ? new Date(s.createdAt).toLocaleString() : "N/A"}
  </td>
- <td className="py-3 px-4 text-m3-on-surface font-sans font-extrabold">
+ <td className="py-3 px-4 text-foreground font-sans font-extrabold">
  {s.customerName}
  </td>
- <td className="py-3 px-4 text-right text-m3-on-surface-variant">
+ <td className="py-3 px-4 text-right text-default-500">
  {formatCurrency(s.subtotal)}
  </td>
- <td className="py-3 px-4 text-right text-m3-on-surface-variant">
+ <td className="py-3 px-4 text-right text-default-500">
  {formatCurrency(s.vat)}
  </td>
  <td className="py-3 px-4 text-right text-rose-500">
  -{formatCurrency(s.discount)}
  </td>
- <td className="py-3 px-4 text-right text-m3-primary font-extrabold">
+ <td className="py-3 px-4 text-right text-primary font-extrabold">
  {formatCurrency(s.grandTotal)}
  </td>
  <td className="py-3 px-4 text-center uppercase text-[9.5px]">
@@ -3881,7 +3751,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <div className="flex gap-2 justify-center items-center">
  <button
  onClick={() => triggerReprintWithPin(s)}
- className="py-1 px-3 rounded-lg border border-m3-outline-variant/60 hover:border-m3-primary hover:bg-m3-primary/10 transition-all font-sans text-[10px] font-black uppercase text-m3-primary cursor-pointer"
+ className="py-1 px-3 rounded-lg border border-divider/60 hover:border-primary hover:bg-primary/10 transition-all font-sans text-[10px] font-black uppercase text-primary cursor-pointer"
  title="Reprint receipt (Guarded by Manager PIN)"
  >
  Reprint Ticket
@@ -3914,8 +3784,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
 
  {/* Pagination Controls bar */}
- <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-m3-surface-low border-t border-m3-outline-variant/20 text-xs font-sans">
- <span className="font-semibold text-m3-on-surface-variant font-mono">
+ <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-content1 border-t border-divider/20 text-xs font-sans">
+ <span className="font-semibold text-default-500 ">
  Showing{" "}
  {Math.min(
  filteredSales.length,
@@ -3929,7 +3799,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  type="button"
  disabled={salesPage === 1}
  onClick={() => setSalesPage((prev) => Math.max(1, prev - 1))}
- className="px-3 py-1.5 rounded-lg border border-m3-outline-variant/60 hover:border-m3-primary hover:bg-m3-primary/10 text-m3-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px]"
+ className="px-3 py-1.5 rounded-lg border border-divider/60 hover:border-primary hover:bg-primary/10 text-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px]"
  >
  Prev
  </button>
@@ -3943,7 +3813,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  ) {
  if (pNum === 2 || pNum === totalSalesPages - 1) {
  return (
- <span key={pNum} className="px-1 text-m3-on-surface-variant">
+ <span key={pNum} className="px-1 text-default-500">
  ...
  </span>
  );
@@ -3955,10 +3825,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
  key={pNum}
  type="button"
  onClick={() => setSalesPage(pNum)}
- className={`h-7 w-7 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+ className={`h-7 w-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
  salesPage === pNum
- ? "bg-m3-primary text-m3-on-primary shadow-md"
- : "border border-m3-outline-variant/20 hover:bg-m3-primary/10 text-m3-on-surface-variant"
+ ? "bg-primary text-primary-foreground shadow-md"
+ : "border border-divider/20 hover:bg-primary/10 text-default-500"
  }`}
  >
  {pNum}
@@ -3971,7 +3841,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  onClick={() =>
  setSalesPage((prev) => Math.min(totalSalesPages, prev + 1))
  }
- className="px-3 py-1.5 rounded-lg border border-m3-outline-variant/60 hover:border-m3-primary hover:bg-m3-primary/10 text-m3-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px]"
+ className="px-3 py-1.5 rounded-lg border border-divider/60 hover:border-primary hover:bg-primary/10 text-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px]"
  >
  Next
  </button>
@@ -3990,7 +3860,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  animate={{ opacity: 1 }}
  exit={{ opacity: 0 }}
  transition={{ duration: 0.25 }}
- className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm"
+ className="absolute inset-0 bg-black/50 backdrop-blur-sm"
  onClick={() => {
  setShowShiftModal(false);
  setHasDismissedShiftPrompt(true);
@@ -4001,17 +3871,17 @@ export const PosModule: React.FC<PosModuleProps> = ({
  animate={{ opacity: 1, scale: 1, y: 0 }}
  exit={{ opacity: 0, scale: 0.95, y: 15 }}
  transition={{ type: "spring", duration: 0.4 }}
- className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4"
+ className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4"
  >
  <div className="flex items-start gap-3 mb-1">
- <div className="p-2 rounded-2xl bg-m3-primary/10 text-m3-primary shrink-0">
+ <div className="p-2 rounded-2xl bg-primary/10 text-primary shrink-0">
  <Lock className="h-5 w-5" />
  </div>
  <div className="text-left">
- <h3 className="text-base font-bold text-m3-primary">
+ <h3 className="text-base font-bold text-primary">
  Cashier Terminal Shift Required
  </h3>
- <p className="text-xs text-m3-on-surface-variant mt-0.5 font-medium leading-relaxed">
+ <p className="text-xs text-default-500 mt-0.5 font-medium leading-relaxed">
  Please register an active cashier starting drawer fund to
  accept ERP OS payments.
  </p>
@@ -4023,10 +3893,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
  className="space-y-4 text-left"
  >
  {previouslyClosedShift && (
- <div className="p-3 bg-m3-surface-low border border-m3-outline-variant/30 rounded-2xl space-y-1.5 text-[11px] leading-normal">
+ <div className="p-3 bg-content1 border border-divider/30 rounded-2xl space-y-1.5 text-[11px] leading-normal">
  <div className="flex justify-between items-center text-amber-600 dark:text-amber-500 font-bold">
  <span>Previous Close Balance:</span>
- <span className="font-mono font-black text-xs text-m3-on-surface">
+ <span className=" font-black text-xs text-foreground">
  ₱
  {(Number(previouslyClosedShift?.cashCount) || 0).toLocaleString(
  undefined,
@@ -4034,9 +3904,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
  )}
  </span>
  </div>
- <p className="text-[9.5px] text-m3-on-surface-variant/80">
+ <p className="text-[9.5px] text-default-500/80">
  Closed by{" "}
- <strong className="text-m3-on-surface-variant font-semibold">
+ <strong className="text-default-500 font-semibold">
  {previouslyClosedShift.cashierName}
  </strong>{" "}
  on{" "}
@@ -4068,7 +3938,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  )}
 
  <div className="space-y-1 relative pr-0 pl-0">
- <label className="text-[10px] font-bold uppercase tracking-widest text-m3-primary block pl-1">
+ <label className="text-[10px] font-bold uppercase tracking-widest text-primary block pl-1">
  Starting Cash fund (PHP)
  </label>
  <input
@@ -4077,24 +3947,24 @@ export const PosModule: React.FC<PosModuleProps> = ({
  required
  value={startCashInput ?? ''}
  onChange={(e) => setStartCashInput(e.target.value)}
- className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-sm text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors text-center font-mono font-black rounded-t-lg"
+ className="w-full bg-background border-b-2 border-divider px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary transition-colors text-center font-black rounded-lg"
  />
  </div>
 
- <div className="flex gap-2 border-t border-m3-outline-variant/15 pt-4">
+ <div className="flex gap-2 border-t border-divider/15 pt-4">
  <button
  type="button"
  onClick={() => {
  setShowShiftModal(false);
  setHasDismissedShiftPrompt(true);
  }}
- className="flex-1 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors text-center"
+ className="flex-1 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors text-center"
  >
  Cancel
  </button>
  <button
  type="submit"
- className="flex-1 m3-btn-primary py-2 text-xs shadow-sm cursor-pointer text-center"
+ className="flex-1 bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20 rounded-xl px-4 py-2 text-xs shadow-sm cursor-pointer text-center hover:bg-primary/90 transition-colors"
  >
  Open Terminal Shift
  </button>
@@ -4114,7 +3984,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  animate={{ opacity: 1 }}
  exit={{ opacity: 0 }}
  transition={{ duration: 0.25 }}
- className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm"
+ className="absolute inset-0 bg-black/50 backdrop-blur-sm"
  onClick={() => setShowCloseShiftModal(false)}
  />
  <motion.div
@@ -4122,7 +3992,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  animate={{ opacity: 1, scale: 1, y: 0 }}
  exit={{ opacity: 0, scale: 0.95, y: 15 }}
  transition={{ type: "spring", duration: 0.4 }}
- className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4"
+ className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4"
  >
  <div className="flex items-start gap-3 mb-1">
  <div className="p-2 rounded-2xl bg-rose-500/10 text-rose-400 shrink-0">
@@ -4132,7 +4002,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <h3 className="text-base font-bold text-rose-400">
  Close Cashier Drawer Shift
  </h3>
- <p className="text-xs text-m3-on-surface-variant mt-0.5 font-medium leading-relaxed">
+ <p className="text-xs text-default-500 mt-0.5 font-medium leading-relaxed">
  Verify and count the physical cash in the register drawer to
  close shift.
  </p>
@@ -4152,16 +4022,16 @@ export const PosModule: React.FC<PosModuleProps> = ({
  onSubmit={handleCloseShiftSubmit}
  className="space-y-4 text-left"
  >
- <div className="bg-m3-surface-lowest border border-m3-outline-variant/30 p-3.5 rounded-2xl space-y-2.5 text-xs">
- <div className="flex justify-between border-b border-m3-outline-variant/15 pb-2">
- <span className="text-m3-on-surface-variant">Active Cashier:</span>
- <span className="font-bold text-m3-on-surface">
+ <div className="bg-content1 border border-divider/30 p-3.5 rounded-2xl space-y-2.5 text-xs">
+ <div className="flex justify-between border-b border-divider/15 pb-2">
+ <span className="text-default-500">Active Cashier:</span>
+ <span className="font-bold text-foreground">
  {activeShift.cashierName}
  </span>
  </div>
  <div className="flex justify-between">
- <span className="text-m3-on-surface-variant">Starting Cash:</span>
- <span className="font-mono font-bold text-m3-on-surface">
+ <span className="text-default-500">Starting Cash:</span>
+ <span className=" font-bold text-foreground">
  ₱
  {(Number(activeShift?.startCash) || 0).toLocaleString(undefined, {
  minimumFractionDigits: 2,
@@ -4169,10 +4039,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </span>
  </div>
  <div className="flex justify-between">
- <span className="text-m3-on-surface-variant">
+ <span className="text-default-500">
  Cash Sales Added:
  </span>
- <span className="font-mono font-bold text-m3-on-surface">
+ <span className=" font-bold text-foreground">
  ₱
  {(Number(stats?.cashSalesTotal) || 0).toLocaleString(undefined, {
  minimumFractionDigits: 2,
@@ -4180,9 +4050,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </span>
  </div>
  {stats && stats.netTotal > stats.cashSalesTotal && (
- <div className="flex justify-between text-[11px] text-m3-on-surface-variant/80">
+ <div className="flex justify-between text-[11px] text-default-500/80">
  <span>Non-Cash Payments (Card/GCash/Credit):</span>
- <span className="font-mono font-bold">
+ <span className=" font-bold">
  ₱
  {(Number(stats.netTotal - stats.cashSalesTotal) || 0).toLocaleString(undefined, {
  minimumFractionDigits: 2,
@@ -4190,11 +4060,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </span>
  </div>
  )}
- <div className="flex justify-between border-t border-dashed border-m3-outline-variant/25 pt-2 text-sm font-bold">
- <span className="text-m3-primary">
+ <div className="flex justify-between border-t border-dashed border-divider/25 pt-2 text-sm font-bold">
+ <span className="text-primary">
  Expected Drawer Cash:
  </span>
- <span className="font-mono text-m3-primary">
+ <span className=" text-primary">
  ₱
  {(Number(expectedCash) || 0).toLocaleString(undefined, {
  minimumFractionDigits: 2,
@@ -4204,7 +4074,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
 
  <div className="space-y-1 relative pr-0 pl-0">
- <label className="text-[10px] font-bold uppercase tracking-widest text-m3-primary block pl-1">
+ <label className="text-[10px] font-bold uppercase tracking-widest text-primary block pl-1">
  Physical Cash Counted (PHP)
  </label>
  <input
@@ -4216,19 +4086,19 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setCloseShiftCashInput(e.target.value)
  }
  placeholder="Enter counted physical cash..."
- className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-sm text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors text-center font-mono font-black rounded-t-lg"
+ className="w-full bg-background border-b-2 border-divider px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary transition-colors text-center font-black rounded-lg"
  />
  </div>
 
  {closeShiftCashInput !== "" && (
- <div className="p-3 bg-m3-surface-lowest border border-m3-outline-variant/30 rounded-2xl flex justify-between items-center">
- <span className="text-xs text-m3-on-surface-variant font-bold uppercase">
+ <div className="p-3 bg-content1 border border-divider/30 rounded-2xl flex justify-between items-center">
+ <span className="text-xs text-default-500 font-bold uppercase">
  Variance:
  </span>
  <span
- className={`font-mono font-black text-sm ${
+ className={` font-black text-sm ${
  variance === 0
- ? "text-m3-on-surface-variant"
+ ? "text-default-500"
  : variance > 0
  ? "text-emerald-600 dark:text-emerald-400"
  : "text-rose-600 dark:text-rose-400"
@@ -4242,11 +4112,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  )}
 
- <div className="flex gap-2 border-t border-m3-outline-variant/15 pt-4">
+ <div className="flex gap-2 border-t border-divider/15 pt-4">
  <button
  type="button"
  onClick={() => setShowCloseShiftModal(false)}
- className="flex-1 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors text-center"
+ className="flex-1 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors text-center"
  >
  Cancel
  </button>
@@ -4282,15 +4152,15 @@ export const PosModule: React.FC<PosModuleProps> = ({
  animate={{ opacity: 1, scale: 1, y: 0 }}
  exit={{ opacity: 0, scale: 0.95, y: 15 }}
  transition={{ type: "spring", duration: 0.4 }}
- className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left"
+ className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4 text-left"
  >
- <h3 className="text-base font-extrabold text-m3-primary flex items-center gap-2">
- <Sparkles className="h-5 w-5 text-m3-primary" /> Select
+ <h3 className="text-base font-extrabold text-primary flex items-center gap-2">
+ <Sparkles className="h-5 w-5 text-primary" /> Select
  Item Discount & Exemptions
  </h3>
 
- <div className="bg-m3-surface p-3.5 rounded-2xl border border-m3-outline-variant/20 space-y-1.5">
- <label className="text-xs font-bold text-m3-primary uppercase tracking-wider block">
+ <div className="bg-background p-3.5 rounded-2xl border border-divider/20 space-y-1.5">
+ <label className="text-xs font-bold text-primary uppercase tracking-wider block">
  Target Item for Discount
  </label>
  <select
@@ -4299,7 +4169,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  const val = e.target.value;
  setSelectedDiscountItemIndex(val === "ALL" ? null : parseInt(val, 10));
  }}
- className="w-full bg-m3-surface-low border border-m3-outline-variant/30 text-xs font-bold rounded-xl px-3.5 py-2.5 text-m3-on-surface focus:outline-none focus:border-m3-primary"
+ className="w-full bg-content1 border border-divider/30 text-xs font-bold rounded-xl px-3.5 py-2.5 text-foreground focus:outline-none focus:border-primary"
  >
  <option value="ALL">Apply to ALL Items in Cart ({cart.length} item{cart.length === 1 ? '' : 's'})</option>
  {cart.map((it, i) => {
@@ -4320,12 +4190,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
  onClick={() => applyCustomDiscount("NONE")}
  className={`p-3.5 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
  discountType === "NONE"
- ? "border-m3-primary bg-m3-primary/10"
- : "border-m3-outline-variant/20 bg-m3-surface hover:bg-m3-outline-variant/10"
+ ? "border-primary bg-primary/10"
+ : "border-divider/20 bg-background hover:bg-default-100"
  }`}
  >
  <div className="font-bold text-sm">No Discount</div>
- <div className="text-xs text-m3-on-surface-variant mt-1 font-medium">
+ <div className="text-xs text-default-500 mt-1 font-medium">
  Standard cashier list pricing applies.
  </div>
  </button>
@@ -4335,14 +4205,14 @@ export const PosModule: React.FC<PosModuleProps> = ({
  onClick={() => applyCustomDiscount("SENIOR")}
  className={`p-3.5 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
  discountType === "SENIOR"
- ? "border-m3-primary bg-m3-primary/10"
- : "border-m3-outline-variant/20 bg-m3-surface hover:bg-m3-outline-variant/10"
+ ? "border-primary bg-primary/10"
+ : "border-divider/20 bg-background hover:bg-default-100"
  }`}
  >
- <div className="font-bold text-sm text-m3-primary flex items-center gap-1">
+ <div className="font-bold text-sm text-primary flex items-center gap-1">
  Senior Citizen
  </div>
- <div className="text-xs text-m3-on-surface-variant mt-1 font-medium">
+ <div className="text-xs text-default-500 mt-1 font-medium">
  20% Off base + 12% VAT exemption (Philippine RA 9994).
  </div>
  </button>
@@ -4352,14 +4222,14 @@ export const PosModule: React.FC<PosModuleProps> = ({
  onClick={() => applyCustomDiscount("PWD")}
  className={`p-3.5 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
  discountType === "PWD"
- ? "border-m3-primary bg-m3-primary/10"
- : "border-m3-outline-variant/20 bg-m3-surface hover:bg-m3-outline-variant/10"
+ ? "border-primary bg-primary/10"
+ : "border-divider/20 bg-background hover:bg-default-100"
  }`}
  >
- <div className="font-bold text-sm text-m3-primary flex items-center gap-1">
+ <div className="font-bold text-sm text-primary flex items-center gap-1">
  PWD Resident
  </div>
- <div className="text-xs text-m3-on-surface-variant mt-1 font-medium">
+ <div className="text-xs text-default-500 mt-1 font-medium">
  20% Off base + 12% VAT exemption (Philippine RA 10754).
  </div>
  </button>
@@ -4369,27 +4239,51 @@ export const PosModule: React.FC<PosModuleProps> = ({
  onClick={() => applyCustomDiscount("CONTRACT")}
  className={`p-3.5 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
  discountType === "CONTRACT"
- ? "border-m3-primary bg-m3-primary/10"
- : "border-m3-outline-variant/20 bg-m3-surface hover:bg-m3-outline-variant/10"
+ ? "border-primary bg-primary/10"
+ : "border-divider/20 bg-background hover:bg-default-100"
  }`}
  >
- <div className="font-bold text-sm text-m3-primary">
+ <div className="font-bold text-sm text-primary">
  Contractor Alliance
  </div>
- <div className="text-xs text-m3-on-surface-variant mt-1 font-medium">
+ <div className="text-xs text-default-500 mt-1 font-medium">
  Flat 10% Trade Allied partner discount.
  </div>
  </button>
- </div>
+                {discountSchemes && discountSchemes.filter(d => d.isActive !== false && d.id !== "disc-senior" && d.id !== "disc-pwd" && d.id !== "disc-contract").map(scheme => (
+                  <button
+                    key={scheme.id}
+                    type="button"
+                    onClick={() => {
+                      if (scheme.discountType === "percentage") {
+                        applyCustomDiscount("PERCENT", String(scheme.ratePercent || 0));
+                      } else {
+                        applyCustomDiscount("FLAT", String(scheme.flatAmount || 0));
+                      }
+                    }}
+                    className="p-3.5 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between border-divider/20 bg-background hover:bg-default-100"
+                  >
+                    <div className="font-bold text-sm text-primary flex items-center justify-between">
+                      <span>{scheme.name}</span>
+                      <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-black">
+                        {scheme.discountType === "percentage" ? `${scheme.ratePercent}% OFF` : `₱${scheme.flatAmount} OFF`}
+                      </span>
+                    </div>
+                    <div className="text-xs text-default-500 mt-1 font-medium">
+                      {scheme.description || `${scheme.name} promotional pricing rule.`}
+                    </div>
+                  </button>
+                ))}
+              </div>
 
- <div className="border-t border-m3-outline-variant/20 pt-4 space-y-4">
- <h4 className="text-xs font-extrabold text-m3-primary uppercase tracking-wider pl-1 font-sans">
+ <div className="border-t border-divider/20 pt-4 space-y-4">
+ <h4 className="text-xs font-extrabold text-primary uppercase tracking-wider pl-1 font-sans">
  Or Apply Custom Values (Flat / Rate)
  </h4>
 
  <div className="flex gap-3">
  <div className="flex-1 relative pl-0">
- <label className="text-xs font-bold tracking-wider text-m3-on-surface-variant mb-1 block pl-1">
+ <label className="text-xs font-bold tracking-wider text-default-500 mb-1 block pl-1">
  Discount Amount/Value
  </label>
  <input
@@ -4401,7 +4295,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  ? "e.g. 15 for 15%"
  : "e.g. 100 for ₱100"
  }
- className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3.5 py-2.5 text-sm font-mono font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary rounded-t-lg transition-colors"
+ className="w-full bg-background border-b-2 border-divider px-3.5 py-2.5 text-sm font-bold text-foreground focus:outline-none focus:border-primary rounded-lg transition-colors"
  />
  </div>
 
@@ -4412,7 +4306,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  onClick={() =>
  applyCustomDiscount("FLAT", discountInput)
  }
- className="px-4 py-2.5 bg-m3-primary/10 text-m3-primary border border-m3-primary/20 hover:bg-m3-primary/20 text-xs font-bold rounded-lg cursor-pointer transition-colors"
+ className="px-4 py-2.5 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 text-xs font-bold rounded-lg cursor-pointer transition-colors"
  >
  Apply Flat (₱)
  </button>
@@ -4421,7 +4315,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  onClick={() =>
  applyCustomDiscount("PERCENT", discountInput)
  }
- className="px-4 py-2.5 bg-m3-primary/10 text-m3-primary border border-m3-primary/20 hover:bg-m3-primary/20 text-xs font-bold rounded-lg cursor-pointer transition-colors"
+ className="px-4 py-2.5 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 text-xs font-bold rounded-lg cursor-pointer transition-colors"
  >
  Apply Percent (%)
  </button>
@@ -4430,11 +4324,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  </div>
 
- <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-4 flex-shrink-0">
+ <div className="flex justify-end gap-2 border-t border-divider/20 pt-4 flex-shrink-0">
  <button
  type="button"
  onClick={() => setShowDiscountModal(false)}
- className="px-5 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors text-center"
+ className="px-5 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors text-center"
  >
  Close Panel
  </button>
@@ -4461,29 +4355,29 @@ export const PosModule: React.FC<PosModuleProps> = ({
  animate={{ opacity: 1, scale: 1, y: 0 }}
  exit={{ opacity: 0, scale: 0.9, y: 30 }}
  transition={{ type: "spring", stiffness: 350, damping: 25 }}
- className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-5 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface flex flex-col justify-between shrink-0"
+ className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl border border-divider/30 p-5 z-20 shadow-2xl bg-content1 text-foreground flex flex-col justify-between shrink-0"
  >
  <div className="flex flex-col items-center justify-center mb-4 text-center">
- <div className="p-2 rounded-full bg-m3-tertiary-container border border-m3-tertiary/20 text-m3-on-tertiary-container mb-2 text-center">
- <CheckCircle className="h-6 w-6 animate-bounce text-m3-tertiary" />
+ <div className="p-2 rounded-full bg-secondary-50 border border-secondary/20 text-secondary-700 mb-2 text-center">
+ <CheckCircle className="h-6 w-6 animate-bounce text-secondary" />
  </div>
- <h3 className="text-base font-bold text-m3-on-surface">
+ <h3 className="text-base font-bold text-foreground">
  Checkout Succeeded
  </h3>
- <p className="text-[11px] text-m3-on-surface-variant font-medium">
+ <p className="text-[11px] text-default-500 font-medium">
  Inventory files adjusted automatically.
  </p>
  </div>
 
   {/* Receipt View Switcher Tabs */}
-  <div className="flex bg-m3-surface-lowest p-1 rounded-xl border border-m3-outline-variant/30 mb-3 bir-report-no-print text-center gap-1">
+  <div className="flex bg-content1 p-1 rounded-xl border border-divider/30 mb-3 bir-report-no-print text-center gap-1">
     <button
       type="button"
       onClick={() => setReceiptViewMode("unified")}
       className={`flex-1 py-1.5 px-2 text-[10px] font-extrabold uppercase rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
         receiptViewMode === "unified"
-          ? "bg-m3-primary text-m3-on-primary shadow-xs"
-          : "text-m3-on-surface-variant hover:text-m3-on-surface"
+          ? "bg-primary text-primary-foreground shadow-xs"
+          : "text-default-500 hover:text-foreground"
       }`}
     >
       <Scissors className="h-3 w-3" /> All (Auto-Cut)
@@ -4494,8 +4388,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
       onClick={() => setReceiptViewMode("official")}
       className={`flex-1 py-1.5 px-2 text-[10px] font-extrabold uppercase rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
         receiptViewMode === "official"
-          ? "bg-m3-primary text-m3-on-primary shadow-xs"
-          : "text-m3-on-surface-variant hover:text-m3-on-surface"
+          ? "bg-primary text-primary-foreground shadow-xs"
+          : "text-default-500 hover:text-foreground"
       }`}
     >
       <FileText className="h-3 w-3" /> Sales Receipt
@@ -4507,8 +4401,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
         onClick={() => setReceiptViewMode("delivery")}
         className={`flex-1 py-1.5 px-2 text-[10px] font-extrabold uppercase rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
           receiptViewMode === "delivery"
-            ? "bg-m3-primary text-m3-on-primary shadow-xs"
-            : "text-m3-on-surface-variant hover:text-m3-on-surface"
+            ? "bg-primary text-primary-foreground shadow-xs"
+            : "text-default-500 hover:text-foreground"
         }`}
       >
         <Truck className="h-3 w-3" /> Delivery Receipt
@@ -4565,7 +4459,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
         addAuditLog(logType, logMsg, "Sales", activeReceipt.id);
         showToast("Sent printing signal to hardware terminal.");
       }}
-      className="flex-1 py-2.5 px-3 text-xs font-black rounded-full bg-m3-primary text-m3-on-primary hover:brightness-110 shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center uppercase tracking-wider"
+      className="flex-1 py-2.5 px-3 text-xs font-black rounded-full bg-primary text-primary-foreground hover:brightness-110 shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center uppercase tracking-wider"
     >
       <Printer className="h-4 w-4" />
       <span>
@@ -4595,7 +4489,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
             showToast("Sent unified printing signal (Auto-Cut) to terminal.");
           }, 120);
         }}
-        className="py-2.5 px-3 text-xs font-bold rounded-full bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary border border-m3-primary/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center uppercase tracking-wider"
+        className="py-2.5 px-3 text-xs font-bold rounded-full bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center uppercase tracking-wider"
         title="Print Sales + Delivery Receipts with Auto-Cut in 1 job"
       >
         <Scissors className="h-3.5 w-3.5" />
@@ -4609,7 +4503,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
         setShowReceiptModal(false);
         setReceiptViewMode("unified");
       }}
-      className="py-2.5 px-4 text-xs font-bold rounded-full border border-m3-outline-variant/50 hover:bg-m3-outline-variant/15 text-m3-on-surface transition-colors cursor-pointer text-center uppercase tracking-wider"
+      className="py-2.5 px-4 text-xs font-bold rounded-full border border-divider/50 hover:bg-default-100 text-foreground transition-colors cursor-pointer text-center uppercase tracking-wider"
     >
       Done
     </button>
@@ -4637,40 +4531,94 @@ export const PosModule: React.FC<PosModuleProps> = ({
  exit={{ opacity: 0, scale: 0.95, y: 15 }}
  transition={{ type: "spring", duration: 0.4 }}
  onSubmit={handleSaveCustomerName}
- className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4"
+ className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4"
  >
- <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
- <h3 className="text-base font-bold text-m3-primary flex items-center gap-2">
+ <div className="flex justify-between items-center border-b border-divider/20 pb-2.5">
+ <h3 className="text-base font-bold text-primary flex items-center gap-2">
  <span>Assign Customer Profile</span>
  </h3>
  <button
  type="button"
  onClick={() => setShowCustomerModal(false)}
- className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full"
+ className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full"
  >
  <X className="h-5 w-5" />
  </button>
  </div>
 
  <div className="space-y-1 relative pr-0 pl-0">
- <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1 block">
- Full Name
+ <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1 block">
+ Buyer's Name
  </label>
  <input
  type="text"
  value={customerModalInput ?? ''}
  onChange={(e) => setCustomerModalInput(e.target.value)}
- placeholder="Full Name"
- className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold"
+ placeholder="Full Name / Company Name"
+ className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold"
+ />
+ </div>
+
+ <div className="space-y-1 relative pr-0 pl-0">
+ <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1 block">
+ Buyer's Address (BIR / Invoicing)
+ </label>
+ <input
+ type="text"
+ value={customerModalAddressInput ?? ''}
+ onChange={(e) => setCustomerModalAddressInput(e.target.value)}
+ placeholder="Unit / Street / Barangay / City / Province"
+ className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold"
+ />
+ </div>
+
+ <div className="grid grid-cols-2 gap-3">
+ <div className="space-y-1 relative pr-0 pl-0">
+ <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1 block">
+ Buyer TIN
+ </label>
+ <input
+ type="text"
+ value={customerModalTinInput ?? ''}
+ onChange={(e) => setCustomerModalTinInput(formatTin(e.target.value))}
+ placeholder="000-000-000-000"
+ className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold"
+ />
+ </div>
+
+ <div className="space-y-1 relative pr-0 pl-0">
+ <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1 block">
+ Business Style
+ </label>
+ <input
+ type="text"
+ value={customerModalBusinessStyleInput ?? ''}
+ onChange={(e) => setCustomerModalBusinessStyleInput(e.target.value)}
+ placeholder="e.g. Retail / General Contractor"
+ className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold"
+ />
+ </div>
+ </div>
+
+ <div className="space-y-1 relative pr-0 pl-0">
+ <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1 block">
+ Ticket Note / Project Assign (Optional)
+ </label>
+ <input
+ type="text"
+ value={customerModalNotesInput ?? ''}
+ onChange={(e) => setCustomerModalNotesInput(e.target.value)}
+ placeholder="e.g. Master Bath Renovation / Lot 4 Villa"
+ className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold"
  />
  </div>
 
  {/* Searchable member selection */}
  <div className="space-y-1.5 pt-1">
-   <label className="text-[9px] font-black text-m3-on-surface-variant uppercase tracking-widest pl-1 block">
+   <label className="text-[9px] font-black text-default-500 uppercase tracking-widest pl-1 block">
      Search Registered Corporate Members
    </label>
-   <div className="max-h-36 overflow-y-auto border border-m3-outline-variant/20 rounded-xl p-1 bg-m3-surface-lowest divide-y divide-m3-outline-variant/10 scrollbar-thin">
+   <div className="max-h-36 overflow-y-auto border border-divider/20 rounded-xl p-1 bg-content1 divide-y divide-divider/10 scrollbar-thin">
      {(() => {
        const filteredModalMembers = members.filter((m) => {
          if (!customerModalInput.trim()) return true;
@@ -4682,7 +4630,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
        if (filteredModalMembers.length === 0) {
          return (
            <div className="p-3 text-center space-y-2">
-             <p className="text-m3-on-surface-variant text-[11px] font-medium italic">
+             <p className="text-default-500 text-[11px] font-medium italic">
                {customerModalInput.trim()
                  ? `No corporate members found matching "${customerModalInput}".`
                  : "No registered corporate members found."}
@@ -4714,14 +4662,16 @@ export const PosModule: React.FC<PosModuleProps> = ({
            key={m.id}
            onClick={() => {
              setCustomerModalInput(m.fullName);
+             if (m.address) setCustomerModalAddressInput(m.address);
+             if (m.tin) setCustomerModalTinInput(formatTin(m.tin));
            }}
-           className="w-full text-left p-2 hover:bg-m3-primary/10 rounded-lg text-xs font-bold text-m3-on-surface flex justify-between items-center cursor-pointer border-0 bg-transparent transition-colors"
+           className="w-full text-left p-2 hover:bg-primary/10 rounded-lg text-xs font-bold text-foreground flex justify-between items-center cursor-pointer border-0 bg-transparent transition-colors"
          >
            <div className="flex flex-col text-left">
              <span>{m.fullName}</span>
-             <span className="text-[8.5px] text-m3-on-surface-variant font-normal">{m.phone} • {m.email}</span>
+             <span className="text-[8.5px] text-default-500 font-normal">{m.phone} • {m.email} {m.tin ? `• TIN: ${m.tin}` : ''}</span>
            </div>
-           <span className="text-[8px] bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded font-black uppercase tracking-wider">
+           <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-black uppercase tracking-wider">
              Select
            </span>
          </button>
@@ -4730,17 +4680,17 @@ export const PosModule: React.FC<PosModuleProps> = ({
    </div>
  </div>
 
- <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-4">
+ <div className="flex justify-end gap-2 border-t border-divider/20 pt-4">
  <button
  type="button"
  onClick={() => setShowCustomerModal(false)}
- className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
+ className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors"
  >
  Cancel
  </button>
  <button
  type="submit"
- className="m3-btn-primary px-5 py-2 text-xs shadow-sm cursor-pointer"
+ className="bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20 rounded-medium px-5 py-2 text-xs shadow-sm cursor-pointer"
  >
  Assign Customer
  </button>
@@ -4768,9 +4718,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
  exit={{ opacity: 0, scale: 0.95, y: 15 }}
  transition={{ type: "spring", duration: 0.4 }}
  onSubmit={handleVerifyApprovalSubmit}
- className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-rose-500/35 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left border-t-4"
+ className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl border border-rose-500/35 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4 text-left border-t-4"
  >
- <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
+ <div className="flex justify-between items-center border-b border-divider/20 pb-2.5">
  <h3 className="text-sm font-black text-rose-500 flex items-center gap-1.5 uppercase tracking-wider">
  <LockKeyhole className="h-5 w-5" />
  <span>Security override prompt</span>
@@ -4778,7 +4728,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <button
  type="button"
  onClick={() => setPendingApproval(null)}
- className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-0.5 rounded-full"
+ className="text-default-500 hover:text-foreground cursor-pointer p-0.5 rounded-full"
  >
  <X className="h-5 w-5" />
  </button>
@@ -4820,7 +4770,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  <div className="space-y-3">
  <div className="space-y-1">
- <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">
+ <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">
  Authorize Username
  </label>
  <input
@@ -4829,12 +4779,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={approverUsername ?? ''}
  onChange={(e) => setApproverUsername(e.target.value)}
  placeholder="Authorize username"
- className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold"
+ className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold"
  />
  </div>
 
  <div className="space-y-1">
- <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">
+ <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">
  Security Clearance PIN Code / Password
  </label>
  <input
@@ -4843,7 +4793,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={approverPassword ?? ''}
  onChange={(e) => setApproverPassword(e.target.value)}
  placeholder="••••••••"
- className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold"
+ className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold"
  />
  </div>
  </div>
@@ -4854,11 +4804,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  )}
 
- <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-4">
+ <div className="flex justify-end gap-2 border-t border-divider/20 pt-4">
  <button
  type="button"
  onClick={() => setPendingApproval(null)}
- className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
+ className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors"
  >
  Decline
  </button>
@@ -4894,22 +4844,22 @@ export const PosModule: React.FC<PosModuleProps> = ({
  exit={{ opacity: 0, scale: 0.95, y: 15 }}
  transition={{ type: "spring", duration: 0.4 }}
  onSubmit={handleSavePriceOverride}
- className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left"
+ className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4 text-left"
  >
- <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
- <h3 className="text-base font-black text-m3-primary flex items-center gap-1.5 uppercase tracking-wider">
+ <div className="flex justify-between items-center border-b border-divider/20 pb-2.5">
+ <h3 className="text-base font-black text-primary flex items-center gap-1.5 uppercase tracking-wider">
  <span>Unit Price Override</span>
  </h3>
  <button
  type="button"
  onClick={() => setOverrideModalOpen(false)}
- className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full hover:bg-m3-outline-variant/15 transition-colors"
+ className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full hover:bg-default-100 transition-colors"
  >
  <X className="h-5 w-5" />
  </button>
  </div>
 
- <div className="space-y-1.5 leading-normal pl-1 text-xs font-semibold text-m3-on-surface-variant bg-m3-surface p-3 rounded-xl border border-m3-outline-variant/20">
+ <div className="space-y-1.5 leading-normal pl-1 text-xs font-semibold text-default-500 bg-background p-3 rounded-xl border border-divider/20">
  <div>
  <strong>Product:</strong>{" "}
  {cart[overrideItemIndex].product.productName}
@@ -4921,7 +4871,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
 
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-m3-primary uppercase tracking-wider pl-1 block">
+ <label className="text-xs font-bold text-primary uppercase tracking-wider pl-1 block">
  New Unit Selling Price
  </label>
  <input
@@ -4931,26 +4881,26 @@ export const PosModule: React.FC<PosModuleProps> = ({
  step="0.01"
  value={overridePriceInput ?? ''}
  onChange={(e) => setOverridePriceInput(e.target.value)}
- className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3.5 py-2.5 text-sm text-m3-on-surface focus:outline-none focus:border-m3-primary transition-colors rounded-t-lg font-bold font-mono"
+ className="w-full bg-background border-b-2 border-divider px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold "
  />
- <span className="text-xs text-m3-on-surface-variant pl-1 block mt-1 font-medium">
+ <span className="text-xs text-default-500 pl-1 block mt-1 font-medium">
  {currentUser?.role === UserRole.CASHIER
  ? "Changing the standard price requires Manager override verification."
  : "Your role has privileges to direct-apply this override."}
  </span>
  </div>
 
- <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-4 font-sans">
+ <div className="flex justify-end gap-2 border-t border-divider/20 pt-4 font-sans">
  <button
  type="button"
  onClick={() => setOverrideModalOpen(false)}
- className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
+ className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors"
  >
  Cancel
  </button>
  <button
  type="submit"
- className="m3-btn-primary px-5 py-2 text-xs shadow-sm cursor-pointer"
+ className="bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20 rounded-medium px-5 py-2 text-xs shadow-sm cursor-pointer"
  >
  Apply Price
  </button>
@@ -4977,14 +4927,14 @@ export const PosModule: React.FC<PosModuleProps> = ({
  animate={{ opacity: 1, scale: 1, y: 0 }}
  exit={{ opacity: 0, scale: 0.95, y: 15 }}
  transition={{ type: "spring", duration: 0.4 }}
- className="relative w-full max-w-lg rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4 max-h-[90vh] overflow-y-auto"
+ className="relative w-full max-w-lg rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground text-left space-y-4 max-h-[90vh] overflow-y-auto"
  >
- <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-3">
+ <div className="flex justify-between items-center border-b border-divider/20 pb-3">
  <div>
- <h3 className="text-sm font-black text-m3-primary uppercase tracking-widest font-mono">
+ <h3 className="text-sm font-black text-primary uppercase tracking-widest ">
  Order Dispatch Fulfillment
  </h3>
- <p className="text-[10px] text-m3-on-surface-variant font-bold mt-0.5 uppercase tracking-wide">
+ <p className="text-[10px] text-default-500 font-bold mt-0.5 uppercase tracking-wide">
  Receipt Ref: {pendingSaleForFulfillment.saleNumber} •
  Customer: {pendingSaleForFulfillment.customerName}
  </p>
@@ -4992,13 +4942,13 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
 
  {/* Customer Payment & Change summary for dispatched fulfillment */}
- <div className="bg-m3-surface-lowest p-3 rounded-2xl border border-m3-outline-variant/20 space-y-1.5 text-xs font-mono">
- <div className="flex justify-between items-center text-m3-on-surface-variant">
- <span>Total Bill: <strong className="text-m3-on-surface">{formatCurrency(pendingSaleForFulfillment?.grandTotal)}</strong></span>
- <span>Tendered ({pendingSaleForFulfillment?.paymentMethod || "Cash"}): <strong className="text-m3-on-surface">{formatCurrency(pendingSaleForFulfillment?.amountTendered || pendingSaleForFulfillment?.grandTotal)}</strong></span>
+ <div className="bg-content1 p-3 rounded-2xl border border-divider/20 space-y-1.5 text-xs ">
+ <div className="flex justify-between items-center text-default-500">
+ <span>Total Bill: <strong className="text-foreground">{formatCurrency(pendingSaleForFulfillment?.grandTotal)}</strong></span>
+ <span>Tendered ({pendingSaleForFulfillment?.paymentMethod || "Cash"}): <strong className="text-foreground">{formatCurrency(pendingSaleForFulfillment?.amountTendered || pendingSaleForFulfillment?.grandTotal)}</strong></span>
  </div>
  {(pendingSaleForFulfillment?.changeAmount || 0) > 0 && (
- <div className="flex justify-between items-center pt-1.5 border-t border-dashed border-m3-outline-variant/20 font-extrabold text-emerald-400 bg-emerald-500/10 -mx-3 -mb-3 p-2.5 rounded-b-2xl">
+ <div className="flex justify-between items-center pt-1.5 border-t border-dashed border-divider/20 font-extrabold text-emerald-400 bg-emerald-500/10 -mx-3 -mb-3 p-2.5 rounded-b-2xl">
  <span className="uppercase text-[10px] tracking-wider font-sans">Customer Change Due:</span>
  <span className="text-sm font-black text-emerald-300">{formatCurrency(pendingSaleForFulfillment?.changeAmount)}</span>
  </div>
@@ -5006,7 +4956,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
 
  <div className="space-y-1.5 pl-1">
- <span className="text-[9.5px] font-black text-m3-primary uppercase tracking-widest block mb-1.5">
+ <span className="text-[9.5px] font-black text-primary uppercase tracking-widest block mb-1.5">
  How will the customer receive the items?
  </span>
  <div className="grid grid-cols-2 gap-3">
@@ -5015,11 +4965,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
  onClick={() => setFulfillmentType("TakeHome")}
  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer text-left flex flex-col justify-between h-[110px] ${
  fulfillmentType === "TakeHome"
- ? "border-m3-primary bg-m3-primary/5 text-m3-primary font-bold"
- : "border-m3-outline-variant/30 hover:border-m3-outline-variant/60 bg-m3-surface-lowest text-m3-on-surface"
+ ? "border-primary bg-primary/5 text-primary font-bold"
+ : "border-divider/30 hover:border-divider/60 bg-content1 text-foreground"
  }`}
  >
- <ShoppingBag className="h-6 w-6 text-m3-primary" />
+ <ShoppingBag className="h-6 w-6 text-primary" />
  <div>
  <h4 className="text-[10.5px] font-black uppercase tracking-wide">
  Take Home / Pickup
@@ -5036,11 +4986,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
  onClick={() => setFulfillmentType("Delivery")}
  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer text-left flex flex-col justify-between h-[110px] ${
  fulfillmentType === "Delivery"
- ? "border-m3-primary bg-m3-primary/5 text-m3-primary font-bold"
- : "border-m3-outline-variant/30 hover:border-m3-outline-variant/60 bg-m3-surface-lowest text-m3-on-surface"
+ ? "border-primary bg-primary/5 text-primary font-bold"
+ : "border-divider/30 hover:border-divider/60 bg-content1 text-foreground"
  }`}
  >
- <Truck className="h-6 w-6 text-m3-primary" />
+ <Truck className="h-6 w-6 text-primary" />
  <div>
  <h4 className="text-[10.5px] font-black uppercase tracking-wide">
  Store Delivery
@@ -5055,7 +5005,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
 
  {fulfillmentType === "TakeHome" && (
- <div className="space-y-4 border-t border-m3-outline-variant/15 pt-4">
+ <div className="space-y-4 border-t border-divider/15 pt-4">
  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-xs text-emerald-400 font-medium leading-relaxed">
  <strong>TAKE HOME IMMEDIATE RELEASE:</strong> All products
  in the cart are logged as released immediately. Stock has
@@ -5065,7 +5015,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <button
  type="button"
  onClick={handleFulfillmentTakeHome}
- className="m3-btn-primary px-8 py-2.5 text-xs font-black uppercase tracking-widest shadow-md cursor-pointer"
+ className="bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20 rounded-medium px-8 py-2.5 text-xs font-black uppercase tracking-widest shadow-md cursor-pointer"
  >
  Release Material & View Receipt
  </button>
@@ -5076,9 +5026,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
  {fulfillmentType === "Delivery" && (
  <form
  onSubmit={handleFulfillmentDeliverySubmit}
- className="space-y-4 border-t border-m3-outline-variant/15 pt-4"
+ className="space-y-4 border-t border-divider/15 pt-4"
  >
- <div className="bg-m3-primary/10 border border-m3-primary/15 rounded-xl p-3 text-[10.5px] text-m3-primary font-medium leading-relaxed">
+ <div className="bg-primary/10 border border-primary/15 rounded-xl p-3 text-[10.5px] text-primary font-medium leading-relaxed">
  <strong>STORE DELIVERY ALLOCATION:</strong> This creates a{" "}
  <strong>Pending Scheduling</strong> transport ledger. Stock
  quantities are reserved of this location immediately.
@@ -5086,7 +5036,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pl-1">
  <div className="space-y-1 col-span-1 md:col-span-2">
- <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">
+ <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">
  Customer / Recipient Name *
  </label>
  <input
@@ -5095,12 +5045,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={deliveryCustomerName ?? ''}
  onChange={(e) => setDeliveryCustomerName(e.target.value)}
  placeholder="Recipient name"
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold"
+ className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg font-bold"
  />
  </div>
 
  <div className="space-y-1">
- <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">
+ <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">
  Contact Number *
  </label>
  <input
@@ -5109,12 +5059,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={deliveryContact ?? ''}
  onChange={(e) => setDeliveryContact(e.target.value)}
  placeholder="Phone number"
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold"
+ className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg font-bold"
  />
  </div>
 
  <div className="space-y-1">
- <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">
+ <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">
  House No. / Building / Suite
  </label>
  <input
@@ -5122,12 +5072,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={deliveryHouseNo ?? ''}
  onChange={(e) => setDeliveryHouseNo(e.target.value)}
  placeholder="House No. / Building / Suite"
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
+ className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg"
  />
  </div>
 
  <div className="space-y-1">
- <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">
+ <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">
  Street / Subdivision
  </label>
  <input
@@ -5135,12 +5085,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={deliveryStreet ?? ''}
  onChange={(e) => setDeliveryStreet(e.target.value)}
  placeholder="Street / Subdivision"
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
+ className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg"
  />
  </div>
 
  <div className="space-y-1">
- <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">
+ <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">
  Barangay *
  </label>
  <input
@@ -5149,12 +5099,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={deliveryBarangay ?? ''}
  onChange={(e) => setDeliveryBarangay(e.target.value)}
  placeholder="Barangay"
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold"
+ className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg font-bold"
  />
  </div>
 
  <div className="space-y-1">
- <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">
+ <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">
  City / Municipality *
  </label>
  <input
@@ -5163,12 +5113,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={deliveryCity ?? ''}
  onChange={(e) => setDeliveryCity(e.target.value)}
  placeholder="City / Municipality"
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold"
+ className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg font-bold"
  />
  </div>
 
  <div className="space-y-1">
- <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">
+ <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">
  Landmark / Directions
  </label>
  <input
@@ -5176,12 +5126,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={deliveryLandmark ?? ''}
  onChange={(e) => setDeliveryLandmark(e.target.value)}
  placeholder="Landmarks or special delivery instructions"
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
+ className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg"
  />
  </div>
 
  <div className="space-y-1">
- <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">
+ <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">
  Unloading Date *
  </label>
  <input
@@ -5189,12 +5139,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
  required
  value={deliveryDate ?? ''}
  onChange={(e) => setDeliveryDate(e.target.value)}
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg font-bold cursor-pointer"
+ className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg font-bold cursor-pointer"
  />
  </div>
 
  <div className="space-y-1">
- <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">
+ <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">
  Arrival Time Window
  </label>
  <input
@@ -5202,13 +5152,13 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={deliveryTime ?? ''}
  onChange={(e) => setDeliveryTime(e.target.value)}
  placeholder="Arrival window (e.g. 10:00 AM - 2:00 PM)"
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
+ className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg"
  />
  </div>
  </div>
 
  <div className="space-y-1 pl-1">
- <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest block mb-0.5">
+ <label className="text-[9px] font-black text-primary uppercase tracking-widest block mb-0.5">
  Special Unloading Notes (e.g. Fragile, Heavy Lift)
  </label>
  <textarea
@@ -5216,14 +5166,14 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={deliveryNotes ?? ''}
  onChange={(e) => setDeliveryNotes(e.target.value)}
  placeholder="Special instructions or notes"
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-t-lg"
+ className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg"
  />
  </div>
 
- <div className="flex justify-end pt-2 border-t border-m3-outline-variant/10">
+ <div className="flex justify-end pt-2 border-t border-divider/10">
  <button
  type="submit"
- className="m3-btn-primary px-8 py-2.5 text-xs font-black uppercase tracking-widest shadow-md cursor-pointer flex items-center gap-1.5"
+ className="bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20 rounded-medium px-8 py-2.5 text-xs font-black uppercase tracking-widest shadow-md cursor-pointer flex items-center gap-1.5"
  >
  Schedule Store Delivery
  </button>
@@ -5238,7 +5188,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  {/* MODAL 6: Security PIN verification passcode modal */}
  <AnimatePresence>
  {pinModalOpen && pinAction && pinTargetSale && (
- <div className="fixed inset-0 flex items-center justify-center z-50 p-4 font-sans">
+ <div className="fixed inset-0 flex items-center justify-center z-[80] p-4 font-sans">
  <motion.div
  initial={{ opacity: 0 }}
  animate={{ opacity: 1 }}
@@ -5257,9 +5207,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
  exit={{ opacity: 0, scale: 0.95, y: 15 }}
  transition={{ type: "spring", duration: 0.4 }}
  onSubmit={handleVerifySecurityPin}
- className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-[28px] border border-amber-500/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left"
+ className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl border border-amber-500/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4 text-left"
  >
- <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
+ <div className="flex justify-between items-center border-b border-divider/20 pb-2.5">
  <h3 className="text-sm font-black text-amber-500 flex items-center gap-1.5 uppercase tracking-widest">
  <LockKeyhole className="h-4 w-4 animate-pulse text-amber-500" />
  <span>{pinAction} Verification</span>
@@ -5271,13 +5221,13 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setPinAction(null);
  setPinTargetSale(null);
  }}
- className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-0.5 rounded-full"
+ className="text-default-500 hover:text-foreground cursor-pointer p-0.5 rounded-full"
  >
  <X className="h-5 w-5" />
  </button>
  </div>
 
- <div className="bg-amber-500/5 border border-amber-500/20 p-3 rounded-2xl text-[11px] leading-relaxed text-m3-on-surface-variant font-bold space-y-1">
+ <div className="bg-amber-500/5 border border-amber-500/20 p-3 rounded-2xl text-[11px] leading-relaxed text-default-500 font-bold space-y-1">
  <div>
  <strong>SECURE OVERRIDE REASON:</strong>
  </div>
@@ -5287,15 +5237,15 @@ export const PosModule: React.FC<PosModuleProps> = ({
  ? "Ticket Copy Reprinting"
  : "Sales Journal Invoice Voiding"}
  </p>
- <div className="text-m3-on-surface-variant mt-1">
+ <div className="text-default-500 mt-1">
  Transaction Ref:{" "}
- <span className="text-m3-on-surface select-all font-mono font-black">
+ <span className="text-foreground select-all font-black">
  {pinTargetSale.saleNumber}
  </span>
  </div>
- <div className="text-m3-on-surface-variant">
+ <div className="text-default-500">
  Settled Amount:{" "}
- <span className="text-m3-on-surface font-mono font-bold">
+ <span className="text-foreground font-bold">
  ₱{(Number(pinTargetSale.grandTotal) || 0).toFixed(2)}
  </span>
  </div>
@@ -5317,7 +5267,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setSecurityPinError("");
  }}
  placeholder="••••"
- className="w-full bg-m3-surface border-b-2 border-m3-outline-variant text-center tracking-[0.5em] text-lg font-black py-2 text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-mono"
+ className="w-full bg-background border-b-2 border-divider text-center tracking-[0.5em] text-lg font-black py-2 text-foreground focus:outline-none focus:border-amber-500 transition-colors rounded-lg "
  autoFocus
  />
  </div>
@@ -5327,7 +5277,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  {securityPinError}
  </p>
  ) : (
- <p className="text-[9px] text-m3-on-surface-variant px-1 text-center font-medium">
+ <p className="text-[9px] text-default-500 px-1 text-center font-medium">
  Ask a Store Supervisor or General Admin to verify their 4-6
  digit operational security PIN.
  </p>
@@ -5345,7 +5295,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setSecurityPinError("");
  }
  }}
- className="py-2.5 rounded-xl bg-m3-surface hover:bg-m3-outline-variant/15 font-black text-sm text-m3-on-surface transition-all active:scale-95 shadow-sm border border-m3-outline-variant/10 cursor-pointer"
+ className="py-2.5 rounded-xl bg-background hover:bg-default-100 font-black text-sm text-foreground transition-all active:scale-95 shadow-sm border border-divider/10 cursor-pointer"
  >
  {num}
  </button>
@@ -5368,7 +5318,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setSecurityPinError("");
  }
  }}
- className="py-2.5 rounded-xl bg-m3-surface hover:bg-m3-outline-variant/15 font-black text-sm text-m3-on-surface transition-all active:scale-95 shadow-sm border border-m3-outline-variant/10 cursor-pointer"
+ className="py-2.5 rounded-xl bg-background hover:bg-default-100 font-black text-sm text-foreground transition-all active:scale-95 shadow-sm border border-divider/10 cursor-pointer"
  >
  0
  </button>
@@ -5388,7 +5338,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setPinAction(null);
  setPinTargetSale(null);
  }}
- className="w-full py-2 bg-m3-outline-variant/10 hover:bg-m3-outline-variant/20 rounded-full text-m3-on-surface-variant font-black text-[10px] uppercase tracking-wider transition-all cursor-pointer text-center"
+ className="w-full py-2 bg-default-100 hover:bg-default-100 rounded-full text-default-500 font-black text-[10px] uppercase tracking-wider transition-all cursor-pointer text-center"
  >
  Decline & Close
  </button>
@@ -5405,26 +5355,26 @@ export const PosModule: React.FC<PosModuleProps> = ({
  className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm"
  onClick={() => setSelectedSaleDetail(null)}
  />
- <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4">
- <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-3">
- <h3 className="text-sm font-black text-rose-500 flex items-center gap-2 uppercase tracking-wider font-mono">
+ <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4">
+ <div className="flex justify-between items-center border-b border-divider/20 pb-3">
+ <h3 className="text-sm font-black text-rose-500 flex items-center gap-2 uppercase tracking-wider ">
  <FileText className="h-5 w-5 text-rose-500" />
  <span>Invoice Ledger: {selectedSaleDetail.saleNumber}</span>
  </h3>
  <button
  onClick={() => setSelectedSaleDetail(null)}
- className="text-m3-on-surface-variant hover:text-white cursor-pointer p-1 rounded-full hover:bg-zinc-800"
+ className="text-default-500 hover:text-white cursor-pointer p-1 rounded-full hover:bg-zinc-800"
  >
  <X className="h-4.5 w-4.5" />
  </button>
  </div>
 
- <div className="grid grid-cols-2 gap-3 bg-m3-surface-lowest/70 p-3.5 rounded-2xl border border-m3-outline-variant/10 text-xs font-sans">
+ <div className="grid grid-cols-2 gap-3 bg-content1/70 p-3.5 rounded-2xl border border-divider/10 text-xs font-sans">
  <div>
  <span className="block text-[10px] uppercase font-bold text-zinc-450 tracking-wider">
  Buyer Name
  </span>
- <span className="font-extrabold text-sm text-m3-primary mt-0.5 block">
+ <span className="font-extrabold text-sm text-primary mt-0.5 block">
  {selectedSaleDetail.customerName}
  </span>
  </div>
@@ -5432,7 +5382,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <span className="block text-[10px] uppercase font-bold text-zinc-450 tracking-wider">
  Settled Timestamp
  </span>
- <span className="font-mono mt-0.5 block">
+ <span className=" mt-0.5 block">
  {(selectedSaleDetail?.createdAt && !isNaN(new Date(selectedSaleDetail.createdAt).getTime())) ? new Date(selectedSaleDetail.createdAt).toLocaleString() : "N/A"}
  </span>
  </div>
@@ -5455,12 +5405,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
 
  <div className="space-y-2">
- <h4 className="text-[10px] font-black uppercase text-m3-primary tracking-wider pl-1 font-mono">
+ <h4 className="text-[10px] font-black uppercase text-primary tracking-wider pl-1 ">
  Purchased Tile Products
  </h4>
- <div className="border border-m3-outline-variant/15 rounded-xl overflow-hidden bg-m3-surface-lowest">
+ <div className="border border-divider/15 rounded-xl overflow-hidden bg-content1">
  <table className="w-full text-left text-[11px] font-sans">
- <thead className="bg-m3-surface-low/50 text-[9px] uppercase font-bold text-m3-on-surface-variant border-b border-m3-outline-variant/15">
+ <thead className="bg-content1/50 text-[9px] uppercase font-bold text-default-500 border-b border-divider/15">
  <tr>
  <th className="py-2.5 px-3">Product Description</th>
  <th className="py-2.5 px-3 text-right">Unit Price</th>
@@ -5468,11 +5418,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <th className="py-2.5 px-3 text-right">Total Price</th>
  </tr>
  </thead>
- <tbody className="divide-y divide-m3-outline-variant/10 font-mono text-m3-on-surface-variant">
+ <tbody className="divide-y divide-divider/10 text-default-500">
  {saleItems
  .filter((item) => item.saleId === selectedSaleDetail.id)
  .map((item, idx) => (
- <tr key={idx} className="hover:bg-m3-surface-low/30">
+ <tr key={idx} className="hover:bg-content1/30">
  <td className="py-2 px-3 font-sans font-bold text-white">
  {item.productName}
  </td>
@@ -5486,7 +5436,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <td className="py-2 px-3 text-center font-bold text-[#10B981]">
  x{item.quantity}
  </td>
- <td className="py-2 px-3 text-right text-m3-primary font-bold">
+ <td className="py-2 px-3 text-right text-primary font-bold">
  ₱
  {(Number(item.total) || 0).toLocaleString(undefined, {
  minimumFractionDigits: 2,
@@ -5501,7 +5451,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <tr>
  <td
  colSpan={4}
- className="py-4 text-center text-m3-on-surface-variant italic font-sans animate-pulse"
+ className="py-4 text-center text-default-500 italic font-sans animate-pulse"
  >
  No products registered in this invoice record.
  </td>
@@ -5512,40 +5462,40 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  </div>
 
- <div className="p-3 bg-m3-surface-lowest/70 border border-m3-outline-variant/10 rounded-xl space-y-1.5 text-[11px] font-mono">
+ <div className="p-3 bg-content1/70 border border-divider/10 rounded-xl space-y-1.5 text-[11px] ">
  <div className="flex justify-between">
- <span className="text-m3-on-surface-variant font-sans">Subtotal Sale:</span>
+ <span className="text-default-500 font-sans">Subtotal Sale:</span>
  <span className="font-bold">
  {formatCurrency(selectedSaleDetail.subtotal)}
  </span>
  </div>
  <div className="flex justify-between">
- <span className="text-m3-on-surface-variant font-sans">
+ <span className="text-default-500 font-sans">
  VAT Included (12%):
  </span>
- <span className="font-bold text-m3-on-surface-variant">
+ <span className="font-bold text-default-500">
  {formatCurrency(selectedSaleDetail.vat)}
  </span>
  </div>
  <div className="flex justify-between">
- <span className="text-m3-on-surface-variant font-sans">
+ <span className="text-default-500 font-sans">
  Discount Deductions:
  </span>
  <span className="font-bold text-rose-500">
  -{formatCurrency(selectedSaleDetail.discount)}
  </span>
  </div>
- <div className="flex justify-between border-t border-m3-outline-variant/10 pt-1.5 text-xs text-m3-primary font-bold">
+ <div className="flex justify-between border-t border-divider/10 pt-1.5 text-xs text-primary font-bold">
  <span className="font-sans">Grand Total:</span>
  <span className="text-sm font-extrabold text-[#10B981]">
  {formatCurrency(selectedSaleDetail.grandTotal)}
  </span>
  </div>
- <div className="flex justify-between text-[10px] text-m3-on-surface-variant pt-1">
+ <div className="flex justify-between text-[10px] text-default-500 pt-1">
  <span className="font-sans">Amount Tendered:</span>
  <span>{formatCurrency(selectedSaleDetail.amountTendered)}</span>
  </div>
- <div className="flex justify-between text-[10px] text-m3-on-surface-variant">
+ <div className="flex justify-between text-[10px] text-default-500">
  <span className="font-sans">Change Settled:</span>
  <span>{formatCurrency(selectedSaleDetail.changeAmount)}</span>
  </div>
@@ -5557,7 +5507,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  )}
 
- <div className="flex justify-between gap-2 border-t border-m3-outline-variant/20 pt-4 font-sans">
+ <div className="flex justify-between gap-2 border-t border-divider/20 pt-4 font-sans">
  <div className="flex gap-2">
  {!selectedSaleDetail.isDeleted && (
  <button
@@ -5578,7 +5528,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setSelectedSaleDetail(null);
  triggerReprintWithPin(s);
  }}
- className="px-3.5 py-2 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary rounded-full text-[10px] uppercase font-black tracking-widest transition-all cursor-pointer shadow-sm active:scale-95"
+ className="px-3.5 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-full text-[10px] uppercase font-black tracking-widest transition-all cursor-pointer shadow-sm active:scale-95"
  title="Reprint Receipt Slip"
  >
  Reprint Slip
@@ -5587,7 +5537,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  <button
  onClick={() => setSelectedSaleDetail(null)}
- className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
+ className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors"
  >
  Close Details
  </button>
@@ -5599,7 +5549,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  {/* MODAL: Tile Coverage Estimator Calculator */}
  <AnimatePresence>
  {showTileCalculatorModal && (
- <div className="fixed inset-0 flex items-center justify-center z-50 p-4 font-sans text-m3-on-surface">
+ <div className="fixed inset-0 flex items-center justify-center z-50 p-4 font-sans text-foreground">
  <motion.div
  initial={{ opacity: 0 }}
  animate={{ opacity: 1 }}
@@ -5613,17 +5563,17 @@ export const PosModule: React.FC<PosModuleProps> = ({
  animate={{ opacity: 1, scale: 1, y: 0 }}
  exit={{ opacity: 0, scale: 0.95, y: 15 }}
  transition={{ type: "spring", duration: 0.4 }}
- className="relative w-full max-w-4xl max-h-[90vh] rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low flex flex-col"
+ className="relative w-full max-w-4xl max-h-[90vh] rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 flex flex-col"
  >
- <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-3.5 mb-4 shrink-0 text-left">
- <h3 className="text-base font-black text-m3-primary flex items-center gap-2">
- <Calculator className="h-5 w-5 text-emerald-400 animate-pulse" />
+ <div className="flex justify-between items-center border-b border-divider/20 pb-3.5 mb-4 shrink-0 text-left">
+ <h3 className="text-base font-black text-primary flex items-center gap-2">
+ <Calculator className="h-5 w-5 text-primary animate-pulse" />
  <span>Tile Coverage & Area Estimator Calculator</span>
  </h3>
  <button
  type="button"
  onClick={() => setShowTileCalculatorModal(false)}
- className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1.5 rounded-full hover:bg-m3-primary/10 transition-colors"
+ className="text-default-500 hover:text-foreground cursor-pointer p-1.5 rounded-full hover:bg-primary/10 transition-colors"
  >
  <X className="h-5 w-5" />
  </button>
@@ -5666,11 +5616,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
  />
  </div>
 
- <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-4 mt-4 shrink-0">
+ <div className="flex justify-end gap-2 border-t border-divider/20 pt-4 mt-4 shrink-0">
  <button
  type="button"
  onClick={() => setShowTileCalculatorModal(false)}
- className="px-6 py-2.5 bg-m3-primary hover:bg-m3-primary/95 text-m3-on-primary text-xs font-black uppercase tracking-wider rounded-full shadow-sm cursor-pointer transition-colors active:scale-95"
+ className="px-6 py-2.5 bg-primary hover:bg-primary/95 text-primary-foreground text-xs font-black uppercase tracking-wider rounded-full shadow-sm cursor-pointer transition-colors active:scale-95"
  >
  Close Calculator
  </button>
@@ -5681,17 +5631,15 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </AnimatePresence>
 
  {/* Success toast alert bar */}
- {toastMessage && (
- <div className="fixed bottom-6 right-6 bg-m3-on-surface text-m3-surface text-xs font-bold py-3 px-5 rounded-[16px] shadow-xl z-50 border border-m3-outline-variant/30 flex items-center gap-2 animate-bounce max-w-[280px]">
- <ShieldCheck className="h-4.5 w-4.5 text-m3-tertiary shrink-0" />
- <span className="leading-tight">{toastMessage}</span>
- </div>
- )}
+ <ToastNotification
+ message={toastMessage}
+ onClose={() => setToastMessage(null)}
+ />
 
  {/* Register Corporate Member Modal */}
  <AnimatePresence>
  {showAddMemberModal && (
- <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+ <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
  <motion.div
  initial={{ opacity: 0 }}
  animate={{ opacity: 1 }}
@@ -5703,22 +5651,22 @@ export const PosModule: React.FC<PosModuleProps> = ({
  initial={{ opacity: 0, scale: 0.95, y: 15 }}
  animate={{ opacity: 1, scale: 1, y: 0 }}
  exit={{ opacity: 0, scale: 0.95, y: 15 }}
- className="relative w-full max-w-lg rounded-[24px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface flex flex-col space-y-4"
+ className="relative w-full max-w-lg rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-background flex flex-col space-y-4"
  >
- <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-3">
+ <div className="flex justify-between items-center border-b border-divider/20 pb-3">
  <div className="flex items-center gap-2">
- <div className="p-2 rounded-xl bg-m3-primary/10 text-m3-primary">
+ <div className="p-2 rounded-xl bg-primary/10 text-primary">
  <UserPlus className="h-5 w-5" />
  </div>
  <div className="text-left">
- <h3 className="text-sm font-extrabold text-m3-on-surface">Add Corporate Member Account</h3>
+ <h3 className="text-sm font-extrabold text-foreground">Add Corporate Member Account</h3>
  
  </div>
  </div>
  <button
  type="button"
  onClick={() => setShowAddMemberModal(false)}
- className="text-m3-on-surface-variant hover:text-m3-on-surface p-1.5 rounded-full hover:bg-m3-primary/10 transition-colors cursor-pointer"
+ className="text-default-500 hover:text-foreground p-1.5 rounded-full hover:bg-primary/10 transition-colors cursor-pointer"
  >
  <X className="h-5 w-5" />
  </button>
@@ -5733,7 +5681,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  <form onSubmit={handleAddCorporateMember} className="space-y-3 text-left">
  <div className="space-y-1">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-wider block">
+ <label className="text-[10px] font-black text-primary uppercase tracking-wider block">
  Full Name / Company Account Name *
  </label>
  <input
@@ -5742,13 +5690,13 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={newMemberName ?? ''}
  onChange={(e) => setNewMemberName(e.target.value)}
  placeholder="Full Name / Company"
- className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl px-3.5 py-2 text-xs font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
+ className="w-full bg-content1 border border-divider/40 rounded-xl px-3.5 py-2 text-xs font-bold text-foreground focus:outline-none focus:border-primary transition-all"
  />
  </div>
 
  <div className="grid grid-cols-2 gap-3">
  <div className="space-y-1">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-wider block">
+ <label className="text-[10px] font-black text-primary uppercase tracking-wider block">
  Contact Phone Number (Optional)
  </label>
  <input
@@ -5756,12 +5704,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={newMemberPhone ?? ''}
  onChange={(e) => setNewMemberPhone(e.target.value)}
  placeholder="Phone number"
- className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl px-3.5 py-2 text-xs font-mono font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
+ className="w-full bg-content1 border border-divider/40 rounded-xl px-3.5 py-2 text-xs font-bold text-foreground focus:outline-none focus:border-primary transition-all"
  />
  </div>
 
  <div className="space-y-1">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-wider block">
+ <label className="text-[10px] font-black text-primary uppercase tracking-wider block">
  Email Address (Optional)
  </label>
  <input
@@ -5769,13 +5717,13 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={newMemberEmail ?? ''}
  onChange={(e) => setNewMemberEmail(e.target.value)}
  placeholder="Email address"
- className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl px-3.5 py-2 text-xs font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
+ className="w-full bg-content1 border border-divider/40 rounded-xl px-3.5 py-2 text-xs font-bold text-foreground focus:outline-none focus:border-primary transition-all"
  />
  </div>
  </div>
 
  <div className="space-y-1">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-wider block">
+ <label className="text-[10px] font-black text-primary uppercase tracking-wider block">
  Credit Line Ceiling Limit (₱) (Optional)
  </label>
  <input
@@ -5785,22 +5733,22 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={newMemberLimit ?? ''}
  onChange={(e) => setNewMemberLimit(e.target.value)}
  placeholder="0"
- className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl px-3.5 py-2 text-xs font-mono font-extrabold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
+ className="w-full bg-content1 border border-divider/40 rounded-xl px-3.5 py-2 text-xs font-extrabold text-foreground focus:outline-none focus:border-primary transition-all"
  />
  
  </div>
 
- <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-3 mt-4">
+ <div className="flex justify-end gap-2 border-t border-divider/20 pt-3 mt-4">
  <button
  type="button"
  onClick={() => setShowAddMemberModal(false)}
- className="px-4 py-2 border border-m3-outline-variant/40 hover:bg-m3-surface-high text-m3-on-surface text-xs font-bold rounded-xl cursor-pointer transition-colors"
+ className="px-4 py-2 border border-divider/40 hover:bg-content3 text-foreground text-xs font-bold rounded-xl cursor-pointer transition-colors"
  >
  Cancel
  </button>
  <button
  type="submit"
- className="px-5 py-2 bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary text-xs font-extrabold rounded-xl shadow-md cursor-pointer transition-colors flex items-center gap-1.5"
+ className="px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-extrabold rounded-xl shadow-md cursor-pointer transition-colors flex items-center gap-1.5"
  >
  <UserPlus className="h-4 w-4" />
  <span>Save & Link Account</span>
@@ -5815,7 +5763,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  {/* Loyalty Points Mechanics Configuration Modal */}
  <AnimatePresence>
  {showLoyaltyConfigModal && (
- <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+ <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
  <motion.div
  initial={{ opacity: 0 }}
  animate={{ opacity: 1 }}
@@ -5827,22 +5775,22 @@ export const PosModule: React.FC<PosModuleProps> = ({
  initial={{ opacity: 0, scale: 0.95, y: 15 }}
  animate={{ opacity: 1, scale: 1, y: 0 }}
  exit={{ opacity: 0, scale: 0.95, y: 15 }}
- className="relative w-full max-w-md rounded-[24px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface flex flex-col space-y-4"
+ className="relative w-full max-w-md rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-background flex flex-col space-y-4"
  >
- <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-3">
+ <div className="flex justify-between items-center border-b border-divider/20 pb-3">
  <div className="flex items-center gap-2">
  <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
  <Sparkles className="h-5 w-5" />
  </div>
  <div className="text-left">
- <h3 className="text-sm font-extrabold text-m3-on-surface">Member Loyalty Program Mechanics</h3>
+ <h3 className="text-sm font-extrabold text-foreground">Member Loyalty Program Mechanics</h3>
  
  </div>
  </div>
  <button
  type="button"
  onClick={() => setShowLoyaltyConfigModal(false)}
- className="text-m3-on-surface-variant hover:text-m3-on-surface p-1.5 rounded-full hover:bg-m3-primary/10 transition-colors cursor-pointer"
+ className="text-default-500 hover:text-foreground p-1.5 rounded-full hover:bg-primary/10 transition-colors cursor-pointer"
  >
  <X className="h-5 w-5" />
  </button>
@@ -5865,21 +5813,21 @@ export const PosModule: React.FC<PosModuleProps> = ({
  >
  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-1">
  <div className="flex items-center justify-between text-xs font-bold text-amber-500">
- <span>⭐ Active Formula Rules</span>
- <span className="text-[10px] font-mono font-black uppercase">Live System Rule</span>
+ <span>Active Formula Rules</span>
+ <span className="text-[10px] font-black uppercase">Live System Rule</span>
  </div>
- <p className="text-[11px] text-m3-on-surface leading-relaxed">
+ <p className="text-[11px] text-foreground leading-relaxed">
  Every <strong>₱{(parseFloat(loyaltySpendInput) || 500).toLocaleString()}</strong> spent = <strong>1 Point</strong> earned.<br />
  <strong>1 Point</strong> = <strong>₱{(parseFloat(loyaltyPointValueInput) || 1.0).toFixed(2)}</strong> discount redemption value.
  </p>
  </div>
 
  <div className="space-y-1">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-wider block">
+ <label className="text-[10px] font-black text-primary uppercase tracking-wider block">
  Spend Amount Per 1 Point (PHP) *
  </label>
  <div className="relative">
- <span className="absolute left-3 top-2.5 text-xs font-bold text-m3-on-surface-variant">₱</span>
+ <span className="absolute left-3 top-2.5 text-xs font-bold text-default-500">₱</span>
  <input
  type="number"
  required
@@ -5888,18 +5836,18 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={loyaltySpendInput ?? ''}
  onChange={(e) => setLoyaltySpendInput(e.target.value)}
  placeholder="500"
- className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl pl-7 pr-3 py-2 text-xs font-mono font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
+ className="w-full bg-content1 border border-divider/40 rounded-xl pl-7 pr-3 py-2 text-xs font-bold text-foreground focus:outline-none focus:border-primary transition-all"
  />
  </div>
  
  </div>
 
  <div className="space-y-1">
- <label className="text-[10px] font-black text-m3-primary uppercase tracking-wider block">
+ <label className="text-[10px] font-black text-primary uppercase tracking-wider block">
  Redemption Value Per 1 Point (PHP) *
  </label>
  <div className="relative">
- <span className="absolute left-3 top-2.5 text-xs font-bold text-m3-on-surface-variant">₱</span>
+ <span className="absolute left-3 top-2.5 text-xs font-bold text-default-500">₱</span>
  <input
  type="number"
  required
@@ -5908,17 +5856,17 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={loyaltyPointValueInput ?? ''}
  onChange={(e) => setLoyaltyPointValueInput(e.target.value)}
  placeholder="1.00"
- className="w-full bg-m3-surface-low border border-m3-outline-variant/40 rounded-xl pl-7 pr-3 py-2 text-xs font-mono font-bold text-m3-on-surface focus:outline-none focus:border-m3-primary transition-all"
+ className="w-full bg-content1 border border-divider/40 rounded-xl pl-7 pr-3 py-2 text-xs font-bold text-foreground focus:outline-none focus:border-primary transition-all"
  />
  </div>
  
  </div>
 
- <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-3 mt-4">
+ <div className="flex justify-end gap-2 border-t border-divider/20 pt-3 mt-4">
  <button
  type="button"
  onClick={() => setShowLoyaltyConfigModal(false)}
- className="px-4 py-2 border border-m3-outline-variant/40 hover:bg-m3-surface-high text-m3-on-surface text-xs font-bold rounded-xl cursor-pointer transition-colors"
+ className="px-4 py-2 border border-divider/40 hover:bg-content3 text-foreground text-xs font-bold rounded-xl cursor-pointer transition-colors"
  >
  Cancel
  </button>
@@ -5942,27 +5890,27 @@ export const PosModule: React.FC<PosModuleProps> = ({
  initial={{ scale: 0.95, opacity: 0 }}
  animate={{ scale: 1, opacity: 1 }}
  exit={{ scale: 0.95, opacity: 0 }}
- className="bg-m3-surface border border-rose-500/30 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4"
+ className="bg-background border border-rose-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4"
  >
  <div className="flex items-center gap-3 text-rose-500">
  <div className="p-3 bg-rose-500/10 rounded-2xl border border-rose-500/20">
  <AlertCircle className="h-6 w-6" />
  </div>
  <div>
- <h3 className="text-base font-black tracking-tight text-m3-on-surface">Exit Checkout / Cancel Sale?</h3>
- <p className="text-xs text-m3-on-surface-variant font-medium">ESC shortcut key triggered</p>
+ <h3 className="text-base font-black tracking-tight text-foreground">Exit Checkout / Cancel Sale?</h3>
+ <p className="text-xs text-default-500 font-medium">ESC shortcut key triggered</p>
  </div>
  </div>
 
- <p className="text-xs text-m3-on-surface-variant leading-relaxed bg-m3-surface-low p-3.5 rounded-2xl border border-m3-outline-variant/15">
- You currently have <strong className="text-m3-primary">{cart.length} item(s)</strong> worth <strong className="text-emerald-500">₱{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> in the active terminal basket.
+ <p className="text-xs text-default-500 leading-relaxed bg-content1 p-3.5 rounded-2xl border border-divider/15">
+ You currently have <strong className="text-primary">{cart.length} item(s)</strong> worth <strong className="text-emerald-500">₱{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> in the active terminal basket.
  </p>
 
  <div className="flex flex-col gap-2 pt-2">
  <button
  type="button"
  onClick={() => setShowEscConfirmModal(false)}
- className="w-full py-2.5 bg-m3-primary text-m3-on-primary hover:bg-m3-primary/90 font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md cursor-pointer transition-all flex items-center justify-center gap-2"
+ className="w-full py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md cursor-pointer transition-all flex items-center justify-center gap-2"
  >
  <span>Continue Sale (Keep Cart)</span>
  </button>

@@ -3,72 +3,59 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from "react";
-import { useReceiptFontSize } from "./ReceiptFontSizeControl";
-import { formatCurrency } from "../utils/formatters";
-import { motion, AnimatePresence } from "motion/react";
-import { ConfirmationModal } from "./ConfirmationModal";
 import {
- Users,
-  Building2,
-  Sparkles,
-  Save,
-  Check,
-  Plus,
-  Minus,
-  Award,
-  Settings,
- Receipt,
- PlusCircle,
- Search,
- Calendar,
- FileText,
- Printer,
- ArrowRight,
- DollarSign,
- Archive,
- RefreshCw,
- Layers,
- CheckCircle2,
- CalendarDays,
- Download,
- Info,
- CreditCard,
- UserPlus,
- AlertCircle,
- Sliders,
- Trash2,
- ChevronLeft,
- ChevronRight,
- ListFilter,
- Zap,
- Percent,
- Heart,
- TrendingDown,
- Accessibility,
- ShieldAlert,
- History,
+AlertCircle,
+Archive,
+Award,
+Building2,
+CalendarDays,
+Check,
+CheckCircle2,
+ChevronLeft,
+ChevronRight,
+CreditCard,
+DollarSign,
+Download,
+FileText,
+History,
+Info,
+PlusCircle,
+Printer,
+Receipt,
+RefreshCw,
+Save,
+Search,
+Settings,
+Sliders,
+Sparkles,
+Trash2,
+UserPlus,
+Users
 } from "lucide-react";
+import { AnimatePresence,motion } from "motion/react";
+import React,{ useEffect,useState } from "react";
 import { useDb } from "../context/DbContext";
-import { Member, Expense, ProductReturn, CustomCorporateBill, UserRole } from "../types/db";
 import { saveFileToBackup } from "../lib/fileBackupHelper";
+import { CustomCorporateBill,Expense,Member,ProductReturn,UserRole } from "../types/db";
+import { formatCurrency } from "../utils/formatters";
+import { ConfirmationModal } from "./ConfirmationModal";
+import { useReceiptFontSize } from "./ReceiptFontSizeControl";
 
 interface AtposExtraModulesProps {
  activeSubTab: string;
- darkMode: boolean;
+ darkMode?: boolean;
+ _darkMode?: boolean;
  onNavigate: (tabId: string) => void;
 }
 
 // Durable local storage keys for persistence
 const LOCAL_STORAGE_MEMBERS = "atpos_v2_members_list";
-const LOCAL_STORAGE_EXPENSES = "atpos_v2_expenses";
-const LOCAL_STORAGE_RETURNS = "atpos_v2_returns";
-const LOCAL_STORAGE_CUSTOM_BILLS = "atpos_v2_custom_bills";
 
 export default function AtposExtraModules({
- activeSubTab,
- darkMode,
- onNavigate,
+  activeSubTab,
+  darkMode,
+  _darkMode,
+  onNavigate,
 }: AtposExtraModulesProps) {
  const db = useDb();
 
@@ -353,7 +340,7 @@ export default function AtposExtraModules({
  dateTime: new Date().toISOString(),
  category: finalCategory,
  amount: amountNum,
- recordedBy: db.currentUser?.fullName || "Rejilyn Manaban",
+ recordedBy: db.currentUser?.fullName || "System Administrator",
  notes: expNotes || "Casual office petty cash expense",
  branchId: expBranchId || db.currentUser?.branchAssignmentId || "B1",
  };
@@ -552,14 +539,14 @@ export default function AtposExtraModules({
  return (
  <div className="space-y-6">
  {/* Dynamic Module Header */}
- <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-5 rounded-2xl bg-m3-surface-low border border-m3-outline-variant/20 shadow-sm">
+ <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-5 rounded-2xl bg-content1 border border-divider/20 shadow-sm">
  <div>
- <h2 className="text-xl font-bold font-sans text-m3-on-surface capitalize leading-none">
+ <h2 className="text-xl font-bold font-sans text-foreground capitalize leading-none">
  {activeSubTab.replace(/-/g, " ")}
  </h2>
  </div>
 
- <span className="self-start md:self-auto px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-m3-primary/10 text-m3-primary border border-m3-primary/25">
+ <span className="self-start md:self-auto px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-primary/10 text-primary border border-primary/25">
  {(() => {
  const currentBranch = db.branches.find(b => b.id === db.currentUser?.branchAssignmentId);
  if (currentBranch) return currentBranch.name.toUpperCase();
@@ -570,22 +557,22 @@ export default function AtposExtraModules({
  </div>
 
  {printReceiptData && (
- <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center bg-black/60 backdrop-blur-sm p-4 md:items-center">
+ <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center bg-gray-950/60 backdrop-blur-sm p-4 md:items-center">
  <motion.div
  initial={{ scale: 0.95, opacity: 0 }}
  animate={{ scale: 1, opacity: 1 }}
- className={`w-full max-w-sm bg-white text-zinc-900 rounded-2xl shadow-2xl p-5 font-mono text-xs border border-zinc-200 relative max-h-[85vh] overflow-y-auto bir-receipt-container scrollbar-thin ${receiptFontClass}`}
+ className={`w-full max-w-sm bg-white text-zinc-900 rounded-2xl shadow-2xl p-5 text-xs border border-zinc-200 relative max-h-[85vh] overflow-y-auto bir-receipt-container scrollbar-thin ${receiptFontClass}`}
  >
  
  <div className="text-center pb-3 border-b-2 border-dashed border-zinc-300">
  <h3 className="font-extrabold text-sm tracking-wide">
- EMMAN TILE CENTER
+ {db.branches.find(b => b.id === printReceiptData.branchId)?.name || localStorage.getItem("tilepoint_company_name_v1") || db.branches[0]?.name || "STORE RECEIPT"}
  </h3>
- <p className="text-[10px]">BRANCH ID: ETC_DIPOLOG MAIN</p>
- <p className="text-[9px] text-zinc-500">
- Sta.Filomena,DipologCity
+ <p className="text-[10px]">BRANCH ID: {printReceiptData.branchId || db.branches[0]?.branchCode || db.branches[0]?.id || "MAIN"}</p>
+ <p className="text-[9px] text-default-500">
+ {db.branches.find(b => b.id === printReceiptData.branchId)?.address || db.branches[0]?.address || "Store Address"}
  </p>
- <p className="text-[9px] text-zinc-500 font-mono">
+ <p className="text-[9px] text-default-500 ">
  Contact: 0000 • TIN 000-111-222
  </p>
  <p className="text-[10.5px] font-bold mt-2 uppercase">
@@ -644,7 +631,7 @@ export default function AtposExtraModules({
  <div className="bg-emerald-50 text-emerald-800 p-2 rounded-lg text-[10px] font-bold">
  Loyalty points accredited: +{printReceiptData.pointsGained} pts
  </div>
- <p className="text-[9px] text-zinc-400">
+ <p className="text-[9px] text-default-500">
  BIR Permitted System - Official Receipt copy.
  </p>
 
@@ -657,7 +644,7 @@ export default function AtposExtraModules({
  </button>
  <button
  onClick={() => setPrintReceiptData(null)}
- className="flex-1 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-bold transition cursor-pointer"
+ className="flex-1 py-1.5 rounded-lg bg-content1 hover:bg-content2 text-white font-bold transition cursor-pointer"
  >
  Close
  </button>
@@ -676,8 +663,8 @@ export default function AtposExtraModules({
  animate={{ opacity: 1 }}
  className="grid md:grid-cols-3 gap-6"
  >
- <div className="md:col-span-1 bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl h-fit space-y-4">
- <div className="flex items-center gap-2 text-m3-primary border-b border-m3-outline-variant/10 pb-3">
+ <div className="md:col-span-1 bg-content1 border border-divider/15 p-5 rounded-2xl h-fit space-y-4">
+ <div className="flex items-center gap-2 text-primary border-b border-divider/10 pb-3">
  <UserPlus className="h-5 w-5" />
  <h3 className="font-bold text-sm">
  Register New Corporate Member
@@ -688,7 +675,7 @@ export default function AtposExtraModules({
  className="space-y-3 font-sans text-xs"
  >
  <div className="space-y-1">
- <label className="font-bold text-m3-on-surface-variant">
+ <label className="font-bold text-default-500">
  Full Client Name *
  </label>
  <input
@@ -697,11 +684,11 @@ export default function AtposExtraModules({
  onChange={(e) => setNewMemberName(e.target.value)}
  type="text"
  placeholder="Juan Perez Inc."
- className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary"
+ className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none focus:border-primary"
  />
  </div>
  <div className="space-y-1">
- <label className="font-bold text-m3-on-surface-variant">
+ <label className="font-bold text-default-500">
  Active Mobile Phone *
  </label>
  <input
@@ -710,11 +697,11 @@ export default function AtposExtraModules({
  onChange={(e) => setNewMemberPhone(e.target.value)}
  type="tel"
  placeholder="Phone number"
- className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary"
+ className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none focus:border-primary"
  />
  </div>
  <div className="space-y-1">
- <label className="font-bold text-m3-on-surface-variant">
+ <label className="font-bold text-default-500">
  Email Address
  </label>
  <input
@@ -722,23 +709,23 @@ export default function AtposExtraModules({
  onChange={(e) => setNewMemberEmail(e.target.value)}
  type="email"
  placeholder="perez@gmail.com"
- className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary"
+ className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none focus:border-primary"
  />
  </div>
  <div className="space-y-1">
- <label className="font-bold text-m3-on-surface-variant">
+ <label className="font-bold text-default-500">
  Credit Account Limit (PHP)
  </label>
  <input
  value={newMemberLimit ?? ''}
  onChange={(e) => setNewMemberLimit(Number(e.target.value))}
  type="number"
- className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary"
+ className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none focus:border-primary"
  />
  </div>
  <button
  type="submit"
- className="w-full bg-m3-primary text-m3-on-primary py-2.5 rounded-xl font-bold transition hover:opacity-90"
+ className="w-full bg-primary text-primary-foreground py-2.5 rounded-xl font-bold transition hover:opacity-90"
  >
  Submit Customer Info
  </button>
@@ -746,20 +733,20 @@ export default function AtposExtraModules({
  </div>
 
  <div className="md:col-span-2 space-y-4">
- <div className="flex bg-m3-surface-low border border-m3-outline-variant/15 p-2 rounded-xl items-center gap-2 font-sans text-xs">
- <Search className="h-4 w-4 text-m3-on-surface-variant pl-1 shrink-0" />
+ <div className="flex bg-content1 border border-divider/15 p-2 rounded-xl items-center gap-2 font-sans text-xs">
+ <Search className="h-4 w-4 text-default-500 pl-1 shrink-0" />
  <input
  value={memberSearch ?? ''}
  onChange={(e) => setMemberSearch(e.target.value)}
  placeholder="Filter customer database..."
  className="w-full bg-transparent border-0 outline-none p-1.5"
  />
- <div className="flex items-center gap-1 shrink-0 border-l border-m3-outline-variant/20 pl-2">
- <Building2 className="h-3.5 w-3.5 text-m3-primary shrink-0" />
+ <div className="flex items-center gap-1 shrink-0 border-l border-divider/20 pl-2">
+ <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
  <select
  value={memberBranchFilter ?? ''}
  onChange={(e) => setMemberBranchFilter(e.target.value)}
- className="bg-m3-surface border border-m3-outline-variant/30 text-m3-primary text-xs font-bold rounded-lg px-2 py-1 outline-none cursor-pointer"
+ className="bg-background border border-divider/30 text-primary text-xs font-bold rounded-lg px-2 py-1 outline-none cursor-pointer"
  >
  <option value="All">All Branches</option>
  {db.branches.filter((b) => !b.isDeleted).map((b) => (
@@ -771,9 +758,9 @@ export default function AtposExtraModules({
  </div>
  </div>
 
- <div className="bg-m3-surface-low border border-m3-outline-variant/15 rounded-2xl overflow-hidden shadow-sm">
+ <div className="bg-content1 border border-divider/15 rounded-2xl overflow-hidden shadow-sm">
  <table className="w-full text-left font-sans text-xs">
- <thead className="bg-m3-surface-high/50 font-bold border-b border-m3-outline-variant/15">
+ <thead className="bg-content3/50 font-bold border-b border-divider/15">
  <tr>
  <th className="p-3">Client Member</th>
  <th className="p-3">Contact</th>
@@ -796,14 +783,14 @@ export default function AtposExtraModules({
  <tr>
  <td colSpan={5} className="p-8 text-center">
  <div className="flex flex-col items-center justify-center space-y-2.5 py-6">
- <div className="h-12 w-12 rounded-2xl bg-m3-primary/10 text-m3-primary flex items-center justify-center shadow-inner border border-m3-primary/15">
+ <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-inner border border-primary/15">
  <Users className="h-6 w-6" />
  </div>
  <div className="space-y-1">
- <p className="font-extrabold text-sm text-m3-on-surface">
+ <p className="font-extrabold text-sm text-foreground">
  {memberSearch ? "No Matching Client Members Found" : "No Registered Client Members"}
  </p>
- <p className="text-xs text-m3-on-surface-variant max-w-sm mx-auto leading-relaxed">
+ <p className="text-xs text-default-500 max-w-sm mx-auto leading-relaxed">
  {memberSearch
  ? `No customer profile matches "${memberSearch}". Check spelling or clear your filter.`
  : "No corporate or retail members registered yet. Use the client enrollment form on the left to add members."}
@@ -813,7 +800,7 @@ export default function AtposExtraModules({
  <button
  type="button"
  onClick={() => setMemberSearch("")}
- className="mt-1 px-3 py-1.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary text-xs font-bold rounded-lg transition-colors cursor-pointer border-0"
+ className="mt-1 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold rounded-lg transition-colors cursor-pointer border-0"
  >
  Clear Search Filter
  </button>
@@ -827,35 +814,35 @@ export default function AtposExtraModules({
  return filteredMembers.map((m) => (
  <tr
  key={m.id}
- className="border-b border-m3-outline-variant/10 hover:bg-m3-primary/10 transition-all cursor-pointer"
+ className="border-b border-divider/10 hover:bg-primary/10 transition-all cursor-pointer"
  onClick={() => {
    setSelectedMember(m);
    onNavigate("members-receivables");
  }}
  title="Click to view A/R Ledger and settle account"
  >
- <td className="p-3 font-semibold text-m3-on-surface flex items-center gap-2">
- <Users className="h-4 w-4 text-m3-primary" />
+ <td className="p-3 font-semibold text-foreground flex items-center gap-2">
+ <Users className="h-4 w-4 text-primary" />
  <div>
  <div>{m.fullName}</div>
- <div className="text-[10px] text-zinc-400 font-mono mt-0.5">
+ <div className="text-[10px] text-default-500 mt-0.5">
  {m.id}
  </div>
  </div>
  </td>
  <td className="p-3">
  <div>{m.phone}</div>
- <div className="text-[10px] text-zinc-400">
+ <div className="text-[10px] text-default-500">
  {m.email}
  </div>
  </td>
- <td className="p-3 text-right font-mono font-bold text-amber-500">
+ <td className="p-3 text-right font-bold text-amber-500">
  {m.points} pts
  </td>
- <td className="p-3 text-right font-mono">
+ <td className="p-3 text-right ">
  ₱{(Number(m?.creditLimit) || 0).toLocaleString("en-US")}
  </td>
- <td className="p-3 text-right font-mono text-rose-500 font-extrabold">
+ <td className="p-3 text-right text-rose-500 font-extrabold">
  ₱{(Number(m?.outstandingBalance) || 0).toLocaleString("en-US")}
  </td>
  </tr>
@@ -875,25 +862,25 @@ export default function AtposExtraModules({
  animate={{ opacity: 1 }}
  className="grid md:grid-cols-2 gap-6"
  >
- <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl space-y-4">
- <h3 className="font-bold text-sm text-m3-primary">
+ <div className="bg-content1 border border-divider/15 p-5 rounded-2xl space-y-4">
+ <h3 className="font-bold text-sm text-primary">
  Settle Customer Account Ledger
  </h3>
 
  <div className="space-y-2 font-sans text-xs">
- <label className="font-bold text-m3-on-surface-variant">
+ <label className="font-bold text-default-500">
  Select Account Client *
  </label>
- <div className="space-y-1 max-h-48 overflow-y-auto border border-m3-outline-variant rounded-lg divide-y divide-m3-outline-variant/15">
+ <div className="space-y-1 max-h-48 overflow-y-auto border border-divider rounded-lg divide-y divide-divider/15">
  {(() => {
  const receivableMembers = members.filter((m) => m.outstandingBalance > 0);
 
  if (receivableMembers.length === 0) {
  return (
- <div className="p-6 text-center text-xs space-y-2 bg-m3-surface-lowest/50 rounded-lg">
+ <div className="p-6 text-center text-xs space-y-2 bg-content1/50 rounded-lg">
  <CheckCircle2 className="h-7 w-7 text-emerald-500 mx-auto opacity-90" />
- <p className="font-extrabold text-m3-on-surface">All Accounts Fully Settled</p>
- <p className="text-[11px] text-m3-on-surface-variant max-w-xs mx-auto leading-relaxed">
+ <p className="font-extrabold text-foreground">All Accounts Fully Settled</p>
+ <p className="text-[11px] text-default-500 max-w-xs mx-auto leading-relaxed">
  There are currently no registered client accounts with outstanding credit balances.
  </p>
  </div>
@@ -906,17 +893,17 @@ export default function AtposExtraModules({
  onClick={() => setSelectedMember(m)}
  className={`w-full text-left p-3 flex justify-between cursor-pointer transition ${
  selectedMember?.id === m.id
- ? "bg-m3-primary/10 border-l-4 border-m3-primary font-bold"
- : "hover:bg-m3-primary/5"
+ ? "bg-primary/10 border-l-4 border-primary font-bold"
+ : "hover:bg-primary/5"
  }`}
  >
  <div>
  <span>{m.fullName}</span>
- <span className="text-[10px] block text-zinc-400">
+ <span className="text-[10px] block text-default-500">
  Limit: ₱{(Number(m?.creditLimit) || 0).toLocaleString()}
  </span>
  </div>
- <span className="text-rose-500 font-mono">
+ <span className="text-rose-500 ">
  ₱{(Number(m?.outstandingBalance) || 0).toLocaleString()}
  </span>
  </button>
@@ -928,11 +915,11 @@ export default function AtposExtraModules({
  {selectedMember && (
  <form
  onSubmit={handlePayBalance}
- className="space-y-4 font-sans text-xs pt-3 animate-fade-in border-t border-m3-outline-variant/15"
+ className="space-y-4 font-sans text-xs pt-3 animate-fade-in border-t border-divider/15"
  >
- <div className="flex justify-between items-center bg-m3-primary/5 p-3 rounded-xl border border-m3-primary/10">
+ <div className="flex justify-between items-center bg-primary/5 p-3 rounded-xl border border-primary/10">
  <div>
- <span className="text-[10px] text-m3-primary font-bold uppercase block">
+ <span className="text-[10px] text-primary font-bold uppercase block">
  Selected Account Billing
  </span>
  <span className="font-extrabold text-sm">
@@ -940,7 +927,7 @@ export default function AtposExtraModules({
  </span>
  </div>
  <div className="text-right">
- <span className="text-[10px] text-zinc-500 block">
+ <span className="text-[10px] text-default-500 block">
  Balance Due
  </span>
  <span className="text-sm font-black text-rose-500">
@@ -950,7 +937,7 @@ export default function AtposExtraModules({
  </div>
 
  <div className="space-y-1">
- <label className="font-bold text-m3-on-surface-variant">
+ <label className="font-bold text-default-500">
  Amount to Tender (PHP) *
  </label>
  <input
@@ -959,14 +946,14 @@ export default function AtposExtraModules({
  value={paymentAmount ?? ''}
  onChange={(e) => setPaymentAmount(e.target.value)}
  placeholder="Amount"
- className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none font-mono focus:border-m3-primary"
+ className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none focus:border-primary"
  max={selectedMember.outstandingBalance}
  />
  </div>
 
  <button
  type="submit"
- className="w-full bg-m3-primary text-m3-on-primary py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+ className="w-full bg-primary text-primary-foreground py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer"
  >
  <CreditCard className="h-4 w-4" />
  Process Payment & Print Slip
@@ -976,23 +963,23 @@ export default function AtposExtraModules({
  </div>
 
  <div className="space-y-4">
- <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl grid grid-cols-2 gap-4">
- <div className="p-4 bg-zinc-100 dark:bg-zinc-800/40 rounded-xl border border-m3-outline-variant/10">
- <span className="text-[10px] font-bold text-zinc-400 block uppercase font-mono">
+ <div className="bg-content1 border border-divider/15 p-5 rounded-2xl grid grid-cols-2 gap-4">
+ <div className="p-4 bg-zinc-100 dark:bg-content2/40 rounded-xl border border-divider/10">
+ <span className="text-[10px] font-bold text-default-500 block uppercase ">
  Total Outstanding A/R
  </span>
- <span className="text-lg font-black text-rose-500 font-mono">
+ <span className="text-lg font-black text-rose-500 ">
  ₱
  {members
  .reduce((acc, m) => acc + m.outstandingBalance, 0)
  .toLocaleString()}
  </span>
  </div>
- <div className="p-4 bg-zinc-100 dark:bg-zinc-800/40 rounded-xl border border-m3-outline-variant/10">
- <span className="text-[10px] font-bold text-zinc-400 block uppercase font-mono">
+ <div className="p-4 bg-zinc-100 dark:bg-content2/40 rounded-xl border border-divider/10">
+ <span className="text-[10px] font-bold text-default-500 block uppercase ">
  Overdue Accounts Limit
  </span>
- <span className="text-lg font-black text-amber-500 font-mono">
+ <span className="text-lg font-black text-amber-500 ">
  {
  members.filter(
  (m) => m.outstandingBalance > m.creditLimit * 0.8,
@@ -1003,24 +990,24 @@ export default function AtposExtraModules({
  </div>
  </div>
 
- <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl text-xs space-y-3 font-sans">
- <div className="flex items-center gap-1.5 font-bold text-zinc-400 pb-2 border-b border-m3-outline-variant/10">
- <Info className="h-4 w-4 text-m3-primary" />
+ <div className="bg-content1 border border-divider/15 p-5 rounded-2xl text-xs space-y-3 font-sans">
+ <div className="flex items-center gap-1.5 font-bold text-default-500 pb-2 border-b border-divider/10">
+ <Info className="h-4 w-4 text-primary" />
  <span>Credit Allocation Protocols</span>
  </div>
  </div>
 
  {/* A/R Ledger & Payment History Card */}
- <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl space-y-4 font-sans text-xs">
-   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-m3-outline-variant/10 pb-3">
+ <div className="bg-content1 border border-divider/15 p-5 rounded-2xl space-y-4 font-sans text-xs">
+   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-divider/10 pb-3">
      <div>
-       <h3 className="font-bold text-sm text-m3-primary flex items-center gap-1.5">
+       <h3 className="font-bold text-sm text-primary flex items-center gap-1.5">
          <History className="h-4.5 w-4.5" />
          <span>A/R Ledger & Payment History</span>
        </h3>
      </div>
      <div className="flex items-center gap-1">
-       <span className="text-[10px] text-zinc-400">Account:</span>
+       <span className="text-[10px] text-default-500">Account:</span>
        <select
          value={selectedMember ? selectedMember.id : "all"}
          onChange={(e) => {
@@ -1032,7 +1019,7 @@ export default function AtposExtraModules({
              if (m) setSelectedMember(m);
            }
          }}
-         className="bg-m3-surface-high border border-m3-outline-variant rounded px-2.5 py-1 text-[11px] outline-none font-bold text-m3-on-surface"
+         className="bg-content3 border border-divider rounded px-2.5 py-1 text-[11px] outline-none font-bold text-foreground"
        >
          <option value="all">All Members</option>
          {members.map((m) => (
@@ -1106,10 +1093,10 @@ export default function AtposExtraModules({
 
      if (combined.length === 0) {
        return (
-         <div className="py-10 text-center space-y-2 bg-m3-surface-lowest/60 border border-m3-outline-variant/15 rounded-xl p-4">
-           <FileText className="h-8 w-8 text-m3-primary/30 mx-auto" />
-           <p className="font-extrabold text-xs text-m3-on-surface">No Ledger Activity Found</p>
-           <p className="text-[11px] text-m3-on-surface-variant max-w-xs mx-auto leading-normal">
+         <div className="py-10 text-center space-y-2 bg-content1/60 border border-divider/15 rounded-xl p-4">
+           <FileText className="h-8 w-8 text-primary/30 mx-auto" />
+           <p className="font-extrabold text-xs text-foreground">No Ledger Activity Found</p>
+           <p className="text-[11px] text-default-500 max-w-xs mx-auto leading-normal">
              No credit charges or settlement payment transactions found {selectedMember ? `for ${selectedMember.fullName}` : "in the system"}.
            </p>
          </div>
@@ -1117,9 +1104,9 @@ export default function AtposExtraModules({
      }
 
      return (
-       <div className="max-h-[320px] overflow-y-auto border border-m3-outline-variant/15 rounded-xl divide-y divide-m3-outline-variant/10 bg-m3-surface-lowest scrollbar-thin">
+       <div className="max-h-[320px] overflow-y-auto border border-divider/15 rounded-xl divide-y divide-divider/10 bg-content1 scrollbar-thin">
          {combined.map((item, idx) => (
-           <div key={idx} className="p-3 flex items-start justify-between hover:bg-m3-primary/5 transition-colors gap-3">
+           <div key={idx} className="p-3 flex items-start justify-between hover:bg-primary/5 transition-colors gap-3">
              <div className="space-y-1 text-left">
                <div className="flex items-center gap-2 flex-wrap">
                  <span className={`text-[8.5px] font-extrabold uppercase px-1.5 py-0.5 rounded ${
@@ -1129,15 +1116,15 @@ export default function AtposExtraModules({
                  }`}>
                    {item.type === "CHARGE" ? "Charge / Debit" : "Payment / Settle"}
                  </span>
-                 <span className="font-mono text-[9px] text-zinc-400 font-bold">
+ <span className=" text-[9px] text-default-500 font-bold">
                    Ref: {item.reference}
                  </span>
                </div>
-               <p className="font-bold text-m3-on-surface text-[11px] leading-tight">
+               <p className="font-bold text-foreground text-[11px] leading-tight">
                  {item.description}
                </p>
-               <div className="flex items-center gap-1.5 text-[10px] text-zinc-400 font-semibold font-sans flex-wrap">
-                 {!selectedMember && <span className="text-m3-primary font-bold">{item.memberName}</span>}
+               <div className="flex items-center gap-1.5 text-[10px] text-default-500 font-semibold font-sans flex-wrap">
+                 {!selectedMember && <span className="text-primary font-bold">{item.memberName}</span>}
                  {!selectedMember && <span>•</span>}
                  <span>{new Date(item.date).toLocaleString()}</span>
                  <span>•</span>
@@ -1145,7 +1132,7 @@ export default function AtposExtraModules({
                </div>
              </div>
              <div className="text-right shrink-0">
-               <span className={`font-mono text-xs font-black ${
+ <span className={` text-xs font-black ${
                  item.type === "CHARGE" ? "text-amber-500" : "text-emerald-500"
                }`}>
                  {item.type === "CHARGE" ? "+" : "-"}₱{item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1180,12 +1167,12 @@ export default function AtposExtraModules({
         className="space-y-4 font-sans"
       >
         {/* Simplified Header & Overview Banner */}
-        <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-2xl shadow-xs space-y-3">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-m3-outline-variant/10 pb-3">
+        <div className="bg-content1 border border-divider/15 p-4 rounded-2xl shadow-xs space-y-3">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-divider/10 pb-3">
             <div>
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-amber-500 shrink-0" />
-                <h3 className="font-extrabold text-sm text-m3-primary">Member Account & Loyalty Desk</h3>
+                <h3 className="font-extrabold text-sm text-primary">Member Account & Loyalty Desk</h3>
               </div>
             </div>
 
@@ -1194,7 +1181,7 @@ export default function AtposExtraModules({
                 <button
                   type="button"
                   onClick={() => setShowLoyaltySettings(!showLoyaltySettings)}
-                  className="px-3 py-1.5 bg-m3-surface-high hover:bg-m3-surface-highest text-m3-on-surface text-xs font-bold rounded-xl border border-m3-outline-variant/30 flex items-center gap-1.5 cursor-pointer transition-colors"
+                  className="px-3 py-1.5 bg-content3 hover:bg-content4 text-foreground text-xs font-bold rounded-xl border border-divider/30 flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
                   <Settings className="h-3.5 w-3.5 text-amber-500" />
                   <span>{showLoyaltySettings ? "Close Rules Settings" : "Edit Loyalty Rules"}</span>
@@ -1205,34 +1192,34 @@ export default function AtposExtraModules({
 
           {/* Quick Metrics Bar */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
-            <div className="bg-m3-surface-lowest p-2.5 rounded-xl border border-m3-outline-variant/10 flex items-center justify-between">
+            <div className="bg-content1 p-2.5 rounded-xl border border-divider/10 flex items-center justify-between">
               <div>
-                <span className="text-[10px] text-zinc-400 uppercase font-bold block">Earning Formula</span>
-                <span className="text-xs font-extrabold text-amber-500 font-mono">₱{config.spendPerPoint.toLocaleString()} = 1 Pt</span>
+                <span className="text-[10px] text-default-500 uppercase font-bold block">Earning Formula</span>
+ <span className="text-xs font-extrabold text-amber-500 ">₱{config.spendPerPoint.toLocaleString()} = 1 Pt</span>
               </div>
               <Award className="h-4 w-4 text-amber-500/30 shrink-0" />
             </div>
 
-            <div className="bg-m3-surface-lowest p-2.5 rounded-xl border border-m3-outline-variant/10 flex items-center justify-between">
+            <div className="bg-content1 p-2.5 rounded-xl border border-divider/10 flex items-center justify-between">
               <div>
-                <span className="text-[10px] text-zinc-400 uppercase font-bold block">Redemption Value</span>
-                <span className="text-xs font-extrabold text-emerald-500 font-mono">1 Pt = {formatCurrency(config.pointValueInPhp)} Off</span>
+                <span className="text-[10px] text-default-500 uppercase font-bold block">Redemption Value</span>
+ <span className="text-xs font-extrabold text-emerald-500 ">1 Pt = {formatCurrency(config.pointValueInPhp)} Off</span>
               </div>
               <Sparkles className="h-4 w-4 text-emerald-500/30 shrink-0" />
             </div>
 
-            <div className="bg-m3-surface-lowest p-2.5 rounded-xl border border-m3-outline-variant/10 flex items-center justify-between">
+            <div className="bg-content1 p-2.5 rounded-xl border border-divider/10 flex items-center justify-between">
               <div>
-                <span className="text-[10px] text-zinc-400 uppercase font-bold block">Active Members</span>
-                <span className="text-xs font-extrabold text-m3-on-surface font-mono">{members.length} Members</span>
+                <span className="text-[10px] text-default-500 uppercase font-bold block">Active Members</span>
+ <span className="text-xs font-extrabold text-foreground ">{members.length} Members</span>
               </div>
-              <Users className="h-4 w-4 text-m3-primary/30 shrink-0" />
+              <Users className="h-4 w-4 text-primary/30 shrink-0" />
             </div>
 
-            <div className="bg-m3-surface-lowest p-2.5 rounded-xl border border-m3-outline-variant/10 flex items-center justify-between">
+            <div className="bg-content1 p-2.5 rounded-xl border border-divider/10 flex items-center justify-between">
               <div>
-                <span className="text-[10px] text-zinc-400 uppercase font-bold block">Total Points Issued</span>
-                <span className="text-xs font-extrabold text-amber-500 font-mono">{totalPointsPool.toLocaleString()} Pts <span className="text-[10px] text-zinc-400 font-normal">({formatCurrency(totalMonetaryValue)})</span></span>
+                <span className="text-[10px] text-default-500 uppercase font-bold block">Total Points Issued</span>
+ <span className="text-xs font-extrabold text-amber-500 ">{totalPointsPool.toLocaleString()} Pts <span className="text-[10px] text-default-500 font-normal">({formatCurrency(totalMonetaryValue)})</span></span>
               </div>
               <Award className="h-4 w-4 text-amber-500/30 shrink-0" />
             </div>
@@ -1255,14 +1242,14 @@ export default function AtposExtraModules({
                 setLoyaltySavedSuccess(true);
                 setTimeout(() => setLoyaltySavedSuccess(false), 3000);
               }}
-              className="p-3.5 bg-m3-surface-lowest border border-amber-500/20 rounded-xl space-y-3 text-xs pt-3"
+              className="p-3.5 bg-content1 border border-amber-500/20 rounded-xl space-y-3 text-xs pt-3"
             >
-              <div className="flex items-center justify-between border-b border-m3-outline-variant/10 pb-2">
+              <div className="flex items-center justify-between border-b border-divider/10 pb-2">
                 <span className="font-extrabold text-xs text-amber-500 flex items-center gap-1.5">
                   <Settings className="h-3.5 w-3.5" />
                   <span>Loyalty Program Parameters</span>
                 </span>
-                <label className="font-bold text-m3-on-surface cursor-pointer flex items-center gap-1.5 text-xs">
+                <label className="font-bold text-foreground cursor-pointer flex items-center gap-1.5 text-xs">
                   <input
                     type="checkbox"
                     checked={loyaltyEnabled}
@@ -1275,12 +1262,12 @@ export default function AtposExtraModules({
 
               <div className="grid sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-bold text-m3-on-surface-variant flex justify-between">
+                  <label className="font-bold text-default-500 flex justify-between">
                     <span>Spend Threshold (PHP)</span>
-                    <span className="text-zinc-400 text-[10px] font-normal">Spend to earn 1 point</span>
+                    <span className="text-default-500 text-[10px] font-normal">Spend to earn 1 point</span>
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-2 text-zinc-400 font-bold">₱</span>
+                    <span className="absolute left-3 top-2 text-default-500 font-bold">₱</span>
                     <input
                       type="number"
                       required
@@ -1288,18 +1275,18 @@ export default function AtposExtraModules({
                       value={loyaltySpendInput ?? ''}
                       onChange={(e) => setLoyaltySpendInput(e.target.value)}
                       placeholder="500"
-                      className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg py-1.5 pl-7 pr-2 outline-none font-mono font-bold focus:border-amber-500 text-m3-on-surface"
+ className="w-full bg-content3 border border-divider rounded-lg py-1.5 pl-7 pr-2 outline-none font-bold focus:border-amber-500 text-foreground"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-bold text-m3-on-surface-variant flex justify-between">
+                  <label className="font-bold text-default-500 flex justify-between">
                     <span>Point Value in PHP</span>
-                    <span className="text-zinc-400 text-[10px] font-normal">Discount value per 1 point</span>
+                    <span className="text-default-500 text-[10px] font-normal">Discount value per 1 point</span>
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-2 text-zinc-400 font-bold">₱</span>
+                    <span className="absolute left-3 top-2 text-default-500 font-bold">₱</span>
                     <input
                       type="number"
                       required
@@ -1308,7 +1295,7 @@ export default function AtposExtraModules({
                       value={loyaltyPointValInput ?? ''}
                       onChange={(e) => setLoyaltyPointValInput(e.target.value)}
                       placeholder="1.00"
-                      className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg py-1.5 pl-7 pr-2 outline-none font-mono font-bold focus:border-amber-500 text-m3-on-surface"
+ className="w-full bg-content3 border border-divider rounded-lg py-1.5 pl-7 pr-2 outline-none font-bold focus:border-amber-500 text-foreground"
                     />
                   </div>
                 </div>
@@ -1334,33 +1321,33 @@ export default function AtposExtraModules({
         </div>
 
         {/* Member Loyalty Roster Table */}
-        <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-2xl space-y-3 shadow-xs text-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-m3-outline-variant/10 pb-3">
+        <div className="bg-content1 border border-divider/15 p-4 rounded-2xl space-y-3 shadow-xs text-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-divider/10 pb-3">
             <div>
-              <h3 className="font-bold text-sm text-m3-primary flex items-center gap-1.5">
+              <h3 className="font-bold text-sm text-primary flex items-center gap-1.5">
                 <Users className="h-4 w-4" />
                 <span>Member Loyalty Points Roster</span>
               </h3>
-              <p className="text-[11px] text-zinc-400 mt-0.5">
+              <p className="text-[11px] text-default-500 mt-0.5">
                 View accumulated reward points and manage balances.
               </p>
             </div>
 
-            <div className="flex bg-m3-surface-high border border-m3-outline-variant/30 px-2.5 py-1.5 rounded-xl items-center gap-2 w-full sm:w-64">
-              <Search className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
+            <div className="flex bg-content3 border border-divider/30 px-2.5 py-1.5 rounded-xl items-center gap-2 w-full sm:w-64">
+              <Search className="h-3.5 w-3.5 text-default-500 shrink-0" />
               <input
                 type="text"
                 value={loyaltyMemberSearch ?? ''}
                 onChange={(e) => setLoyaltyMemberSearch(e.target.value)}
                 placeholder="Search member name or phone..."
-                className="w-full bg-transparent border-0 outline-none text-xs text-m3-on-surface"
+                className="w-full bg-transparent border-0 outline-none text-xs text-foreground"
               />
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-m3-outline-variant/15">
+          <div className="overflow-x-auto rounded-xl border border-divider/15">
             <table className="w-full text-left text-xs">
-              <thead className="bg-m3-surface-high/50 font-bold border-b border-m3-outline-variant/15 text-m3-on-surface-variant">
+              <thead className="bg-content3/50 font-bold border-b border-divider/15 text-default-500">
                 <tr>
                   <th className="p-3">Member Profile</th>
                   <th className="p-3">Contact</th>
@@ -1370,7 +1357,7 @@ export default function AtposExtraModules({
                   <th className="p-3 text-center">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-m3-outline-variant/10">
+              <tbody className="divide-y divide-divider/10">
                 {(() => {
                   const filtered = members.filter(
                     (m) =>
@@ -1382,7 +1369,7 @@ export default function AtposExtraModules({
                   if (filtered.length === 0) {
                     return (
                       <tr>
-                        <td colSpan={6} className="p-8 text-center text-zinc-400 italic">
+                        <td colSpan={6} className="p-8 text-center text-default-500 italic">
                           No matching member profiles found.
                         </td>
                       </tr>
@@ -1393,26 +1380,26 @@ export default function AtposExtraModules({
                     const ptValue = (m.points || 0) * (config.pointValueInPhp || 1.0);
 
                     return (
-                      <tr key={m.id} className="hover:bg-m3-primary/5 transition-colors">
-                        <td className="p-3 font-semibold text-m3-on-surface">
+                      <tr key={m.id} className="hover:bg-primary/5 transition-colors">
+                        <td className="p-3 font-semibold text-foreground">
                           <div className="flex items-center gap-2">
                             <div className="h-7 w-7 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold text-xs shrink-0">
                               {m.fullName.charAt(0)}
                             </div>
                             <div>
-                              <div className="font-bold text-m3-on-surface">{m.fullName}</div>
-                              <div className="text-[10px] text-zinc-400 font-mono">{m.id}</div>
+                              <div className="font-bold text-foreground">{m.fullName}</div>
+ <div className="text-[10px] text-default-500 ">{m.id}</div>
                             </div>
                           </div>
                         </td>
                         <td className="p-3">
-                          <div className="text-m3-on-surface font-medium">{m.phone || "N/A"}</div>
-                          <div className="text-[10px] text-zinc-400">{m.email || "—"}</div>
+                          <div className="text-foreground font-medium">{m.phone || "N/A"}</div>
+                          <div className="text-[10px] text-default-500">{m.email || "—"}</div>
                         </td>
-                        <td className="p-3 text-right font-mono font-extrabold text-amber-500 text-sm">
-                          ⭐ {(m.points || 0).toLocaleString()} Pts
+ <td className="p-3 text-right font-extrabold text-amber-500 text-sm">
+                          {(m.points || 0).toLocaleString()} Pts
                         </td>
-                        <td className="p-3 text-right font-mono font-bold text-emerald-500">
+ <td className="p-3 text-right font-bold text-emerald-500">
                           {formatCurrency(ptValue)}
                         </td>
                         <td className="p-3 text-center">
@@ -1455,8 +1442,8 @@ export default function AtposExtraModules({
  animate={{ opacity: 1 }}
  className="grid md:grid-cols-3 gap-6"
  >
- <div className="md:col-span-1 bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl h-fit space-y-4">
- <h3 className="font-bold text-sm text-m3-primary border-b border-m3-outline-variant/10 pb-3 flex items-center gap-1.5">
+ <div className="md:col-span-1 bg-content1 border border-divider/15 p-5 rounded-2xl h-fit space-y-4">
+ <h3 className="font-bold text-sm text-primary border-b border-divider/10 pb-3 flex items-center gap-1.5">
  <PlusCircle className="h-5 w-5" />
  Deduct Branch Cash Expense
  </h3>
@@ -1465,13 +1452,13 @@ export default function AtposExtraModules({
  className="space-y-3 font-sans text-xs"
  >
  <div className="space-y-1">
- <label className="font-bold text-m3-on-surface-variant">
+ <label className="font-bold text-default-500">
  Branch Location *
  </label>
  <select
  value={expBranchId ?? ''}
  onChange={(e) => setExpBranchId(e.target.value)}
- className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary font-bold text-m3-primary"
+ className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none focus:border-primary font-bold text-primary"
  >
  {db.branches.filter((b) => !b.isDeleted).map((b) => (
  <option key={b.id} value={b.id}>
@@ -1481,13 +1468,13 @@ export default function AtposExtraModules({
  </select>
  </div>
  <div className="space-y-1">
- <label className="font-bold text-m3-on-surface-variant">
+ <label className="font-bold text-default-500">
  Expense Classification *
  </label>
  <select
  value={expCategory ?? ''}
  onChange={(e) => setExpCategory(e.target.value)}
- className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary"
+ className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none focus:border-primary"
  >
  <option value="Floor Supplies">Floor Supplies</option>
  <option value="Delivery Gas">Delivery Gas</option>
@@ -1506,7 +1493,7 @@ export default function AtposExtraModules({
  </div>
  {expCategory === "Other / Custom" && (
  <div className="space-y-1">
- <label className="font-bold text-m3-on-surface-variant">
+ <label className="font-bold text-default-500">
  Specify Custom Classification *
  </label>
  <input
@@ -1515,12 +1502,12 @@ export default function AtposExtraModules({
  onChange={(e) => setCustomCategory(e.target.value)}
  type="text"
  placeholder="Custom classification"
- className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary"
+ className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none focus:border-primary"
  />
  </div>
  )}
  <div className="space-y-1">
- <label className="font-bold text-m3-on-surface-variant">
+ <label className="font-bold text-default-500">
  Amount Disbursed (PHP) *
  </label>
  <input
@@ -1529,11 +1516,11 @@ export default function AtposExtraModules({
  onChange={(e) => setExpAmount(e.target.value)}
  type="number"
  placeholder="500"
- className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 font-mono outline-none focus:border-m3-primary"
+ className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none focus:border-primary"
  />
  </div>
  <div className="space-y-1">
- <label className="font-bold text-m3-on-surface-variant">
+ <label className="font-bold text-default-500">
  Detailed Notes / Vendor *
  </label>
  <textarea
@@ -1541,12 +1528,12 @@ export default function AtposExtraModules({
  value={expNotes ?? ''}
  onChange={(e) => setExpNotes(e.target.value)}
  placeholder="Bought extra heavy mop for the main hall tiles..."
- className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary"
+ className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none focus:border-primary"
  />
  </div>
  <button
  type="submit"
- className="w-full bg-m3-primary text-m3-on-primary py-2.5 rounded-xl font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5 cursor-pointer"
+ className="w-full bg-primary text-primary-foreground py-2.5 rounded-xl font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5 cursor-pointer"
  >
  <DollarSign className="h-4 w-4" />
  Confirm Petty Cash Payout
@@ -1555,20 +1542,20 @@ export default function AtposExtraModules({
  </div>
 
  <div className="md:col-span-2 space-y-4">
- <div className="flex bg-m3-surface-low border border-m3-outline-variant/15 p-2 rounded-xl items-center gap-2 font-sans text-xs">
- <Search className="h-4 w-4 text-m3-on-surface-variant pl-1 shrink-0" />
+ <div className="flex bg-content1 border border-divider/15 p-2 rounded-xl items-center gap-2 font-sans text-xs">
+ <Search className="h-4 w-4 text-default-500 pl-1 shrink-0" />
  <input
  value={expenseSearch ?? ''}
  onChange={(e) => setExpenseSearch(e.target.value)}
  placeholder="Filter disbursements..."
  className="w-full bg-transparent border-0 outline-none p-1.5"
  />
- <div className="flex items-center gap-1 shrink-0 border-l border-m3-outline-variant/20 pl-2">
- <Building2 className="h-3.5 w-3.5 text-m3-primary shrink-0" />
+ <div className="flex items-center gap-1 shrink-0 border-l border-divider/20 pl-2">
+ <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
  <select
  value={expenseBranchFilter ?? ''}
  onChange={(e) => setExpenseBranchFilter(e.target.value)}
- className="bg-m3-surface border border-m3-outline-variant/30 text-m3-primary text-xs font-bold rounded-lg px-2 py-1 outline-none cursor-pointer"
+ className="bg-background border border-divider/30 text-primary text-xs font-bold rounded-lg px-2 py-1 outline-none cursor-pointer"
  >
  <option value="All">All Branches</option>
  {db.branches.filter((b) => !b.isDeleted).map((b) => (
@@ -1580,9 +1567,9 @@ export default function AtposExtraModules({
  </div>
  </div>
 
- <div className="bg-m3-surface-low border border-m3-outline-variant/15 rounded-2xl overflow-hidden shadow-sm">
+ <div className="bg-content1 border border-divider/15 rounded-2xl overflow-hidden shadow-sm">
  <table className="w-full text-left font-sans text-xs">
- <thead className="bg-m3-surface-high/50 font-bold border-b border-m3-outline-variant/15">
+ <thead className="bg-content3/50 font-bold border-b border-divider/15">
  <tr>
  <th className="p-3">Track Info</th>
  <th className="p-3">Category</th>
@@ -1608,14 +1595,14 @@ export default function AtposExtraModules({
  <tr>
  <td colSpan={6} className="p-8 text-center">
  <div className="flex flex-col items-center justify-center space-y-2.5 py-6">
- <div className="h-12 w-12 rounded-2xl bg-m3-primary/10 text-m3-primary flex items-center justify-center shadow-inner border border-m3-primary/15">
+ <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-inner border border-primary/15">
  <Receipt className="h-6 w-6" />
  </div>
  <div className="space-y-1">
- <p className="font-extrabold text-sm text-m3-on-surface">
+ <p className="font-extrabold text-sm text-foreground">
  {expenseSearch ? "No Matching Expenses Found" : "No Operational Expenses Logged"}
  </p>
- <p className="text-xs text-m3-on-surface-variant max-w-sm mx-auto leading-relaxed">
+ <p className="text-xs text-default-500 max-w-sm mx-auto leading-relaxed">
  {expenseSearch
  ? `No disbursement entry matches "${expenseSearch}". Try adjusting your filter term.`
  : "No petty cash or store operating expenses logged yet. Use the disbursement form on the left to record new expenses."}
@@ -1625,7 +1612,7 @@ export default function AtposExtraModules({
  <button
  type="button"
  onClick={() => setExpenseSearch("")}
- className="mt-1 px-3 py-1.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary text-xs font-bold rounded-lg transition-colors cursor-pointer border-0"
+ className="mt-1 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold rounded-lg transition-colors cursor-pointer border-0"
  >
  Clear Expense Filter
  </button>
@@ -1639,26 +1626,26 @@ export default function AtposExtraModules({
  return filteredExpenses.map((ex) => (
  <tr
  key={ex.id}
- className="border-b border-m3-outline-variant/10 hover:bg-m3-primary/5 transition-all"
+ className="border-b border-divider/10 hover:bg-primary/5 transition-all"
  >
- <td className="p-3 font-semibold text-m3-on-surface">
+ <td className="p-3 font-semibold text-foreground">
  <div>{ex.notes}</div>
- <div className="text-[10px] text-zinc-400 font-mono mt-0.5">
+ <div className="text-[10px] text-default-500 mt-0.5">
  {ex.dateTime && !isNaN(new Date(ex.dateTime).getTime()) ? new Date(ex.dateTime).toLocaleString("en-US") : "N/A"}
  </div>
  </td>
  <td className="p-3">
- <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-m3-secondary-container text-m3-on-secondary-container">
+ <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-content2 text-foreground">
  {ex.category}
  </span>
  </td>
- <td className="p-3 text-zinc-400 font-bold">
+ <td className="p-3 text-default-500 font-bold">
  {ex.recordedBy}
  </td>
- <td className="p-3 text-zinc-400 font-mono">
+ <td className="p-3 text-default-500 ">
  {ex.branchId}
  </td>
- <td className="p-3 text-right font-mono text-rose-500 font-bold">
+ <td className="p-3 text-right text-rose-500 font-bold">
  -₱{ex.amount.toLocaleString()}
  </td>
  <td className="p-3 text-center">
@@ -1710,16 +1697,16 @@ export default function AtposExtraModules({
         animate={{ opacity: 1 }}
         className="space-y-4"
       >
-        <div className="flex flex-col md:flex-row bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl items-stretch md:items-center justify-between font-sans text-xs gap-4">
+        <div className="flex flex-col md:flex-row bg-content1 border border-divider/15 p-4 rounded-xl items-stretch md:items-center justify-between font-sans text-xs gap-4">
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
-              <CalendarDays className="h-4 w-4 text-m3-primary" />
-              <span className="font-extrabold text-m3-on-surface-variant">Filter Date:</span>
+              <CalendarDays className="h-4 w-4 text-primary" />
+              <span className="font-extrabold text-default-500">Filter Date:</span>
               <input
                 type="date"
                 value={dateFilter ?? ''}
                 onChange={(e) => setDateFilter(e.target.value)}
-                className="bg-m3-surface-high border border-m3-outline-variant rounded p-1 outline-none text-m3-on-surface"
+                className="bg-content3 border border-divider rounded p-1 outline-none text-foreground"
               />
               {dateFilter && (
                 <button
@@ -1733,11 +1720,11 @@ export default function AtposExtraModules({
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-m3-on-surface-variant">Category:</span>
+              <span className="font-extrabold text-default-500">Category:</span>
               <select
                 value={expenseCategoryFilter ?? ''}
                 onChange={(e) => setExpenseCategoryFilter(e.target.value)}
-                className="bg-m3-surface-high border border-m3-outline-variant rounded p-1 outline-none text-m3-on-surface"
+                className="bg-content3 border border-divider rounded p-1 outline-none text-foreground"
               >
                 <option value="">All Categories</option>
                 {Array.from(new Set(expenses.filter(ex => !ex.isDeleted).map(ex => ex.category))).map(cat => (
@@ -1756,13 +1743,13 @@ export default function AtposExtraModules({
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-m3-on-surface-variant">Search:</span>
+              <span className="font-extrabold text-default-500">Search:</span>
               <input
                 type="text"
                 placeholder="Search detail, user, ID..."
                 value={expenseSearchQuery ?? ''}
                 onChange={(e) => setExpenseSearchQuery(e.target.value)}
-                className="bg-m3-surface-high border border-m3-outline-variant rounded p-1 outline-none text-m3-on-surface w-44"
+                className="bg-content3 border border-divider rounded p-1 outline-none text-foreground w-44"
               />
               {expenseSearchQuery && (
                 <button
@@ -1816,20 +1803,20 @@ export default function AtposExtraModules({
                   URL.revokeObjectURL(url);
                 });
             }}
-            className="py-1.5 px-3 rounded bg-m3-primary text-m3-on-primary font-bold transition flex items-center justify-center gap-1 border-0 cursor-pointer self-start md:self-auto hover:opacity-90 active:scale-95"
+            className="py-1.5 px-3 rounded bg-primary text-primary-foreground font-bold transition flex items-center justify-center gap-1 border-0 cursor-pointer self-start md:self-auto hover:opacity-90 active:scale-95"
           >
             <Download className="h-3.5 w-3.5" /> Export CSV / Excel
           </button>
         </div>
 
         {filteredExpenses.length === 0 ? (
-          <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl text-center space-y-4 py-12">
-            <Archive className="h-10 w-10 text-m3-primary/30 mx-auto animate-pulse" />
+          <div className="bg-content1 border border-divider/15 p-5 rounded-2xl text-center space-y-4 py-12">
+            <Archive className="h-10 w-10 text-primary/30 mx-auto animate-pulse" />
             <div>
-              <h3 className="font-bold text-sm text-m3-on-surface">
+              <h3 className="font-bold text-sm text-foreground">
                 No Disbursement Registry Records Found
               </h3>
-              <p className="text-xs text-m3-on-surface-variant max-w-sm mx-auto mt-1 leading-normal">
+              <p className="text-xs text-default-500 max-w-sm mx-auto mt-1 leading-normal">
                 Try adjusting your filter date, category selector, or search term to locate specific operational expense records.
               </p>
             </div>
@@ -1841,7 +1828,7 @@ export default function AtposExtraModules({
                   setExpenseCategoryFilter("");
                   setExpenseSearchQuery("");
                 }}
-                className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary text-xs font-bold rounded-lg transition-colors cursor-pointer border-0"
+                className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold rounded-lg transition-colors cursor-pointer border-0"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 Reset Search Filters
@@ -1849,27 +1836,27 @@ export default function AtposExtraModules({
             )}
           </div>
         ) : (
-          <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-m3-outline-variant/10 pb-3">
+          <div className="bg-content1 border border-divider/15 p-5 rounded-2xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-divider/10 pb-3">
               <div>
-                <h3 className="font-bold text-sm text-m3-on-surface">
+                <h3 className="font-bold text-sm text-foreground">
                   Disbursement Registry Records
                 </h3>
-                <p className="text-[11px] text-m3-on-surface-variant mt-0.5">
+                <p className="text-[11px] text-default-500 mt-0.5">
                   Showing {filteredExpenses.length} historical expense audits. Certified entries mapped to current showrooms.
                 </p>
               </div>
               <div className="sm:text-right">
-                <span className="text-[9px] font-black uppercase tracking-widest text-m3-on-surface-variant font-mono block">Total Cash Outflow:</span>
-                <span className="text-sm font-black text-rose-500 font-mono">
+ <span className="text-[9px] font-black uppercase tracking-widest text-default-500 block">Total Cash Outflow:</span>
+ <span className="text-sm font-black text-rose-500 ">
                   ₱{totalOutflow.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             </div>
 
-            <div className="w-full border border-m3-outline-variant/15 rounded-xl overflow-hidden shadow-sm overflow-x-auto bg-m3-surface-lowest">
+            <div className="w-full border border-divider/15 rounded-xl overflow-hidden shadow-sm overflow-x-auto bg-content1">
               <table className="w-full text-left font-sans text-xs min-w-[700px]">
-                <thead className="bg-m3-surface-high/60 text-m3-on-surface-variant font-bold border-b border-m3-outline-variant/15 text-[10.5px]">
+                <thead className="bg-content3/60 text-default-500 font-bold border-b border-divider/15 text-[10.5px]">
                   <tr>
                     <th className="p-3">Receipt No</th>
                     <th className="p-3">Date & Time</th>
@@ -1880,30 +1867,30 @@ export default function AtposExtraModules({
                     <th className="p-3 text-center">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-m3-outline-variant/10">
+                <tbody className="divide-y divide-divider/10">
                   {filteredExpenses.map((ex) => (
                     <tr
                       key={ex.id}
-                      className="hover:bg-m3-surface-high/20 transition-colors"
+                      className="hover:bg-content3/20 transition-colors"
                     >
-                      <td className="p-3 font-mono font-bold text-m3-primary text-xs align-middle">
+ <td className="p-3 font-bold text-primary text-xs align-middle">
                         {ex.id}
                       </td>
-                      <td className="p-3 text-m3-on-surface-variant text-xs align-middle font-mono">
+ <td className="p-3 text-default-500 text-xs align-middle ">
                         {ex.dateTime && !isNaN(new Date(ex.dateTime).getTime()) ? new Date(ex.dateTime).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) : "N/A"}
                       </td>
                       <td className="p-3 align-middle">
-                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-m3-primary/10 text-m3-primary border border-m3-primary/20">
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
                           {ex.category}
                         </span>
                       </td>
-                      <td className="p-3 text-m3-on-surface text-xs align-middle max-w-xs truncate font-medium" title={ex.notes}>
+                      <td className="p-3 text-foreground text-xs align-middle max-w-xs truncate font-medium" title={ex.notes}>
                         {ex.notes}
                       </td>
-                      <td className="p-3 text-m3-on-surface-variant text-xs align-middle font-medium">
+                      <td className="p-3 text-default-500 text-xs align-middle font-medium">
                         {ex.recordedBy || 'System'}
                       </td>
-                      <td className="p-3 text-right font-mono text-rose-500 font-extrabold text-xs align-middle">
+ <td className="p-3 text-right text-rose-500 font-extrabold text-xs align-middle">
                         -₱{ex.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="p-3 text-center align-middle">
@@ -1934,8 +1921,8 @@ export default function AtposExtraModules({
  animate={{ opacity: 1 }}
  className="grid md:grid-cols-3 gap-6"
  >
- <div className="md:col-span-1 bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl h-fit space-y-4">
- <h3 className="font-bold text-sm text-m3-primary border-b border-m3-outline-variant/10 pb-3 flex items-center gap-1.5">
+ <div className="md:col-span-1 bg-content1 border border-divider/15 p-5 rounded-2xl h-fit space-y-4">
+ <h3 className="font-bold text-sm text-primary border-b border-divider/10 pb-3 flex items-center gap-1.5">
  <RefreshCw className="h-5 w-5" />
  Register Sales Return
  </h3>
@@ -1944,7 +1931,7 @@ export default function AtposExtraModules({
  className="space-y-3 font-sans text-xs"
  >
  <div className="space-y-1">
- <label className="font-bold text-m3-on-surface-variant">
+ <label className="font-bold text-default-500">
  Original System Sale Receipt ID *
  </label>
  <input
@@ -1953,11 +1940,11 @@ export default function AtposExtraModules({
  onChange={(e) => setRetSaleId(e.target.value)}
  type="text"
  placeholder="Receipt ID"
- className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 font-bold outline-none focus:border-m3-primary"
+ className="w-full bg-content3 border border-divider rounded-lg p-2.5 font-bold outline-none focus:border-primary"
  />
  </div>
  <div className="space-y-1">
- <label className="font-bold text-m3-on-surface-variant">
+ <label className="font-bold text-default-500">
  Select Tile / Product Return *
  </label>
  <input
@@ -1966,12 +1953,12 @@ export default function AtposExtraModules({
  onChange={(e) => setRetProduct(e.target.value)}
  type="text"
  placeholder="Ceramic Floor Tile Carrara"
- className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary"
+ className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none focus:border-primary"
  />
  </div>
  <div className="grid grid-cols-2 gap-3">
  <div className="space-y-1">
- <label className="font-bold text-m3-on-surface-variant">
+ <label className="font-bold text-default-500">
  Qty Returned *
  </label>
  <input
@@ -1980,17 +1967,17 @@ export default function AtposExtraModules({
  onChange={(e) => setRetQty(e.target.value)}
  type="number"
  placeholder="1"
- className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary"
+ className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none focus:border-primary"
  />
  </div>
  <div className="space-y-1">
- <label className="font-bold text-m3-on-surface-variant">
+ <label className="font-bold text-default-500">
  Damage Fee %
  </label>
  <select
  value={retFee ?? ''}
  onChange={(e) => setRetFee(e.target.value)}
- className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary"
+ className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none focus:border-primary"
  >
  <option value="5">5% fee</option>
  <option value="10">10% fee</option>
@@ -2000,7 +1987,7 @@ export default function AtposExtraModules({
  </div>
  </div>
  <div className="space-y-1">
- <label className="font-bold text-m3-on-surface-variant">
+ <label className="font-bold text-default-500">
  Total Amount Refunded (PHP) *
  </label>
  <input
@@ -2009,14 +1996,14 @@ export default function AtposExtraModules({
  onChange={(e) => setRetRef(e.target.value)}
  type="number"
  placeholder="580"
- className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none font-mono focus:border-m3-primary"
+ className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none focus:border-primary"
  />
  </div>
  <div className="space-y-1">
- <label className="font-bold text-m3-on-surface-variant">
+ <label className="font-bold text-default-500">
  Restocking Stock Status
  </label>
- <div className="flex gap-4 p-2 bg-m3-surface-high border border-m3-outline-variant rounded-lg">
+ <div className="flex gap-4 p-2 bg-content3 border border-divider rounded-lg">
  <label className="flex items-center gap-1.5 cursor-pointer">
  <input
  type="radio"
@@ -2037,7 +2024,7 @@ export default function AtposExtraModules({
  </div>
  <button
  type="submit"
- className="w-full bg-m3-primary text-m3-on-primary py-2.5 rounded-xl font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5 cursor-pointer"
+ className="w-full bg-primary text-primary-foreground py-2.5 rounded-xl font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5 cursor-pointer"
  >
  <CheckCircle2 className="h-4 w-4" />
  Submit Sales Return
@@ -2046,13 +2033,13 @@ export default function AtposExtraModules({
  </div>
 
  <div className="md:col-span-2 space-y-4">
- <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl flex items-start gap-3">
- <AlertCircle className="h-5 w-5 text-m3-primary shrink-0 mt-0.5" />
+ <div className="bg-content1 border border-divider/15 p-5 rounded-2xl flex items-start gap-3">
+ <AlertCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
  <div className="text-xs font-sans space-y-1">
- <div className="font-bold text-m3-on-surface">
+ <div className="font-bold text-foreground">
  Returned Stock & Accounting Policy
  </div>
- <p className="text-m3-on-surface-variant leading-relaxed">
+ <p className="text-default-500 leading-relaxed">
  All processed customer returns add the tiles back into
  Warehouse Inventory immediately if logged as "Good Stock".
  Restocking charges are deducted dynamically from the net
@@ -2062,10 +2049,10 @@ export default function AtposExtraModules({
  </div>
  </div>
 
- <div className="bg-m3-surface-low border border-m3-outline-variant/15 rounded-2xl overflow-hidden shadow-sm">
- <div className="overflow-auto scrollbar-thin scrollbar-thumb-m3-outline-variant h-[58vh] md:h-[64vh] lg:h-[68vh] min-h-[380px]">
+ <div className="bg-content1 border border-divider/15 rounded-2xl overflow-hidden shadow-sm">
+ <div className="overflow-auto scrollbar-thin scrollbar-thumb-divider h-[58vh] md:h-[64vh] lg:h-[68vh] min-h-[380px]">
  <table className="w-full text-left font-sans text-xs">
- <thead className="bg-m3-surface-high/50 font-bold border-b border-m3-outline-variant/15">
+ <thead className="bg-content3/50 font-bold border-b border-divider/15">
  <tr>
  <th className="p-3">Track Return</th>
  <th className="p-3">Receipt Ref</th>
@@ -2079,18 +2066,18 @@ export default function AtposExtraModules({
  {productReturns.filter(rt => !rt.isDeleted).map((rt) => (
  <tr
  key={rt.id}
- className="border-b border-m3-outline-variant/10 hover:bg-m3-primary/5 transition-all"
+ className="border-b border-divider/10 hover:bg-primary/5 transition-all"
  >
  <td className="p-3">
- <div className="font-bold text-m3-on-surface">
+ <div className="font-bold text-foreground">
  {rt.productName}
  </div>
- <div className="text-[10px] text-zinc-400 font-mono mt-0.5">
+ <div className="text-[10px] text-default-500 mt-0.5">
  {rt.id} ·{" "}
  {rt.dateTime && !isNaN(new Date(rt.dateTime).getTime()) ? new Date(rt.dateTime).toLocaleString("en-US") : "N/A"}
  </div>
  </td>
- <td className="p-3 font-mono font-black">
+ <td className="p-3 font-black">
  {rt.saleId}
  </td>
  <td className="p-3">
@@ -2104,10 +2091,10 @@ export default function AtposExtraModules({
  {rt.status}
  </span>
  </td>
- <td className="p-3 text-right font-mono text-zinc-400">
+ <td className="p-3 text-right text-default-500">
  ₱{rt.damageRestockFee.toLocaleString()}
  </td>
- <td className="p-3 text-right font-mono text-emerald-500 font-extrabold">
+ <td className="p-3 text-right text-emerald-500 font-extrabold">
  ₱{rt.amountRefunded.toLocaleString()}
  </td>
  <td className="p-3 text-center">
@@ -2139,7 +2126,7 @@ export default function AtposExtraModules({
  <div className="grid md:grid-cols-3 gap-6">
  {db.suppliers
  .filter((s) => !s.isDeleted)
- .map((sup, index) => {
+ .map((sup) => {
  const realOutstanding = db.purchaseOrders
  .filter(
  (po) =>
@@ -2166,35 +2153,35 @@ export default function AtposExtraModules({
  return (
  <div
  key={sup.id}
- className="bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl space-y-4 shadow-sm font-sans flex flex-col justify-between"
+ className="bg-content1 border border-divider/15 p-5 rounded-2xl space-y-4 shadow-sm font-sans flex flex-col justify-between"
  >
  <div>
  <div className="flex justify-between items-start">
- <span className="text-[10px] text-zinc-400 font-mono block tracking-wider font-bold">
+ <span className="text-[10px] text-default-500 block tracking-wider font-bold">
  Supplier {sup.id}
  </span>
  <span className="px-2 py-0.5 rounded text-[9px] font-extrabold uppercase bg-emerald-500/10 text-emerald-500">
  Credited
  </span>
  </div>
- <h4 className="font-black text-sm text-m3-on-surface mt-1">
+ <h4 className="font-black text-sm text-foreground mt-1">
  {sup.name}
  </h4>
- <p className="text-[11px] text-m3-on-surface-variant mt-1">
+ <p className="text-[11px] text-default-500 mt-1">
  {sup.contactPerson} · {sup.phone}
  </p>
  </div>
 
- <div className="pt-3 border-t border-m3-outline-variant/10 space-y-2 mt-4">
+ <div className="pt-3 border-t border-divider/10 space-y-2 mt-4">
  <div className="flex justify-between text-xs">
- <span className="text-m3-on-surface-variant">
+ <span className="text-default-500">
  Outstanding Accounts Payable:
  </span>
- <span className="font-mono font-extrabold text-rose-500">
+ <span className=" font-extrabold text-rose-500">
  ₱{outstanding.toLocaleString()}
  </span>
  </div>
- <div className="w-full bg-zinc-200 dark:bg-zinc-800/60 h-2 rounded-full overflow-hidden">
+ <div className="w-full bg-zinc-200 dark:bg-content2/60 h-2 rounded-full overflow-hidden">
  <div
  style={{
  width: `${(outstanding / creditLimit) * 100}%`,
@@ -2202,7 +2189,7 @@ export default function AtposExtraModules({
  className="bg-rose-500 h-full rounded-full"
  />
  </div>
- <div className="flex justify-between text-[10px] text-zinc-400 font-mono">
+ <div className="flex justify-between text-[10px] text-default-500 ">
  <span>
  Allocated Limit: ₱{(Number(creditLimit) || 0).toLocaleString()}
  </span>
@@ -2219,7 +2206,7 @@ export default function AtposExtraModules({
  `Sent payment dispatch authorization request to accounting for ${sup.name}!`,
  )
  }
- className="w-full py-1.5 bg-m3-primary/10 hover:bg-m3-primary text-m3-primary hover:text-m3-on-primary text-xs rounded-lg font-bold transition mt-3 cursor-pointer"
+ className="w-full py-1.5 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground text-xs rounded-lg font-bold transition mt-3 cursor-pointer"
  >
  Authorize Payment
  </button>
@@ -2307,28 +2294,6 @@ export default function AtposExtraModules({
  }
 
  const flatPayablesList: FlatPayableItem[] = [];
-
- // Seed default supplier distributions dynamically for the active month
- db.suppliers
- .filter((s) => !s.isDeleted)
- .forEach((s, idx) => {
- const simulatedDay = ((idx * 6 + 5) % 28) + 1;
- const simulatedAmount = ((idx * 16500 + 42000) % 95000) + 15000;
- const monthStr = String(calendarMonth + 1).padStart(2, "0");
- const dayStr = String(simulatedDay).padStart(2, "0");
- 
- flatPayablesList.push({
- day: simulatedDay,
- month: calendarMonth,
- year: calendarYear,
- supplierName: s.name,
- amount: simulatedAmount,
- poNumber: `PO-${calendarYear}${monthStr}${dayStr}-0${idx + 1}`,
- poId: `SIM-${idx + 1}-${calendarYear}-${monthStr}`,
- status: "Approved",
- type: "Projected PO",
- });
- });
 
  // Map standard single-date Purchase Orders matching active month & year
  db.purchaseOrders.forEach((po) => {
@@ -2538,36 +2503,11 @@ export default function AtposExtraModules({
  u.status === "Active" &&
  u.managerPin === partialManagerPin
  );
-
- if (foundUserByPin) {
- isAuthorized = true;
- authorizerName = foundUserByPin.fullName;
- } else {
- // Validate fallback values for seed profiles or general overrides
- const isEricaPin = partialManagerPin === "4321";
- const isJuanPin = partialManagerPin === "9988";
- const isTomasPin = partialManagerPin === "1122";
- const isDemoPin =
- partialManagerPin === "1234" || partialManagerPin === "0000" || partialManagerPin === "8888";
-
- if (isEricaPin) {
- const erica = db.users.find((u: any) => u.username === "erica_admin");
- authorizerName = erica ? erica.fullName : "Erica Manaban (Admin)";
- isAuthorized = true;
- } else if (isJuanPin) {
- const juan = db.users.find((u: any) => u.username === "juan_mgr");
- authorizerName = juan ? juan.fullName : "Juan Gomez (Manager)";
- isAuthorized = true;
- } else if (isTomasPin) {
- const tomas = db.users.find((u: any) => u.username === "tomas_mgr");
- authorizerName = tomas ? tomas.fullName : "Tomas Santos (Manager)";
- isAuthorized = true;
- } else if (isDemoPin) {
- authorizerName = "Global Manager (Demo)";
- isAuthorized = true;
- }
- }
- }
+    if (foundUserByPin) {
+      isAuthorized = true;
+      authorizerName = foundUserByPin.fullName;
+    }
+  }
 
  if (!isAuthorized) {
  alert("Authorization Denied: Invalid security authorization PIN.");
@@ -2665,31 +2605,31 @@ export default function AtposExtraModules({
  >
  <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
  {/* Interactive Form & Payables Side Panel */}
- <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl text-left space-y-4 h-fit flex flex-col">
+ <div className="bg-content1 border border-divider/15 p-5 rounded-2xl text-left space-y-4 h-fit flex flex-col">
  
  {/* Panel Title & Tab Switcher */}
  <div className="space-y-3">
- <div className="flex items-center justify-between text-m3-primary border-b border-m3-outline-variant/10 pb-2">
+ <div className="flex items-center justify-between text-primary border-b border-divider/10 pb-2">
  <div className="flex items-center gap-2">
  <Sliders className="h-4.5 w-4.5" />
- <h4 className="font-extrabold text-xs uppercase tracking-wider font-mono">
+ <h4 className="font-extrabold text-xs uppercase tracking-wider ">
  Payables Hub
  </h4>
  </div>
- <span className="text-[10px] font-mono font-bold bg-m3-primary/10 text-m3-primary px-2 py-0.5 rounded-full">
+ <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
  {flatPayablesList.length} Accounts
  </span>
  </div>
 
  {/* Segmented Control Selector Tabs */}
- <div className="flex border border-m3-outline-variant/10 p-0.5 bg-m3-surface-high/30 rounded-xl">
+ <div className="flex border border-divider/10 p-0.5 bg-content3/30 rounded-xl">
  <button
  type="button"
  onClick={() => setLeftPanelTab("list")}
  className={`flex-1 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all border-0 cursor-pointer ${
  leftPanelTab === "list"
- ? "bg-m3-primary text-m3-on-primary shadow-xs font-black"
- : "text-zinc-400 hover:text-zinc-200"
+ ? "bg-primary text-primary-foreground shadow-xs font-black"
+ : "text-default-500 hover:text-foreground"
  }`}
  >
  Accounts List
@@ -2699,8 +2639,8 @@ export default function AtposExtraModules({
  onClick={() => setLeftPanelTab("create")}
  className={`flex-1 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all border-0 cursor-pointer ${
  leftPanelTab === "create"
- ? "bg-m3-primary text-m3-on-primary shadow-xs font-black"
- : "text-zinc-400 hover:text-zinc-200"
+ ? "bg-primary text-primary-foreground shadow-xs font-black"
+ : "text-default-500 hover:text-foreground"
  }`}
  >
  Setup Bill
@@ -2710,8 +2650,8 @@ export default function AtposExtraModules({
  onClick={() => setLeftPanelTab("notes")}
  className={`flex-1 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all border-0 cursor-pointer ${
  leftPanelTab === "notes"
- ? "bg-m3-primary text-m3-on-primary shadow-xs font-black"
- : "text-zinc-400 hover:text-zinc-200"
+ ? "bg-primary text-primary-foreground shadow-xs font-black"
+ : "text-default-500 hover:text-foreground"
  }`}
  >
  Memos
@@ -2725,7 +2665,7 @@ export default function AtposExtraModules({
  className="space-y-3 font-sans text-xs"
  >
  <div className="space-y-1">
- <label className="font-bold text-m3-on-surface-variant">
+ <label className="font-bold text-default-500">
  Liability Account Title *
  </label>
  <input
@@ -2734,11 +2674,11 @@ export default function AtposExtraModules({
  value={billTitle ?? ''}
  onChange={(e) => setBillTitle(e.target.value)}
  placeholder="Account Title"
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded-lg p-2.5 outline-none font-semibold focus:border-m3-primary text-m3-on-surface"
+ className="w-full bg-content1 border border-divider rounded-lg p-2.5 outline-none font-semibold focus:border-primary text-foreground"
  />
  </div>
  <div className="space-y-1">
- <label className="font-bold text-m3-on-surface-variant">
+ <label className="font-bold text-default-500">
  Payout Amount (PHP) *
  </label>
  <input
@@ -2747,11 +2687,11 @@ export default function AtposExtraModules({
  value={billAmount ?? ''}
  onChange={(e) => setBillAmount(e.target.value)}
  placeholder="12500"
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded-lg p-2.5 outline-none font-mono focus:border-m3-primary text-m3-on-surface"
+ className="w-full bg-content1 border border-divider rounded-lg p-2.5 outline-none focus:border-primary text-foreground"
  />
  </div>
  <div className="space-y-1">
- <label className="font-bold text-m3-on-surface-variant">
+ <label className="font-bold text-default-500">
  Recurrence Interval *
  </label>
  <select
@@ -2759,46 +2699,46 @@ export default function AtposExtraModules({
  onChange={(e) =>
  setBillFrequency(e.target.value as any)
  }
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded-lg p-2.5 outline-none focus:border-m3-primary font-bold text-m3-on-surface"
+ className="w-full bg-content1 border border-divider rounded-lg p-2.5 outline-none focus:border-primary font-bold text-foreground"
  >
- <option value="WEEKLY" className="bg-m3-surface-lowest text-m3-on-surface">Weekly Cycle</option>
- <option value="MONTHLY" className="bg-m3-surface-lowest text-m3-on-surface">Monthly Cycle</option>
- <option value="SEMI_QUARTERLY" className="bg-m3-surface-lowest text-m3-on-surface">
+ <option value="WEEKLY" className="bg-content1 text-foreground">Weekly Cycle</option>
+ <option value="MONTHLY" className="bg-content1 text-foreground">Monthly Cycle</option>
+ <option value="SEMI_QUARTERLY" className="bg-content1 text-foreground">
  Semi-Quarterly (45d)
  </option>
- <option value="QUARTERLY" className="bg-m3-surface-lowest text-m3-on-surface">
+ <option value="QUARTERLY" className="bg-content1 text-foreground">
  Quarterly Installment
  </option>
- <option value="YEARLY" className="bg-m3-surface-lowest text-m3-on-surface">Yearly Corporate Bill</option>
+ <option value="YEARLY" className="bg-content1 text-foreground">Yearly Corporate Bill</option>
  </select>
  </div>
  <div className="space-y-1">
- <label className="font-bold text-m3-on-surface-variant">
+ <label className="font-bold text-default-500">
  Target Start Due Date *
  </label>
  <input
  type="date"
  value={billDueDate ?? ''}
  onChange={(e) => setBillDueDate(e.target.value)}
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded-lg p-2.5 outline-none cursor-pointer font-bold font-mono text-m3-on-surface"
+ className="w-full bg-content1 border border-divider rounded-lg p-2.5 outline-none cursor-pointer font-bold text-foreground"
  />
  </div>
  <button
  type="submit"
- className="w-full py-2.5 bg-m3-primary text-m3-on-primary font-black uppercase tracking-wider text-[10px] rounded-xl shadow-sm hover:opacity-90 cursor-pointer border-0"
+ className="w-full py-2.5 bg-primary text-primary-foreground font-black uppercase tracking-wider text-[10px] rounded-xl shadow-sm hover:opacity-90 cursor-pointer border-0"
  >
  Schedule Recurring Bill
  </button>
  </form>
  ) : leftPanelTab === "notes" ? (
  <div className="space-y-3 flex-1 flex flex-col animate-fade-in text-xs h-full">
- <div className="flex items-center gap-1.5 text-m3-primary border-b border-m3-outline-variant/10 pb-2">
+ <div className="flex items-center gap-1.5 text-primary border-b border-divider/10 pb-2">
  <FileText className="h-4.5 w-4.5" />
- <h4 className="font-extrabold text-xs uppercase tracking-wider font-mono">
+ <h4 className="font-extrabold text-xs uppercase tracking-wider ">
  Calendar Memos
  </h4>
  </div>
- <p className="text-[10px] text-zinc-400">
+ <p className="text-[10px] text-default-500">
  Draft reminders or admin details here. All changes are instantly saved to the secure database.
  </p>
  <textarea
@@ -2807,9 +2747,9 @@ export default function AtposExtraModules({
  setCalendarNotes(e.target.value);
  }}
  placeholder="Type notes or specific reminders here..."
- className="w-full flex-1 min-h-[350px] bg-m3-surface-lowest border border-m3-outline-variant rounded-xl p-3 outline-none text-m3-on-surface text-xs font-mono focus:border-m3-primary resize-none leading-relaxed"
+ className="w-full flex-1 min-h-[350px] bg-content1 border border-divider rounded-xl p-3 outline-none text-foreground text-xs focus:border-primary resize-none leading-relaxed"
  />
- <div className="flex justify-between items-center text-[9px] text-zinc-500 font-mono">
+ <div className="flex justify-between items-center text-[9px] text-default-500 ">
  <span>Auto-Saved Securely</span>
  <span>{calendarNotes.length} chars</span>
  </div>
@@ -2819,44 +2759,44 @@ export default function AtposExtraModules({
  {/* Search, Status Filter, and Sort By */}
  <div className="space-y-2">
  <div className="relative">
- <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-zinc-500" />
+ <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-default-500" />
  <input
  type="text"
  value={payableSearchQuery ?? ''}
  onChange={(e) => setPayableSearchQuery(e.target.value)}
  placeholder="Search supplier / ID..."
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded-lg pl-8 pr-3 py-2 text-xs outline-none focus:border-m3-primary text-m3-on-surface font-medium"
+ className="w-full bg-content1 border border-divider rounded-lg pl-8 pr-3 py-2 text-xs outline-none focus:border-primary text-foreground font-medium"
  />
  </div>
 
  <div className="grid grid-cols-2 gap-2">
  <div className="space-y-0.5">
- <label className="text-[8px] font-black uppercase tracking-wider text-zinc-500">
+ <label className="text-[8px] font-black uppercase tracking-wider text-default-500">
  Filter Status
  </label>
  <select
  value={payableStatusFilter ?? ''}
  onChange={(e) => setPayableStatusFilter(e.target.value as any)}
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded-md p-1 font-sans text-[10px] outline-none font-bold focus:border-m3-primary text-m3-on-surface"
+ className="w-full bg-content1 border border-divider rounded-md p-1 font-sans text-[10px] outline-none font-bold focus:border-primary text-foreground"
  >
- <option value="all" className="bg-m3-surface-lowest text-m3-on-surface">All</option>
- <option value="active" className="bg-m3-surface-lowest text-m3-on-surface">Active</option>
- <option value="partial" className="bg-m3-surface-lowest text-m3-on-surface">Partial</option>
- <option value="paid" className="bg-m3-surface-lowest text-m3-on-surface">Settled</option>
+ <option value="all" className="bg-content1 text-foreground">All</option>
+ <option value="active" className="bg-content1 text-foreground">Active</option>
+ <option value="partial" className="bg-content1 text-foreground">Partial</option>
+ <option value="paid" className="bg-content1 text-foreground">Settled</option>
  </select>
  </div>
  <div className="space-y-0.5">
- <label className="text-[8px] font-black uppercase tracking-wider text-zinc-500">
+ <label className="text-[8px] font-black uppercase tracking-wider text-default-500">
  Sort By
  </label>
  <select
  value={payableSortField ?? ''}
  onChange={(e) => setPayableSortField(e.target.value as any)}
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded-md p-1 font-sans text-[10px] outline-none font-bold focus:border-m3-primary text-m3-on-surface"
+ className="w-full bg-content1 border border-divider rounded-md p-1 font-sans text-[10px] outline-none font-bold focus:border-primary text-foreground"
  >
- <option value="due" className="bg-m3-surface-lowest text-m3-on-surface">Urgency</option>
- <option value="amount" className="bg-m3-surface-lowest text-m3-on-surface">Amount</option>
- <option value="supplier" className="bg-m3-surface-lowest text-m3-on-surface">Supplier</option>
+ <option value="due" className="bg-content1 text-foreground">Urgency</option>
+ <option value="amount" className="bg-content1 text-foreground">Amount</option>
+ <option value="supplier" className="bg-content1 text-foreground">Supplier</option>
  </select>
  </div>
  </div>
@@ -2887,8 +2827,8 @@ export default function AtposExtraModules({
  urgencyBadge = "text-amber-500 bg-amber-950/20 border border-amber-500/15";
  alertIconColor = "text-amber-500";
  } else {
- urgencyBadge = "text-zinc-400 bg-zinc-800/20 border border-zinc-700/10";
- alertIconColor = "text-zinc-500";
+ urgencyBadge = "text-default-500 bg-content2/20 border border-divider/25/10";
+ alertIconColor = "text-default-500";
  }
 
  const itemTypeLabel =
@@ -2904,31 +2844,31 @@ export default function AtposExtraModules({
  onClick={() => {
  setSelectedCalendarDay(item.day);
  }}
- className={`p-3 rounded-xl border transition-all text-left cursor-pointer hover:bg-m3-surface-high/35 ${
+ className={`p-3 rounded-xl border transition-all text-left cursor-pointer hover:bg-content3/35 ${
  isSelected
- ? "border-m3-primary bg-m3-primary/5 shadow-xs ring-1 ring-m3-primary"
- : "border-m3-outline-variant/15 bg-m3-surface-high/15"
+ ? "border-primary bg-primary/5 shadow-xs ring-1 ring-primary"
+ : "border-divider/15 bg-content3/15"
  }`}
  >
  {/* Item Header */}
  <div className="flex justify-between items-center gap-1.5 mb-1.5">
- <span className="text-[9px] font-extrabold text-m3-primary font-mono truncate max-w-[120px]" title={item.poNumber}>
+ <span className="text-[9px] font-extrabold text-primary truncate max-w-[120px]" title={item.poNumber}>
  {item.poNumber}
  </span>
- <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-zinc-800/40 text-zinc-400 font-mono">
+ <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-content2/40 text-default-500 ">
  {itemTypeLabel}
  </span>
  </div>
 
  {/* Item Main Title */}
- <h5 className="text-[11px] font-extrabold text-zinc-100 leading-tight truncate">
+ <h5 className="text-[11px] font-extrabold text-foreground leading-tight truncate">
  {item.supplierName}
  </h5>
 
  {/* Status and Financial Summary */}
  <div className="mt-2 space-y-1">
- <div className="flex justify-between items-center text-[10px] font-mono">
- <span className="text-zinc-400">Balance:</span>
+ <div className="flex justify-between items-center text-[10px] ">
+ <span className="text-default-500">Balance:</span>
  <span className={`font-black ${item.isFinished ? "text-emerald-500" : "text-amber-500"}`}>
  ₱{item.remaining.toLocaleString()}
  </span>
@@ -2936,7 +2876,7 @@ export default function AtposExtraModules({
 
  {/* Small visual progress indicator */}
  {item.amount > 0 && (
- <div className="w-full bg-zinc-700/30 h-1 rounded-full overflow-hidden mt-1">
+ <div className="w-full bg-default-200/30 h-1 rounded-full overflow-hidden mt-1">
  <div
  className="bg-emerald-500 h-full rounded-full transition-all duration-300"
  style={{ width: `${Math.min(100, (item.totalPaid / item.amount) * 100)}%` }}
@@ -2946,7 +2886,7 @@ export default function AtposExtraModules({
  </div>
 
  {/* Urgency Alert Badge */}
- <div className="flex justify-between items-center mt-2.5 pt-2 border-t border-dashed border-m3-outline-variant/10">
+ <div className="flex justify-between items-center mt-2.5 pt-2 border-t border-dashed border-divider/10">
  <div className={`text-[8.5px] px-1.5 py-0.5 rounded border flex items-center gap-1 uppercase tracking-wider font-extrabold ${urgencyBadge}`}>
  <AlertCircle className={`h-2.5 w-2.5 ${alertIconColor}`} />
  <span>
@@ -2959,7 +2899,7 @@ export default function AtposExtraModules({
  : `${item.diffDays}d left`}
  </span>
  </div>
- <span className="text-[9px] font-mono font-bold text-zinc-500">
+ <span className="text-[9px] font-bold text-default-500">
  Day {item.day} of {months[item.month].substring(0, 3)}
  </span>
  </div>
@@ -2967,10 +2907,10 @@ export default function AtposExtraModules({
  );
  })
  ) : (
- <div className="text-center py-10 space-y-2 border border-dashed border-m3-outline-variant/15 rounded-xl">
- <Info className="h-5 w-5 text-zinc-500 mx-auto animate-pulse" />
- <p className="text-xs text-zinc-500 font-bold">No Payables Found</p>
- <p className="text-[9.5px] text-zinc-500 max-w-[150px] mx-auto">
+ <div className="text-center py-10 space-y-2 border border-dashed border-divider/15 rounded-xl">
+ <Info className="h-5 w-5 text-default-500 mx-auto animate-pulse" />
+ <p className="text-xs text-default-500 font-bold">No Payables Found</p>
+ <p className="text-[9.5px] text-default-500 max-w-[150px] mx-auto">
  No records match search query or status filter in this period.
  </p>
  </div>
@@ -2981,11 +2921,11 @@ export default function AtposExtraModules({
  </div>
 
  {/* Primary Interactive Calendar Component */}
- <div className="lg:col-span-3 bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl grid grid-cols-1 xl:grid-cols-4 gap-6 text-left">
+ <div className="lg:col-span-3 bg-content1 border border-divider/15 p-5 rounded-2xl grid grid-cols-1 xl:grid-cols-4 gap-6 text-left">
  <div className="xl:col-span-3 space-y-4">
- <div className="flex justify-between items-center border-b border-m3-outline-variant/10 pb-3 gap-2 flex-wrap">
+ <div className="flex justify-between items-center border-b border-divider/10 pb-3 gap-2 flex-wrap">
  <div className="flex items-center gap-2 flex-wrap">
- <h3 className="font-extrabold text-sm text-m3-primary flex items-center gap-1.5">
+ <h3 className="font-extrabold text-sm text-primary flex items-center gap-1.5">
  <CalendarDays className="h-5 w-5" />
  Supplier Payment Calendar Cycle
  </h3>
@@ -2993,7 +2933,7 @@ export default function AtposExtraModules({
  </div>
  
  {/* Interactive Month & Year Navigation Widget */}
- <div className="flex items-center gap-1 bg-m3-surface-high/30 p-1 rounded-xl border border-m3-outline-variant/10">
+ <div className="flex items-center gap-1 bg-content3/30 p-1 rounded-xl border border-divider/10">
  <button
  type="button"
  onClick={() => {
@@ -3005,7 +2945,7 @@ export default function AtposExtraModules({
  }
  setSelectedCalendarDay(null);
  }}
- className="p-1.5 hover:bg-m3-surface-high rounded-lg text-zinc-400 hover:text-m3-primary transition cursor-pointer border-0"
+ className="p-1.5 hover:bg-content3 rounded-lg text-default-500 hover:text-primary transition cursor-pointer border-0"
  title="Previous Month"
  >
  <ChevronLeft className="h-4 w-4" />
@@ -3017,10 +2957,10 @@ export default function AtposExtraModules({
  setCalendarMonth(Number(e.target.value));
  setSelectedCalendarDay(null);
  }}
- className="bg-transparent border-0 text-xs font-black font-sans text-m3-on-surface focus:ring-0 cursor-pointer pr-8 py-0.5"
+ className="bg-transparent border-0 text-xs font-black font-sans text-foreground focus:ring-0 cursor-pointer pr-8 py-0.5"
  >
  {months.map((m, idx) => (
- <option key={m} value={idx} className="bg-m3-surface-lowest text-m3-on-surface font-sans">
+ <option key={m} value={idx} className="bg-content1 text-foreground font-sans">
  {m}
  </option>
  ))}
@@ -3032,10 +2972,10 @@ export default function AtposExtraModules({
  setCalendarYear(Number(e.target.value));
  setSelectedCalendarDay(null);
  }}
- className="bg-transparent border-0 text-xs font-bold font-mono text-m3-primary focus:ring-0 cursor-pointer pr-8 py-0.5"
+ className="bg-transparent border-0 text-xs font-bold text-primary focus:ring-0 cursor-pointer pr-8 py-0.5"
  >
  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((y) => (
- <option key={y} value={y} className="bg-m3-surface-lowest text-m3-on-surface font-mono">
+ <option key={y} value={y} className="bg-content1 text-foreground ">
  {y}
  </option>
  ))}
@@ -3052,7 +2992,7 @@ export default function AtposExtraModules({
  }
  setSelectedCalendarDay(null);
  }}
- className="p-1.5 hover:bg-m3-surface-high rounded-lg text-zinc-400 hover:text-m3-primary transition cursor-pointer border-0"
+ className="p-1.5 hover:bg-content3 rounded-lg text-default-500 hover:text-primary transition cursor-pointer border-0"
  title="Next Month"
  >
  <ChevronRight className="h-4 w-4" />
@@ -3065,7 +3005,7 @@ export default function AtposExtraModules({
  (d) => (
  <div
  key={d}
- className="p-1.5 text-center text-[10px] font-black text-zinc-400 uppercase tracking-widest font-mono"
+ className="p-1.5 text-center text-[10px] font-black text-default-500 uppercase tracking-widest "
  >
  {d}
  </div>
@@ -3131,22 +3071,22 @@ export default function AtposExtraModules({
  onClick={() => setSelectedCalendarDay(day)}
  className={`p-2 min-h-[85px] border rounded-xl flex flex-col justify-between transition-all cursor-pointer ${
  isSelected
- ? "border-m3-primary bg-m3-primary/5 scale-[1.02] ring-1 ring-m3-primary"
+ ? "border-primary bg-primary/5 scale-[1.02] ring-1 ring-primary"
  : isToday
  ? "border-amber-500 bg-amber-500/10 ring-2 ring-amber-500/50 shadow-md shadow-amber-500/10"
  : isFullyPaid
  ? "border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 shadow-3xs"
  : isPartiallyPaid
- ? "border-m3-primary/30 bg-m3-primary/5 hover:bg-m3-primary/10 shadow-3xs"
+ ? "border-primary/30 bg-primary/5 hover:bg-primary/10 shadow-3xs"
  : hasPayment
  ? "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 shadow-3xs"
- : "border-m3-outline-variant/10 bg-m3-surface-high/20 hover:border-zinc-350"
+ : "border-divider/10 bg-content3/20 hover:border-zinc-350"
  }`}
  >
  <div className="flex justify-between items-center w-full">
  <div className="flex items-center gap-1">
  <span
- className={`text-[10px] font-black leading-none ${isSelected ? "text-m3-primary" : isToday ? "text-amber-500" : "text-zinc-400"}`}
+ className={`text-[10px] font-black leading-none ${isSelected ? "text-primary" : isToday ? "text-amber-500" : "text-default-500"}`}
  >
  {day}
  </span>
@@ -3174,16 +3114,16 @@ export default function AtposExtraModules({
  <span className="block font-black uppercase text-[7px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-1 rounded text-center">
  SETTLED
  </span>
- <span className="block truncate text-[9.5px] text-emerald-500 font-mono text-center">
+ <span className="block truncate text-[9.5px] text-emerald-500 text-center">
  ₱{totalPaid.toLocaleString()}
  </span>
  </>
  ) : isPartiallyPaid ? (
  <>
- <span className="block font-black uppercase text-[7px] bg-m3-primary/15 text-m3-primary px-1 rounded text-center">
+ <span className="block font-black uppercase text-[7px] bg-primary/15 text-primary px-1 rounded text-center">
  PARTIAL
  </span>
- <span className="block truncate text-[8.5px] text-zinc-300 font-mono text-center">
+ <span className="block truncate text-[8.5px] text-default-700 text-center">
  ₱{totalRemaining.toLocaleString()}
  </span>
  </>
@@ -3192,7 +3132,7 @@ export default function AtposExtraModules({
  <span className="block font-black uppercase text-[7px] bg-amber-500/15 text-amber-600 dark:text-amber-400 px-1 rounded text-center">
  PAYABLES
  </span>
- <span className="block truncate text-[9.5px] text-zinc-300 font-mono text-center">
+ <span className="block truncate text-[9.5px] text-default-700 text-center">
  ₱{totalDue.toLocaleString()}
  </span>
  </>
@@ -3206,24 +3146,24 @@ export default function AtposExtraModules({
  </div>
 
  {/* Day Detail Inspector Widget */}
- <div className="bg-m3-surface p-4 rounded-2xl border border-m3-outline-variant/35 flex flex-col justify-between min-h-[420px] h-full">
+ <div className="bg-background p-4 rounded-2xl border border-divider/35 flex flex-col justify-between min-h-[420px] h-full">
  <div className="space-y-4">
- <div className="border-b border-m3-outline-variant/10 pb-3">
- <h4 className="font-extrabold text-xs text-m3-primary uppercase tracking-widest font-mono">
+ <div className="border-b border-divider/10 pb-3">
+ <h4 className="font-extrabold text-xs text-primary uppercase tracking-widest ">
  Payable Day Inspector
  </h4>
- <p className="text-[10px] text-zinc-400 mt-1">
+ <p className="text-[10px] text-default-500 mt-1">
  Review due accounts &amp; schedule payments or installment disbursement.
  </p>
  </div>
 
  {selectedCalendarDay ? (
  <div className="space-y-3">
- <div className="flex justify-between items-center bg-m3-primary/10 px-3 py-1.5 rounded-xl">
- <span className="text-xs font-bold font-mono">
+ <div className="flex justify-between items-center bg-primary/10 px-3 py-1.5 rounded-xl">
+ <span className="text-xs font-bold ">
  {months[calendarMonth]} {selectedCalendarDay}, {calendarYear}
  </span>
- <span className="text-[9px] font-black bg-m3-primary text-m3-on-primary px-2 py-0.5 rounded-full">
+ <span className="text-[9px] font-black bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
  {selectedDayEntries.length} Invoices
  </span>
  </div>
@@ -3238,10 +3178,10 @@ export default function AtposExtraModules({
  return (
  <div
  key={pIdx}
- className="bg-m3-surface-low p-3 rounded-xl border border-m3-outline-variant/15 space-y-2 text-left"
+ className="bg-content1 p-3 rounded-xl border border-divider/15 space-y-2 text-left"
  >
  <div className="flex justify-between items-start gap-1">
- <span className="text-[10px] font-extrabold text-m3-primary font-mono truncate max-w-[120px]" title={payVal.poNumber}>
+ <span className="text-[10px] font-extrabold text-primary truncate max-w-[120px]" title={payVal.poNumber}>
  {payVal.poNumber}
  </span>
  <span
@@ -3249,9 +3189,9 @@ export default function AtposExtraModules({
  isFinished
  ? "bg-emerald-500/10 text-emerald-400"
  : totalPaid > 0
- ? "bg-m3-primary/10 text-m3-primary"
+ ? "bg-primary/10 text-primary"
  : payVal.poNumber.startsWith("BILL-")
- ? "bg-m3-primary/10 text-m3-primary"
+ ? "bg-primary/10 text-primary"
  : "bg-amber-500/10 text-amber-400"
  }`}
  >
@@ -3259,24 +3199,24 @@ export default function AtposExtraModules({
  </span>
  </div>
  
- <h5 className="text-[11px] font-bold text-m3-on-surface leading-tight">
+ <h5 className="text-[11px] font-bold text-foreground leading-tight">
  {payVal.supplierName}
  </h5>
 
  {/* Financial Breakdown Progress */}
- <div className="bg-zinc-800/15 p-2 rounded-lg border border-m3-outline-variant/10 space-y-1.5 text-[10px]">
- <div className="flex justify-between text-zinc-400 font-mono text-[9px]">
+ <div className="bg-content2/15 p-2 rounded-lg border border-divider/10 space-y-1.5 text-[10px]">
+ <div className="flex justify-between text-default-500 text-[9px]">
  <span>Total Amount:</span>
- <span className="font-bold text-zinc-200">₱{payVal.amount.toLocaleString()}</span>
+ <span className="font-bold text-foreground">₱{payVal.amount.toLocaleString()}</span>
  </div>
  {totalPaid > 0 && (
- <div className="flex justify-between text-emerald-400 font-mono text-[9px]">
+ <div className="flex justify-between text-emerald-400 text-[9px]">
  <span>Amount Paid:</span>
  <span className="font-bold">₱{totalPaid.toLocaleString()}</span>
  </div>
  )}
- <div className="flex justify-between font-mono text-[10px] border-t border-dashed border-m3-outline-variant/10 pt-1">
- <span className="text-zinc-400 font-bold">Remaining Bal:</span>
+ <div className="flex justify-between text-[10px] border-t border-dashed border-divider/10 pt-1">
+ <span className="text-default-500 font-bold">Remaining Bal:</span>
  <span className={`font-black ${isFinished ? "text-emerald-500" : "text-amber-500"}`}>
  ₱{remaining.toLocaleString()}
  </span>
@@ -3285,7 +3225,7 @@ export default function AtposExtraModules({
  {/* Visual Progress Bar */}
  {payVal.amount > 0 && (
  <div className="space-y-1 pt-1">
- <div className="w-full bg-zinc-700/50 h-1.5 rounded-full overflow-hidden">
+ <div className="w-full bg-default-200/50 h-1.5 rounded-full overflow-hidden">
  <div
  className="bg-emerald-500 h-full rounded-full transition-all duration-300"
  style={{ width: `${Math.min(100, (totalPaid / payVal.amount) * 100)}%` }}
@@ -3297,13 +3237,13 @@ export default function AtposExtraModules({
 
  {/* Installment History Nested Drawer */}
  {payHistory.length > 0 && (
- <div className="space-y-1 bg-m3-surface-high/30 p-2 rounded-lg border border-m3-outline-variant/5">
- <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block">
+ <div className="space-y-1 bg-content3/30 p-2 rounded-lg border border-divider/5">
+ <span className="text-[8px] font-black text-default-500 uppercase tracking-widest block">
  Installment Payments Log
  </span>
  <div className="max-h-[70px] overflow-y-auto space-y-1 scrollbar-none">
  {payHistory.map((inst, hIdx) => (
- <div key={inst.id || hIdx} className="flex justify-between items-center text-[9px] font-mono text-zinc-400">
+ <div key={inst.id || hIdx} className="flex justify-between items-center text-[9px] text-default-500">
  <span>{inst.date && !isNaN(new Date(inst.date).getTime()) ? new Date(inst.date).toLocaleDateString() : "N/A"}</span>
  <span className="text-emerald-400 font-bold">₱{inst.amount.toLocaleString()}</span>
  </div>
@@ -3314,20 +3254,20 @@ export default function AtposExtraModules({
 
  {/* Payment Execution Form */}
  {!isFinished ? (
- <div className="border-t border-m3-outline-variant/10 pt-2.5 mt-2 space-y-2.5 text-left text-[11px]">
- <span className="text-[8px] font-black text-m3-primary uppercase tracking-widest block">
+ <div className="border-t border-divider/10 pt-2.5 mt-2 space-y-2.5 text-left text-[11px]">
+ <span className="text-[8px] font-black text-primary uppercase tracking-widest block">
  Disburse Installment / Settle
  </span>
 
  {/* Payment Mode Segmented Selector */}
- <div className="grid grid-cols-2 gap-1 bg-zinc-800/20 p-0.5 rounded-lg border border-m3-outline-variant/5">
+ <div className="grid grid-cols-2 gap-1 bg-content2/20 p-0.5 rounded-lg border border-divider/5">
  <button
  type="button"
  onClick={() => setPartialPaymentMethod("cash")}
  className={`py-1 text-[9px] font-black uppercase rounded transition cursor-pointer border-0 ${
  partialPaymentMethod === "cash"
- ? "bg-m3-primary/10 text-m3-primary"
- : "text-zinc-500 hover:text-zinc-300 bg-transparent"
+ ? "bg-primary/10 text-primary"
+ : "text-default-500 hover:text-default-700 bg-transparent"
  }`}
  >
  Cash
@@ -3337,8 +3277,8 @@ export default function AtposExtraModules({
  onClick={() => setPartialPaymentMethod("cheque")}
  className={`py-1 text-[9px] font-black uppercase rounded transition cursor-pointer border-0 ${
  partialPaymentMethod === "cheque"
- ? "bg-m3-primary/10 text-m3-primary"
- : "text-zinc-500 hover:text-zinc-300 bg-transparent"
+ ? "bg-primary/10 text-primary"
+ : "text-default-500 hover:text-default-700 bg-transparent"
  }`}
  >
  Cheque
@@ -3347,38 +3287,38 @@ export default function AtposExtraModules({
  
  <div className="grid grid-cols-2 gap-1.5">
  <div className="space-y-0.5 col-span-2">
- <label className="text-[8px] text-zinc-400 font-bold">Amount to Pay *</label>
+ <label className="text-[8px] text-default-500 font-bold">Amount to Pay *</label>
  <input
  type="number"
  value={partialPaymentAmount ?? ''}
  onChange={(e) => setPartialPaymentAmount(e.target.value)}
  placeholder={remaining.toString()}
  max={remaining}
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded p-1.5 font-mono text-[10px] outline-none text-m3-on-surface focus:border-m3-primary"
+ className="w-full bg-content1 border border-divider rounded p-1.5 text-[10px] outline-none text-foreground focus:border-primary"
  />
  </div>
 
  {partialPaymentMethod === "cheque" && (
  <div className="space-y-0.5 col-span-2 animate-fade-in">
- <label className="text-[8px] text-zinc-400 font-bold">Cheque Number *</label>
+ <label className="text-[8px] text-default-500 font-bold">Cheque Number *</label>
  <input
  type="text"
  value={partialChequeNumber ?? ''}
  onChange={(e) => setPartialChequeNumber(e.target.value)}
  placeholder="Cheque Number"
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded p-1.5 text-[10px] outline-none text-m3-on-surface font-mono focus:border-m3-primary"
+ className="w-full bg-content1 border border-divider rounded p-1.5 text-[10px] outline-none text-foreground focus:border-primary"
  />
  </div>
  )}
 
  <div className="space-y-0.5">
- <label className="text-[8px] text-zinc-400 font-bold">Remarks / Notes</label>
+ <label className="text-[8px] text-default-500 font-bold">Remarks / Notes</label>
  <input
  type="text"
  value={partialPaymentNotes ?? ''}
  onChange={(e) => setPartialPaymentNotes(e.target.value)}
  placeholder="Remarks / Notes"
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant rounded p-1.5 text-[10px] outline-none text-m3-on-surface focus:border-m3-primary"
+ className="w-full bg-content1 border border-divider rounded p-1.5 text-[10px] outline-none text-foreground focus:border-primary"
  />
  </div>
 
@@ -3393,7 +3333,7 @@ export default function AtposExtraModules({
  value={partialManagerPin ?? ''}
  onChange={(e) => setPartialManagerPin(e.target.value)}
  placeholder="••••"
- className="w-full bg-m3-surface-lowest border border-rose-500/35 rounded p-1.5 text-[10px] font-mono outline-none text-m3-on-surface focus:border-rose-500"
+ className="w-full bg-content1 border border-rose-500/35 rounded p-1.5 text-[10px] outline-none text-foreground focus:border-rose-500"
  />
  </div>
  ) : (
@@ -3410,14 +3350,14 @@ export default function AtposExtraModules({
  <button
  type="button"
  onClick={() => handleInstallmentPayment(payVal, Number(partialPaymentAmount), partialPaymentNotes)}
- className="flex-1 text-center py-1.5 bg-m3-primary/10 text-m3-primary hover:bg-m3-primary/20 text-[9px] font-black uppercase rounded-lg transition border-0 cursor-pointer"
+ className="flex-1 text-center py-1.5 bg-primary/10 text-primary hover:bg-primary/20 text-[9px] font-black uppercase rounded-lg transition border-0 cursor-pointer"
  >
  Pay Installment
  </button>
  <button
  type="button"
  onClick={() => handleInstallmentPayment(payVal, remaining, "Full Settlement")}
- className="flex-1 text-center py-1.5 bg-m3-primary text-m3-on-primary hover:opacity-90 text-[9px] font-black uppercase rounded-lg transition border-0 cursor-pointer"
+ className="flex-1 text-center py-1.5 bg-primary text-primary-foreground hover:opacity-90 text-[9px] font-black uppercase rounded-lg transition border-0 cursor-pointer"
  >
  Pay in Full (₱{remaining.toLocaleString()})
  </button>
@@ -3435,9 +3375,9 @@ export default function AtposExtraModules({
  </div>
 
  {/* Daily Memo / Note Editor */}
- <div className="border-t border-m3-outline-variant/15 pt-3 mt-4 space-y-3 text-left">
+ <div className="border-t border-divider/15 pt-3 mt-4 space-y-3 text-left">
  <div className="flex justify-between items-center">
- <span className="text-[10px] font-black text-m3-primary uppercase tracking-widest flex items-center gap-1.5 font-sans">
+ <span className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-1.5 font-sans">
  <FileText className="h-3.5 w-3.5 text-amber-500 animate-pulse" />
  <span>Daily Calendar Memos</span>
  </span>
@@ -3467,8 +3407,8 @@ export default function AtposExtraModules({
  <div className="space-y-2">
  <div className="max-h-[140px] overflow-y-auto space-y-1.5 scrollbar-thin pr-1">
  {memoList.map((memo, mIdx) => (
- <div key={mIdx} className="bg-m3-surface-lowest border border-m3-outline-variant/15 p-2 rounded-xl text-[11px] leading-relaxed text-m3-on-surface flex justify-between items-start gap-2 group shadow-3xs">
- <span className="break-words flex-1 font-sans font-semibold text-zinc-300">{memo}</span>
+ <div key={mIdx} className="bg-content1 border border-divider/15 p-2 rounded-xl text-[11px] leading-relaxed text-foreground flex justify-between items-start gap-2 group shadow-3xs">
+ <span className="break-words flex-1 font-sans font-semibold text-default-700">{memo}</span>
  <button
  type="button"
  onClick={() => {
@@ -3489,8 +3429,8 @@ export default function AtposExtraModules({
  </div>
  ))}
  {memoList.length === 0 && (
- <div className="text-center py-4 border border-dashed border-m3-outline-variant/10 rounded-xl">
- <p className="text-[10px] text-zinc-500 italic">No memos registered for this day.</p>
+ <div className="text-center py-4 border border-dashed border-divider/10 rounded-xl">
+ <p className="text-[10px] text-default-500 italic">No memos registered for this day.</p>
  </div>
  )}
  </div>
@@ -3513,7 +3453,7 @@ export default function AtposExtraModules({
  }
  }}
  placeholder="Type a new memo for today..."
- className="flex-1 bg-m3-surface-lowest border border-m3-outline-variant/25 rounded-xl px-2.5 py-1.5 text-xs outline-none focus:border-m3-primary text-m3-on-surface animate-fade-in"
+ className="flex-1 bg-content1 border border-divider/25 rounded-xl px-2.5 py-1.5 text-xs outline-none focus:border-primary text-foreground animate-fade-in"
  />
  <button
  type="button"
@@ -3526,7 +3466,7 @@ export default function AtposExtraModules({
  setDayMemoInput("");
  }
  }}
- className="px-3 bg-m3-primary text-m3-on-primary hover:opacity-90 transition rounded-xl text-xs font-black cursor-pointer border-0"
+ className="px-3 bg-primary text-primary-foreground hover:opacity-90 transition rounded-xl text-xs font-black cursor-pointer border-0"
  >
  Add
  </button>
@@ -3555,11 +3495,11 @@ export default function AtposExtraModules({
  </div>
  ) : (
  <div className="text-center py-12 space-y-2">
- <Info className="h-8 w-8 text-zinc-500 mx-auto animate-pulse" />
- <p className="text-xs text-zinc-500 italic">
+ <Info className="h-8 w-8 text-default-500 mx-auto animate-pulse" />
+ <p className="text-xs text-default-500 italic">
  No Date Selected
  </p>
- <p className="text-[9.5px] text-zinc-500">
+ <p className="text-[9.5px] text-default-500">
  Click any day with active{" "}
  <span className="font-bold text-amber-500">
  PAYABLES
@@ -3574,7 +3514,7 @@ export default function AtposExtraModules({
  )}
  </div>
 
- <div className="border-t border-m3-outline-variant/10 pt-3 text-[9px] text-zinc-500 leading-normal">
+ <div className="border-t border-divider/10 pt-3 text-[9px] text-default-500 leading-normal">
  Terms: Automatic 15-day settlement window is calculated
  from original cargo delivery receipt timestamps.
  Unsettled credits attract regular interest guidelines.
@@ -3601,110 +3541,56 @@ export default function AtposExtraModules({
  animate={{ opacity: 1 }}
  className="space-y-6"
  >
-  {/* Modern Interactive BIR Sub-tab Compliance Selector */}
-  <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-2xl space-y-3 shadow-sm font-sans text-left">
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-m3-outline-variant/10 pb-3">
-      <div>
-        <h3 className="font-extrabold text-sm text-m3-primary uppercase font-mono tracking-wider flex items-center gap-1.5">
-          <Percent className="h-4 w-4 text-amber-500 animate-pulse" />
-          BIR Fiscal Ledgers & Books of Accounts
-        </h3>
-        <p className="text-[11px] text-m3-on-surface-variant mt-0.5">
-          Philippine BIR Tax compliance books. Select a book to audit X/Z readings, VAT, PWD, Senior, and Solo Parent discounts.
-        </p>
-      </div>
-
-    </div>
-    
-    <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-m3-outline-variant/20 -mx-1 px-1">
-      {[
-        { id: "bir-xz", name: "X & Z Readings", desc: "Terminal drawer audits", icon: Receipt },
-        { id: "bir-summary", name: "BIR Summary", desc: "Total daily sales tax", icon: Layers },
-        { id: "bir-pwd", name: "PWD Book (20%)", desc: "Persons with disability", icon: Accessibility },
-        { id: "bir-senior20", name: "Senior (20%)", desc: "Senior citizen ledger", icon: Heart },
-        { id: "bir-senior5", name: "Senior (5%)", desc: "Basic necessities", icon: Award },
-        { id: "bir-solo", name: "Solo Parent (10%)", desc: "Solo parent registry", icon: Users },
-        { id: "bir-athletes", name: "National Athletes", desc: "Athletes/Coaches dsc.", icon: ShieldAlert },
-        { id: "bir-regular", name: "Regular Promos", desc: "Standard discounts", icon: Percent },
-      ].map((tab) => {
-        const isSelected = activeSubTab === tab.id;
-        const Icon = tab.icon;
-        return (
-          <button
-            key={tab.id}
-            onClick={() => onNavigate(tab.id)}
-            className={`flex-none flex items-center gap-2 px-3 py-2 rounded-xl border text-left cursor-pointer transition-all duration-200 select-none ${
-              isSelected
-                ? "bg-m3-primary/15 text-m3-primary border-m3-primary/35 shadow-xs"
-                : "bg-m3-surface-lowest hover:bg-m3-surface-high text-m3-on-surface/85 border-m3-outline-variant/10 hover:border-m3-outline-variant/25"
-            }`}
-          >
-            <div className={`p-1.5 rounded-lg ${isSelected ? "bg-m3-primary/20 text-m3-primary" : "bg-m3-surface-high text-m3-on-surface-variant"}`}>
-              <Icon className="h-4 w-4" />
-            </div>
-            <div className="pr-1">
-              <span className="block text-[11px] font-bold leading-tight font-sans">
-                {tab.name}
-              </span>
-              <span className="block text-[9px] text-m3-on-surface-variant/80 leading-none mt-0.5 font-sans">
-                {tab.desc}
-              </span>
-            </div>
-          </button>
-        );
-      })}
-    </div>
-  </div>
  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
- <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-xs font-sans space-y-1">
- <span className="text-m3-on-surface-variant block font-bold uppercase tracking-wider text-[9px]">
+ <div className="bg-content1 border border-divider/15 p-4 rounded-xl text-xs font-sans space-y-1">
+ <span className="text-default-500 block font-bold uppercase tracking-wider text-[9px]">
  Vatable Sales (Net of VAT)
  </span>
- <span className="text-sm font-black font-mono">
+ <span className="text-sm font-black ">
  ₱
  {vatableSales.toLocaleString("en-US", {
  minimumFractionDigits: 2,
  })}
  </span>
  </div>
- <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-xs font-sans space-y-1">
- <span className="text-m3-on-surface-variant block font-bold uppercase tracking-wider text-[9px]">
+ <div className="bg-content1 border border-divider/15 p-4 rounded-xl text-xs font-sans space-y-1">
+ <span className="text-default-500 block font-bold uppercase tracking-wider text-[9px]">
  VAT-Exempt Sales Base
  </span>
- <span className="text-sm font-black font-mono">
+ <span className="text-sm font-black ">
  ₱
  {vatExemptSales.toLocaleString("en-US", {
  minimumFractionDigits: 2,
  })}
  </span>
  </div>
- <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-xs font-sans space-y-1">
- <span className="text-m3-on-surface-variant block font-bold uppercase tracking-wider text-[9px]">
+ <div className="bg-content1 border border-divider/15 p-4 rounded-xl text-xs font-sans space-y-1">
+ <span className="text-default-500 block font-bold uppercase tracking-wider text-[9px]">
  12% Output VAT Amount
  </span>
- <span className="text-sm font-black text-amber-500 font-mono">
+ <span className="text-sm font-black text-amber-500 ">
  ₱
  {vatOutput.toLocaleString("en-US", {
  minimumFractionDigits: 2,
  })}
  </span>
  </div>
- <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-xs font-sans space-y-1">
- <span className="text-m3-on-surface-variant block font-bold uppercase tracking-wider text-[9px]">
+ <div className="bg-content1 border border-divider/15 p-4 rounded-xl text-xs font-sans space-y-1">
+ <span className="text-default-500 block font-bold uppercase tracking-wider text-[9px]">
  BIR Discounts & Deductions
  </span>
- <span className="text-sm font-black text-emerald-500 font-mono">
+ <span className="text-sm font-black text-emerald-500 ">
  ₱
  {discountTotal.toLocaleString("en-US", {
  minimumFractionDigits: 2,
  })}
  </span>
  </div>
- <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-xs font-sans space-y-1 col-span-2 sm:col-span-1">
- <span className="text-m3-on-surface-variant block font-bold uppercase tracking-wider text-[9px]">
+ <div className="bg-content1 border border-divider/15 p-4 rounded-xl text-xs font-sans space-y-1 col-span-2 sm:col-span-1">
+ <span className="text-default-500 block font-bold uppercase tracking-wider text-[9px]">
  Accredited Net Sales Due
  </span>
- <span className="text-sm font-black text-emerald-500 font-mono">
+ <span className="text-sm font-black text-emerald-500 ">
  ₱
  {totalSalesFromDay.toLocaleString("en-US", {
  minimumFractionDigits: 2,
@@ -3716,26 +3602,26 @@ export default function AtposExtraModules({
  {activeSubTab === "bir-xz" && (
  <div className="grid md:grid-cols-2 gap-6">
  {/* X Reading Card */}
- <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl space-y-4 shadow-sm font-sans">
+ <div className="bg-content1 border border-divider/15 p-5 rounded-2xl space-y-4 shadow-sm font-sans">
  <div>
- <h3 className="font-extrabold text-sm text-m3-primary uppercase font-mono tracking-wider">
+ <h3 className="font-extrabold text-sm text-primary uppercase tracking-wider">
  Generate Cashier X-Reading
  </h3>
- <p className="text-xs text-m3-on-surface-variant mt-1">
+ <p className="text-xs text-default-500 mt-1">
  Runs the system cumulative reading for the active terminal
  user shift session. Reconciles drawer payments without
  closing the grand cumulative counters.
  </p>
  </div>
- <div className="p-4 bg-zinc-100 dark:bg-zinc-800/40 border border-m3-outline-variant/10 rounded-xl space-y-2 font-mono text-[11px]">
+ <div className="p-4 bg-zinc-100 dark:bg-content2/40 border border-divider/10 rounded-xl space-y-2 text-[11px]">
  <div className="flex justify-between">
  <span>Assigned Terminal:</span>
- <span className="font-bold">TERM-01 (Emman Main)</span>
+ <span className="font-bold">TERM-01 ({(db.branches.find(b => b.id === db.currentUser?.branchAssignmentId) || db.branches[0])?.name || "Main Branch"})</span>
  </div>
  <div className="flex justify-between">
  <span>Working Cashier:</span>
  <span className="font-bold">
- {db.currentUser?.fullName || "Rejilyn Manaban"}
+ {db.currentUser?.fullName || "Active Cashier"}
  </span>
  </div>
  <div className="flex justify-between">
@@ -3757,7 +3643,7 @@ export default function AtposExtraModules({
  })}
  </span>
  </div>
- <div className="flex justify-between text-emerald-500 font-extrabold border-t border-dashed border-zinc-500/30 pt-1.5 text-xs">
+ <div className="flex justify-between text-emerald-500 font-extrabold border-t border-dashed border-divider/20 pt-1.5 text-xs">
  <span>Cash In Drawer Match:</span>
  <span>
  ₱
@@ -3773,7 +3659,7 @@ export default function AtposExtraModules({
  title: "BIR X-READING SLIP",
  receiptNo:
  "X-" + Math.floor(Math.random() * 89999 + 10000),
- customer: db.currentUser?.fullName || "Rejilyn Manaban",
+ customer: db.currentUser?.fullName || "Walk-In Customer",
  date: new Date().toLocaleString(),
  prevBalance: totalSalesFromDay + discountTotal,
  paid: discountTotal,
@@ -3781,26 +3667,26 @@ export default function AtposExtraModules({
  pointsGained: 0,
  });
  }}
- className="w-full py-2.5 bg-m3-primary hover:bg-m3-primary/95 text-m3-on-primary rounded-xl font-bold transition flex items-center justify-center gap-1.5 cursor-pointer text-xs border-0"
+ className="w-full py-2.5 bg-primary hover:bg-primary/95 text-primary-foreground rounded-xl font-bold transition flex items-center justify-center gap-1.5 cursor-pointer text-xs border-0"
  >
  <Printer className="h-4 w-4" /> Print Current X-Reading Slip
  </button>
  </div>
 
  {/* Z Reading Card */}
- <div className="bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl space-y-4 shadow-sm font-sans">
+ <div className="bg-content1 border border-divider/15 p-5 rounded-2xl space-y-4 shadow-sm font-sans">
  <div>
- <h3 className="font-extrabold text-sm text-amber-500 uppercase font-mono tracking-wider">
+ <h3 className="font-extrabold text-sm text-amber-500 uppercase tracking-wider">
  Generate Cumulative Z-Reading
  </h3>
- <p className="text-xs text-m3-on-surface-variant mt-1">
+ <p className="text-xs text-default-500 mt-1">
  Concludes all working shifts for the calendar day. Commits
  locked fiscal audit counts, calculates output taxation
  ledger, and resets cashier drawers. This is required for
  official BIR tax submissions.
  </p>
  </div>
- <div className="p-4 bg-zinc-100 dark:bg-zinc-800/40 border border-m3-outline-variant/10 rounded-xl space-y-2 font-mono text-[11px]">
+ <div className="p-4 bg-zinc-100 dark:bg-content2/40 border border-divider/10 rounded-xl space-y-2 text-[11px]">
  <div className="flex justify-between">
  <span>Z-Reading Record #:</span>
  <span className="font-bold text-amber-500">
@@ -3821,7 +3707,7 @@ export default function AtposExtraModules({
  )}
  </span>
  </div>
- <div className="flex justify-between border-t border-dashed border-zinc-500/30 pt-1.5">
+ <div className="flex justify-between border-t border-dashed border-divider/20 pt-1.5">
  <span>Total VAT Declared:</span>
  <span>
  ₱
@@ -3845,14 +3731,14 @@ export default function AtposExtraModules({
  )}
 
  {activeSubTab !== "bir-xz" && (
- <div className="bir-report-container bg-m3-surface-low border border-m3-outline-variant/15 p-5 rounded-2xl overflow-hidden shadow-sm space-y-4">
+ <div className="bir-report-container bg-content1 border border-divider/15 p-5 rounded-2xl overflow-hidden shadow-sm space-y-4">
  {/* Official Print Header for BIR Compliance Sheets */}
  <div className="hidden print:block border-b-2 border-black pb-4 mb-4 text-black">
  <div className="flex justify-between items-start">
  <div>
- <h1 className="text-xl font-black uppercase font-mono tracking-tight text-black">EMMAN TILE CENTER</h1>
+ <h1 className="text-xl font-black uppercase tracking-tight text-black">{localStorage.getItem('tilepoint_company_name_v1') || db.branches[0]?.name || "MAIN STORE"}</h1>
  <p className="text-xs font-serif font-bold text-black">Bureau of Internal Revenue (BIR) Official Sales & Taxation Ledger</p>
- <p className="text-[10px] font-mono text-black mt-0.5">
+ <p className="text-[10px] text-black mt-0.5">
  {(() => {
   const activeBranch = db.branches.find(b => b.id === db.currentUser?.branchAssignmentId) || db.branches[0];
   const yr = new Date().getFullYear();
@@ -3862,11 +3748,11 @@ export default function AtposExtraModules({
   return `Permit #: BIR-PERMIT-${yr}-${code}-MNL | Serial: MIN-${yr}${serial}-01 | Machine Tax ID: ${tin}`;
 })()}
  </p>
- <p className="text-[10px] font-mono text-black">
+ <p className="text-[10px] text-black">
  Branch: Central Depot & Main Hub | Operator: {db.currentUser?.fullName || 'System Administrator'}
  </p>
  </div>
- <div className="text-right font-mono text-xs">
+ <div className="text-right text-xs">
  <span className="font-extrabold uppercase block border border-black px-2.5 py-1 text-[11px] bg-zinc-100">
  {activeSubTab.replace("bir-", "").replace("-", " ").toUpperCase()} LEDGER SHEET
  </span>
@@ -3876,7 +3762,7 @@ export default function AtposExtraModules({
  </div>
 
  {/* Print Summary Metrics Bar */}
- <div className="grid grid-cols-5 gap-2 mt-3 pt-3 border-t border-dashed border-black text-[10px] font-mono">
+ <div className="grid grid-cols-5 gap-2 mt-3 pt-3 border-t border-dashed border-black text-[10px] ">
  <div>
  <span className="block text-[8.5px] uppercase font-bold text-black">Vatable Sales:</span>
  <span className="font-extrabold text-black">₱{vatableSales.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
@@ -3900,8 +3786,8 @@ export default function AtposExtraModules({
  </div>
  </div>
 
- <div className="flex justify-between items-center bg-m3-surface-high/30 p-3 rounded-xl border border-m3-outline-variant/10 font-sans text-xs">
- <span className="font-extrabold text-m3-primary uppercase font-mono tracking-wider">
+ <div className="flex justify-between items-center bg-content3/30 p-3 rounded-xl border border-divider/10 font-sans text-xs">
+ <span className="font-extrabold text-primary uppercase tracking-wider">
  {activeSubTab
  .replace("bir-", "")
  .replace("-", " ")
@@ -3911,7 +3797,7 @@ export default function AtposExtraModules({
  <div className="flex gap-2 bir-report-no-print">
  <button
  onClick={() => window.print()}
- className="py-1 px-2 text-[11px] bg-zinc-200 dark:bg-zinc-800 text-m3-on-surface rounded font-bold hover:bg-zinc-300 transition flex items-center gap-1 cursor-pointer border-0"
+ className="py-1 px-2 text-[11px] bg-zinc-200 dark:bg-content2 text-foreground rounded font-bold hover:bg-zinc-300 transition flex items-center gap-1 cursor-pointer border-0"
  >
  <Printer className="h-3.5 w-3.5" /> Print Sheets
  </button>
@@ -4000,14 +3886,14 @@ export default function AtposExtraModules({
  URL.revokeObjectURL(url);
  });
  }}
- className="py-1 px-2 text-[11px] bg-m3-primary text-m3-on-primary rounded font-bold hover:opacity-90 transition flex items-center gap-1 cursor-pointer border-0"
+ className="py-1 px-2 text-[11px] bg-primary text-primary-foreground rounded font-bold hover:opacity-90 transition flex items-center gap-1 cursor-pointer border-0"
  >
  <Download className="h-3.5 w-3.5" /> Export CSV
  </button>
  </div>
  </div>
 
- <div className="overflow-x-auto rounded-xl border border-m3-outline-variant/15">
+ <div className="overflow-x-auto rounded-xl border border-divider/15">
  {(() => {
  const filteredRows = db.sales
  .filter((s) => !s.isDeleted)
@@ -4125,8 +4011,8 @@ export default function AtposExtraModules({
  );
 
  return (
- <table className="w-full text-left font-sans text-xs divide-y divide-m3-outline-variant/15 min-w-[900px]">
- <thead className="bg-m3-surface-high/50 font-black border-b border-m3-outline-variant/15">
+ <table className="w-full text-left font-sans text-xs divide-y divide-divider/15 min-w-[900px]">
+ <thead className="bg-content3/50 font-black border-b border-divider/15">
  <tr>
  <th className="p-3">Reference Date</th>
  <th className="p-3">SI Number</th>
@@ -4138,7 +4024,7 @@ export default function AtposExtraModules({
  <th className="p-3 text-right">Net Sales Due</th>
  </tr>
  </thead>
- <tbody className="divide-y divide-m3-outline-variant/10 bg-m3-surface-low">
+ <tbody className="divide-y divide-divider/10 bg-content1">
  {filteredRows.map(
  ({
  s,
@@ -4151,51 +4037,51 @@ export default function AtposExtraModules({
  }) => (
  <tr
  key={s.id}
- className="hover:bg-m3-primary/5 transition-all text-m3-on-surface"
+ className="hover:bg-primary/5 transition-all text-foreground"
  >
- <td className="p-3 font-mono text-[10.5px] text-zinc-400">
+ <td className="p-3 text-[10.5px] text-default-500">
  {new Date(
  s.createdAt || Date.now(),
  ).toLocaleString()}
  </td>
- <td className="p-3 font-mono font-black text-m3-primary">
+ <td className="p-3 font-black text-primary">
  {s.saleNumber || s.id}
  </td>
  <td className="p-3 font-bold uppercase text-[10px]">
  {s.customerName || "Walk-In Customer"}
- <span className="block font-mono text-[9px] text-zinc-400 font-normal lowercase tracking-wide mt-0.5">
+ <span className="block text-[9px] text-default-500 font-normal lowercase tracking-wide mt-0.5">
  ({taxLabel})
  </span>
  </td>
- <td className="p-3 text-right font-mono">
+ <td className="p-3 text-right ">
  ₱
  {rowVatable.toLocaleString("en-US", {
  minimumFractionDigits: 2,
  maximumFractionDigits: 2,
  })}
  </td>
- <td className="p-3 text-right font-mono">
+ <td className="p-3 text-right ">
  ₱
  {rowVatExempt.toLocaleString("en-US", {
  minimumFractionDigits: 2,
  maximumFractionDigits: 2,
  })}
  </td>
- <td className="p-3 text-right font-mono text-amber-500">
+ <td className="p-3 text-right text-amber-500">
  ₱
  {rowVat.toLocaleString("en-US", {
  minimumFractionDigits: 2,
  maximumFractionDigits: 2,
  })}
  </td>
- <td className="p-3 text-right font-mono text-rose-500 font-bold">
+ <td className="p-3 text-right text-rose-500 font-bold">
  -₱
  {rowDiscount.toLocaleString("en-US", {
  minimumFractionDigits: 2,
  maximumFractionDigits: 2,
  })}
  </td>
- <td className="p-3 text-right font-mono text-emerald-500 font-extrabold">
+ <td className="p-3 text-right text-emerald-500 font-extrabold">
  ₱
  {rowNet.toLocaleString("en-US", {
  minimumFractionDigits: 2,
@@ -4206,43 +4092,43 @@ export default function AtposExtraModules({
  ),
  )}
  </tbody>
- <tfoot className="bg-m3-surface-high/30 border-t border-m3-outline-variant/30 font-black text-[11px] text-m3-on-surface">
+ <tfoot className="bg-content3/30 border-t border-divider/30 font-black text-[11px] text-foreground">
  <tr>
  <td
  colSpan={3}
- className="p-3 text-left uppercase tracking-wider text-zinc-400"
+ className="p-3 text-left uppercase tracking-wider text-default-500"
  >
  Cumulative Ledger Totals:
  </td>
- <td className="p-3 text-right font-mono">
+ <td className="p-3 text-right ">
  ₱
  {sumVatable.toLocaleString("en-US", {
  minimumFractionDigits: 2,
  maximumFractionDigits: 2,
  })}
  </td>
- <td className="p-3 text-right font-mono">
+ <td className="p-3 text-right ">
  ₱
  {sumVatExempt.toLocaleString("en-US", {
  minimumFractionDigits: 2,
  maximumFractionDigits: 2,
  })}
  </td>
- <td className="p-3 text-right font-mono text-amber-500">
+ <td className="p-3 text-right text-amber-500">
  ₱
  {sumVat.toLocaleString("en-US", {
  minimumFractionDigits: 2,
  maximumFractionDigits: 2,
  })}
  </td>
- <td className="p-3 text-right font-mono text-rose-500">
+ <td className="p-3 text-right text-rose-500">
  -₱
  {sumDiscount.toLocaleString("en-US", {
  minimumFractionDigits: 2,
  maximumFractionDigits: 2,
  })}
  </td>
- <td className="p-3 text-right font-mono text-emerald-500">
+ <td className="p-3 text-right text-emerald-500">
  ₱
  {sumNet.toLocaleString("en-US", {
  minimumFractionDigits: 2,
@@ -4257,22 +4143,22 @@ export default function AtposExtraModules({
  </div>
 
  {/* Official Print Sign-off Footer */}
- <div className="hidden print:block pt-8 mt-6 border-t border-black text-[10px] font-mono text-black">
+ <div className="hidden print:block pt-8 mt-6 border-t border-black text-[10px] text-black">
  <div className="grid grid-cols-3 gap-8 text-center">
  <div>
  <div className="border-b border-black mb-1 h-8"></div>
  <p className="font-bold uppercase">Prepared By (Cashier/Staff)</p>
- <p className="text-[8px] text-zinc-600">Signature Over Printed Name</p>
+ <p className="text-[8px] text-default-600">Signature Over Printed Name</p>
  </div>
  <div>
  <div className="border-b border-black mb-1 h-8"></div>
  <p className="font-bold uppercase">Verified By (Branch Manager)</p>
- <p className="text-[8px] text-zinc-600">Signature Over Printed Name</p>
+ <p className="text-[8px] text-default-600">Signature Over Printed Name</p>
  </div>
  <div>
  <div className="border-b border-black mb-1 h-8"></div>
  <p className="font-bold uppercase">BIR Auditor / Inspector</p>
- <p className="text-[8px] text-zinc-600">Official Stamp & Date</p>
+ <p className="text-[8px] text-default-600">Official Stamp & Date</p>
  </div>
  </div>
  </div>
@@ -4284,24 +4170,24 @@ export default function AtposExtraModules({
 
       {/* Adjust Points Modal */}
       {showAdjustPointsModal && selectedLoyaltyMember && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-m3-surface-low border border-m3-outline-variant/20 rounded-2xl p-5 max-w-md w-full space-y-4 shadow-xl text-xs font-sans">
-            <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-3">
-              <h3 className="font-extrabold text-sm text-m3-primary flex items-center gap-1.5">
+        <div className="fixed inset-0 z-50 bg-gray-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-content1 border border-divider/20 rounded-2xl p-5 max-w-md w-full space-y-4 shadow-xl text-xs font-sans">
+            <div className="flex justify-between items-center border-b border-divider/15 pb-3">
+              <h3 className="font-extrabold text-sm text-primary flex items-center gap-1.5">
                 <Sparkles className="h-4.5 w-4.5 text-amber-500" />
                 <span>Adjust Points — {selectedLoyaltyMember.fullName}</span>
               </h3>
               <button
                 onClick={() => setShowAdjustPointsModal(false)}
-                className="text-zinc-400 hover:text-m3-on-surface text-base font-bold cursor-pointer"
+                className="text-default-500 hover:text-foreground text-base font-bold cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="bg-m3-surface-lowest p-3 rounded-xl border border-m3-outline-variant/10 flex justify-between items-center font-mono">
-              <span className="text-zinc-400 font-sans text-xs">Current Points Balance:</span>
-              <span className="font-extrabold text-amber-500 text-sm">⭐ {(selectedLoyaltyMember.points || 0)} Pts</span>
+ <div className="bg-content1 p-3 rounded-xl border border-divider/10 flex justify-between items-center ">
+              <span className="text-default-500 font-sans text-xs">Current Points Balance:</span>
+              <span className="font-extrabold text-amber-500 text-sm">{(selectedLoyaltyMember.points || 0)} Pts</span>
             </div>
 
             <form
@@ -4325,10 +4211,10 @@ export default function AtposExtraModules({
               className="space-y-3.5"
             >
               <div className="space-y-1">
-                <label className="font-bold text-m3-on-surface-variant flex justify-between">
+                <label className="font-bold text-default-500 flex justify-between">
                   <span>Points Adjustment (+ grant, - deduct) *</span>
                   {adjustPointsAmount && (
-                    <span className="font-mono text-xs text-amber-500 font-bold">
+ <span className=" text-xs text-amber-500 font-bold">
                       Val: {formatCurrency(Math.abs(parseInt(adjustPointsAmount) || 0) * (db.loyaltyConfig?.pointValueInPhp || 1.0))}
                     </span>
                   )}
@@ -4339,51 +4225,51 @@ export default function AtposExtraModules({
                   value={adjustPointsAmount ?? ''}
                   onChange={(e) => setAdjustPointsAmount(e.target.value)}
                   placeholder="Points amount"
-                  className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none font-mono font-bold text-sm focus:border-amber-500 text-m3-on-surface"
+ className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none font-bold text-sm focus:border-amber-500 text-foreground"
                 />
 
                 {/* Quick Presets */}
                 <div className="flex flex-wrap gap-1.5 pt-1">
-                  <span className="text-[10px] text-zinc-400 font-bold uppercase w-full">Quick Presets:</span>
+                  <span className="text-[10px] text-default-500 font-bold uppercase w-full">Quick Presets:</span>
                   <button
                     type="button"
                     onClick={() => { setAdjustPointsAmount("10"); setAdjustPointsReason("Loyalty Bonus Credit"); }}
-                    className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 font-mono font-bold text-[10px] rounded border border-emerald-500/20 cursor-pointer"
+ className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 font-bold text-[10px] rounded border border-emerald-500/20 cursor-pointer"
                   >
                     +10 Bonus
                   </button>
                   <button
                     type="button"
                     onClick={() => { setAdjustPointsAmount("50"); setAdjustPointsReason("Promo Reward Bonus"); }}
-                    className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 font-mono font-bold text-[10px] rounded border border-emerald-500/20 cursor-pointer"
+ className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 font-bold text-[10px] rounded border border-emerald-500/20 cursor-pointer"
                   >
                     +50 Bonus
                   </button>
                   <button
                     type="button"
                     onClick={() => { setAdjustPointsAmount("100"); setAdjustPointsReason("VIP Milestone Bonus"); }}
-                    className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 font-mono font-bold text-[10px] rounded border border-emerald-500/20 cursor-pointer"
+ className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 font-bold text-[10px] rounded border border-emerald-500/20 cursor-pointer"
                   >
                     +100 Bonus
                   </button>
                   <button
                     type="button"
                     onClick={() => { setAdjustPointsAmount("-10"); setAdjustPointsReason("Direct Voucher Redemption"); }}
-                    className="px-2 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-mono font-bold text-[10px] rounded border border-rose-500/20 cursor-pointer"
+ className="px-2 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-bold text-[10px] rounded border border-rose-500/20 cursor-pointer"
                   >
                     -10 Redeem
                   </button>
                   <button
                     type="button"
                     onClick={() => { setAdjustPointsAmount("-50"); setAdjustPointsReason("Store Discount Redemption"); }}
-                    className="px-2 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-mono font-bold text-[10px] rounded border border-rose-500/20 cursor-pointer"
+ className="px-2 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-bold text-[10px] rounded border border-rose-500/20 cursor-pointer"
                   >
                     -50 Redeem
                   </button>
                   <button
                     type="button"
                     onClick={() => { setAdjustPointsAmount(`-${selectedLoyaltyMember.points || 0}`); setAdjustPointsReason("Full Balance Store Credit Redemption"); }}
-                    className="px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 font-mono font-bold text-[10px] rounded border border-amber-500/20 cursor-pointer"
+ className="px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 font-bold text-[10px] rounded border border-amber-500/20 cursor-pointer"
                   >
                     Use All ({selectedLoyaltyMember.points || 0} Pts)
                   </button>
@@ -4391,7 +4277,7 @@ export default function AtposExtraModules({
               </div>
 
               <div className="space-y-1">
-                <label className="font-bold text-m3-on-surface-variant">
+                <label className="font-bold text-default-500">
                   Reason / Note (Optional)
                 </label>
                 <input
@@ -4399,7 +4285,7 @@ export default function AtposExtraModules({
                   value={adjustPointsReason ?? ''}
                   onChange={(e) => setAdjustPointsReason(e.target.value)}
                   placeholder="Reason / Note"
-                  className="w-full bg-m3-surface-high border border-m3-outline-variant rounded-lg p-2.5 outline-none text-xs focus:border-amber-500 text-m3-on-surface"
+                  className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none text-xs focus:border-amber-500 text-foreground"
                 />
               </div>
 
@@ -4407,7 +4293,7 @@ export default function AtposExtraModules({
                 <button
                   type="button"
                   onClick={() => setShowAdjustPointsModal(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold transition cursor-pointer"
+                  className="flex-1 py-2.5 rounded-xl bg-content2 hover:bg-default-200 text-default-700 font-bold transition cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -4433,12 +4319,12 @@ export default function AtposExtraModules({
         onConfirm={() => {
           setPrintReceiptData({
             title: "BIR CUMULATIVE Z-READING",
-            receiptNo: "Z-" + Math.floor(Math.random() * 89999 + 10000),
-            customer: "EMMAN TILE MAIN HQ",
+            receiptNo: "Z-" + new Date().toISOString().slice(0, 10).replace(/-/g, "") + "-" + Date.now().toString().slice(-4),
+            customer: (localStorage.getItem('tilepoint_company_name_v1') || db.branches[0]?.name || "MAIN HQ").toUpperCase(),
             date: new Date().toLocaleString(),
-            prevBalance: 5420910.0,
+            prevBalance: Math.max(0, db.sales.reduce((acc, s) => acc + (!s.isDeleted ? Number(s.grandTotal) || 0 : 0), 0) - Number(totalSalesFromDay || 0)),
             paid: totalSalesFromDay,
-            newBalance: 5420910.0 + Number(totalSalesFromDay),
+            newBalance: db.sales.reduce((acc, s) => acc + (!s.isDeleted ? Number(s.grandTotal) || 0 : 0), 0),
             pointsGained: 0,
           });
           setConfirmZReadingModal(false);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { User, UserRole } from "../types/db";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -20,6 +21,7 @@ import {
   LockKeyhole,
   BookOpen,
 } from "lucide-react";
+import { HeroChip } from "./common/ui/HeroChip";
 
 export interface ShortcutModuleItem {
   id: string;
@@ -127,7 +129,7 @@ export const MODULE_SHORTCUT_MAP: ShortcutModuleItem[] = [
     category: "System",
     shortcut: "Ctrl + 0",
     icon: BookOpen,
-    roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+    roles: [UserRole.ADMIN, UserRole.MANAGER],
     description: "Step-by-step cashier handbook & system workflow guide",
   },
 ];
@@ -216,35 +218,42 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
 
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-md animate-fade-in">
-        {/* Backdrop click to dismiss */}
-        <div className="absolute inset-0" onClick={onClose} />
+      <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+        {/* Full-Screen Uniform Backdrop */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          onClick={onClose}
+          className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md"
+        />
 
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: -10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: -10 }}
           transition={{ duration: 0.15 }}
-          className="relative w-full max-w-2xl bg-m3-surface border border-m3-outline-variant/30 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] text-m3-on-surface z-10"
+          className="relative w-full max-w-2xl bg-content1 border border-divider/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] text-foreground z-10 transition-all duration-300"
         >
           {/* Header & Search Bar */}
-          <div className="p-4 border-b border-m3-outline-variant/20 bg-m3-surface-low flex flex-col gap-3">
+          <div className="p-4 border-b border-divider/20 bg-content1/80 flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-m3-primary font-black text-xs uppercase tracking-wider font-mono">
+              <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-wider">
                 <Command className="h-4 w-4" />
                 <span>TilePoint Quick Module Switcher</span>
               </div>
 
               {/* Mode Tabs */}
-              <div className="flex items-center gap-1 bg-m3-surface-container p-1 rounded-xl border border-m3-outline-variant/20 text-[10px] font-bold">
+              <div className="flex items-center gap-1 bg-content2 p-1 rounded-xl border border-divider/20 text-[10px] font-bold">
                 <button
                   onClick={() => setActiveTabMode("switcher")}
                   className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
                     activeTabMode === "switcher"
-                      ? "bg-m3-primary text-m3-on-primary font-extrabold shadow-sm"
-                      : "text-m3-on-surface-variant hover:text-m3-on-surface"
+                      ? "bg-primary text-primary-foreground font-extrabold shadow-sm"
+                      : "text-default-500 hover:text-foreground"
                   }`}
                 >
                   Modules
@@ -253,8 +262,8 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
                   onClick={() => setActiveTabMode("hotkeys")}
                   className={`px-3 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
                     activeTabMode === "hotkeys"
-                      ? "bg-m3-primary text-m3-on-primary font-extrabold shadow-sm"
-                      : "text-m3-on-surface-variant hover:text-m3-on-surface"
+                      ? "bg-primary text-primary-foreground font-extrabold shadow-sm"
+                      : "text-default-500 hover:text-foreground"
                   }`}
                 >
                   <Keyboard className="h-3 w-3" />
@@ -264,7 +273,7 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
 
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-full hover:bg-m3-outline-variant/20 text-m3-on-surface-variant transition-colors cursor-pointer"
+                className="p-1.5 rounded-full hover:bg-default-100 text-default-500 transition-colors cursor-pointer"
                 title="Close (Esc)"
               >
                 <X className="h-4 w-4" />
@@ -273,7 +282,7 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
 
             {activeTabMode === "switcher" && (
               <div className="relative flex items-center">
-                <Search className="absolute left-3.5 h-4 w-4 text-m3-on-surface-variant pointer-events-none" />
+                <Search className="absolute left-3.5 h-4 w-4 text-default-500 pointer-events-none" />
                 <input
                   ref={inputRef}
                   type="text"
@@ -283,20 +292,20 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
                     setSelectedIndex(0);
                   }}
                   placeholder="Type to filter modules or shortcut key (e.g. 'pos', 'inventory', 'Ctrl+2')..."
-                  className="w-full pl-10 pr-4 py-2.5 bg-m3-surface rounded-2xl border border-m3-outline-variant/40 text-xs font-semibold placeholder:text-m3-on-surface-variant/60 focus:outline-none focus:border-m3-primary focus:ring-2 focus:ring-m3-primary/20 transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 bg-background rounded-2xl border border-divider/40 text-xs font-semibold placeholder:text-default-500/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                 />
               </div>
             )}
           </div>
 
           {/* Body Content */}
-          <div className="p-3 overflow-y-auto flex-1 divide-y divide-m3-outline-variant/10 scrollbar-thin">
+          <div className="p-3 overflow-y-auto flex-1 divide-y divide-divider/10 scrollbar-thin">
             {activeTabMode === "switcher" ? (
               filteredModules.length === 0 ? (
-                <div className="p-8 text-center text-m3-on-surface-variant text-xs font-medium space-y-2">
+                <div className="p-8 text-center text-default-500 text-xs font-medium space-y-2">
                   <ShieldAlert className="h-8 w-8 mx-auto text-amber-500 opacity-80" />
                   <p>No matching modules found for "{searchQuery}".</p>
-                  <p className="text-[10px] text-m3-on-surface-variant/70">
+                  <p className="text-[10px] text-default-500/70">
                     Try searching for "POS", "Inventory", "Dashboard", or "Calculator".
                   </p>
                 </div>
@@ -317,16 +326,16 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
                         onMouseEnter={() => setSelectedIndex(idx)}
                         className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all cursor-pointer text-left border ${
                           isSelected
-                            ? "bg-m3-primary/10 border-m3-primary/40 text-m3-primary shadow-sm"
-                            : "bg-transparent border-transparent hover:bg-m3-surface-low text-m3-on-surface"
+                            ? "bg-primary/10 border-primary/40 text-primary shadow-sm"
+                            : "bg-transparent border-transparent hover:bg-content1 text-foreground"
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
                           <div
                             className={`p-2 rounded-xl shrink-0 ${
                               isSelected
-                                ? "bg-m3-primary text-m3-on-primary"
-                                : "bg-m3-surface-container text-m3-on-surface-variant"
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-content2 text-default-500"
                             }`}
                           >
                             <ItemIcon className="h-4 w-4" />
@@ -337,25 +346,24 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
                                 {item.name}
                               </span>
                               {isActive && (
-                                <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.2 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shrink-0 flex items-center gap-1">
-                                  <Check className="h-2.5 w-2.5" />
+                                <HeroChip variant="primary" size="sm" startContent={<Check className="h-2.5 w-2.5" />}>
                                   Active
-                                </span>
+                                </HeroChip>
                               )}
                             </div>
-                            <p className="text-[10px] text-m3-on-surface-variant truncate mt-0.5">
+                            <p className="text-[10px] text-default-500 truncate mt-0.5">
                               {item.description}
                             </p>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[9px] font-mono font-extrabold uppercase px-2 py-0.5 rounded-lg bg-m3-surface-container-high border border-m3-outline-variant/30 text-m3-on-surface-variant">
+                          <HeroChip variant="neutral" size="sm">
                             {item.category}
-                          </span>
-                          <span className="text-[10px] font-mono font-black uppercase px-2.5 py-1 rounded-xl bg-m3-primary/20 text-m3-primary border border-m3-primary/30 shadow-xs">
+                          </HeroChip>
+                          <HeroChip variant="primary" size="sm" className="font-mono shadow-xs">
                             {item.shortcut}
-                          </span>
+                          </HeroChip>
                         </div>
                       </button>
                     );
@@ -365,12 +373,12 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
             ) : (
               /* Cashier Hotkeys Reference Sheet */
               <div className="p-2 space-y-3">
-                <div className="p-3 rounded-2xl bg-m3-primary/10 border border-m3-primary/20 text-xs space-y-1">
-                  <div className="font-black text-m3-primary flex items-center gap-2">
+                <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20 text-xs space-y-1">
+                  <div className="font-black text-primary flex items-center gap-2">
                     <Sparkles className="h-4 w-4" />
                     <span>Global Cashier Keyboard Efficiency Guide</span>
                   </div>
-                  <p className="text-[11px] text-m3-on-surface-variant leading-relaxed">
+                  <p className="text-[11px] text-default-500 leading-relaxed">
                     Use these direct keyboard shortcuts anywhere in the TilePoint ERP system to switch modules instantly without touching the mouse!
                   </p>
                 </div>
@@ -379,12 +387,12 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
                   {POS_HOTKEYS.map((hk, i) => (
                     <div
                       key={i}
-                      className="p-2.5 rounded-xl bg-m3-surface-low border border-m3-outline-variant/20 flex items-center justify-between text-xs"
+                      className="p-2.5 rounded-xl bg-content1 border border-divider/20 flex items-center justify-between text-xs"
                     >
-                      <span className="text-[11px] text-m3-on-surface font-semibold">
+                      <span className="text-[11px] text-foreground font-semibold">
                         {hk.description}
                       </span>
-                      <kbd className="px-2 py-0.5 rounded-lg bg-m3-surface-container-high font-mono font-black text-[10px] text-m3-primary border border-m3-outline-variant/40 shadow-xs shrink-0 ml-2">
+                      <kbd className="px-2 py-0.5 rounded-lg bg-content3 font-black text-[10px] text-primary border border-divider/40 shadow-xs shrink-0 ml-2">
                         {hk.key}
                       </kbd>
                     </div>
@@ -395,37 +403,42 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
           </div>
 
           {/* Footer Navigation Hints */}
-          <div className="p-3 bg-m3-surface-low border-t border-m3-outline-variant/15 flex items-center justify-between text-[10px] font-medium text-m3-on-surface-variant">
+          <div className="p-3 bg-content1 border-t border-divider/15 flex items-center justify-between text-[10px] font-medium text-default-500">
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 rounded bg-m3-surface border border-m3-outline-variant/30 font-mono font-bold">
+                <kbd className="px-1.5 py-0.5 rounded bg-background border border-divider/30 font-bold">
                   ↑
                 </kbd>
-                <kbd className="px-1.5 py-0.5 rounded bg-m3-surface border border-m3-outline-variant/30 font-mono font-bold">
+                <kbd className="px-1.5 py-0.5 rounded bg-background border border-divider/30 font-bold">
                   ↓
                 </kbd>
                 <span>Navigate</span>
               </span>
               <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 rounded bg-m3-surface border border-m3-outline-variant/30 font-mono font-bold">
+                <kbd className="px-1.5 py-0.5 rounded bg-background border border-divider/30 font-bold">
                   Enter
                 </kbd>
                 <span>Select Module</span>
               </span>
               <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 rounded bg-m3-surface border border-m3-outline-variant/30 font-mono font-bold">
+                <kbd className="px-1.5 py-0.5 rounded bg-background border border-divider/30 font-bold">
                   Esc
                 </kbd>
                 <span>Close</span>
               </span>
             </div>
 
-            <div className="hidden sm:block text-m3-primary font-mono font-bold">
-              Press <kbd className="px-1.5 py-0.5 rounded bg-m3-primary/15 border border-m3-primary/30">Ctrl + 1..0</kbd> to jump directly
+            <div className="hidden sm:block text-primary font-bold">
+              Press <kbd className="px-1.5 py-0.5 rounded bg-primary/15 border border-primary/30">Ctrl + 1..0</kbd> to jump directly
             </div>
           </div>
         </motion.div>
       </div>
     </AnimatePresence>
   );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(modalContent, document.body);
 };
+
+export default QuickModuleSwitcherModal;

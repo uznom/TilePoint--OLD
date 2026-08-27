@@ -4,91 +4,26 @@
  */
 
 import React from 'react';
+import { HeroSkeleton } from './common/ui/HeroSkeleton';
+import { HeroCard } from './common/ui/HeroCard';
 
 export const SkeletalLoader: React.FC = () => {
- return (
- <div className="space-y-6 animate-pulse w-full">
- {/* Top micro alerts bar mock skeleton */}
- <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
- {[...Array(4)].map((_, idx) => (
- <div
- key={idx}
- className="h-20 bg-m3-surface-low border border-m3-outline-variant/20 rounded-[24px] flex items-center p-4 gap-4 w-full"
- >
- <div className="h-10 w-10 bg-m3-outline-variant/35 rounded-full shrink-0" />
- <div className="space-y-2 flex-1 min-w-0">
- <div className="h-3.5 bg-m3-outline-variant/35 rounded-md w-1/3" />
- <div className="h-3 bg-m3-outline-variant/20 rounded-md w-2/3" />
- </div>
- </div>
- ))}
- </div>
-
- {/* KPI Cards bento skeleton */}
- <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-8 gap-4 w-full">
- {[...Array(8)].map((_, idx) => (
- <div
- key={idx}
- className="p-5 rounded-[24px] border border-m3-outline-variant/25 bg-m3-surface-low flex items-center justify-between shadow-sm w-full"
- >
- <div className="space-y-2.5 flex-1 min-w-0 mr-2">
- <div className="h-3 bg-m3-outline-variant/30 rounded w-1/2" />
- <div className="h-7 bg-m3-outline-variant/40 rounded w-2/3" />
- <div className="h-2 bg-m3-outline-variant/20 rounded w-1/3" />
- </div>
- <div className="h-11 w-11 bg-m3-outline-variant/30 rounded-[14px] shrink-0" />
- </div>
- ))}
- </div>
-
- {/* Main double column feed skeleton */}
- <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
- {/* Left wider block */}
- <div className="lg:col-span-8 xl:col-span-9 p-6 bg-m3-surface-low rounded-[28px] border border-m3-outline-variant/20 space-y-4 w-full">
- <div className="flex items-center justify-between">
- <div className="h-4.5 bg-m3-outline-variant/45 rounded w-1/4" />
- <div className="h-3.5 bg-m3-outline-variant/25 rounded-full w-20" />
- </div>
- <div className="border border-m3-outline-variant/15 rounded-2xl overflow-hidden divide-y divide-m3-outline-variant/15 w-full">
- {[...Array(6)].map((_, i) => (
- <div
- key={i}
- className="p-4 flex items-center justify-between gap-4 w-full"
- >
- <div className="flex items-center gap-3 flex-1 min-w-0">
- <div className="h-9 w-9 bg-m3-outline-variant/30 rounded-xl shrink-0" />
- <div className="space-y-2 flex-1 min-w-0">
- <div className="h-3 bg-m3-outline-variant/35 rounded w-1/3" />
- <div className="h-2.5 bg-m3-outline-variant/20 rounded w-1/2" />
- </div>
- </div>
- <div className="h-3.5 bg-m3-outline-variant/35 rounded w-12 shrink-0" />
- </div>
- ))}
- </div>
- </div>
-
- {/* Right side widgets block */}
- <div className="lg:col-span-4 xl:col-span-3 space-y-4 w-full">
- <div className="p-5 bg-m3-surface-low rounded-[28px] border border-m3-outline-variant/20 space-y-4 w-full">
- <div className="h-4 bg-m3-outline-variant/45 rounded w-1/3" />
- <div className="space-y-3 w-full">
- {[...Array(5)].map((_, i) => (
- <div
- key={i}
- className="p-3 bg-m3-surface rounded-xl border border-m3-outline-variant/10 flex items-center justify-between w-full"
- >
- <div className="space-y-2 flex-1 min-w-0 mr-4">
- <div className="h-3 bg-m3-outline-variant/30 rounded w-2/3" />
- <div className="h-2 bg-m3-outline-variant/15 rounded w-1/3" />
- </div>
- <div className="h-6 w-14 bg-m3-outline-variant/25 rounded-full shrink-0" />
- </div>
- ))}
- </div>
- </div>
- </div>
- </div>
- </div>
- );
+  return (
+    <div className="w-full space-y-6 animate-fade-in p-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <HeroCard key={i} className="p-4 bg-content1 rounded-2xl border border-divider/40">
+            <HeroSkeleton className="h-4 w-20 rounded-md mb-2" />
+            <HeroSkeleton className="h-8 w-28 rounded-lg" />
+          </HeroCard>
+        ))}
+      </div>
+      <HeroCard className="p-6 bg-content1 rounded-2xl border border-divider/40">
+        <HeroSkeleton className="h-6 w-48 rounded-lg mb-4" />
+        <HeroSkeleton className="h-64 w-full rounded-xl" />
+      </HeroCard>
+    </div>
+  );
 };
+
+export default SkeletalLoader;

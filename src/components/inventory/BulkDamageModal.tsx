@@ -1,7 +1,9 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle, X, Check } from 'lucide-react';
 import { Branch, Product, BranchStock } from '../../types/db';
 import { getBranchOptionLabel } from '../../lib/branchUtils';
+import { HeroButton } from '../common/ui/HeroButton';
 
 interface BulkDamageModalProps {
   isOpen: boolean;
@@ -42,40 +44,42 @@ export const BulkDamageModal: React.FC<BulkDamageModalProps> = React.memo(({
 }) => {
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
+  const modalContent = (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
+      {/* Full-Screen Uniform Backdrop */}
       <div 
-        className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm shadow-xl" 
+        className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
         onClick={onClose} 
       />
       <form
         onSubmit={onSubmit}
-        className="relative w-full max-w-2xl rounded-[32px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4 max-h-[90vh] overflow-y-auto animate-scale-up"
+        className="relative w-full max-w-2xl rounded-large border border-divider p-6 z-20 shadow-2xl bg-content1 text-foreground text-left space-y-4 max-h-[90vh] overflow-y-auto animate-scale-up"
       >
         {/* Header */}
-        <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-3">
-          <h3 className="text-sm font-black text-rose-500 uppercase tracking-wider flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-rose-500 animate-pulse" />
+        <div className="flex justify-between items-center border-b border-divider pb-3">
+          <h3 className="text-sm font-black text-danger uppercase tracking-wider flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-danger animate-pulse" />
             <span>Register Bulk Damages & Log Breakages</span>
           </h3>
           <button 
             type="button" 
             onClick={onClose} 
-            className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full hover:bg-m3-outline-variant/15 transition-all"
+            className="text-default-400 hover:text-foreground cursor-pointer p-1 rounded-medium hover:bg-default-100 transition-colors"
+            aria-label="Close modal"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4.5 w-4.5" />
           </button>
         </div>
 
         {/* Config Fields Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="space-y-1">
-            <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Reporting Branch</label>
+            <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">Reporting Branch</label>
             <select
               required
               value={bulkDamageBranchId}
               onChange={e => setBulkDamageBranchId(e.target.value)}
-              className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary p-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans cursor-pointer"
+              className="w-full bg-content2 border border-divider focus:border-primary p-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-sans cursor-pointer"
             >
               {branches.filter(b => !b.isDeleted).map(b => (
                 <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
@@ -84,11 +88,11 @@ export const BulkDamageModal: React.FC<BulkDamageModalProps> = React.memo(({
           </div>
 
           <div className="space-y-1">
-            <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Damage Category</label>
+            <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">Damage Category</label>
             <select
               value={bulkDamageCategory}
               onChange={e => setBulkDamageCategory(e.target.value)}
-              className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary p-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans cursor-pointer"
+              className="w-full bg-content2 border border-divider focus:border-primary p-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-sans cursor-pointer"
             >
               <option value="Warehouse Breakage">Warehouse Drop / Forklift Clash</option>
               <option value="BOA">BOA (Broken On Arrival from Supplier)</option>
@@ -98,11 +102,11 @@ export const BulkDamageModal: React.FC<BulkDamageModalProps> = React.memo(({
           </div>
 
           <div className="space-y-1">
-            <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Action / Treatment Taken</label>
+            <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">Action / Treatment Taken</label>
             <select
               value={bulkDamageAction}
               onChange={e => setBulkDamageAction(e.target.value)}
-              className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/50 focus:border-m3-primary p-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-sans cursor-pointer"
+              className="w-full bg-content2 border border-divider focus:border-primary p-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-sans cursor-pointer"
             >
               <option value="Disposed / Scrapped">Shattered - Disposed & Scrapped</option>
               <option value="Saved for Mosaic">Saved for Low-Cost Mosaic Sales</option>
@@ -114,20 +118,20 @@ export const BulkDamageModal: React.FC<BulkDamageModalProps> = React.memo(({
 
         {/* Selected Products Quantities list */}
         <div className="space-y-2">
-          <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Damaged Quantities per Tile Code</label>
-          <div className="bg-m3-surface-lowest border border-m3-outline-variant/15 rounded-2xl max-h-[240px] overflow-y-auto divide-y divide-m3-outline-variant/10 scrollbar-thin">
+          <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">Damaged Quantities per Tile Code</label>
+          <div className="bg-content2 border border-divider rounded-medium max-h-[240px] overflow-y-auto divide-y divide-divider scrollbar-thin">
             {selectedProducts.map((pItem) => {
               const branchStockVal = branchStock.find(bs => bs.productId === pItem.id && bs.branchId === bulkDamageBranchId)?.quantity ?? 0;
               return (
                 <div key={pItem.id} className="p-3 flex items-center justify-between gap-4 text-xs">
                   <div className="flex-1 min-w-0">
-                    <div className="font-extrabold truncate text-m3-on-surface">{pItem.productName}</div>
-                    <div className="text-[10px] text-zinc-400 font-mono mt-0.5">
-                      SKU: {pItem.sku} • Stock in Branch: <span className="font-bold text-m3-primary">{branchStockVal} boxes</span>
+                    <div className="font-extrabold truncate text-foreground">{pItem.productName}</div>
+                    <div className="text-[10px] text-default-500 mt-0.5">
+                      SKU: {pItem.sku} • Stock in Branch: <span className="font-bold text-primary">{branchStockVal} boxes</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase">Damaged Boxes:</span>
+                    <span className="text-[10px] font-bold text-default-500 uppercase">Damaged Boxes:</span>
                     <input
                       type="number"
                       min={1}
@@ -141,7 +145,7 @@ export const BulkDamageModal: React.FC<BulkDamageModalProps> = React.memo(({
                           [pItem.id]: val
                         }));
                       }}
-                      className="w-16 bg-m3-surface-low border border-m3-outline-variant/30 rounded-lg text-center p-1 font-mono font-bold text-xs focus:border-m3-primary focus:outline-none"
+                      className="w-16 bg-content1 border border-divider rounded-medium text-center p-1 font-bold text-xs focus:border-primary focus:outline-none"
                     />
                   </div>
                 </div>
@@ -152,37 +156,45 @@ export const BulkDamageModal: React.FC<BulkDamageModalProps> = React.memo(({
 
         {/* Incident description */}
         <div className="space-y-1">
-          <label className="text-[9px] font-black text-m3-primary uppercase tracking-widest pl-1 block">Incident Description & Audit Remarks</label>
+          <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">Incident Description & Audit Remarks</label>
           <textarea
             required
             rows={2}
             value={bulkDamageNotes}
             onChange={e => setBulkDamageNotes(e.target.value)}
             placeholder="Describe the incident causing the stock breakages or suppliers delivery issue..."
-            className="w-full bg-m3-surface-lowest border border-m3-outline-variant/20 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-xl font-sans"
+            className="w-full bg-content2 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-sans"
           />
         </div>
 
         {/* Submit / Cancel Actions */}
-        <div className="flex justify-end gap-2 border-t border-m3-outline-variant/15 pt-4">
-          <button
+        <div className="flex justify-end gap-2 border-t border-divider pt-4">
+          <HeroButton
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-black uppercase tracking-wider rounded-full hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors cursor-pointer"
+            variant="light"
+            size="sm"
+            className="font-bold text-default-600"
           >
             Cancel
-          </button>
-          <button
+          </HeroButton>
+          <HeroButton
             type="submit"
-            className="bg-rose-500 hover:bg-rose-600 text-white font-black uppercase tracking-wider px-5 py-2.5 rounded-full text-xs shadow-md cursor-pointer transition-all active:scale-95 flex items-center gap-1.5"
+            color="danger"
+            variant="solid"
+            size="sm"
+            className="font-black uppercase tracking-wider"
+            startIcon={<Check className="h-4 w-4" />}
           >
-            <Check className="h-4 w-4" />
-            <span>Register Bulk Damages</span>
-          </button>
+            Register Bulk Damages
+          </HeroButton>
         </div>
       </form>
     </div>
   );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(modalContent, document.body);
 });
 
 BulkDamageModal.displayName = 'BulkDamageModal';

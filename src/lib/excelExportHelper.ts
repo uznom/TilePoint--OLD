@@ -167,7 +167,7 @@ export async function exportSalesTransmittalToXLSX(
   report: any,
   currentUser: any
 ): Promise<{ success: boolean; path: string }> {
-  const establishmentName = typeof window !== 'undefined' ? (localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center') : 'Emman Tile Center';
+  const establishmentName = typeof window !== 'undefined' ? (localStorage.getItem('tilepoint_company_name_v1') || 'Main Enterprise') : 'Main Enterprise';
 
   // Summary Sheet
   const summaryAoA = [

@@ -3,13 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product, Branch, InventoryLocationStock, UserRole, User } from '../../types/db';
 import {
   Search,
   Plus,
-  Upload,
   ArrowUpDown,
   Printer,
   AlertTriangle,
@@ -22,12 +21,18 @@ import {
   Trash2,
   Clock
 } from 'lucide-react';
-import { getBranchStockQuantity, getBranchStockRecord, getBranchOptionLabel } from '../../lib/branchUtils';
+import { getBranchStockQuantity, getBranchStockRecord, getBranchOptionLabel, isProductInBranch } from '../../lib/branchUtils';
 import { formatCurrency } from '../../utils/formatters';
 import { TablePagination } from '../TablePagination';
 import { createSearchIndex, searchIndex } from '../../utils/searchIndex';
 import { useVirtualList } from '../../hooks/useVirtualList';
 import { StyledBarcode } from '../../utils/barcodeGenerator';
+import { HeroButton } from '../common/ui/HeroButton';
+import { HeroTooltip } from '../common/ui/HeroTooltip';
+import { HeroTable } from '../common/ui/HeroTable';
+import { HeroChip } from '../common/ui/HeroChip';
+import { useMultiSort } from '../../hooks/useMultiSort';
+import { MultiSortBadgeBar } from '../common/ui/MultiSortBadgeBar';
 
 export interface CatalogStockLedgerProps {
   branchProducts: Product[];
@@ -47,8 +52,8 @@ export interface CatalogStockLedgerProps {
   setCategoryFilter: (category: string) => void;
   statusFilter: string;
   setStatusFilter: (status: string) => void;
-  sortBy: 'default' | 'qty-desc' | 'qty-asc' | 'alpha-asc' | 'alpha-desc';
-  setSortBy: (sort: 'default' | 'qty-desc' | 'qty-asc' | 'alpha-asc' | 'alpha-desc') => void;
+  sortBy: 'default' | 'qty-desc' | 'qty-asc' | 'alpha-asc' | 'alpha-desc' | 'price-desc' | 'price-asc' | 'sku-asc' | 'sku-desc' | string;
+  setSortBy: (sort: any) => void;
   selectedProdIds: Record<string, boolean>;
   setSelectedProdIds: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   expandedProductIds: Record<string, boolean>;
@@ -58,7 +63,6 @@ export interface CatalogStockLedgerProps {
   prodPage: number;
   setProdPage: (page: number) => void;
   prodsPerPage: number;
-  setShowPortabilityHubModal: (show: boolean) => void;
   handleOpenAdd: () => void;
   handleBulkSimulatePrint: (products: Product[]) => void;
   setBulkDamageQuantities: (qtys: Record<string, number>) => void;
@@ -104,7 +108,6 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
   prodPage,
   setProdPage,
   prodsPerPage,
-  setShowPortabilityHubModal,
   handleOpenAdd,
   handleBulkSimulatePrint,
   setBulkDamageQuantities,
@@ -121,37 +124,93 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
   // Pre-indexed search index for catalog products
   const productSearchIndex = useMemo(() => {
     return createSearchIndex(branchProducts, p =>
-      `${p.productName} ${p.productCode} ${p.barcode || ''} ${p.sku || ''} ${p.brand || ''} ${p.designName || ''} ${p.category || ''}`
+      `${p.productName} ${p.productCode} ${p.barcode || ''} ${p.sku || ''} ${p.brand || ''} ${p.designName || ''} ${p.category || ''} ${p.size || ''} ${p.supplierId || ''} ${p.origin || ''} ${p.id || ''} ${(p as any).description || ''}`
     );
   }, [branchProducts]);
+
+  // Branch scope toggle: "branch-only" (items stocked/assigned to selected branch) vs "all-catalog"
+  const [branchScopeFilter, setBranchScopeFilter] = useState<'branch-only' | 'all-catalog'>('branch-only');
+
+  // Reset page to 1 whenever search, category, status, or branch filters change
+  useEffect(() => {
+    setProdPage(1);
+  }, [term, categoryFilter, statusFilter, selectedViewBranchId, branchScopeFilter, setProdPage]);
+
+  // Multi-column sorting engine
+  const {
+    sortDescriptors,
+    handleSort: handleTableSort,
+    getSortDirection: getTableSortDir,
+    getSortRank: getTableSortRank,
+    removeSort,
+    clearSort,
+    sortData
+  } = useMultiSort<Product>({
+    customGetters: {
+      sku: (p) => p.productCode || p.sku || '',
+      name: (p) => p.productName || '',
+      category: (p) => p.category || '',
+      cost: (p) => p.costPrice || 0,
+      price: (p) => p.sellingPrice || 0,
+      stock: (p) => getBranchStockQuantity(p, selectedViewBranchId, branchStock, branches),
+      threshold: (p) => {
+        const isConsolidated = selectedViewBranchId === 'consolidated' || !selectedViewBranchId;
+        const bsRec = getBranchStockRecord(p, selectedViewBranchId, branchStock, branches);
+        return isConsolidated
+          ? (p.minimumStock ?? p.lowStockThreshold ?? 10)
+          : (bsRec?.lowStockThresholdOverride ?? bsRec?.lowStockThreshold ?? p.minimumStock ?? p.lowStockThreshold ?? 10);
+      }
+    }
+  });
 
   // Catalog Filtration & Sorting
   const filteredProducts = useMemo(() => {
     const searchMatches = searchIndex(productSearchIndex, term);
+    const isConsolidated = selectedViewBranchId === 'consolidated' || !selectedViewBranchId;
+
     const filtered = searchMatches.filter(p => {
-      const matchCategory = categoryFilter === 'All' || p.category === categoryFilter;
+      // 1. Branch Scope Filter
+      if (!isConsolidated && branchScopeFilter === 'branch-only') {
+        const inBranch = isProductInBranch(p, selectedViewBranchId, branchStock, branches);
+        if (!inBranch) return false;
+      }
+
+      // 2. Category Filter
+      const matchCategory = categoryFilter === 'All' || 
+        (p.category && p.category.trim().toLowerCase() === categoryFilter.trim().toLowerCase());
       if (!matchCategory) return false;
 
+      // 3. Status Filter
       if (statusFilter === 'All') return true;
 
       const qty = getBranchStockQuantity(p, selectedViewBranchId, branchStock, branches);
       const bsRec = getBranchStockRecord(p, selectedViewBranchId, branchStock, branches);
-      const threshold = selectedViewBranchId === 'consolidated'
-        ? p.minimumStock
-        : (bsRec?.lowStockThresholdOverride ?? p.minimumStock);
+      const threshold = isConsolidated
+        ? (p.minimumStock ?? p.lowStockThreshold ?? 10)
+        : (bsRec?.lowStockThresholdOverride ?? bsRec?.lowStockThreshold ?? p.minimumStock ?? p.lowStockThreshold ?? 10);
 
-      let currentStatus = 'In Stock';
-      if (qty === 0) {
-        currentStatus = 'Out of Stock';
-      } else if (qty <= threshold * 0.5) {
-        currentStatus = 'Critical';
-      } else if (qty <= threshold) {
-        currentStatus = 'Low Stock';
+      const isLow = statusFilter === 'Low Stock' || statusFilter === '● Low Stock';
+      const isCritical = statusFilter === 'Critical' || statusFilter === '● Critical Stock';
+      const isOut = statusFilter === 'Out of Stock' || statusFilter === '● Out of Stock';
+      const isInStock = statusFilter === 'In Stock';
+
+      if (isInStock) return qty > 0;
+      if (isOut) return qty === 0;
+      if (isLow) return qty > 0 && qty <= threshold;
+      if (isCritical) {
+        const critThreshold = Math.max(1, Math.floor(threshold * 0.5));
+        return qty > 0 && qty <= critThreshold;
       }
 
-      return statusFilter === currentStatus;
+      return true;
     });
 
+    // If multi-sort descriptors are active, prioritize multi-sort
+    if (sortDescriptors.length > 0) {
+      return sortData(filtered);
+    }
+
+    // Fallback to legacy single dropdown sort if specified
     if (sortBy === 'qty-desc') {
       return [...filtered].sort((a, b) => {
         const qtyA = getBranchStockQuantity(a, selectedViewBranchId, branchStock, branches);
@@ -172,9 +231,21 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
     if (sortBy === 'alpha-desc') {
       return [...filtered].sort((a, b) => b.productName.localeCompare(a.productName));
     }
+    if (sortBy === 'sku-asc') {
+      return [...filtered].sort((a, b) => (a.productCode || a.sku || '').localeCompare(b.productCode || b.sku || ''));
+    }
+    if (sortBy === 'sku-desc') {
+      return [...filtered].sort((a, b) => (b.productCode || b.sku || '').localeCompare(a.productCode || a.sku || ''));
+    }
+    if (sortBy === 'price-desc') {
+      return [...filtered].sort((a, b) => (b.sellingPrice || 0) - (a.sellingPrice || 0));
+    }
+    if (sortBy === 'price-asc') {
+      return [...filtered].sort((a, b) => (a.sellingPrice || 0) - (b.sellingPrice || 0));
+    }
 
     return filtered;
-  }, [productSearchIndex, branchStock, branches, term, categoryFilter, statusFilter, selectedViewBranchId, sortBy]);
+  }, [productSearchIndex, branchStock, branches, term, categoryFilter, statusFilter, selectedViewBranchId, branchScopeFilter, sortBy, sortDescriptors, sortData]);
 
   const totalProdPages = Math.ceil(filteredProducts.length / prodsPerPage) || 1;
 
@@ -201,6 +272,15 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
     itemHeight: 52
   });
 
+  const setContainerRef = useCallback((node: HTMLDivElement | null) => {
+    if (catalogTableContainerRef) {
+      (catalogTableContainerRef as any).current = node;
+    }
+    if (catalogVirtualRef) {
+      (catalogVirtualRef as any).current = node;
+    }
+  }, [catalogVirtualRef]);
+
   const handleToggleSelectAll = () => {
     if (!allowedToModify) {
       showToast('Access Denied: Row selection is restricted to authorized roles (Admin/Manager).');
@@ -220,14 +300,33 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
     return branchProducts.filter(p => selectedProdIds[p.id]);
   };
 
+  // Dynamic column count for colSpan consistency
+  const totalColumnsCount = useMemo(() => {
+    let count = 0;
+    if (!hasActiveShift) count++; // checkbox
+    count++; // expand toggle
+    count++; // Code / SKU
+    if (!isCompactColumns) count++; // Identifier codes
+    count++; // Product Details
+    if (!isCompactColumns) count++; // Category / Brand
+    if (!isCompactColumns) count++; // Packaging
+    if (!isCompactColumns && canSeeFinancialCostsAndSources) count++; // Unit Cost
+    count++; // Sale Price
+    count++; // Stock
+    if (!isCompactColumns) count++; // Threshold
+    count++; // Status
+    count++; // Controls
+    return count;
+  }, [hasActiveShift, isCompactColumns, canSeeFinancialCostsAndSources]);
+
   return (
     <>
       {/* Main Filter Controller Panel Card */}
-      <div className="bg-m3-surface-low p-4 rounded-[28px] border border-m3-outline-variant/20 shadow-sm space-y-4">
+      <div className="bg-content1 p-4 rounded-large border border-divider shadow-sm space-y-4">
         <div className="flex flex-col xl:flex-row gap-4 items-stretch xl:items-center justify-between">
           {/* Search query box */}
           <div className="relative w-full xl:max-w-md shrink-0">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-m3-primary">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-primary">
               <Search className="h-4 w-4" />
             </span>
             <input
@@ -236,28 +335,31 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
               disabled={!branchProducts.some(p => !p.isDeleted)}
               value={term}
               onChange={e => setTerm(e.target.value)}
-              className="w-full bg-m3-surface-lowest border border-m3-outline-variant/25 focus:border-m3-primary px-3.5 py-2.5 pl-10 pr-8 text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary/10 transition-all rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-content2 border border-divider focus:border-primary px-3.5 py-2 pl-10 pr-8 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all rounded-medium font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             />
             {term && (
-              <button
-                onClick={() => setTerm('')}
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-m3-on-surface-variant hover:text-rose-500 cursor-pointer text-xs font-black transition-colors"
-                title="Clear search"
-              >
-                ✕
-              </button>
+              <HeroTooltip content="Clear search">
+                <button
+                  type="button"
+                  onClick={() => setTerm('')}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-default-400 hover:text-danger cursor-pointer text-xs font-black transition-colors"
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              </HeroTooltip>
             )}
           </div>
 
           {/* Advanced catalog filters and commands */}
           <div className="flex flex-wrap gap-2.5 w-full justify-start xl:justify-end items-center">
             {/* Branch view select / consolidated */}
-            <div className="flex items-center gap-1.5 bg-m3-surface-lowest border border-emerald-500/30 px-3 py-1.5 rounded-xl shadow-sm">
-              <span className="text-[9px] uppercase font-black tracking-widest text-emerald-600 font-mono">Branch:</span>
+            <div className="flex items-center gap-1.5 bg-content2 border border-success/30 px-3 py-1.5 rounded-medium shadow-sm">
+              <span className="text-[9px] uppercase font-black tracking-widest text-success">Branch:</span>
               <select
                 value={selectedViewBranchId ?? ''}
                 onChange={e => handleBranchSelect(e.target.value)}
-                className="bg-transparent text-xs text-emerald-500 focus:outline-none cursor-pointer transition-colors font-extrabold outline-none"
+                className="bg-transparent text-xs text-success focus:outline-none cursor-pointer transition-colors font-extrabold outline-none"
               >
                 {isAdminUser && (
                   <option value="consolidated">HQ Consolidated (All Branches)</option>
@@ -268,13 +370,28 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
               </select>
             </div>
 
+            {/* Branch inventory scope toggle when viewing a specific branch */}
+            {selectedViewBranchId !== 'consolidated' && selectedViewBranchId && (
+              <div className="flex items-center gap-1 bg-content2 border border-divider px-2.5 py-1.5 rounded-medium shadow-sm">
+                <span className="text-[9px] uppercase font-black tracking-widest text-default-500">Scope:</span>
+                <select
+                  value={branchScopeFilter}
+                  onChange={e => setBranchScopeFilter(e.target.value as 'branch-only' | 'all-catalog')}
+                  className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer transition-colors font-bold outline-none"
+                >
+                  <option value="branch-only">Branch Items Only</option>
+                  <option value="all-catalog">Full Enterprise Catalog</option>
+                </select>
+              </div>
+            )}
+
             {/* Category select */}
-            <div className="flex items-center gap-1.5 bg-m3-surface-lowest border border-m3-outline-variant/25 px-3 py-1.5 rounded-xl shadow-sm">
-              <span className="text-[9px] uppercase font-black tracking-widest text-m3-on-surface-variant font-mono">Category:</span>
+            <div className="flex items-center gap-1.5 bg-content2 border border-divider px-3 py-1.5 rounded-medium shadow-sm">
+              <span className="text-[9px] uppercase font-black tracking-widest text-default-500">Category:</span>
               <select
                 value={categoryFilter ?? ''}
                 onChange={e => setCategoryFilter(e.target.value)}
-                className="bg-transparent text-xs text-m3-on-surface focus:outline-none cursor-pointer transition-colors font-semibold outline-none"
+                className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer transition-colors font-semibold outline-none"
               >
                 <option value="All">All Categories ({branchProducts.length})</option>
                 {categories.map((cat, i) => {
@@ -287,12 +404,12 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
             </div>
 
             {/* Status select */}
-            <div className="flex items-center gap-1.5 bg-m3-surface-lowest border border-m3-outline-variant/25 px-3 py-1.5 rounded-xl shadow-sm">
-              <span className="text-[9px] uppercase font-black tracking-widest text-m3-on-surface-variant font-mono">Status:</span>
+            <div className="flex items-center gap-1.5 bg-content2 border border-divider px-3 py-1.5 rounded-medium shadow-sm">
+              <span className="text-[9px] uppercase font-black tracking-widest text-default-500">Status:</span>
               <select
                 value={statusFilter ?? ''}
                 onChange={e => setStatusFilter(e.target.value)}
-                className="bg-transparent text-xs text-m3-on-surface focus:outline-none cursor-pointer transition-colors font-semibold outline-none"
+                className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer transition-colors font-semibold outline-none"
               >
                 <option value="All">All Statuses</option>
                 <option value="In Stock">In Stock</option>
@@ -303,39 +420,37 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
             </div>
 
             {/* Sort select */}
-            <div className="flex items-center gap-1.5 bg-m3-surface-lowest border border-m3-outline-variant/25 px-3 py-1.5 rounded-xl shadow-sm">
-              <ArrowUpDown className="h-3.5 w-3.5 text-m3-primary" />
-              <span className="text-[9px] uppercase font-black tracking-widest text-m3-on-surface-variant font-mono">Sort By:</span>
+            <div className="flex items-center gap-1.5 bg-content2 border border-divider px-3 py-1.5 rounded-medium shadow-sm">
+              <ArrowUpDown className="h-3.5 w-3.5 text-primary" />
+              <span className="text-[9px] uppercase font-black tracking-widest text-default-500">Sort By:</span>
               <select
                 value={sortBy ?? ''}
                 onChange={e => setSortBy(e.target.value as any)}
-                className="bg-transparent text-xs text-m3-on-surface focus:outline-none cursor-pointer transition-colors font-semibold outline-none"
+                className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer transition-colors font-semibold outline-none"
               >
                 <option value="default">Default Order</option>
                 <option value="qty-desc">Stock Quantity (High → Low)</option>
                 <option value="qty-asc">Stock Quantity (Low → High)</option>
-                <option value="alpha-asc">Alphabetical (A → Z)</option>
-                <option value="alpha-desc">Alphabetical (Z → A)</option>
+                <option value="alpha-asc">Product Name (A → Z)</option>
+                <option value="alpha-desc">Product Name (Z → A)</option>
+                <option value="sku-asc">Code / SKU (A → Z)</option>
+                <option value="sku-desc">Code / SKU (Z → A)</option>
+                <option value="price-desc">Sale Price (High → Low)</option>
+                <option value="price-asc">Sale Price (Low → High)</option>
               </select>
             </div>
 
             {allowedToModify && (
-              <>
-                <button
-                  onClick={() => setShowPortabilityHubModal(true)}
-                  className="p-2 px-3.5 text-m3-primary hover:bg-m3-outline-variant/25 text-xs font-black flex items-center gap-1.5 cursor-pointer rounded-full transition-colors border border-m3-outline-variant/15 hover:border-m3-primary/30"
-                  title="Open JSON Import/Export Portability Modal Hub"
-                >
-                  <Upload className="h-4 w-4 text-emerald-500 animate-pulse" /> Data Portability Hub
-                </button>
-
-                <button
-                  onClick={handleOpenAdd}
-                  className="m3-btn-primary flex items-center gap-1.5 cursor-pointer shadow-sm text-xs px-4"
-                >
-                  <Plus className="h-4 w-4" /> Register Product
-                </button>
-              </>
+              <HeroButton
+                onClick={handleOpenAdd}
+                color="primary"
+                variant="solid"
+                size="sm"
+                className="font-bold shadow-sm"
+                startIcon={<Plus className="h-4 w-4" />}
+              >
+                Register Product
+              </HeroButton>
             )}
           </div>
         </div>
@@ -343,22 +458,25 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
 
       {/* Bulk Operations Panel */}
       {!hasActiveShift && getSelectedProducts().length > 0 && (
-        <div className="bg-m3-surface-low border border-m3-outline-variant/25 p-3.5 rounded-[22px] flex flex-wrap items-center justify-between gap-3 shadow-md animate-fade-in mb-3">
+        <div className="bg-content1 border border-divider p-3.5 rounded-large flex flex-wrap items-center justify-between gap-3 shadow-md animate-fade-in mb-3">
           <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-m3-primary animate-pulse" />
-            <span className="text-xs font-black text-m3-on-surface">
+            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+            <span className="text-xs font-black text-foreground">
               {getSelectedProducts().length} {getSelectedProducts().length === 1 ? 'item' : 'items'} selected for bulk actions
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <button
+            <HeroButton
               onClick={() => handleBulkSimulatePrint(getSelectedProducts())}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-m3-primary/30 text-m3-primary hover:bg-m3-primary/10 text-[11px] font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 bg-m3-surface-lowest shadow-xs"
+              color="primary"
+              variant="bordered"
+              size="sm"
+              className="text-[11px] font-bold uppercase tracking-wider"
+              startIcon={<Printer className="h-3.5 w-3.5" />}
             >
-              <Printer className="h-3.5 w-3.5" />
-              <span>Print Barcodes</span>
-            </button>
-            <button
+              Print Barcodes
+            </HeroButton>
+            <HeroButton
               onClick={() => {
                 const selected = getSelectedProducts();
                 const initialQtys: Record<string, number> = {};
@@ -373,511 +491,648 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                 }
                 setShowBulkDamageModal(true);
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/15 border border-rose-500/20 text-rose-500 text-[11px] font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95"
+              color="danger"
+              variant="flat"
+              size="sm"
+              className="text-[11px] font-bold uppercase tracking-wider"
+              startIcon={<AlertTriangle className="h-3.5 w-3.5" />}
             >
-              <AlertTriangle className="h-3.5 w-3.5" />
-              <span>Move to Damage Register</span>
-            </button>
-            <button
+              Move to Damage Register
+            </HeroButton>
+            <HeroButton
               onClick={() => setSelectedProdIds({})}
-              className="px-3 py-1.5 rounded-xl text-m3-on-surface-variant hover:text-rose-500 text-[11px] font-bold uppercase tracking-wider cursor-pointer transition-all hover:bg-m3-surface-lowest"
+              variant="light"
+              size="sm"
+              className="text-[11px] font-bold uppercase tracking-wider text-default-500 hover:text-danger"
             >
               Clear Selection
-            </button>
+            </HeroButton>
           </div>
         </div>
       )}
 
-      {/* Database Catalog Table List */}
-      <div className="m3-card shadow-sm p-0 overflow-hidden relative">
-        <div
-          ref={(node) => {
-            (catalogTableContainerRef as any).current = node;
-            (catalogVirtualRef as any).current = node;
-          }}
-          onScroll={handleCatalogVirtualScroll}
-          className="overflow-auto scrollbar-thin scrollbar-thumb-m3-outline-variant min-h-[280px]"
-        >
-          <table className={`w-full text-left border-collapse table-auto text-xs transition-all ${isCompactColumns ? 'min-w-[700px]' : 'min-w-[1280px]'}`}>
-            <thead>
-              <tr className="border-b border-m3-outline-variant/20 bg-m3-surface/30 text-[10px] uppercase font-bold text-m3-on-surface-variant tracking-wider">
-                {/* Checkbox column header */}
-                {!hasActiveShift && (
-                  <th className="py-3 px-2 w-10 text-center select-none bg-m3-surface-low/30 border-r border-m3-outline-variant/10">
-                    <input
-                      type="checkbox"
-                      checked={paginatedProducts.length > 0 && paginatedProducts.every(p => !!selectedProdIds[p.id])}
-                      onChange={handleToggleSelectAll}
-                      className="rounded border-m3-outline-variant text-m3-primary focus:ring-m3-primary/35 cursor-pointer h-3.5 w-3.5 disabled:opacity-30 disabled:cursor-not-allowed"
-                      title="Select/Deselect visible"
-                      disabled={!allowedToModify}
-                    />
-                  </th>
-                )}
-                <th className="py-3 px-2 w-10 text-center bg-m3-surface-low/40 select-none"></th>
-                <th className="py-3 px-4">Code / SKU</th>
-                {!isCompactColumns && <th className="py-3 px-4">Identifier codes</th>}
-                <th className="py-3 px-4">Product Details</th>
-                {!isCompactColumns && <th className="py-3 px-4">Category / Brand</th>}
-                {!isCompactColumns && <th className="py-3 px-4 text-center">Packaging dimensions</th>}
-                {!isCompactColumns && canSeeFinancialCostsAndSources && <th className="py-3 px-4 text-right">Unit cost</th>}
-                <th className="py-3 px-4 text-right">Sale Price</th>
-                <th className="py-3 px-4 text-center">Stock</th>
-                {!isCompactColumns && <th className="py-3 px-2 text-center">Threshold</th>}
-                <th className="py-3 px-4 text-center">Status</th>
-                <th className="py-3 px-4 text-center">Controls</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
-              {isLoading ? (
-                <>
-                  {Array.from({ length: 6 }).map((_, idx) => (
-                    <tr key={idx} className="animate-pulse border-b border-m3-outline-variant/10 bg-m3-surface-low/20">
-                      {!hasActiveShift && (
-                        <td className="py-4 px-2 text-center"><div className="h-4 w-4 bg-m3-outline-variant/20 rounded mx-auto" /></td>
-                      )}
-                      <td className="py-4 px-2 text-center"><div className="h-4 w-4 bg-m3-outline-variant/20 rounded mx-auto" /></td>
-                      <td className="py-4 px-4"><div className="h-4 w-28 bg-m3-outline-variant/25 rounded mb-1.5" /><div className="h-3 w-20 bg-m3-outline-variant/15 rounded" /></td>
-                      <td className="py-4 px-4"><div className="h-4 w-36 bg-m3-outline-variant/25 rounded mb-1.5" /><div className="h-3 w-16 bg-m3-outline-variant/15 rounded" /></td>
-                      <td className="py-4 px-4"><div className="h-5 w-24 bg-m3-outline-variant/20 rounded-full" /></td>
-                      <td className="py-4 px-4"><div className="h-4 w-16 bg-m3-outline-variant/20 rounded" /></td>
-                      <td className="py-4 px-4"><div className="h-4 w-14 bg-m3-outline-variant/20 rounded ms-auto" /></td>
-                      <td className="py-4 px-4"><div className="h-4 w-16 bg-m3-outline-variant/20 rounded ms-auto" /></td>
-                      <td className="py-4 px-4"><div className="h-6 w-20 bg-m3-outline-variant/20 rounded-lg mx-auto" /></td>
-                      <td className="py-4 px-4"><div className="h-7 w-20 bg-m3-outline-variant/20 rounded-xl mx-auto" /></td>
-                    </tr>
-                  ))}
-                </>
-              ) : paginatedProducts.length === 0 ? (
-                <tr>
-                  <td colSpan={hasActiveShift ? 9 : 10} className="py-12 text-center text-sm font-medium text-m3-on-surface-variant/70">
-                    No products found matching the search criteria or selected branch filter.
-                  </td>
-                </tr>
-              ) : (
-                <>
-                  {catalogPaddingTop > 0 && (
-                    <tr style={{ height: catalogPaddingTop }}>
-                      <td colSpan={hasActiveShift ? (isCompactColumns ? 7 : 13) : (isCompactColumns ? 8 : 14)} className="p-0 border-0" />
-                    </tr>
+      {/* Multi-Sort Active Badge Bar */}
+      <MultiSortBadgeBar
+        sortDescriptors={sortDescriptors}
+        onRemoveSort={removeSort}
+        onClearSort={clearSort}
+        columnLabels={{
+          sku: 'Code / SKU',
+          name: 'Product Details',
+          category: 'Category / Brand',
+          cost: 'Unit Cost',
+          price: 'Sale Price',
+          stock: 'Stock Quantity',
+          threshold: 'Low Stock Threshold',
+        }}
+      />
+
+      {/* Database Catalog HeroTable Ledger */}
+      <HeroTable
+        containerRef={setContainerRef}
+        onScroll={handleCatalogVirtualScroll}
+        containerClassName="min-h-[280px] scrollbar-thin scrollbar-thumb-divider overflow-auto"
+        className={isCompactColumns ? 'min-w-[700px]' : 'min-w-[1280px]'}
+        isStriped
+      >
+        <HeroTable.Header>
+          <tr className="border-b border-divider bg-content2/60 text-[10px] uppercase font-bold text-default-500 tracking-wider">
+            {/* Checkbox column header */}
+            {!hasActiveShift && (
+              <HeroTable.Column align="center" className="py-3 px-2 w-10 text-center select-none bg-content2/40 border-r border-divider">
+                <input
+                  type="checkbox"
+                  checked={paginatedProducts.length > 0 && paginatedProducts.every(p => !!selectedProdIds[p.id])}
+                  onChange={handleToggleSelectAll}
+                  className="rounded border-divider text-primary focus:ring-primary/35 cursor-pointer h-3.5 w-3.5 disabled:opacity-30 disabled:cursor-not-allowed"
+                  aria-label="Select/Deselect visible"
+                  disabled={!allowedToModify}
+                />
+              </HeroTable.Column>
+            )}
+            <HeroTable.Column align="center" className="py-3 px-2 w-10 text-center bg-content2/40 select-none"></HeroTable.Column>
+            <HeroTable.Column
+              allowsSorting
+              sortDirection={getTableSortDir('sku') !== 'none' ? getTableSortDir('sku') : (sortBy === 'sku-asc' ? 'ascending' : sortBy === 'sku-desc' ? 'descending' : 'none')}
+              sortRank={getTableSortRank('sku')}
+              onSort={(e) => handleTableSort('sku', e)}
+              className="py-3 px-4"
+            >
+              Code / SKU
+            </HeroTable.Column>
+            {!isCompactColumns && (
+              <HeroTable.Column className="py-3 px-4">
+                Identifier Codes
+              </HeroTable.Column>
+            )}
+            <HeroTable.Column
+              allowsSorting
+              sortDirection={getTableSortDir('name') !== 'none' ? getTableSortDir('name') : (sortBy === 'alpha-asc' ? 'ascending' : sortBy === 'alpha-desc' ? 'descending' : 'none')}
+              sortRank={getTableSortRank('name')}
+              onSort={(e) => handleTableSort('name', e)}
+              className="py-3 px-4"
+            >
+              Product Details
+            </HeroTable.Column>
+            {!isCompactColumns && (
+              <HeroTable.Column
+                allowsSorting
+                sortDirection={getTableSortDir('category')}
+                sortRank={getTableSortRank('category')}
+                onSort={(e) => handleTableSort('category', e)}
+                className="py-3 px-4"
+              >
+                Category / Brand
+              </HeroTable.Column>
+            )}
+            {!isCompactColumns && (
+              <HeroTable.Column align="center" className="py-3 px-4 text-center">
+                Packaging Dimensions
+              </HeroTable.Column>
+            )}
+            {!isCompactColumns && canSeeFinancialCostsAndSources && (
+              <HeroTable.Column
+                align="end"
+                allowsSorting
+                sortDirection={getTableSortDir('cost')}
+                sortRank={getTableSortRank('cost')}
+                onSort={(e) => handleTableSort('cost', e)}
+                className="py-3 px-4 text-right"
+              >
+                Unit Cost
+              </HeroTable.Column>
+            )}
+            <HeroTable.Column
+              align="end"
+              allowsSorting
+              sortDirection={getTableSortDir('price') !== 'none' ? getTableSortDir('price') : (sortBy === 'price-asc' ? 'ascending' : sortBy === 'price-desc' ? 'descending' : 'none')}
+              sortRank={getTableSortRank('price')}
+              onSort={(e) => handleTableSort('price', e)}
+              className="py-3 px-4 text-right"
+            >
+              Sale Price
+            </HeroTable.Column>
+            <HeroTable.Column
+              align="center"
+              allowsSorting
+              sortDirection={getTableSortDir('stock') !== 'none' ? getTableSortDir('stock') : (sortBy === 'qty-desc' ? 'descending' : sortBy === 'qty-asc' ? 'ascending' : 'none')}
+              sortRank={getTableSortRank('stock')}
+              onSort={(e) => handleTableSort('stock', e)}
+              className="py-3 px-4 text-center"
+            >
+              Stock
+            </HeroTable.Column>
+            {!isCompactColumns && (
+              <HeroTable.Column
+                align="center"
+                allowsSorting
+                sortDirection={getTableSortDir('threshold')}
+                sortRank={getTableSortRank('threshold')}
+                onSort={(e) => handleTableSort('threshold', e)}
+                className="py-3 px-2 text-center"
+              >
+                Threshold
+              </HeroTable.Column>
+            )}
+            <HeroTable.Column align="center" className="py-3 px-4 text-center">
+              Status
+            </HeroTable.Column>
+            <HeroTable.Column align="center" className="py-3 px-4 text-center">
+              Controls
+            </HeroTable.Column>
+          </tr>
+        </HeroTable.Header>
+
+        <HeroTable.Body>
+          {isLoading ? (
+            <>
+              {Array.from({ length: 6 }).map((_, idx) => (
+                <HeroTable.Row key={idx} className="animate-pulse border-b border-divider bg-content2/20">
+                  {!hasActiveShift && (
+                    <HeroTable.Cell align="center" className="py-4 px-2 text-center"><div className="h-4 w-4 bg-default-200 rounded mx-auto" /></HeroTable.Cell>
                   )}
-                  {visibleCatalogIndices.map((idx) => {
-                    const p = paginatedProducts[idx];
-                    if (!p) return null;
+                  <HeroTable.Cell align="center" className="py-4 px-2 text-center"><div className="h-4 w-4 bg-default-200 rounded mx-auto" /></HeroTable.Cell>
+                  <HeroTable.Cell className="py-4 px-4"><div className="h-4 w-28 bg-default-200 rounded mb-1.5" /><div className="h-3 w-20 bg-default-100 rounded" /></HeroTable.Cell>
+                  {!isCompactColumns && <HeroTable.Cell className="py-4 px-4"><div className="h-4 w-20 bg-default-200 rounded" /></HeroTable.Cell>}
+                  <HeroTable.Cell className="py-4 px-4"><div className="h-4 w-36 bg-default-200 rounded mb-1.5" /><div className="h-3 w-16 bg-default-100 rounded" /></HeroTable.Cell>
+                  {!isCompactColumns && <HeroTable.Cell className="py-4 px-4"><div className="h-5 w-24 bg-default-200 rounded-full" /></HeroTable.Cell>}
+                  {!isCompactColumns && <HeroTable.Cell align="center" className="py-4 px-4"><div className="h-4 w-16 bg-default-200 mx-auto rounded" /></HeroTable.Cell>}
+                  {!isCompactColumns && canSeeFinancialCostsAndSources && <HeroTable.Cell align="end" className="py-4 px-4"><div className="h-4 w-14 bg-default-200 rounded ms-auto" /></HeroTable.Cell>}
+                  <HeroTable.Cell align="end" className="py-4 px-4"><div className="h-4 w-16 bg-default-200 rounded ms-auto" /></HeroTable.Cell>
+                  <HeroTable.Cell align="center" className="py-4 px-4"><div className="h-6 w-20 bg-default-200 rounded-medium mx-auto" /></HeroTable.Cell>
+                  {!isCompactColumns && <HeroTable.Cell align="center" className="py-4 px-2"><div className="h-4 w-8 bg-default-200 rounded mx-auto" /></HeroTable.Cell>}
+                  <HeroTable.Cell align="center" className="py-4 px-4"><div className="h-5 w-20 bg-default-200 rounded-full mx-auto" /></HeroTable.Cell>
+                  <HeroTable.Cell align="center" className="py-4 px-4"><div className="h-7 w-20 bg-default-200 rounded-medium mx-auto" /></HeroTable.Cell>
+                </HeroTable.Row>
+              ))}
+            </>
+          ) : paginatedProducts.length === 0 ? (
+            <HeroTable.Row isHoverable={false}>
+              <HeroTable.Cell colSpan={totalColumnsCount} className="py-12 text-center text-sm font-medium text-default-400">
+                No products found matching the search criteria or selected branch filter.
+              </HeroTable.Cell>
+            </HeroTable.Row>
+          ) : (
+            <>
+              {catalogPaddingTop > 0 && (
+                <tr style={{ height: catalogPaddingTop }}>
+                  <td colSpan={totalColumnsCount} className="p-0 border-0" />
+                </tr>
+              )}
+              {visibleCatalogIndices.map((idx) => {
+                const p = paginatedProducts[idx];
+                if (!p) return null;
 
-                    // Determine status indicators based on selected branch scope or consolidated HQ view
-                    const qty = getBranchStockQuantity(p, selectedViewBranchId, branchStock, branches);
+                // Determine status indicators based on selected branch scope or consolidated HQ view
+                const qty = getBranchStockQuantity(p, selectedViewBranchId, branchStock, branches);
 
-                    const bsRec = getBranchStockRecord(p, selectedViewBranchId, branchStock, branches);
-                    const threshold = selectedViewBranchId === 'consolidated'
-                      ? p.minimumStock
-                      : (bsRec?.lowStockThresholdOverride ?? p.minimumStock);
+                const bsRec = getBranchStockRecord(p, selectedViewBranchId, branchStock, branches);
+                const threshold = selectedViewBranchId === 'consolidated'
+                  ? (p.minimumStock ?? p.lowStockThreshold ?? 10)
+                  : (bsRec?.lowStockThresholdOverride ?? bsRec?.lowStockThreshold ?? p.minimumStock ?? p.lowStockThreshold ?? 10);
 
-                    let statusLabel = 'In Stock';
-                    let statusClass = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/25';
+                let statusLabel = 'In Stock';
+                let statusChipColor: 'success' | 'warning' | 'danger' | 'default' = 'success';
 
-                    if (qty === 0) {
-                      statusLabel = 'Out of Stock';
-                      statusClass = 'bg-m3-outline-variant/15 text-m3-on-surface-variant/75 border-transparent';
-                    } else if (qty <= threshold * 0.5) {
-                      statusLabel = 'Critical';
-                      statusClass = 'bg-rose-500/10 text-rose-500 border-rose-500/25 font-black animate-pulse';
-                    } else if (qty <= threshold) {
-                      statusLabel = 'Low Stock';
-                      statusClass = 'bg-amber-500/10 text-amber-500 border-amber-500/25';
-                    }
+                if (qty === 0) {
+                  statusLabel = 'Out of Stock';
+                  statusChipColor = 'default';
+                } else if (qty <= threshold * 0.5) {
+                  statusLabel = 'Critical';
+                  statusChipColor = 'danger';
+                } else if (qty <= threshold) {
+                  statusLabel = 'Low Stock';
+                  statusChipColor = 'warning';
+                }
 
-                    const isExpanded = !!expandedProductIds[p.id];
+                const isExpanded = !!expandedProductIds[p.id];
+                const isSelected = !!selectedProdIds[p.id];
 
-                    return (
-                      <React.Fragment key={p.id}>
-                        <tr
-                          className={`hover:bg-m3-surface-low/50 transition-all cursor-pointer ${
-                            p.id === highlightedProductId
-                              ? 'animate-pulse-twice ring-2 ring-rose-500/80 bg-rose-500/5'
-                              : ''
-                          } ${isExpanded ? 'bg-m3-primary/5 hover:bg-m3-primary/10' : ''}`}
-                          onClick={() => toggleProductExpand(p.id)}
-                          title="Click to expand/collapse full tile specifications"
+                return (
+                  <React.Fragment key={p.id}>
+                    <HeroTable.Row
+                      isSelected={isSelected}
+                      className={`${
+                        p.id === highlightedProductId
+                          ? 'animate-pulse ring-2 ring-danger/80 bg-danger/5'
+                          : ''
+                      } ${isExpanded ? 'bg-primary/5 hover:bg-primary/10' : ''}`}
+                      onClick={() => toggleProductExpand(p.id)}
+                    >
+                      {/* Checkbox Selection column */}
+                      {!hasActiveShift && (
+                        <HeroTable.Cell
+                          align="center"
+                          className="py-3.5 px-2 text-center bg-content2/20 border-r border-divider"
+                          onClick={e => e.stopPropagation()}
                         >
-                          {/* Checkbox Selection column */}
-                          {!hasActiveShift && (
-                            <td className="py-3.5 px-2 text-center bg-m3-surface-low/10 border-r border-m3-outline-variant/10" onClick={e => e.stopPropagation()}>
-                              <input
-                                type="checkbox"
-                                checked={!!selectedProdIds[p.id]}
-                                onChange={() => {
-                                  if (!allowedToModify) {
-                                    showToast('Access Denied: Row selection is restricted to authorized roles (Admin/Manager).');
-                                    return;
-                                  }
-                                  setSelectedProdIds(prev => ({
-                                    ...prev,
-                                    [p.id]: !prev[p.id]
-                                  }));
-                                }}
-                                className="rounded border-m3-outline-variant text-m3-primary focus:ring-m3-primary/35 cursor-pointer h-3.5 w-3.5 disabled:opacity-30 disabled:cursor-not-allowed"
-                                disabled={!allowedToModify}
-                              />
-                            </td>
-                          )}
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              if (!allowedToModify) {
+                                showToast('Access Denied: Row selection is restricted to authorized roles (Admin/Manager).');
+                                return;
+                              }
+                              setSelectedProdIds(prev => ({
+                                ...prev,
+                                [p.id]: !prev[p.id]
+                              }));
+                            }}
+                            className="rounded border-divider text-primary focus:ring-primary/35 cursor-pointer h-3.5 w-3.5 disabled:opacity-30 disabled:cursor-not-allowed"
+                            disabled={!allowedToModify}
+                            aria-label={`Select ${p.productName}`}
+                          />
+                        </HeroTable.Cell>
+                      )}
 
-                          {/* Expand/Collapse Toggle Button column */}
-                          <td className="py-3.5 px-2 text-center bg-m3-surface-low/15" onClick={e => e.stopPropagation()}>
+                      {/* Expand/Collapse Toggle Button column */}
+                      <HeroTable.Cell
+                        align="center"
+                        className="py-3.5 px-2 text-center bg-content2/30"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <HeroTooltip content={isExpanded ? "Collapse specifications" : "Expand specifications"}>
+                          <button
+                            type="button"
+                            onClick={() => toggleProductExpand(p.id)}
+                            className="p-1 hover:bg-primary/10 text-primary rounded-medium cursor-pointer transition-colors"
+                            aria-label="Toggle details"
+                          >
+                            {isExpanded ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </button>
+                        </HeroTooltip>
+                      </HeroTable.Cell>
+
+                      {/* Code / SKU details */}
+                      <HeroTable.Cell className="py-3.5 px-4">
+                        <div className="font-extrabold text-primary">{p.productCode}</div>
+                        <div className="text-[10px] text-default-500 font-bold">{p.sku}</div>
+                      </HeroTable.Cell>
+
+                      {/* Scannable keys info */}
+                      {!isCompactColumns && (
+                        <HeroTable.Cell className="py-3.5 px-4 text-[10px] text-default-500 select-all">
+                          <div>BC: {p.barcode}</div>
+                        </HeroTable.Cell>
+                      )}
+
+                      {/* Primary specifications block */}
+                      <HeroTable.Cell className="py-3.5 px-4">
+                        <strong className="text-foreground text-xs block truncate max-w-[240px]">
+                          {p.productName}
+                        </strong>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          {p.designName && (
+                            <span className="text-[10px] text-default-600 font-medium bg-content2 px-1.5 py-0.5 rounded border border-divider font-sans">
+                              Design: {p.designName}
+                            </span>
+                          )}
+                          {p.coveragePerBox ? (
+                            <span className="text-[10px] text-primary font-bold bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20 font-sans">
+                              Coverage: {p.coveragePerBox} m²
+                            </span>
+                          ) : null}
+                          {p.origin && canSeeFinancialCostsAndSources && (
+                            <span className="text-[10px] text-warning font-black bg-warning/10 px-1.5 py-0.5 rounded border border-warning/20 font-sans">
+                              Source: {p.origin}
+                            </span>
+                          )}
+                          {p.hasExpiration && (() => {
+                            if (p.expirationDate) {
+                              const today = new Date();
+                              const exp = new Date(p.expirationDate);
+                              const diffTime = exp.getTime() - today.getTime();
+                              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                              if (diffDays < 0) {
+                                return (
+                                  <span className="text-[10px] text-danger font-extrabold bg-danger/10 px-1.5 py-0.5 rounded border border-danger/20 font-sans flex items-center gap-1">
+                                    <Clock className="h-3 w-3 shrink-0 text-danger animate-pulse" /> Expired ({p.expirationDate})
+                                  </span>
+                                );
+                              } else if (diffDays <= 30) {
+                                return (
+                                  <span className="text-[10px] text-warning font-extrabold bg-warning/10 px-1.5 py-0.5 rounded border border-warning/20 font-sans flex items-center gap-1">
+                                    <Clock className="h-3 w-3 shrink-0 text-warning animate-pulse" /> Expiring Soon ({p.expirationDate})
+                                  </span>
+                                );
+                              } else {
+                                return (
+                                  <span className="text-[10px] text-success font-extrabold bg-success/10 px-1.5 py-0.5 rounded border border-success/20 font-sans flex items-center gap-1">
+                                    <Clock className="h-3 w-3 shrink-0 text-success" /> Expiry Tracked ({p.expirationDate})
+                                  </span>
+                                );
+                              }
+                            } else {
+                              return (
+                                <span className="text-[10px] text-warning font-extrabold bg-warning/10 px-1.5 py-0.5 rounded border border-warning/20 font-sans flex items-center gap-1">
+                                  <Clock className="h-3 w-3 shrink-0 text-warning animate-pulse" /> Expiry Tracked
+                                </span>
+                              );
+                            }
+                          })()}
+                        </div>
+                      </HeroTable.Cell>
+
+                      {/* Category metadata */}
+                      {!isCompactColumns && (
+                        <HeroTable.Cell className="py-3.5 px-4">
+                          <span className="bg-content2 px-2.5 py-0.5 rounded-full text-foreground text-[11px] font-bold border border-divider">
+                            {p.category}
+                          </span>
+                          <div className="text-[9px] text-default-500 mt-1.5 font-bold">Brand: {p.brand}</div>
+                        </HeroTable.Cell>
+                      )}
+
+                      {/* Packaging dimensions and piece count */}
+                      {!isCompactColumns && (
+                        <HeroTable.Cell align="center" className="py-3.5 px-4 text-center font-bold">
+                          <div className="text-foreground">{p.unit}</div>
+                          {p.size && (
+                            <div className="text-[10px] text-default-500 font-medium">
+                              {p.size} {p.boxQuantity > 1 && `(${p.boxQuantity} pcs)`}
+                            </div>
+                          )}
+                        </HeroTable.Cell>
+                      )}
+
+                      {/* Financial unit cost */}
+                      {!isCompactColumns && canSeeFinancialCostsAndSources && (
+                        <HeroTable.Cell align="end" className="py-3.5 px-4 text-right font-bold text-foreground">
+                          {formatCurrency(p.costPrice)}
+                        </HeroTable.Cell>
+                      )}
+
+                      {/* Retail selling price */}
+                      <HeroTable.Cell align="end" className="py-3.5 px-4 text-right font-extrabold text-primary">
+                        {formatCurrency(p.sellingPrice)}
+                      </HeroTable.Cell>
+
+                      {/* Current physical warehouse qty */}
+                      <HeroTable.Cell align="center" className="py-3.5 px-4 text-center text-sm font-extrabold">
+                        <div className={
+                          qty === 0
+                            ? 'text-default-400'
+                            : qty <= threshold
+                            ? 'text-warning font-black tracking-wide'
+                            : 'text-foreground'
+                        }>
+                          {qty} <span className="text-[10px] text-default-500 font-normal">{p.unit || "Unit"}</span>
+                        </div>
+                      </HeroTable.Cell>
+
+                      {/* Threshold warnings trigger limit */}
+                      {!isCompactColumns && (
+                        <HeroTable.Cell align="center" className="py-3.5 px-2 text-center text-default-500 font-bold">
+                          {threshold}
+                        </HeroTable.Cell>
+                      )}
+
+                      {/* Visual Status badge with HeroChip */}
+                      <HeroTable.Cell align="center" className="py-3.5 px-4 text-center select-none">
+                        <HeroChip
+                          size="sm"
+                          variant="flat"
+                          color={statusChipColor}
+                          className={`font-black text-[9px] uppercase tracking-wider ${
+                            statusChipColor === 'danger' ? 'animate-pulse' : ''
+                          }`}
+                        >
+                          {statusLabel}
+                        </HeroChip>
+                      </HeroTable.Cell>
+
+                      {/* CRUD + Action buttons with HeroTooltip */}
+                      <HeroTable.Cell
+                        align="center"
+                        className="py-3.5 px-4 text-center select-none"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <div className="flex gap-1 justify-center">
+                          <HeroTooltip content="View / Print Barcode Label">
                             <button
                               type="button"
-                              onClick={() => toggleProductExpand(p.id)}
-                              className="p-1 hover:bg-m3-primary/10 text-m3-primary rounded-full cursor-pointer transition-all"
+                              onClick={() => handleOpenCodesModal(p)}
+                              className="p-1.5 text-default-400 hover:text-primary hover:bg-default-100 transition-colors rounded-medium cursor-pointer shrink-0"
+                              aria-label="View or print barcode"
                             >
-                              {isExpanded ? (
-                                <ChevronUp className="h-4 w-4" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4" />
-                              )}
+                              <Barcode className="h-4 w-4" />
                             </button>
-                          </td>
+                          </HeroTooltip>
 
-                          {/* Code / SKU details */}
-                          <td className="py-3.5 px-4 font-mono">
-                            <div className="font-extrabold text-m3-primary">{p.productCode}</div>
-                            <div className="text-[10px] text-m3-on-surface-variant font-bold">{p.sku}</div>
-                          </td>
+                          <HeroTooltip content="Queue Restock in Sourcing Desk (+50 Units)">
+                            <button
+                              type="button"
+                              onClick={() => handleQueueRestock(p.id)}
+                              className="p-1.5 text-default-400 hover:text-warning hover:bg-warning/10 transition-colors rounded-medium cursor-pointer shrink-0"
+                              aria-label="Queue restock"
+                            >
+                              <Truck className="h-4 w-4" />
+                            </button>
+                          </HeroTooltip>
 
-                          {/* Scannable keys info */}
-                          {!isCompactColumns && (
-                            <td className="py-3.5 px-4 font-mono text-[10px] text-m3-on-surface-variant select-all">
-                              <div>BC: {p.barcode}</div>
-                            </td>
-                          )}
-
-                          {/* Primary specifications block */}
-                          <td className="py-3.5 px-4">
-                            <strong className="text-m3-on-surface text-xs block truncate max-w-[240px]" title={p.productName}>
-                              {p.productName}
-                            </strong>
-                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                              {p.designName && (
-                                <span className="text-[10px] text-m3-on-surface-variant font-medium bg-m3-surface-lowest px-1.5 py-0.5 rounded border border-m3-outline-variant/15 font-sans">
-                                  Design: {p.designName}
-                                </span>
-                              )}
-                              {p.coveragePerBox ? (
-                                <span className="text-[10px] text-m3-primary/95 font-bold bg-m3-primary/5 px-1.5 py-0.5 rounded border border-m3-primary/10 font-sans">
-                                  Coverage: {p.coveragePerBox} m²
-                                </span>
-                              ) : null}
-                              {p.origin && canSeeFinancialCostsAndSources && (
-                                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-black bg-amber-500/5 px-1.5 py-0.5 rounded border border-amber-500/10 font-sans" title={`Origin/Source: ${p.origin}`}>
-                                  Source: {p.origin}
-                                </span>
-                              )}
-                              {p.hasExpiration && (() => {
-                                if (p.expirationDate) {
-                                  const today = new Date();
-                                  const exp = new Date(p.expirationDate);
-                                  const diffTime = exp.getTime() - today.getTime();
-                                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                                  if (diffDays < 0) {
-                                    return (
-                                      <span className="text-[10px] text-rose-500 font-extrabold bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20 font-sans flex items-center gap-1" title={`Expired on ${p.expirationDate}. Quarantine immediately!`}>
-                                        <Clock className="h-3 w-3 shrink-0 text-rose-500 animate-pulse" /> Expired ({p.expirationDate})
-                                      </span>
-                                    );
-                                  } else if (diffDays <= 30) {
-                                    return (
-                                      <span className="text-[10px] text-amber-500 font-extrabold bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 font-sans flex items-center gap-1" title={`Expiring soon on ${p.expirationDate}. Sell or move first!`}>
-                                        <Clock className="h-3 w-3 shrink-0 text-amber-500 animate-pulse" /> Expiring Soon ({p.expirationDate})
-                                      </span>
-                                    );
-                                  } else {
-                                    return (
-                                      <span className="text-[10px] text-emerald-500 font-extrabold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-sans flex items-center gap-1" title={`Valid until ${p.expirationDate}`}>
-                                        <Clock className="h-3 w-3 shrink-0 text-emerald-500" /> Expiry Tracked ({p.expirationDate})
-                                      </span>
-                                    );
-                                  }
-                                } else {
-                                  return (
-                                    <span className="text-[10px] text-amber-500 font-extrabold bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 font-sans flex items-center gap-1" title="This product has an expiration date requirement. Check calendar batches.">
-                                      <Clock className="h-3 w-3 shrink-0 text-amber-500 animate-pulse" /> Expiry Tracked
-                                    </span>
-                                  );
-                                }
-                              })()}
-                            </div>
-                          </td>
-
-                          {/* Category metadata */}
-                          {!isCompactColumns && (
-                            <td className="py-3.5 px-4">
-                              <span className="bg-m3-outline-variant/25 px-2.5 py-0.5 rounded-full text-m3-on-surface text-[11px] font-bold">
-                                {p.category}
-                              </span>
-                              <div className="text-[9px] text-m3-on-surface-variant mt-1.5 font-bold">Brand: {p.brand}</div>
-                            </td>
-                          )}
-
-                          {/* Packaging dimensions and piece count */}
-                          {!isCompactColumns && (
-                            <td className="py-3.5 px-4 text-center font-bold">
-                              <div className="text-m3-on-surface">{p.unit}</div>
-                              {p.size && (
-                                <div className="text-[10px] text-m3-on-surface-variant font-medium">
-                                  {p.size} {p.boxQuantity > 1 && `(${p.boxQuantity} pcs)`}
-                                </div>
-                              )}
-                            </td>
-                          )}
-
-                          {/* Financial unit cost */}
-                          {!isCompactColumns && canSeeFinancialCostsAndSources && (
-                            <td className="py-3.5 px-4 text-right font-mono font-bold text-m3-on-surface">
-                              {formatCurrency(p.costPrice)}
-                            </td>
-                          )}
-
-                          {/* Retail selling price */}
-                          <td className="py-3.5 px-4 text-right font-mono font-extrabold text-m3-primary">
-                            {formatCurrency(p.sellingPrice)}
-                          </td>
-
-                          {/* Current physical warehouse qty */}
-                          <td className="py-3.5 px-4 text-center font-mono text-sm font-extrabold">
-                            <div className={
-                              qty === 0
-                                ? 'text-m3-on-surface-variant dark:text-m3-on-surface-variant'
-                                : qty <= threshold
-                                ? 'text-m3-primary tracking-wide'
-                                : 'text-m3-on-surface'
-                            }>
-                              {qty} <span className="text-[10px] text-m3-on-surface-variant font-normal">{p.unit || "Unit"}</span>
-                            </div>
-                          </td>
-
-                          {/* Threshold warnings trigger limit */}
-                          {!isCompactColumns && (
-                            <td className="py-3.5 px-2 text-center font-mono text-m3-on-surface-variant font-bold">
-                              {threshold}
-                            </td>
-                          )}
-
-                          {/* Visual Status badge */}
-                          <td className="py-3.5 px-4 text-center select-none">
-                            <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase border ${statusClass}`}>
-                              {statusLabel}
-                            </span>
-                          </td>
-
-                          {/* CRUD + Action buttons */}
-                          <td className="py-3.5 px-4 text-center select-none" onClick={e => e.stopPropagation()}>
-                            <div className="flex gap-0.5 justify-center">
-                              <button
-                                onClick={() => handleOpenCodesModal(p)}
-                                className="p-1.5 text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-outline-variant/15 transition-all rounded-full cursor-pointer shrink-0"
-                                title="View / Print Barcode Label"
-                              >
-                                <Barcode className="h-4 w-4" />
-                              </button>
-
-                              <button
-                                onClick={() => handleQueueRestock(p.id)}
-                                className="p-1.5 text-m3-on-surface-variant hover:text-amber-500 hover:bg-amber-500/10 transition-all rounded-full cursor-pointer shrink-0"
-                                title="Queue Restock in Sourcing Desk (+50 Units)"
-                              >
-                                <Truck className="h-4 w-4" />
-                              </button>
-
-                              {allowedToModify && (
-                                <>
-                                  <button
-                                    onClick={() => handleOpenAdjust(p)}
-                                    className="p-1.5 text-m3-on-surface-variant hover:text-emerald-500 hover:bg-m3-outline-variant/15 transition-all rounded-full cursor-pointer shrink-0"
-                                    title="Quick Stock Adjustment Intake/outtake"
-                                  >
-                                    <Sliders className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleOpenEdit(p)}
-                                    className="p-1.5 text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-outline-variant/15 transition-all rounded-full cursor-pointer shrink-0"
-                                    title="Edit specs"
-                                  >
-                                    <Edit2 className="h-4 w-4" />
-                                  </button>
-                                  {!hasActiveShift && (
-                                    <button
-                                      onClick={() => handleDeleteTrigger(p.id, p.productName)}
-                                      className="p-1.5 text-m3-on-surface-variant hover:text-rose-500 hover:bg-rose-500/10 transition-all rounded-full cursor-pointer shrink-0"
-                                      title="Soft-delete listings"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </button>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-
-                        {/* Expanded Sub-Row with Detailed Layout Card */}
-                        <AnimatePresence initial={false}>
-                          {isExpanded && (
-                            <tr key={`${p.id}-expanded-details`}>
-                              <td colSpan={hasActiveShift ? (isCompactColumns ? 7 : 13) : (isCompactColumns ? 8 : 14)} className="p-4 bg-m3-surface-low border-b border-m3-outline-variant/20">
-                                <motion.div
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: "auto", opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                                  className="overflow-hidden"
+                          {allowedToModify && (
+                            <>
+                              <HeroTooltip content="Quick Stock Adjustment Intake/outtake">
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenAdjust(p)}
+                                  className="p-1.5 text-default-400 hover:text-success hover:bg-default-100 transition-colors rounded-medium cursor-pointer shrink-0"
+                                  aria-label="Adjust stock"
                                 >
-                                  <div className={`bg-m3-surface-lowest p-5 rounded-2xl border border-m3-outline-variant/15 grid grid-cols-1 ${currentUser?.role === UserRole.ADMIN ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6 shadow-inner text-left`}>
-
-                                    {/* Left specs: Branding & Thumbnail */}
-                                    <div className="space-y-4 border-b md:border-b-0 md:border-r border-m3-outline-variant/10 pb-4 md:pb-0 md:pr-6">
-                                      <div className="flex gap-4 items-start">
-                                        <div className="space-y-1">
-                                          <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest block">Primary SKU Details</span>
-                                          <strong className="text-sm text-m3-on-surface block leading-tight">{p.productName}</strong>
-                                          <span className="text-[10px] text-m3-on-surface-variant font-mono block">ID Key: {p.id}</span>
-                                        </div>
-                                      </div>
-
-                                      <div className="pt-2">
-                                        <StyledBarcode code={p.barcode} />
-                                        <span className="text-[9px] font-mono font-bold text-m3-on-surface-variant block mt-1.5 text-center">SCAN BARCODE: {p.barcode}</span>
-                                      </div>
-                                    </div>
-
-                                    {/* Center specs: Dimensions, quantities and price indices */}
-                                    <div className={`space-y-3 ${currentUser?.role === UserRole.ADMIN ? 'md:border-r border-m3-outline-variant/10 md:pr-6' : ''}`}>
-                                      <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest block">Dimensional Specifications</span>
-                                      <div className="grid grid-cols-2 gap-3 text-xs font-semibold">
-                                        <div>
-                                          <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Brand Name</span>
-                                          <span className="text-m3-on-surface">{p.brand || 'No registered brand'}</span>
-                                        </div>
-                                        <div>
-                                          <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Catalog Category</span>
-                                          <span className="text-m3-on-surface">{p.category}</span>
-                                        </div>
-                                        <div>
-                                          <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Dimensions / Size</span>
-                                          <span className="text-m3-on-surface">{p.size || 'Unspecified'}</span>
-                                        </div>
-                                        <div>
-                                          <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Box Coverage</span>
-                                          <span className="text-m3-primary">{p.coveragePerBox ? `${p.coveragePerBox} m²` : '0.00 m²'}</span>
-                                        </div>
-                                        <div>
-                                          <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Pcs / Package</span>
-                                          <span className="text-m3-on-surface">{p.boxQuantity} pieces</span>
-                                        </div>
-                                        <div>
-                                          <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Safety Threshold</span>
-                                          <span className="text-amber-500 font-mono">{p.minimumStock} {p.unit}</span>
-                                        </div>
-                                        <div className="border-t border-m3-outline-variant/10 pt-2 col-span-2 grid grid-cols-2 gap-2">
-                                          {canSeeFinancialCostsAndSources && (
-                                            <div>
-                                              <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Unit Cost</span>
-                                              <span className="text-m3-on-surface-variant font-mono text-xs">{formatCurrency(p.costPrice)}</span>
-                                            </div>
-                                          )}
-                                          <div>
-                                            <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Selling Retail</span>
-                                            <span className="text-m3-primary font-mono text-xs font-extrabold">{formatCurrency(p.sellingPrice)}</span>
-                                          </div>
-                                          <div>
-                                            <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Markup %</span>
-                                            <span className="text-emerald-500 font-mono text-xs font-bold">
-                                              {p.markupPercent !== undefined ? `${p.markupPercent}%` : (p.costPrice > 0 ? `${Math.round(((p.sellingPrice - p.costPrice) / p.costPrice) * 100 * 10) / 10}%` : '50%')}
-                                            </span>
-                                          </div>
-                                          <div>
-                                            <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Tax Type</span>
-                                            <span className="text-teal-500 font-sans text-xs font-bold">
-                                              {p.taxType || '12% VAT'}
-                                            </span>
-                                          </div>
-                                          {p.origin && canSeeFinancialCostsAndSources && (
-                                            <div className="col-span-2 pt-2 border-t border-m3-outline-variant/10">
-                                              <span className="text-[9px] text-m3-on-surface-variant font-black uppercase block leading-none mb-1">Acquired From / Origin</span>
-                                              <span className="text-amber-500 dark:text-amber-400 font-bold text-[11px] block">{p.origin}</span>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    {/* Right specs: Regional Branch distributions */}
-                                    {currentUser?.role === UserRole.ADMIN && (
-                                      <div className="space-y-3">
-                                        <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest block">Live Multi-Branch Stock balance</span>
-                                        <div className="space-y-2">
-                                          {branches.filter(b => !b.isDeleted).map((b) => {
-                                            const branchRecord = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id);
-                                            const qty = branchRecord?.quantity || 0;
-                                            const overrideLimit = branchRecord?.lowStockThresholdOverride !== undefined
-                                              ? branchRecord.lowStockThresholdOverride
-                                              : p.minimumStock;
-
-                                            let statusBg = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/10';
-                                            if (qty === 0) statusBg = 'bg-rose-500/10 text-rose-500 border-rose-500/10';
-                                            else if (qty <= overrideLimit) statusBg = 'bg-amber-500/10 text-amber-500 border-amber-500/10';
-
-                                            return (
-                                              <div key={b.id} className="flex flex-col md:flex-row justify-between md:items-center gap-2 text-xs p-3 rounded-xl bg-m3-surface border border-m3-outline-variant/10 shadow-3xs">
-                                                <div className="flex flex-col">
-                                                  <span className="font-extrabold text-[10px] text-m3-on-surface uppercase tracking-tight">{b.name.replace('Emman Tile Center ', '')}</span>
-                                                  <span className="text-[8px] text-m3-on-surface-variant font-mono uppercase">Current Balance: <strong className="text-m3-on-surface">{qty} {p.unit || 'Unit'}</strong></span>
-                                                </div>
-
-                                                <div className="flex items-center gap-2">
-                                                  {/* Alert limit settings for each branch */}
-                                                  <div className="flex items-center gap-1 bg-m3-surface-low px-2 py-1 rounded-lg border border-m3-outline-variant/20">
-                                                    <span className="text-[9px] text-m3-on-surface-variant font-bold uppercase tracking-wider">Alert Threshold:</span>
-                                                    <input
-                                                      type="number"
-                                                      className="w-12 bg-m3-surface-lowest text-xs font-mono font-bold text-center border-b border-m3-outline-variant text-m3-on-surface py-0.5"
-                                                      value={overrideLimit ?? ''}
-                                                      onChange={(e) => {
-                                                        const val = parseInt(e.target.value);
-                                                        updateBranchLowStockThreshold(p.id, b.id, isNaN(val) ? p.minimumStock : val);
-                                                      }}
-                                                      min={0}
-                                                    />
-                                                  </div>
-
-                                                  <span className={`font-mono font-black text-xs px-2.5 py-1 rounded-lg border ${statusBg}`}>
-                                                    {qty} {p.unit || 'Unit'}
-                                                  </span>
-                                                </div>
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                </motion.div>
-                              </td>
-                            </tr>
+                                  <Sliders className="h-4 w-4" />
+                                </button>
+                              </HeroTooltip>
+                              <HeroTooltip content="Edit product specs">
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEdit(p)}
+                                  className="p-1.5 text-default-400 hover:text-primary hover:bg-default-100 transition-colors rounded-medium cursor-pointer shrink-0"
+                                  aria-label="Edit specs"
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </button>
+                              </HeroTooltip>
+                              {!hasActiveShift && (
+                                <HeroTooltip content="Soft-delete listings" color="danger">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteTrigger(p.id, p.productName)}
+                                    className="p-1.5 text-default-400 hover:text-danger hover:bg-danger/10 transition-colors rounded-medium cursor-pointer shrink-0"
+                                    aria-label="Delete product"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </HeroTooltip>
+                              )}
+                            </>
                           )}
-                        </AnimatePresence>
-                      </React.Fragment>
-                    );
-                  })}
-                  {catalogPaddingBottom > 0 && (
-                    <tr style={{ height: catalogPaddingBottom }}>
-                      <td colSpan={hasActiveShift ? (isCompactColumns ? 7 : 13) : (isCompactColumns ? 8 : 14)} className="p-0 border-0" />
-                    </tr>
-                  )}
-                </>
+                        </div>
+                      </HeroTable.Cell>
+                    </HeroTable.Row>
+
+                    {/* Expanded Sub-Row with Detailed Layout Card */}
+                    <AnimatePresence initial={false}>
+                      {isExpanded && (
+                        <HeroTable.Row isHoverable={false} key={`${p.id}-expanded-details`}>
+                          <HeroTable.Cell colSpan={totalColumnsCount} className="p-4 bg-content2/30 border-b border-divider">
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                              className="overflow-hidden"
+                            >
+                              <div className={`bg-content1 p-5 rounded-large border border-divider grid grid-cols-1 ${currentUser?.role === UserRole.ADMIN ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6 shadow-inner text-left`}>
+
+                                {/* Left specs: Branding & Thumbnail */}
+                                <div className="space-y-4 border-b md:border-b-0 md:border-r border-divider pb-4 md:pb-0 md:pr-6">
+                                  <div className="flex gap-4 items-start">
+                                    <div className="space-y-1">
+                                      <span className="text-[10px] font-black uppercase text-primary tracking-widest block">Primary SKU Details</span>
+                                      <strong className="text-sm text-foreground block leading-tight">{p.productName}</strong>
+                                      <span className="text-[10px] text-default-500 block">ID Key: {p.id}</span>
+                                    </div>
+                                  </div>
+
+                                  <div className="pt-2">
+                                    <StyledBarcode code={p.barcode} />
+                                    <span className="text-[9px] font-bold text-default-500 block mt-1.5 text-center">SCAN BARCODE: {p.barcode}</span>
+                                  </div>
+                                </div>
+
+                                {/* Center specs: Dimensions, quantities and price indices */}
+                                <div className={`space-y-3 ${currentUser?.role === UserRole.ADMIN ? 'md:border-r border-divider md:pr-6' : ''}`}>
+                                  <span className="text-[10px] font-black uppercase text-primary tracking-widest block">Dimensional Specifications</span>
+                                  <div className="grid grid-cols-2 gap-3 text-xs font-semibold">
+                                    <div>
+                                      <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Brand Name</span>
+                                      <span className="text-foreground">{p.brand || 'No registered brand'}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Catalog Category</span>
+                                      <span className="text-foreground">{p.category}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Dimensions / Size</span>
+                                      <span className="text-foreground">{p.size || 'Unspecified'}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Box Coverage</span>
+                                      <span className="text-primary">{p.coveragePerBox ? `${p.coveragePerBox} m²` : '0.00 m²'}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Pcs / Package</span>
+                                      <span className="text-foreground">{p.boxQuantity} pieces</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Safety Threshold</span>
+                                      <span className="text-warning font-bold">{p.minimumStock} {p.unit}</span>
+                                    </div>
+                                    <div className="border-t border-divider pt-2 col-span-2 grid grid-cols-2 gap-2">
+                                      {canSeeFinancialCostsAndSources && (
+                                        <div>
+                                          <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Unit Cost</span>
+                                          <span className="text-default-500 text-xs">{formatCurrency(p.costPrice)}</span>
+                                        </div>
+                                      )}
+                                      <div>
+                                        <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Selling Retail</span>
+                                        <span className="text-primary text-xs font-extrabold">{formatCurrency(p.sellingPrice)}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Markup %</span>
+                                        <span className="text-success text-xs font-bold">
+                                          {p.markupPercent !== undefined ? `${p.markupPercent}%` : (p.costPrice > 0 ? `${Math.round(((p.sellingPrice - p.costPrice) / p.costPrice) * 100 * 10) / 10}%` : '50%')}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Tax Type</span>
+                                        <span className="text-teal-500 font-sans text-xs font-bold">
+                                          {p.taxType || '12% VAT'}
+                                        </span>
+                                      </div>
+                                      {p.origin && canSeeFinancialCostsAndSources && (
+                                        <div className="col-span-2 pt-2 border-t border-divider">
+                                          <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Acquired From / Origin</span>
+                                          <span className="text-warning font-bold text-[11px] block">{p.origin}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Right specs: Regional Branch distributions */}
+                                {currentUser?.role === UserRole.ADMIN && (
+                                  <div className="space-y-3">
+                                    <span className="text-[10px] font-black uppercase text-primary tracking-widest block">Live Multi-Branch Stock balance</span>
+                                    <div className="space-y-2">
+                                      {branches.filter(b => !b.isDeleted).map((b) => {
+                                        const branchRecord = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id);
+                                        const qty = branchRecord?.quantity || 0;
+                                        const overrideLimit = branchRecord?.lowStockThresholdOverride !== undefined
+                                          ? branchRecord.lowStockThresholdOverride
+                                          : p.minimumStock;
+
+                                        let statusBg = 'bg-success/10 text-success border-success/20';
+                                        if (qty === 0) statusBg = 'bg-danger/10 text-danger border-danger/20';
+                                        else if (qty <= overrideLimit) statusBg = 'bg-warning/10 text-warning border-warning/20';
+
+                                        return (
+                                          <div key={b.id} className="flex flex-col md:flex-row justify-between md:items-center gap-2 text-xs p-3 rounded-medium bg-content2 border border-divider shadow-xs">
+                                            <div className="flex flex-col">
+                                              <span className="font-extrabold text-[10px] text-foreground uppercase tracking-tight">{b.name}</span>
+                                              <span className="text-[8px] text-default-500 uppercase">Current Balance: <strong className="text-foreground">{qty} {p.unit || 'Unit'}</strong></span>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                              {/* Alert limit settings for each branch */}
+                                              <div className="flex items-center gap-1 bg-content1 px-2 py-1 rounded-medium border border-divider">
+                                                <span className="text-[9px] text-default-500 font-bold uppercase tracking-wider">Alert Threshold:</span>
+                                                <input
+                                                  type="number"
+                                                  className="w-12 bg-content2 text-xs font-bold text-center border-b border-divider text-foreground py-0.5"
+                                                  value={overrideLimit ?? ''}
+                                                  onChange={(e) => {
+                                                    const val = parseInt(e.target.value);
+                                                    updateBranchLowStockThreshold(p.id, b.id, isNaN(val) ? p.minimumStock : val);
+                                                  }}
+                                                  min={0}
+                                                />
+                                              </div>
+
+                                              <span className={`font-black text-xs px-2.5 py-1 rounded-medium border ${statusBg}`}>
+                                                {qty} {p.unit || 'Unit'}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          </HeroTable.Cell>
+                        </HeroTable.Row>
+                      )}
+                    </AnimatePresence>
+                  </React.Fragment>
+                );
+              })}
+              {catalogPaddingBottom > 0 && (
+                <tr style={{ height: catalogPaddingBottom }}>
+                  <td colSpan={totalColumnsCount} className="p-0 border-0" />
+                </tr>
               )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            </>
+          )}
+        </HeroTable.Body>
+      </HeroTable>
 
       {/* Table Pagination */}
       <TablePagination
@@ -890,3 +1145,4 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
     </>
   );
 };
+

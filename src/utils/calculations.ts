@@ -79,6 +79,16 @@ export function calculateCartTotals(
 
   const grandTotal = Math.max(0, subtotal - discountTotal);
 
+  if (overallDiscountPercent > 0 || overallDiscountAmount > 0) {
+    const totalLines = vatableSales + vatAmount + vatExemptSales;
+    if (totalLines > 0) {
+      const ratio = grandTotal / totalLines;
+      vatableSales = Number((vatableSales * ratio).toFixed(2));
+      vatAmount = Number((vatAmount * ratio).toFixed(2));
+      vatExemptSales = Number((vatExemptSales * ratio).toFixed(2));
+    }
+  }
+
   return {
     subtotal,
     discountTotal,

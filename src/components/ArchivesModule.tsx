@@ -1,27 +1,22 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
-  Archive,
-  RotateCcw,
-  Trash2,
-  Search,
-  Filter,
-  CheckSquare,
-  Square,
-  AlertTriangle,
-  RefreshCw,
-  Package,
-  Users,
-  Building2,
-  Truck,
-  Receipt,
-  FileText,
   AlertOctagon,
-  DollarSign,
-  ShieldAlert,
-  Sparkles,
-  Info,
+  AlertTriangle,
+  Archive,
+  Building2,
+  FileText,
+  Package,
+  Receipt,
+  RotateCcw,
+  Search,
+  Trash2,
+  Truck,
+  Users
 } from 'lucide-react';
 import { useDb } from '../context/DbContext';
+import { ToastNotification } from './ToastNotification';
+import { HeroPagination } from './common/ui/HeroPagination';
 
 interface ArchivesModuleProps {
   darkMode?: boolean;
@@ -125,7 +120,7 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
           subtitle: `Role: ${u.role} • Username: @${u.username}`,
           details: `Email: ${u.email || 'N/A'} • Branch: ${u.branchAssignmentId || 'Central'}`,
           deletedAt: u.updatedAt,
-          badgeColor: 'bg-m3-primary/10 text-m3-primary border-m3-primary/20',
+          badgeColor: 'bg-primary/10 text-primary border-primary/20',
         });
       });
 
@@ -204,7 +199,7 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
           subtitle: `Supplier: ${po.supplierName || po.supplierId} • Status: ${po.status}`,
           details: `Total Cost: $${(po.totalAmount || 0).toLocaleString()} • Items: ${po.items?.length || 0}`,
           deletedAt: po.deletedAt || po.createdAt,
-          badgeColor: 'bg-m3-primary/10 text-m3-primary border-m3-primary/20',
+          badgeColor: 'bg-primary/10 text-primary border-primary/20',
         });
       });
 
@@ -315,6 +310,30 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
     });
   }, [archivedItems, activeTab, searchQuery]);
 
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+
+  // Reset page on search or category switch
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+    setSelectedKeys({});
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    setCurrentPage(1);
+  };
+
+  const totalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(filteredItems.length / pageSize));
+  }, [filteredItems.length, pageSize]);
+
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredItems.slice(start, start + pageSize);
+  }, [filteredItems, currentPage, pageSize]);
+
   // Handle single item restore
   const handleRestoreSingle = (item: UnifiedArchivedItem) => {
     switch (item.type) {
@@ -405,31 +424,29 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto p-4 md:p-6 space-y-5 bg-m3-surface/30">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto p-4 md:p-6 space-y-5 bg-background/30 pb-20 md:pb-16">
       {/* Toast Alert */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 bg-m3-on-surface text-m3-surface text-xs font-bold py-3 px-5 rounded-2xl shadow-2xl z-50 border border-m3-outline-variant/30 flex items-center gap-2.5 animate-bounce max-w-[320px]">
-          <RotateCcw className="h-4.5 w-4.5 text-emerald-400 shrink-0" />
-          <span className="leading-tight">{toastMessage}</span>
-        </div>
-      )}
+      <ToastNotification
+        message={toastMessage}
+        onClose={() => setToastMessage(null)}
+      />
 
       {/* HEADER BANNER */}
-      <div className="m3-card p-5 border border-m3-outline-variant/20 bg-gradient-to-r from-m3-surface-low via-m3-surface-lowest to-m3-surface-low shadow-sm rounded-3xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-content1 border border-divider rounded-large shadow-small text-foreground p-5 border border-divider/20 bg-gradient-to-r from-content1 via-content1 to-content1 shadow-sm rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
-          <div className="p-3 rounded-2xl bg-m3-primary/10 text-m3-primary border border-m3-primary/20 shrink-0">
+          <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20 shrink-0">
             <Archive className="h-6 w-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-black text-m3-on-surface tracking-tight">
+              <h1 className="text-xl font-black text-foreground tracking-tight">
                 System Archives & Restore Center
               </h1>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                 Recovery Vault
               </span>
             </div>
-            <p className="text-xs text-m3-on-surface-variant font-medium mt-0.5">
+            <p className="text-xs text-default-500 font-medium mt-0.5">
               Safely inspect and restore soft-deleted items across inventory, employees, branches, suppliers, and sales.
             </p>
           </div>
@@ -437,44 +454,44 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
 
         {/* STATS OVERVIEW BADGES */}
         <div className="flex flex-wrap items-center gap-2 self-stretch md:self-auto justify-end">
-          <div className="p-2.5 px-4 rounded-2xl bg-m3-surface-lowest border border-m3-outline-variant/20 text-center min-w-[100px]">
-            <div className="text-[10px] uppercase font-bold text-m3-on-surface-variant tracking-wider">
+          <div className="p-2.5 px-4 rounded-2xl bg-content1 border border-divider/20 text-center min-w-[100px]">
+            <div className="text-[10px] uppercase font-bold text-default-500 tracking-wider">
               Total Vault
             </div>
-            <div className="text-lg font-black text-m3-primary">{counts.all}</div>
+            <div className="text-lg font-black text-primary">{counts.all}</div>
           </div>
-          <div className="p-2.5 px-4 rounded-2xl bg-m3-surface-lowest border border-m3-outline-variant/20 text-center min-w-[100px]">
-            <div className="text-[10px] uppercase font-bold text-m3-on-surface-variant tracking-wider">
+          <div className="p-2.5 px-4 rounded-2xl bg-content1 border border-divider/20 text-center min-w-[100px]">
+            <div className="text-[10px] uppercase font-bold text-default-500 tracking-wider">
               Products
             </div>
             <div className="text-lg font-black text-emerald-600 dark:text-emerald-400">{counts.product}</div>
           </div>
-          <div className="p-2.5 px-4 rounded-2xl bg-m3-surface-lowest border border-m3-outline-variant/20 text-center min-w-[100px]">
-            <div className="text-[10px] uppercase font-bold text-m3-on-surface-variant tracking-wider">
+          <div className="p-2.5 px-4 rounded-2xl bg-content1 border border-divider/20 text-center min-w-[100px]">
+            <div className="text-[10px] uppercase font-bold text-default-500 tracking-wider">
               Staff / Other
             </div>
-            <div className="text-lg font-black text-m3-primary">{counts.user + counts.branch}</div>
+            <div className="text-lg font-black text-primary">{counts.user + counts.branch}</div>
           </div>
         </div>
       </div>
 
       {/* FILTER TABS & SEARCH BAR */}
-      <div className="m3-card p-4 border border-m3-outline-variant/20 rounded-3xl space-y-3 bg-m3-surface-lowest shadow-xs">
+      <div className="bg-content1 border border-divider rounded-large shadow-small text-foreground p-4 border border-divider/20 rounded-2xl space-y-3 bg-content1 shadow-xs">
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
           {/* SEARCH INPUT */}
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-m3-on-surface-variant" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-default-500" />
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Search archives by name, code, SKU, email, role..."
-              className="w-full pl-10 pr-4 py-2 text-xs rounded-2xl bg-m3-surface-low border border-m3-outline-variant/30 text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary/30 transition-all placeholder:text-m3-on-surface-variant/50"
+              className="w-full pl-10 pr-4 py-2 text-xs rounded-2xl bg-content1 border border-divider/30 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all placeholder:text-default-500/50"
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-m3-on-surface-variant hover:text-m3-on-surface"
+                onClick={() => handleSearchChange('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-default-500 hover:text-foreground"
               >
                 Clear
               </button>
@@ -483,8 +500,8 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
 
           {/* QUICK BULK ACTIONS IF ANY SELECTED */}
           {getSelectedItems().length > 0 && (
-            <div className="flex items-center gap-2 bg-m3-surface-low p-1.5 px-3 rounded-2xl border border-m3-primary/20 animate-fade-in">
-              <span className="text-xs font-black text-m3-primary">
+            <div className="flex items-center gap-2 bg-content1 p-1.5 px-3 rounded-2xl border border-primary/20 animate-fade-in">
+              <span className="text-xs font-black text-primary">
                 {getSelectedItems().length} selected
               </span>
               <button
@@ -503,7 +520,7 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
               </button>
               <button
                 onClick={() => setSelectedKeys({})}
-                className="text-[11px] font-bold text-m3-on-surface-variant hover:text-m3-on-surface px-2 py-1"
+                className="text-[11px] font-bold text-default-500 hover:text-foreground px-2 py-1"
               >
                 Deselect
               </button>
@@ -528,14 +545,11 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
             return (
               <button
                 key={tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id);
-                  setSelectedKeys({});
-                }}
+                onClick={() => handleTabChange(tab.id)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap cursor-pointer transition-all ${
                   isActive
-                    ? 'bg-m3-primary text-m3-on-primary shadow-xs'
-                    : 'bg-m3-surface-low text-m3-on-surface-variant hover:bg-m3-surface-variant/20'
+                    ? 'bg-primary text-primary-foreground shadow-xs'
+                    : 'bg-content1 text-default-500 hover:bg-default-100/20'
                 }`}
               >
                 <IconComp className="h-3.5 w-3.5" />
@@ -543,8 +557,8 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
                     isActive
-                      ? 'bg-m3-on-primary/20 text-m3-on-primary'
-                      : 'bg-m3-outline-variant/30 text-m3-on-surface-variant'
+                      ? 'bg-primary-foreground/20 text-primary-foreground'
+                      : 'bg-default-100 text-default-500'
                   }`}
                 >
                   {tab.count}
@@ -556,15 +570,15 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
       </div>
 
       {/* TABLE / LIST CONTAINER */}
-      <div className="m3-card p-0 border border-m3-outline-variant/20 rounded-3xl overflow-hidden bg-m3-surface-lowest shadow-sm">
+      <div className="bg-content1 border border-divider rounded-large shadow-small text-foreground p-0 border border-divider/20 rounded-2xl overflow-hidden bg-content1 shadow-sm">
         {filteredItems.length === 0 ? (
           <div className="p-12 text-center flex flex-col items-center justify-center space-y-3">
-            <div className="p-4 rounded-full bg-m3-surface-low text-m3-on-surface-variant/40 border border-m3-outline-variant/20">
+            <div className="p-4 rounded-full bg-content1 text-default-500/40 border border-divider/20">
               <Archive className="h-10 w-10 stroke-[1.5]" />
             </div>
             <div className="max-w-sm space-y-1">
-              <h3 className="text-sm font-black text-m3-on-surface">No Archived Items Found</h3>
-              <p className="text-xs text-m3-on-surface-variant">
+              <h3 className="text-sm font-black text-foreground">No Archived Items Found</h3>
+              <p className="text-xs text-default-500">
                 {searchQuery
                   ? `No records matching "${searchQuery}" in this category.`
                   : 'There are currently no soft-deleted records in this vault category. Active records are operational!'}
@@ -573,7 +587,7 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="mt-2 text-xs font-bold text-m3-primary hover:underline"
+                className="mt-2 text-xs font-bold text-primary hover:underline"
               >
                 Clear Search Filter
               </button>
@@ -583,7 +597,7 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-m3-outline-variant/20 bg-m3-surface-low/50 text-[10px] uppercase font-bold text-m3-on-surface-variant tracking-wider">
+                <tr className="border-b border-divider/20 bg-content1/50 text-[10px] uppercase font-bold text-default-500 tracking-wider">
                   <th className="py-3 px-3.5 w-10 text-center select-none">
                     <input
                       type="checkbox"
@@ -592,7 +606,7 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
                         getSelectedItems().length === filteredItems.length
                       }
                       onChange={handleToggleSelectAll}
-                      className="rounded border-zinc-300 dark:border-zinc-700 text-m3-primary focus:ring-m3-primary cursor-pointer h-3.5 w-3.5"
+                      className="rounded border-zinc-300 dark:border-zinc-700 text-primary focus:ring-primary cursor-pointer h-3.5 w-3.5"
                     />
                   </th>
                   <th className="py-3 px-3 w-28">Category</th>
@@ -602,16 +616,16 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
                   <th className="py-3 px-4 text-right w-48">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-m3-outline-variant/10">
-                {filteredItems.map((item) => {
+              <tbody className="divide-y divide-divider/10">
+                {paginatedItems.map((item) => {
                   const key = `${item.type}_${item.id}`;
                   const isSelected = !!selectedKeys[key];
 
                   return (
                     <tr
                       key={key}
-                      className={`hover:bg-m3-surface-low/60 transition-colors ${
-                        isSelected ? 'bg-m3-primary/5' : ''
+                      className={`hover:bg-content1/60 transition-colors ${
+                        isSelected ? 'bg-primary/5' : ''
                       }`}
                     >
                       {/* SELECT CHECKBOX */}
@@ -620,7 +634,7 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => handleToggleSelectOne(key)}
-                          className="rounded border-zinc-300 dark:border-zinc-700 text-m3-primary focus:ring-m3-primary cursor-pointer h-3.5 w-3.5"
+                          className="rounded border-zinc-300 dark:border-zinc-700 text-primary focus:ring-primary cursor-pointer h-3.5 w-3.5"
                         />
                       </td>
 
@@ -635,19 +649,19 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
 
                       {/* TITLE & SUBTITLE */}
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-m3-on-surface">{item.title}</div>
-                        <div className="text-[11px] text-m3-on-surface-variant font-mono mt-0.5">
+                        <div className="font-bold text-foreground">{item.title}</div>
+                        <div className="text-[11px] text-default-500 mt-0.5">
                           {item.subtitle}
                         </div>
                       </td>
 
                       {/* DETAILS */}
-                      <td className="py-3.5 px-4 text-m3-on-surface-variant text-[11px]">
+                      <td className="py-3.5 px-4 text-default-500 text-[11px]">
                         {item.details || '—'}
                       </td>
 
                       {/* TIMESTAMP */}
-                      <td className="py-3.5 px-4 text-m3-on-surface-variant text-[11px] font-mono">
+                      <td className="py-3.5 px-4 text-default-500 text-[11px] ">
                         {item.deletedAt
                           ? new Date(item.deletedAt).toLocaleDateString(undefined, {
                               year: 'numeric',
@@ -658,7 +672,7 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
                             })
                           : 'Archived'}
                         {item.deletedBy && (
-                          <div className="text-[10px] text-m3-on-surface-variant/70">
+                          <div className="text-[10px] text-default-500/70">
                             By: {item.deletedBy}
                           </div>
                         )}
@@ -677,7 +691,7 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
                           </button>
                           <button
                             onClick={() => setItemToPurge(item)}
-                            className="p-1.5 rounded-xl text-m3-on-surface-variant/60 hover:text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-all"
+                            className="p-1.5 rounded-xl text-default-500/60 hover:text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-all"
                             title="Permanently purge from system"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -689,33 +703,77 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
                 })}
               </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            {filteredItems.length > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-divider/20 bg-content1/40 text-xs text-default-400">
+                <div>
+                  Showing <span className="font-bold text-foreground">{(currentPage - 1) * pageSize + 1}</span> to{' '}
+                  <span className="font-bold text-foreground">
+                    {Math.min(currentPage * pageSize, filteredItems.length)}
+                  </span>{' '}
+                  of <span className="font-bold text-foreground">{filteredItems.length}</span> records
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5 text-default-400 text-xs">
+                    <span>Rows:</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="bg-content2 dark:bg-content1/70 border border-divider/40 text-foreground text-xs rounded-lg px-2 py-1 outline-none font-semibold cursor-pointer"
+                    >
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                    </select>
+                  </div>
+
+                  <HeroPagination
+                    total={totalPages}
+                    page={currentPage}
+                    onChange={(p) => setCurrentPage(p)}
+                    size="sm"
+                    showControls
+                  />
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* MODAL: SINGLE PURGE CONFIRMATION */}
-      {itemToPurge && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-m3-surface-lowest rounded-3xl p-6 max-w-md w-full border border-m3-outline-variant/30 shadow-2xl space-y-4">
+      {itemToPurge && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
+          {/* Full-Screen Uniform Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
+            onClick={() => setItemToPurge(null)} 
+          />
+          <div className="relative bg-content1 rounded-2xl p-6 max-w-md w-full border border-divider/30 shadow-2xl space-y-4 z-10">
             <div className="flex items-center gap-3 text-rose-500">
               <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20">
                 <AlertTriangle className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-base font-black text-m3-on-surface">Permanent Purge</h3>
-                <p className="text-xs text-m3-on-surface-variant">Action cannot be undone</p>
+                <h3 className="text-base font-black text-foreground">Permanent Purge</h3>
+                <p className="text-xs text-default-500">Action cannot be undone</p>
               </div>
             </div>
 
-            <p className="text-xs text-m3-on-surface-variant leading-relaxed">
+            <p className="text-xs text-default-500 leading-relaxed">
               Are you sure you want to permanently delete{' '}
-              <strong className="text-m3-on-surface">{itemToPurge.title}</strong> ({itemToPurge.typeLabel})? This will eradicate the record permanently from system backups.
+              <strong className="text-foreground">{itemToPurge.title}</strong> ({itemToPurge.typeLabel})? This will eradicate the record permanently from system backups.
             </p>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-m3-outline-variant/15">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-divider/15">
               <button
                 onClick={() => setItemToPurge(null)}
-                className="px-4 py-2 text-xs font-bold rounded-xl text-m3-on-surface-variant hover:bg-m3-surface-low"
+                className="px-4 py-2 text-xs font-bold rounded-xl text-default-500 hover:bg-content1"
               >
                 Cancel
               </button>
@@ -727,31 +785,37 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL: BULK RESTORE CONFIRMATION */}
-      {showBulkRestoreModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-m3-surface-lowest rounded-3xl p-6 max-w-md w-full border border-m3-outline-variant/30 shadow-2xl space-y-4">
+      {showBulkRestoreModal && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
+          {/* Full-Screen Uniform Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
+            onClick={() => setShowBulkRestoreModal(false)} 
+          />
+          <div className="relative bg-content1 rounded-2xl p-6 max-w-md w-full border border-divider/30 shadow-2xl space-y-4 z-10">
             <div className="flex items-center gap-3 text-emerald-500">
               <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
                 <RotateCcw className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-base font-black text-m3-on-surface">Bulk Restore Confirmation</h3>
-                <p className="text-xs text-m3-on-surface-variant">Restore records to active system</p>
+                <h3 className="text-base font-black text-foreground">Bulk Restore Confirmation</h3>
+                <p className="text-xs text-default-500">Restore records to active system</p>
               </div>
             </div>
 
-            <p className="text-xs text-m3-on-surface-variant leading-relaxed">
-              You are about to restore <strong className="text-m3-on-surface">{getSelectedItems().length} selected records</strong> back to active modules and catalogs.
+            <p className="text-xs text-default-500 leading-relaxed">
+              You are about to restore <strong className="text-foreground">{getSelectedItems().length} selected records</strong> back to active modules and catalogs.
             </p>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-m3-outline-variant/15">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-divider/15">
               <button
                 onClick={() => setShowBulkRestoreModal(false)}
-                className="px-4 py-2 text-xs font-bold rounded-xl text-m3-on-surface-variant hover:bg-m3-surface-low"
+                className="px-4 py-2 text-xs font-bold rounded-xl text-default-500 hover:bg-content1"
               >
                 Cancel
               </button>
@@ -763,31 +827,37 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL: BULK PURGE CONFIRMATION */}
-      {showBulkPurgeModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-m3-surface-lowest rounded-3xl p-6 max-w-md w-full border border-m3-outline-variant/30 shadow-2xl space-y-4">
+      {showBulkPurgeModal && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
+          {/* Full-Screen Uniform Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
+            onClick={() => setShowBulkPurgeModal(false)} 
+          />
+          <div className="relative bg-content1 rounded-2xl p-6 max-w-md w-full border border-divider/30 shadow-2xl space-y-4 z-10">
             <div className="flex items-center gap-3 text-rose-500">
               <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20">
                 <AlertOctagon className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-base font-black text-m3-on-surface">Bulk Permanent Purge</h3>
-                <p className="text-xs text-m3-on-surface-variant">Irreversible Operation</p>
+                <h3 className="text-base font-black text-foreground">Bulk Permanent Purge</h3>
+                <p className="text-xs text-default-500">Irreversible Operation</p>
               </div>
             </div>
 
-            <p className="text-xs text-m3-on-surface-variant leading-relaxed">
+            <p className="text-xs text-default-500 leading-relaxed">
               Are you sure you want to permanently delete <strong className="text-rose-500">{getSelectedItems().length} selected archived records</strong>?
             </p>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-m3-outline-variant/15">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-divider/15">
               <button
                 onClick={() => setShowBulkPurgeModal(false)}
-                className="px-4 py-2 text-xs font-bold rounded-xl text-m3-on-surface-variant hover:bg-m3-surface-low"
+                className="px-4 py-2 text-xs font-bold rounded-xl text-default-500 hover:bg-content1"
               >
                 Cancel
               </button>
@@ -799,7 +869,8 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

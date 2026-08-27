@@ -3,67 +3,80 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, {
- createContext,
- useContext,
- useState,
- useEffect,
- useRef,
- useMemo,
- useCallback,
+import React,{
+createContext,
+useCallback,
+useContext,
+useEffect,
+useMemo,
+useRef,
+useState,
 } from "react";
+import { getBranchStockQuantity,getBranchStockRecord,isProductInBranch,isSameBranch,slugifyBranchStr } from "../lib/branchUtils";
 import {
- createSaltedHash,
- formatHashToken,
- verifyPasswordWithToken,
- detectSQLi,
- encryptCredentialPacket,
- decryptCredentialPacket,
- generateSessionToken,
+createSaltedHash,
+decryptCredentialPacket,
+detectSQLi,
+encryptCredentialPacket,
+formatHashToken,
+generateSessionToken,
+verifyPasswordWithToken,
 } from "../lib/crypto";
-import { saveFileToBackup } from "../lib/fileBackupHelper";
-import { generateEan13Barcode } from "../utils/barcodeGenerator";
-import { isProductInBranch, slugifyBranchStr, getBranchStockQuantity, getBranchStockRecord, isSameBranch } from "../lib/branchUtils";
-import { sqliteDatabaseService } from "../services/sqliteDatabaseService";
-import { dbSyncWorkerClient } from "../services/dbSyncWorkerClient";
 import {
- User,
- UserRole,
- Branch,
- Supplier,
- Brand,
- Product,
- PurchaseOrder,
- PurchaseOrderItem,
- Transmittal,
- TransmittalDocType,
- TransmittalStatus,
- Shift,
- Sale,
- SaleItem,
- InventoryMovement,
- AuditLog,
- POStatus,
- ShiftStatus,
- StockTransfer,
- TransferStatus,
- TransferType,
- InventoryLocationStock,
- LedgerEntry,
- BranchSalesReport,
- Delivery,
- DeliveryStatus,
- DamageLog,
- ActiveSession,
- CustomCorporateBill,
- Member,
- Expense,
- ProductReturn,
- LoyaltyConfig,
- ArchivableCategory,
- PurgeResult,
- RetentionPolicyMap,
+DEFAULT_DAMAGE_REASONS,
+DEFAULT_DISCOUNT_SCHEMES,
+DEFAULT_PAYMENT_METHODS,
+DEFAULT_PRODUCT_CATEGORIES,
+DEFAULT_UNIT_TYPES,
+} from "../lib/dynamicConfigDefaults";
+import { saveFileToBackup } from "../lib/fileBackupHelper";
+import { dbSyncWorkerClient } from "../services/dbSyncWorkerClient";
+import { mysqlDatabaseService } from "../services/mysqlDatabaseService";
+import {
+ActiveSession,
+ArchivableCategory,
+AuditLog,
+Branch,
+BranchSalesReport,
+Brand,
+CustomCorporateBill,
+CustomPaymentMethod,
+DamageLog,
+DamageReasonOption,
+Delivery,
+DeliveryStatus,
+DiscountScheme,
+Expense,
+InventoryLocationStock,
+InventoryMovement,
+LedgerEntry,
+LoyaltyConfig,
+Member,
+POStatus,
+Product,
+ProductCategory,
+ProductReturn,
+PurchaseOrder,
+PurchaseOrderItem,
+PurgeResult,
+RetentionPolicyMap,
+Sale,
+SaleItem,
+Shift,
+ShiftStatus,
+StockTransfer,
+Supplier,
+TransferStatus,
+TransferType,
+Transmittal,
+TransmittalDocType,
+TransmittalStatus,
+UnitType,
+User,
+UserRole,
 } from "../types/db";
+import { io as socketIO, Socket } from "socket.io-client";
+import { generateEan13Barcode } from "../utils/barcodeGenerator";
 
 // Hard-locked database tables containing active transactions, shift summaries, and stock levels (absolutely exempt from auto-purging)
 // Core database tables containing active session & auth states (exempt from auto-clearing by Cashiers)
@@ -77,10 +90,10 @@ const HARD_LOCKED_KEYS = [
   "tp_branches"
 ];
 
-// Comprehensive Synchronous Storage Pruning Function
+// Safe Storage Pruning Function (Only cleans up non-essential temporary caches)
 const performSyncPruning = (): number => {
   if (typeof window === "undefined" || !window.localStorage) return 0;
-  console.log("[System Guard] Performing synchronous emergency database pruning...");
+  console.log("[System Guard] Performing safe storage cache maintenance (preserving all inventory & transaction tables)...");
   let bytesFreed = 0;
 
   const setItemSync = (k: string, val: string) => {
@@ -89,7 +102,7 @@ const performSyncPruning = (): number => {
     } catch (_) {}
   };
 
-  // 1. Strip heavy 'data' payload from tp_db_snapshots in localStorage
+  // 1. Strip heavy 'data' payload from tp_db_snapshots in localStorage (keep metadata only)
   try {
     const snapshotsStr = window.localStorage.getItem("tp_db_snapshots");
     if (snapshotsStr) {
@@ -108,7 +121,7 @@ const performSyncPruning = (): number => {
     try { window.localStorage.removeItem("tp_db_snapshots"); } catch (_) {}
   }
 
-  // 2. Remove tp_ingestion_snapshots
+  // 2. Remove temporary ingestion snapshots
   try {
     const ingestStr = window.localStorage.getItem("tp_ingestion_snapshots");
     if (ingestStr) {
@@ -117,102 +130,18 @@ const performSyncPruning = (): number => {
     }
   } catch (_) {}
 
-  // 3. Trim tp_audit_logs to newest 20
-  try {
-    const logsStr = window.localStorage.getItem("tp_audit_logs");
-    if (logsStr) {
-      const logs = JSON.parse(logsStr);
-      if (Array.isArray(logs) && logs.length > 20) {
-        const sorted = [...logs].sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
-        const trimmed = sorted.slice(0, 20);
-        const newStr = JSON.stringify(trimmed);
-        setItemSync("tp_audit_logs", newStr);
-        bytesFreed += (logsStr.length - newStr.length);
-      }
-    }
-  } catch (_) {}
-
-  // 4. Trim tp_movements to newest 50
-  try {
-    const movStr = window.localStorage.getItem("tp_movements");
-    if (movStr) {
-      const movs = JSON.parse(movStr);
-      if (Array.isArray(movs) && movs.length > 50) {
-        const sorted = [...movs].sort((a, b) => new Date(b.createdAt || b.timestamp || 0).getTime() - new Date(a.createdAt || a.timestamp || 0).getTime());
-        const trimmed = sorted.slice(0, 50);
-        const newStr = JSON.stringify(trimmed);
-        setItemSync("tp_movements", newStr);
-        bytesFreed += (movStr.length - newStr.length);
-      }
-    }
-  } catch (_) {}
-
-  // 5. Trim tp_sales and tp_sale_items in localStorage (keep latest 50 sales in local cache)
-  try {
-    const salesStr = window.localStorage.getItem("tp_sales");
-    if (salesStr) {
-      const salesArr = JSON.parse(salesStr);
-      if (Array.isArray(salesArr) && salesArr.length > 50) {
-        const sorted = [...salesArr].sort((a, b) => new Date(b.createdAt || b.dateTime || 0).getTime() - new Date(a.createdAt || a.dateTime || 0).getTime());
-        const trimmedSales = sorted.slice(0, 50);
-        const keepIds = new Set(trimmedSales.map((s: any) => s.id));
-        const newSalesStr = JSON.stringify(trimmedSales);
-        setItemSync("tp_sales", newSalesStr);
-        bytesFreed += (salesStr.length - newSalesStr.length);
-
-        const itemsStr = window.localStorage.getItem("tp_sale_items");
-        if (itemsStr) {
-          const itemsArr = JSON.parse(itemsStr);
-          if (Array.isArray(itemsArr)) {
-            const trimmedItems = itemsArr.filter((item: any) => keepIds.has(item.saleId));
-            setItemSync("tp_sale_items", JSON.stringify(trimmedItems));
-          }
-        }
-      }
-    }
-  } catch (_) {}
-
-  // 6. Trim extended module items
-  ["atpos_v2_expenses", "atpos_v2_returns", "atpos_v2_custom_bills", "atpos_v2_members_list"].forEach((pruneKey) => {
-    try {
-      const str = window.localStorage.getItem(pruneKey);
-      if (str) {
-        const arr = JSON.parse(str);
-        if (Array.isArray(arr) && arr.length > 20) {
-          const trimmed = arr.slice(0, 20);
-          const newStr = JSON.stringify(trimmed);
-          setItemSync(pruneKey, newStr);
-          bytesFreed += (str.length - newStr.length);
-        }
+  // 3. Clear temporary/transient debugging keys without touching core tables
+  ["tp_write_stats_prevented", "tp_batch_expirations", "tp_temp_catalog_cache"].forEach((tk) => {
+    try { 
+      const val = window.localStorage.getItem(tk);
+      if (val) {
+        bytesFreed += val.length;
+        window.localStorage.removeItem(tk);
       }
     } catch (_) {}
   });
 
-  // 7. Strip base64 image strings from tp_products in localStorage
-  try {
-    const prodStr = window.localStorage.getItem("tp_products");
-    if (prodStr && prodStr.includes("data:image")) {
-      const prods = JSON.parse(prodStr);
-      if (Array.isArray(prods)) {
-        const stripped = prods.map((p: any) => {
-          if (p.imageUrl && typeof p.imageUrl === "string" && p.imageUrl.startsWith("data:image")) {
-            return { ...p, imageUrl: "" };
-          }
-          return p;
-        });
-        const strippedStr = JSON.stringify(stripped);
-        setItemSync("tp_products", strippedStr);
-        bytesFreed += (prodStr.length - strippedStr.length);
-      }
-    }
-  } catch (_) {}
-
-  // 8. Clear transient keys
-  ["tp_write_stats_prevented", "tp_batch_expirations"].forEach((tk) => {
-    try { window.localStorage.removeItem(tk); } catch (_) {}
-  });
-
-  console.log(`[System Guard] Synchronous pruning finished. Freed approx ${bytesFreed} bytes.`);
+  console.log(`[System Guard] Safe cache maintenance finished. Freed approx ${bytesFreed} bytes.`);
   return bytesFreed;
 };
 
@@ -337,7 +266,7 @@ if (typeof window !== "undefined" && window.localStorage && !(window.localStorag
 
  (window as any).createLocalDatabaseSnapshot = createLocalDatabaseSnapshot;
 
- const originalRemoveItem = window.localStorage.removeItem;
+  const originalRemoveItem = window.localStorage.removeItem;
  window.localStorage.removeItem = function (key) {
  if (HARD_LOCKED_KEYS.includes(key)) {
  let isCashier = false;
@@ -366,7 +295,7 @@ if (typeof window !== "undefined" && window.localStorage && !(window.localStorag
  }
  } catch (_) {}
 
- if (!hasSnapshot) {
+ if (!hasSnapshot && window.localStorage.getItem("tp_is_configured") === "true") {
  console.log(`[System Guard] Satisfying safety requirements: Automatically generating on-the-fly backup snapshot before removing "${key}"`);
  createLocalDatabaseSnapshot();
  }
@@ -402,7 +331,7 @@ if (typeof window !== "undefined" && window.localStorage && !(window.localStorag
  }
  } catch (_) {}
 
- if (!hasSnapshot) {
+ if (!hasSnapshot && window.localStorage.getItem("tp_is_configured") === "true") {
  console.log("[System Guard] Satisfying safety requirements: Automatically generating on-the-fly backup snapshot before clearing database storage.");
  createLocalDatabaseSnapshot();
  }
@@ -467,6 +396,7 @@ interface DbContextType {
  ) => Promise<{ success: boolean; error?: string; sqliBlocked?: boolean }>;
  logout: () => void;
  isConfigured: boolean;
+ setIsConfigured: React.Dispatch<React.SetStateAction<boolean>>;
  setupSystem: (
  adminData: {
  fullName: string;
@@ -518,6 +448,43 @@ interface DbContextType {
  setDayMemos: React.Dispatch<React.SetStateAction<Record<string, string>>>;
  loyaltyConfig: LoyaltyConfig;
  updateLoyaltyConfig: (updates: Partial<LoyaltyConfig>) => void;
+
+ selectedViewBranchId: string;
+ setSelectedViewBranchId: (bId: string) => void;
+
+ // Dynamic Business Parameters & Configurations
+ productCategories: ProductCategory[];
+ setProductCategories: React.Dispatch<React.SetStateAction<ProductCategory[]>>;
+ createProductCategory: (category: Omit<ProductCategory, "id" | "createdAt" | "updatedAt">) => ProductCategory;
+ updateProductCategory: (id: string, updates: Partial<ProductCategory>) => void;
+ deleteProductCategory: (id: string) => void;
+
+ unitTypes: UnitType[];
+ setUnitTypes: React.Dispatch<React.SetStateAction<UnitType[]>>;
+ createUnitType: (unit: Omit<UnitType, "id" | "createdAt" | "updatedAt">) => UnitType;
+ updateUnitType: (id: string, updates: Partial<UnitType>) => void;
+ deleteUnitType: (id: string) => void;
+
+ paymentMethodsList: CustomPaymentMethod[];
+ setPaymentMethodsList: React.Dispatch<React.SetStateAction<CustomPaymentMethod[]>>;
+ createPaymentMethod: (pm: Omit<CustomPaymentMethod, "id" | "createdAt" | "updatedAt">) => CustomPaymentMethod;
+ updatePaymentMethod: (id: string, updates: Partial<CustomPaymentMethod>) => void;
+ deletePaymentMethod: (id: string) => void;
+ togglePaymentMethod: (id: string, enabled?: boolean) => void;
+
+ discountSchemes: DiscountScheme[];
+ setDiscountSchemes: React.Dispatch<React.SetStateAction<DiscountScheme[]>>;
+ createDiscountScheme: (ds: Omit<DiscountScheme, "id" | "createdAt" | "updatedAt">) => DiscountScheme;
+ updateDiscountScheme: (id: string, updates: Partial<DiscountScheme>) => void;
+ deleteDiscountScheme: (id: string) => void;
+ toggleDiscountScheme: (id: string, enabled?: boolean) => void;
+
+ damageReasonsList: DamageReasonOption[];
+ setDamageReasonsList: React.Dispatch<React.SetStateAction<DamageReasonOption[]>>;
+ createDamageReason: (dr: Omit<DamageReasonOption, "id" | "createdAt" | "updatedAt">) => DamageReasonOption;
+ updateDamageReason: (id: string, updates: Partial<DamageReasonOption>) => void;
+ deleteDamageReason: (id: string) => void;
+ toggleDamageReason: (id: string, enabled?: boolean) => void;
 
  // Actions - Users
  createUser: (user: Omit<User, "id" | "createdAt" | "updatedAt">) => void;
@@ -633,6 +600,9 @@ interface DbContextType {
  discountType?: string,
  targetBranchId?: string,
  pointsRedeemed?: number,
+ customerAddress?: string,
+ customerTin?: string,
+ businessStyle?: string,
  ) => Sale;
  voidSale: (saleId: string) => void;
 
@@ -852,7 +822,7 @@ interface DbContextType {
  activeSessionId: string | null;
  terminateSession: (sessionId: string) => void;
  completeOnboarding: (
- newProducts: Product[],
+    newProducts?: Product[],
  newBranchesList?: Branch[],
  ) => Promise<void>;
  isRowClearingBlocked: () => boolean;
@@ -907,19 +877,6 @@ export interface IngestionSnapshot {
 
 const DbContext = createContext<DbContextType | undefined>(undefined);
 
-const _GUEST_USER: User = {
- id: "G1",
- avatarInitials: "??",
- fullName: "Guest User",
- username: "guest",
- email: "",
- role: UserRole.STAFF,
- branchAssignmentId: "",
- status: "Active",
- createdAt: "",
- updatedAt: "",
-};
-
 function safeParse<T>(key: string, defaultValue: T): T {
  try {
  const cached = localStorage.getItem(key);
@@ -936,7 +893,6 @@ function safeParse<T>(key: string, defaultValue: T): T {
 
 // Production Seed collections (Clean empty initial states)
 const SEED_BRANCHES: Branch[] = [];
-const SEED_USERS: User[] = [];
 const SEED_SUPPLIERS: Supplier[] = [];
 const SEED_BRANDS: Brand[] = [];
 const SEED_PRODUCTS: Product[] = [];
@@ -948,7 +904,6 @@ const SEED_PO_ITEMS: PurchaseOrderItem[] = [];
 const SEED_TRANSMITTALS: Transmittal[] = [];
 const SEED_MOVEMENTS: InventoryMovement[] = [];
 const SEED_AUDIT_LOGS: AuditLog[] = [];
-const DEFAULT_SEED_DELIVERIES: Delivery[] = [];
 
 /**
  * Highly secure sanitation and verification helpers to prevent XSS script injections,
@@ -1019,7 +974,7 @@ export const getSecuritySecretKey = (): string => {
  const isValidSecret =
  envSecret &&
  envSecret.trim() !== "" &&
- envSecret !== "EmmanTileCenterSecretKey" &&
+ envSecret !== "TilePointSecretKey" &&
  envSecret.length >= 16 &&
  !envSecret.includes("123456") &&
  !envSecret.toLowerCase().includes("placeholder");
@@ -1031,7 +986,7 @@ export const getSecuritySecretKey = (): string => {
  // Fallback to an environment-managed/stable derived key based on the company name,
  // split and obfuscated, combined with static enterprise bounds.
  // This maintains functional local demo runs while preventing easy client-side forging of signature tokens.
- const companyName = localStorage.getItem("tilepoint_company_name_v1") || "Emman Tile Center";
+ const companyName = localStorage.getItem("tilepoint_company_name_v1") || "Main Enterprise";
  const obfuscatedStableSeed = `tile_point_salt_${companyName.split("").reverse().join("")}_secure_fallback`;
  return obfuscatedStableSeed;
 };
@@ -1158,10 +1113,15 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  },
  );
 
- const [isConfigured, setIsConfigured] = useState<boolean>(() => {
- const cached = localStorage.getItem("tp_is_configured");
- return cached === "true";
- });
+  const [isConfigured, setIsConfigured] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    const cached = localStorage.getItem("tp_is_configured");
+    const cachedUsers = safeParse<User[]>("tp_users", []);
+    if (!cachedUsers || cachedUsers.length === 0) {
+      return false;
+    }
+    return cached === "true";
+  });
 
  // Load initial local data or populate with seed data from sessionStorage to isolate sessions
  const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -1211,9 +1171,6 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  localStorage.removeItem("tp_users");
  localStorage.setItem("tp_hash_version_v3", "true");
  }
- const isSetup =
- typeof window !== "undefined" &&
- localStorage.getItem("tilepoint_onboarded_setup") === "true";
  return safeParse<User[]>("tp_users", []);
  });
 
@@ -1225,16 +1182,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  users.map(async (u) => {
  if (!u.passwordHash) {
  changed = true;
- const defaultPassword =
- u.username === "erica_admin"
- ? "admin123"
- : u.username === "juan_mgr"
- ? "manager123"
- : u.username === "tomas_mgr"
- ? "manager123"
- : u.username === "carla_cashier"
- ? "cashier123"
- : "tilepoint";
+ const defaultPassword = "password123";
  const salt = u.username + "_salt_tok";
  const hashedVal = await createSaltedHash(
  defaultPassword,
@@ -1310,28 +1258,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  username: string,
  password: string,
  ): Promise<{ success: boolean; error?: string; sqliBlocked?: boolean }> => {
- // Ensure default admin user exists if users list is empty
- if (users.length === 0 && username.trim().toLowerCase() === "admin" && password === "admin123") {
- const adminSalt = "admin_salt";
- const adminHash = await createSaltedHash("admin123", adminSalt, 2500);
- const adminToken = formatHashToken(adminSalt, adminHash, 2500);
- const defaultAdmin: User = {
- id: "sim_admin",
- avatarInitials: "EA",
- fullName: "Erica Manaban",
- username: "admin",
- email: "admin@tilepoint.com",
- role: UserRole.ADMIN,
- branchAssignmentId: "B1",
- status: "Active",
- managerPin: "9999",
- passwordHash: adminToken,
- createdAt: new Date().toISOString(),
- updatedAt: new Date().toISOString(),
- };
- setUsers([defaultAdmin]);
- localStorage.setItem("tp_users", JSON.stringify([defaultAdmin]));
- }
+ // Dynamic credential verification
 
  // 1. Check for SQL Injection (SQLi)
  const sqlCheckUser = detectSQLi(username);
@@ -1432,7 +1359,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  );
  const activeBranchName =
  branches.find((b) => b.id === targetUser.branchAssignmentId)?.name ||
- (localStorage.getItem("tilepoint_company_name_v1") || "ETC_DIPOLOG MAIN");
+ branches[0]?.name ||
+ (localStorage.getItem("tilepoint_company_name_v1") || "Main Branch");
  const updatedSessions = [
  ...cleanSessions,
  {
@@ -1604,8 +1532,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
   const maxRetries = 3;
 
   while (true) {
+    const controller = new AbortController();
+    const fetchTimeout = setTimeout(() => controller.abort(), 10000);
     try {
-      const res = await fetch(input, mergedInit);
+      const signal = mergedInit.signal || controller.signal;
+      const res = await fetch(input, { ...mergedInit, signal });
+      clearTimeout(fetchTimeout);
 
       if (!res.ok) {
         const statusCode = res.status;
@@ -1771,6 +1703,21 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const [transmittals, setTransmittals] = useState<Transmittal[]>(() => {
  return safeParse<Transmittal[]>("tp_transmittals", SEED_TRANSMITTALS);
  });
+
+ const [selectedViewBranchId, setSelectedViewBranchIdState] = useState<string>(() => {
+   if (typeof window !== "undefined") {
+     const saved = localStorage.getItem("tilepoint_selected_view_branch_id");
+     if (saved) return saved;
+   }
+   return "consolidated";
+ });
+
+ const setSelectedViewBranchId = useCallback((bId: string) => {
+   setSelectedViewBranchIdState(bId);
+   if (typeof window !== "undefined") {
+     localStorage.setItem("tilepoint_selected_view_branch_id", bId);
+   }
+ }, []);
 
  const sanitizeShifts = (shiftsList: Shift[]): Shift[] => {
  if (!shiftsList || shiftsList.length === 0) return shiftsList;
@@ -2114,17 +2061,29 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
   );
   };
 
-  const _CATEGORY_DISPLAY_LABELS: Record<ArchivableCategory, string> = {
-  auditLogs: "Audit Trail & Activity Logs",
-  movements: "Stock Movement Ledger",
-  sales: "Historical Sales Invoices",
-  expenses: "Operating Expenses",
-  returns: "Customer Product Returns",
-  damageLogs: "Damage & Waste Register",
-  };
-
  const [dayMemos, setDayMemos] = useState<Record<string, string>>(() => {
  return safeParse<Record<string, string>>("atpos_v2_calendar_day_memos", {});
+ });
+
+ // Dynamic Business Parameters & Catalogs State
+ const [productCategories, setProductCategories] = useState<ProductCategory[]>(() => {
+   return safeParse<ProductCategory[]>("tp_product_categories", DEFAULT_PRODUCT_CATEGORIES);
+ });
+
+ const [unitTypes, setUnitTypes] = useState<UnitType[]>(() => {
+   return safeParse<UnitType[]>("tp_unit_types", DEFAULT_UNIT_TYPES);
+ });
+
+ const [paymentMethodsList, setPaymentMethodsList] = useState<CustomPaymentMethod[]>(() => {
+   return safeParse<CustomPaymentMethod[]>("tp_payment_methods", DEFAULT_PAYMENT_METHODS);
+ });
+
+ const [discountSchemes, setDiscountSchemes] = useState<DiscountScheme[]>(() => {
+   return safeParse<DiscountScheme[]>("tp_discount_schemes", DEFAULT_DISCOUNT_SCHEMES);
+ });
+
+ const [damageReasonsList, setDamageReasonsList] = useState<DamageReasonOption[]>(() => {
+   return safeParse<DamageReasonOption[]>("tp_damage_reasons", DEFAULT_DAMAGE_REASONS);
  });
 
  const [activeSessions, setActiveSessions] = useState<ActiveSession[]>(() => {
@@ -2195,7 +2154,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  const activeBranchName =
  branches.find((b) => b.id === currentUser.branchAssignmentId)
- ?.name || (localStorage.getItem("tilepoint_company_name_v1") || "ETC_DIPOLOG MAIN");
+ ?.name || branches[0]?.name || (localStorage.getItem("tilepoint_company_name_v1") || "Main Branch");
  updatedSessions.push({
  id: activeSessionId,
  userId: currentUser.id,
@@ -2238,9 +2197,6 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  (s) => s.userId === currentUser.id && s.id !== activeSessionId,
  );
  if (hasConcurrentSession) {
- const _mySessionInList = freshSessions.some(
- (s) => s.id === activeSessionId,
- );
  const concurrentSession = freshSessions.find(
  (s) => s.userId === currentUser.id && s.id !== activeSessionId,
  );
@@ -2275,9 +2231,6 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  });
 
  // Set of active branch IDs for quick O(1) membership checks
- const _activeBranchIds = new Set(
- branches.filter((b) => !b.isDeleted).map((b) => b.id)
- );
 
  let updated = [...prevStock];
  let hasChanges = false;
@@ -2480,7 +2433,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  localStorage.getItem("tilepoint_onboarded_setup") || "false",
  tilepoint_company_name_v1:
  localStorage.getItem("tilepoint_company_name_v1") ||
- "Emman Tile Center",
+ "Main Enterprise",
  };
 
  let serializedBody: string;
@@ -2863,15 +2816,28 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  setActiveSessions(workerRes.updatedSessions);
  }
  if (workerRes.isConfiguredValue !== undefined) {
- if (!workerRes.isConfiguredValue) {
- localStorage.setItem("tp_is_configured", "false");
- localStorage.setItem("tilepoint_onboarded_setup", "false");
- setIsConfigured(false);
- } else {
- localStorage.setItem("tp_is_configured", "true");
- setIsConfigured(true);
- }
- }
+      const hasLocalConfig = localStorage.getItem("tp_is_configured") === "true";
+      const hasUsers = (() => {
+        try {
+          const u = JSON.parse(localStorage.getItem("tp_users") || "[]");
+          return Array.isArray(u) && u.length > 0;
+        } catch (_) { return false; }
+      })();
+
+      if (!workerRes.isConfiguredValue || !hasUsers) {
+        if (!hasLocalConfig || !hasUsers) {
+          localStorage.setItem("tp_is_configured", "false");
+          localStorage.setItem("tilepoint_onboarded_setup", "false");
+          setIsConfigured(false);
+        } else {
+          forceSyncAllToServer();
+        }
+      } else {
+        localStorage.setItem("tp_is_configured", "true");
+        localStorage.setItem("tilepoint_onboarded_setup", "true");
+        setIsConfigured(true);
+      }
+    }
  }
  } catch (workerErr) {
  console.warn('[Shared DB Client] Web worker sync processing error, using fallback:', workerErr);
@@ -3107,15 +3073,23 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
             const rawServer = typeof db[key] === "string" ? safeParse(db[key], []) : db[key];
             const serverArr = Array.isArray(rawServer) ? rawServer : [];
 
+            const rawIsConfigured = db["tp_is_configured"];
+            const isUnconfiguredOrReset = rawIsConfigured === false || rawIsConfigured === "false" || rawIsConfigured === 0 || rawIsConfigured === "0" || localStorage.getItem("tp_is_configured") === "false";
+
             // Combine current React state and local disk storage so no local items are missed
             const localStored = safeParse<any[]>(key, []);
             const localArr = (Array.isArray(currentState) && currentState.length > 0 && Array.isArray(localStored) && localStored.length > 0)
               ? mergeCollections(currentState, localStored)
               : ((Array.isArray(currentState) && currentState.length > 0) ? currentState : (Array.isArray(localStored) ? localStored : []));
 
-            const merged = key === "tp_parked_sales"
- ? mergeParkedSales(localArr, serverArr, deletedParkedSaleIds.current)
- : mergeCollections(localArr, serverArr);
+            let merged: any[] = [];
+            if (isUnconfiguredOrReset) {
+              merged = serverArr;
+            } else if (key === "tp_parked_sales") {
+              merged = mergeParkedSales(localArr, serverArr, deletedParkedSaleIds.current);
+            } else {
+              merged = mergeCollections(localArr, serverArr);
+            }
 
             // Safely update volatile cache & localStorage with merged result (prioritizing non-empty imported datasets)
             const mergedStr = JSON.stringify(merged);
@@ -3132,8 +3106,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
             }
 
             // Safeguard: If local client has a non-empty imported dataset but server returned an empty array,
-            // trigger a sync to push the non-empty local dataset to the server.
-            if (merged.length > serverArr.length || (localArr.length > 0 && serverArr.length === 0 && merged.length > 0)) {
+            // trigger a sync to push the non-empty local dataset to the server (only if configured).
+            if (!isUnconfiguredOrReset && (merged.length > serverArr.length || (localArr.length > 0 && serverArr.length === 0 && merged.length > 0))) {
               console.log(`[Sync Guard] Local dataset for "${key}" is non-empty (${merged.length} items) while server was empty. Queueing server write...`);
               setTimeout(() => {
                 saveToStorageWithDebounce(key, merged, true);
@@ -3162,6 +3136,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         processCollection("tp_branch_sales_reports", branchSalesReports, setBranchSalesReports);
         processCollection("tp_deliveries", deliveries, setDeliveries);
         processCollection("tp_damage_logs", damageLogs, setDamageLogs);
+        processCollection("tp_product_categories", productCategories, setProductCategories);
+        processCollection("tp_unit_types", unitTypes, setUnitTypes);
+        processCollection("tp_payment_methods", paymentMethodsList, setPaymentMethodsList);
+        processCollection("tp_discount_schemes", discountSchemes, setDiscountSchemes);
+        processCollection("tp_damage_reasons", damageReasonsList, setDamageReasonsList);
         processCollection("atpos_v2_custom_bills", customBills, setCustomBills);
         processCollection("atpos_v2_members_list", members, setMembers);
         processCollection("atpos_v2_expenses", expenses, setExpenses);
@@ -3205,16 +3184,28 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }
 
  if (db["tp_is_configured"] !== undefined) {
- const serverConfigured = db["tp_is_configured"] === "true" || db["tp_is_configured"] === true;
- if (!serverConfigured) {
- localStorage.setItem("tp_is_configured", "false");
- localStorage.setItem("tilepoint_onboarded_setup", "false");
- setIsConfigured(false);
- } else {
- localStorage.setItem("tp_is_configured", "true");
- setIsConfigured(true);
- }
- }
+      const serverConfigured = db["tp_is_configured"] === "true" || db["tp_is_configured"] === true;
+      const hasLocalConfig = localStorage.getItem("tp_is_configured") === "true";
+      const hasUsers = (() => {
+        try {
+          const u = JSON.parse(localStorage.getItem("tp_users") || "[]");
+          return Array.isArray(u) && u.length > 0;
+        } catch (_) { return false; }
+      })();
+
+      if (!serverConfigured || !hasUsers) {
+        if (!hasLocalConfig || !hasUsers) {
+          localStorage.setItem("tp_is_configured", "false");
+          localStorage.setItem("tilepoint_onboarded_setup", "false");
+          setIsConfigured(false);
+        } else {
+          forceSyncAllToServer();
+        }
+      } else {
+        localStorage.setItem("tp_is_configured", "true");
+        setIsConfigured(true);
+      }
+    }
  }
  } else {
  // Shared server db is empty (first-time launch of the server!)
@@ -3312,20 +3303,35 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  // Synchronize on mount and poll periodically with exponential backoff & jitter
  useEffect(() => {
+ let isCancelled = false;
+
+ const safetyTimer = setTimeout(() => {
+ if (!isCancelled) {
+ setIsSystemHydrating(false);
+ setIsHydrating(false);
+ }
+ }, 1500);
+
  const initializeDatabase = async () => {
  try {
  setIsSystemHydrating(true);
- await syncFromSharedServer();
+ await Promise.race([
+ syncFromSharedServer(),
+ new Promise((resolve) => setTimeout(resolve, 2000)),
+ ]);
  runDatabasePruning();
- await fetchDbSnapshots();
+ await fetchDbSnapshots().catch(() => {});
  } catch (err) {
  console.error(
  "[Hydration Guard] Initial state resolution failed:",
  err,
  );
  } finally {
+ clearTimeout(safetyTimer);
+ if (!isCancelled) {
  setIsSystemHydrating(false);
  setIsHydrating(false);
+ }
  }
  // Start the backoff scheduling loop once initialized
  scheduleNextSync(15000);
@@ -3333,6 +3339,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  initializeDatabase();
 
  return () => {
+ isCancelled = true;
+ clearTimeout(safetyTimer);
  if (syncTimeoutRef.current) {
  clearTimeout(syncTimeoutRef.current);
  }
@@ -3352,23 +3360,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return () => window.removeEventListener("online", handleOnline);
  }, []);
 
- // Real-time server-sent events (SSE) listener for instant synchronization across all staff & cashier devices
+ // Real-time server push listener (Socket.io WebSocket + SSE fallback) for instant synchronization across all staff & cashier devices
  useEffect(() => {
  let eventSource: EventSource | null = null;
+ let socketClient: Socket | null = null;
  let reconnectTimeout: any = null;
  let reconnectDelay = 5000;
-
- const connectRealTimeChannel = () => {
- // Don't attempt connection if browser is offline
- if (typeof navigator !== "undefined" && !navigator.onLine) {
- console.info("[Real-Time Sync] Browser is offline. SSE connection deferred until network resumes.");
- return;
- }
-
- if (eventSource) {
- try { eventSource.close(); } catch (_) {}
- eventSource = null;
- }
 
  let clientId = localStorage.getItem("tp_active_session_id") || sessionStorage.getItem("tp_active_session_id");
  if (!clientId || clientId === "unknown") {
@@ -3379,8 +3376,65 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }
  }
 
- console.log(`[Real-Time Sync] Subscribing to central server event channel (client: ${clientId.substring(0, 16)}...)...`);
- eventSource = new EventSource(`/api/db/events?clientId=${encodeURIComponent(clientId)}`);
+ // 1. Connect WebSocket / Socket.io for low-latency full-duplex tunnel synchronization
+ const connectSocketIO = () => {
+ if (typeof window === "undefined" || !navigator.onLine) return;
+ try {
+ if (socketClient) {
+ socketClient.disconnect();
+ }
+ socketClient = socketIO({
+ path: "/socket.io/",
+ transports: ["websocket", "polling"],
+ reconnection: true,
+ reconnectionAttempts: Infinity,
+ reconnectionDelay: 2000,
+ reconnectionDelayMax: 10000,
+ timeout: 20000,
+ query: { clientId }
+ });
+
+ socketClient.on("connect", () => {
+ console.log("[Real-Time WebSocket] Socket.io connected successfully via", socketClient?.io?.engine?.transport?.name || "websocket");
+ isSseConnected.current = true;
+ });
+
+ socketClient.on("db_pulse_update", async (data: any) => {
+ if (data && data.hash && data.hash === lastServerDbHash.current) {
+ return;
+ }
+ console.log("[Real-Time WebSocket] Database pulse received. Syncing silently...");
+ await syncFromSharedServer(true);
+ });
+
+ socketClient.on("disconnect", (reason) => {
+ console.info("[Real-Time WebSocket] Disconnected:", reason);
+ });
+
+ socketClient.on("connect_error", (err) => {
+ console.warn("[Real-Time WebSocket] Connection warning:", err.message);
+ });
+ } catch (err: any) {
+ console.warn("[Real-Time WebSocket] Socket.io init warning:", err?.message);
+ }
+ };
+
+ // 2. Connect SSE as reliable HTTP-based stream channel
+ const connectRealTimeChannel = () => {
+ // Don't attempt connection if browser is offline
+ if (typeof navigator !== "undefined" && !navigator.onLine) {
+ console.info("[Real-Time Sync] Browser is offline. Real-time connection deferred until network resumes.");
+ return;
+ }
+
+ if (eventSource) {
+ try { eventSource.close(); } catch (_) {}
+ eventSource = null;
+ }
+
+ console.log(`[Real-Time Sync] Subscribing to central server event channel (client: ${clientId?.substring(0, 16)}...)...`);
+ try {
+ eventSource = new EventSource(`/api/db/events?clientId=${encodeURIComponent(clientId || '')}`);
 
  eventSource.onopen = () => {
  console.log("[Real-Time Sync] SSE Channel established. Switching to event-driven push mode.");
@@ -3439,16 +3493,21 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  if (reconnectTimeout) clearTimeout(reconnectTimeout);
  reconnectTimeout = setTimeout(connectRealTimeChannel, reconnectDelay);
  };
+ } catch (e: any) {
+ console.warn("[Real-Time Sync] EventSource initialization error:", e?.message);
+ }
  };
 
+ connectSocketIO();
  connectRealTimeChannel();
 
  // Re-connect immediately when page becomes visible or network resumes from sleep
  const handleWakeOrOnline = () => {
  if (document.visibilityState === "visible" && navigator.onLine && !isSseConnected.current) {
- console.log("[Real-Time Sync] Device resumed / network online. Re-establishing SSE event channel...");
+ console.log("[Real-Time Sync] Device resumed / network online. Re-establishing real-time event channels...");
  if (reconnectTimeout) clearTimeout(reconnectTimeout);
  reconnectDelay = 3000;
+ connectSocketIO();
  connectRealTimeChannel();
  scheduleNextSync(300);
  }
@@ -3461,6 +3520,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  isSseConnected.current = false;
  window.removeEventListener("online", handleWakeOrOnline);
  document.removeEventListener("visibilitychange", handleWakeOrOnline);
+ if (socketClient) {
+ try { socketClient.disconnect(); } catch (_) {}
+ }
  if (eventSource) {
  try { eventSource.close(); } catch (_) {}
  }
@@ -3728,23 +3790,6 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  // Concurrency & Race Management: Strict sequential execution write queue
  const writeQueue = useRef<Promise<any>>(Promise.resolve());
- const stockTransactionLock = useRef<Promise<any>>(Promise.resolve());
-
- const _runStockTransaction = async <T,>(fn: () => Promise<T> | T): Promise<T> => {
- let resolveLock: () => void;
- const nextLock = new Promise<void>((res) => {
- resolveLock = res;
- });
- const previousLock = stockTransactionLock.current;
- stockTransactionLock.current = previousLock.then(() => nextLock);
-
- try {
- await previousLock;
- return await fn();
- } finally {
- resolveLock!();
- }
- };
 
  const safeLocalStorageSetItem = (key: string, dataStr: string): boolean => {
   try {
@@ -4366,7 +4411,16 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  });
  await fetchDbSnapshots();
  } catch (e) {
- console.error("[System Guard] Failed to save manual snapshot to server:", e);
+ console.warn("[System Guard] Server offline; manual backup snapshot stored in offline cache:", e);
+ setDbSnapshots((prev) => {
+ const next = [newSnapshot, ...prev.filter((s) => s.id !== newSnapshot.id)].slice(0, 50);
+ try {
+ const metaOnly = next.map(({ data, ...m }: any) => m);
+ localStorage.setItem("tp_db_snapshots", JSON.stringify(metaOnly));
+ localStorage.setItem(`tp_snap_payload_${newSnapshot.id}`, newSnapshot.data);
+ } catch (_) {}
+ return next;
+ });
  }
 
  addAuditLog(
@@ -4395,7 +4449,23 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }
  }
  } catch (e) {
- console.error("[System Guard] Failed to load full snapshot details for restoration:", e);
+ console.warn("[System Guard] Server unavailable for remote snapshot retrieval; checking offline storage:", e);
+ }
+
+ // Offline fallback: check local storage snapshot metadata / cached payload
+ if (!snap) {
+ try {
+ const cachedSnap = dbSnapshots.find((s) => s.id === snapshotId);
+ const cachedRawData = localStorage.getItem(`tp_snap_payload_${snapshotId}`);
+ if (cachedSnap && (cachedSnap.data || cachedRawData)) {
+ snap = {
+ ...cachedSnap,
+ data: cachedSnap.data || cachedRawData || "{}",
+ };
+ }
+ } catch (cacheErr) {
+ console.error("[System Guard] Failed to resolve offline snapshot:", cacheErr);
+ }
  }
 
  if (!snap) return false;
@@ -4845,6 +4915,27 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  saveToStorageWithDebounce("atpos_v2_calendar_day_memos", dayMemos);
  }, [dayMemos]);
 
+ // WRITER LINKS FOR DYNAMIC BUSINESS CONFIGURATIONS
+ useEffect(() => {
+   saveToStorageWithDebounce("tp_product_categories", productCategories);
+ }, [productCategories]);
+
+ useEffect(() => {
+   saveToStorageWithDebounce("tp_unit_types", unitTypes);
+ }, [unitTypes]);
+
+ useEffect(() => {
+   saveToStorageWithDebounce("tp_payment_methods", paymentMethodsList);
+ }, [paymentMethodsList]);
+
+ useEffect(() => {
+   saveToStorageWithDebounce("tp_discount_schemes", discountSchemes);
+ }, [discountSchemes]);
+
+ useEffect(() => {
+   saveToStorageWithDebounce("tp_damage_reasons", damageReasonsList);
+ }, [damageReasonsList]);
+
  // General Audit Log function
  const addAuditLog = (
  action: string,
@@ -5055,7 +5146,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  // Prevent sync overrides while setup is in progress
  localStorage.setItem("tp_setting_up", "true");
 
- const branchId = branchData.id?.trim() || "B1";
+ const branchId = branchData.id?.trim() || "BR-MAIN";
 
  // 1. Create first branches list
  const firstBranch: Branch = {
@@ -5594,7 +5685,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  if (!decrypted) {
  decrypted = decryptString(
  parsed.securitySignature,
- "EmmanTileCenterSecretKey",
+ "TilePointSecretKey",
  );
  if (decrypted) {
  console.warn(
@@ -5663,7 +5754,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  if (currentUser.role !== UserRole.ADMIN) {
  const establishmentName =
  localStorage.getItem("tilepoint_company_name_v1") ||
- "Emman Tile Center";
+ (branches && branches[0]?.name) ||
+ "Main Store";
  return {
  success: false,
  error: `This sales report is for admin only of ${establishmentName}.`,
@@ -6382,108 +6474,164 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }
  };
 
- // --- DATABASE FACTORY TRUNCATE & RE-SEED ENGINE ---
- const truncateDatabase = async (mode: "all" | "transactions") => {
- if (currentUser.role !== UserRole.ADMIN) {
- console.error(
- "Unauthorized security violation: Only system administrators are authorized to reset or truncate the database.",
- );
- return;
- }
+  // --- DATABASE FACTORY TRUNCATE & RE-SEED ENGINE ---
+  const truncateDatabase = async (mode: "all" | "transactions") => {
+    if (currentUser && currentUser.role !== UserRole.ADMIN) {
+      console.error(
+        "Unauthorized security violation: Only system administrators are authorized to reset or truncate the database.",
+      );
+      return;
+    }
 
- // Force pre-clear backup snapshot & quiet recovery download requirements
- const snapshotName = `Pre-Truncate Auto-Snapshot (${mode}) - ${new Date().toLocaleDateString()}`;
- const snapshot = generateSystemSnapshot(snapshotName);
- 
- try {
- const payload = JSON.parse(snapshot.data);
- triggerQuietDownload(payload);
- } catch (e) {
- console.error("[System Guard] Pre-truncate quiet download failed:", e);
- }
+    // Force pre-clear backup snapshot & quiet recovery download requirements
+    try {
+      const snapshotName = `Pre-Truncate Auto-Snapshot (${mode}) - ${new Date().toLocaleDateString()}`;
+      const snapshot = generateSystemSnapshot(snapshotName);
+      const payload = JSON.parse(snapshot.data);
+      triggerQuietDownload(payload);
+    } catch (e) {
+      console.error("[System Guard] Pre-truncate quiet download failed:", e);
+    }
 
- // Reset/truncate server database first
- try {
- await safeApiFetch("/api/db/truncate", {
- method: "POST",
- headers: {
- "Content-Type": "application/json",
- ...getAuthHeaders(),
- },
- body: JSON.stringify({ mode }),
- });
- } catch (e) {
- console.warn(
- "[Shared DB Client] Failed to reset server-side database. Resetting locally...",
- e,
- );
- }
+    // Reset/truncate server database first
+    try {
+      await safeApiFetch("/api/db/truncate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ mode }),
+      });
+    } catch (e) {
+      console.warn(
+        "[Shared DB Client] Failed to reset server-side database. Resetting locally...",
+        e,
+      );
+    }
 
- // Mode 'all' or 'transactions'
- setSales([]);
- setSaleItems([]);
- setPurchaseOrders([]);
- setPoItems([]);
- setTransmittals([]);
- setShifts([]);
- setMovements([]);
- setParkedSales([]);
- setStockTransfers([]);
- setLedgerEntries([]);
- setBranchSalesReports([]);
- setDeliveries(DEFAULT_SEED_DELIVERIES);
- setCustomBills([]);
- setBranches((prev) => prev.map((b) => ({ ...b, monthlySales: 0 })));
+    // Mode 'all' or 'transactions'
+    setSales([]);
+    setSaleItems([]);
+    setPurchaseOrders([]);
+    setPoItems([]);
+    setTransmittals([]);
+    setShifts([]);
+    setMovements([]);
+    setParkedSales([]);
+    setStockTransfers([]);
+    setLedgerEntries([]);
+    setBranchSalesReports([]);
+    setDeliveries([]);
+    setCustomBills([]);
+    setDamageLogs([]);
+    setMembers([]);
+    setExpenses([]);
+    setProductReturns([]);
+    setCalendarNotes("");
+    setDayMemos({});
+    setActiveSessions([]);
+    setSimulationModeActive(false);
 
- localStorage.removeItem("atpos_v2_members_list");
- localStorage.removeItem("atpos_v2_expenses");
- localStorage.removeItem("atpos_v2_returns");
- localStorage.removeItem("tp_branch_sales_reports");
- localStorage.setItem("tp_deliveries", JSON.stringify(DEFAULT_SEED_DELIVERIES));
- localStorage.removeItem("atpos_v2_custom_bills");
+    if (mode === "all") {
+      setProducts([]);
+      setSuppliers([]);
+      setBrands([]);
+      setUsers([]);
+      setBranches([]);
+      setBranchStock([]);
+      setAuditLogs([]);
+      setDbSnapshots([]);
+      setRollbackSnapshots([]);
+      setProductCategories([]);
+      setUnitTypes([]);
+      setPaymentMethodsList([]);
+      setDiscountSchemes([]);
+      setDamageReasonsList([]);
+      setIsConfigured(false);
+      setCurrentUser(null);
+      setIsLoggedIn(false);
 
- if (mode === "all") {
- setProducts([]);
- setSuppliers([]);
- setBranchStock([]);
+      const keysToRemove = [
+        "tp_users", "tp_branches", "tp_suppliers", "tp_brands", "tp_products",
+        "tp_product_categories", "tp_unit_types", "tp_payment_methods", "tp_discount_schemes", "tp_damage_reasons",
+        "tp_purchase_orders", "tp_po_items", "tp_transmittals", "tp_shifts",
+        "tp_sales", "tp_sale_items", "tp_movements", "tp_audit_logs",
+        "tp_parked_sales", "tp_stock_transfers", "tp_branch_stock",
+        "tp_ledger_entries", "tp_branch_sales_reports", "tp_deliveries",
+        "tp_damage_logs", "atpos_v2_custom_bills", "tp_custom_corporate_bills",
+        "atpos_v2_members_list", "tp_members", "atpos_v2_expenses", "tp_expenses",
+        "atpos_v2_returns", "tp_product_returns", "atpos_v2_calendar_notes",
+        "atpos_v2_calendar_day_memos", "tp_active_sessions", "tp_active_session_id",
+        "tp_current_user", "tp_is_logged_in", "tp_active_cart", "tp_active_customer_name",
+        "tp_active_customer_notes", "tp_pos_session_checkpoint", "tp_po_cart",
+        "tp_po_templates", "tp_batch_expirations", "tp_daily_reconciliations",
+        "tp_db_snapshots", "tp_ingestion_snapshots", "tp_offline_queue",
+        "tp_transaction_sync_queue", "tp_shared_deleted_parked_ids", "tp_used_nonces",
+        "tp_simulation_mode_active", "tilepoint_company_name_v1", "tilepoint_store_logo_v1",
+        "tilepoint_primary_branch_id", "tp_active_branch_id", "tilepoint_active_tab",
+        "tp_active_tab", "tp_active_subtab", "tp_setting_up", "tp_first_login_done",
+        "tilepoint_branch_landing_modifiers", "tp_last_resumed_hold_id",
+        "tp_pending_delivery_draft", "tp_pending_product_filter"
+      ];
 
- localStorage.removeItem("tp_products");
- localStorage.removeItem("tp_suppliers");
- localStorage.removeItem("tp_branch_stock");
- localStorage.removeItem("tp_active_cart");
- localStorage.removeItem("tp_active_customer_name");
- localStorage.removeItem("tp_parked_sales");
- localStorage.setItem("tp_is_configured", "false");
- localStorage.setItem("tilepoint_onboarded_setup", "false");
- } else {
- // Mode 'transactions' (keep products and suppliers but clear stocks to 0)
- const clearedBranchStock = branchStock.map((bs) => ({
- ...bs,
- quantity: 0,
- }));
- setBranchStock(clearedBranchStock);
+      keysToRemove.forEach((k) => {
+        try { localStorage.removeItem(k); } catch (_) {}
+        try { sessionStorage.removeItem(k); } catch (_) {}
+      });
 
- const resetProducts = products.map((p) => ({ ...p, stockQuantity: 0 }));
- setProducts(resetProducts);
- }
+      try {
+        localStorage.setItem("tp_is_configured", "false");
+        localStorage.setItem("tilepoint_onboarded_setup", "false");
+      } catch (_) {}
 
- const truncateLog: AuditLog = {
- id: `AL-TRUNCATE-${Date.now()}`,
- timestamp: new Date().toISOString(),
- userId: currentUser.id,
- username: currentUser.username,
- action: "DB_TRUNCATE",
- description: `Executed database truncation (Mode: ${mode.toUpperCase()}). Core tables purged.`,
- tableAffected: "ALL",
- recordId: "SYSTEM",
- };
- setAuditLogs([truncateLog]);
+      try {
+        if (typeof indexedDB !== "undefined") {
+          indexedDB.deleteDatabase("TilePointBackupDB");
+        }
+      } catch (_) {}
 
- // Clean up active sessions list on reset/truncate to keep the system pristine and remove all session seeds
- setActiveSessions((prev) => prev.filter((s) => s.id === activeSessionId));
- setSimulationModeActive(false);
- localStorage.removeItem("tp_simulation_mode_active");
- };
+      volatileCache.current = {};
+      optimisticStockCacheRef.current.clear();
+      deletedParkedSaleIds.current.clear();
+      lastServerDbHash.current = "";
+    } else {
+      // Mode 'transactions' (keep products and suppliers but clear stocks to 0)
+      const clearedBranchStock = branchStock.map((bs) => ({
+        ...bs,
+        quantity: 0,
+      }));
+      setBranchStock(clearedBranchStock);
+
+      const resetProducts = products.map((p) => ({ ...p, stockQuantity: 0 }));
+      setProducts(resetProducts);
+
+      setBranches((prev) => prev.map((b) => ({ ...b, monthlySales: 0 })));
+
+      localStorage.removeItem("atpos_v2_members_list");
+      localStorage.removeItem("atpos_v2_expenses");
+      localStorage.removeItem("atpos_v2_returns");
+      localStorage.removeItem("tp_branch_sales_reports");
+      localStorage.removeItem("tp_deliveries");
+      localStorage.removeItem("atpos_v2_custom_bills");
+      localStorage.removeItem("tp_active_cart");
+      localStorage.removeItem("tp_active_customer_name");
+      localStorage.removeItem("tp_parked_sales");
+      localStorage.removeItem("tp_pos_session_checkpoint");
+
+      const truncateLog: AuditLog = {
+        id: `AL-TRUNCATE-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        userId: currentUser?.id || "SYSTEM",
+        username: currentUser?.username || "Admin",
+        action: "DB_TRUNCATE",
+        description: `Executed database truncation (Mode: ${mode.toUpperCase()}). Financial and transaction records purged.`,
+        tableAffected: "TRANSACTIONS",
+        recordId: "SYSTEM",
+      };
+      setAuditLogs([truncateLog]);
+    }
+  };
 
  const generateMasterForensicBackup = () => {
    return {
@@ -7453,6 +7601,167 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     );
   };
 
+  // --- DYNAMIC BUSINESS PARAMETERS ACTIONS ---
+  // Product Categories
+  const createProductCategory = (category: Omit<ProductCategory, "id" | "createdAt" | "updatedAt">): ProductCategory => {
+    const newCategory: ProductCategory = {
+      ...category,
+      id: `CAT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      name: sanitizeInputText(category.name),
+      description: category.description ? sanitizeInputText(category.description) : undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setProductCategories((prev) => [...prev, newCategory]);
+    addAuditLog("CATEGORY_CREATE", `Created product category: ${newCategory.name}`, "ProductCategories", newCategory.id);
+    return newCategory;
+  };
+
+  const updateProductCategory = (id: string, updates: Partial<ProductCategory>) => {
+    setProductCategories((prev) =>
+      prev.map((cat) => (cat.id === id ? { ...cat, ...updates, updatedAt: new Date().toISOString() } : cat))
+    );
+    addAuditLog("CATEGORY_UPDATE", `Updated product category ID: ${id}`, "ProductCategories", id);
+  };
+
+  const deleteProductCategory = (id: string) => {
+    setProductCategories((prev) => prev.filter((cat) => cat.id !== id));
+    addAuditLog("CATEGORY_DELETE", `Deleted product category ID: ${id}`, "ProductCategories", id);
+  };
+
+  // Unit Types
+  const createUnitType = (unit: Omit<UnitType, "id" | "createdAt" | "updatedAt">): UnitType => {
+    const newUnit: UnitType = {
+      ...unit,
+      id: `UNIT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      name: sanitizeInputText(unit.name),
+      abbreviation: sanitizeInputText(unit.abbreviation),
+      description: unit.description ? sanitizeInputText(unit.description) : undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setUnitTypes((prev) => [...prev, newUnit]);
+    addAuditLog("UNIT_CREATE", `Created unit type: ${newUnit.name} (${newUnit.abbreviation})`, "UnitTypes", newUnit.id);
+    return newUnit;
+  };
+
+  const updateUnitType = (id: string, updates: Partial<UnitType>) => {
+    setUnitTypes((prev) =>
+      prev.map((u) => (u.id === id ? { ...u, ...updates, updatedAt: new Date().toISOString() } : u))
+    );
+    addAuditLog("UNIT_UPDATE", `Updated unit type ID: ${id}`, "UnitTypes", id);
+  };
+
+  const deleteUnitType = (id: string) => {
+    setUnitTypes((prev) => prev.filter((u) => u.id !== id));
+    addAuditLog("UNIT_DELETE", `Deleted unit type ID: ${id}`, "UnitTypes", id);
+  };
+
+  // Payment Methods
+  const createPaymentMethod = (pm: Omit<CustomPaymentMethod, "id" | "createdAt" | "updatedAt">): CustomPaymentMethod => {
+    const newPm: CustomPaymentMethod = {
+      ...pm,
+      id: `PM-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      name: sanitizeInputText(pm.name),
+      code: sanitizeInputText(pm.code),
+      description: pm.description ? sanitizeInputText(pm.description) : undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setPaymentMethodsList((prev) => [...prev, newPm]);
+    addAuditLog("PAYMENT_METHOD_CREATE", `Created payment method: ${newPm.name}`, "PaymentMethods", newPm.id);
+    return newPm;
+  };
+
+  const updatePaymentMethod = (id: string, updates: Partial<CustomPaymentMethod>) => {
+    setPaymentMethodsList((prev) =>
+      prev.map((pm) => (pm.id === id ? { ...pm, ...updates, updatedAt: new Date().toISOString() } : pm))
+    );
+    addAuditLog("PAYMENT_METHOD_UPDATE", `Updated payment method ID: ${id}`, "PaymentMethods", id);
+  };
+
+  const deletePaymentMethod = (id: string) => {
+    setPaymentMethodsList((prev) => prev.filter((pm) => pm.id !== id));
+    addAuditLog("PAYMENT_METHOD_DELETE", `Deleted payment method ID: ${id}`, "PaymentMethods", id);
+  };
+
+  const togglePaymentMethod = (id: string, enabled?: boolean) => {
+    setPaymentMethodsList((prev) =>
+      prev.map((pm) => (pm.id === id ? { ...pm, isEnabled: enabled !== undefined ? enabled : !pm.isEnabled, updatedAt: new Date().toISOString() } : pm))
+    );
+    addAuditLog("PAYMENT_METHOD_TOGGLE", `Toggled payment method status for ID: ${id}`, "PaymentMethods", id);
+  };
+
+  // Discount Schemes
+  const createDiscountScheme = (ds: Omit<DiscountScheme, "id" | "createdAt" | "updatedAt">): DiscountScheme => {
+    const newDs: DiscountScheme = {
+      ...ds,
+      id: `DISC-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      name: sanitizeInputText(ds.name),
+      code: sanitizeInputText(ds.code),
+      description: ds.description ? sanitizeInputText(ds.description) : undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setDiscountSchemes((prev) => [...prev, newDs]);
+    addAuditLog("DISCOUNT_SCHEME_CREATE", `Created discount scheme: ${newDs.name}`, "DiscountSchemes", newDs.id);
+    return newDs;
+  };
+
+  const updateDiscountScheme = (id: string, updates: Partial<DiscountScheme>) => {
+    setDiscountSchemes((prev) =>
+      prev.map((ds) => (ds.id === id ? { ...ds, ...updates, updatedAt: new Date().toISOString() } : ds))
+    );
+    addAuditLog("DISCOUNT_SCHEME_UPDATE", `Updated discount scheme ID: ${id}`, "DiscountSchemes", id);
+  };
+
+  const deleteDiscountScheme = (id: string) => {
+    setDiscountSchemes((prev) => prev.filter((ds) => ds.id !== id));
+    addAuditLog("DISCOUNT_SCHEME_DELETE", `Deleted discount scheme ID: ${id}`, "DiscountSchemes", id);
+  };
+
+  const toggleDiscountScheme = (id: string, enabled?: boolean) => {
+    setDiscountSchemes((prev) =>
+      prev.map((ds) => (ds.id === id ? { ...ds, isEnabled: enabled !== undefined ? enabled : !ds.isEnabled, updatedAt: new Date().toISOString() } : ds))
+    );
+    addAuditLog("DISCOUNT_SCHEME_TOGGLE", `Toggled discount scheme status for ID: ${id}`, "DiscountSchemes", id);
+  };
+
+  // Damage Reasons
+  const createDamageReason = (dr: Omit<DamageReasonOption, "id" | "createdAt" | "updatedAt">): DamageReasonOption => {
+    const newDr: DamageReasonOption = {
+      ...dr,
+      id: `DMR-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      name: sanitizeInputText(dr.name),
+      code: sanitizeInputText(dr.code),
+      description: dr.description ? sanitizeInputText(dr.description) : undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setDamageReasonsList((prev) => [...prev, newDr]);
+    addAuditLog("DAMAGE_REASON_CREATE", `Created damage reason: ${newDr.name}`, "DamageReasons", newDr.id);
+    return newDr;
+  };
+
+  const updateDamageReason = (id: string, updates: Partial<DamageReasonOption>) => {
+    setDamageReasonsList((prev) =>
+      prev.map((dr) => (dr.id === id ? { ...dr, ...updates, updatedAt: new Date().toISOString() } : dr))
+    );
+    addAuditLog("DAMAGE_REASON_UPDATE", `Updated damage reason ID: ${id}`, "DamageReasons", id);
+  };
+
+  const deleteDamageReason = (id: string) => {
+    setDamageReasonsList((prev) => prev.filter((dr) => dr.id !== id));
+    addAuditLog("DAMAGE_REASON_DELETE", `Deleted damage reason ID: ${id}`, "DamageReasons", id);
+  };
+
+  const toggleDamageReason = (id: string, enabled?: boolean) => {
+    setDamageReasonsList((prev) =>
+      prev.map((dr) => (dr.id === id ? { ...dr, isEnabled: enabled !== undefined ? enabled : !dr.isEnabled, updatedAt: new Date().toISOString() } : dr))
+    );
+    addAuditLog("DAMAGE_REASON_TOGGLE", `Toggled damage reason status for ID: ${id}`, "DamageReasons", id);
+  };
+
 
  const importProducts = (imported: Product[], branchMapping?: Record<string, string>) => {
  try {
@@ -7731,7 +8040,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
   const nowIso = new Date().toISOString();
   sanitized.forEach((item) => {
     if (item.stockQuantity > 0) {
-      let targetBranchId = currentUser.branchAssignmentId || "B1";
+      let targetBranchId = (branchMapping && branchMapping['default']) || currentUser.branchAssignmentId || "B1";
       if (item.origin) {
         const cleanedOrigin = item.origin.toLowerCase().trim();
         if (branchMapping && branchMapping[cleanedOrigin]) {
@@ -7781,8 +8090,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
                     (item.productName || "").toUpperCase().includes("DAMAGE") ||
                     (item.category || "").toUpperCase().includes("DAMAGE");
    if (isDamage && item.stockQuantity > 0) {
-     let targetBranchId = currentUser.branchAssignmentId || "B1";
-     let targetBranchName = "ETC_DIPOLOG MAIN";
+     let targetBranchId = (branchMapping && branchMapping['default']) || currentUser.branchAssignmentId || "B1";
+     let targetBranchName = branches.find(b => b.id === targetBranchId)?.name || branches[0]?.name || "Main Branch";
      if (item.origin) {
        const cleanedOrigin = item.origin.toLowerCase().trim();
        if (branchMapping && branchMapping[cleanedOrigin]) {
@@ -8069,10 +8378,18 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         const bsRec = getBranchStockRecord(p, targetBranchId, branchStock, branches);
         const threshold = (!isConsolidated && bsRec?.lowStockThresholdOverride !== undefined)
           ? bsRec.lowStockThresholdOverride
-          : p.minimumStock;
+          : (p.minimumStock ?? p.lowStockThreshold ?? 10);
 
         totalItems += qty;
-        totalValue += qty * (p.costPrice || 0);
+        const unitValuation = bsRec?.costPriceOverride && bsRec.costPriceOverride > 0
+          ? bsRec.costPriceOverride
+          : (p.costPrice > 0 
+              ? p.costPrice 
+              : (bsRec?.sellingPriceOverride && bsRec.sellingPriceOverride > 0 
+                  ? bsRec.sellingPriceOverride 
+                  : (p.sellingPrice || 0)));
+
+        totalValue += qty * unitValuation;
 
         if (qty === 0) {
           outOfStockCount++;
@@ -8243,6 +8560,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  discountType?: string,
  targetBranchId?: string,
  pointsRedeemed?: number,
+ customerAddress?: string,
+ customerTin?: string,
+ businessStyle?: string,
  ): Sale => {
  // Idempotency check: prevent duplicate transactions
  if (idempotencyKey) {
@@ -8368,6 +8688,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  cashierId: currentUser?.id || "SYSTEM",
  cashierName: currentUser?.fullName || "System Automated",
  customerName: customerName || "Walk-in Customer",
+ customerAddress,
+ customerTin,
+ businessStyle,
  subtotal,
  vat,
  discount: discountAmount,
@@ -8591,7 +8914,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  },
  });
 
- sqliteDatabaseService.saveSaleLog({
+ mysqlDatabaseService.saveSaleLog({
    id: newSale.id,
    saleNumber: newSale.saleNumber,
    branchId: newSale.branchId,
@@ -8616,9 +8939,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
    })),
    createdAt: newSale.createdAt,
    updatedAt: newSale.updatedAt
- }).catch(err => console.warn('[DbContext] sqliteDatabaseService.saveSaleLog notice:', err));
+ }).catch(err => console.warn('[DbContext] mysqlDatabaseService.saveSaleLog notice:', err));
 
- sqliteDatabaseService.logAuditTrail({
+ mysqlDatabaseService.logAuditTrail({
    action: 'POS_CHECKOUT',
    category: 'Sales',
    details: `Completed sale invoice ${saleNum}. Amount: ₱${grandTotal.toFixed(2)}`,
@@ -8775,7 +9098,6 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  prev.map((s) => {
  if (s.id === activeShift.id) {
  // Subtract from totals
- const _voidedSubtotal = targetSale.subtotal;
  const voidedVat = targetSale.vat;
  const voidedDiscount = targetSale.discount;
  return {
@@ -9850,6 +10172,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       login,
       logout,
       isConfigured,
+      setIsConfigured,
       setupSystem,
       isRateLimited: lockoutUntil > Date.now(),
       rateLimitTimeLeft,
@@ -9884,6 +10207,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       dayMemos,
       setDayMemos,
       syncStatus,
+      selectedViewBranchId,
+      setSelectedViewBranchId,
       createUser,
       updateUser,
       resetPassword,
@@ -9953,6 +10278,35 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       completeDelivery,
       damageLogs,
       createDamageLog,
+      // Dynamic Business Parameters & Configurations
+      productCategories,
+      setProductCategories,
+      createProductCategory,
+      updateProductCategory,
+      deleteProductCategory,
+      unitTypes,
+      setUnitTypes,
+      createUnitType,
+      updateUnitType,
+      deleteUnitType,
+      paymentMethodsList,
+      setPaymentMethodsList,
+      createPaymentMethod,
+      updatePaymentMethod,
+      deletePaymentMethod,
+      togglePaymentMethod,
+      discountSchemes,
+      setDiscountSchemes,
+      createDiscountScheme,
+      updateDiscountScheme,
+      deleteDiscountScheme,
+      toggleDiscountScheme,
+      damageReasonsList,
+      setDamageReasonsList,
+      createDamageReason,
+      updateDamageReason,
+      deleteDamageReason,
+      toggleDamageReason,
       updateBranchPriceOverride,
       updateBranchLowStockThreshold,
       debounceDelay,
@@ -10064,6 +10418,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       rollbackSnapshots,
       deliveries,
       damageLogs,
+      productCategories,
+      unitTypes,
+      paymentMethodsList,
+      discountSchemes,
+      damageReasonsList,
       debounceDelay,
       dbSyncStatus,
       writeStatsCount,
@@ -10096,6 +10455,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       getBranchStockStats,
       filterBranchStockByBranch,
       revalidateStockCounts,
+      selectedViewBranchId,
+      setSelectedViewBranchId,
     ]
   );
 
@@ -10291,7 +10652,7 @@ export function unwrapInboundPayload(rawObj: any): any {
         decryptedText = decryptString(rawPayload, key);
       } catch (e) {
         try {
-          decryptedText = decryptString(rawPayload, "EmmanTileCenterSecretKey");
+          decryptedText = decryptString(rawPayload, "TilePointSecretKey");
         } catch (e2) {
           decryptedText = "";
         }

@@ -62,6 +62,8 @@ export interface Branch {
  receiptPromoText?: string;
  receiptQrBase64?: string;
  receiptThankYou?: string;
+ receiptReturnPolicy?: string;
+ receiptNonReturnablePolicy?: string;
  tin?: string;
  logoSize?: number; // Height of receipt logo in pixels (e.g. 40)
  openingTime?: string;
@@ -134,6 +136,7 @@ export interface BranchStock {
  lowStockThreshold?: number;
  lowStockThresholdOverride?: number;
  sellingPriceOverride?: number; // Local custom pricing override per branch layout rules
+ costPriceOverride?: number;
  updatedAt?: string;
  version?: number;
 }
@@ -146,6 +149,7 @@ export interface InventoryLocationStock {
  lowStockThreshold?: number;
  lowStockThresholdOverride?: number;
  sellingPriceOverride?: number;
+ costPriceOverride?: number;
  updatedAt?: string;
  version?: number;
 }
@@ -232,6 +236,9 @@ export interface Sale {
  cashierId: string;
  cashierName: string;
  customerName: string;
+ customerAddress?: string;
+ customerTin?: string;
+ businessStyle?: string;
  subtotal: number;
  vat: number; // 12% Output VAT metrics
  discount: number;
@@ -504,6 +511,9 @@ export interface Member {
  fullName: string;
  phone: string;
  email: string;
+ address?: string;
+ tin?: string;
+ businessStyle?: string;
  points: number;
  creditLimit: number;
  outstandingBalance: number;
@@ -561,5 +571,91 @@ export interface PurgeResult {
   category: ArchivableCategory;
   ageMonths: number;
   timestamp: string;
+}
+
+// ----------------------------------------------------
+// DYNAMIC SYSTEM CONFIGURATION SCHEMAS (HIGH-PRIORITY)
+// ----------------------------------------------------
+
+export interface ProductCategory {
+  id: string;
+  name: string;
+  code?: string;
+  description?: string;
+  color?: string;
+  isDefault?: boolean;
+  isEnabled?: boolean;
+  isActive?: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface UnitType {
+  id: string;
+  name: string;
+  abbreviation: string;
+  description?: string;
+  allowDecimals?: boolean;
+  isDefault?: boolean;
+  isEnabled?: boolean;
+  isActive?: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CustomPaymentMethod {
+  id: string;
+  name: string;
+  code: string;
+  category: "Cash" | "E-Wallet" | "Card" | "Bank" | "Credit" | "Other";
+  color?: string;
+  activeColor?: string;
+  requiresReference: boolean;
+  referenceLabel?: string;
+  accountNumber?: string;
+  accountName?: string;
+  qrCodeUrl?: string;
+  instructions?: string;
+  description?: string;
+  isEnabled: boolean;
+  isActive?: boolean;
+  isDefault?: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface DiscountScheme {
+  id: string;
+  name: string;
+  code: string;
+  type: "PERCENT" | "FLAT";
+  value: number; // e.g. 20 for 20% or 100 for 100 PHP flat
+  vatExempt: boolean; // e.g. Senior & PWD
+  requiresIdNumber: boolean;
+  requiresCustomerName: boolean;
+  minimumSpend?: number;
+  description?: string;
+  isEnabled: boolean;
+  isActive?: boolean;
+  discountType?: "percentage" | "flat_amount" | "PERCENT" | "FLAT";
+  ratePercent?: number;
+  flatAmount?: number;
+  isDefault?: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface DamageReasonOption {
+  id: string;
+  name: string;
+  code: string;
+  category: DamageCategory;
+  defaultAction: DamageActionTaken;
+  description?: string;
+  isEnabled: boolean;
+  isActive?: boolean;
+  isDefault?: boolean;
+  createdAt: string;
+  updatedAt?: string;
 }
 

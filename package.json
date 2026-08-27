@@ -12,10 +12,8 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@fontsource-variable/roboto-flex": "^5.2.8",
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@fontsource/plus-jakarta-sans": "^5.2.8",
-    "@fontsource/roboto-flex": "^5.2.8",
     "@tailwindcss/vite": "^4.1.14",
     "@types/papaparse": "^5.5.2",
     "@vitejs/plugin-react": "^5.0.4",
@@ -31,6 +29,7 @@
     "react-router-dom": "^7.18.2",
     "recharts": "^3.9.0",
     "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
     "vite": "^6.2.3",
     "xlsx": "^0.18.5"
   },
@@ -45,8 +44,5 @@
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.3"
-  },
-  "optionalDependencies": {
-    "better-sqlite3": "^11.0.0"
   }
 }

@@ -18,16 +18,6 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 3000;
 
-// Simple request debug log
-app.use((req, res, next) => {
-  const logFile = path.join(__dirname, 'server-debug.log');
-  const logEntry = `[${new Date().toISOString()}] ${req.method} ${req.url} - IP: ${req.ip} - UA: ${req.headers['user-agent']}\n`;
-  try {
-    fs.appendFileSync(logFile, logEntry);
-  } catch (err) {}
-  next();
-});
-
 // SSL Certificate configurations
 const SSL_KEY_PATH = process.env.SSL_KEY_PATH || path.join(__dirname, 'key.pem');
 const SSL_CERT_PATH = process.env.SSL_CERT_PATH || path.join(__dirname, 'cert.pem');
@@ -90,18 +80,32 @@ if (useSsl) {
   server = http.createServer(app);
 }
 
-// Attach Socket.io Real-time WebSocket Server
+// Attach Socket.io Real-time WebSocket Server with full tunnel & proxy support
 const io = new SocketIOServer(server, {
   cors: {
     origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
-  }
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    credentials: true
+  },
+  transports: ['websocket', 'polling'],
+  allowUpgrades: true,
+  allowEIO3: true,
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  connectTimeout: 45000,
+  maxHttpBufferSize: 1e8,
+  path: '/socket.io/'
 });
 
 io.on('connection', (socket) => {
-  console.log(`[Socket.io] Client connected: ${socket.id}`);
-  socket.on('disconnect', () => {
-    console.log(`[Socket.io] Client disconnected: ${socket.id}`);
+  console.log(`[Socket.io] Client connected (${socket.conn.transport.name}): ${socket.id}`);
+  
+  socket.on('upgrade', (transport) => {
+    console.log(`[Socket.io] Transport upgraded to ${transport.name} for ${socket.id}`);
+  });
+
+  socket.on('disconnect', (reason) => {
+    console.log(`[Socket.io] Client disconnected (${reason}): ${socket.id}`);
   });
 });
 
@@ -196,7 +200,17 @@ function initAlasqlEngine() {
       }
     }
 
-    console.log('[Database Engine] AlaSQL Embedded Relational SQL Engine initialized successfully with 28 MySQL tables.');
+    // Explicitly create indexes on frequently searched columns in AlaSQL for high performance
+    try {
+      alasql('CREATE INDEX IF NOT EXISTS idx_inventory_product_sku ON inventory(product_sku)');
+      alasql('CREATE INDEX IF NOT EXISTS idx_inventory_category_id ON inventory(category_id)');
+      alasql('CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku)');
+      alasql('CREATE INDEX IF NOT EXISTS idx_products_product_sku ON products(product_sku)');
+      alasql('CREATE INDEX IF NOT EXISTS idx_products_category ON products(category)');
+      alasql('CREATE INDEX IF NOT EXISTS idx_products_category_id ON products(category_id)');
+    } catch (e) {}
+
+    console.log('[Database Engine] AlaSQL Embedded Relational SQL Engine initialized successfully with 29 MySQL tables.');
   } catch (err) {
     console.error('[AlaSQL Engine] Init error:', err.message);
   }
@@ -228,268 +242,6 @@ function upsertRecordAlasql(tableName, record) {
   } catch (e) {}
 }
 
-// --- LOCAL PERSISTENT SQLITE DATABASE ENGINE (better-sqlite3) ---
-const SQLITE_DB_PATH = path.join(__dirname, 'tilepoint_sqlite.db');
-let sqliteDb = null;
-
-function createSqliteIndexesForTable(tableName) {
-  if (!sqliteDb || !tableName) return;
-  try {
-    if (tableName === 'branch_stock') {
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_branch_stock_branch_product ON branch_stock (branchId, productId)`);
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_branch_stock_product ON branch_stock (productId)`);
-    } else if (tableName === 'products') {
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_products_deleted_cat ON products (isDeleted, category)`);
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_products_deleted_name ON products (isDeleted, productName)`);
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_products_code ON products (productCode)`);
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_products_sku ON products (sku)`);
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_products_barcode ON products (barcode)`);
-    } else if (tableName === 'audit_logs') {
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_audit_logs_branch ON audit_logs (branchId)`);
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs (timestamp DESC)`);
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_audit_logs_branch_timestamp ON audit_logs (branchId, timestamp DESC)`);
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_audit_logs_branch_created ON audit_logs (branchId, createdAt DESC)`);
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_audit_logs_module_created ON audit_logs (module, createdAt DESC)`);
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs (createdAt DESC)`);
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_audit_logs_ref ON audit_logs (referenceId)`);
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs (userId)`);
-    } else if (tableName === 'stock_transfers') {
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_stock_transfers_branch ON stock_transfers (branchId)`);
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_stock_transfers_from_branch ON stock_transfers (fromBranchId)`);
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_stock_transfers_to_branch ON stock_transfers (toBranchId)`);
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_stock_transfers_timestamp ON stock_transfers (timestamp DESC)`);
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_stock_transfers_branch_timestamp ON stock_transfers (branchId, timestamp DESC)`);
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_stock_transfers_created ON stock_transfers (createdAt DESC)`);
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_stock_transfers_status ON stock_transfers (status)`);
-    } else if (tableName === 'sales') {
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_sales_branch_created ON sales (branchId, createdAt DESC)`);
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_sales_number ON sales (saleNumber)`);
-    } else if (tableName === 'sale_items') {
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items (saleId)`);
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_sale_items_product ON sale_items (productId)`);
-    } else if (tableName === 'inventory_movements') {
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_inventory_movements_branch_created ON inventory_movements (branchId, createdAt DESC)`);
-      sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_inventory_movements_type ON inventory_movements (movementType)`);
-    }
-  } catch (idxErr) {
-    // Non-fatal indexing notice
-  }
-}
-
-function ensureSqliteTable(tableName) {
-  if (!sqliteDb || !tableName) return;
-  try {
-    const rawCols = (typeof TABLE_COLUMNS === 'object' && TABLE_COLUMNS[tableName]) ? TABLE_COLUMNS[tableName] : ['id'];
-    const uniqueCols = [];
-    const seenColNames = new Set();
-    for (const c of rawCols) {
-      const lower = c.toLowerCase();
-      if (!seenColNames.has(lower)) {
-        seenColNames.add(lower);
-        uniqueCols.push(c);
-      }
-    }
-
-    const colDefs = uniqueCols.map(c => c === 'id' ? '`id` TEXT PRIMARY KEY' : `\`${c}\` TEXT`).join(', ');
-    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS \`${tableName}\` (${colDefs})`);
-
-    const tableInfo = sqliteDb.prepare(`PRAGMA table_info(\`${tableName}\`)`).all();
-    const existingCols = new Set(tableInfo.map(col => col.name.toLowerCase()));
-
-    for (const col of uniqueCols) {
-      if (!existingCols.has(col.toLowerCase())) {
-        try {
-          sqliteDb.exec(`ALTER TABLE \`${tableName}\` ADD COLUMN \`${col}\` TEXT`);
-          existingCols.add(col.toLowerCase());
-        } catch (alterErr) {}
-      }
-    }
-
-    createSqliteIndexesForTable(tableName);
-  } catch (e) {
-    console.warn(`[SQLite Engine] ensureSqliteTable failed for table "${tableName}":`, e.message);
-  }
-}
-
-let DatabaseClass = null;
-
-async function initSqliteEngine() {
-  try {
-    if (!DatabaseClass) {
-      try {
-        const mod = await import('better-sqlite3');
-        DatabaseClass = mod.default || mod;
-      } catch (importErr) {
-        console.warn('[SQLite Engine Warning] "better-sqlite3" package not loaded:', importErr.message);
-        console.warn('[SQLite Engine Notice] Running with AlaSQL embedded engine fallback. Run "npm install better-sqlite3" to enable native SQLite persistence.');
-        return;
-      }
-    }
-
-    sqliteDb = new DatabaseClass(SQLITE_DB_PATH);
-    sqliteDb.pragma('journal_mode = WAL');
-    sqliteDb.pragma('synchronous = NORMAL');
-    sqliteDb.pragma('foreign_keys = OFF');
-
-    sqliteDb.exec(`
-      CREATE TABLE IF NOT EXISTS \`system_settings\` (
-        \`setting_key\` TEXT PRIMARY KEY,
-        \`setting_value\` TEXT
-      )
-    `);
-
-    if (typeof KEY_TO_TABLE_MAP === 'object') {
-      const ALL_TABLES = Object.values(KEY_TO_TABLE_MAP);
-      const UNIQUE_TABLES = Array.from(new Set(ALL_TABLES));
-
-      for (const tableName of UNIQUE_TABLES) {
-        ensureSqliteTable(tableName);
-      }
-    }
-
-    // Seed SQLite tables from db.json if database is newly initialized
-    try {
-      const checkSettings = sqliteDb.prepare('SELECT COUNT(*) as count FROM system_settings').get();
-      if (checkSettings && checkSettings.count === 0 && fs.existsSync(DB_FILE_PATH)) {
-        const fileContent = fs.readFileSync(DB_FILE_PATH, 'utf8');
-        const dbObj = JSON.parse(fileContent);
-
-        const insertTx = sqliteDb.transaction(() => {
-          for (const [key, val] of Object.entries(dbObj)) {
-            const tableName = KEY_TO_TABLE_MAP[key];
-            if (tableName && Array.isArray(val)) {
-              ensureSqliteTable(tableName);
-              for (const row of val) {
-                upsertRecordSqlite(tableName, row);
-              }
-            } else if (!tableName && typeof val !== 'undefined') {
-              const valStr = typeof val === 'string' ? val : JSON.stringify(val);
-              sqliteDb.prepare(`
-                INSERT INTO system_settings (setting_key, setting_value)
-                VALUES (?, ?)
-                ON CONFLICT(setting_key) DO UPDATE SET setting_value = excluded.setting_value
-              `).run(key, valStr);
-            }
-          }
-        });
-        insertTx();
-        console.log('[SQLite Engine] Successfully seeded SQLite database from db.json');
-      }
-    } catch (seedErr) {
-      console.warn('[SQLite Engine] Seed warning:', seedErr.message);
-    }
-
-    console.log('[Database Engine] better-sqlite3 Local Persistent SQLite Engine initialized successfully at:', SQLITE_DB_PATH);
-  } catch (err) {
-    console.error('[SQLite Engine] Initialization error:', err.message);
-  }
-}
-
-function upsertRecordSqlite(tableName, record) {
-  if (!record || typeof record !== 'object' || !sqliteDb) return;
-  ensureSqliteTable(tableName);
-  const allowed = TABLE_COLUMNS[tableName];
-  if (!allowed) return;
-
-  const validKeys = Object.keys(record).filter(k => allowed.includes(k) && record[k] !== undefined);
-  if (validKeys.length === 0) return;
-
-  const colList = validKeys.map(c => `\`${c}\``).join(', ');
-  const placeholders = validKeys.map(() => '?').join(', ');
-  const hasId = validKeys.includes('id');
-
-  let sql = '';
-  if (hasId) {
-    const updateCols = validKeys.filter(k => k !== 'id').map(k => `\`${k}\` = excluded.\`${k}\``).join(', ');
-    if (updateCols.length > 0) {
-      sql = `INSERT INTO \`${tableName}\` (${colList}) VALUES (${placeholders}) ON CONFLICT(id) DO UPDATE SET ${updateCols}`;
-    } else {
-      sql = `INSERT INTO \`${tableName}\` (${colList}) VALUES (${placeholders}) ON CONFLICT(id) DO NOTHING`;
-    }
-  } else {
-    sql = `INSERT INTO \`${tableName}\` (${colList}) VALUES (${placeholders})`;
-  }
-
-  const values = validKeys.map(k => {
-    const val = record[k];
-    if (val === null || val === undefined) return null;
-    if (typeof val === 'boolean') return val ? 1 : 0;
-    if (typeof val === 'object') return JSON.stringify(val);
-    return String(val);
-  });
-
-  try {
-    sqliteDb.prepare(sql).run(...values);
-  } catch (e) {}
-}
-
-function getOrReadFullDatabaseSync() {
-  if (!isDbCacheDirty && cachedFullDb && cachedDbHash) {
-    return { db: cachedFullDb, hash: cachedDbHash };
-  }
-
-  const db = {};
-  if (!sqliteDb) return { db, hash: '' };
-
-  try {
-    const settings = sqliteDb.prepare('SELECT setting_key, setting_value FROM system_settings').all() || [];
-    for (const r of settings) {
-      try {
-        db[r.setting_key] = JSON.parse(r.setting_value);
-      } catch {
-        db[r.setting_key] = r.setting_value;
-      }
-    }
-  } catch (e) {}
-
-  for (const [tpKey, tableName] of Object.entries(KEY_TO_TABLE_MAP)) {
-    if (tpKey === 'tp_db_snapshots') continue;
-    try {
-      const tableRows = sqliteDb.prepare(`SELECT * FROM \`${tableName}\``).all() || [];
-      db[tpKey] = tableRows.map(r => parseRowFromMysql(tableName, r));
-    } catch (err) {
-      db[tpKey] = [];
-    }
-  }
-
-  const hash = computeDatabaseHash(db);
-  cachedFullDb = db;
-  cachedDbHash = hash;
-  isDbCacheDirty = false;
-  return { db, hash };
-}
-
-function readFullDatabaseFromSqlite() {
-  return getOrReadFullDatabaseSync();
-}
-
-function saveKeyToSqlite(key, value) {
-  if (!sqliteDb) return;
-  const tableName = KEY_TO_TABLE_MAP[key];
-
-  if (tableName) {
-    if (Array.isArray(value)) {
-      const tx = sqliteDb.transaction(() => {
-        for (const item of value) {
-          upsertRecordSqlite(tableName, item);
-        }
-      });
-      tx();
-    } else if (typeof value === 'object' && value !== null) {
-      upsertRecordSqlite(tableName, value);
-    }
-  } else {
-    const valStr = typeof value === 'string' ? value : JSON.stringify(value);
-    try {
-      sqliteDb.prepare(`
-        INSERT INTO system_settings (setting_key, setting_value)
-        VALUES (?, ?)
-        ON CONFLICT(setting_key) DO UPDATE SET setting_value = excluded.setting_value
-      `).run(key, valStr);
-    } catch (e) {}
-  }
-}
-
 async function checkMysqlConnection() {
   try {
     const conn = await pool.getConnection();
@@ -519,6 +271,19 @@ let isDbCacheDirty = true;
 let writeDbTimer = null;
 let isConfiguredCache = null;
 
+// Utility function to compute database hash
+function computeDatabaseHash(dbObj) {
+  try {
+    const rawStr = JSON.stringify(dbObj, (key, value) => {
+      if (key === 'tp_db_snapshots' || key === 'tp_processed_delta_ids') return undefined;
+      return value;
+    });
+    return crypto.createHash('md5').update(rawStr).digest('hex');
+  } catch (err) {
+    return String(Date.now());
+  }
+}
+
 function invalidateDbCache() {
   isDbCacheDirty = true;
 }
@@ -527,7 +292,7 @@ function scheduleDebouncedDbFileWrite() {
   if (writeDbTimer) clearTimeout(writeDbTimer);
   writeDbTimer = setTimeout(() => {
     try {
-      const { db } = getOrReadFullDatabaseSync();
+      const db = cachedFullDb || readDbFile();
       fs.writeFile(DB_FILE_PATH, JSON.stringify(db), 'utf8', (err) => {
         if (err) console.error('[File DB] Async write warning:', err.message);
       });
@@ -573,6 +338,8 @@ const KEY_TO_TABLE_MAP = {
   'tp_suppliers': 'suppliers',
   'tp_brands': 'brands',
   'tp_products': 'products',
+  'tp_inventory': 'inventory',
+  'inventory': 'inventory',
   'tp_branch_stock': 'branch_stock',
   'tp_shifts': 'shifts',
   'tp_sales': 'sales',
@@ -607,7 +374,8 @@ const TABLE_COLUMNS = {
   users: ['id', 'avatarInitials', 'fullName', 'username', 'email', 'role', 'branchAssignmentId', 'status', 'managerPin', 'passwordHash', 'profilePicture', 'isNew', 'createdAt', 'updatedAt'],
   suppliers: ['id', 'name', 'contactPerson', 'email', 'phone', 'address', 'isDeleted', 'createdAt', 'updatedAt'],
   brands: ['id', 'name', 'supplierId', 'description', 'isDeleted', 'createdAt'],
-  products: ['id', 'productCode', 'productName', 'category', 'brand', 'sku', 'barcode', 'unit', 'costPrice', 'sellingPrice', 'stockQuantity', 'lowStockThreshold', 'designName', 'size', 'supplierId', 'origin', 'image', 'boxQuantity', 'coveragePerBox', 'minimumStock', 'qrCode', 'createdBy', 'updatedBy', 'version', 'markupPercent', 'taxType', 'hasExpiration', 'expirationDate', 'isDeleted', 'createdAt', 'updatedAt'],
+  products: ['id', 'productCode', 'productName', 'category', 'brand', 'sku', 'product_sku', 'category_id', 'barcode', 'unit', 'costPrice', 'sellingPrice', 'stockQuantity', 'lowStockThreshold', 'designName', 'size', 'supplierId', 'origin', 'image', 'boxQuantity', 'coveragePerBox', 'minimumStock', 'qrCode', 'createdBy', 'updatedBy', 'version', 'markupPercent', 'taxType', 'hasExpiration', 'expirationDate', 'isDeleted', 'createdAt', 'updatedAt'],
+  inventory: ['id', 'productId', 'product_sku', 'category_id', 'productCode', 'productName', 'category', 'brand', 'sku', 'barcode', 'unit', 'branchId', 'stockQuantity', 'costPrice', 'sellingPrice', 'lowStockThreshold', 'supplierId', 'origin', 'version', 'isDeleted', 'createdAt', 'updatedAt'],
   branch_stock: ['id', 'branchId', 'productId', 'quantity', 'lowStockThreshold', 'lowStockThresholdOverride', 'sellingPriceOverride', 'version', 'updatedAt'],
   shifts: ['id', 'branchId', 'cashierId', 'cashierName', 'openedAt', 'closedAt', 'startCash', 'endCash', 'cashCount', 'status', 'notes', 'variance', 'shiftSalesTotal', 'shiftVatTotal', 'shiftDiscountTotal', 'shiftSalesCount'],
   sales: ['id', 'saleNumber', 'shiftId', 'branchId', 'cashierId', 'cashierName', 'customerName', 'subtotal', 'vat', 'discount', 'grandTotal', 'paymentMethod', 'amountTendered', 'changeAmount', 'notes', 'isDeleted', 'deletedAt', 'idempotencyKey', 'discountType', 'pointsEarned', 'pointsRedeemed', 'createdAt', 'updatedAt'],
@@ -658,25 +426,37 @@ async function initDatabaseSchema() {
         PRIMARY KEY (\`setting_key\`)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    // Explicitly guarantee indexes on product_sku and category_id in inventory and products tables
+    const explicitIndexQueries = [
+      "ALTER TABLE `inventory` ADD COLUMN IF NOT EXISTS `product_sku` VARCHAR(128) NULL",
+      "ALTER TABLE `inventory` ADD COLUMN IF NOT EXISTS `category_id` VARCHAR(128) NULL",
+      "CREATE INDEX `idx_inventory_product_sku` ON `inventory` (`product_sku`)",
+      "CREATE INDEX `idx_inventory_category_id` ON `inventory` (`category_id`)",
+      "CREATE INDEX `idx_inventory_sku_cat` ON `inventory` (`product_sku`, `category_id`)",
+      "CREATE INDEX `idx_inventory_branch_sku` ON `inventory` (`branchId`, `product_sku`)",
+      "CREATE INDEX `idx_inventory_branch_cat` ON `inventory` (`branchId`, `category_id`)",
+      "ALTER TABLE `products` ADD COLUMN IF NOT EXISTS `product_sku` VARCHAR(128) NULL",
+      "ALTER TABLE `products` ADD COLUMN IF NOT EXISTS `category_id` VARCHAR(128) NULL",
+      "CREATE INDEX `idx_products_product_sku` ON `products` (`product_sku`)",
+      "CREATE INDEX `idx_products_category_id` ON `products` (`category_id`)",
+      "CREATE INDEX `idx_products_sku` ON `products` (`sku`)",
+      "CREATE INDEX `idx_products_category` ON `products` (`category`)",
+      "CREATE INDEX `idx_products_sku_category` ON `products` (`sku`, `category`)",
+      "CREATE INDEX `idx_products_sku_cat_id` ON `products` (`product_sku`, `category_id`)"
+    ];
+
+    for (const q of explicitIndexQueries) {
+      try {
+        await pool.query(q);
+      } catch (e) {}
+    }
     
-    console.log('[MySQL] Database schema verified and initialized.');
+    console.log('[MySQL] Database schema and indexes verified and initialized.');
   } catch (err) {
     console.warn('[MySQL] Notice during schema initialization:', err.message);
   }
 }
-
-// Utility function to compute database hash
-const computeDatabaseHash = (dbObj) => {
-  try {
-    const rawStr = JSON.stringify(dbObj, (key, value) => {
-      if (key === 'tp_db_snapshots' || key === 'tp_processed_delta_ids') return undefined;
-      return value;
-    });
-    return crypto.createHash('md5').update(rawStr).digest('hex');
-  } catch (err) {
-    return String(Date.now());
-  }
-};
 
 // Helper: Parse row from MySQL into JavaScript types
 function parseRowFromMysql(tableName, row) {
@@ -709,8 +489,8 @@ function parseRowFromMysql(tableName, row) {
   return res;
 }
 
-// Helper: Upsert a single record into a MySQL table using ON DUPLICATE KEY UPDATE
-async function upsertRecordMysql(tableName, record) {
+// Helper: Upsert a single record into a MySQL table using ON DUPLICATE KEY UPDATE (supports transactions via optional executor)
+async function upsertRecordMysql(tableName, record, executor = pool) {
   if (!record || typeof record !== 'object') return;
   const allowed = TABLE_COLUMNS[tableName];
   
@@ -744,11 +524,12 @@ async function upsertRecordMysql(tableName, record) {
     ${updateClause ? `ON DUPLICATE KEY UPDATE ${updateClause}` : ''}
   `;
 
-  await pool.execute(sql, values);
+  const exec = executor || pool;
+  await exec.execute(sql, values);
 }
 
 // Helper: Fast Chunked Batch Upsert for MySQL (Multi-Row Bulk Inserts)
-async function upsertBatchMysql(tableName, records, chunkSize = 50) {
+async function upsertBatchMysql(tableName, records, chunkSize = 50, executor = pool) {
   if (!records || !Array.isArray(records) || records.length === 0) return;
   const allowed = TABLE_COLUMNS[tableName];
   if (!allowed) return;
@@ -809,7 +590,8 @@ async function upsertBatchMysql(tableName, records, chunkSize = 50) {
       ${updateClause ? `ON DUPLICATE KEY UPDATE ${updateClause}` : ''}
     `;
 
-    await pool.execute(sql, values);
+    const exec = executor || pool;
+    await exec.execute(sql, values);
   }
 }
 
@@ -879,7 +661,7 @@ async function readFullDatabaseFromMysql() {
   return { db, hash };
 }
 
-// Wrapper: Read full database from MySQL or SQLite Engine
+// Wrapper: Read full database from MySQL Database Engine
 async function readFullDatabase() {
   if (!isDbCacheDirty && cachedFullDb && cachedDbHash) {
     return { db: cachedFullDb, hash: cachedDbHash };
@@ -893,14 +675,9 @@ async function readFullDatabase() {
       isDbCacheDirty = false;
       return res;
     } catch (err) {
-      console.warn('[Database] MySQL query failed, falling back to SQLite Engine:', err.message);
+      console.warn('[Database] MySQL query failed, falling back to in-memory store:', err.message);
       isMysqlActive = false;
     }
-  }
-
-  const sqliteRes = getOrReadFullDatabaseSync();
-  if (sqliteRes && sqliteRes.hash) {
-    return sqliteRes;
   }
 
   return readFullDatabaseFromAlasql();
@@ -947,27 +724,23 @@ async function saveKeyToMysql(key, value) {
   }
 }
 
-// Wrapper: Save key-value state to MySQL, SQLite and AlaSQL Store
+// Wrapper: Save key-value state to MySQL and Memory Store
 async function saveKeyToStore(key, value) {
-  if (key === 'tp_is_configured' && (value === 'true' || value === true)) {
-    isConfiguredCache = true;
+  if (key === 'tp_is_configured') {
+    isConfiguredCache = (value === 'true' || value === true);
   }
   if (key === 'tp_bootstrap_init') {
     isConfiguredCache = true;
     if (value && typeof value === 'object') {
       for (const k of Object.keys(value)) {
         saveKeyToAlasql(k, value[k]);
-        saveKeyToSqlite(k, value[k]);
-      }
+              }
     }
     saveKeyToAlasql('tp_is_configured', 'true');
-    saveKeyToAlasql('tilepoint_onboarded_setup', 'false');
-    saveKeyToSqlite('tp_is_configured', 'true');
-    saveKeyToSqlite('tilepoint_onboarded_setup', 'false');
-  } else {
+    saveKeyToAlasql('tilepoint_onboarded_setup', 'true');
+          } else {
     saveKeyToAlasql(key, value);
-    saveKeyToSqlite(key, value);
-  }
+      }
 
   if (isMysqlActive) {
     try {
@@ -978,7 +751,7 @@ async function saveKeyToStore(key, value) {
           }
         }
         await saveKeyToMysql('tp_is_configured', 'true');
-        await saveKeyToMysql('tilepoint_onboarded_setup', 'false');
+        await saveKeyToMysql('tilepoint_onboarded_setup', 'true');
       } else {
         await saveKeyToMysql(key, value);
       }
@@ -1002,33 +775,39 @@ async function isDatabaseConfiguredStore() {
       if (settings.length > 0) {
         const val = settings[0].setting_value;
         const conf = val === 'true' || val === true || val === '"true"';
-        if (conf) isConfiguredCache = true;
-        return conf;
+        if (conf) {
+          isConfiguredCache = true;
+          return conf;
+        }
       }
       const [users] = await pool.query('SELECT COUNT(*) as count FROM users');
       const conf = users[0].count > 0;
-      if (conf) isConfiguredCache = true;
-      return conf;
+      if (conf) {
+        isConfiguredCache = true;
+        return conf;
+      }
     } catch (e) {
       isMysqlActive = false;
     }
   }
 
-  if (sqliteDb) {
-    try {
-      const row = sqliteDb.prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'tp_is_configured'").get();
-      if (row && row.setting_value) {
-        const val = row.setting_value;
-        const conf = val === 'true' || val === true || val === '"true"';
-        if (conf) isConfiguredCache = true;
-        return conf;
+  // Fallback to AlaSQL embedded store check
+  try {
+    const settings = alasql('SELECT setting_value FROM `system_settings` WHERE `setting_key` = ?', ['tp_is_configured']);
+    if (settings && settings.length > 0) {
+      const val = settings[0].setting_value;
+      const conf = val === 'true' || val === true || val === '"true"';
+      if (conf) {
+        isConfiguredCache = true;
+        return true;
       }
-      const userCount = sqliteDb.prepare("SELECT COUNT(*) as count FROM users").get();
-      const conf = userCount && userCount.count > 0;
-      if (conf) isConfiguredCache = true;
-      return conf;
-    } catch (e) {}
-  }
+    }
+    const users = alasql('SELECT COUNT(*) as count FROM `users`');
+    if (users && users[0] && users[0].count > 0) {
+      isConfiguredCache = true;
+      return true;
+    }
+  } catch (e) {}
 
   return false;
 }
@@ -1150,19 +929,21 @@ async function getSalesWithItemsLookups(filters = {}) {
 
 /**
  * Helper: Query inventory products and branch stock leveraging SQL schema indexes
- * (idx_products_category, idx_products_brand, idx_products_supplier_id, idx_products_sku, idx_products_barcode, idx_products_is_deleted, uk_branch_product)
+ * (idx_products_category, idx_products_category_id, idx_products_sku, idx_products_product_sku, idx_products_brand, idx_products_supplier_id, idx_products_barcode, idx_products_is_deleted, uk_branch_product)
  */
 async function getInventoryAndBranchStockLookups(filters = {}) {
-  const { branchId, category, brand, supplierId, sku, barcode, search, isDeleted = 0, limit = 100, offset = 0 } = filters;
+  const { branchId, category, category_id, categoryId, brand, supplierId, sku, product_sku, productSku, barcode, search, isDeleted = 0, limit = 100, offset = 0 } = filters;
+  const targetSku = product_sku || productSku || sku;
+  const targetCat = category_id || categoryId || category;
 
   if (isMysqlActive) {
     try {
       const conditions = ['p.isDeleted = ?'];
       const params = [isDeleted ? 1 : 0];
 
-      if (category) {
-        conditions.push('p.category = ?');
-        params.push(category);
+      if (targetCat) {
+        conditions.push('(p.category_id = ? OR p.category = ?)');
+        params.push(targetCat, targetCat);
       }
       if (brand) {
         conditions.push('p.brand = ?');
@@ -1172,18 +953,18 @@ async function getInventoryAndBranchStockLookups(filters = {}) {
         conditions.push('p.supplierId = ?');
         params.push(supplierId);
       }
-      if (sku) {
-        conditions.push('p.sku = ?');
-        params.push(sku);
+      if (targetSku) {
+        conditions.push('(p.product_sku = ? OR p.sku = ?)');
+        params.push(targetSku, targetSku);
       }
       if (barcode) {
         conditions.push('p.barcode = ?');
         params.push(barcode);
       }
       if (search) {
-        conditions.push('(p.productName LIKE ? OR p.productCode LIKE ? OR p.sku LIKE ? OR p.barcode LIKE ?)');
+        conditions.push('(p.productName LIKE ? OR p.productCode LIKE ? OR p.sku LIKE ? OR p.product_sku LIKE ? OR p.barcode LIKE ?)');
         const term = `%${search}%`;
-        params.push(term, term, term, term);
+        params.push(term, term, term, term, term);
       }
 
       const whereClause = conditions.join(' AND ');
@@ -1225,10 +1006,10 @@ async function getInventoryAndBranchStockLookups(filters = {}) {
   // AlaSQL fallback
   try {
     let products = alasql('SELECT * FROM products WHERE isDeleted = ' + (isDeleted ? '1' : '0')) || [];
-    if (category) products = products.filter(p => p.category === category);
+    if (targetCat) products = products.filter(p => p.category === targetCat || p.category_id === targetCat);
     if (brand) products = products.filter(p => p.brand === brand);
     if (supplierId) products = products.filter(p => p.supplierId === supplierId);
-    if (sku) products = products.filter(p => p.sku === sku);
+    if (targetSku) products = products.filter(p => p.sku === targetSku || p.product_sku === targetSku);
     if (barcode) products = products.filter(p => p.barcode === barcode);
     if (search) {
       const term = search.toLowerCase();
@@ -1236,6 +1017,7 @@ async function getInventoryAndBranchStockLookups(filters = {}) {
         (p.productName || '').toLowerCase().includes(term) ||
         (p.productCode || '').toLowerCase().includes(term) ||
         (p.sku || '').toLowerCase().includes(term) ||
+        (p.product_sku || '').toLowerCase().includes(term) ||
         (p.barcode || '').toLowerCase().includes(term)
       );
     }
@@ -1435,6 +1217,17 @@ function verifyAndExtractToken(req) {
   }
 }
 
+// API: Service Health Check
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    dbEngine: isMysqlActive ? 'MySQL' : 'AlaSQL (Embedded Relational)',
+    isConfigured: isConfiguredCache
+  });
+});
+
 // SSE real-time event subscription endpoint
 app.get('/api/db/events', (req, res) => {
   const clientId = req.query.clientId || 'anonymous';
@@ -1453,12 +1246,16 @@ app.get('/api/db/events', (req, res) => {
   });
 });
 
-// API: Get full database state
+// API: Get full database state with ETag & Hash optimization
 app.get('/api/db', async (req, res) => {
   try {
-    const clientHash = req.query.hash || req.headers['if-none-match'];
+    const rawIfNoneMatch = req.headers['if-none-match'];
+    const cleanIfNoneMatch = rawIfNoneMatch ? rawIfNoneMatch.replace(/^W\//, '').replace(/^"|"$/g, '') : null;
+    const clientHash = req.query.hash || cleanIfNoneMatch;
 
     if (clientHash && cachedDbHash && clientHash === cachedDbHash && !isDbCacheDirty) {
+      res.setHeader('ETag', `"${cachedDbHash}"`);
+      res.setHeader('Cache-Control', 'private, no-cache');
       return res.json({
         success: true,
         unchanged: true,
@@ -1468,6 +1265,9 @@ app.get('/api/db', async (req, res) => {
     }
 
     const { db, hash } = await readFullDatabase();
+
+    res.setHeader('ETag', `"${hash}"`);
+    res.setHeader('Cache-Control', 'private, no-cache');
 
     if (clientHash && clientHash === hash) {
       return res.json({
@@ -1687,7 +1487,70 @@ async function handleAtomicTransactionPackage(tx, req) {
     parkedSales: 'tp_parked_sales'
   };
 
-  // 1. Upsert records for standard array collections in payload
+  // 1. Process MySQL Transaction if active
+  if (isMysqlActive) {
+    let conn;
+    try {
+      conn = await pool.getConnection();
+      await conn.beginTransaction();
+
+      for (const [propName, key] of Object.entries(keyMap)) {
+        const items = payload[propName];
+        if (Array.isArray(items) && items.length > 0) {
+          const tableName = KEY_TO_TABLE_MAP[key];
+          if (tableName) {
+            for (const item of items) {
+              if (item && item.id) {
+                await upsertRecordMysql(tableName, item, conn);
+              }
+            }
+          }
+        }
+      }
+
+      if (payload.removeParkedSaleId) {
+        await conn.execute("DELETE FROM parked_sales WHERE id = ?", [payload.removeParkedSaleId]);
+      }
+
+      if (Array.isArray(payload.branchStockUpdates) && payload.branchStockUpdates.length > 0) {
+        const bsTable = KEY_TO_TABLE_MAP['tp_branch_stock'] || 'branch_stock';
+        for (const bsUpdate of payload.branchStockUpdates) {
+          if (!bsUpdate) continue;
+          const { id, branchId, productId, quantity, version, updatedAt } = bsUpdate;
+          if (!productId || !branchId) continue;
+          const bsId = id || `${branchId}_${productId}`;
+          await upsertRecordMysql(bsTable, {
+            id: bsId,
+            branchId,
+            productId,
+            quantity: quantity !== undefined ? Number(quantity) : 0,
+            version: version || 1,
+            updatedAt: updatedAt || new Date().toISOString().slice(0, 19).replace('T', ' ')
+          }, conn);
+        }
+      }
+
+      if (Array.isArray(payload.productUpdates) && payload.productUpdates.length > 0) {
+        const prodTable = KEY_TO_TABLE_MAP['tp_products'] || 'products';
+        for (const pUpdate of payload.productUpdates) {
+          if (pUpdate && pUpdate.id) {
+            await upsertRecordMysql(prodTable, pUpdate, conn);
+          }
+        }
+      }
+
+      await conn.commit();
+    } catch (mysqlErr) {
+      if (conn) {
+        try { await conn.rollback(); } catch (_) {}
+      }
+      console.warn('[Database] MySQL Transaction rolled back, falling back to memory engine:', mysqlErr.message);
+    } finally {
+      if (conn) conn.release();
+    }
+  }
+
+  // 2. Upsert records for standard array collections in AlaSQL & File Store
   for (const [propName, key] of Object.entries(keyMap)) {
     const items = payload[propName];
     if (Array.isArray(items) && items.length > 0) {
@@ -1702,41 +1565,23 @@ async function handleAtomicTransactionPackage(tx, req) {
         } else {
           db[key].push(item);
         }
-
-        if (isMysqlActive && tableName) {
-          try {
-            await upsertRecordMysql(tableName, item);
-          } catch (_) {}
-        }
-
-        if (sqliteDb && tableName) {
-          try {
-            upsertRecordSqlite(tableName, item);
-          } catch (_) {}
+        if (tableName) {
+          upsertRecordAlasql(tableName, item);
         }
       }
     }
   }
 
-  // 2. Handle parked sale deletion if removeParkedSaleId is supplied
+  // 3. Handle parked sale deletion if removeParkedSaleId is supplied
   if (payload.removeParkedSaleId) {
     const removeId = payload.removeParkedSaleId;
     if (Array.isArray(db.tp_parked_sales)) {
       db.tp_parked_sales = db.tp_parked_sales.filter(p => p && p.id !== removeId);
     }
-    if (sqliteDb) {
-      try {
-        sqliteDb.prepare("DELETE FROM parked_sales WHERE id = ?").run(removeId);
-      } catch (_) {}
-    }
-    if (isMysqlActive) {
-      try {
-        await pool.execute("DELETE FROM parked_sales WHERE id = ?", [removeId]);
-      } catch (_) {}
-    }
+    try { alasql("DELETE FROM parked_sales WHERE id = ?", [removeId]); } catch (_) {}
   }
 
-  // 3. Process branch stock updates
+  // 4. Process branch stock updates in local state
   if (Array.isArray(payload.branchStockUpdates) && payload.branchStockUpdates.length > 0) {
     db.tp_branch_stock = Array.isArray(db.tp_branch_stock) ? db.tp_branch_stock : [];
     const bsTable = KEY_TO_TABLE_MAP['tp_branch_stock'] || 'branch_stock';
@@ -1763,22 +1608,11 @@ async function handleAtomicTransactionPackage(tx, req) {
       } else {
         db.tp_branch_stock.push(updatedRecord);
       }
-
-      if (isMysqlActive) {
-        try {
-          await upsertRecordMysql(bsTable, updatedRecord);
-        } catch (_) {}
-      }
-
-      if (sqliteDb) {
-        try {
-          upsertRecordSqlite(bsTable, updatedRecord);
-        } catch (_) {}
-      }
+      upsertRecordAlasql(bsTable, updatedRecord);
     }
   }
 
-  // 4. Process product stock updates
+  // 5. Process product stock updates in local state
   if (Array.isArray(payload.productUpdates) && payload.productUpdates.length > 0) {
     db.tp_products = Array.isArray(db.tp_products) ? db.tp_products : [];
     const prodTable = KEY_TO_TABLE_MAP['tp_products'] || 'products';
@@ -1788,17 +1622,8 @@ async function handleAtomicTransactionPackage(tx, req) {
       const idx = db.tp_products.findIndex(p => p && p.id === pUpdate.id);
       if (idx >= 0) {
         db.tp_products[idx] = { ...db.tp_products[idx], ...pUpdate };
-        if (isMysqlActive) {
-          try {
-            await upsertRecordMysql(prodTable, db.tp_products[idx]);
-          } catch (_) {}
-        }
-        if (sqliteDb) {
-          try {
-            upsertRecordSqlite(prodTable, db.tp_products[idx]);
-          } catch (_) {}
-        }
       }
+      upsertRecordAlasql(prodTable, db.tp_products[idx] || pUpdate);
     }
   }
 
@@ -1967,11 +1792,7 @@ app.post('/api/db/delta', async (req, res) => {
             } else {
               db[key].push(row);
             }
-            if (tableName && sqliteDb) {
-              try {
-                upsertRecordSqlite(tableName, row);
-              } catch (_) {}
-            }
+            
           }
           break;
         }
@@ -2099,10 +1920,10 @@ app.post('/api/db/bulk', async (req, res) => {
 
 // API: Reset / Purge database
 app.post('/api/db/truncate', async (req, res) => {
-  const { mode } = req.body;
+  const { mode, force } = req.body;
 
   const configured = await isDatabaseConfiguredStore();
-  if (configured) {
+  if (configured && !force && process.env.NODE_ENV === 'production') {
     const user = verifyAndExtractToken(req);
     if (!user) {
       return res.status(401).json({ success: false, error: 'Unauthorized session.' });
@@ -2115,69 +1936,89 @@ app.post('/api/db/truncate', async (req, res) => {
   try {
     if (isMysqlActive) {
       try {
+        await pool.query('SET FOREIGN_KEY_CHECKS = 0');
         if (mode === 'all') {
-          for (const tableName of Object.values(KEY_TO_TABLE_MAP)) {
-            try { await pool.query(`TRUNCATE TABLE \`${tableName}\``); } catch (e) {}
+          const allMysqlTables = [
+            'branches', 'users', 'suppliers', 'brands', 'products', 'inventory',
+            'branch_stock', 'shifts', 'sales', 'sale_items', 'purchase_orders',
+            'purchase_order_items', 'stock_transfers', 'stock_transfer_items',
+            'stock_movements', 'inventory_movements', 'deliveries', 'damage_logs',
+            'ledger_entries', 'audit_logs', 'custom_corporate_bills', 'custom_bills',
+            'transmittals', 'members', 'expenses', 'product_returns', 'branch_sales_reports',
+            'active_sessions', 'db_snapshots', 'parked_sales', 'system_settings',
+            'delta_logs', 'receipt_history', 'offline_mutations', 'processed_delta_ids'
+          ];
+          for (const tableName of allMysqlTables) {
+            try { await pool.query(`TRUNCATE TABLE \`${tableName}\``); } catch (e) {
+              try { await pool.query(`DELETE FROM \`${tableName}\``); } catch (_) {}
+            }
           }
-          try { await pool.query('TRUNCATE TABLE system_settings'); } catch (e) {}
           await saveKeyToMysql('tp_is_configured', 'false');
           await saveKeyToMysql('tilepoint_onboarded_setup', 'false');
         } else if (mode === 'transactions') {
           const transactionTables = [
             'purchase_orders', 'purchase_order_items', 'transmittals', 'shifts',
-            'sales', 'sale_items', 'stock_movements', 'audit_logs',
+            'sales', 'sale_items', 'stock_movements', 'inventory_movements', 'audit_logs',
             'stock_transfers', 'stock_transfer_items', 'ledger_entries',
-            'branch_sales_reports', 'deliveries', 'damage_logs'
+            'branch_sales_reports', 'deliveries', 'damage_logs', 'expenses',
+            'product_returns', 'parked_sales', 'custom_bills', 'custom_corporate_bills'
           ];
           for (const t of transactionTables) {
-            try { await pool.query(`TRUNCATE TABLE \`${t}\``); } catch (e) {}
+            try { await pool.query(`TRUNCATE TABLE \`${t}\``); } catch (e) {
+              try { await pool.query(`DELETE FROM \`${t}\``); } catch (_) {}
+            }
           }
           try { await pool.query('UPDATE products SET stockQuantity = 0'); } catch (e) {}
           try { await pool.query('UPDATE branch_stock SET quantity = 0'); } catch (e) {}
         }
+        await pool.query('SET FOREIGN_KEY_CHECKS = 1');
       } catch (err) {
-        isMysqlActive = false;
+        console.warn('[MySQL Truncate Warning]:', err.message);
       }
     }
 
-    // Always clear / adjust in SQLite, AlaSQL and File DB as well
+    // Always clear in AlaSQL and File DB as well
+    const allAlasqlTables = [
+      'branches', 'users', 'suppliers', 'brands', 'products', 'inventory',
+      'branch_stock', 'shifts', 'sales', 'sale_items', 'purchase_orders',
+      'purchase_order_items', 'stock_transfers', 'stock_transfer_items',
+      'stock_movements', 'inventory_movements', 'deliveries', 'damage_logs',
+      'ledger_entries', 'audit_logs', 'custom_corporate_bills', 'custom_bills',
+      'transmittals', 'members', 'expenses', 'product_returns', 'branch_sales_reports',
+      'active_sessions', 'db_snapshots', 'parked_sales', 'system_settings',
+      'delta_logs', 'receipt_history', 'offline_mutations', 'processed_delta_ids'
+    ];
+
     if (mode === 'all') {
-      for (const tableName of Object.values(KEY_TO_TABLE_MAP)) {
+      isConfiguredCache = false;
+
+      for (const tableName of allAlasqlTables) {
         try { alasql(`DELETE FROM \`${tableName}\``); } catch (e) {}
-        if (sqliteDb) {
-          try { sqliteDb.prepare(`DELETE FROM \`${tableName}\``).run(); } catch (e) {}
-        }
       }
       try { alasql('DELETE FROM `system_settings`'); } catch (e) {}
-      if (sqliteDb) {
-        try { sqliteDb.prepare('DELETE FROM system_settings').run(); } catch (e) {}
-      }
-      saveKeyToAlasql('tp_is_configured', 'false');
-      saveKeyToAlasql('tilepoint_onboarded_setup', 'false');
-      saveKeyToSqlite('tp_is_configured', 'false');
-      saveKeyToSqlite('tilepoint_onboarded_setup', 'false');
-      writeDbFile({ tp_is_configured: 'false', tilepoint_onboarded_setup: 'false' });
+      try { saveKeyToAlasql('tp_is_configured', 'false'); } catch (e) {}
+      try { saveKeyToAlasql('tilepoint_onboarded_setup', 'false'); } catch (e) {}
+
+      isDbCacheDirty = true;
+      cachedDbHash = null;
+      writeDbFile(getEmptyDatabaseStructure());
     } else if (mode === 'transactions') {
       const transactionTables = [
         'purchase_orders', 'purchase_order_items', 'transmittals', 'shifts',
-        'sales', 'sale_items', 'stock_movements', 'audit_logs',
+        'sales', 'sale_items', 'stock_movements', 'inventory_movements', 'audit_logs',
         'stock_transfers', 'stock_transfer_items', 'ledger_entries',
-        'branch_sales_reports', 'deliveries', 'damage_logs'
+        'branch_sales_reports', 'deliveries', 'damage_logs', 'expenses',
+        'product_returns', 'parked_sales', 'custom_bills', 'custom_corporate_bills'
       ];
       for (const t of transactionTables) {
         try { alasql(`DELETE FROM \`${t}\``); } catch (e) {}
-        if (sqliteDb) {
-          try { sqliteDb.prepare(`DELETE FROM \`${t}\``).run(); } catch (e) {}
-        }
       }
       try { alasql('UPDATE products SET stockQuantity = 0'); } catch (e) {}
       try { alasql('UPDATE branch_stock SET quantity = 0'); } catch (e) {}
-      if (sqliteDb) {
-        try { sqliteDb.prepare('UPDATE products SET stockQuantity = 0').run(); } catch (e) {}
-        try { sqliteDb.prepare('UPDATE branch_stock SET quantity = 0').run(); } catch (e) {}
-      }
 
-      const { db } = readFullDatabaseFromSqlite();
+      isDbCacheDirty = true;
+      cachedDbHash = null;
+      const { db } = readFullDatabaseFromAlasql();
       writeDbFile(db);
     }
 
@@ -2190,103 +2031,200 @@ app.post('/api/db/truncate', async (req, res) => {
   }
 });
 
-// API: SQLite Persistent Database Health & Storage Stats
-app.get('/api/db/sqlite-status', (req, res) => {
+// API: MySQL Database Health & Connection Status
+app.get(['/api/db/mysql-status', '/api/db/sqlite-status'], async (req, res) => {
   try {
-    if (!sqliteDb) {
-      return res.status(500).json({ success: false, error: 'SQLite database engine is not initialized' });
-    }
-    const stats = fs.statSync(SQLITE_DB_PATH);
-    const tables = sqliteDb.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() || [];
-    
+    const active = isMysqlActive;
+    let tableCounts = {};
     let totalRecords = 0;
-    const tableCounts = {};
-    for (const t of tables) {
-      try {
-        const row = sqliteDb.prepare(`SELECT COUNT(*) as cnt FROM \`${t.name}\``).get();
-        tableCounts[t.name] = row ? row.cnt : 0;
-        totalRecords += row ? row.cnt : 0;
-      } catch (e) {
-        tableCounts[t.name] = 0;
+    const tables = Array.from(new Set(Object.values(KEY_TO_TABLE_MAP)));
+    const totalTables = tables.length;
+
+    if (active) {
+      for (const t of tables) {
+        try {
+          const [rows] = await pool.query(`SELECT COUNT(*) as cnt FROM \`${t}\``);
+          const cnt = rows[0]?.cnt || 0;
+          tableCounts[t] = cnt;
+          totalRecords += cnt;
+        } catch (e) {
+          tableCounts[t] = 0;
+        }
+      }
+    } else {
+      for (const t of tables) {
+        try {
+          const rows = alasql(`SELECT COUNT(*) as cnt FROM \`${t}\``) || [];
+          const cnt = rows[0]?.cnt || 0;
+          tableCounts[t] = cnt;
+          totalRecords += cnt;
+        } catch (e) {
+          tableCounts[t] = 0;
+        }
       }
     }
 
     res.json({
       success: true,
-      engine: 'better-sqlite3',
-      dbPath: SQLITE_DB_PATH,
-      sizeBytes: stats.size,
-      sizeFormatted: (stats.size / (1024 * 1024)).toFixed(2) + ' MB',
-      totalTables: tables.length,
+      engine: 'MySQL',
+      active,
+      host: process.env.MYSQL_HOST || '127.0.0.1',
+      port: Number(process.env.MYSQL_PORT || 3306),
+      database: process.env.MYSQL_DATABASE || 'tilepoint_db',
+      totalTables,
       totalRecords,
       tableCounts,
-      journalMode: 'WAL'
+      poolStatus: {
+        connectionLimit: Number(process.env.MYSQL_CONNECTION_LIMIT || 25),
+        maxIdle: Number(process.env.MYSQL_MAX_IDLE || 10)
+      }
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// Dedicated SQLite Service Endpoints for ERP Operations (better-sqlite3)
-app.get('/api/sqlite/branch-stock', (req, res) => {
+// API: Fast MySQL Branch Stock Lookup
+app.get(['/api/db/branch-stock', '/api/mysql/branch-stock', '/api/sqlite/branch-stock'], async (req, res) => {
   try {
-    if (!sqliteDb) {
-      return res.status(500).json({ success: false, error: 'SQLite database not active' });
-    }
-    ensureSqliteTable('products');
-    ensureSqliteTable('branch_stock');
-    const { branchId, productId, sku, barcode, search, category, limit = 200, offset = 0 } = req.query;
-    
-    let sql = `
-      SELECT p.*, bs.id as branchStockId, bs.quantity as branchQuantity, bs.lowStockThreshold as branchLowStockThreshold, bs.sellingPriceOverride
-      FROM products p
-      LEFT JOIN branch_stock bs ON (p.id = bs.productId AND bs.branchId = ?)
-      WHERE p.isDeleted = 0
-    `;
-    const params = [branchId || 'B1'];
+    const { branchId, productId, sku, product_sku, productSku, barcode, search, category, category_id, categoryId, limit = 200, offset = 0 } = req.query;
+    const targetBranch = branchId || 'B1';
+    const targetSku = product_sku || productSku || sku;
+    const targetCat = category_id || categoryId || category;
 
-    if (productId) {
-      sql += ' AND p.id = ?';
-      params.push(productId);
+    if (isMysqlActive) {
+      let sql = `
+        SELECT p.*, bs.id as branchStockId, bs.quantity as branchQuantity, bs.lowStockThreshold as branchLowStockThreshold, bs.sellingPriceOverride
+        FROM products p
+        LEFT JOIN branch_stock bs ON (p.id = bs.productId AND bs.branchId = ?)
+        WHERE (p.isDeleted = 0 OR p.isDeleted IS NULL)
+      `;
+      const params = [targetBranch];
+
+      if (productId) {
+        sql += ' AND p.id = ?';
+        params.push(productId);
+      }
+      if (targetSku) {
+        sql += ' AND (p.product_sku = ? OR p.sku = ?)';
+        params.push(targetSku, targetSku);
+      }
+      if (barcode) {
+        sql += ' AND p.barcode = ?';
+        params.push(barcode);
+      }
+      if (targetCat && targetCat !== 'All') {
+        sql += ' AND (p.category_id = ? OR p.category = ?)';
+        params.push(targetCat, targetCat);
+      }
+      if (search) {
+        sql += ' AND (p.productName LIKE ? OR p.productCode LIKE ? OR p.sku LIKE ? OR p.product_sku LIKE ? OR p.barcode LIKE ?)';
+        const term = `%${search}%`;
+        params.push(term, term, term, term, term);
+      }
+
+      sql += ' ORDER BY p.productName ASC LIMIT ? OFFSET ?';
+      params.push(Number(limit) || 200, Number(offset) || 0);
+
+      const [rows] = await pool.query(sql, params);
+      const parsed = rows.map(r => parseRowFromMysql('products', r));
+      return res.json({ success: true, count: parsed.length, data: parsed });
     }
 
-    if (sku) {
-      sql += ' AND p.sku = ?';
-      params.push(sku);
-    }
+    // AlaSQL fallback
+    const { db } = readFullDatabaseFromAlasql();
+    let prods = Array.isArray(db.tp_products) ? db.tp_products.filter(p => p && !p.isDeleted) : [];
+    const bStock = Array.isArray(db.tp_branch_stock) ? db.tp_branch_stock : [];
 
-    if (barcode) {
-      sql += ' AND p.barcode = ?';
-      params.push(barcode);
-    }
-
-    if (category && category !== 'All') {
-      sql += ' AND p.category = ?';
-      params.push(category);
-    }
-
+    if (productId) prods = prods.filter(p => p.id === productId);
+    if (targetSku) prods = prods.filter(p => p.sku === targetSku || p.product_sku === targetSku);
+    if (barcode) prods = prods.filter(p => p.barcode === barcode);
+    if (targetCat && targetCat !== 'All') prods = prods.filter(p => p.category === targetCat || p.category_id === targetCat);
     if (search) {
-      sql += ' AND (p.productName LIKE ? OR p.productCode LIKE ? OR p.sku LIKE ? OR p.barcode LIKE ?)';
-      const term = `%${search}%`;
-      params.push(term, term, term, term);
+      const q = String(search).toLowerCase();
+      prods = prods.filter(p =>
+        (p.productName && p.productName.toLowerCase().includes(q)) ||
+        (p.productCode && p.productCode.toLowerCase().includes(q)) ||
+        (p.sku && p.sku.toLowerCase().includes(q)) ||
+        (p.product_sku && p.product_sku.toLowerCase().includes(q)) ||
+        (p.barcode && p.barcode.toLowerCase().includes(q))
+      );
     }
 
-    sql += ' ORDER BY p.productName ASC LIMIT ? OFFSET ?';
-    params.push(Number(limit) || 200, Number(offset) || 0);
+    const result = prods.slice(Number(offset) || 0, (Number(offset) || 0) + (Number(limit) || 200)).map(p => {
+      const bs = bStock.find(s => s && s.productId === p.id && s.branchId === targetBranch);
+      return {
+        ...p,
+        branchStockId: bs ? bs.id : undefined,
+        branchQuantity: bs ? Number(bs.quantity) || 0 : 0,
+        branchLowStockThreshold: bs ? bs.lowStockThreshold : undefined,
+        sellingPriceOverride: bs ? bs.sellingPriceOverride : undefined
+      };
+    });
 
-    const rows = sqliteDb.prepare(sql).all(...params) || [];
-    const parsed = rows.map(r => parseRowFromMysql('products', r));
-    res.json({ success: true, count: parsed.length, data: parsed });
+    res.json({ success: true, count: result.length, data: result });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-app.post('/api/sqlite/sales', express.json(), (req, res) => {
+// API: Direct Inventory Query with Indexed Lookups (product_sku, category_id, branchId)
+app.get(['/api/db/inventory', '/api/mysql/inventory'], async (req, res) => {
   try {
-    if (!sqliteDb) {
-      return res.status(500).json({ success: false, error: 'SQLite database not active' });
+    const { product_sku, sku, category_id, category, branchId, search, limit = 100, offset = 0 } = req.query;
+    const targetSku = product_sku || sku;
+    const targetCategory = category_id || category;
+
+    if (isMysqlActive) {
+      let sql = 'SELECT * FROM inventory WHERE isDeleted = 0';
+      const params = [];
+
+      if (targetSku) {
+        sql += ' AND (product_sku = ? OR sku = ?)';
+        params.push(targetSku, targetSku);
+      }
+      if (targetCategory) {
+        sql += ' AND (category_id = ? OR category = ?)';
+        params.push(targetCategory, targetCategory);
+      }
+      if (branchId) {
+        sql += ' AND branchId = ?';
+        params.push(branchId);
+      }
+      if (search) {
+        sql += ' AND (productName LIKE ? OR product_sku LIKE ? OR sku LIKE ? OR barcode LIKE ?)';
+        const term = `%${search}%`;
+        params.push(term, term, term, term);
+      }
+
+      sql += ' ORDER BY productName ASC LIMIT ? OFFSET ?';
+      params.push(Number(limit) || 100, Number(offset) || 0);
+
+      const [rows] = await pool.query(sql, params);
+      const parsed = rows.map(r => parseRowFromMysql('inventory', r));
+      return res.json({ success: true, count: parsed.length, data: parsed });
     }
+
+    // Fallback via AlaSQL or Products
+    const items = await getInventoryAndBranchStockLookups({
+      sku: targetSku,
+      product_sku: targetSku,
+      category: targetCategory,
+      category_id: targetCategory,
+      branchId,
+      search,
+      limit,
+      offset
+    });
+    return res.json({ success: true, count: items.length, data: items });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Save POS Sale into MySQL with full ACID transaction, row-locking & Idempotency
+app.post(['/api/db/sales', '/api/mysql/sales', '/api/sqlite/sales'], express.json(), async (req, res) => {
+  try {
     const sale = req.body;
     if (!sale || !sale.id) {
       return res.status(400).json({ success: false, error: 'Sale record with id is required' });
@@ -2295,59 +2233,88 @@ app.post('/api/sqlite/sales', express.json(), (req, res) => {
     const items = Array.isArray(sale.items) ? sale.items : [];
     delete sale.items;
 
-    const saveSaleTx = sqliteDb.transaction(() => {
-      upsertRecordSqlite('sales', sale);
-      for (const item of items) {
-        if (!item.saleId) item.saleId = sale.id;
-        upsertRecordSqlite('sale_items', item);
+    // Idempotency check: if sale with this ID or idempotencyKey already exists, return cleanly
+    if (isMysqlActive && sale.idempotencyKey) {
+      try {
+        const [existing] = await pool.query('SELECT id, saleNumber FROM sales WHERE idempotencyKey = ? LIMIT 1', [sale.idempotencyKey]);
+        if (existing && existing.length > 0) {
+          return res.json({ success: true, id: existing[0].id, duplicate: true, message: 'Sale was already processed (idempotent response)' });
+        }
+      } catch (_) {}
+    }
 
-        // Deduct inventory stock in SQLite if productId and quantity provided
-        if (item.productId && item.quantity) {
-          const qty = Number(item.quantity) || 0;
-          if (sale.branchId) {
-            const existingBs = sqliteDb.prepare('SELECT * FROM branch_stock WHERE branchId = ? AND productId = ?').get(sale.branchId, item.productId);
-            if (existingBs) {
-              const newQty = Math.max(0, (Number(existingBs.quantity) || 0) - qty);
-              sqliteDb.prepare('UPDATE branch_stock SET quantity = ? WHERE id = ?').run(newQty, existingBs.id);
+    if (isMysqlActive) {
+      let conn;
+      try {
+        conn = await pool.getConnection();
+        await conn.beginTransaction();
+
+        await upsertRecordMysql('sales', sale, conn);
+
+        for (const item of items) {
+          if (!item.saleId) item.saleId = sale.id;
+          await upsertRecordMysql('sale_items', item, conn);
+
+          if (item.productId && item.quantity) {
+            const qty = Number(item.quantity) || 0;
+            if (sale.branchId) {
+              await conn.execute(`
+                UPDATE branch_stock 
+                SET quantity = GREATEST(0, quantity - ?), version = version + 1, updatedAt = NOW()
+                WHERE branchId = ? AND productId = ?
+              `, [qty, sale.branchId, item.productId]);
             }
-          }
-          const existingP = sqliteDb.prepare('SELECT * FROM products WHERE id = ?').get(item.productId);
-          if (existingP) {
-            const newPQty = Math.max(0, (Number(existingP.stockQuantity) || 0) - qty);
-            sqliteDb.prepare('UPDATE products SET stockQuantity = ? WHERE id = ?').run(newPQty, item.productId);
+            await conn.execute(`
+              UPDATE products 
+              SET stockQuantity = GREATEST(0, stockQuantity - ?), version = version + 1, updatedAt = NOW()
+              WHERE id = ?
+            `, [qty, item.productId]);
           }
         }
+
+        const auditMovement = {
+          id: 'MOV-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+          movementType: 'SALE',
+          referenceId: sale.id,
+          branchId: sale.branchId || 'B1',
+          performedBy: sale.cashierName || sale.cashierId || 'System',
+          createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+          details: `POS Sale ${sale.saleNumber || sale.id} - ${items.length} item(s)`
+        };
+        await upsertRecordMysql('inventory_movements', auditMovement, conn);
+
+        await conn.commit();
+      } catch (err) {
+        if (conn) {
+          try { await conn.rollback(); } catch (_) {}
+        }
+        console.warn('[MySQL POS Sale Transaction Error]', err.message);
+      } finally {
+        if (conn) conn.release();
       }
+    }
 
-      // Log movement to inventory_movements table
-      const auditMovement = {
-        id: 'MOV-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
-        movementType: 'SALE',
-        referenceId: sale.id,
-        branchId: sale.branchId || 'B1',
-        performedBy: sale.cashierName || sale.cashierId || 'System',
-        createdAt: new Date().toISOString(),
-        details: `POS Sale ${sale.saleNumber || sale.id} - ${items.length} item(s)`
-      };
-      upsertRecordSqlite('inventory_movements', auditMovement);
-    });
+    upsertRecordAlasql('sales', sale);
+    for (const item of items) {
+      if (!item.saleId) item.saleId = sale.id;
+      upsertRecordAlasql('sale_items', item);
+    }
 
-    saveSaleTx();
+    invalidateDbCache();
+    scheduleDebouncedDbFileWrite();
 
-    const { hash } = readFullDatabaseFromSqlite();
+    const { hash } = await readFullDatabase();
     emitPulseUpdate('sales', hash, req.headers['x-client-id']);
 
-    res.json({ success: true, id: sale.id, message: 'Sale log saved atomically to better-sqlite3 database' });
+    res.json({ success: true, id: sale.id, message: 'Sale log saved atomically to MySQL database' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-app.post('/api/sqlite/audit-trails', express.json(), (req, res) => {
+// API: Audit Trails in MySQL
+app.post(['/api/db/audit-trails', '/api/mysql/audit-trails', '/api/sqlite/audit-trails'], express.json(), async (req, res) => {
   try {
-    if (!sqliteDb) {
-      return res.status(500).json({ success: false, error: 'SQLite database not active' });
-    }
     const audit = req.body;
     if (!audit) {
       return res.status(400).json({ success: false, error: 'Audit payload required' });
@@ -2367,7 +2334,14 @@ app.post('/api/sqlite/audit-trails', express.json(), (req, res) => {
       createdAt: audit.createdAt || new Date().toISOString()
     };
 
-    upsertRecordSqlite('audit_logs', auditEntry);
+    if (isMysqlActive) {
+      try {
+        await upsertRecordMysql('audit_logs', auditEntry);
+      } catch (err) {
+        console.warn('[MySQL Audit Error]', err.message);
+      }
+    }
+    upsertRecordAlasql('audit_logs', auditEntry);
 
     res.json({ success: true, id: auditEntry.id, audit: auditEntry });
   } catch (err) {
@@ -2375,50 +2349,48 @@ app.post('/api/sqlite/audit-trails', express.json(), (req, res) => {
   }
 });
 
-app.get('/api/sqlite/audit-trails', (req, res) => {
+app.get(['/api/db/audit-trails', '/api/mysql/audit-trails', '/api/sqlite/audit-trails'], async (req, res) => {
   try {
-    if (!sqliteDb) {
-      return res.status(500).json({ success: false, error: 'SQLite database not active' });
-    }
-    ensureSqliteTable('audit_logs');
     const { branchId, module, performerId, referenceId, startDate, endDate, limit = 100 } = req.query;
-    let sql = 'SELECT * FROM audit_logs WHERE 1=1';
-    const params = [];
 
-    if (branchId) {
-      sql += ' AND branchId = ?';
-      params.push(branchId);
+    if (isMysqlActive) {
+      let sql = 'SELECT * FROM audit_logs WHERE 1=1';
+      const params = [];
+
+      if (branchId) {
+        sql += ' AND branchId = ?';
+        params.push(branchId);
+      }
+      if (module && module !== 'All') {
+        sql += ' AND module = ?';
+        params.push(module);
+      }
+      if (performerId) {
+        sql += ' AND userId = ?';
+        params.push(performerId);
+      }
+      if (referenceId) {
+        sql += ' AND referenceId = ?';
+        params.push(referenceId);
+      }
+      if (startDate) {
+        sql += ' AND (createdAt >= ? OR timestamp >= ?)';
+        params.push(startDate, startDate);
+      }
+      if (endDate) {
+        sql += ' AND (createdAt <= ? OR timestamp <= ?)';
+        params.push(endDate, endDate);
+      }
+
+      sql += ' ORDER BY COALESCE(timestamp, createdAt) DESC LIMIT ?';
+      params.push(Number(limit) || 100);
+
+      const [rows] = await pool.query(sql, params);
+      const parsed = rows.map(r => parseRowFromMysql('audit_logs', r));
+      return res.json({ success: true, count: parsed.length, data: parsed });
     }
 
-    if (module && module !== 'All') {
-      sql += ' AND module = ?';
-      params.push(module);
-    }
-
-    if (performerId) {
-      sql += ' AND userId = ?';
-      params.push(performerId);
-    }
-
-    if (referenceId) {
-      sql += ' AND referenceId = ?';
-      params.push(referenceId);
-    }
-
-    if (startDate) {
-      sql += ' AND (createdAt >= ? OR timestamp >= ?)';
-      params.push(startDate, startDate);
-    }
-
-    if (endDate) {
-      sql += ' AND (createdAt <= ? OR timestamp <= ?)';
-      params.push(endDate, endDate);
-    }
-
-    sql += ' ORDER BY COALESCE(timestamp, createdAt) DESC LIMIT ?';
-    params.push(Number(limit) || 100);
-
-    const rows = sqliteDb.prepare(sql).all(...params) || [];
+    const rows = alasql('SELECT * FROM audit_logs') || [];
     const parsed = rows.map(r => parseRowFromMysql('audit_logs', r));
     res.json({ success: true, count: parsed.length, data: parsed });
   } catch (err) {
@@ -2426,17 +2398,14 @@ app.get('/api/sqlite/audit-trails', (req, res) => {
   }
 });
 
-app.post('/api/sqlite/stock-transfers', express.json(), (req, res) => {
+// API: Stock Transfers in MySQL
+app.post(['/api/db/stock-transfers', '/api/mysql/stock-transfers', '/api/sqlite/stock-transfers'], express.json(), async (req, res) => {
   try {
-    if (!sqliteDb) {
-      return res.status(500).json({ success: false, error: 'SQLite database not active' });
-    }
     const transfer = req.body;
     if (!transfer) {
       return res.status(400).json({ success: false, error: 'Transfer payload required' });
     }
 
-    ensureSqliteTable('stock_transfers');
     const transferEntry = {
       id: transfer.id || ('ST-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6)),
       transferNo: transfer.transferNo || ('TR-' + Date.now()),
@@ -2454,12 +2423,40 @@ app.post('/api/sqlite/stock-transfers', express.json(), (req, res) => {
       updatedAt: transfer.updatedAt || new Date().toISOString()
     };
 
-    upsertRecordSqlite('stock_transfers', transferEntry);
+    if (isMysqlActive) {
+      let conn;
+      try {
+        conn = await pool.getConnection();
+        await conn.beginTransaction();
 
+        await upsertRecordMysql('stock_transfers', transferEntry, conn);
+        if (Array.isArray(transfer.items)) {
+          for (const item of transfer.items) {
+            await upsertRecordMysql('stock_transfer_items', {
+              id: item.id || ('STI-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6)),
+              transferId: transferEntry.id,
+              productId: item.productId,
+              productName: item.productName || '',
+              quantity: item.quantity || 0,
+              isDeleted: 0
+            }, conn);
+          }
+        }
+        await conn.commit();
+      } catch (err) {
+        if (conn) {
+          try { await conn.rollback(); } catch (_) {}
+        }
+        console.warn('[MySQL Stock Transfer Transaction Error]', err.message);
+      } finally {
+        if (conn) conn.release();
+      }
+    }
+
+    upsertRecordAlasql('stock_transfers', transferEntry);
     if (Array.isArray(transfer.items)) {
-      ensureSqliteTable('stock_transfer_items');
       for (const item of transfer.items) {
-        upsertRecordSqlite('stock_transfer_items', {
+        upsertRecordAlasql('stock_transfer_items', {
           id: item.id || ('STI-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6)),
           transferId: transferEntry.id,
           productId: item.productId,
@@ -2476,50 +2473,217 @@ app.post('/api/sqlite/stock-transfers', express.json(), (req, res) => {
   }
 });
 
-app.get('/api/sqlite/stock-transfers', (req, res) => {
+app.get(['/api/db/stock-transfers', '/api/mysql/stock-transfers', '/api/sqlite/stock-transfers'], async (req, res) => {
   try {
-    if (!sqliteDb) {
-      return res.status(500).json({ success: false, error: 'SQLite database not active' });
-    }
-    ensureSqliteTable('stock_transfers');
     const { branchId, fromBranchId, toBranchId, status, startDate, endDate, limit = 100 } = req.query;
-    let sql = 'SELECT * FROM stock_transfers WHERE 1=1 AND (isDeleted IS NULL OR isDeleted = 0)';
-    const params = [];
 
-    if (branchId) {
-      sql += ' AND (branchId = ? OR fromBranchId = ? OR toBranchId = ?)';
-      params.push(branchId, branchId, branchId);
-    }
-    if (fromBranchId) {
-      sql += ' AND fromBranchId = ?';
-      params.push(fromBranchId);
-    }
-    if (toBranchId) {
-      sql += ' AND toBranchId = ?';
-      params.push(toBranchId);
-    }
-    if (status) {
-      sql += ' AND status = ?';
-      params.push(status);
-    }
-    if (startDate) {
-      sql += ' AND (timestamp >= ? OR createdAt >= ?)';
-      params.push(startDate, startDate);
-    }
-    if (endDate) {
-      sql += ' AND (timestamp <= ? OR createdAt <= ?)';
-      params.push(endDate, endDate);
+    if (isMysqlActive) {
+      let sql = 'SELECT * FROM stock_transfers WHERE 1=1 AND (isDeleted IS NULL OR isDeleted = 0)';
+      const params = [];
+
+      if (branchId) {
+        sql += ' AND (branchId = ? OR fromBranchId = ? OR toBranchId = ?)';
+        params.push(branchId, branchId, branchId);
+      }
+      if (fromBranchId) {
+        sql += ' AND fromBranchId = ?';
+        params.push(fromBranchId);
+      }
+      if (toBranchId) {
+        sql += ' AND toBranchId = ?';
+        params.push(toBranchId);
+      }
+      if (status) {
+        sql += ' AND status = ?';
+        params.push(status);
+      }
+      if (startDate) {
+        sql += ' AND (timestamp >= ? OR createdAt >= ?)';
+        params.push(startDate, startDate);
+      }
+      if (endDate) {
+        sql += ' AND (timestamp <= ? OR createdAt <= ?)';
+        params.push(endDate, endDate);
+      }
+
+      sql += ' ORDER BY COALESCE(timestamp, createdAt) DESC LIMIT ?';
+      params.push(Number(limit) || 100);
+
+      const [rows] = await pool.query(sql, params);
+      const parsed = rows.map(r => parseRowFromMysql('stock_transfers', r));
+      return res.json({ success: true, count: parsed.length, data: parsed });
     }
 
-    sql += ' ORDER BY COALESCE(timestamp, createdAt) DESC LIMIT ?';
-    params.push(Number(limit) || 100);
-
-    const rows = sqliteDb.prepare(sql).all(...params) || [];
+    const rows = alasql('SELECT * FROM stock_transfers WHERE (isDeleted IS NULL OR isDeleted = 0)') || [];
     const parsed = rows.map(r => parseRowFromMysql('stock_transfers', r));
     res.json({ success: true, count: parsed.length, data: parsed });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
+});
+
+// API: High-Performance Offline Outbox Batch Sync Protocol
+// Processes multiple queued terminal mutations (sales, stock changes, logs) atomically
+app.post(['/api/db/sync-batch', '/api/mysql/sync-batch'], express.json({ limit: '50mb' }), async (req, res) => {
+  const { mutations, terminalId, branchId } = req.body;
+  if (!Array.isArray(mutations) || mutations.length === 0) {
+    return res.status(400).json({ success: false, error: 'Array of mutations is required' });
+  }
+
+  const results = {
+    total: mutations.length,
+    processed: 0,
+    skipped: 0,
+    failed: 0,
+    terminalId: terminalId || 'UNKNOWN',
+    branchId: branchId || 'B1',
+    serverTimestamp: new Date().toISOString()
+  };
+
+  const db = readDbFile();
+  let processedDeltaIds = db.tp_processed_delta_ids || [];
+
+  if (isMysqlActive) {
+    let conn;
+    try {
+      conn = await pool.getConnection();
+      await conn.beginTransaction();
+
+      for (const mutation of mutations) {
+        if (!mutation || !mutation.id) {
+          results.skipped++;
+          continue;
+        }
+
+        // Idempotency check: Skip already committed mutation packages
+        if (processedDeltaIds.includes(mutation.id)) {
+          results.skipped++;
+          continue;
+        }
+
+        try {
+          if (mutation.type === 'ATOMIC_TRANSACTION' || mutation.type === 'TRANSACTION_PACKAGE') {
+            const payload = mutation.payload || {};
+            
+            // Standard entity collections
+            const keyMap = {
+              sales: 'sales',
+              saleItems: 'sale_items',
+              movements: 'inventory_movements',
+              auditLogs: 'audit_logs',
+              ledgerEntries: 'ledger_entries',
+              expenses: 'expenses',
+              stockTransfers: 'stock_transfers',
+              shifts: 'shifts'
+            };
+
+            for (const [propName, tbl] of Object.entries(keyMap)) {
+              const records = payload[propName];
+              if (Array.isArray(records) && records.length > 0) {
+                for (const rec of records) {
+                  if (rec && rec.id) {
+                    await upsertRecordMysql(tbl, rec, conn);
+                  }
+                }
+              }
+            }
+
+            // Branch Stock updates
+            if (Array.isArray(payload.branchStockUpdates)) {
+              for (const bs of payload.branchStockUpdates) {
+                if (bs && bs.branchId && bs.productId) {
+                  await upsertRecordMysql('branch_stock', {
+                    id: bs.id || `${bs.branchId}_${bs.productId}`,
+                    branchId: bs.branchId,
+                    productId: bs.productId,
+                    quantity: Number(bs.quantity) || 0,
+                    version: bs.version || 1,
+                    updatedAt: bs.updatedAt || new Date().toISOString().slice(0, 19).replace('T', ' ')
+                  }, conn);
+                }
+              }
+            }
+
+            // Products updates
+            if (Array.isArray(payload.productUpdates)) {
+              for (const p of payload.productUpdates) {
+                if (p && p.id) {
+                  await upsertRecordMysql('products', p, conn);
+                }
+              }
+            }
+          } else if (mutation.type === 'SINGLE_UPSERT' && mutation.table && mutation.row) {
+            await upsertRecordMysql(mutation.table, mutation.row, conn);
+          }
+
+          processedDeltaIds.push(mutation.id);
+          results.processed++;
+        } catch (itemErr) {
+          console.warn('[Sync-Batch Mutation Error]', itemErr.message);
+          results.failed++;
+        }
+      }
+
+      await conn.commit();
+    } catch (txErr) {
+      if (conn) {
+        try { await conn.rollback(); } catch (_) {}
+      }
+      console.warn('[Sync-Batch Transaction Rollback]', txErr.message);
+    } finally {
+      if (conn) conn.release();
+    }
+  }
+
+  // AlaSQL and Local JSON Persistence fallback for mutations
+  for (const mutation of mutations) {
+    if (!mutation || !mutation.id) continue;
+    const payload = mutation.payload || {};
+    
+    if (mutation.type === 'ATOMIC_TRANSACTION' || mutation.type === 'TRANSACTION_PACKAGE') {
+      const keyMap = {
+        sales: 'tp_sales',
+        saleItems: 'tp_sale_items',
+        movements: 'tp_movements',
+        auditLogs: 'tp_audit_logs',
+        ledgerEntries: 'tp_ledger_entries',
+        expenses: 'atpos_v2_expenses',
+        stockTransfers: 'tp_stock_transfers',
+        shifts: 'tp_shifts'
+      };
+
+      for (const [propName, storeKey] of Object.entries(keyMap)) {
+        const records = payload[propName];
+        if (Array.isArray(records) && records.length > 0) {
+          db[storeKey] = Array.isArray(db[storeKey]) ? db[storeKey] : [];
+          const tbl = KEY_TO_TABLE_MAP[storeKey];
+          for (const rec of records) {
+            if (!rec || !rec.id) continue;
+            const idx = db[storeKey].findIndex(r => r && r.id === rec.id);
+            if (idx >= 0) db[storeKey][idx] = { ...db[storeKey][idx], ...rec };
+            else db[storeKey].push(rec);
+            if (tbl) upsertRecordAlasql(tbl, rec);
+          }
+        }
+      }
+    }
+  }
+
+  if (processedDeltaIds.length > 5000) {
+    processedDeltaIds = processedDeltaIds.slice(-5000);
+  }
+  db.tp_processed_delta_ids = processedDeltaIds;
+  writeDbFile(db);
+  invalidateDbCache();
+
+  const { hash } = await readFullDatabase();
+  emitPulseUpdate('sync-batch', hash, req.headers['x-client-id']);
+
+  res.json({
+    success: results.failed === 0,
+    ...results,
+    hash
+  });
 });
 
 // Explicit static route for PWA Service Worker & Manifest
@@ -2556,13 +2720,13 @@ app.get('/manifest.json', (req, res) => {
 });
 
 // Vite middleware setup or production static files
-const hasDistBuild = fs.existsSync(path.join(__dirname, 'dist', 'index.html'));
-if (process.env.NODE_ENV === 'production' || hasDistBuild) {
+if (process.env.NODE_ENV === 'production') {
   console.log('[Shared DB Server] Serving compiled production static files from dist/...');
-  app.use(express.static(path.join(__dirname, 'dist')));
+  const distPath = path.join(__dirname, 'dist');
+  app.use(express.static(distPath));
   
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    res.sendFile(path.join(distPath, 'index.html'));
   });
 } else {
   console.log('[Shared DB Server] Running in DEVELOPMENT mode with Vite middleware...');
@@ -2571,7 +2735,7 @@ if (process.env.NODE_ENV === 'production' || hasDistBuild) {
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
-        hmr: process.env.DISABLE_HMR === 'true' ? false : { server }
+        hmr: process.env.DISABLE_HMR === 'true' ? false : { server },
       },
       appType: 'spa'
     });
@@ -2581,9 +2745,8 @@ if (process.env.NODE_ENV === 'production' || hasDistBuild) {
   }
 }
 
-// Initialize AlaSQL & SQLite Persistent Database Engines
+// Initialize AlaSQL Embedded Engine
 initAlasqlEngine();
-await initSqliteEngine();
 
 server.listen(PORT, '0.0.0.0', async () => {
   await initDatabaseSchema();
@@ -2592,7 +2755,7 @@ server.listen(PORT, '0.0.0.0', async () => {
   console.log(`========================================`);
   console.log(`Server Port         : ${PORT}`);
   console.log(`Security Mode       : ${useSsl ? 'HTTPS (SSL Secured)' : 'HTTP (Standard)'}`);
-  console.log(`Database Engine     : better-sqlite3 Persistent Local SQLite Engine (Primary) / MySQL Pool`);
+  console.log(`Database Engine     : MySQL Connection Pool (Primary) with Embedded AlaSQL Buffer`);
   console.log(`Real-Time Engine    : Socket.io (db_pulse_update) + SSE`);
   console.log(`========================================`);
 });

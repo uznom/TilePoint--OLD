@@ -1,5 +1,12 @@
 -- TilePoint Enterprise Retail & Inventory POS Engine
 -- Production-Ready MySQL Database Schema
+--
+-- PERFORMANCE & INDEXING ARCHITECTURE BEST PRACTICES:
+-- 1. All single and composite database indexes MUST contain 5 or fewer columns (<= 5 columns).
+--    Keeping index width compact minimizes B-Tree traversal depth, reduces cache footprint,
+--    and prevents index bloat during high-throughput POS write bursts.
+-- 2. High-cardinality columns (e.g., branchId, timestamp, productId) are positioned first in composite keys.
+-- 3. Soft deletes (isDeleted) and active statuses use single-column index keys for optimal range scans.
 
 CREATE DATABASE IF NOT EXISTS `tilepoint_db` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE `tilepoint_db`;
@@ -97,6 +104,8 @@ CREATE TABLE IF NOT EXISTS `products` (
   `category` VARCHAR(128) NOT NULL,
   `brand` VARCHAR(128) NULL,
   `sku` VARCHAR(128) NULL,
+  `product_sku` VARCHAR(128) NULL,
+  `category_id` VARCHAR(128) NULL,
   `barcode` VARCHAR(128) NULL,
   `unit` VARCHAR(64) NOT NULL DEFAULT 'Pcs',
   `costPrice` DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
@@ -126,11 +135,51 @@ CREATE TABLE IF NOT EXISTS `products` (
   UNIQUE KEY `uk_products_code` (`productCode`),
   KEY `idx_products_barcode` (`barcode`),
   KEY `idx_products_sku` (`sku`),
+  KEY `idx_products_product_sku` (`product_sku`),
   KEY `idx_products_category` (`category`),
+  KEY `idx_products_category_id` (`category_id`),
+  KEY `idx_products_sku_category` (`sku`, `category`),
+  KEY `idx_products_sku_cat_id` (`product_sku`, `category_id`),
   KEY `idx_products_brand` (`brand`),
   KEY `idx_products_supplier_id` (`supplierId`),
   KEY `idx_products_is_deleted` (`isDeleted`),
   CONSTRAINT `fk_products_supplier` FOREIGN KEY (`supplierId`) REFERENCES `suppliers` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 5b. Inventory Table (High-Performance Stock & Materialized Catalog Registry)
+CREATE TABLE IF NOT EXISTS `inventory` (
+  `id` VARCHAR(64) NOT NULL,
+  `productId` VARCHAR(64) NULL,
+  `product_sku` VARCHAR(128) NOT NULL,
+  `category_id` VARCHAR(128) NOT NULL,
+  `productCode` VARCHAR(128) NULL,
+  `productName` VARCHAR(255) NOT NULL,
+  `category` VARCHAR(128) NULL,
+  `brand` VARCHAR(128) NULL,
+  `sku` VARCHAR(128) NULL,
+  `barcode` VARCHAR(128) NULL,
+  `unit` VARCHAR(64) NOT NULL DEFAULT 'Pcs',
+  `branchId` VARCHAR(64) NULL,
+  `stockQuantity` DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+  `costPrice` DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+  `sellingPrice` DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+  `lowStockThreshold` DECIMAL(12, 2) NULL DEFAULT 10.00,
+  `supplierId` VARCHAR(64) NULL,
+  `origin` VARCHAR(128) NULL,
+  `version` INT NOT NULL DEFAULT 1,
+  `isDeleted` TINYINT(1) NOT NULL DEFAULT 0,
+  `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_inventory_product_sku` (`product_sku`),
+  KEY `idx_inventory_category_id` (`category_id`),
+  KEY `idx_inventory_sku_cat` (`product_sku`, `category_id`),
+  KEY `idx_inventory_branch_sku` (`branchId`, `product_sku`),
+  KEY `idx_inventory_branch_cat` (`branchId`, `category_id`),
+  KEY `idx_inventory_barcode` (`barcode`),
+  KEY `idx_inventory_product_id` (`productId`),
+  KEY `idx_inventory_category` (`category`),
+  KEY `idx_inventory_is_deleted` (`isDeleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 6. Branch Stock Table

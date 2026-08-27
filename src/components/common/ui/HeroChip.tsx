@@ -1,0 +1,244 @@
+import React from 'react';
+
+export type HeroChipVariant =
+  | 'solid'
+  | 'bordered'
+  | 'light'
+  | 'flat'
+  | 'faded'
+  | 'shadow'
+  | 'dot'
+  | 'primary'
+  | 'secondary'
+  | 'tertiary'
+  | 'success'
+  | 'warning'
+  | 'danger'
+  | 'info'
+  | 'neutral'
+  | 'outline';
+
+export type HeroChipColor =
+  | 'default'
+  | 'primary'
+  | 'secondary'
+  | 'success'
+  | 'warning'
+  | 'danger';
+
+export type HeroChipSize = 'sm' | 'md' | 'lg';
+export type HeroChipRadius = 'none' | 'sm' | 'md' | 'lg' | 'full';
+
+export interface HeroChipProps {
+  children?: React.ReactNode;
+  variant?: HeroChipVariant;
+  color?: HeroChipColor;
+  size?: HeroChipSize;
+  radius?: HeroChipRadius;
+  dot?: boolean;
+  startContent?: React.ReactNode;
+  endContent?: React.ReactNode;
+  avatar?: React.ReactNode;
+  className?: string;
+  id?: string;
+  onClick?: () => void;
+  onClose?: () => void;
+}
+
+export const HeroChip: React.FC<HeroChipProps> = ({
+  children,
+  variant = 'flat',
+  color = 'default',
+  size = 'md',
+  radius = 'full',
+  dot = false,
+  startContent,
+  endContent,
+  avatar,
+  className = '',
+  id,
+  onClick,
+  onClose,
+}) => {
+  // Normalize legacy variants
+  let resolvedVariant: string = variant;
+  let resolvedColor: HeroChipColor = color;
+
+  if (variant === 'primary') {
+    resolvedVariant = 'flat';
+    resolvedColor = 'primary';
+  } else if (variant === 'secondary') {
+    resolvedVariant = 'flat';
+    resolvedColor = 'secondary';
+  } else if (variant === 'tertiary') {
+    resolvedVariant = 'flat';
+    resolvedColor = 'secondary';
+  } else if (variant === 'success') {
+    resolvedVariant = 'flat';
+    resolvedColor = 'success';
+  } else if (variant === 'warning') {
+    resolvedVariant = 'flat';
+    resolvedColor = 'warning';
+  } else if (variant === 'danger') {
+    resolvedVariant = 'flat';
+    resolvedColor = 'danger';
+  } else if (variant === 'info') {
+    resolvedVariant = 'flat';
+    resolvedColor = 'primary';
+  } else if (variant === 'outline') {
+    resolvedVariant = 'bordered';
+  } else if (variant === 'neutral') {
+    resolvedVariant = 'flat';
+    resolvedColor = 'default';
+  }
+
+  const getVariantClasses = () => {
+    switch (resolvedVariant) {
+      case 'solid':
+        switch (resolvedColor) {
+          case 'primary':
+            return { container: 'bg-primary text-primary-foreground', dot: 'bg-white' };
+          case 'secondary':
+            return { container: 'bg-secondary text-secondary-foreground', dot: 'bg-white' };
+          case 'success':
+            return { container: 'bg-success text-success-foreground', dot: 'bg-white' };
+          case 'warning':
+            return { container: 'bg-warning text-warning-foreground', dot: 'bg-white' };
+          case 'danger':
+            return { container: 'bg-danger text-danger-foreground', dot: 'bg-white' };
+          case 'default':
+          default:
+            return { container: 'bg-default text-default-foreground', dot: 'bg-default-foreground' };
+        }
+      case 'bordered':
+        switch (resolvedColor) {
+          case 'primary':
+            return { container: 'border border-primary text-primary bg-transparent', dot: 'bg-primary' };
+          case 'secondary':
+            return { container: 'border border-secondary text-secondary bg-transparent', dot: 'bg-secondary' };
+          case 'success':
+            return { container: 'border border-success text-success bg-transparent', dot: 'bg-success' };
+          case 'warning':
+            return { container: 'border border-warning text-warning bg-transparent', dot: 'bg-warning' };
+          case 'danger':
+            return { container: 'border border-danger text-danger bg-transparent', dot: 'bg-danger' };
+          case 'default':
+          default:
+            return { container: 'border border-default-300 text-default-700 dark:text-default-300 bg-transparent', dot: 'bg-default-500' };
+        }
+      case 'light':
+        switch (resolvedColor) {
+          case 'primary':
+            return { container: 'text-primary bg-transparent', dot: 'bg-primary' };
+          case 'secondary':
+            return { container: 'text-secondary bg-transparent', dot: 'bg-secondary' };
+          case 'success':
+            return { container: 'text-success bg-transparent', dot: 'bg-success' };
+          case 'warning':
+            return { container: 'text-warning bg-transparent', dot: 'bg-warning' };
+          case 'danger':
+            return { container: 'text-danger bg-transparent', dot: 'bg-danger' };
+          case 'default':
+          default:
+            return { container: 'text-default-600 dark:text-default-400 bg-transparent', dot: 'bg-default-500' };
+        }
+      case 'dot':
+        switch (resolvedColor) {
+          case 'primary':
+            return { container: 'border border-default-200 bg-transparent text-default-800 dark:text-default-200', dot: 'bg-primary' };
+          case 'secondary':
+            return { container: 'border border-default-200 bg-transparent text-default-800 dark:text-default-200', dot: 'bg-secondary' };
+          case 'success':
+            return { container: 'border border-default-200 bg-transparent text-default-800 dark:text-default-200', dot: 'bg-success' };
+          case 'warning':
+            return { container: 'border border-default-200 bg-transparent text-default-800 dark:text-default-200', dot: 'bg-warning' };
+          case 'danger':
+            return { container: 'border border-default-200 bg-transparent text-default-800 dark:text-default-200', dot: 'bg-danger' };
+          case 'default':
+          default:
+            return { container: 'border border-default-200 bg-transparent text-default-800 dark:text-default-200', dot: 'bg-default-500' };
+        }
+      case 'shadow':
+        return { container: 'bg-primary text-primary-foreground shadow-md shadow-primary/30', dot: 'bg-white' };
+      case 'flat':
+      default:
+        switch (resolvedColor) {
+          case 'primary':
+            return { container: 'bg-primary-50 text-primary-600 dark:bg-primary/20 dark:text-primary border border-primary/20', dot: 'bg-primary' };
+          case 'secondary':
+            return { container: 'bg-secondary-50 text-secondary-600 dark:bg-secondary/20 dark:text-secondary border border-secondary/20', dot: 'bg-secondary' };
+          case 'success':
+            return { container: 'bg-success-50 text-success-600 dark:bg-success/20 dark:text-success border border-success/20', dot: 'bg-success' };
+          case 'warning':
+            return { container: 'bg-warning-50 text-warning-600 dark:bg-warning/20 dark:text-warning border border-warning/20', dot: 'bg-warning' };
+          case 'danger':
+            return { container: 'bg-danger-50 text-danger-600 dark:bg-danger/20 dark:text-danger border border-danger/20', dot: 'bg-danger' };
+          case 'default':
+          default:
+            return { container: 'bg-default-100 text-default-700 dark:text-default-300 border border-default-200/50', dot: 'bg-default-500' };
+        }
+    }
+  };
+
+  const getRadiusClasses = () => {
+    switch (radius) {
+      case 'none':
+        return 'rounded-none';
+      case 'sm':
+        return 'rounded-small';
+      case 'md':
+        return 'rounded-medium';
+      case 'lg':
+        return 'rounded-large';
+      case 'full':
+      default:
+        return 'rounded-full';
+    }
+  };
+
+  const getSizeClasses = () => {
+    switch (size) {
+      case 'sm':
+        return 'text-[10px] h-6 px-2 gap-1';
+      case 'lg':
+        return 'text-xs h-8 px-3.5 gap-2';
+      case 'md':
+      default:
+        return 'text-[11px] h-7 px-2.5 gap-1.5';
+    }
+  };
+
+  const styles = getVariantClasses();
+  const showDot = dot || resolvedVariant === 'dot';
+
+  return (
+    <span
+      id={id}
+      onClick={onClick}
+      className={`inline-flex items-center justify-center font-bold tracking-wide select-none transition-colors duration-150 ${getRadiusClasses()} ${getSizeClasses()} ${styles.container} ${onClick ? 'cursor-pointer active:scale-95' : ''} ${className}`}
+    >
+      {avatar && <span className="shrink-0 -ml-1 mr-1">{avatar}</span>}
+      {startContent && <span className="shrink-0">{startContent}</span>}
+      {showDot && <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${styles.dot}`} />}
+      <span>{children}</span>
+      {endContent && <span className="shrink-0">{endContent}</span>}
+      {onClose && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          className="ml-1 -mr-1 p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/20 transition-colors text-current opacity-70 hover:opacity-100 cursor-pointer"
+        >
+          <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      )}
+    </span>
+  );
+};
+
+export default HeroChip;

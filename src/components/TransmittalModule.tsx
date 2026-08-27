@@ -4,12 +4,15 @@
  */
 
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { useDb } from "../context/DbContext";
 import { isProductInBranch } from "../lib/branchUtils";
 import { formatCurrency } from "../utils/formatters";
 import { saveFileToBackup, verifyAndUnwrapBackup } from "../lib/fileBackupHelper";
 import { Transmittal, TransmittalDocType, UserRole } from "../types/db";
 import { useResponsivePageSize, TablePagination } from "./TablePagination";
+import { HeroButton } from "./common/ui";
+import { ToastNotification } from "./ToastNotification";
 import {
  Send,
  Download,
@@ -18,7 +21,6 @@ import {
  Plus,
  X,
  FileCheck,
- ShieldCheck,
  Printer,
 } from "lucide-react";
 
@@ -289,7 +291,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  if (!b) {
  const stored = localStorage.getItem("tilepoint_company_name_v1");
  if (stored) return stored;
- return "ETC_DIPOLOG MAIN";
+  return branches[0]?.name || "Main Branch";
  }
  return b.name;
  };
@@ -714,7 +716,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  const renderPayloadPrintTable = (data: any) => {
  if (!data)
  return (
- <p className="italic text-[10px] text-zinc-400">
+ <p className="italic text-[10px] text-default-500">
  Empty payload contents.
  </p>
  );
@@ -730,36 +732,36 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  return (
  <div className="space-y-4 text-xs animate-fade-in print:text-black">
  {/* Quick Metrics Grid */}
- <div className="grid grid-cols-2 shadow-sm rounded-xl overflow-hidden sm:grid-cols-4 gap-px bg-m3-outline-variant/20 border border-m3-outline-variant/15 p-px print:border-zinc-400 print:bg-transparent">
- <div className="p-3 bg-m3-surface-low text-center print:bg-white">
- <span className="text-[10px] text-zinc-400 font-bold uppercase block print:text-zinc-700">
+ <div className="grid grid-cols-2 shadow-sm rounded-xl overflow-hidden sm:grid-cols-4 gap-px bg-default-100 border border-divider/15 p-px print:border-zinc-400 print:bg-transparent">
+ <div className="p-3 bg-content1 text-center print:bg-white">
+ <span className="text-[10px] text-default-500 font-bold uppercase block print:text-default-700">
  Stock Catalog
  </span>
- <span className="font-mono text-base font-black text-m3-primary print:text-black">
+ <span className=" text-base font-black text-primary print:text-black">
  {summary.inventoryStocksCount || 0} Products
  </span>
  </div>
- <div className="p-3 bg-m3-surface-low text-center print:bg-white">
- <span className="text-[10px] text-zinc-400 font-bold uppercase block print:text-zinc-700">
+ <div className="p-3 bg-content1 text-center print:bg-white">
+ <span className="text-[10px] text-default-500 font-bold uppercase block print:text-default-700">
  Cashier Transactions
  </span>
- <span className="font-mono text-base font-black text-emerald-500 print:text-black">
+ <span className=" text-base font-black text-emerald-500 print:text-black">
  {summary.salesTransactionsCount || 0} Invoices
  </span>
  </div>
- <div className="p-3 bg-m3-surface-low text-center print:bg-white">
- <span className="text-[10px] text-zinc-400 font-bold uppercase block print:text-zinc-700">
+ <div className="p-3 bg-content1 text-center print:bg-white">
+ <span className="text-[10px] text-default-500 font-bold uppercase block print:text-default-700">
  Operating Expenses
  </span>
- <span className="font-mono text-base font-black text-rose-500 print:text-black">
+ <span className=" text-base font-black text-rose-500 print:text-black">
  {summary.expensesDisbursementsCount || 0} Logs
  </span>
  </div>
- <div className="p-3 bg-m3-surface-low text-center print:bg-white">
- <span className="text-[10px] text-zinc-400 font-bold uppercase block print:text-zinc-700">
+ <div className="p-3 bg-content1 text-center print:bg-white">
+ <span className="text-[10px] text-default-500 font-bold uppercase block print:text-default-700">
  Shifts Logged
  </span>
- <span className="font-mono text-base font-black text-amber-500 print:text-black">
+ <span className=" text-base font-black text-amber-500 print:text-black">
  {summary.cashierShiftsCount || 0} Audits
  </span>
  </div>
@@ -768,42 +770,42 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  <div className="space-y-5">
  {/* 1. Stocks Ledger Block */}
  {stocks.length > 0 && (
- <div className="p-3.5 rounded-2xl bg-m3-surface-low/30 border border-m3-outline-variant/15 space-y-2 print:border-zinc-400 print:bg-transparent">
- <p className="font-black uppercase text-[10px] text-m3-primary border-b border-m3-outline-variant/20 pb-1.5 tracking-wider flex justify-between items-center print:text-black print:border-black">
+ <div className="p-3.5 rounded-2xl bg-content1/30 border border-divider/15 space-y-2 print:border-zinc-400 print:bg-transparent">
+ <p className="font-black uppercase text-[10px] text-primary border-b border-divider/20 pb-1.5 tracking-wider flex justify-between items-center print:text-black print:border-black">
  <span>I. Branch Stock Catalog Ledger</span>
- <span className="font-mono font-bold text-[9px] bg-m3-outline-variant/20 text-zinc-400 px-1.5 py-0.2 rounded print:text-black">
+ <span className=" font-bold text-[9px] bg-default-100 text-default-500 px-1.5 py-0.2 rounded print:text-black">
  {stocks.length} items
  </span>
  </p>
  <div className="max-h-[160px] overflow-y-auto pr-1">
  <table className="w-full text-left text-[10px] border-collapse print:text-black">
  <thead>
- <tr className="border-b border-m3-outline-variant/20 font-bold text-zinc-500 text-[9px] print:text-black">
+ <tr className="border-b border-divider/20 font-bold text-default-500 text-[9px] print:text-black">
  <th className="py-1">Product Description</th>
- <th className="py-1 text-center font-mono">SKU Code</th>
+ <th className="py-1 text-center ">SKU Code</th>
  <th className="py-1 text-center">
  Local Price Override
  </th>
  <th className="py-1 text-right">Qty</th>
  </tr>
  </thead>
- <tbody className="divide-y divide-m3-outline-variant/10 print:divide-zinc-300">
+ <tbody className="divide-y divide-divider/10 print:divide-zinc-300">
  {stocks.map((item: any, i: number) => (
- <tr key={i} className="hover:bg-m3-surface-low/30">
- <td className="py-1.5 font-bold text-m3-on-surface print:text-black">
+ <tr key={i} className="hover:bg-content1/30">
+ <td className="py-1.5 font-bold text-foreground print:text-black">
  {item.productName || item.productId}
  </td>
- <td className="py-1.5 text-center font-mono text-zinc-500 print:text-black">
+ <td className="py-1.5 text-center text-default-500 print:text-black">
  {item.sku || "N/A"}
  </td>
- <td className="py-1.5 text-center font-mono text-teal-500 font-bold print:text-black">
+ <td className="py-1.5 text-center text-teal-500 font-bold print:text-black">
  {item.sellingPriceOverride ? (
  formatCurrency(item.sellingPriceOverride)
  ) : (
- <span className="text-zinc-500 italic">None</span>
+ <span className="text-default-500 italic">None</span>
  )}
  </td>
- <td className="py-1.5 text-right font-mono font-black text-emerald-500 print:text-black">
+ <td className="py-1.5 text-right font-black text-emerald-500 print:text-black">
  {item.quantity} pcs
  </td>
  </tr>
@@ -816,10 +818,10 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
 
  {/* 2. Detailed Cashier Sales Invoices Block */}
  {salesList.length > 0 && (
- <div className="p-3.5 rounded-2xl bg-m3-surface-low/30 border border-m3-outline-variant/15 space-y-3 print:border-zinc-400 print:bg-transparent">
- <p className="font-black uppercase text-[10px] text-m3-primary border-b border-m3-outline-variant/20 pb-1.5 tracking-wider flex justify-between items-center print:text-black print:border-black">
+ <div className="p-3.5 rounded-2xl bg-content1/30 border border-divider/15 space-y-3 print:border-zinc-400 print:bg-transparent">
+ <p className="font-black uppercase text-[10px] text-primary border-b border-divider/20 pb-1.5 tracking-wider flex justify-between items-center print:text-black print:border-black">
  <span>II. Cashier Transactions History Ledger</span>
- <span className="font-mono font-bold text-[9px] bg-m3-outline-variant/20 text-zinc-400 px-1.5 py-0.2 rounded print:text-black">
+ <span className=" font-bold text-[9px] bg-default-100 text-default-500 px-1.5 py-0.2 rounded print:text-black">
  {salesList.length} sales
  </span>
  </p>
@@ -827,27 +829,27 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  {salesList.map((sale: any, i: number) => (
  <div
  key={i}
- className="p-2.5 border border-m3-outline-variant/10 bg-m3-surface-lowest rounded-xl space-y-1.5 text-[10.5px] print:border-zinc-400 print:mb-2 print:break-inside-avoid"
+ className="p-2.5 border border-divider/10 bg-content1 rounded-xl space-y-1.5 text-[10.5px] print:border-zinc-400 print:mb-2 print:break-inside-avoid"
  >
- <div className="flex justify-between items-center bg-m3-outline-variant/15 p-1 px-2 rounded-lg print:border-zinc-400">
- <span className="font-mono font-black text-m3-primary print:text-black">
+ <div className="flex justify-between items-center bg-default-100 p-1 px-2 rounded-lg print:border-zinc-400">
+ <span className=" font-black text-primary print:text-black">
  {sale.saleNumber}
  </span>
- <span className="font-mono text-[9px] text-zinc-400 print:text-black">
+ <span className=" text-[9px] text-default-500 print:text-black">
  {new Date(sale.createdAt).toLocaleString()}
  </span>
  </div>
 
- <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] text-zinc-400 pr-1">
+ <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] text-default-500 pr-1">
  <div>
  Cashier:{" "}
- <strong className="text-m3-on-surface font-bold print:text-black">
+ <strong className="text-foreground font-bold print:text-black">
  {sale.cashierName}
  </strong>
  </div>
  <div>
  Customer:{" "}
- <strong className="text-m3-on-surface font-bold print:text-black">
+ <strong className="text-foreground font-bold print:text-black">
  {sale.customerName || "Walk-in"}
  </strong>
  </div>
@@ -868,10 +870,10 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  {/* Sold items breakdown */}
  {Array.isArray(sale.itemizedProducts) &&
  sale.itemizedProducts.length > 0 && (
- <div className="mt-1.5 pt-1.5 border-t border-m3-outline-variant/10">
+ <div className="mt-1.5 pt-1.5 border-t border-divider/10">
  <table className="w-full text-left text-[9px]">
  <thead>
- <tr className="text-zinc-500 font-bold border-b border-m3-outline-variant/10">
+ <tr className="text-default-500 font-bold border-b border-divider/10">
  <th>Tile Sold Description</th>
  <th className="text-center">Price</th>
  <th className="text-center">Qty</th>
@@ -883,18 +885,18 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  (p: any, idx: number) => (
  <tr
  key={idx}
- className="border-b border-m3-outline-variant/5 border-dashed"
+ className="border-b border-divider/5 border-dashed"
  >
- <td className="py-0.5 text-zinc-300 font-medium print:text-black">
+ <td className="py-0.5 text-default-700 font-medium print:text-black">
  {p.productName}
  </td>
- <td className="py-0.5 text-center font-mono print:text-black">
+ <td className="py-0.5 text-center print:text-black">
  ₱{(p.unitPrice || 0).toLocaleString()}
  </td>
- <td className="py-0.5 text-center font-mono font-bold text-m3-primary print:text-black">
+ <td className="py-0.5 text-center font-bold text-primary print:text-black">
  {p.quantity} pcs
  </td>
- <td className="py-0.5 text-right font-mono font-bold text-emerald-500 print:text-black">
+ <td className="py-0.5 text-right font-bold text-emerald-500 print:text-black">
  ₱{(p.total || 0).toLocaleString()}
  </td>
  </tr>
@@ -912,10 +914,10 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
 
  {/* 3. Operational Expenses Block */}
  {expensesList.length > 0 && (
- <div className="p-3.5 rounded-2xl bg-m3-surface-low/30 border border-m3-outline-variant/15 space-y-2 print:border-zinc-400 print:bg-transparent">
- <p className="font-black uppercase text-[10px] text-m3-primary border-b border-m3-outline-variant/20 pb-1.5 tracking-wider flex justify-between items-center print:text-black print:border-black">
+ <div className="p-3.5 rounded-2xl bg-content1/30 border border-divider/15 space-y-2 print:border-zinc-400 print:bg-transparent">
+ <p className="font-black uppercase text-[10px] text-primary border-b border-divider/20 pb-1.5 tracking-wider flex justify-between items-center print:text-black print:border-black">
  <span>III. Branch Expenses &amp; Cash Disbursements</span>
- <span className="font-mono font-bold text-[9px] bg-m3-outline-variant/20 text-zinc-400 px-1.5 py-0.2 rounded print:text-black">
+ <span className=" font-bold text-[9px] bg-default-100 text-default-500 px-1.5 py-0.2 rounded print:text-black">
  ₱
  {expensesList
  .reduce(
@@ -930,29 +932,29 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  <div className="max-h-[160px] overflow-y-auto pr-1">
  <table className="w-full text-left text-[10px] border-collapse print:text-black">
  <thead>
- <tr className="border-b border-m3-outline-variant/20 font-bold text-zinc-500 text-[9px] print:text-black">
+ <tr className="border-b border-divider/20 font-bold text-default-500 text-[9px] print:text-black">
  <th className="py-1">Category</th>
  <th className="py-1">Memo Notes</th>
  <th className="py-1 text-center">Audited By</th>
  <th className="py-1 text-right">Amount</th>
  </tr>
  </thead>
- <tbody className="divide-y divide-m3-outline-variant/10 print:divide-zinc-300">
+ <tbody className="divide-y divide-divider/10 print:divide-zinc-300">
  {expensesList.map((ex: any, i: number) => (
- <tr key={i} className="hover:bg-m3-surface-low/30">
+ <tr key={i} className="hover:bg-content1/30">
  <td className="py-1.5 font-bold text-rose-500 print:text-black">
  {ex.category}
  </td>
  <td
- className="py-1.5 text-zinc-400 italic max-w-[120px] truncate print:text-black print:max-w-none print:whitespace-normal"
+ className="py-1.5 text-default-500 italic max-w-[120px] truncate print:text-black print:max-w-none print:whitespace-normal"
  title={ex.notes}
  >
  {ex.notes}
  </td>
- <td className="py-1.5 text-center font-mono text-zinc-500 print:text-black">
+ <td className="py-1.5 text-center text-default-500 print:text-black">
  {ex.recordedBy}
  </td>
- <td className="py-1.5 text-right font-mono font-black text-rose-500 print:text-black">
+ <td className="py-1.5 text-right font-black text-rose-500 print:text-black">
  ₱{(ex.amount || 0).toLocaleString()}
  </td>
  </tr>
@@ -965,43 +967,43 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
 
  {/* 4. Cashier Shift Audits Block */}
  {shiftsList.length > 0 && (
- <div className="p-3.5 rounded-2xl bg-m3-surface-low/30 border border-m3-outline-variant/15 space-y-2 print:border-zinc-400 print:bg-transparent">
- <p className="font-black uppercase text-[10px] text-m3-primary border-b border-m3-outline-variant/20 pb-1.5 tracking-wider flex justify-between items-center print:text-black print:border-black">
+ <div className="p-3.5 rounded-2xl bg-content1/30 border border-divider/15 space-y-2 print:border-zinc-400 print:bg-transparent">
+ <p className="font-black uppercase text-[10px] text-primary border-b border-divider/20 pb-1.5 tracking-wider flex justify-between items-center print:text-black print:border-black">
  <span>V. Cashier Shift &amp; Register Drawer Audits</span>
- <span className="font-mono font-bold text-[9px] bg-m3-outline-variant/20 text-zinc-400 px-1.5 py-0.2 rounded print:text-black">
+ <span className=" font-bold text-[9px] bg-default-100 text-default-500 px-1.5 py-0.2 rounded print:text-black">
  {shiftsList.length} shifts
  </span>
  </p>
  <div className="max-h-[160px] overflow-y-auto pr-1">
  <table className="w-full text-left text-[10px] border-collapse print:text-black">
  <thead>
- <tr className="border-b border-m3-outline-variant/20 font-bold text-zinc-500 text-[9px] print:text-black">
+ <tr className="border-b border-divider/20 font-bold text-default-500 text-[9px] print:text-black">
  <th className="py-1">Logged Cashier</th>
- <th className="py-1 text-center font-mono">Status</th>
+ <th className="py-1 text-center ">Status</th>
  <th className="py-1 text-right">Open Balance</th>
  <th className="py-1 text-right">Drawer Close</th>
  <th className="py-1 text-right">Discrepancy</th>
  </tr>
  </thead>
- <tbody className="divide-y divide-m3-outline-variant/10 print:divide-zinc-300">
+ <tbody className="divide-y divide-divider/10 print:divide-zinc-300">
  {shiftsList.map((sh: any, i: number) => {
  const hasVariance = sh.variance !== 0;
  return (
- <tr key={i} className="hover:bg-m3-surface-low/30">
- <td className="py-1.5 font-bold text-m3-on-surface print:text-black">
+ <tr key={i} className="hover:bg-content1/30">
+ <td className="py-1.5 font-bold text-foreground print:text-black">
  {sh.cashierName}
  </td>
- <td className="py-1.5 text-center font-mono text-zinc-500">
+ <td className="py-1.5 text-center text-default-500">
  <span
- className={`px-1 rounded text-[8.5px] font-black uppercase ${sh.status === "Open" ? "bg-emerald-500/10 text-emerald-500" : "bg-zinc-500/15 text-zinc-400"}`}
+ className={`px-1 rounded text-[8.5px] font-black uppercase ${sh.status === "Open" ? "bg-emerald-500/10 text-emerald-500" : "bg-zinc-500/15 text-default-500"}`}
  >
  {sh.status}
  </span>
  </td>
- <td className="py-1.5 text-right font-mono print:text-black">
+ <td className="py-1.5 text-right print:text-black">
  ₱{(sh.startCash || 0).toLocaleString()}
  </td>
- <td className="py-1.5 text-right font-mono font-black print:text-black">
+ <td className="py-1.5 text-right font-black print:text-black">
  ₱
  {(
  sh.cashCount ||
@@ -1010,7 +1012,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  ).toLocaleString()}
  </td>
  <td
- className={`py-1.5 text-right font-mono font-black ${hasVariance ? "text-rose-500" : "text-emerald-500"}`}
+ className={`py-1.5 text-right font-black ${hasVariance ? "text-rose-500" : "text-emerald-500"}`}
  >
  {sh.variance > 0
  ? `+₱${sh.variance.toLocaleString()}`
@@ -1036,14 +1038,14 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  if (Array.isArray(items)) {
  return (
  <div className="space-y-1.5 mt-2">
- <p className="font-extrabold uppercase text-[9px] border-b border-black dark:border-zinc-700 pb-0.5 tracking-wider">
+ <p className="font-extrabold uppercase text-[9px] border-b border-black dark:border-divider/25 pb-0.5 tracking-wider">
  Itemized Stock Allocations:
  </p>
  <table className="w-full text-left text-[10px] border-collapse print:text-black">
  <thead>
- <tr className="border-b border-black text-[9px] font-bold text-zinc-500 print:text-black">
+ <tr className="border-b border-black text-[9px] font-bold text-default-500 print:text-black">
  <th className="py-1">Material/Product Name</th>
- <th className="py-1 text-center font-mono">SKU</th>
+ <th className="py-1 text-center ">SKU</th>
  <th className="py-1 text-center">Local Price Override</th>
  <th className="py-1 text-right">Handover Qty</th>
  </tr>
@@ -1052,20 +1054,20 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  {items.map((item: any, i: number) => (
  <tr
  key={i}
- className="border-b border-zinc-200 dark:border-zinc-800 border-dashed print:border-zinc-400"
+ className="border-b border-zinc-200 dark:border-divider/20 border-dashed print:border-zinc-400"
  >
- <td className="py-1.5 font-sans font-bold text-m3-on-surface print:text-black">
+ <td className="py-1.5 font-sans font-bold text-foreground print:text-black">
  {item.productName || item.productId}
  </td>
- <td className="py-1.5 text-center font-mono text-zinc-500 print:text-black">
+ <td className="py-1.5 text-center text-default-500 print:text-black">
  {item.sku || "N/A"}
  </td>
- <td className="py-1.5 text-center font-mono text-teal-500 font-bold print:text-black">
+ <td className="py-1.5 text-center text-teal-500 font-bold print:text-black">
  {item.sellingPriceOverride
  ? formatCurrency(item.sellingPriceOverride)
  : "None"}
  </td>
- <td className="py-1.5 text-right font-mono font-black text-emerald-500 print:text-black">
+ <td className="py-1.5 text-right font-black text-emerald-500 print:text-black">
  {item.quantity} pcs
  </td>
  </tr>
@@ -1081,30 +1083,30 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  if (Array.isArray(salesList)) {
  return (
  <div className="space-y-2 mt-2">
- <p className="font-extrabold uppercase text-[9px] border-b border-black dark:border-zinc-700 pb-0.5 tracking-wider">
+ <p className="font-extrabold uppercase text-[9px] border-b border-black dark:border-divider/25 pb-0.5 tracking-wider">
  Registered Sales Handover:
  </p>
  <table className="w-full text-left text-[10px] border-collapse print:text-black">
  <thead>
- <tr className="border-b border-black text-[9px] font-bold text-zinc-500 print:text-black">
+ <tr className="border-b border-black text-[9px] font-bold text-default-500 print:text-black">
  <th className="py-1">Transaction Ref</th>
- <th className="py-1 text-center font-mono">Payment</th>
- <th className="py-1 text-right font-mono">Grand Total</th>
+ <th className="py-1 text-center ">Payment</th>
+ <th className="py-1 text-right ">Grand Total</th>
  </tr>
  </thead>
  <tbody>
  {salesList.map((sale: any, i: number) => (
  <tr
  key={i}
- className="border-b border-zinc-200 dark:border-zinc-800 border-dashed print:border-zinc-400"
+ className="border-b border-zinc-200 dark:border-divider/20 border-dashed print:border-zinc-400"
  >
- <td className="py-1.5 font-bold font-mono text-m3-primary print:text-black">
+ <td className="py-1.5 font-bold text-primary print:text-black">
  {sale.saleNumber || sale.id}
  </td>
- <td className="py-1.5 text-center font-medium text-zinc-500 print:text-black">
+ <td className="py-1.5 text-center font-medium text-default-500 print:text-black">
  {sale.paymentMethod || "CASH"}
  </td>
- <td className="py-1.5 text-right font-mono font-black text-emerald-500 print:text-black">
+ <td className="py-1.5 text-right font-black text-emerald-500 print:text-black">
  ₱{(sale.grandTotal || 0).toLocaleString()}
  </td>
  </tr>
@@ -1120,19 +1122,19 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  if (keys.length > 0) {
  return (
  <div className="space-y-1.5 mt-2">
- <p className="font-extrabold uppercase text-[9px] border-b border-black dark:border-zinc-700 pb-0.5 tracking-wider">
+ <p className="font-extrabold uppercase text-[9px] border-b border-black dark:border-divider/25 pb-0.5 tracking-wider">
  Transmittal Properties Ledger:
  </p>
  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-[10.5px]">
  {keys.map((k, idx) => (
  <div
  key={idx}
- className="flex justify-between border-b border-zinc-200 dark:border-zinc-800 py-1 print:border-zinc-400"
+ className="flex justify-between border-b border-zinc-200 dark:border-divider/20 py-1 print:border-zinc-400"
  >
- <span className="capitalize font-medium text-zinc-400 dark:text-zinc-500 font-sans print:text-zinc-700">
+ <span className="capitalize font-medium text-default-500 dark:text-default-500 font-sans print:text-default-700">
  {k.replace(/([A-Z])/g, " $1")}:
  </span>
- <span className="font-mono font-bold text-m3-on-surface print:text-black">
+ <span className=" font-bold text-foreground print:text-black">
  {String(data[k])}
  </span>
  </div>
@@ -1143,7 +1145,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  }
 
  return (
- <pre className="p-2 border border-zinc-300 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 font-mono text-[9px] overflow-auto whitespace-pre-wrap max-h-[140px] text-zinc-400 print:text-black print:bg-white print:border-zinc-400">
+ <pre className="p-2 border border-zinc-300 dark:border-divider/20 bg-zinc-50 dark:bg-background text-[9px] overflow-auto whitespace-pre-wrap max-h-[140px] text-default-500 print:text-black print:bg-white print:border-zinc-400">
  {JSON.stringify(data, null, 2)}
  </pre>
  );
@@ -1158,22 +1160,22 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
 
  if (!isAuthorizedBranch) {
  return (
- <div className="space-y-6 animate-fade-in text-m3-on-surface">
- <div className="bg-m3-surface-low p-8 rounded-[28px] border border-m3-outline-variant/30 text-center max-w-lg mx-auto my-12 space-y-4 shadow-xl">
+ <div className="space-y-6 animate-fade-in text-foreground">
+ <div className="bg-content1 p-8 rounded-2xl border border-divider/30 text-center max-w-lg mx-auto my-12 space-y-4 shadow-xl">
  <div className="mx-auto h-16 w-16 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center border border-amber-500/20">
  <Send className="h-7 w-7 text-amber-500 animate-pulse" />
  </div>
  <div>
- <h4 className="text-base font-black text-m3-on-surface uppercase tracking-wider">
+ <h4 className="text-base font-black text-foreground uppercase tracking-wider">
  Transmittals Restricted
  </h4>
- <p className="text-[10px] text-zinc-400 font-bold font-mono uppercase tracking-widest mt-1">
+ <p className="text-[10px] text-default-500 font-bold uppercase tracking-widest mt-1">
  LOGISTICS PRIVILEGE LOCK
  </p>
  </div>
- <p className="text-xs text-m3-on-surface-variant leading-relaxed">
+ <p className="text-xs text-default-500 leading-relaxed">
  Inter-Branch Digital Transmittals are restricted for{" "}
- <strong className="font-bold text-m3-on-surface">
+ <strong className="font-bold text-foreground">
  {currentBranch ? currentBranch.name : "your branch"}
  </strong>
  . Under standard distribution parameters, only the{" "}
@@ -1186,7 +1188,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </strong>{" "}
  are authorized to dispatch or import digital transmittals.
  </p>
- <div className="pt-2 text-[10px] font-bold text-zinc-500 font-mono">
+ <div className="pt-2 text-[10px] font-bold text-default-500 ">
  Instruct the System Administrator to designate this location as a
  Distribution Hub in Branch settings.
  </div>
@@ -1196,27 +1198,32 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  }
 
  return (
- <div className="space-y-6 animate-fade-in text-m3-on-surface">
+ <div className="space-y-6 animate-fade-in text-foreground">
  {/* Search Header and actions */}
- <div className="flex justify-between items-center bg-m3-surface-low/95 backdrop-blur-md p-4 rounded-[20px] border border-m3-outline-variant/20 sticky top-0 z-20 shadow-md">
+ <div className="flex justify-between items-center bg-content1/95 backdrop-blur-md p-4 rounded-xl border border-divider/20 sticky top-0 z-20 shadow-md">
  <div>
- <h3 className="text-xs font-black tracking-widest text-m3-primary uppercase font-mono">
+ <h3 className="text-xs font-black tracking-widest text-primary uppercase ">
  Inter-Branch Digital Transmittals
  </h3>
- <p className="text-xs text-m3-on-surface-variant/80 mt-0.5">
+ <p className="text-xs text-default-500/80 mt-0.5">
  Approved ledger transfers
  </p>
  </div>
 
  <div className="flex gap-2">
- <button
+ <HeroButton
+ variant="secondary"
+ size="sm"
  onClick={handleOpenImport}
- className="p-1 px-3 bg-m3-outline-variant/15 text-m3-primary hover:bg-m3-outline-variant/25 text-xs font-bold flex items-center gap-1.5 cursor-pointer rounded-full transition-colors border border-m3-outline-variant/10"
+ startIcon={<Upload className="h-4 w-4" />}
+ className="rounded-full"
  >
- <Upload className="h-4 w-4" /> Import Slip
- </button>
+ Import Slip
+ </HeroButton>
 
- <button
+ <HeroButton
+ variant="primary"
+ size="sm"
  onClick={() => {
  setToBranchId(
  branches.find((b) => b.id !== currentUser.branchAssignmentId)
@@ -1228,18 +1235,19 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  compileBranchData("Full Branch State Snapshot");
  }, 50);
  }}
- className="m3-btn-primary flex items-center gap-1.5 cursor-pointer shadow-sm text-xs shrink-0"
+ startIcon={<Plus className="h-4 w-4" />}
+ className="rounded-full shadow-sm"
  >
- <Plus className="h-4 w-4" /> Dispatch Packet
- </button>
+ Dispatch Packet
+ </HeroButton>
  </div>
  </div>
 
  {/* Main Ledger grid */}
- <div className="m3-card shadow-sm overflow-x-auto p-0">
+ <div className="bg-content1 border border-divider rounded-large shadow-small text-foreground shadow-sm overflow-x-auto p-0">
  <table className="w-full text-xs text-left border-collapse table-auto min-w-[900px]">
  <thead>
- <tr className="border-b border-m3-outline-variant/20 bg-m3-surface/30 text-[10px] uppercase font-bold text-m3-on-surface-variant tracking-wider">
+ <tr className="border-b border-divider/20 bg-background/30 text-[10px] uppercase font-bold text-default-500 tracking-wider">
  <th className="py-3 px-4">Tracking Slip Ref</th>
  <th className="py-3 px-4 text-center">Document Category</th>
  <th className="py-3 px-4 text-center">Dispatch Branch</th>
@@ -1249,46 +1257,46 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  <th className="py-3 px-4 text-center">Command Operations</th>
  </tr>
  </thead>
- <tbody className="divide-y divide-m3-outline-variant/10 text-m3-on-surface/90">
+ <tbody className="divide-y divide-divider/10 text-foreground/90">
  {transmittals
  .slice((transPage - 1) * transPageSize, transPage * transPageSize)
  .map((t, idx) => {
- let badgeStyle = "bg-m3-outline-variant/20 text-m3-on-surface";
+ let badgeStyle = "bg-default-100 text-foreground";
  if (t.status === "Submitted")
  badgeStyle =
- "bg-m3-primary-container text-m3-on-primary-container border-m3-primary/25";
+ "bg-primary-50 text-primary-700 border-primary/25";
  if (t.status === "Approved")
  badgeStyle =
- "bg-m3-tertiary-container text-m3-on-tertiary-container border-m3-tertiary/25";
+ "bg-secondary-50 text-secondary-700 border-secondary/25";
  if (t.status === "Archived")
  badgeStyle =
- "bg-m3-outline-variant/10 text-m3-on-surface-variant/70 border-transparent";
+ "bg-default-100 text-default-500/70 border-transparent";
 
  return (
  <tr
  key={idx}
- className="hover:bg-m3-surface-low/50 transition-colors"
+ className="hover:bg-content1/50 transition-colors"
  >
  <td className="py-3.5 px-4">
- <div className="font-extrabold text-m3-primary font-mono text-xs">
+ <div className="font-extrabold text-primary text-xs">
  {t.id}
  </div>
- <div className="text-[10px] text-m3-on-surface-variant">
+ <div className="text-[10px] text-default-500">
  Signed: {t.submittedBy}
  </div>
  </td>
 
  <td className="py-3.5 px-4 text-center font-bold">
- <span className="bg-m3-outline-variant/25 px-2.5 py-0.5 rounded-full text-m3-on-surface">
+ <span className="bg-default-100 px-2.5 py-0.5 rounded-full text-foreground">
  {t.documentType}
  </span>
  </td>
 
- <td className="py-3.5 px-4 text-center font-bold text-m3-on-surface">
+ <td className="py-3.5 px-4 text-center font-bold text-foreground">
  {getBranchName(t.fromBranchId)}
  </td>
 
- <td className="py-3.5 px-4 text-center font-bold text-m3-on-surface">
+ <td className="py-3.5 px-4 text-center font-bold text-foreground">
  {getBranchName(t.toBranchId)}
  </td>
 
@@ -1300,7 +1308,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </span>
  </td>
 
- <td className="py-3.5 px-4 text-right text-m3-on-surface-variant font-mono">
+ <td className="py-3.5 px-4 text-right text-default-500 ">
  {t.submittedAt && !isNaN(new Date(t.submittedAt).getTime()) ? new Date(t.submittedAt).toLocaleDateString() : 'N/A'}
  </td>
 
@@ -1311,15 +1319,15 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  setInspectTab("itemized");
  setActiveTrans(t);
  }}
- className="py-1 px-3 text-[10px] rounded-full border border-m3-primary/35 text-m3-primary bg-m3-primary/5 hover:bg-m3-primary/10 cursor-pointer font-bold transition-colors flex items-center gap-1"
+ className="py-1 px-3 text-[10px] rounded-full border border-primary/35 text-primary bg-primary/5 hover:bg-primary/10 cursor-pointer font-bold transition-colors flex items-center gap-1"
  >
- <Printer className="h-3 w-3 text-m3-primary" /> Inspect
+ <Printer className="h-3 w-3 text-primary" /> Inspect
  &amp; Print
  </button>
 
  <button
  onClick={() => handleExportTransmittal(t)}
- className="p-1 px-1.5 text-m3-tertiary hover:scale-105 rounded-full border border-m3-tertiary/20 bg-m3-tertiary/5 cursor-pointer transition-colors"
+ className="p-1 px-1.5 text-secondary hover:scale-105 rounded-full border border-secondary/20 bg-secondary/5 cursor-pointer transition-colors"
  title="Download raw packet data"
  >
  <Download className="h-3.5 w-3.5" />
@@ -1334,7 +1342,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  <tr>
  <td
  colSpan={7}
- className="py-8 text-center text-m3-on-surface-variant"
+ className="py-8 text-center text-default-500"
  >
  No inter-branch transmittal ledgers currently recorded.
  </td>
@@ -1355,25 +1363,25 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </div>
 
  {/* MODAL 1: Create dispatch document form */}
- {showModal && (
- <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
+ {showModal && typeof document !== 'undefined' && createPortal(
+ <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
  <div
- className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm"
+ className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity"
  onClick={() => setShowModal(false)}
  />
  <form
  onSubmit={handleCreateTrans}
- className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left"
+ className="relative w-full max-w-sm rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4 text-left"
  >
- <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5 flex-shrink-0">
- <h3 className="text-base font-bold text-m3-primary flex items-center gap-2">
+ <div className="flex justify-between items-center border-b border-divider/20 pb-2.5 flex-shrink-0">
+ <h3 className="text-base font-bold text-primary flex items-center gap-2">
  <Send className="h-4.5 w-4.5" />
  <span>Dispatch Form Package</span>
  </h3>
  <button
  type="button"
  onClick={() => setShowModal(false)}
- className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full"
+ className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full"
  >
  <X className="h-5 w-5" />
  </button>
@@ -1381,13 +1389,13 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
 
  <div className="space-y-1 relative">
  <div className="flex justify-between items-center">
- <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">
+ <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">
  Document Category
  </label>
  <button
  type="button"
  onClick={() => compileBranchData(selectedDocType)}
- className="bg-m3-primary/10 text-m3-primary hover:bg-m3-primary/25 border border-m3-primary/20 px-2 py-0.5 rounded text-[9px] font-black uppercase transition-colors"
+ className="bg-primary/10 text-primary hover:bg-primary/25 border border-primary/20 px-2 py-0.5 rounded text-[9px] font-black uppercase transition-colors"
  title="Automatically snapshot and wrap core matching branch records into standard JSON ledger schema"
  >
  Pull Live Data
@@ -1400,7 +1408,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  setSelectedDocType(val);
  compileBranchData(val);
  }}
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md cursor-pointer"
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg cursor-pointer"
  >
  <option value="Full Branch State Snapshot">
  Full Branch State Snapshot (All Sales, Stocks, Shifts &amp;
@@ -1417,13 +1425,13 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </div>
 
  <div className="space-y-1 relative">
- <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">
+ <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">
  Target branch destination
  </label>
  <select
  value={toBranchId ?? ''}
  onChange={(e) => setToBranchId(e.target.value)}
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md cursor-pointer"
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg cursor-pointer"
  >
  {branches
  .filter((b) => b.id !== currentUser.branchAssignmentId)
@@ -1436,7 +1444,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </div>
 
  <div className="space-y-1 relative">
- <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">
+ <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">
  JSON Content payload
  </label>
  <textarea
@@ -1444,12 +1452,12 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  rows={4}
  value={payloadText ?? ''}
  onChange={(e) => setPayloadText(e.target.value)}
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface font-mono focus:outline-none transition-colors rounded-t-md"
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg"
  />
  </div>
 
  <div className="space-y-1 relative">
- <label className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1">
+ <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">
  Summary memo notes
  </label>
  <input
@@ -1457,39 +1465,40 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  value={notes ?? ''}
  onChange={(e) => setNotes(e.target.value)}
  placeholder="Summary memo notes"
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md"
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg"
  />
  </div>
 
- <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-4 flex-shrink-0">
+ <div className="flex justify-end gap-2 border-t border-divider/20 pt-4 flex-shrink-0">
  <button
  type="button"
  onClick={() => setShowModal(false)}
- className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
+ className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors"
  >
  Cancel
  </button>
  <button
  type="submit"
- className="m3-btn-primary px-5 py-2 text-xs shadow-sm cursor-pointer"
+ className="bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20 rounded-medium px-5 py-2 text-xs shadow-sm cursor-pointer"
  >
  Dispatch Packet
  </button>
  </div>
  </form>
- </div>
+ </div>,
+ document.body
  )}
 
  {/* MODAL 2: Inspect Payload contents details & Printable interactive slip */}
- {activeTrans && (
- <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in no-print">
+ {activeTrans && typeof document !== 'undefined' && createPortal(
+ <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in no-print font-sans">
  <div
- className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm"
+ className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity"
  onClick={() => setActiveTrans(null)}
  />
- <div className="relative w-full max-w-md rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left flex flex-col max-h-[90vh]">
- <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
- <h3 className="text-base font-black text-m3-primary flex items-center gap-2">
+ <div className="relative w-full max-w-md rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4 text-left flex flex-col max-h-[90vh]">
+ <div className="flex justify-between items-center border-b border-divider/20 pb-2.5">
+ <h3 className="text-base font-black text-primary flex items-center gap-2">
  <FileCheck className="h-5 w-5" />
  <span className="uppercase tracking-wide">
  Transmittal Slip Details
@@ -1497,21 +1506,21 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </h3>
  <button
  onClick={() => setActiveTrans(null)}
- className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full"
+ className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full"
  >
  <X className="h-5 w-5" />
  </button>
  </div>
 
  {/* Modal Navigation Tabs */}
- <div className="flex border-b border-m3-outline-variant/15 p-1 bg-m3-surface-low/50 rounded-xl flex-shrink-0">
+ <div className="flex border-b border-divider/15 p-1 bg-content1/50 rounded-xl flex-shrink-0">
  <button
  type="button"
  onClick={() => setInspectTab("itemized")}
  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer text-center ${
  inspectTab === "itemized"
- ? "bg-m3-primary text-m3-on-primary shadow-sm font-black"
- : "text-m3-on-surface-variant hover:bg-m3-primary/10 hover:text-m3-primary"
+ ? "bg-primary text-primary-foreground shadow-sm font-black"
+ : "text-default-500 hover:bg-primary/10 hover:text-primary"
  }`}
  >
  Delivery Slip Preview
@@ -1521,8 +1530,8 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  onClick={() => setInspectTab("raw")}
  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer text-center ${
  inspectTab === "raw"
- ? "bg-m3-primary text-m3-on-primary shadow-sm font-black"
- : "text-m3-on-surface-variant hover:bg-m3-primary/10 hover:text-m3-primary"
+ ? "bg-primary text-primary-foreground shadow-sm font-black"
+ : "text-default-500 hover:bg-primary/10 hover:text-primary"
  }`}
  >
  Raw JSON Ledger
@@ -1532,52 +1541,52 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  {/* Scrollable Container */}
  <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 py-1 max-h-[50vh]">
  {/* Content summary */}
- <div className="space-y-2 text-xs leading-relaxed text-m3-on-surface-variant/90 font-medium bg-m3-surface-lowest/50 p-3 rounded-2xl border border-m3-outline-variant/10">
+ <div className="space-y-2 text-xs leading-relaxed text-default-500/90 font-medium bg-content1/50 p-3 rounded-2xl border border-divider/10">
  <div className="flex justify-between">
  <strong>Tracking Slip Ref:</strong>
- <span className="font-mono text-m3-primary font-bold">
+ <span className=" text-primary font-bold">
  {activeTrans.id}
  </span>
  </div>
  <div className="flex justify-between">
  <strong>Dispatch Branch:</strong>
- <span className="text-m3-on-surface font-bold">
+ <span className="text-foreground font-bold">
  {getBranchName(activeTrans.fromBranchId)}
  </span>
  </div>
  <div className="flex justify-between">
  <strong>Recipient Destination:</strong>
- <span className="text-m3-on-surface font-bold">
+ <span className="text-foreground font-bold">
  {getBranchName(activeTrans.toBranchId)}
  </span>
  </div>
  <div className="flex justify-between">
  <strong>Signed Supervisor:</strong>
- <span className="text-m3-on-surface font-bold">
+ <span className="text-foreground font-bold">
  {activeTrans.submittedBy}
  </span>
  </div>
  <div className="flex justify-between">
  <strong>Dispatch Date:</strong>
- <span className="font-mono text-m3-on-surface font-bold">
+ <span className=" text-foreground font-bold">
  {new Date(activeTrans.submittedAt).toLocaleString()}
  </span>
  </div>
  {activeTrans.notes && (
- <div className="pt-2 italic text-m3-tertiary border-t border-m3-outline-variant/10 mt-1">
+ <div className="pt-2 italic text-secondary border-t border-divider/10 mt-1">
  Notes: "{activeTrans.notes}"
  </div>
  )}
  </div>
 
  {inspectTab === "itemized" ? (
- <div className="rounded-2xl border border-m3-outline-variant/30 p-4 bg-m3-surface-lowest space-y-3 font-mono text-xs text-zinc-800 dark:text-zinc-200 shadow-inner">
- <div className="text-center border-b border-zinc-300 dark:border-zinc-800 border-dashed pb-2">
- <div className="text-xs font-black tracking-wider text-m3-primary flex items-center justify-center gap-1">
+ <div className="rounded-2xl border border-divider/30 p-4 bg-content1 space-y-3 text-xs text-zinc-800 dark:text-foreground shadow-inner">
+ <div className="text-center border-b border-zinc-300 dark:border-divider/20 border-dashed pb-2">
+ <div className="text-xs font-black tracking-wider text-primary flex items-center justify-center gap-1">
  <Send className="h-3.5 w-3.5" /> TILEPOINT LOGISTICS
  SUMMARY
  </div>
- <div className="text-[9px] text-zinc-400 mt-0.5 tracking-widest uppercase font-sans">
+ <div className="text-[9px] text-default-500 mt-0.5 tracking-widest uppercase font-sans">
  Official Inter-Branch Slips
  </div>
  </div>
@@ -1591,7 +1600,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  );
  } catch (err) {
  return (
- <p className="text-rose-500 font-mono text-[10px]">
+ <p className="text-rose-500 text-[10px]">
  Error parsing transmittal JSON: Invalid Schema
  </p>
  );
@@ -1599,8 +1608,8 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  })()}
  </div>
 
- <div className="text-center pt-2 border-t border-dashed border-zinc-200 dark:border-zinc-800">
- <div className="text-[9px] text-zinc-400 font-sans leading-tight">
+ <div className="text-center pt-2 border-t border-dashed border-zinc-200 dark:border-divider/20">
+ <div className="text-[9px] text-default-500 font-sans leading-tight">
  Reconcile physical stock counts fully upon handover
  reception.
  </div>
@@ -1608,10 +1617,10 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </div>
  ) : (
  <div className="space-y-1">
- <span className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1 block">
+ <span className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1 block">
  Decrypted Payload Contents
  </span>
- <pre className="p-3 bg-m3-surface-lowest text-m3-primary text-[10.5px] rounded-[16px] border border-m3-outline-variant/30 font-mono max-h-[180px] overflow-auto select-all leading-relaxed shadow-inner">
+ <pre className="p-3 bg-content1 text-primary text-[10.5px] rounded-xl border border-divider/30 max-h-[180px] overflow-auto select-all leading-relaxed shadow-inner">
  {JSON.stringify(
  JSON.parse(activeTrans.payloadJson),
  null,
@@ -1635,7 +1644,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  "Inter-branch document verified and authenticated successfully.",
  );
  }}
- className="w-full py-2 bg-m3-tertiary text-m3-on-tertiary rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1 hover:bg-m3-tertiary/90 transition-all border-0"
+ className="w-full py-2 bg-secondary text-secondary-foreground rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1 hover:bg-secondary/90 transition-all border-0"
  >
  <CheckSquare className="h-4 w-4" /> Authenticate &amp;
  Approve Document
@@ -1644,7 +1653,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  )}
 
  {/* Interactive footer action row */}
- <div className="flex gap-2 pt-3 border-t border-m3-outline-variant/15 justify-end flex-shrink-0">
+ <div className="flex gap-2 pt-3 border-t border-divider/15 justify-end flex-shrink-0">
  <button
  type="button"
  onClick={() => {
@@ -1657,7 +1666,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  );
  showToast("Preparing slip print canvas...");
  }}
- className="px-4 py-2 bg-m3-primary text-m3-on-primary hover:bg-m3-primary/95 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm flex items-center gap-1.5 transition-all"
+ className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm flex items-center gap-1.5 transition-all"
  >
  <Printer className="h-4 w-4" /> Print / Save PDF
  </button>
@@ -1665,7 +1674,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  <button
  type="button"
  onClick={() => handleExportTransmittal(activeTrans)}
- className="px-3 py-2 bg-m3-outline-variant/15 text-m3-primary hover:bg-m3-outline-variant/25 text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer transition-colors border border-m3-outline-variant/10"
+ className="px-3 py-2 bg-default-100 text-primary hover:bg-default-100 text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer transition-colors border border-divider/10"
  title="Download raw JSON packet"
  >
  <Download className="h-4 w-4" /> Export JSON
@@ -1674,20 +1683,21 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  <button
  type="button"
  onClick={() => setActiveTrans(null)}
- className="px-4 py-2 text-xs font-bold rounded-xl cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
+ className="px-4 py-2 text-xs font-bold rounded-xl cursor-pointer hover:bg-default-100 text-default-500 transition-colors"
  >
  Close
  </button>
  </div>
  </div>
- </div>
+ </div>,
+ document.body
  )}
 
  {/* EXCLUSIVELY FOR PHYSICAL PRINT / PDF COMPILATION */}
  {activeTrans && (
  <div
  id="printable-transmittal-slip"
- className="hidden print:block print:fixed print:inset-0 print:bg-white print:text-black print:z-[99999999] print:p-8 print:overflow-visible font-mono text-[11px] leading-relaxed"
+ className="hidden print:block print:fixed print:inset-0 print:bg-white print:text-black print:z-[99999999] print:p-8 print:overflow-visible text-[11px] leading-relaxed"
  >
  <div className="max-w-xl mx-auto border-4 border-double border-black p-6 space-y-5">
  {/* Header */}
@@ -1698,7 +1708,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  <p className="text-xs font-bold mt-1 tracking-wider uppercase">
  OFFICIAL INTER-BRANCH DELIVERY &amp; TRANSMITTAL SLIP
  </p>
- <p className="text-[9px] text-zinc-500 mt-0.5">
+ <p className="text-[9px] text-default-500 mt-0.5">
  COMPLIANT WITH CORPORATE INVENTORY DISTRIBUTION DIRECTIVES
  </p>
  </div>
@@ -1706,15 +1716,15 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  {/* Key-Value Details Table */}
  <div className="grid grid-cols-2 gap-y-2 border-b border-black pb-4 text-[10px]">
  <div>
- <span className="font-bold uppercase text-[9px] text-zinc-600 block">
+ <span className="font-bold uppercase text-[9px] text-default-600 block">
  TRACKING SLIP ID:
  </span>
- <p className="text-xs font-black text-black font-mono mt-0.5">
+ <p className="text-xs font-black text-black mt-0.5">
  {activeTrans.id}
  </p>
  </div>
  <div>
- <span className="font-bold uppercase text-[9px] text-zinc-600 block">
+ <span className="font-bold uppercase text-[9px] text-default-600 block">
  DOCUMENT CATEGORY:
  </span>
  <p className="text-xs font-black mt-0.5 underline">
@@ -1722,7 +1732,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </p>
  </div>
  <div>
- <span className="font-bold uppercase text-[9px] text-zinc-600 block">
+ <span className="font-bold uppercase text-[9px] text-default-600 block">
  DISPATCH ORIGIN:
  </span>
  <p className="text-xs font-bold mt-0.5">
@@ -1731,7 +1741,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </p>
  </div>
  <div>
- <span className="font-bold uppercase text-[9px] text-zinc-600 block">
+ <span className="font-bold uppercase text-[9px] text-default-600 block">
  TARGET DESTINATION:
  </span>
  <p className="text-xs font-bold mt-0.5">
@@ -1740,7 +1750,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </p>
  </div>
  <div>
- <span className="font-bold uppercase text-[9px] text-zinc-600 block">
+ <span className="font-bold uppercase text-[9px] text-default-600 block">
  AUTHORIZED ISSUED BY:
  </span>
  <p className="text-xs font-bold mt-0.5">
@@ -1748,10 +1758,10 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </p>
  </div>
  <div>
- <span className="font-bold uppercase text-[9px] text-zinc-600 block">
+ <span className="font-bold uppercase text-[9px] text-default-600 block">
  SYSTEM DISPATCH DATE:
  </span>
- <p className="text-xs font-mono mt-0.5">
+ <p className="text-xs mt-0.5">
  {new Date(activeTrans.submittedAt).toLocaleString()}
  </p>
  </div>
@@ -1776,7 +1786,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  );
  } catch (err) {
  return (
- <p className="text-rose-500 font-mono text-[9px]">
+ <p className="text-rose-500 text-[9px]">
  Error parsing transmittal JSON payload.
  </p>
  );
@@ -1789,7 +1799,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  <div className="text-center space-y-8">
  <div className="border-t border-black pt-2 text-[10px] font-bold uppercase">
  DISPATCHER SIGNATURE / DATE
- <p className="text-[8px] font-normal text-zinc-400 mt-1">
+ <p className="text-[8px] font-normal text-default-500 mt-1">
  EMBEDDED SIGNATURE: {activeTrans.submittedBy}
  </p>
  </div>
@@ -1797,7 +1807,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  <div className="text-center space-y-8">
  <div className="border-t border-black pt-2 text-[10px] font-bold uppercase">
  RECIPIENT RECEIVING SIGN-OFF
- <p className="text-[8px] font-normal text-zinc-400 mt-1">
+ <p className="text-[8px] font-normal text-default-500 mt-1">
  CONFIRMS TOTAL CARGO RECONCILIATION
  </p>
  </div>
@@ -1806,11 +1816,11 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
 
  {/* Footer stamp */}
  <div className="text-center pt-6 border-t border-black border-dashed mt-6">
- <p className="text-[9px] text-zinc-500 font-sans leading-relaxed">
+ <p className="text-[9px] text-default-500 font-sans leading-relaxed">
  This digital transmittal slip was auto-compiled directly from
  live Tilepoint Inventory ledger registers.
  </p>
- <p className="text-[8px] text-zinc-400 font-mono mt-0.5">
+ <p className="text-[8px] text-default-500 mt-0.5">
  TRANSMITTAL TRANSACTION STAMP ID: {activeTrans.id}-
  {activeTrans.fromBranchId}-{activeTrans.toBranchId}-{Date.now()}
  </p>
@@ -1850,28 +1860,28 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  />
 
  {/* MODAL 3: Visual JSON import form (replacing prompt window popup) */}
- {showImportModal && (
- <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
+ {showImportModal && typeof document !== 'undefined' && createPortal(
+ <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
  <div
- className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm"
+ className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity"
  onClick={() => setShowImportModal(false)}
  />
- <div className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface text-left space-y-4">
- <div className="flex justify-between items-center border-b border-m3-outline-variant/20 pb-2.5">
- <h3 className="text-base font-bold text-m3-primary flex items-center gap-2">
+ <div className="relative w-full max-w-sm rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground text-left space-y-4">
+ <div className="flex justify-between items-center border-b border-divider/20 pb-2.5">
+ <h3 className="text-base font-bold text-primary flex items-center gap-2">
  <Upload className="h-5 w-5" /> Import JSON Slip
  </h3>
  <button
  type="button"
  onClick={() => setShowImportModal(false)}
- className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full"
+ className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full"
  >
  <X className="h-5 w-5" />
  </button>
  </div>
 
  <div className="space-y-1">
- <span className="text-[10px] font-bold text-m3-primary uppercase tracking-widest pl-1 block">
+ <span className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1 block">
  Paste Code Contents
  </span>
  <textarea
@@ -1879,36 +1889,35 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  value={rawImportText ?? ''}
  onChange={(e) => setRawImportText(e.target.value)}
  placeholder="Paste raw downloaded transmittal JSON slip data here..."
- className="w-full bg-m3-surface-lowest border-b-2 border-m3-outline-variant/60 focus:border-m3-primary px-3 py-2 text-xs text-m3-on-surface focus:outline-none transition-colors rounded-t-md font-mono"
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg "
  />
  </div>
 
- <div className="flex justify-end gap-2 border-t border-m3-outline-variant/20 pt-4">
+ <div className="flex justify-end gap-2 border-t border-divider/20 pt-4">
  <button
  type="button"
  onClick={() => setShowImportModal(false)}
- className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-m3-outline-variant/15 text-m3-on-surface-variant transition-colors"
+ className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors"
  >
  Cancel
  </button>
  <button
  onClick={executeLocalImport}
- className="m3-btn-primary px-5 py-2 text-xs shadow-sm cursor-pointer"
+ className="bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20 rounded-medium px-5 py-2 text-xs shadow-sm cursor-pointer"
  >
  Process Slip
  </button>
  </div>
  </div>
- </div>
+ </div>,
+ document.body
  )}
 
  {/* Success toast alert bar */}
- {toastMessage && (
- <div className="fixed bottom-6 right-6 bg-m3-on-surface text-m3-surface text-xs font-bold py-3 px-5 rounded-[16px] shadow-xl z-50 border border-m3-outline-variant/30 flex items-center gap-2 animate-bounce max-w-[280px]">
- <ShieldCheck className="h-4.5 w-4.5 text-m3-tertiary shrink-0" />
- <span className="leading-tight">{toastMessage}</span>
- </div>
- )}
+ <ToastNotification
+ message={toastMessage}
+ onClose={() => setToastMessage(null)}
+ />
  </div>
  );
 };

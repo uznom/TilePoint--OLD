@@ -4,2117 +4,492 @@
 
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-mono: ui-monospace, SFMono-Regular, "Courier New", Courier, monospace;
+  --font-receipt: "JetBrains Mono", ui-monospace, SFMono-Regular, "Courier New", Courier, monospace;
 
-  /* Register M3 color tokens with direct references to M3 CSS variables */
-  --color-m3-primary: var(--m3-primary);
-  --color-m3-on-primary: var(--m3-on-primary);
-  --color-m3-primary-container: var(--m3-primary-container);
-  --color-m3-on-primary-container: var(--m3-on-primary-container);
-  
-  --color-m3-secondary: var(--m3-secondary);
-  --color-m3-on-secondary: var(--m3-on-secondary);
-  --color-m3-secondary-container: var(--m3-secondary-container);
-  --color-m3-on-secondary-container: var(--m3-on-secondary-container);
-  
-  --color-m3-tertiary: var(--m3-tertiary);
-  --color-m3-on-tertiary: var(--m3-on-tertiary);
-  --color-m3-tertiary-container: var(--m3-tertiary-container);
-  --color-m3-on-tertiary-container: var(--m3-on-tertiary-container);
-  
-  --color-m3-surface: var(--m3-surface);
-  --color-m3-on-surface: var(--m3-on-surface);
-  --color-m3-on-surface-variant: var(--m3-on-surface-variant);
-  
-  --color-m3-surface-lowest: var(--m3-surface-container-lowest);
-  --color-m3-surface-low: var(--m3-surface-container-low);
-  --color-m3-surface-container: var(--m3-surface-container);
-  --color-m3-surface-high: var(--m3-surface-container-high);
-  
-  --color-m3-outline: var(--m3-outline);
-  --color-m3-outline-variant: var(--m3-outline-variant);
+  /* Color tokens */
+  --color-background: var(--heroui-background);
+  --color-foreground: var(--heroui-foreground);
+  --color-divider: var(--heroui-divider);
+  --color-focus: var(--heroui-primary);
 
-  /* Expressive Shape System */
-  --radius-m3-xs: 4px;
-  --radius-m3-sm: 8px;
-  --radius-m3-md: 12px;
-  --radius-m3-lg: 16px;
-  --radius-m3-xl: 28px;
+  --color-content1: var(--heroui-content1);
+  --color-content2: var(--heroui-content2);
+  --color-content3: var(--heroui-content3);
+  --color-content4: var(--heroui-content4);
+
+  --color-default: var(--heroui-default);
+  --color-default-foreground: var(--heroui-default-foreground);
+  --color-default-50: var(--heroui-default-50);
+  --color-default-100: var(--heroui-default-100);
+  --color-default-200: var(--heroui-default-200);
+  --color-default-300: var(--heroui-default-300);
+  --color-default-400: var(--heroui-default-400);
+  --color-default-500: var(--heroui-default-500);
+  --color-default-600: var(--heroui-default-600);
+  --color-default-700: var(--heroui-default-700);
+  --color-default-800: var(--heroui-default-800);
+  --color-default-900: var(--heroui-default-900);
+
+  --color-primary: var(--heroui-primary);
+  --color-primary-foreground: var(--heroui-primary-foreground);
+  --color-primary-50: var(--heroui-primary-50);
+  --color-primary-100: var(--heroui-primary-100);
+  --color-primary-200: var(--heroui-primary-200);
+  --color-primary-300: var(--heroui-primary-300);
+  --color-primary-400: var(--heroui-primary-400);
+  --color-primary-500: var(--heroui-primary-500);
+  --color-primary-600: var(--heroui-primary-600);
+  --color-primary-700: var(--heroui-primary-700);
+  --color-primary-800: var(--heroui-primary-800);
+  --color-primary-900: var(--heroui-primary-900);
+
+  --color-secondary: var(--heroui-secondary);
+  --color-secondary-foreground: #ffffff;
+  --color-secondary-50: var(--heroui-secondary-50);
+  --color-secondary-100: var(--heroui-secondary-100);
+  --color-secondary-200: var(--heroui-secondary-200);
+  --color-secondary-300: var(--heroui-secondary-300);
+  --color-secondary-400: var(--heroui-secondary-400);
+  --color-secondary-500: var(--heroui-secondary-500);
+  --color-secondary-600: var(--heroui-secondary-600);
+  --color-secondary-700: var(--heroui-secondary-700);
+  --color-secondary-800: var(--heroui-secondary-800);
+  --color-secondary-900: var(--heroui-secondary-900);
+
+  --color-success: var(--heroui-success);
+  --color-success-foreground: #ffffff;
+  --color-success-50: var(--heroui-success-50);
+  --color-success-100: var(--heroui-success-100);
+  --color-success-200: var(--heroui-success-200);
+  --color-success-500: var(--heroui-success);
+  --color-success-600: var(--heroui-success-600);
+
+  --color-warning: var(--heroui-warning);
+  --color-warning-foreground: #ffffff;
+  --color-warning-50: var(--heroui-warning-50);
+  --color-warning-100: var(--heroui-warning-100);
+  --color-warning-200: var(--heroui-warning-200);
+  --color-warning-500: var(--heroui-warning);
+  --color-warning-600: var(--heroui-warning-600);
+
+  --color-danger: var(--heroui-danger);
+  --color-danger-foreground: #ffffff;
+  --color-danger-50: var(--heroui-danger-50);
+  --color-danger-100: var(--heroui-danger-100);
+  --color-danger-200: var(--heroui-danger-200);
+  --color-danger-500: var(--heroui-danger);
+  --color-danger-600: var(--heroui-danger-600);
+
+  --radius-xs: 4px;
+  --radius-small: 8px;
+  --radius-medium: 12px;
+  --radius-large: 14px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
 }
 
-/* Base definitions for light / dark modes */
 :root {
-  --m3-primary: #155EEF;          /* Eye-safe Professional Royal Sapphire Blue */
-  --m3-primary-rgb: 21, 94, 239;
-  --m3-on-primary: #FFFFFF;
-  --m3-primary-container: #EFF8FF; /* Softest, calming pastel blue container background */
-  --m3-on-primary-container: #175CD3; /* Balanced high-contrast deep marine blue */
-  
-  --m3-secondary: #344054;        /* Deep Steel Slate Gray for high semantic hierarchy */
-  --m3-on-secondary: #FFFFFF;
-  --m3-secondary-container: #F2F4F7; /* Calming ash container background */
-  --m3-on-secondary-container: #1D2939; /* Rich charcoal text secondary container */
-  
-  --m3-tertiary: #0E9384;         /* Soft emerald teal, eye soothing and fresh */
-  --m3-on-tertiary: #FFFFFF;
-  --m3-tertiary-container: #F0FDF9;
-  --m3-on-tertiary-container: #0F6357;
-  
-  --m3-surface: #EBF0F6;          /* Anti-glare eye-safe soft slate-blue-gray underlay */
-  --m3-on-surface: #101828;       /* Charcoal Black text for top-grade readability (18.2:1 contrast ratio) */
-  --m3-on-surface-variant: #344054; /* Highly legible variant copy (10.4:1 contrast ratio) */
-  --m3-surface-container-lowest: #FAFBFD; /* Super-soft luxurious ivory-blue eggshell white for input backgrounds */
-  --m3-surface-container-low: #F3F6FA; /* Soft, restful slate-gray card layout (no pure white blinding lights) */
-  --m3-surface-container: #E4E8F0;
-  --m3-surface-container-high: #D0D7E2;
-
-  --m3-surface-lowest: var(--m3-surface-container-lowest);
-  --m3-surface-low: var(--m3-surface-container-low);
-  --m3-surface-high: var(--m3-surface-container-high);
-  
-  --m3-outline: #475467;          /* Eye-safe secondary elements and inputs boundary borders */
-  --m3-outline-variant: #C2CBD6;  /* Explicit card & structural layout grid grid lines */
-  --m3-hover-overlay: rgba(var(--m3-primary-rgb), 0.08); /* Professional light mode active hover */
-}
-
-/* We also apply variables to .dark class when state has darkMode=true */
-:root.dark {
-  --m3-primary: #3B82F6;          /* Glowing Professional Royal Blue */
-  --m3-primary-rgb: 59, 130, 246;
-  --m3-on-primary: #FFFFFF;
-  --m3-primary-container: #1E40AF;
-  --m3-on-primary-container: #EBF5FF;
-  
-  --m3-secondary: #94A3B8;        /* Bright Steel/Graphite Grey */
-  --m3-on-secondary: #0F172A;
-  --m3-secondary-container: #1E293B;
-  --m3-on-secondary-container: #E2E8F0;
-  
-  --m3-tertiary: #14B8A6;         /* Warning Turquoise/Teal */
-  --m3-on-tertiary: #FFFFFF;
-  --m3-tertiary-container: #115E59;
-  --m3-on-tertiary-container: #CCFBF1;
-  
-  --m3-surface: #0B0F13;          /* Deep Carbon / Midnight Slate */
-  --m3-on-surface: #F8FAFC;
-  --m3-on-surface-variant: #94A3B8;
-  --m3-surface-container-lowest: #070B0E;
-  --m3-surface-container-low: #131A22;
-  --m3-surface-container: #1E293B;
-  --m3-surface-container-high: #334155;
-
-  --m3-surface-lowest: var(--m3-surface-container-lowest);
-  --m3-surface-low: var(--m3-surface-container-low);
-  --m3-surface-high: var(--m3-surface-container-high);
-  
-  --m3-outline: #475569;
-  --m3-outline-variant: #334155;
-  --m3-hover-overlay: rgba(var(--m3-primary-rgb), 0.16); /* Bright active dark mode hover */
-}
-
-/* Accessibility legibility enhancement for Light Theme:
-   Upgrade standard gray/zinc/slate text classes to higher-contrast tones under light mode
-   while preserving soft gray colors in dark mode or nested dark elements. */
-html:not(.dark) .text-zinc-400 {
-  color: #52525b !important; /* zinc-600 */
-}
-html:not(.dark) .text-slate-400 {
-  color: #475569 !important; /* slate-600 */
-}
-html:not(.dark) .text-gray-400 {
-  color: #4b5563 !important; /* gray-600 */
-}
-html:not(.dark) .text-neutral-400 {
-  color: #525252 !important; /* neutral-600 */
-}
-
-html:not(.dark) .text-zinc-500 {
-  color: #3f3f46 !important; /* zinc-700 */
-}
-html:not(.dark) .text-slate-500 {
-  color: #334155 !important; /* slate-700 */
-}
-html:not(.dark) .text-gray-500 {
-  color: #374151 !important; /* gray-700 */
-}
-html:not(.dark) .text-neutral-500 {
-  color: #404040 !important; /* neutral-700 */
-}
-
-html:not(.dark) .text-zinc-300 {
-  color: #71717a !important; /* zinc-500 */
-}
-html:not(.dark) .text-slate-300 {
-  color: #64748b !important; /* slate-500 */
-}
-html:not(.dark) .text-gray-300 {
-  color: #6b7280 !important; /* gray-500 */
-}
-html:not(.dark) .text-neutral-300 {
-  color: #737373 !important; /* neutral-500 */
-}
-
-/* Restore native soft light gray text colors inside dark container components in light mode */
-html:not(.dark) .bg-slate-900 .text-zinc-400,
-html:not(.dark) .bg-slate-950 .text-zinc-400,
-html:not(.dark) .bg-zinc-900 .text-zinc-400,
-html:not(.dark) .bg-zinc-950 .text-zinc-400,
-html:not(.dark) .bg-black .text-zinc-400,
-html:not(.dark) .bg-slate-900 .text-slate-400,
-html:not(.dark) .bg-slate-950 .text-slate-400,
-html:not(.dark) .bg-zinc-900 .text-slate-400,
-html:not(.dark) .bg-zinc-950 .text-slate-400,
-html:not(.dark) .bg-black .text-slate-400,
-html:not(.dark) .bg-slate-900 .text-gray-400,
-html:not(.dark) .bg-slate-950 .text-gray-400,
-html:not(.dark) .bg-zinc-900 .text-gray-400,
-html:not(.dark) .bg-zinc-950 .text-gray-400,
-html:not(.dark) .bg-black .text-gray-400 {
-  color: #a1a1aa !important; /* zinc-400 */
-}
-
-html:not(.dark) .bg-slate-900 .text-zinc-300,
-html:not(.dark) .bg-slate-950 .text-zinc-300,
-html:not(.dark) .bg-zinc-900 .text-zinc-300,
-html:not(.dark) .bg-zinc-950 .text-zinc-300,
-html:not(.dark) .bg-black .text-zinc-300,
-html:not(.dark) .bg-slate-900 .text-slate-300,
-html:not(.dark) .bg-slate-950 .text-slate-300,
-html:not(.dark) .bg-zinc-900 .text-slate-300,
-html:not(.dark) .bg-zinc-950 .text-slate-300,
-html:not(.dark) .bg-black .text-slate-300 {
-  color: #d4d4d8 !important; /* zinc-300 */
-}
-
-html:not(.dark) .bg-slate-900 .text-zinc-500,
-html:not(.dark) .bg-slate-950 .text-zinc-500,
-html:not(.dark) .bg-zinc-900 .text-zinc-500,
-html:not(.dark) .bg-zinc-950 .text-zinc-500,
-html:not(.dark) .bg-black .text-zinc-500,
-html:not(.dark) .bg-slate-900 .text-slate-500,
-html:not(.dark) .bg-slate-950 .text-slate-500,
-html:not(.dark) .bg-zinc-900 .text-slate-500,
-html:not(.dark) .bg-zinc-950 .text-slate-500,
-html:not(.dark) .bg-black .text-slate-500 {
-  color: #71717a !important; /* zinc-500 */
-}
-
-body {
-  font-family: var(--font-sans);
-  background-color: var(--m3-surface);
-  color: var(--m3-on-surface);
-  transition: background-color 300ms cubic-bezier(0.2, 0, 0, 1), color 300ms cubic-bezier(0.2, 0, 0, 1);
-}
-
-/* Enable ultra-smooth, premium transitions for all elements when toggling dark/light mode */
-html.theme-transition,
-html.theme-transition *,
-html.theme-transition *::before,
-html.theme-transition *::after {
-  transition: background-color 600ms cubic-bezier(0.16, 1, 0.3, 1) !important, 
-              color 600ms cubic-bezier(0.16, 1, 0.3, 1) !important, 
-              border-color 600ms cubic-bezier(0.16, 1, 0.3, 1) !important, 
-              box-shadow 600ms cubic-bezier(0.16, 1, 0.3, 1) !important,
-              backdrop-filter 600ms cubic-bezier(0.16, 1, 0.3, 1) !important,
-              -webkit-backdrop-filter 600ms cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
-
-/* Custom Scrollbars in Material 3 Style - Luxury, Low-profile & Fully Styled */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--m3-outline-variant) transparent;
-}
-
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 99px;
-}
-::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--m3-outline-variant) 65%, transparent);
-  border-radius: 99px;
-  border: 1px solid transparent;
-  background-clip: padding-box;
-  transition: background-color 250ms cubic-bezier(0.2, 0, 0, 1);
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--m3-outline);
-  border: 1px solid transparent;
-  background-clip: padding-box;
-}
-.dark ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-}
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-/* Material 3 Card Bases - Solid and comfortable in Light Mode, Glassmorphic in Dark Mode */
-.m3-card {
-  border-radius: 28px; /* Extra Large Shape for Core Containers */
-  background-color: var(--m3-surface-container-low);
-  padding: 1.5rem;
-  border: 1.5px solid var(--m3-outline-variant);
-  box-shadow: 0 4px 16px -2px rgba(16, 24, 40, 0.08), 0 2px 6px -1px rgba(16, 24, 40, 0.04);
-  transition: all 250ms cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.dark .m3-card {
-  background-color: rgba(19, 26, 34, 0.70);
-  background-color: color-mix(in srgb, var(--m3-surface-container-low) 70%, transparent);
-  backdrop-filter: blur(24px) saturate(120%);
-  -webkit-backdrop-filter: blur(24px) saturate(120%);
-  border: 1.5px solid rgba(255, 255, 255, 0.12);
-  border: 1px solid color-mix(in srgb, var(--m3-outline-variant) 30%, transparent);
-  box-shadow: 0 10px 40px -6px rgba(0, 0, 0, 0.6);
-}
-
-/* Base style for glowing hover cards to support relative layout and bounds clamping */
-.android-glass-card, .glowing-card, .m3-card {
-  position: relative;
-  overflow: hidden;
-}
-
-/* Premium Glowing Cursor Spotlight Canvas on Card Hover - Disabled per user preference */
-.android-glass-card::before, .glowing-card::before, .m3-card::before {
-  display: none !important;
-  opacity: 0 !important;
-  content: none !important;
-}
-
-/* Enhanced high-contrast spotlight color mapping inside dark mode */
-.dark .android-glass-card::before, .dark .glowing-card::before, .dark .m3-card::before {
-  display: none !important;
-  opacity: 0 !important;
-  content: none !important;
-}
-
-/* Disable card hover spotlight cursor light effect when backdrop & UI blurs are disabled */
-html.accessibility-no-blur .android-glass-card::before,
-html.accessibility-no-blur .glowing-card::before,
-html.accessibility-no-blur .m3-card::before,
-html.accessibility-no-animation .android-glass-card::before,
-html.accessibility-no-animation .glowing-card::before,
-html.accessibility-no-animation .m3-card::before {
-  display: none !important;
-  opacity: 0 !important;
-  content: none !important;
-}
-
-/* Ensure all child text elements, action components, lists, and icons float over the glow indicator */
-.android-glass-card > *, .glowing-card > *, .m3-card > * {
-  position: relative;
-  z-index: 2;
-}
-
-/* Material 3 Expressive Buttons without oval shapes */
-.m3-btn-filled {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  padding: 0.625rem 1.5rem;
-  background-color: var(--m3-primary);
-  color: var(--m3-on-primary);
-  border-radius: 14px; /* Elegant rounded rectangular instead of oval */
-  transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(var(--m3-primary-rgb, 21, 94, 239), 0.18), 0 1px 2px rgba(var(--m3-primary-rgb, 21, 94, 239), 0.1);
-  border: 1px solid rgba(var(--m3-primary-rgb, 21, 94, 239), 0.15);
-}
-.m3-btn-filled:hover {
-  box-shadow: 0 5px 14px rgba(var(--m3-primary-rgb, 21, 94, 239), 0.3), 0 2px 4px rgba(var(--m3-primary-rgb, 21, 94, 239), 0.12);
-  transform: translateY(-1.5px);
-  filter: brightness(0.92); /* Deepens brand color for supreme contrast in light mode */
-}
-.m3-btn-filled:active {
-  transform: translateY(0);
-}
-.dark .m3-btn-filled {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-.dark .m3-btn-filled:hover {
-  box-shadow: 0 0 15px var(--m3-primary), 0 4px 12px rgba(0, 0, 0, 0.5);
-  filter: brightness(1.15);
-}
-
-.m3-btn-tonal {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  padding: 0.625rem 1.5rem;
-  background-color: var(--m3-secondary-container);
-  color: var(--m3-on-secondary-container);
-  border-radius: 14px; /* Modern shape */
-  border: 1px solid var(--m3-outline-variant);
-  box-shadow: 0 1.5px 3px rgba(16, 24, 40, 0.05);
-  transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
-  cursor: pointer;
-}
-.m3-btn-tonal:hover {
-  background-color: var(--m3-outline-variant);
-  color: var(--m3-on-surface);
-  box-shadow: 0 4px 10px rgba(16, 24, 40, 0.1);
-  transform: translateY(-1px);
-}
-.dark .m3-btn-tonal {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-.dark .m3-btn-tonal:hover {
-  background-color: rgba(255, 255, 255, 0.15) !important;
-  color: #fff !important;
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
-}
-
-.m3-btn-outlined {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  padding: 0.625rem 1.5rem;
-  background-color: var(--m3-surface-container-lowest);
-  color: var(--m3-primary);
-  border: 1.5px solid var(--m3-outline);
-  border-radius: 14px; /* Consistent styling */
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
-  transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
-  cursor: pointer;
-}
-.m3-btn-outlined:hover {
-  background-color: color-mix(in srgb, var(--m3-primary) 10%, transparent);
-  border-color: var(--m3-primary);
-  box-shadow: 0 3px 8px rgba(var(--m3-primary-rgb, 21, 94, 239), 0.12);
-  transform: translateY(-0.5px);
-}
-.dark .m3-btn-outlined {
-  border-color: rgba(255, 255, 255, 0.35);
-  background-color: rgba(255, 255, 255, 0.02);
-}
-.dark .m3-btn-outlined:hover {
-  background-color: rgba(var(--m3-primary-rgb, 59, 130, 246), 0.15);
-  border-color: var(--m3-primary);
-  box-shadow: 0 0 10px rgba(var(--m3-primary-rgb, 59, 130, 246), 0.25);
-}
-
-/* Primary, Sub, and Tertiary button custom wrappers mapped to expressive tokens */
-.m3-btn-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-size: 0.825rem;
-  font-weight: 750;
-  letter-spacing: 0.02em;
-  padding: 0.55rem 1.25rem;
-  background-color: var(--m3-primary);
-  color: var(--m3-on-primary);
-  border-radius: 14px; /* Match responsive theme rounded specs */
-  transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
-  cursor: pointer;
-  box-shadow: 0 2px 5px rgba(var(--m3-primary-rgb, 21, 94, 239), 0.2);
-  border: 1px solid rgba(var(--m3-primary-rgb, 21, 94, 239), 0.1);
-}
-.m3-btn-primary:hover {
-  box-shadow: 0 6px 14px rgba(var(--m3-primary-rgb, 21, 94, 239), 0.32);
-  transform: translateY(-1.5px);
-  filter: brightness(0.92);
-}
-.m3-btn-primary:active {
-  transform: translateY(0);
-}
-.dark .m3-btn-primary:hover {
-  box-shadow: 0 0 15px var(--m3-primary), 0 4px 12px rgba(0, 0, 0, 0.4);
-  filter: brightness(1.15);
-}
-
-.m3-btn-sub {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-size: 0.825rem;
-  font-weight: 750;
-  letter-spacing: 0.02em;
-  padding: 0.625rem 1.5rem;
-  background-color: var(--m3-primary);
-  color: var(--m3-on-primary);
-  border-radius: 14px; /* Avoid ovals */
-  transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
-  cursor: pointer;
-  box-shadow: 0 2px 5px rgba(var(--m3-primary-rgb, 21, 94, 239), 0.2);
-  border: 1px solid rgba(var(--m3-primary-rgb, 21, 94, 239), 0.1);
-}
-.m3-btn-sub:hover {
-  box-shadow: 0 6px 14px rgba(var(--m3-primary-rgb, 21, 94, 239), 0.35);
-  transform: translateY(-1.5px);
-  filter: brightness(0.92);
-}
-.dark .m3-btn-sub:hover {
-  box-shadow: 0 0 15px var(--m3-primary), 0 4px 12px rgba(0, 0, 0, 0.4);
-  filter: brightness(1.15);
-}
-
-.m3-btn-tertiary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-size: 0.825rem;
-  font-weight: 750;
-  letter-spacing: 0.02em;
-  padding: 0.55rem 1.25rem;
-  background-color: var(--m3-secondary-container);
-  color: var(--m3-on-secondary-container);
-  border-radius: 14px; /* Consistent rounded rectangular style */
-  transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
-  cursor: pointer;
-  border: 1.5px solid var(--m3-outline-variant);
-  box-shadow: 0 1px 2.5px rgba(16, 24, 40, 0.06);
-}
-.m3-btn-tertiary:hover {
-  background-color: var(--m3-outline-variant);
-  color: var(--m3-on-surface);
-  border-color: var(--m3-outline);
-  box-shadow: 0 4px 10px rgba(16, 24, 40, 0.1);
-  transform: translateY(-1px);
-}
-.dark .m3-btn-tertiary {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-}
-.dark .m3-btn-tertiary:hover {
-  background-color: rgba(255, 255, 255, 0.15) !important;
-  color: #ffffff !important;
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
-}
-
-/* Material 3 Segmented Control or Custom Chip */
-.m3-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.375rem 0.75rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border-radius: 8px;
-  border: 1px solid var(--m3-outline-variant);
-  background-color: var(--m3-surface);
-  color: var(--m3-on-surface-variant);
-  transition: all 150ms cubic-bezier(0.2, 0, 0, 1);
-  cursor: pointer;
-}
-.m3-chip-selected {
-  background-color: var(--m3-secondary-container);
-  color: var(--m3-on-secondary-container);
-  border-color: var(--m3-outline);
-}
-
-/* Material 3 Input Field Style & Unified System Inputs */
-.m3-input,
-input[type="text"]:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent):not(.border-0):not(.un-m3-input):not(.sr-only),
-input[type="number"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
-input[type="email"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
-input[type="password"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
-input[type="tel"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
-input[type="search"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
-input[type="date"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
-select:not(.bg-transparent):not(.border-0):not(.un-m3-input),
-textarea:not(.bg-transparent):not(.border-0):not(.un-m3-input) {
-  width: 100%;
-  padding: 0.625rem 0.875rem;
-  border-radius: 12px !important;
-  background-color: var(--m3-surface-container-lowest) !important;
-  color: var(--m3-on-surface) !important;
-  border: 1.5px solid var(--m3-outline-variant) !important;
-  box-shadow: inset 0 1.5px 3px rgba(16, 24, 40, 0.04) !important;
-  font-size: 0.825rem !important;
-  transition: all 200ms cubic-bezier(0.2, 0, 0, 1) !important;
-}
-
-.m3-input:focus,
-input[type="text"]:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent):not(.border-0):not(.un-m3-input):not(.sr-only):focus,
-input[type="number"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
-input[type="email"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
-input[type="password"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
-input[type="tel"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
-input[type="search"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
-input[type="date"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
-select:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
-textarea:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus {
-  outline: none !important;
-  border-color: var(--m3-primary) !important;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--m3-primary) 15%, transparent), inset 0 1.5px 3px rgba(16, 24, 40, 0.04) !important;
-  background-color: var(--m3-surface-container-lowest) !important;
-}
-
-.dark .m3-input,
-.dark input[type="text"]:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent):not(.border-0):not(.un-m3-input):not(.sr-only),
-.dark input[type="number"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
-.dark input[type="email"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
-.dark input[type="password"]:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent):not(.border-0):not(.un-m3-input),
-.dark input[type="tel"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
-.dark input[type="search"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
-.dark input[type="date"]:not(.bg-transparent):not(.border-0):not(.un-m3-input),
-.dark select:not(.bg-transparent):not(.border-0):not(.un-m3-input),
-.dark textarea:not(.bg-transparent):not(.border-0):not(.un-m3-input) {
-  background-color: var(--m3-surface-container-lowest) !important;
-  border-color: var(--m3-outline-variant) !important;
-  box-shadow: inset 0 1.5px 3px rgba(0, 0, 0, 0.4) !important;
-  color: #f8fafc !important;
-}
-
-.dark .m3-input:focus,
-.dark input[type="text"]:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent):not(.border-0):not(.un-m3-input):not(.sr-only):focus,
-.dark input[type="number"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
-.dark input[type="email"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
-.dark input[type="password"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
-.dark input[type="tel"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
-.dark input[type="search"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
-.dark input[type="date"]:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
-.dark select:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus,
-.dark textarea:not(.bg-transparent):not(.border-0):not(.un-m3-input):focus {
-  background-color: var(--m3-surface-container-low) !important;
-  border-color: var(--m3-primary) !important;
-  box-shadow: 0 0 12px color-mix(in srgb, var(--m3-primary) 30%, transparent), inset 0 1.5px 3px rgba(0, 0, 0, 0.4) !important;
-}
-
-/* FAB (Floating Action Button) styling */
-.m3-fab {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--m3-tertiary-container);
-  color: var(--m3-on-tertiary-container);
-  border-radius: 20px; /* Expressive angled shape */
-  font-weight: 600;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
-  cursor: pointer;
-}
-.m3-fab:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-  transform: scale(1.04);
-}
-
-/* Custom Expressive Shape Masks for unique organic frames */
-.m3-shape-asymmetric {
-  border-top-left-radius: 36px;
-  border-bottom-right-radius: 36px;
-  border-top-right-radius: 12px;
-  border-bottom-left-radius: 12px;
-}
-
-/* Android 17 Expressive Glassmorphism & Translucency System - Solid & Comfort in Light Mode, Glassmorphic in Dark Mode */
-.android-glass {
-  background-color: var(--m3-surface-container-low);
-  border: 1px solid var(--m3-outline-variant);
-}
-
-.android-glass-header {
-  background-color: var(--m3-surface-container-low);
-}
-
-.android-glass-sidebar {
-  background-color: var(--m3-surface);
-}
-
-.android-glass-card {
-  border-radius: 28px;
-  background-color: var(--m3-surface-container-low);
-  padding: 1.5rem;
-  border: 1px solid var(--m3-outline-variant);
-  box-shadow: 0 4px 20px -2px rgba(16, 24, 40, 0.03);
-  transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.android-glass-card:hover {
-  background-color: var(--m3-surface-container-low);
-  border-color: var(--m3-outline-variant);
-  box-shadow: 0 4px 20px -2px rgba(16, 24, 40, 0.03);
-  transform: none;
-}
-
-.android-glass-modal {
-  background-color: var(--m3-surface-container-low);
-  border: 1px solid var(--m3-outline-variant);
-  box-shadow: 0 24px 64px -12px rgba(16, 24, 40, 0.12);
-}
-
-.dark .android-glass {
-  background-color: color-mix(in oklab, #110c0c 50%, #0000006b);
-  backdrop-filter: blur(24px) saturate(120%);
-  -webkit-backdrop-filter: blur(24px) saturate(120%);
-  border: 1px solid rgba(194, 203, 214, 0.30);
-  border: 1px solid color-mix(in srgb, var(--m3-outline-variant) 30%, transparent);
-}
-
-.dark .android-glass-header {
-  background-color: color-mix(in oklab, #110c0c 50%, #0000006b);
-  backdrop-filter: blur(30px) saturate(130%);
-  -webkit-backdrop-filter: blur(30px) saturate(130%);
-}
-
-.dark .android-glass-sidebar {
-  background-color: color-mix(in oklab, #110c0c 50%, #0000006b);
-  backdrop-filter: blur(32px);
-  -webkit-backdrop-filter: blur(32px);
-}
-
-.dark .android-glass-card {
-  background-color: color-mix(in oklab, #110c0c 50%, #0000006b);
-  backdrop-filter: blur(20px) saturate(115%);
-  -webkit-backdrop-filter: blur(20px) saturate(115%);
-  border: 1px solid rgba(194, 203, 214, 0.25);
-  border: 1px solid color-mix(in srgb, var(--m3-outline-variant) 25%, transparent);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.03);
-}
-
-.dark .android-glass-card:hover {
-  background-color: color-mix(in oklab, #110c0c 50%, #0000006b);
-  border-color: rgba(194, 203, 214, 0.25);
-  border-color: color-mix(in srgb, var(--m3-outline-variant) 25%, transparent);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.03);
-  transform: none;
-}
-
-.dark .android-glass-modal {
-  background-color: color-mix(in oklab, #110c0c 50%, #0000006b);
-  backdrop-filter: blur(28px) saturate(125%);
-  -webkit-backdrop-filter: blur(28px) saturate(125%);
-  border: 1px solid rgba(194, 203, 214, 0.40);
-  border: 1px solid color-mix(in srgb, var(--m3-outline-variant) 40%, transparent);
-  box-shadow: 0 24px 64px -12px rgba(0, 0, 0, 0.15);
-}
-
-@keyframes spin-slow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-.animate-spin-slow {
-  animation: spin-slow 12s linear infinite;
-}
-
-@keyframes scan-line {
-  0% { transform: translateY(-90px); opacity: 0.1; }
-  15% { opacity: 1; }
-  85% { opacity: 1; }
-  100% { transform: translateY(90px); opacity: 0.1; }
-}
-.animate-scan-line {
-  animation: scan-line 3s ease-in-out infinite;
-}
-
-/* Material 3 App Table Row Hover Rounded Corners */
-table tbody tr {
-  transition: background-color 150ms cubic-bezier(0.2, 0, 0, 1);
-}
-
-table tbody tr td {
-  transition: background-color 150ms cubic-bezier(0.2, 0, 0, 1), border-radius 150ms cubic-bezier(0.2, 0, 0, 1);
-}
-
-/* On hover, set background color on td, with first and last td having rounded corners */
-table tbody tr:hover td {
-  background-color: var(--m3-hover-overlay) !important;
-}
-
-/* ========================================================
-   GLOBAL LIGHT-MODE AUTOMATIC CONTRAST SAFEGUARD
-   ======================================================== */
-html:not(.dark) .text-zinc-350,
-html:not(.dark) .text-zinc-300,
-html:not(.dark) .text-slate-300,
-html:not(.dark) .text-gray-300,
-html:not(.dark) .text-neutral-300 {
-  color: var(--m3-on-surface-variant) !important;
-}
-
-html:not(.dark) .text-zinc-50,
-html:not(.dark) .text-slate-50,
-html:not(.dark) .text-gray-50,
-html:not(.dark) .text-neutral-50,
-html:not(.dark) .text-zinc-100,
-html:not(.dark) .text-slate-100,
-html:not(.dark) .text-gray-100,
-html:not(.dark) .text-neutral-100,
-html:not(.dark) .text-zinc-200,
-html:not(.dark) .text-slate-200,
-html:not(.dark) .text-gray-200,
-html:not(.dark) .text-neutral-200 {
-  color: var(--m3-on-surface) !important;
-}
-
-html:not(.dark) .text-zinc-400,
-html:not(.dark) .text-slate-400,
-html:not(.dark) .text-gray-400,
-html:not(.dark) .text-neutral-400,
-html:not(.dark) .text-zinc-450,
-html:not(.dark) .text-slate-450,
-html:not(.dark) .text-gray-450,
-html:not(.dark) .text-neutral-450 {
-  color: var(--m3-on-surface-variant) !important;
-}
-
-html:not(.dark) .text-zinc-500,
-html:not(.dark) .text-slate-500,
-html:not(.dark) .text-gray-500,
-html:not(.dark) .text-neutral-500 {
-  color: var(--m3-on-surface-variant) !important;
-}
-
-/* Force text-white to be visible in tables and plain text in Light Mode unless on a specific color background */
-html:not(.dark) table .text-white,
-html:not(.dark) td.text-white,
-html:not(.dark) th.text-white,
-html:not(.dark) .m3-card .text-white:not([class*="bg-"]):not([class*="btn"]):not([class*="primary"]),
-html:not(.dark) div.text-white:not([class*="bg-"]):not([class*="btn"]):not([class*="badge"]),
-html:not(.dark) span.text-white:not([class*="bg-"]):not([class*="btn"]):not([class*="badge"]),
-html:not(.dark) p.text-white:not([class*="bg-"]):not([class*="btn"]):not([class*="badge"]) {
-  color: var(--m3-on-surface) !important;
-}
-
-html:not(.dark) .text-rose-300 {
-  color: #b42318 !important; /* Rich legible Dark Red in Light Mode */
-}
-html:not(.dark) .text-amber-300 {
-  color: #b54708 !important; /* Rich legible Dark Amber in Light Mode */
-}
-html:not(.dark) .text-emerald-300 {
-  color: #067647 !important; /* Rich legible Dark Emerald Green in Light Mode */
-}
-html:not(.dark) .text-indigo-300 {
-  color: #3538cd !important; /* Rich legible Dark Indigo in Light Mode */
-}
-
-/* Custom background containers tint upgrades for low-contrast alert card fallbacks in Light Mode */
-html:not(.dark) .bg-rose-500\/5,
-html:not(.dark) .bg-rose-500\/10 {
-  background-color: #fef3f2 !important;
-  border-color: rgba(239, 68, 68, 0.25) !important;
-}
-html:not(.dark) .bg-amber-500\/5,
-html:not(.dark) .bg-amber-500\/10 {
-  background-color: #fffbeb !important;
-  border-color: rgba(245, 158, 11, 0.25) !important;
-}
-html:not(.dark) .bg-indigo-500\/5,
-html:not(.dark) .bg-indigo-500\/10 {
-  background-color: #f5f3ff !important;
-  border-color: rgba(99, 102, 241, 0.25) !important;
-}
-html:not(.dark) .bg-emerald-500\/5,
-html:not(.dark) .bg-emerald-500\/10 {
-  background-color: #ecfdf3 !important;
-  border-color: rgba(16, 185, 129, 0.25) !important;
-}
-
-table tbody tr:hover td:first-child {
-  border-top-left-radius: 12px;
-  border-bottom-left-radius: 12px;
-}
-
-table tbody tr:hover td:last-child {
-  border-top-right-radius: 12px;
-  border-bottom-right-radius: 12px;
-}
-
-/* Round the outer corners of table headers inline with the system's border radius */
-table thead tr th:first-child {
-  border-top-left-radius: 12px;
-  border-bottom-left-radius: 12px;
-}
-
-table thead tr th:last-child {
-  border-top-right-radius: 12px;
-  border-bottom-right-radius: 12px;
-}
-
-/* Utility to hide scrollbars completely */
-.scrollbar-none::-webkit-scrollbar {
-  display: none !important;
-}
-.scrollbar-none {
-  -ms-overflow-style: none !important;
-  scrollbar-width: none !important;
-}
-
-/* Custom scrollbar-thin utility to override custom scrollbar styles or explicitly request modern slim scrollbars */
-.scrollbar-thin::-webkit-scrollbar {
-  width: 4px !important;
-  height: 4px !important;
-}
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: transparent !important;
-}
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.25) !important;
-  border-radius: 99px !important;
-}
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.45) !important;
-}
-.dark .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15) !important;
-}
-.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3) !important;
-}
-.scrollbar-thin {
-  scrollbar-width: thin !important;
-  scrollbar-color: rgba(156, 163, 175, 0.25) transparent !important;
-}
-
-/* ========================================================
-   ACCESSIBILITY OVERGRADES & RECOGNITION CLASSES
-   ======================================================== */
-
-/* 1. Font Scale Customizers (System UI Only - Excludes Receipts) */
-:root {
-  --sys-font-scale: 1;
-}
-
-html.accessibility-small-text {
-  --sys-font-scale: 0.88;
-}
-
-html.accessibility-large-text {
-  --sys-font-scale: 1.15;
-}
-
-html.accessibility-xlarge-text {
-  --sys-font-scale: 1.30;
-}
-
-html.accessibility-small-text {
-  font-size: 88% !important;
-}
-html.accessibility-large-text {
-  font-size: 115% !important;
-}
-html.accessibility-xlarge-text {
-  font-size: 130% !important;
-}
-
-/* Scaled text size overrides for Small Text (88% = 0.88x) */
-html.accessibility-small-text .text-\[6px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 5.28px !important; }
-html.accessibility-small-text .text-\[6\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 5.72px !important; }
-html.accessibility-small-text .text-\[7px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 6.16px !important; }
-html.accessibility-small-text .text-\[7\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 6.6px !important; }
-html.accessibility-small-text .text-\[8px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 7.04px !important; }
-html.accessibility-small-text .text-\[8\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 7.48px !important; }
-html.accessibility-small-text .text-\[9px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 7.92px !important; }
-html.accessibility-small-text .text-\[9\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 8.36px !important; }
-html.accessibility-small-text .text-\[10px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 8.8px !important; }
-html.accessibility-small-text .text-\[10\.1px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 8.88px !important; }
-html.accessibility-small-text .text-\[10\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 9.24px !important; }
-html.accessibility-small-text .text-\[11px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 9.68px !important; }
-html.accessibility-small-text .text-\[11\.3px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 9.94px !important; }
-html.accessibility-small-text .text-\[11\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 10.12px !important; }
-html.accessibility-small-text .text-\[12px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 10.56px !important; }
-html.accessibility-small-text .text-\[12\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 11px !important; }
-html.accessibility-small-text .text-\[13px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 11.44px !important; }
-html.accessibility-small-text .text-\[14px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 12.32px !important; }
-html.accessibility-small-text .text-\[15px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 13.2px !important; }
-html.accessibility-small-text .text-\[16px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 14.08px !important; }
-html.accessibility-small-text .text-xs:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 0.66rem !important; }
-html.accessibility-small-text .text-sm:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 0.77rem !important; }
-html.accessibility-small-text .text-base:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 0.88rem !important; }
-html.accessibility-small-text .text-lg:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 0.99rem !important; }
-html.accessibility-small-text .text-xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.1rem !important; }
-html.accessibility-small-text .text-2xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.32rem !important; }
-html.accessibility-small-text .text-3xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.65rem !important; }
-html.accessibility-small-text .text-4xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.98rem !important; }
-html.accessibility-small-text .text-5xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 2.64rem !important; }
-
-/* Scaled text size overrides for Large Text (115% = 1.15x) */
-html.accessibility-large-text .text-\[6px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 6.9px !important; }
-html.accessibility-large-text .text-\[6\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 7.47px !important; }
-html.accessibility-large-text .text-\[7px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 8.05px !important; }
-html.accessibility-large-text .text-\[7\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 8.62px !important; }
-html.accessibility-large-text .text-\[8px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 9.2px !important; }
-html.accessibility-large-text .text-\[8\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 9.77px !important; }
-html.accessibility-large-text .text-\[9px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 10.35px !important; }
-html.accessibility-large-text .text-\[9\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 10.92px !important; }
-html.accessibility-large-text .text-\[10px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 11.5px !important; }
-html.accessibility-large-text .text-\[10\.1px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 11.61px !important; }
-html.accessibility-large-text .text-\[10\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 12.07px !important; }
-html.accessibility-large-text .text-\[11px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 12.65px !important; }
-html.accessibility-large-text .text-\[11\.3px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 13px !important; }
-html.accessibility-large-text .text-\[11\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 13.22px !important; }
-html.accessibility-large-text .text-\[12px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 13.8px !important; }
-html.accessibility-large-text .text-\[12\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 14.37px !important; }
-html.accessibility-large-text .text-\[13px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 14.95px !important; }
-html.accessibility-large-text .text-\[14px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 16.1px !important; }
-html.accessibility-large-text .text-\[15px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 17.25px !important; }
-html.accessibility-large-text .text-\[16px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 18.4px !important; }
-html.accessibility-large-text .text-xs:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 0.86rem !important; }
-html.accessibility-large-text .text-sm:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.01rem !important; }
-html.accessibility-large-text .text-base:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.15rem !important; }
-html.accessibility-large-text .text-lg:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.29rem !important; }
-html.accessibility-large-text .text-xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.43rem !important; }
-html.accessibility-large-text .text-2xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.72rem !important; }
-html.accessibility-large-text .text-3xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 2.15rem !important; }
-html.accessibility-large-text .text-4xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 2.58rem !important; }
-html.accessibility-large-text .text-5xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 3.45rem !important; }
-
-/* Scaled text size overrides for Extra Large Text (130% = 1.30x) */
-html.accessibility-xlarge-text .text-\[6px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 7.8px !important; }
-html.accessibility-xlarge-text .text-\[6\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 8.45px !important; }
-html.accessibility-xlarge-text .text-\[7px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 9.1px !important; }
-html.accessibility-xlarge-text .text-\[7\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 9.75px !important; }
-html.accessibility-xlarge-text .text-\[8px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 10.4px !important; }
-html.accessibility-xlarge-text .text-\[8\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 11.05px !important; }
-html.accessibility-xlarge-text .text-\[9px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 11.7px !important; }
-html.accessibility-xlarge-text .text-\[9\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 12.35px !important; }
-html.accessibility-xlarge-text .text-\[10px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 13px !important; }
-html.accessibility-xlarge-text .text-\[10\.1px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 13.13px !important; }
-html.accessibility-xlarge-text .text-\[10\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 13.65px !important; }
-html.accessibility-xlarge-text .text-\[11px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 14.3px !important; }
-html.accessibility-xlarge-text .text-\[11\.3px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 14.69px !important; }
-html.accessibility-xlarge-text .text-\[11\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 14.95px !important; }
-html.accessibility-xlarge-text .text-\[12px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 15.6px !important; }
-html.accessibility-xlarge-text .text-\[12\.5px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 16.25px !important; }
-html.accessibility-xlarge-text .text-\[13px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 16.9px !important; }
-html.accessibility-xlarge-text .text-\[14px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 18.2px !important; }
-html.accessibility-xlarge-text .text-\[15px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 19.5px !important; }
-html.accessibility-xlarge-text .text-\[16px\]:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 20.8px !important; }
-html.accessibility-xlarge-text .text-xs:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 0.975rem !important; }
-html.accessibility-xlarge-text .text-sm:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.1375rem !important; }
-html.accessibility-xlarge-text .text-base:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.3rem !important; }
-html.accessibility-xlarge-text .text-lg:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.4625rem !important; }
-html.accessibility-xlarge-text .text-xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.625rem !important; }
-html.accessibility-xlarge-text .text-2xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 1.95rem !important; }
-html.accessibility-xlarge-text .text-3xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 2.4375rem !important; }
-html.accessibility-xlarge-text .text-4xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 2.925rem !important; }
-html.accessibility-xlarge-text .text-5xl:not(.bir-receipt-container *):not(.bir-receipt-container) { font-size: 3.9rem !important; }
-
-/* 1.5. Thermal Receipt Font Size Adjuster Scale (Independent of System Font Size) */
-.bir-receipt-container {
-  --receipt-font-scale: 1;
-}
-
-.bir-receipt-container.receipt-font-70 { --receipt-font-scale: 0.7; }
-.bir-receipt-container.receipt-font-80 { --receipt-font-scale: 0.8; }
-.bir-receipt-container.receipt-font-85 { --receipt-font-scale: 0.85; }
-.bir-receipt-container.receipt-font-90 { --receipt-font-scale: 0.9; }
-.bir-receipt-container.receipt-font-95 { --receipt-font-scale: 0.95; }
-.bir-receipt-container.receipt-font-100 { --receipt-font-scale: 1.0; }
-.bir-receipt-container.receipt-font-105 { --receipt-font-scale: 1.05; }
-.bir-receipt-container.receipt-font-110 { --receipt-font-scale: 1.1; }
-.bir-receipt-container.receipt-font-115 { --receipt-font-scale: 1.15; }
-.bir-receipt-container.receipt-font-120 { --receipt-font-scale: 1.2; }
-.bir-receipt-container.receipt-font-125 { --receipt-font-scale: 1.25; }
-.bir-receipt-container.receipt-font-130 { --receipt-font-scale: 1.3; }
-
-/* Multiply explicit font size classes inside .bir-receipt-container by --receipt-font-scale */
-.bir-receipt-container .text-\[7px\] { font-size: calc(7px * var(--receipt-font-scale, 1)) !important; }
-.bir-receipt-container .text-\[7\.5px\] { font-size: calc(7.5px * var(--receipt-font-scale, 1)) !important; }
-.bir-receipt-container .text-\[8px\] { font-size: calc(8px * var(--receipt-font-scale, 1)) !important; }
-.bir-receipt-container .text-\[8\.5px\] { font-size: calc(8.5px * var(--receipt-font-scale, 1)) !important; }
-.bir-receipt-container .text-\[9px\] { font-size: calc(9px * var(--receipt-font-scale, 1)) !important; }
-.bir-receipt-container .text-\[9\.5px\] { font-size: calc(9.5px * var(--receipt-font-scale, 1)) !important; }
-.bir-receipt-container .text-\[10px\] { font-size: calc(10px * var(--receipt-font-scale, 1)) !important; }
-.bir-receipt-container .text-\[10\.5px\] { font-size: calc(10.5px * var(--receipt-font-scale, 1)) !important; }
-.bir-receipt-container .text-\[11px\] { font-size: calc(11px * var(--receipt-font-scale, 1)) !important; }
-.bir-receipt-container .text-xs { font-size: calc(12px * var(--receipt-font-scale, 1)) !important; }
-.bir-receipt-container .text-sm { font-size: calc(14px * var(--receipt-font-scale, 1)) !important; }
-.bir-receipt-container .text-base { font-size: calc(16px * var(--receipt-font-scale, 1)) !important; }
-.bir-receipt-container .text-lg { font-size: calc(18px * var(--receipt-font-scale, 1)) !important; }
-
-/* 2. Dyslexic-Friendly Typography Switcher */
-html.accessibility-dyslexic-font:not(.font-mono) :not(code):not(pre):not(.font-mono) {
-  font-family: "Comic Sans MS", "Comic Neue", "Andika", "Courier New", sans-serif !important;
+  --heroui-background: #F7F9FC;
+  --heroui-foreground: #0F172A;
+  --heroui-divider: rgba(226, 232, 240, 0.85);
+  --heroui-content1: #FFFFFF;
+  --heroui-content2: #F1F5F9;
+  --heroui-content3: #E2E8F0;
+  --heroui-content4: #CBD5E1;
+  --heroui-default: #E2E8F0;
+  --heroui-default-foreground: #0F172A;
+  --heroui-default-50: #F8FAFC;
+  --heroui-default-100: #F1F5F9;
+  --heroui-default-200: #E2E8F0;
+  --heroui-default-300: #CBD5E1;
+  --heroui-default-400: #94A3B8;
+  --heroui-default-500: #64748B;
+  --heroui-default-600: #475569;
+  --heroui-default-700: #334155;
+  --heroui-default-800: #1E293B;
+  --heroui-default-900: #0F172A;
+  --heroui-primary: #006FEE;
+  --heroui-primary-rgb: 0, 111, 238;
+  --heroui-primary-foreground: #FFFFFF;
+  --heroui-primary-50: #E6F1FE;
+  --heroui-primary-100: #CCE3FD;
+  --heroui-primary-200: #99C7FB;
+  --heroui-primary-300: #66ABF9;
+  --heroui-primary-400: #338EF7;
+  --heroui-primary-500: #006FEE;
+  --heroui-primary-600: #005BC4;
+  --heroui-primary-700: #004493;
+  --heroui-primary-800: #002E62;
+  --heroui-primary-900: #001731;
+  --heroui-secondary: #7828C8;
+  --heroui-secondary-50: #F2EAFA;
+  --heroui-secondary-100: #E4D4F4;
+  --heroui-secondary-200: #C9A9E9;
+  --heroui-secondary-300: #AE7EDE;
+  --heroui-secondary-400: #9353D3;
+  --heroui-secondary-500: #7828C8;
+  --heroui-secondary-600: #6020A0;
+  --heroui-secondary-700: #481878;
+  --heroui-secondary-800: #301050;
+  --heroui-secondary-900: #180828;
+  --heroui-success: #17C964;
+  --heroui-success-50: #E8FAF0;
+  --heroui-success-100: #D1F4E0;
+  --heroui-success-200: #A2E9C1;
+  --heroui-success-600: #12A150;
+  --heroui-warning: #F5A524;
+  --heroui-warning-50: #FEF6E9;
+  --heroui-warning-100: #FDEED3;
+  --heroui-warning-200: #FBDBA7;
+  --heroui-warning-600: #C4841D;
+  --heroui-danger: #F31260;
+  --heroui-danger-50: #FEE7EF;
+  --heroui-danger-100: #FDCFDF;
+  --heroui-danger-200: #FB9FBF;
+  --heroui-danger-600: #C20E4D;
+}
+
+:root.dark,
+.dark,
+html.dark {
+  --heroui-background: #0B0E14;
+  --heroui-foreground: #F8FAFC;
+  --heroui-divider: rgba(255, 255, 255, 0.15);
+  --heroui-content1: #151921;
+  --heroui-content2: #222733;
+  --heroui-content3: #353D4F;
+  --heroui-content4: #4B5569;
+  --heroui-default: #222733;
+  --heroui-default-foreground: #F8FAFC;
+  --heroui-default-50: #151921;
+  --heroui-default-100: #222733;
+  --heroui-default-200: #353D4F;
+  --heroui-default-300: #71717A;
+  --heroui-default-400: #A1A1AA;
+  --heroui-default-500: #CBD5E1;
+  --heroui-default-600: #E2E8F0;
+  --heroui-default-700: #F1F5F9;
+  --heroui-default-800: #F8FAFC;
+  --heroui-default-900: #FFFFFF;
+  --heroui-primary: #006FEE;
+  --heroui-primary-rgb: 0, 111, 238;
+  --heroui-primary-foreground: #FFFFFF;
+  --heroui-primary-50: rgba(0, 111, 238, 0.12);
+  --heroui-primary-100: rgba(0, 111, 238, 0.22);
+  --heroui-primary-200: rgba(0, 111, 238, 0.38);
+  --heroui-primary-300: #338EF7;
+  --heroui-primary-400: #66ABF9;
+  --heroui-primary-500: #006FEE;
+  --heroui-primary-600: #005BC4;
+  --heroui-primary-700: #004493;
+  --heroui-primary-800: #002E62;
+  --heroui-primary-900: #001731;
+  --heroui-secondary: #9353D3;
+  --heroui-secondary-50: rgba(147, 83, 211, 0.12);
+  --heroui-secondary-100: rgba(147, 83, 211, 0.22);
+  --heroui-secondary-200: rgba(147, 83, 211, 0.38);
+  --heroui-secondary-300: #AE7EDE;
+  --heroui-secondary-400: #C9A9E9;
+  --heroui-secondary-500: #9353D3;
+  --heroui-secondary-600: #7828C8;
+  --heroui-secondary-700: #6020A0;
+  --heroui-secondary-800: #481878;
+  --heroui-secondary-900: #301050;
+  --heroui-success: #17C964;
+  --heroui-success-50: rgba(23, 201, 100, 0.12);
+  --heroui-success-100: rgba(23, 201, 100, 0.22);
+  --heroui-success-200: rgba(23, 201, 100, 0.38);
+  --heroui-success-600: #12A150;
+  --heroui-warning: #F5A524;
+  --heroui-warning-50: rgba(245, 165, 36, 0.12);
+  --heroui-warning-100: rgba(245, 165, 36, 0.22);
+  --heroui-warning-200: rgba(245, 165, 36, 0.38);
+  --heroui-warning-600: #C4841D;
+  --heroui-danger: #F31260;
+  --heroui-danger-50: rgba(243, 18, 96, 0.12);
+  --heroui-danger-100: rgba(243, 18, 96, 0.22);
+  --heroui-danger-200: rgba(243, 18, 96, 0.38);
+  --heroui-danger-600: #C20E4D;
+}
+
+/* ==========================================================================
+   Visual & Nav Assist Accessibility Classes
+   ========================================================================== */
+
+/* Dyslexic-friendly Typography */
+.accessibility-dyslexic-font,
+.accessibility-dyslexic-font body,
+.accessibility-dyslexic-font button,
+.accessibility-dyslexic-font input,
+.accessibility-dyslexic-font select,
+.accessibility-dyslexic-font textarea {
+  font-family: 'OpenDyslexic', 'Comic Sans MS', 'Trebuchet MS', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
   letter-spacing: 0.05em !important;
   word-spacing: 0.12em !important;
   line-height: 1.65 !important;
 }
 
-/* 3. Extreme High Contrast Modes */
-html.accessibility-high-contrast {
-  --m3-primary: #0044cc !important;
-  --m3-surface: #ffffff !important;
-  --m3-on-surface: #000000 !important;
-  --m3-on-surface-variant: #000000 !important;
-  --m3-outline: #000000 !important;
-  --m3-outline-variant: #000000 !important;
-  --m3-surface-container-low: #ffffff !important;
-  --m3-surface-container: #eaeaea !important;
-  --m3-surface-container-high: #cccccc !important;
-  filter: contrast(1.25) saturate(1) !important;
-}
-html.dark.accessibility-high-contrast {
-  --m3-primary: #ffff00 !important; /* Visual Yellow high-vis contrast */
-  --m3-surface: #000000 !important;
-  --m3-on-surface: #ffffff !important;
-  --m3-on-surface-variant: #ffffff !important;
-  --m3-outline: #ffffff !important;
-  --m3-outline-variant: #ffffff !important;
-  --m3-surface-container-low: #000000 !important;
-  --m3-surface-container: #1a1a1a !important;
-  --m3-surface-container-high: #333333 !important;
-  filter: contrast(1.3) saturate(1) !important;
+/* Enhanced Focus & Borders */
+.accessibility-enhanced-outlines *:focus-visible {
+  outline: 3px solid #006FEE !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(0, 111, 238, 0.4) !important;
 }
 
-/* 4. Highlighted Keyboard Focus Indicator Markers */
-html.accessibility-enhanced-outlines *:focus {
-  outline: 4px solid #f59e0b !important;
-  outline-offset: 3px !important;
-  box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.5) !important;
+.accessibility-enhanced-outlines .border,
+.accessibility-enhanced-outlines [class*="border-"] {
+  border-width: 2px !important;
 }
 
-/* 4b. Maximize Text Contrast - adds backgrounds behind text */
-html.accessibility-maximize-text-contrast p,
-html.accessibility-maximize-text-contrast span:not(.lucide):not(.badge-count):not(.avatar-letters),
-html.accessibility-maximize-text-contrast label,
-html.accessibility-maximize-text-contrast h1,
-html.accessibility-maximize-text-contrast h2,
-html.accessibility-maximize-text-contrast h3,
-html.accessibility-maximize-text-contrast h4,
-html.accessibility-maximize-text-contrast h5,
-html.accessibility-maximize-text-contrast h6,
-html.accessibility-maximize-text-contrast li,
-html.accessibility-maximize-text-contrast a {
-  background-color: var(--m3-surface, #ffffff) !important;
-  color: var(--m3-on-surface, #000000) !important;
-  padding-left: 5px !important;
-  padding-right: 5px !important;
-  padding-top: 2px !important;
-  padding-bottom: 2px !important;
-  border-radius: 4px !important;
-  box-shadow: 0 0 2px 2px var(--m3-surface, #ffffff) !important;
-  text-shadow: none !important;
-  font-weight: 600 !important;
-}
-
-/* On dark mode, it inherits the dark surface background */
-html.dark.accessibility-maximize-text-contrast p,
-html.dark.accessibility-maximize-text-contrast span:not(.lucide):not(.badge-count):not(.avatar-letters),
-html.dark.accessibility-maximize-text-contrast label,
-html.dark.accessibility-maximize-text-contrast h1,
-html.dark.accessibility-maximize-text-contrast h2,
-html.dark.accessibility-maximize-text-contrast h3,
-html.dark.accessibility-maximize-text-contrast h4,
-html.dark.accessibility-maximize-text-contrast h5,
-html.dark.accessibility-maximize-text-contrast h6,
-html.dark.accessibility-maximize-text-contrast li,
-html.dark.accessibility-maximize-text-contrast a {
-  background-color: var(--m3-surface, #121212) !important;
-  color: var(--m3-on-surface, #ffffff) !important;
-  box-shadow: 0 0 2px 2px var(--m3-surface, #121212) !important;
-  text-shadow: none !important;
-  font-weight: 600 !important;
-}
-
-/* Ensure raw layouts, navigation, and functional icons are not forced to wrap */
-html.accessibility-maximize-text-contrast .lucide,
-html.accessibility-maximize-text-contrast button span,
-html.accessibility-maximize-text-contrast div[role="button"] span,
-html.accessibility-maximize-text-contrast span.absolute,
-html.accessibility-maximize-text-contrast span[class*="absolute"],
-html.accessibility-maximize-text-contrast span:has(.lucide),
-html.accessibility-maximize-text-contrast span:has(svg) {
-  background-color: transparent !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  font-weight: inherit !important;
-  text-shadow: none !important;
-}
-
-/* 4c. Turn Off Blurs & Remove Animations Fallbacks */
-html.accessibility-no-blur *,
-html.accessibility-no-blur {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-/* Ensure input icon paddings are respected and do not merge with text */
-input[class*="pl-2"] { padding-left: 0.5rem !important; }
-input[class*="pl-3"] { padding-left: 0.75rem !important; }
-input[class*="pl-4"] { padding-left: 1rem !important; }
-input[class*="pl-5"] { padding-left: 1.25rem !important; }
-input[class*="pl-6"] { padding-left: 1.5rem !important; }
-input[class*="pl-7"] { padding-left: 1.75rem !important; }
-input[class*="pl-8"] { padding-left: 2rem !important; }
-input[class*="pl-9"] { padding-left: 2.25rem !important; }
-input[class*="pl-10"] { padding-left: 2.5rem !important; }
-input[class*="pl-11"] { padding-left: 2.75rem !important; }
-input[class*="pl-12"] { padding-left: 3rem !important; }
-input[class*="pl-14"] { padding-left: 3.5rem !important; }
-input[class*="pl-16"] { padding-left: 4rem !important; }
-
-input[class*="pr-2"] { padding-right: 0.5rem !important; }
-input[class*="pr-3"] { padding-right: 0.75rem !important; }
-input[class*="pr-4"] { padding-right: 1rem !important; }
-input[class*="pr-5"] { padding-right: 1.25rem !important; }
-input[class*="pr-6"] { padding-right: 1.5rem !important; }
-input[class*="pr-7"] { padding-right: 1.75rem !important; }
-input[class*="pr-8"] { padding-right: 2rem !important; }
-input[class*="pr-9"] { padding-right: 2.25rem !important; }
-input[class*="pr-10"] { padding-right: 2.5rem !important; }
-input[class*="pr-11"] { padding-right: 2.75rem !important; }
-input[class*="pr-12"] { padding-right: 3rem !important; }
-input[class*="pr-14"] { padding-right: 3.5rem !important; }
-input[class*="pr-16"] { padding-right: 4rem !important; }
-
-/* Turn off card/button hover transition effects safely */
-html.accessibility-no-blur *:hover {
-  transition: none !important;
-}
-
-/* Specifically target classes or elements containing blur or filter with blur */
-html.accessibility-no-blur .blur,
-html.accessibility-no-blur .blur-sm,
-html.accessibility-no-blur .blur-md,
-html.accessibility-no-blur .blur-lg,
-html.accessibility-no-blur .blur-xl,
-html.accessibility-no-blur .blur-2xl,
-html.accessibility-no-blur .blur-3xl,
-html.accessibility-no-blur [class*="blur-"],
-html.accessibility-no-blur [class*="backdrop-blur"] {
+/* Disable UI & Backdrop Blurs for Performance & Visual Clarity */
+.accessibility-no-blur *,
+.accessibility-no-ui-blur * {
   filter: none !important;
+}
+
+.accessibility-no-backdrop-blur *,
+.accessibility-no-blur * {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 
-/* Force solid backgrounds on cards and overlays when blur is disabled (no glass/transparency slop) */
-html.accessibility-no-blur .m3-card,
-html.accessibility-no-blur .glowing-card,
-html.accessibility-no-blur .android-glass-card {
-  background-color: var(--m3-surface-container-lowest) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  border-color: var(--m3-outline-variant) !important;
-  box-shadow: 0 4px 16px -2px rgba(16, 24, 40, 0.08) !important;
+/* Disable or Reduce Animations */
+.accessibility-no-animations *,
+.accessibility-no-animations *::before,
+.accessibility-no-animations *::after {
+  animation-duration: 0.0001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.0001ms !important;
+  scroll-behavior: auto !important;
 }
 
-.dark html.accessibility-no-blur .m3-card,
-.dark html.accessibility-no-blur .glowing-card,
-.dark html.accessibility-no-blur .android-glass-card {
-  background-color: var(--m3-surface-container-low, #131a22) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  border-color: var(--m3-outline-variant) !important;
-  box-shadow: 0 10px 40px -6px rgba(0, 0, 0, 0.6) !important;
+/* Universal Modal & Drawer Backdrop System */
+.ui-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.60);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 0;
+  transition: opacity 0.2s ease-in-out;
 }
 
-/* Completely strip all interactive transform and hover scale effects when blurs/backdrop blurs are off */
-html.accessibility-no-blur .glowing-card:hover,
-html.accessibility-no-blur .android-glass-card:hover {
-  transform: none !important;
-  scale: none !important;
-  background-color: var(--m3-surface-container-lowest) !important;
-  border-color: var(--m3-outline-variant) !important;
-  box-shadow: 0 4px 16px -2px rgba(16, 24, 40, 0.08) !important;
+.dark .ui-backdrop {
+  background-color: rgba(0, 0, 0, 0.75);
 }
 
-.dark html.accessibility-no-blur .glowing-card:hover,
-.dark html.accessibility-no-blur .android-glass-card:hover {
-  transform: none !important;
-  scale: none !important;
-  background-color: var(--m3-surface-container-low, #131a22) !important;
-  border-color: var(--m3-outline-variant) !important;
-  box-shadow: 0 10px 40px -6px rgba(0, 0, 0, 0.6) !important;
+/* High Contrast Mode */
+.accessibility-high-contrast {
+  --heroui-background: #000000;
+  --heroui-foreground: #FFFFFF;
+  --heroui-content1: #0A0A0A;
+  --heroui-content2: #141414;
+  --heroui-content3: #1E1E1E;
+  --heroui-content4: #282828;
+  --heroui-divider: rgba(255, 255, 255, 0.35);
+  --heroui-focus: #FFFF00;
 }
 
-/* Make the background of the whole system a single solid color */
-html.accessibility-no-blur,
-html.accessibility-no-blur body {
-  background-color: var(--m3-surface) !important;
+.accessibility-high-contrast button {
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
 }
 
-/* Solid background for idle clock screen */
-html.accessibility-no-blur #desktop-m3-expressive-idle-screen {
-  background-color: var(--m3-surface) !important;
+/* Text Size Scaling on root */
+html.accessibility-small-text,
+html.accessibility-text-sm {
+  font-size: 14px !important;
+  --app-font-multiplier: 0.88;
 }
 
-/* Global uniform background-color for all backdrop-blur elements */
-html:not(.accessibility-no-blur) [class*="backdrop-blur"]:not(.backdrop-blur-none),
-html:not(.accessibility-no-blur) .backdrop-blur,
-html:not(.accessibility-no-blur) .backdrop-blur-sm,
-html:not(.accessibility-no-blur) .backdrop-blur-md,
-html:not(.accessibility-no-blur) .backdrop-blur-lg,
-html:not(.accessibility-no-blur) .backdrop-blur-xl,
-html:not(.accessibility-no-blur) .backdrop-blur-2xl,
-html:not(.accessibility-no-blur) .backdrop-blur-3xl {
-  background-color: color-mix(in oklab, #110c0c 50%, #0000006b) !important;
+html.accessibility-normal-text,
+html.accessibility-text-base {
+  font-size: 16px !important;
+  --app-font-multiplier: 1.0;
 }
 
-/* Hide all dynamic background glowing blobs and shapes on the idle screen to maintain single solid color background */
-html.accessibility-no-blur #desktop-m3-expressive-idle-screen > div:not(.z-10) {
+html.accessibility-large-text,
+html.accessibility-text-lg {
+  font-size: 18px !important;
+  --app-font-multiplier: 1.125;
+}
+
+html.accessibility-xlarge-text,
+html.accessibility-text-xl {
+  font-size: 20px !important;
+  --app-font-multiplier: 1.25;
+}
+
+/* ==========================================================================
+   HeroUI v3 Modern Scrollbar System
+   ========================================================================== */
+
+/* Universal Scrollbar Styling */
+*,
+*::before,
+*::after {
+  scrollbar-width: thin;
+  scrollbar-color: var(--heroui-default-300) transparent;
+}
+
+/* WebKit Scrollbar Styling (Chrome, Safari, Edge, Opera) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--heroui-default-300);
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--heroui-default-400);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background-color: var(--heroui-default-500);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* HeroUI Scrollbar Utilities */
+.scrollbar-none,
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+.scrollbar-none::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar {
   display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
-/* Ensure solid backgrounds on dialogs, cards, dropdowns, and components when backdrop blur is disabled */
-html.accessibility-no-blur [class*="backdrop-blur"]:not(.fixed):not(.absolute),
-html.accessibility-no-blur .backdrop-blur,
-html.accessibility-no-blur .backdrop-blur-sm,
-html.accessibility-no-blur .backdrop-blur-md,
-html.accessibility-no-blur .backdrop-blur-lg,
-html.accessibility-no-blur .backdrop-blur-xl {
-  background-color: var(--m3-surface-container-lowest) !important;
-  color: var(--m3-on-surface, #1c1b1f) !important;
+.scrollbar-thin,
+.scrollbar-heroui,
+.heroui-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--heroui-default-300) transparent;
 }
 
-.dark html.accessibility-no-blur [class*="backdrop-blur"]:not(.fixed):not(.absolute),
-.dark html.accessibility-no-blur .backdrop-blur,
-.dark html.accessibility-no-blur .backdrop-blur-sm,
-.dark html.accessibility-no-blur .backdrop-blur-md,
-.dark html.accessibility-no-blur .backdrop-blur-lg,
-.dark html.accessibility-no-blur .backdrop-blur-xl {
-  background-color: var(--m3-surface-container-low, #131a22) !important;
-  color: #f8fafc !important;
+.scrollbar-thin::-webkit-scrollbar,
+.scrollbar-heroui::-webkit-scrollbar,
+.heroui-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-/* Specific transparent class overrides to solid backgrounds */
-html.accessibility-no-blur .bg-zinc-900\/80,
-html.accessibility-no-blur .bg-zinc-950\/80,
-html.accessibility-no-blur .bg-zinc-900\/90,
-html.accessibility-no-blur .bg-black\/80,
-html.accessibility-no-blur .bg-m3-surface-low\/80,
-html.accessibility-no-blur .bg-m3-surface-low\/90,
-html.accessibility-no-blur .bg-m3-surface\/80,
-html.accessibility-no-blur .bg-m3-surface\/90 {
-  background-color: var(--m3-surface-container-lowest) !important;
+.scrollbar-thin::-webkit-scrollbar-thumb,
+.scrollbar-heroui::-webkit-scrollbar-thumb,
+.heroui-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--heroui-default-300);
+  border-radius: 9999px;
 }
 
-.dark html.accessibility-no-blur .bg-zinc-900\/80,
-.dark html.accessibility-no-blur .bg-zinc-950\/80,
-.dark html.accessibility-no-blur .bg-zinc-900\/90,
-.dark html.accessibility-no-blur .bg-black\/80,
-.dark html.accessibility-no-blur .bg-m3-surface-low\/80,
-.dark html.accessibility-no-blur .bg-m3-surface-low\/90,
-.dark html.accessibility-no-blur .bg-m3-surface\/80,
-.dark html.accessibility-no-blur .bg-m3-surface\/90 {
-  background-color: var(--m3-surface-container-low, #131a22) !important;
+.scrollbar-thin::-webkit-scrollbar-thumb:hover,
+.scrollbar-heroui::-webkit-scrollbar-thumb:hover,
+.heroui-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--heroui-default-400);
 }
 
-html.accessibility-no-blur .bg-white\/80,
-html.accessibility-no-blur .bg-white\/90 {
-  background-color: #ffffff !important;
+.scrollbar-thumb-divider {
+  scrollbar-color: var(--heroui-divider) transparent;
 }
 
-/* Globally remove transitions and animations */
-html.accessibility-no-animation *,
-html.accessibility-no-animation,
-html.accessibility-no-animation *::before,
-html.accessibility-no-animation *::after {
-  animation: none !important;
-  animation-duration: 0s !important;
-  animation-delay: 0s !important;
-  transition: none !important;
-  transition-duration: 0s !important;
-  transition-delay: 0s !important;
+.scrollbar-thumb-divider::-webkit-scrollbar-thumb {
+  background-color: var(--heroui-divider);
 }
 
-/* Completely disable all hover states, scale effects, and pointer changes when animations & effects are turned off */
-html.accessibility-no-animation *:hover {
-  transform: none !important;
-  scale: none !important;
-  transition: none !important;
-  animation: none !important;
-  filter: none !important;
-  backdrop-filter: none !important;
+.scrollbar-thumb-divider::-webkit-scrollbar-thumb:hover {
+  background-color: var(--heroui-default-400);
 }
 
-/* For cards and buttons under no-animation setting, lock their background colors and styles to their defaults */
-html.accessibility-no-animation .android-glass-card:hover,
-html.accessibility-no-animation .glowing-card:hover {
-  background-color: var(--m3-surface-container-lowest) !important;
-  border-color: var(--m3-outline-variant) !important;
-  box-shadow: 0 4px 16px -2px rgba(16, 24, 40, 0.08) !important;
+/* Dynamic dropdowns and native select styling for light and dark modes */
+select option,
+select optgroup {
+  background-color: var(--heroui-content1);
+  color: var(--heroui-foreground);
 }
 
-.dark html.accessibility-no-animation .android-glass-card:hover,
-.dark html.accessibility-no-animation .glowing-card:hover {
-  background-color: var(--m3-surface-container-low, #131a22) !important;
-  border-color: var(--m3-outline-variant) !important;
-  box-shadow: 0 10px 40px -6px rgba(0, 0, 0, 0.6) !important;
+.dark select option,
+.dark select optgroup,
+html.dark select option,
+html.dark select optgroup {
+  background-color: #18181B;
+  color: #F8FAFC;
 }
 
-html.accessibility-no-animation .m3-btn-primary:hover,
-html.accessibility-no-animation .m3-btn-filled:hover {
-  background-color: var(--m3-primary) !important;
-  color: var(--m3-on-primary) !important;
+[data-slot="popover-content"],
+[data-slot="dropdown-content"],
+[data-slot="select-listbox"] {
+  background-color: var(--heroui-content1);
+  color: var(--heroui-foreground);
 }
 
-.dark html.accessibility-no-animation .m3-btn-primary:hover,
-.dark html.accessibility-no-animation .m3-btn-filled:hover {
-  background-color: var(--m3-primary) !important;
-  color: var(--m3-on-primary) !important;
+.dark [data-slot="popover-content"],
+.dark [data-slot="dropdown-content"],
+.dark [data-slot="select-listbox"],
+html.dark [data-slot="popover-content"],
+html.dark [data-slot="dropdown-content"],
+html.dark [data-slot="select-listbox"] {
+  background-color: #18181B;
+  color: #F8FAFC;
 }
 
-html.accessibility-no-animation .m3-btn-outlined:hover {
-  background-color: transparent !important;
-  color: var(--m3-primary) !important;
-}
-
-html.accessibility-no-animation .m3-btn-tonal:hover {
-  background-color: var(--m3-secondary-container) !important;
-  color: var(--m3-on-secondary-container) !important;
-}
-
-html.accessibility-no-animation table tbody tr:hover td {
-  background-color: transparent !important;
-}
-
-/* 4.5. High-fidelity Screen Receipt Preview Simulator */
-@media screen {
-  .bir-receipt-container {
-    background-color: #fcfcf9 !important; /* Soft ivory/white authentic thermal receipt paper */
-    color: #111111 !important; /* Rich carbon black printed text style */
-    padding: 1.25rem !important; /* Elegant horizontal and vertical spacing on screen */
-    border: 1px solid rgba(0, 0, 0, 0.15) !important;
-    border-top: 4px solid #111111 !important; /* Simulated roll-starter top border */
-    border-bottom: 8px dashed #cccccc !important; /* Simulated jagged tear-off bottom edge */
-    box-shadow: 
-      0 10px 25px -5px rgba(0, 0, 0, 0.3), 
-      0 8px 10px -6px rgba(0, 0, 0, 0.3),
-      inset 0 -10px 20px -10px rgba(0, 0, 0, 0.05) !important;
-    font-family: 'JetBrains Mono', 'Courier New', Courier, monospace !important;
-  }
-
-  /* Ensure backgrounds of elements inside the receipt are transparent so they read perfectly on ivory */
-  .bir-receipt-container *:not(.bir-report-no-print):not(.bir-report-no-print *):not(img):not(.bg-white) {
-    background-color: transparent !important;
-    background: transparent !important;
-  }
-
-  /* Force monochrome high-contrast carbon black colors for all inner typography */
-  .bir-receipt-container *:not(.bir-report-no-print):not(.bir-report-no-print *),
-  .bir-receipt-container span:not(.bir-report-no-print):not(.bir-report-no-print *),
-  .bir-receipt-container p:not(.bir-report-no-print):not(.bir-report-no-print *),
-  .bir-receipt-container div:not(.bir-report-no-print):not(.bir-report-no-print *),
-  .bir-receipt-container h3:not(.bir-report-no-print):not(.bir-report-no-print *),
-  .bir-receipt-container h4:not(.bir-report-no-print):not(.bir-report-no-print *) {
-    color: #111111 !important;
-    font-family: 'JetBrains Mono', 'Courier New', Courier, monospace !important;
-    text-shadow: none !important;
-  }
-
-  /* Override specific Tailwind brand colors/accents to keep the layout realistic monochrome black on ivory */
-  .bir-receipt-container [class*="text-m3-"]:not(.bir-report-no-print):not(.bir-report-no-print *),
-  .bir-receipt-container [class*="text-zinc-"]:not(.bir-report-no-print):not(.bir-report-no-print *),
-  .bir-receipt-container [class*="text-gray-"]:not(.bir-report-no-print):not(.bir-report-no-print *),
-  .bir-receipt-container [class*="text-neutral-"]:not(.bir-report-no-print):not(.bir-report-no-print *),
-  .bir-receipt-container [class*="text-amber-"]:not(.bir-report-no-print):not(.bir-report-no-print *),
-  .bir-receipt-container [class*="text-emerald-"]:not(.bir-report-no-print):not(.bir-report-no-print *),
-  .bir-receipt-container [class*="text-red-"]:not(.bir-report-no-print):not(.bir-report-no-print *),
-  .bir-receipt-container [class*="text-primary"]:not(.bir-report-no-print):not(.bir-report-no-print *),
-  .bir-receipt-container .font-black:not(.bir-report-no-print):not(.bir-report-no-print *) {
-    color: #111111 !important;
-  }
-
-  /* High contrast divider borders inside the screen receipt resembling real carbon ribbon ink */
-  .bir-receipt-container .border-dashed,
-  .bir-receipt-container [class*="border-dashed"] {
-    border-color: #222222 !important;
-    border-style: dashed !important;
-    border-width: 0 0 1px 0 !important;
-    opacity: 0.75 !important;
-  }
-
-  .bir-receipt-container .border-dotted,
-  .bir-receipt-container [class*="border-dotted"] {
-    border-color: #222222 !important;
-    border-style: dotted !important;
-    border-width: 1px 0 0 0 !important;
-    opacity: 0.75 !important;
-  }
-
-  .bir-receipt-container .border-t,
-  .bir-receipt-container [class*="border-t"] {
-    border-color: #222222 !important;
-    border-style: solid !important;
-    border-width: 1px 0 0 0 !important;
-    opacity: 0.75 !important;
-  }
-
-  .bir-receipt-container .border-b,
-  .bir-receipt-container [class*="border-b"] {
-    border-color: #222222 !important;
-    border-style: solid !important;
-    border-width: 0 0 1px 0 !important;
-    opacity: 0.75 !important;
-  }
-
-  /* Preserve full visibility and usability of printing/dismiss action bars inside report dialogs */
-  .bir-receipt-container .bir-report-no-print {
-    background: transparent !important;
-    border-top: 1px dashed rgba(17, 17, 17, 0.25) !important;
-    padding-top: 12px !important;
-    margin-top: 12px !important;
-  }
-
-  .bir-receipt-container .bir-report-no-print * {
-    font-family: var(--font-sans), system-ui, sans-serif !important;
-  }
-
-  /* Specific color restoration rules to fix receipt preview action buttons */
-  .bir-receipt-container .bir-report-no-print button {
-    color: inherit !important;
-  }
-
-  .bir-receipt-container .bir-report-no-print button.bg-m3-primary,
-  .bir-receipt-container .bir-report-no-print button.bg-m3-tertiary,
-  .bir-receipt-container .bir-report-no-print button:not(.border) {
-    background-color: #111111 !important;
-    color: #ffffff !important;
-    border: none !important;
-  }
-
-  .bir-receipt-container .bir-report-no-print button.bg-m3-primary *,
-  .bir-receipt-container .bir-report-no-print button.bg-m3-tertiary *,
-  .bir-receipt-container .bir-report-no-print button:not(.border) * {
-    color: #ffffff !important;
-  }
-
-  .bir-receipt-container .bir-report-no-print button.border {
-    background-color: transparent !important;
-    color: #111111 !important;
-    border: 1px solid rgba(17, 17, 17, 0.4) !important;
-  }
-
-  .bir-receipt-container .bir-report-no-print button.border * {
-    color: #111111 !important;
-  }
-
-  /* High-contrast accessible buttons that fit the receipt theme beautifully on screen */
-  .bir-receipt-container .bir-report-no-print button {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 6px !important;
-    font-size: 11px !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.05em !important;
-    padding: 8px 16px !important;
-    border-radius: 9999px !important;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
-    cursor: pointer !important;
-  }
-
-  /* Primary/Filled Action button inside thermal ticket (e.g., Dismiss) */
-  .bir-receipt-container .bir-report-no-print button.bg-m3-primary,
-  .bir-receipt-container .bir-report-no-print button.bg-m3-tertiary,
-  .bir-receipt-container .bir-report-no-print button:not(.border) {
-    background-color: #111111 !important;
-    color: #ffffff !important;
-    border: none !important;
-  }
-
-  .bir-receipt-container .bir-report-no-print button.bg-m3-primary:hover,
-  .bir-receipt-container .bir-report-no-print button:not(.border):hover {
-    background-color: #2a2a2a !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-  }
-
-  /* Outlined Action button inside thermal ticket (e.g., Print Ticket) */
-  .bir-receipt-container .bir-report-no-print button.border {
-    background-color: transparent !important;
-    color: #111111 !important;
-    border: 1px solid rgba(17, 17, 17, 0.4) !important;
-  }
-
-  .bir-receipt-container .bir-report-no-print button.border:hover {
-    background-color: rgba(17, 17, 17, 0.08) !important;
-    border-color: #111111 !important;
-    transform: translateY(-1px) !important;
-  }
-
-  /* Clean grey styling for custom QR survey images in screen preview */
-  .bir-receipt-container img {
-    filter: grayscale(100%) contrast(125%) brightness(95%) !important;
-  }
-
-  /* Customize scrollbar specifically for the preview container scroll flow */
-  .bir-receipt-container::-webkit-scrollbar {
-    width: 5px !important;
-    height: 5px !important;
-  }
-  
-  .bir-receipt-container::-webkit-scrollbar-track {
-    background: #f4f4ee !important;
-    border-radius: 9999px !important;
-  }
-  
-  .bir-receipt-container::-webkit-scrollbar-thumb {
-    background: #d1d1c4 !important;
-    border-radius: 9999px !important;
-  }
-
-  .bir-receipt-container::-webkit-scrollbar-thumb:hover {
-    background: #b1b1a4 !important;
-  }
-}
-
-/* 5. Clean, Professional @media print System for BIR ledger compliance sheets & slips */
+/* ==========================================================================
+   Thermal Printer & POS Receipt Print Styling (100% Solid Black, No Grey)
+   ========================================================================== */
 @media print {
-  /* Hide standard non-printed blocks specifically */
-  header, 
-  aside, 
-  nav, 
-  button, 
-  input, 
-  select,
-  .bir-report-no-print,
-  #sidebar-tutorials-btn,
-  #mobile-sidebar-tutorials-btn {
-    display: none !important;
-    visibility: hidden !important;
-  }
-
-  /* Reset standard page variables for high fidelity print execution */
-  body, html {
+  body {
     background: #ffffff !important;
     color: #000000 !important;
-    height: auto !important;
-    font-size: 11px !important;
   }
 
-  /* Make sure container covers full width and has zero offset margins */
-  .bir-report-container {
-    display: block !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
+  .receipt-container,
+  .receipt-container *,
+  [data-receipt-print="true"],
+  [data-receipt-print="true"] * {
+    color: #000000 !important;
+    border-color: #000000 !important;
+    background-color: transparent !important;
     box-shadow: none !important;
-    background: #ffffff !important;
-    color: #000000 !important;
-  }
-
-  /* Dedicated A4 landscape format layout for BIR report ledger sheets and documents */
-  @page {
-    size: A4 landscape;
-    margin: 8mm;
-  }
-
-  /* Reset layout for thermal receipt context to support continuous dynamic roll height */
-  body:has(.bir-receipt-container) {
-    width: 76mm !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: #ffffff !important;
-    color: #000000 !important;
-    display: block !important;
-  }
-
-  body:has(.bir-receipt-container) html,
-  body:has(.bir-receipt-container) #root {
-    display: block !important;
-    position: static !important;
-    width: 76mm !important;
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    overflow: visible !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  /* Make sure every ancestor parent element of the receipt container in the DOM flow is unconstrained */
-  body:has(.bir-receipt-container) div:has(.bir-receipt-container) {
-    display: block !important;
-    position: static !important;
-    width: 100% !important;
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: visible !important;
-    border: none !important;
-    box-shadow: none !important;
-  }
-
-  /* Hide ALL other elements completely to prevent them from taking layout space or printing blank pages */
-  body:has(.bir-receipt-container) header,
-  body:has(.bir-receipt-container) footer,
-  body:has(.bir-receipt-container) nav,
-  body:has(.bir-receipt-container) aside,
-  body:has(.bir-receipt-container) button,
-  body:has(.bir-receipt-container) .bir-report-no-print,
-  body:has(.bir-receipt-container) .no-print,
-  body:has(.bir-receipt-container) .m3-btn,
-  body:has(.bir-receipt-container) [role="dialog"]:not(:has(.bir-receipt-container)) {
-    display: none !important;
-    visibility: hidden !important;
-  }
-
-  /* Completely hide all non-ancestor div siblings */
-  body:has(.bir-receipt-container) div:not(:has(.bir-receipt-container)):not(.bir-receipt-container):not(.bir-receipt-container *) {
-    display: none !important;
-    visibility: hidden !important;
-  }
-
-  /* Style the receipt container to fit perfectly inside the printable area of 75mm-76mm roll */
-  .bir-receipt-container {
-    display: block !important;
-    visibility: visible !important;
-    position: static !important; /* Must be static/relative to allow proper height calculation and prevent vertical cuts */
-    margin: 0 !important; /* Forces document boundary alignment to prevent horizontal offset issues */
-    width: 100% !important; /* Fill the page width natively */
-    max-width: 100% !important;
-    padding: 4mm 0mm 14mm 0mm !important; /* Forces 0mm horizontal padding for 1:1 alignment directly to print edges */
-    box-sizing: border-box !important;
-    background: #ffffff !important;
-    color: #000000 !important;
-    font-family: 'JetBrains Mono', 'Courier New', Courier, monospace !important;
-    font-size: 10px !important;
-    line-height: 1.4 !important;
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
-    border: none !important;
-    box-shadow: none !important;
-  }
-
-  /* Enforce 0 margins/padding before left-aligned elements to achieve 1:1 margin-less alignment */
-  .bir-receipt-container .flex.justify-between > *:first-child,
-  .bir-receipt-container [class*="justify-between"] > *:first-child,
-  .bir-receipt-container .grid > *:first-child {
-    padding-left: 0mm !important;
-    margin-left: 0mm !important;
-  }
-
-  /* Add margin/padding to right-aligned elements (amounts) during printing to prevent edge clipping */
-  .bir-receipt-container .flex.justify-between > *:last-child,
-  .bir-receipt-container [class*="justify-between"] > *:last-child,
-  .bir-receipt-container .grid > *:last-child {
-    padding-right: 3mm !important;
-    margin-right: 1mm !important;
-  }
-
-  /* Auto-cut line separator for thermal printers & multi-slip receipts */
-  .bir-receipt-cut-separator {
-    display: flex !important;
-    visibility: visible !important;
-    page-break-after: always !important;
-    break-after: page !important;
-    margin: 8mm 0 !important;
-    padding: 3mm 0 !important;
-    border-top: 2px dashed #000000 !important;
-    border-bottom: 2px dashed #000000 !important;
-    text-align: center !important;
-  }
-
-  /* Ensure all text inside the receipt prints as pure high-contrast black on white */
-  .bir-receipt-container * {
-    visibility: visible !important;
-    color: #000000 !important;
-    background: transparent !important;
-  }
-
-  /* High contrast border rendering for monochrome receipt printers (gray borders disappear) */
-  .bir-receipt-container .border-dashed,
-  .bir-receipt-container [class*="border-dashed"] {
-    border-color: #000000 !important;
-    border-style: dashed !important;
-    border-width: 0 0 1px 0 !important;
-    opacity: 1 !important;
-  }
-  .bir-receipt-container .border-dotted,
-  .bir-receipt-container [class*="border-dotted"] {
-    border-color: #000000 !important;
-    border-style: dotted !important;
-    border-width: 1px 0 0 0 !important;
-    opacity: 1 !important;
-  }
-  .bir-receipt-container .border-t,
-  .bir-receipt-container [class*="border-t"] {
-    border-color: #000000 !important;
-    border-style: solid !important;
-    border-width: 1px 0 0 0 !important;
-    opacity: 1 !important;
-  }
-  .bir-receipt-container .border-b,
-  .bir-receipt-container [class*="border-b"] {
-    border-color: #000000 !important;
-    border-style: solid !important;
-    border-width: 0 0 1px 0 !important;
-    opacity: 1 !important;
-  }
-  .bir-receipt-container .border-r,
-  .bir-receipt-container [class*="border-r"] {
-    border-color: #000000 !important;
-    border-style: solid !important;
-    border-width: 0 1px 0 0 !important;
-    opacity: 1 !important;
-  }
-  .bir-receipt-container .border-l,
-  .bir-receipt-container [class*="border-l"] {
-    border-color: #000000 !important;
-    border-style: solid !important;
-    border-width: 0 0 0 1px !important;
-    opacity: 1 !important;
-  }
-
-  /* Robust isolation: if bir-report-container exists on screen, hide all other DOM elements completely */
-  body:has(.bir-report-container) * {
-    visibility: hidden !important;
-  }
-  body:has(.bir-report-container) .bir-report-container,
-  body:has(.bir-report-container) .bir-report-container * {
-    visibility: visible !important;
-  }
-  body:has(.bir-report-container) .bir-report-container {
-    visibility: visible !important;
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 20px !important;
-    border: none !important;
-    box-shadow: none !important;
-    background: #ffffff !important;
-    color: #000000 !important;
-    height: auto !important;
-    overflow: visible !important;
-  }
-  body:has(.bir-report-container) .bir-report-container table {
-    width: 100% !important;
-    min-width: 100% !important;
-    border-collapse: collapse !important;
-    font-size: 10px !important;
-    color: #000000 !important;
-  }
-  body:has(.bir-report-container) .bir-report-container th,
-  body:has(.bir-report-container) .bir-report-container td {
-    border: 1px solid #000000 !important;
-    padding: 4px 6px !important;
-    color: #000000 !important;
-    background: #ffffff !important;
-  }
-  body:has(.bir-report-container) .bir-report-container tr {
-    page-break-inside: avoid !important;
-  }
-  body:has(.bir-report-container) .bir-report-container thead {
-    background-color: #f2f2f2 !important;
+    text-shadow: none !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
-  /* Robust isolation: if tilepoint-printable-pl exists on screen, hide all other DOM elements completely */
-  body:has(#tilepoint-printable-pl) * {
-    visibility: hidden !important;
-  }
-  body:has(#tilepoint-printable-pl) #tilepoint-printable-pl,
-  body:has(#tilepoint-printable-pl) #tilepoint-printable-pl * {
-    visibility: visible !important;
-  }
-  body:has(#tilepoint-printable-pl) #tilepoint-printable-pl {
-    visibility: visible !important;
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 30px !important;
-    border: none !important;
-    box-shadow: none !important;
-    background: #ffffff !important;
-    color: #000000 !important;
-    height: auto !important;
-    overflow: visible !important;
-  }
-
-  /* Robust isolation: if tilepoint-printable-handbook exists on screen, hide all other DOM elements completely */
-  body:has(#tilepoint-printable-handbook) * {
-    visibility: hidden !important;
-  }
-  body:has(#tilepoint-printable-handbook) #tilepoint-printable-handbook,
-  body:has(#tilepoint-printable-handbook) #tilepoint-printable-handbook * {
-    visibility: visible !important;
-  }
-  body:has(#tilepoint-printable-handbook) #tilepoint-printable-handbook {
-    visibility: visible !important;
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 30px !important;
-    border: none !important;
-    box-shadow: none !important;
-    background: #ffffff !important;
-    color: #000000 !important;
-    height: auto !important;
-    overflow: visible !important;
-  }
-
-  /* Robust isolation: if tilepoint-printable-po exists on screen, hide all other DOM elements completely */
-  body:has(#tilepoint-printable-po) * {
-    visibility: hidden !important;
-  }
-  body:has(#tilepoint-printable-po) #tilepoint-printable-po,
-  body:has(#tilepoint-printable-po) #tilepoint-printable-po * {
-    visibility: visible !important;
-  }
-  body:has(#tilepoint-printable-po) #tilepoint-printable-po {
-    visibility: visible !important;
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 30px !important;
-    border: none !important;
-    box-shadow: none !important;
-    background: #ffffff !important;
-    color: #000000 !important;
-    height: auto !important;
-    overflow: visible !important;
-  }
-
-  /* Robust isolation: if tilepoint-printable-area exists on screen */
-  body:has(#tilepoint-printable-area) * {
-    visibility: hidden !important;
-  }
-  body:has(#tilepoint-printable-area) #tilepoint-printable-area,
-  body:has(#tilepoint-printable-area) #tilepoint-printable-area * {
-    visibility: visible !important;
-  }
-  body:has(#tilepoint-printable-area) #tilepoint-printable-area {
-    visibility: visible !important;
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 30px !important;
-    border: none !important;
-    box-shadow: none !important;
-    background: #ffffff !important;
-    color: #000000 !important;
-    height: auto !important;
-    overflow: visible !important;
-  }
-
-  /* Robust isolation: if printable-transmittal-slip exists on screen */
-  body:has(#printable-transmittal-slip) * {
-    visibility: hidden !important;
-  }
-  body:has(#printable-transmittal-slip) #printable-transmittal-slip,
-  body:has(#printable-transmittal-slip) #printable-transmittal-slip * {
-    visibility: visible !important;
-  }
-  body:has(#printable-transmittal-slip) #printable-transmittal-slip {
-    visibility: visible !important;
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 20px !important;
-    border: none !important;
-    box-shadow: none !important;
-    background: #ffffff !important;
-    color: #000000 !important;
-    height: auto !important;
-    overflow: visible !important;
-  }
-
-  table {
-    width: 100% !important;
-    border-collapse: collapse !important;
-    font-size: 10px !important;
-  }
-
-  th {
-    border-bottom: 2px solid #333333 !important;
-    background: #f4f4f4 !important;
-    color: #000000 !important;
-    font-weight: bold !important;
-  }
-
-  td {
-    border-bottom: 1px solid #cccccc !important;
+  .receipt-container .text-default-500,
+  .receipt-container .text-default-400,
+  .receipt-container .text-default-600,
+  .receipt-container .text-gray-500,
+  .receipt-container .text-gray-400,
+  .receipt-container .text-slate-500,
+  .receipt-container .text-primary,
+  .receipt-container .text-secondary,
+  .receipt-container .text-amber-500,
+  .receipt-container .text-emerald-500,
+  .receipt-container .text-rose-500 {
     color: #000000 !important;
   }
 
-  @page {
-    size: auto;
-    margin: 0;
-  }
-
-  @page receipt-page {
-    size: 76mm auto;
-    margin: 0;
+  .receipt-container .border-dashed,
+  .receipt-container .border-dotted,
+  .receipt-container .border-divider {
+    border-color: #000000 !important;
   }
 }
-
-/* Ensure all dropdown select elements and options respect the dark mode colors explicitly */
-select, option {
-  background-color: var(--m3-surface-container-low);
-  color: var(--m3-on-surface);
-}
-
-.dark select, .dark option {
-  background-color: #131A22 !important;
-  color: #F8FAFC !important;
-}
-
-select:focus {
-  outline: none;
-}
-
-/* Expressive Variable Font Animation for Roboto Flex with a Natural Breathing Rhythm */
-@keyframes roboto-flex-morph {
-  0% {
-    font-variation-settings: 'wdth' 40, 'wght' 200, 'opsz' 14;
-    letter-spacing: -0.04em;
-    filter: drop-shadow(0 0 10px rgba(var(--m3-primary-rgb), 0.2)) drop-shadow(0 0 20px rgba(var(--m3-primary-rgb), 0.35));
-    opacity: 0.9;
-    transform: scale(0.99);
-  }
-  45% {
-    font-variation-settings: 'wdth' 125, 'wght' 600, 'opsz' 72;
-    letter-spacing: -0.01em;
-    filter: drop-shadow(0 0 25px var(--m3-primary)) drop-shadow(0 0 45px rgba(var(--m3-primary-rgb), 0.5));
-    opacity: 1.0;
-    transform: scale(1.01);
-  }
-  55% {
-    font-variation-settings: 'wdth' 125, 'wght' 600, 'opsz' 72;
-    letter-spacing: -0.01em;
-    filter: drop-shadow(0 0 30px var(--m3-primary)) drop-shadow(0 0 50px rgba(var(--m3-primary-rgb), 0.6));
-    opacity: 1.0;
-    transform: scale(1.01);
-  }
-  100% {
-    font-variation-settings: 'wdth' 40, 'wght' 200, 'opsz' 14;
-    letter-spacing: -0.04em;
-    filter: drop-shadow(0 0 10px rgba(var(--m3-primary-rgb), 0.2)) drop-shadow(0 0 20px rgba(var(--m3-primary-rgb), 0.35));
-    opacity: 0.9;
-    transform: scale(0.99);
-  }
-}
-
-.animate-roboto-flex {
-  font-family: 'Roboto Flex Variable', 'Roboto Flex', sans-serif !important;
-  animation: roboto-flex-morph 12s cubic-bezier(0.42, 0, 0.58, 1) infinite;
-  transition: transform 1s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* Android 17 style smooth morphing background blobs */
-@keyframes blob-pivot-one {
-  0%, 100% {
-    transform: translate(0px, 0px) scale(1) rotate(0deg);
-  }
-  33% {
-    transform: translate(30px, -50px) scale(1.15) rotate(120deg);
-  }
-  66% {
-    transform: translate(-20px, 20px) scale(0.9) rotate(240deg);
-  }
-}
-
-@keyframes blob-pivot-two {
-  0%, 100% {
-    transform: translate(0px, 0px) scale(1) rotate(0deg);
-  }
-  50% {
-    transform: translate(-40px, 40px) scale(1.2) rotate(-180deg);
-  }
-}
-
-@keyframes blob-pivot-three {
-  0%, 100% {
-    transform: translate(0px, 0px) scale(1) rotate(0deg);
-  }
-  40% {
-    transform: translate(50px, 20px) scale(0.85) rotate(90deg);
-  }
-}
-
-.animate-blob-1 {
-  animation: blob-pivot-one 24s ease-in-out infinite;
-}
-
-.animate-blob-2 {
-  animation: blob-pivot-two 28s ease-in-out infinite;
-}
-
-.animate-blob-3 {
-  animation: blob-pivot-three 20s ease-in-out infinite;
-}
-
-/* 
-   6. 240Hz High-Refresh-Rate Display Optimization System
-   Ensures sub-4ms frame times are utilized perfectly without visual stutter, 
-   judder, or micro-stutters by forcing hardware GPU acceleration, preventing 
-   layout repaints, and using highly responsive panel curves.
-*/
-@media (prefers-reduced-motion: no-preference) {
-  /* Force GPU layer compositing on highly interactive or animating surfaces */
-  .m3-card,
-  button,
-  a,
-  input,
-  select,
-  .modal-overlay,
-  .modal-content,
-  .sidebar-container,
-  .tab-pane,
-  [role="dialog"],
-  .theme-transition,
-  .theme-transition * {
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    transform: translate3d(0, 0, 0);
-    will-change: transform, opacity;
-  }
-
-  /* Ultra-fluid premium cubic-bezier easing tailored for 240Hz high-refresh responsiveness */
-  .transition-all {
-    transition-property: all;
-    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1) !important;
-  }
-
-  /* Slightly swifter duration adjustments for high-frequency render loops to prevent ghosting */
-  .duration-150 {
-    transition-duration: 100ms !important;
-  }
-
-  .duration-200 {
-    transition-duration: 140ms !important;
-  }
-
-  .duration-300 {
-    transition-duration: 200ms !important;
-  }
-
-  /* Optimize scroll containers for frictionless scrolling */
-  * {
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-  }
-}
-
-
 
 
 

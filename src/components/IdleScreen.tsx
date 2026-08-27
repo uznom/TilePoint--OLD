@@ -6,7 +6,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useDb } from '../context/DbContext';
-import { UserRole } from '../types/db';
 
 export const IdleScreen: React.FC = () => {
  const { isLoggedIn, currentUser } = useDb();
@@ -16,10 +15,13 @@ export const IdleScreen: React.FC = () => {
  return localStorage.getItem('tilepoint-disable-idle-clock') === 'true';
  });
 
- // Listen to external theme sync events to instantly hide or show
+ const [, setThemeTick] = useState(0);
+
+ // Listen to external theme sync events to instantly hide, show, or re-render
  useEffect(() => {
  const handleSync = () => {
  setIsDisabled(localStorage.getItem('tilepoint-disable-idle-clock') === 'true');
+ setThemeTick(t => t + 1);
  };
  window.addEventListener('tilepoint-theme-updated', handleSync);
  return () => window.removeEventListener('tilepoint-theme-updated', handleSync);
@@ -65,45 +67,26 @@ export const IdleScreen: React.FC = () => {
  }
 
  const resetTimer = () => {
- // If we are currently in the process of dismissing, ignore inputs
- if (dismissalInProgressRef.current) return;
-
- lastActiveRef.current = Date.now();
-
- // If already idle, initiate the beautiful sequential fadeout sequence
- if (isIdle) {
- dismissalInProgressRef.current = true;
- setIsDismissing(true); // Animate time & date fadeout
-
- // 1) Clock and date fadeout (duration: ~500ms)
- // 2) Background and morphing shapes fadeout (duration: next ~600ms)
- setTimeout(() => {
- setIsDismissingWhole(true);
- }, 500);
-
- setTimeout(() => {
- setIsIdle(false);
- setIsDismissing(false);
- setIsDismissingWhole(false);
- lastActiveRef.current = Date.now(); // reset activity pointer
- dismissalInProgressRef.current = false;
- }, 1100);
- }
+   lastActiveRef.current = Date.now();
+   if (isIdle) {
+     setIsIdle(false);
+     setIsDismissing(false);
+     setIsDismissingWhole(false);
+     dismissalInProgressRef.current = false;
+   }
  };
 
  // Register active user interactions
  const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
  events.forEach(event => window.addEventListener(event, resetTimer, { passive: true }));
 
- // Checker interval running every 500ms
+ // Checker interval running every 1000ms (300 seconds = 5 minutes idle threshold)
  const interval = setInterval(() => {
- if (dismissalInProgressRef.current) return;
- 
- const secondsInactive = (Date.now() - lastActiveRef.current) / 1000;
- if (secondsInactive >= 15) {
- setIsIdle(true);
- }
- }, 500);
+   const secondsInactive = (Date.now() - lastActiveRef.current) / 1000;
+   if (secondsInactive >= 300) {
+     setIsIdle(true);
+   }
+ }, 1000);
 
  return () => {
  events.forEach(event => window.removeEventListener(event, resetTimer));
@@ -137,14 +120,14 @@ export const IdleScreen: React.FC = () => {
  <AnimatePresence>
  {isIdle && (
  <motion.div
- id="desktop-m3-expressive-idle-screen"
+ id="desktop-expressive-idle-screen"
  initial={{ opacity: 0 }}
  animate={{ opacity: isDismissingWhole ? 0 : 1 }}
  exit={{ opacity: 0 }}
  transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
  className="fixed inset-0 z-[9999] overflow-hidden select-none"
  style={{
- backgroundColor: 'var(--m3-surface-container-lowest, #070B0E)',
+ backgroundColor: 'var(--heroui-background)',
  }}
  >
  {/* ANDROID 17 FLUID GLOWING GRAPHIC BLURS */}
@@ -153,29 +136,29 @@ export const IdleScreen: React.FC = () => {
  <div 
  className="absolute -top-[10%] -left-[10%] w-[60vw] h-[60vw] rounded-full filter blur-[120px] animate-blob-1"
  style={{
- background: 'radial-gradient(circle, var(--m3-primary) 0%, rgba(0,0,0,0) 70%)',
+ background: 'radial-gradient(circle, var(--heroui-primary) 0%, rgba(0,0,0,0) 70%)',
  }}
  />
  {/* Dynamic Blob 2 */}
  <div 
  className="absolute -bottom-[20%] -right-[10%] w-[70vw] h-[70vw] rounded-full filter blur-[140px] animate-blob-2"
  style={{
- background: 'radial-gradient(circle, var(--m3-secondary) 0%, rgba(0,0,0,0) 70%)',
+ background: 'radial-gradient(circle, var(--heroui-secondary, var(--heroui-primary)) 0%, rgba(0,0,0,0) 70%)',
  }}
  />
  {/* Dynamic Blob 3 */}
  <div 
  className="absolute top-[30%] left-[40%] w-[50vw] h-[50vw] rounded-full filter blur-[130px] animate-blob-3"
  style={{
- background: 'radial-gradient(circle, var(--m3-tertiary-container) 0%, rgba(0,0,0,0) 70%)',
+ background: 'radial-gradient(circle, var(--heroui-primary) 0%, rgba(0,0,0,0) 70%)',
  }}
  />
  </div>
 
- {/* MATERIAL 3 FROSTED GLASS GRADIENT MASK */}
- <div className="absolute inset-x-0 inset-y-0 backdrop-blur-[60px] bg-gradient-to-tr from-m3-surface-lowest/70 via-m3-surface-low/30 to-m3-surface-highest/65" />
+ {/* HEROUI FROSTED GLASS GRADIENT MASK */}
+ <div className="absolute inset-x-0 inset-y-0 backdrop-blur-[60px] bg-gradient-to-tr from-content1/70 via-content1/30 to-content3/65" />
 
- {/* EXPRESSIVE SHAPE ARTWORKS (MATERIAL 3) */}
+ {/* EXPRESSIVE SHAPE ARTWORKS (HEROUI V3) */}
  <div className="absolute inset-0 pointer-events-none overflow-hidden">
  {/* Morphing Organic SVG Star / Blob 1 */}
  <motion.div
@@ -194,7 +177,7 @@ export const IdleScreen: React.FC = () => {
  repeat: Infinity,
  ease: "easeInOut"
  }}
- className="absolute left-[15%] top-[20%] w-[240px] h-[240px] border border-m3-primary/20 bg-m3-primary/5 shadow-inner"
+ className="absolute left-[15%] top-[20%] w-[240px] h-[240px] border border-primary/25 bg-primary/5 shadow-inner"
  />
 
  {/* Morphing Dynamic Outline Shape 2 */}
@@ -214,7 +197,7 @@ export const IdleScreen: React.FC = () => {
  repeat: Infinity,
  ease: "easeInOut"
  }}
- className="absolute right-[20%] bottom-[15%] w-[320px] h-[320px] border-2 border-m3-secondary/25 bg-m3-secondary-container/5"
+ className="absolute right-[20%] bottom-[15%] w-[320px] h-[320px] border-2 border-secondary/25 bg-secondary-50/10"
  />
  </div>
 
@@ -247,23 +230,23 @@ export const IdleScreen: React.FC = () => {
  {/* Giant Clock Face */}
  <h1 
  id="idle-screen-adaptive-clock"
- className="animate-roboto-flex text-[11vw] font-black leading-none text-[var(--m3-on-surface)] select-none tracking-tighter whitespace-nowrap flex items-baseline justify-center gap-4"
+ className="animate-roboto-flex text-[11vw] font-black leading-none text-[var(--heroui-foreground)] select-none tracking-tighter whitespace-nowrap flex items-baseline justify-center gap-4"
  style={{
  fontFamily: "'Roboto Flex Variable', 'Roboto Flex', var(--font-sans)",
  }}
  >
  <span>{formatTimeParts(time).timeStr}</span>
- <span className="text-[3.5vw] font-extrabold text-[var(--m3-primary)] tracking-wider uppercase font-mono">
+ <span className="text-[3.5vw] font-extrabold text-[var(--heroui-primary)] tracking-wider uppercase ">
  {formatTimeParts(time).ampm}
  </span>
  </h1>
 
  {/* Date & Session Summary Card */}
  <div className="mt-6 space-y-1">
- <p className="text-sm md:text-md font-extrabold uppercase tracking-widest text-[var(--m3-primary)]">
+ <p className="text-sm md:text-md font-extrabold uppercase tracking-widest text-[var(--heroui-primary)]">
  {formatDate(time)}
  </p>
- <p className="text-[11px] font-mono text-[var(--m3-on-surface-variant)] lowercase tracking-wider mt-1">
+ <p className="text-[11px] text-[var(--heroui-default-500)] lowercase tracking-wider mt-1">
  {currentUser?.username || 'user'} @ terminal session
  </p>
  </div>

@@ -1,5 +1,6 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertOctagon, RefreshCw, Trash2, ShieldAlert } from 'lucide-react';
+import React, { ErrorInfo, ReactNode } from 'react';
+import { RefreshCw, Trash2, ShieldAlert } from 'lucide-react';
+import { HeroButton } from './common/ui/HeroButton';
 
 interface Props {
  children: ReactNode;
@@ -23,7 +24,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
  }
 
  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
- console.error('️ [TilePoint ErrorBoundary] Caught a runtime rendering exception:', error, errorInfo);
+ console.error(' [TilePoint ErrorBoundary] Caught a runtime rendering exception:', error, errorInfo);
  this.setState({ error, errorInfo });
  }
 
@@ -46,7 +47,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
  if (this.state.hasError) {
  return (
  <div className="min-h-screen bg-[#0B0F13] text-[#F8FAFC] flex items-center justify-center p-6 font-sans">
- <div className="w-full max-w-xl rounded-[28px] bg-[#131A22] border border-red-500/25 p-8 shadow-2xl space-y-6 relative overflow-hidden">
+ <div className="w-full max-w-xl rounded-2xl bg-[#131A22] border border-red-500/25 p-8 shadow-2xl space-y-6 relative overflow-hidden">
  <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-red-500 via-amber-500 to-red-500 animate-pulse" />
  
  <div className="flex items-center gap-4">
@@ -71,7 +72,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
  <span className="text-[10px] text-zinc-500 block uppercase font-bold">
  Error Details
  </span>
- <div className="max-h-[140px] overflow-y-auto text-[10.5px] font-mono text-red-300 leading-relaxed pr-1 space-y-1.5 scrollbar-thin">
+ <div className="max-h-[140px] overflow-y-auto text-[10.5px] text-red-300 leading-relaxed pr-1 space-y-1.5 scrollbar-thin">
  <div className="font-bold text-red-400">
  Error: {this.state.error?.message || 'Unknown Exception'}
  </div>
@@ -87,24 +88,28 @@ export class ErrorBoundary extends React.Component<Props, State> {
  </div>
 
  <div className="flex flex-col sm:flex-row gap-3 pt-2">
- <button
+ <HeroButton
  type="button"
  onClick={this.handleReset}
- className="flex-1 px-4 py-2.5 bg-m3-primary hover:bg-m3-primary/95 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 shadow-md active:scale-95 cursor-pointer"
+ variant="primary"
+ size="md"
+ startIcon={<RefreshCw className="h-4 w-4 animate-spin-slow" />}
+ className="flex-1 font-bold text-xs uppercase tracking-wider rounded-xl shadow-md"
  >
- <RefreshCw className="h-4 w-4 animate-spin-slow" />
- <span>Reload Application</span>
- </button>
+ Reload Application
+ </HeroButton>
  
- <button
+ <HeroButton
  type="button"
  onClick={this.handleWipeClean}
- className="px-4 py-2.5 bg-zinc-900 hover:bg-red-950/40 text-zinc-450 hover:text-red-400 border border-zinc-800 hover:border-red-900/45 text-xs uppercase font-bold tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+ variant="flat"
+ size="md"
+ startIcon={<Trash2 className="h-4 w-4" />}
+ className="font-bold text-xs uppercase tracking-wider rounded-xl border border-zinc-800 text-zinc-400 hover:text-red-400 hover:border-red-900/45"
  title="Clear app cache and start fresh if the page does not reload"
  >
- <Trash2 className="h-4 w-4" />
- <span>Clear App Cache</span>
- </button>
+ Clear App Cache
+ </HeroButton>
  </div>
 
  <div className="text-center">

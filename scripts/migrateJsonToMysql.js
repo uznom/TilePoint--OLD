@@ -270,23 +270,25 @@ async function migrateData(dataInput, customConfig = {}) {
     }
   }
 
-  // 5. Migrate Products
+  // 5. Migrate Products & Inventory Catalog
   if (products.length > 0) {
-    console.log(`Migrating ${products.length} products...`);
+    console.log(`Migrating ${products.length} products and inventory records...`);
     const sql = `
       INSERT INTO products (
-        id, productCode, productName, category, brand, sku, barcode, unit, costPrice,
+        id, productCode, productName, category, brand, sku, product_sku, category_id, barcode, unit, costPrice,
         sellingPrice, stockQuantity, lowStockThreshold, designName, size, supplierId,
         origin, image, boxQuantity, coveragePerBox, minimumStock, qrCode, createdBy,
         updatedBy, version, markupPercent, taxType, hasExpiration, expirationDate,
         isDeleted, createdAt, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
         productCode = VALUES(productCode),
         productName = VALUES(productName),
         category = VALUES(category),
         brand = VALUES(brand),
         sku = VALUES(sku),
+        product_sku = VALUES(product_sku),
+        category_id = VALUES(category_id),
         barcode = VALUES(barcode),
         unit = VALUES(unit),
         costPrice = VALUES(costPrice),
@@ -313,7 +315,36 @@ async function migrateData(dataInput, customConfig = {}) {
         updatedAt = VALUES(updatedAt)
     `;
 
+    const inventorySql = `
+      INSERT INTO inventory (
+        id, productId, product_sku, category_id, productCode, productName, category, brand, sku, barcode, unit,
+        stockQuantity, costPrice, sellingPrice, lowStockThreshold, supplierId, origin, version, isDeleted, createdAt, updatedAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        product_sku = VALUES(product_sku),
+        category_id = VALUES(category_id),
+        productCode = VALUES(productCode),
+        productName = VALUES(productName),
+        category = VALUES(category),
+        brand = VALUES(brand),
+        sku = VALUES(sku),
+        barcode = VALUES(barcode),
+        unit = VALUES(unit),
+        stockQuantity = VALUES(stockQuantity),
+        costPrice = VALUES(costPrice),
+        sellingPrice = VALUES(sellingPrice),
+        lowStockThreshold = VALUES(lowStockThreshold),
+        supplierId = VALUES(supplierId),
+        origin = VALUES(origin),
+        version = VALUES(version),
+        isDeleted = VALUES(isDeleted),
+        updatedAt = VALUES(updatedAt)
+    `;
+
     for (const p of products) {
+      const productSku = p.product_sku || p.sku || p.productCode || p.id;
+      const categoryId = p.category_id || p.category || 'General';
+
       const row = [
         p.id,
         p.productCode || p.id,
@@ -321,6 +352,8 @@ async function migrateData(dataInput, customConfig = {}) {
         p.category || 'General',
         p.brand || null,
         p.sku || null,
+        productSku,
+        categoryId,
         p.barcode || null,
         p.unit || 'Pcs',
         formatNumber(p.costPrice, 0),
@@ -348,6 +381,31 @@ async function migrateData(dataInput, customConfig = {}) {
         formatDate(p.updatedAt) || formatDate(Date.now()),
       ];
       await connection.execute(sql, row);
+
+      const invRow = [
+        `inv_${p.id}`,
+        p.id,
+        productSku,
+        categoryId,
+        p.productCode || p.id,
+        p.productName || 'Unnamed Product',
+        p.category || 'General',
+        p.brand || null,
+        p.sku || null,
+        p.barcode || null,
+        p.unit || 'Pcs',
+        formatNumber(p.stockQuantity, 0),
+        formatNumber(p.costPrice, 0),
+        formatNumber(p.sellingPrice, 0),
+        formatNumber(p.lowStockThreshold, 10),
+        p.supplierId || null,
+        p.origin || null,
+        formatNumber(p.version, 1),
+        formatBool(p.isDeleted),
+        formatDate(p.createdAt) || formatDate(Date.now()),
+        formatDate(p.updatedAt) || formatDate(Date.now()),
+      ];
+      await connection.execute(inventorySql, invRow);
     }
   }
 

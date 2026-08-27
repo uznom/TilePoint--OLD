@@ -3,309 +3,290 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef, Suspense } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { DbProvider, useDb, DbSnapshot } from "./context/DbContext";
-import { UserRole, User } from "./types/db";
-import { motion, AnimatePresence, MotionConfig } from "motion/react";
-import { SkeletalLoader } from "./components/SkeletalLoader";
-import { SimpleProgressBar } from "./components/SimpleProgressBar";
+import { AnimatePresence, MotionConfig, motion } from "motion/react";
+import React, { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { LoginModule } from "./components/LoginModule";
 import { SetupModule } from "./components/SetupModule";
+import { DbProvider, DbSnapshot, useDb } from "./context/DbContext";
 import {
   createSaltedHash,
   formatHashToken,
   verifyPasswordWithToken,
 } from "./lib/crypto";
-import { verifyAndUnwrapBackup, saveFileToBackup } from "./lib/fileBackupHelper";
+import { saveFileToBackup, verifyAndUnwrapBackup } from "./lib/fileBackupHelper";
+import { User, UserRole } from "./types/db";
 
 // Modular lazy components imports for route-based code splitting
 import {
-  LazyDashboard as Dashboard,
   LazyAdminProfitModule as AdminProfitModule,
-  LazyPosModule as PosModule,
-  LazyInventoryModule as InventoryModule,
-  LazyProcurementModule as ProcurementModule,
-  LazyTransmittalModule as TransmittalModule,
-  LazyShiftModule as ShiftModule,
-  LazyBranchModule as BranchModule,
-  LazyUsersModule as UsersModule,
-  LazySystemSettingsModule as SystemSettingsModule,
-  LazyCalculatorModule as CalculatorModule,
-  LazyStaffPortal as StaffPortal,
+  LazyArchivesModule as ArchivesModule,
   LazyAtposExtraModules as AtposExtraModules,
-  LazyDeliveriesModule as DeliveriesModule,
-  LazySalesTransmissionModule as SalesTransmissionModule,
+  LazyBranchModule as BranchModule,
+  LazyCalculatorModule as CalculatorModule,
   LazyDailyReconciliationModule as DailyReconciliationModule,
-  LazyReconciliationTransmissionModule as ReconciliationTransmissionModule,
   LazyDamageRegisterModule as DamageRegisterModule,
+  LazyDashboard as Dashboard,
+  LazyDeliveriesModule as DeliveriesModule,
+  LazyInventoryModule as InventoryModule,
+  LazyPosModule as PosModule,
+  LazyProcurementModule as ProcurementModule,
+  LazyReconciliationTransmissionModule as ReconciliationTransmissionModule,
+  LazySalesTransmissionModule as SalesTransmissionModule,
+  LazyShiftModule as ShiftModule,
+  LazyStaffPortal as StaffPortal,
+  LazySystemSettingsModule as SystemSettingsModule,
+  LazyTransmittalModule as TransmittalModule,
+  LazyTutorialOnboarding as TutorialOnboarding,
+  LazyUsersModule as UsersModule,
+  performTabTransitionCleanup,
   scheduleIdlePrefetch,
   trackModuleVisit,
-  prefetchModule,
 } from "./components/LazyModules";
 import { PageLoadingFallback } from "./components/PageLoadingFallback";
-import { ArchivesModule } from "./components/ArchivesModule";
 
-import { TutorialOnboarding } from "./components/TutorialOnboarding";
-import { PrivacyAccessibilityHub } from "./components/PrivacyAccessibilityHub";
-import { OnboardingSetupWizard } from "./components/OnboardingSetupWizard";
-import { SystemLoadingOverlay } from "./components/SystemLoadingOverlay";
-import { IdleScreen } from "./components/IdleScreen";
-import { PwaInstallPrompt } from "./components/PwaInstallPrompt";
-import { MobilePcOnlyBlocker } from "./components/MobilePcOnlyBlocker";
-import { isSameBranch } from "./lib/branchUtils";
 import { ConfirmationModal } from "./components/ConfirmationModal";
+import { DesktopKeyboardShortcutsModal } from "./components/DesktopKeyboardShortcutsModal";
+import { HeaderNavTabs } from "./components/HeaderNavTabs";
+import { IdleScreen } from "./components/IdleScreen";
+import { MobileBottomNav } from "./components/MobileBottomNav";
+import { OnboardingSetupWizard } from "./components/OnboardingSetupWizard";
+import { PrivacyAccessibilityHub } from "./components/PrivacyAccessibilityHub";
+import { PwaInstallPrompt } from "./components/PwaInstallPrompt";
 import { QuickModuleSwitcherModal } from "./components/QuickModuleSwitcherModal";
-import { useRouteSyncManager, PATH_TO_TAB, TAB_TO_PATH } from "./hooks";
+import { Sidebar } from "./components/Sidebar";
+import { SystemLoadingOverlay } from "./components/SystemLoadingOverlay";
+import { ToastNotification } from "./components/ToastNotification";
+import { PATH_TO_TAB, useRouteSyncManager } from "./hooks";
+import { isSameBranch } from "./lib/branchUtils";
 
 import {
- generateThemeFromSeed,
- applyM3ThemeToDOM,
- resetM3ThemeOverride,
+  applyHeroUIThemeToDOM,
+  getStoredHeroUIConfig,
+  saveHeroUIConfig,
+} from "./lib/herouiThemeEngine";
+import {
+  applyHeroThemeToDOM,
+  generateThemeFromSeed,
+  resetHeroThemeOverride,
 } from "./lib/themeGenerator";
 
 import {
- LayoutDashboard,
- ShoppingCart,
- Layers,
- FileText,
- Send,
- LockKeyhole,
- Building2,
- Users as UsersIcon,
- Calculator,
- Moon,
- Sun,
- User as LucideUser,
- Power,
- Package,
- Building,
- Menu,
- X,
- Sparkles,
- ChevronLeft,
- ChevronDown,
- ChevronRight,
- Database,
- History,
- Eye,
- EyeOff,
- RefreshCw,
- DollarSign,
- Truck,
- BookOpen,
- Accessibility,
- Shield,
- CalendarDays,
- Trash2,
- Download,
- Upload,
- Sliders,
- AlertTriangle,
- Palette,
- Settings,
- ShieldAlert,
- Smartphone,
- Clock,
- Wrench,
+  AlertTriangle,
+  Building2,
+  ChevronRight,
+  Database,
+  DollarSign,
+  Download,
+  Eye,
+  EyeOff,
+  FileText,
+  Layers,
+  LayoutDashboard,
+  LockKeyhole,
+  Power,
+  RefreshCw,
+  ShoppingCart,
+  Sparkles,
+  Trash2,
+  Truck,
+  Upload,
+  Users as UsersIcon,
+  X,
+  Clock,
+  HardDrive,
+  Zap,
+  Settings,
 } from "lucide-react";
 
 const ALL_ROLES = [
- UserRole.ADMIN,
- UserRole.MANAGER,
- UserRole.CASHIER,
- UserRole.STAFF,
+  UserRole.ADMIN,
+  UserRole.MANAGER,
+  UserRole.CASHIER,
+  UserRole.STAFF,
 ];
 const ADMIN_MANAGER = [UserRole.ADMIN, UserRole.MANAGER];
 const ADMIN_MANAGER_CASHIER = [
- UserRole.ADMIN,
- UserRole.MANAGER,
- UserRole.CASHIER,
+  UserRole.ADMIN,
+  UserRole.MANAGER,
+  UserRole.CASHIER,
 ];
 const ADMIN_ONLY = [UserRole.ADMIN];
 
 // Definitive Directory Hierarchical Categories and Sub-items with RBAC configuration
 export const sidebarCategoryTree = [
- {
- id: "sale",
- name: "Sale",
- icon: ShoppingCart,
- subItems: [
- { id: "pos", name: "ERP OS Checkout Mode", roles: ALL_ROLES },
- { id: "shift", name: "Shift drawer", roles: ADMIN_MANAGER_CASHIER },
- { id: "calculator", name: "Tile Coverage Calc", roles: ALL_ROLES },
- ],
- },
- {
- id: "inventory",
- name: "Inventory",
- icon: Layers,
- subItems: [
- { id: "inventory-stocks", name: "Catalog Stock Ledger", roles: ALL_ROLES },
- { id: "inventory-adjustments", name: "Adjustments Logs", roles: ALL_ROLES },
- { id: "inventory-transfer", name: "Stock Transfers", roles: ALL_ROLES },
- { id: "inventory-logistics", name: "Logistics Ledger & Heatmap", roles: ALL_ROLES },
- { id: "inventory-import", name: "Migration & Import/Export Tool", roles: ADMIN_MANAGER },
- { id: "inventory-damage", name: "Broken & BOA Register", roles: ALL_ROLES },
- { id: "inventory-expiry", name: "Shelf-Life & Expiry Calendar", roles: ALL_ROLES },
- { id: "inventory-branch-prices", name: "Branch MSRP & SRP Suggestions", roles: ADMIN_MANAGER },
- ],
- },
- {
- id: "bir",
- name: "BIR & Sales Transmission",
- icon: FileText,
- subItems: [
- { id: "reconciliation-transmission", name: "Reconciliation & Transmission", roles: ADMIN_MANAGER },
- { id: "bir-xz", name: "Search X&Z Reading", roles: ADMIN_MANAGER },
- { id: "bir-summary", name: "BIR Summary Report", roles: ADMIN_MANAGER },
- { id: "bir-pwd", name: "PWD Book (20%)", roles: ADMIN_MANAGER },
- { id: "bir-senior20", name: "Senior Citizen (20%)", roles: ADMIN_MANAGER },
- { id: "bir-senior5", name: "Senior Citizen (5%)", roles: ADMIN_MANAGER },
- { id: "bir-solo", name: "Solo Parent (10%)", roles: ADMIN_MANAGER },
- { id: "bir-athletes", name: "National Athletes", roles: ADMIN_MANAGER },
- { id: "bir-regular", name: "Regular Promos", roles: ADMIN_MANAGER },
- ],
- },
- {
- id: "deliveries",
- name: "Cargo Deliveries",
- icon: Truck,
- subItems: [
- { id: "deliveries-panel", name: "Delivery Center", roles: ALL_ROLES },
- ],
- },
- {
- id: "members",
- name: "Members",
- icon: UsersIcon,
- subItems: [
- { id: "members-manage", name: "Manage Members", roles: ALL_ROLES },
- { id: "members-receivables", name: "Account Receivables", roles: ADMIN_MANAGER },
- { id: "members-loyalty", name: "Member Loyalty Points", roles: ALL_ROLES },
- ],
- },
- {
- id: "supplier",
- name: "Supplier",
- icon: Building2,
- subItems: [
- { id: "suppliers-manage", name: "Manage Suppliers", roles: ADMIN_ONLY },
- { id: "suppliers-credits", name: "Active Credits", roles: ADMIN_ONLY },
- { id: "suppliers-calendar", name: "Payment Calendar", roles: ADMIN_ONLY },
- ],
- },
- {
- id: "expenses",
- name: "Expenses",
- icon: DollarSign,
- subItems: [
- { id: "expenses-add", name: "Add Expenses", roles: ADMIN_MANAGER },
- { id: "expenses-search", name: "Search Expenses", roles: ADMIN_MANAGER },
- ],
- },
- {
- id: "adjustments",
- name: "Sale Adjustments",
- icon: RefreshCw,
- subItems: [
- { id: "adjustments-void", name: "Search Voided Sales", roles: ALL_ROLES },
- { id: "adjustments-return", name: "Search Returned Products", roles: ALL_ROLES },
- ],
- },
- {
- id: "admin-bi",
- name: "Business Intelligence",
- icon: LayoutDashboard,
- subItems: [
- { id: "dashboard", name: "Branch Dashboard", roles: ADMIN_MANAGER },
- { id: "profit-analytics", name: "P&L Accounting Desk", roles: ADMIN_MANAGER },
- ],
- },
- {
- id: "admin-org",
- name: "Staff & Settings",
- icon: UsersIcon,
- subItems: [
- { id: "branches", name: "Branches Profile", roles: ADMIN_MANAGER },
- { id: "users", name: "Employee Directory", roles: ADMIN_MANAGER },
- { id: "system-settings", name: "System Settings", roles: ADMIN_MANAGER },
-		{ id: "archives", name: "Archives", roles: ADMIN_MANAGER },
- { id: "tutorials", name: "Operational Walkthrough", roles: ALL_ROLES },
- ],
- },
+  {
+    id: "sale",
+    name: "Sale",
+    icon: ShoppingCart,
+    subItems: [
+      { id: "pos", name: "ERP OS Checkout Mode", roles: ALL_ROLES },
+      { id: "shift", name: "Shift drawer", roles: ADMIN_MANAGER_CASHIER },
+      { id: "calculator", name: "Tile Coverage Calc", roles: ALL_ROLES },
+    ],
+  },
+  {
+    id: "inventory",
+    name: "Inventory",
+    icon: Layers,
+    subItems: [
+      { id: "inventory-stocks", name: "Catalog Stock Ledger", roles: ALL_ROLES },
+      { id: "inventory-adjustments", name: "Adjustments Logs", roles: ALL_ROLES },
+      { id: "inventory-transfer", name: "Stock Transfers", roles: ALL_ROLES },
+      { id: "inventory-logistics", name: "Logistics Ledger & Heatmap", roles: ALL_ROLES },
+      { id: "inventory-import", name: "Migration & Import/Export Tool", roles: ADMIN_MANAGER },
+      { id: "inventory-damage", name: "Broken & BOA Register", roles: ALL_ROLES },
+      { id: "inventory-expiry", name: "Shelf-Life & Expiry Calendar", roles: ALL_ROLES },
+      { id: "inventory-branch-prices", name: "Branch MSRP & SRP Suggestions", roles: ADMIN_MANAGER },
+    ],
+  },
+  {
+    id: "bir",
+    name: "BIR & Sales Transmission",
+    icon: FileText,
+    subItems: [
+      { id: "reconciliation-transmission", name: "Reconciliation & Transmission", roles: ADMIN_MANAGER },
+      { id: "bir-xz", name: "Search X&Z Reading", roles: ADMIN_MANAGER },
+      { id: "bir-summary", name: "BIR Summary Report", roles: ADMIN_MANAGER },
+      { id: "bir-pwd", name: "PWD Book (20%)", roles: ADMIN_MANAGER },
+      { id: "bir-senior20", name: "Senior Citizen (20%)", roles: ADMIN_MANAGER },
+      { id: "bir-senior5", name: "Senior Citizen (5%)", roles: ADMIN_MANAGER },
+      { id: "bir-solo", name: "Solo Parent (10%)", roles: ADMIN_MANAGER },
+      { id: "bir-athletes", name: "National Athletes", roles: ADMIN_MANAGER },
+      { id: "bir-regular", name: "Regular Promos", roles: ADMIN_MANAGER },
+    ],
+  },
+  {
+    id: "deliveries",
+    name: "Cargo Deliveries",
+    icon: Truck,
+    subItems: [
+      { id: "deliveries-panel", name: "Delivery Center", roles: ALL_ROLES },
+    ],
+  },
+  {
+    id: "members",
+    name: "Members",
+    icon: UsersIcon,
+    subItems: [
+      { id: "members-manage", name: "Manage Members", roles: ALL_ROLES },
+      { id: "members-receivables", name: "Account Receivables", roles: ADMIN_MANAGER },
+      { id: "members-loyalty", name: "Member Loyalty Points", roles: ALL_ROLES },
+    ],
+  },
+  {
+    id: "supplier",
+    name: "Supplier",
+    icon: Building2,
+    subItems: [
+      { id: "suppliers-manage", name: "Manage Suppliers", roles: ADMIN_ONLY },
+      { id: "suppliers-credits", name: "Active Credits", roles: ADMIN_ONLY },
+      { id: "suppliers-calendar", name: "Payment Calendar", roles: ADMIN_ONLY },
+    ],
+  },
+  {
+    id: "expenses",
+    name: "Expenses",
+    icon: DollarSign,
+    subItems: [
+      { id: "expenses-add", name: "Add Expenses", roles: ADMIN_MANAGER },
+      { id: "expenses-search", name: "Search Expenses", roles: ADMIN_MANAGER },
+    ],
+  },
+  {
+    id: "adjustments",
+    name: "Sale Adjustments",
+    icon: RefreshCw,
+    subItems: [
+      { id: "adjustments-void", name: "Search Voided Sales", roles: ALL_ROLES },
+      { id: "adjustments-return", name: "Search Returned Products", roles: ALL_ROLES },
+    ],
+  },
+  {
+    id: "admin-bi",
+    name: "Business Intelligence",
+    icon: LayoutDashboard,
+    subItems: [
+      { id: "dashboard", name: "Branch Dashboard", roles: ADMIN_MANAGER },
+      { id: "profit-analytics", name: "P&L Accounting Desk", roles: ADMIN_MANAGER },
+    ],
+  },
+  {
+    id: "admin-org",
+    name: "Staff & Organization",
+    icon: UsersIcon,
+    subItems: [
+      { id: "branches", name: "Branches Profile", roles: ADMIN_MANAGER },
+      { id: "users", name: "Employee Directory", roles: ADMIN_MANAGER },
+      { id: "archives", name: "Database & Backups", roles: ADMIN_MANAGER },
+    ],
+  },
 ];
 
 // Centralized flat list of all submodules derived from sidebarCategoryTree
 export const allSubModules = sidebarCategoryTree.flatMap((category) => category.subItems);
 
 function AppContent() {
- const {
- currentUser,
- updateCurrentUser,
- updateUser,
- users,
- branches,
- isLoggedIn,
- logout,
- isConfigured,
- isHydrating,
- isSystemHydrating,
-  isSystemProcessing,
- dbSnapshots,
- createDbSnapshot,
- restoreDbSnapshot,
- deleteDbSnapshot,
- autoBackupEnabled,
- setAutoBackupEnabled,
- backupIntervalHours,
- setBackupIntervalHours,
- lastAutoBackupTime,
- setLastAutoBackupTime,
- triggerSystemProcessing,
- dbSyncStatus,
- writeStatsCount,
- resetWriteStats,
- forceSyncAll,
- debounceDelay,
- setDebounceDelay,
- suppliers,
- products,
- purchaseOrders,
- poItems,
- transmittals,
- shifts,
- sales,
- saleItems,
- movements,
- auditLogs,
- parkedSales,
- holdSale,
- stockTransfers,
- branchStock,
- ledgerEntries,
- branchSalesReports,
- deliveries,
- serverConnected,
- lowPerformanceMode,
- setLowPerformanceMode,
- apiErrorState,
- clearServerErrorState,
- invalidateLocalCache,
- syncFromSharedServer,
- dbMaintenanceEnabled,
- setDbMaintenanceEnabled,
- lastMaintenanceTime,
- isMaintenanceRunning,
- runDatabaseMaintenance,
- } = useDb();
+  const {
+    currentUser,
+    updateCurrentUser,
+    updateUser,
+    users,
+    branches,
+    isLoggedIn,
+    logout,
+    isConfigured,
+    isHydrating,
+    isSystemHydrating,
+    dbSnapshots,
+    createDbSnapshot,
+    restoreDbSnapshot,
+    deleteDbSnapshot,
+    autoBackupEnabled,
+    setAutoBackupEnabled,
+    backupIntervalHours,
+    setBackupIntervalHours,
+    triggerSystemProcessing,
+    dbSyncStatus,
+    writeStatsCount,
+    debounceDelay,
+    suppliers,
+    products,
+    purchaseOrders,
+    poItems,
+    transmittals,
+    shifts,
+    sales,
+    saleItems,
+    movements,
+    auditLogs,
+    parkedSales,
+    holdSale,
+    stockTransfers,
+    branchStock,
+    ledgerEntries,
+    branchSalesReports,
+    deliveries,
+    lowPerformanceMode,
+    apiErrorState,
+    clearServerErrorState,
+    syncFromSharedServer,
+    dbMaintenanceEnabled,
+    setDbMaintenanceEnabled,
+    lastMaintenanceTime,
+    isMaintenanceRunning,
+    runDatabaseMaintenance,
+  } = useDb();
+
   const showSaleRedDot = parkedSales.some((p: any) => {
     const pBranch = p.heldByBranchId || (p as any).branchId;
     if (!pBranch) return false;
     return isSameBranch(pBranch, currentUser?.branchAssignmentId || "B1", branches);
   });
 
-  const showDeliveriesRedDot = deliveries.some(d => d.status === 'Scheduled' || d.status === 'Packed' || d.status === 'Out For Delivery');
+  const showDeliveriesRedDot = deliveries.some(
+    (d) => d.status === "Scheduled" || d.status === "Packed" || d.status === "Out For Delivery"
+  );
 
   let showInventoryRedDot = false;
   try {
@@ -327,3229 +308,1862 @@ function AppContent() {
     showInventoryRedDot = true;
   }
 
-  const showTransferRedDot = stockTransfers.some(t => {
-    if (t.status !== 'Pending') return false;
-    return t.fromBranchId !== t.toBranchId;
+  const initialSavedTabRef = useRef<string | null>(null);
+  if (initialSavedTabRef.current === null && typeof window !== "undefined") {
+    initialSavedTabRef.current =
+      localStorage.getItem("tilepoint_active_tab") || "none";
+  }
+
+  const { activeTab, setActiveTab, isRouteValid } = useRouteSyncManager({ currentUser });
+
+  const [confirmRestoreSnap, setConfirmRestoreSnap] = useState<DbSnapshot | null>(null);
+  const [selectedBranchId, setSelectedBranchId] = useState<string>("all");
+
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const showToastMsg = (msg: string, _type?: "success" | "info" | "error") => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3500);
+  };
+
+  // Dynamic automatic routing on login/identity-switch to ensure Cashier goes to pos, Admin/Manager goes to dashboard
+  const prevUserIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (isLoggedIn && currentUser) {
+      if (prevUserIdRef.current !== currentUser.id) {
+        prevUserIdRef.current = currentUser.id;
+
+        if (typeof window !== "undefined") {
+          const currentPath = window.location.pathname;
+          if (currentPath && currentPath !== "/") {
+            const routeTab = PATH_TO_TAB[currentPath] || currentPath.replace(/^\//, "");
+            if (routeTab && isRouteValid(routeTab)) {
+              setActiveTab(routeTab);
+              return;
+            }
+          }
+        }
+
+        // Direct Cashiers to checkout mode (pos), Admin & Manager to dashboard
+        if (currentUser.role === UserRole.CASHIER) {
+          setActiveTab("pos");
+          localStorage.setItem("tilepoint_active_tab", "pos");
+        } else if (
+          currentUser.role === UserRole.ADMIN ||
+          currentUser.role === UserRole.MANAGER
+        ) {
+          setActiveTab("dashboard");
+          localStorage.setItem("tilepoint_active_tab", "dashboard");
+        } else {
+          setActiveTab("inventory-stocks");
+          localStorage.setItem("tilepoint_active_tab", "inventory-stocks");
+        }
+      }
+    } else {
+      prevUserIdRef.current = null;
+    }
+  }, [isLoggedIn, currentUser?.id, currentUser?.role, isRouteValid, setActiveTab]);
+
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(() => {
+    return localStorage.getItem("tilepoint_sidebar_expanded") !== "false";
   });
 
-  const showExpiryRedDot = showInventoryRedDot;
-  const initialSavedTabRef = useRef<string | null>(null);
- if (initialSavedTabRef.current === null && typeof window !== "undefined") {
- initialSavedTabRef.current =
- localStorage.getItem("tilepoint_active_tab") || "none";
- }
+  const isSidebarMinimized = !isSidebarExpanded;
 
- const { activeTab, setActiveTab, isRouteValid } = useRouteSyncManager({ currentUser });
+  const [, setIsTabChanging] = useState(false);
+  const [percentProgress, setPercentProgress] = useState(0);
 
- const [confirmRestoreSnap, setConfirmRestoreSnap] = useState<DbSnapshot | null>(null);
-
- const [selectedBranchId, setSelectedBranchId] = useState<string>("all");
- const [isMobileViewport, setIsMobileViewport] = useState(false);
- const [developerBypassTabs, setDeveloperBypassTabs] = useState<string[]>([]);
-
- const [viewportBreakpoint, setViewportBreakpoint] = useState<"mobile" | "tablet" | "desktop" | "wide">("desktop");
- const [windowWidth, setWindowWidth] = useState<number>(typeof window !== 'undefined' ? window.innerWidth : 1200);
- const [windowHeight, setWindowHeight] = useState<number>(typeof window !== 'undefined' ? window.innerHeight : 800);
- const [showBreakpointModal, setShowBreakpointModal] = useState(false);
- const [simulatedBreakpoint, setSimulatedBreakpoint] = useState<"none" | "mobile" | "tablet" | "desktop" | "wide">("none");
-
- useEffect(() => {
- const handleResize = () => {
- if (simulatedBreakpoint !== "none") return;
- const width = window.innerWidth;
- const height = window.innerHeight;
- setWindowWidth(width);
- setWindowHeight(height);
- setIsMobileViewport(width < 640);
- 
- if (width < 640) {
- setViewportBreakpoint("mobile");
- } else if (width < 1024) {
- setViewportBreakpoint("tablet");
- } else if (width < 1536) {
- setViewportBreakpoint("desktop");
- } else {
- setViewportBreakpoint("wide");
- }
- };
- handleResize();
- window.addEventListener("resize", handleResize);
- return () => window.removeEventListener("resize", handleResize);
- }, [simulatedBreakpoint]);
-
- useEffect(() => {
- if (simulatedBreakpoint !== "none") {
- if (simulatedBreakpoint === "mobile") {
- setWindowWidth(480);
- setWindowHeight(800);
- setIsMobileViewport(true);
- setViewportBreakpoint("mobile");
- } else if (simulatedBreakpoint === "tablet") {
- setWindowWidth(800);
- setWindowHeight(1024);
- setIsMobileViewport(true);
- setViewportBreakpoint("tablet");
- } else if (simulatedBreakpoint === "desktop") {
- setWindowWidth(1280);
- setWindowHeight(800);
- setIsMobileViewport(false);
- setViewportBreakpoint("desktop");
- } else if (simulatedBreakpoint === "wide") {
- setWindowWidth(1680);
- setWindowHeight(1050);
- setIsMobileViewport(false);
- setViewportBreakpoint("wide");
- }
- } else {
- const width = window.innerWidth;
- const height = window.innerHeight;
- setWindowWidth(width);
- setWindowHeight(height);
- setIsMobileViewport(width < 640);
- if (width < 640) {
- setViewportBreakpoint("mobile");
- } else if (width < 1024) {
- setViewportBreakpoint("tablet");
- } else if (width < 1536) {
- setViewportBreakpoint("desktop");
- } else {
- setViewportBreakpoint("wide");
- }
- }
- }, [simulatedBreakpoint]);
-
- const showToastMsg = (msg: string, type: "success" | "info" | "error") => {
- showToast(msg);
- };
-
- // Dynamic automatic routing on login/identity-switch to ensure Admin sees dashboard first
- const hasInitializedRoutingRef = useRef(false);
- useEffect(() => {
- if (isLoggedIn && currentUser) {
- if (hasInitializedRoutingRef.current) return;
- hasInitializedRoutingRef.current = true;
-
- if (typeof window !== "undefined") {
- const currentPath = window.location.pathname;
- if (currentPath && currentPath !== "/") {
- const routeTab = PATH_TO_TAB[currentPath] || currentPath.replace(/^\//, "");
- if (routeTab && isRouteValid(routeTab)) return;
- }
- }
- const savedTab =
- initialSavedTabRef.current && initialSavedTabRef.current !== "none"
- ? initialSavedTabRef.current
- : localStorage.getItem("tilepoint_active_tab");
- if (savedTab && savedTab !== "none") {
- const savedItem = allSubModules.find((m) => m.id === savedTab);
- if (savedItem && savedItem.roles.includes(currentUser.role)) {
- setActiveTab(savedTab);
- return;
- }
- }
- const isFirstTime =
- typeof window !== "undefined" &&
- localStorage.getItem("tp_first_login_done") !== "true";
- if (isFirstTime) {
- setActiveTab("tutorials");
- localStorage.setItem("tp_first_login_done", "true");
- } else if (currentUser.role === UserRole.CASHIER) {
- setActiveTab("pos");
- } else if (
- currentUser.role === UserRole.ADMIN ||
- currentUser.role === UserRole.MANAGER
- ) {
- setActiveTab("dashboard");
- } else {
- setActiveTab("inventory-stocks");
- }
- } else {
- hasInitializedRoutingRef.current = false;
- }
- }, [isLoggedIn, currentUser?.id, currentUser?.role]);
- const [isSidebarExpanded, setIsSidebarExpanded] = useState(() => {
- return localStorage.getItem("tilepoint_sidebar_expanded") !== "false";
- });
-
- const isSidebarMinimized = !isSidebarExpanded;
- const setIsSidebarMinimized = (val?: any) => {
- if (typeof val === "boolean") {
- setIsSidebarExpanded(!val);
- } else {
- setIsSidebarExpanded((prev) => !prev);
- }
- };
- const [isTabChanging, setIsTabChanging] = useState(false);
- const [percentProgress, setPercentProgress] = useState(0);
-
- useEffect(() => {
- localStorage.setItem("tilepoint_sidebar_expanded", String(isSidebarExpanded));
- localStorage.setItem(
- "tilepoint_sidebar_minimized",
- String(isSidebarMinimized),
- );
- }, [isSidebarExpanded, isSidebarMinimized]);
-
- const [followSystemTheme, setFollowSystemTheme] = useState(() => {
- const saved = localStorage.getItem("tilepoint_follow_system_theme");
- return saved !== null ? saved === "true" : true;
- });
-
- const [darkMode, setDarkMode] = useState(() => {
- const savedFollow = localStorage.getItem("tilepoint_follow_system_theme");
- const isFollow = savedFollow !== null ? savedFollow === "true" : true;
- if (isFollow) {
- return typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
- }
- const saved = localStorage.getItem("tilepoint_dark_theme");
- return saved !== null ? saved === "true" : true;
- });
-
- // Handle manual dark mode toggling, disabling "follow system"
- const handleToggleDarkMode = (targetVal?: boolean) => {
- setFollowSystemTheme(false);
- if (targetVal !== undefined) {
- setDarkMode(targetVal);
- } else {
- setDarkMode((prev) => !prev);
- }
- };
-
- useEffect(() => {
- scheduleIdlePrefetch();
- }, []);
-
- useEffect(() => {
- localStorage.setItem("tilepoint_follow_system_theme", String(followSystemTheme));
- }, [followSystemTheme]);
-
- useEffect(() => {
- if (!followSystemTheme) return;
-
- const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
- const handleChange = (e: MediaQueryListEvent) => {
- setDarkMode(e.matches);
- };
-
- if (mediaQuery.addEventListener) {
- mediaQuery.addEventListener("change", handleChange);
- } else {
- mediaQuery.addListener(handleChange);
- }
-
- setDarkMode(mediaQuery.matches);
-
- return () => {
- if (mediaQuery.removeEventListener) {
- mediaQuery.removeEventListener("change", handleChange);
- } else {
- mediaQuery.removeListener(handleChange);
- }
- };
- }, [followSystemTheme]);
-
- // Smoothly transition all elements when changing dark/light theme
- const isFirstThemeRender = React.useRef(true);
- useEffect(() => {
- if (isFirstThemeRender.current) {
- isFirstThemeRender.current = false;
- return;
- }
- if (
- document.documentElement.classList.contains("accessibility-no-animation")
- ) {
- return;
- }
- document.documentElement.classList.add("theme-transition");
- const timer = setTimeout(() => {
- document.documentElement.classList.remove("theme-transition");
- }, 1000);
- return () => clearTimeout(timer);
- }, [darkMode]);
- const [isSubMenuCollapsed, setIsSubMenuCollapsed] = useState(false);
- const [isSidebarProfileDropdownOpen, setIsSidebarProfileDropdownOpen] =
- useState(false);
-
- const [wasSidebarExpandedBeforeCheckout, setWasSidebarExpandedBeforeCheckout] = useState(false);
- const prevTabRef = useRef(activeTab);
-
- // Auto-minimize the sidebar when tab is ERP OS Mode (checkout mode) and restore when exiting
- useEffect(() => {
- const prevTab = prevTabRef.current;
- prevTabRef.current = activeTab;
-
- if (activeTab === "pos" && prevTab !== "pos") {
- // Entering checkout mode
- if (!isSidebarMinimized) {
- setWasSidebarExpandedBeforeCheckout(true);
- setIsSidebarMinimized(true);
- } else {
- setWasSidebarExpandedBeforeCheckout(false);
- }
- } else if (activeTab !== "pos" && prevTab === "pos") {
- // Exiting checkout mode
- if (wasSidebarExpandedBeforeCheckout) {
- setIsSidebarMinimized(false);
- setWasSidebarExpandedBeforeCheckout(false);
- }
- }
- }, [activeTab, isSidebarMinimized, wasSidebarExpandedBeforeCheckout]);
-
- const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-
- // ATPOS v2 Collapsible Folder States
- const [expandedFolders, setExpandedFolders] = useState<
- Record<string, boolean>
- >({
- inventory: true,
- sale: false,
- adjustments: false,
- members: false,
- expenses: false,
- supplier: false,
- bir: false,
- "admin-bi": false,
- "admin-org": false,
- "admin-data": false,
- });
-
- const toggleFolder = (folderId: string) => {
- setExpandedFolders((prev) => ({
- ...prev,
- [folderId]: !prev[folderId],
- }));
- };
-
- // Account settings states & Logout confirmatory dialogs
- const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
- const [colorContrast, setColorContrast] = useState<
- "small" | "default" | "medium" | "high"
- >(() => {
- const val = localStorage.getItem("tilepoint-color-contrast");
- if (val === "small" || val === "default") return "small";
- return (val as any) || "medium";
- });
-
- const [maximizeTextContrast, setMaximizeTextContrast] = useState<boolean>(
- () => {
- return (
- localStorage.getItem("tilepoint-maximize-text-contrast") === "true"
- );
- },
- );
-
- const [disableAnimations, setDisableAnimations] = useState(() => {
- return localStorage.getItem("tilepoint-disable-animations") === "true";
- });
-
- const [disableBlurs, setDisableBlurs] = useState(() => {
- return localStorage.getItem("tilepoint-disable-blurs") === "true";
- });
-
- useEffect(() => {
- const handleSync = () => {
- const rawContrast = localStorage.getItem("tilepoint-color-contrast");
- const contrast = (rawContrast === "small" || rawContrast === "default") ? "small" : ((rawContrast as any) || "medium");
- const maxText =
- localStorage.getItem("tilepoint-maximize-text-contrast") === "true";
- const savedSeed = localStorage.getItem("tilepoint_custom_theme_primary");
- const noAnim =
- localStorage.getItem("tilepoint-disable-animations") === "true";
- const noBlur = localStorage.getItem("tilepoint-disable-blurs") === "true";
- const textSize =
- (localStorage.getItem("tilepoint-text-size") as
- | "small"
- | "normal"
- | "large"
- | "xlarge") || "normal";
- const dyslexic =
- localStorage.getItem("tilepoint-dyslexic-font") === "true";
- const outlines =
- localStorage.getItem("tilepoint-enhanced-outlines") === "true";
-
- setColorContrast(contrast);
- setMaximizeTextContrast(maxText);
- setDisableAnimations(noAnim);
- setDisableBlurs(noBlur);
-
- // Apply the theme with latest contrast settings
- try {
- const activeSeed = savedSeed || "#155EEF";
- const scheme = generateThemeFromSeed(activeSeed, darkMode, contrast);
- applyM3ThemeToDOM(scheme);
- } catch (err) {
- console.error(
- "[M3 Dynamic Theme] Failed to apply color theme:",
- err,
- );
- }
-
- // Sync Font Size classes
- document.documentElement.classList.remove(
- "accessibility-small-text",
- "accessibility-large-text",
- "accessibility-xlarge-text"
- );
- if (textSize === "small") {
- document.documentElement.classList.add("accessibility-small-text");
- } else if (textSize === "large") {
- document.documentElement.classList.add("accessibility-large-text");
- } else if (textSize === "xlarge") {
- document.documentElement.classList.add("accessibility-xlarge-text");
- }
-
- // Sync Dyslexic Font class
- if (dyslexic) {
- document.documentElement.classList.add("accessibility-dyslexic-font");
- } else {
- document.documentElement.classList.remove("accessibility-dyslexic-font");
- }
-
- // Sync Enhanced Outlines class
- if (outlines) {
- document.documentElement.classList.add("accessibility-enhanced-outlines");
- } else {
- document.documentElement.classList.remove("accessibility-enhanced-outlines");
- }
-
- // Sync CSS accessibility high contrast and maximize text contrast flag classes
- if (contrast === "high") {
- document.documentElement.classList.add("accessibility-high-contrast");
- } else {
- document.documentElement.classList.remove(
- "accessibility-high-contrast",
- );
- }
-
- if (maxText) {
- document.documentElement.classList.add(
- "accessibility-maximize-text-contrast",
- );
- } else {
- document.documentElement.classList.remove(
- "accessibility-maximize-text-contrast",
- );
- }
-
- if (noAnim) {
- document.documentElement.classList.add("accessibility-no-animation");
- } else {
- document.documentElement.classList.remove("accessibility-no-animation");
- }
-
- if (noBlur) {
- document.documentElement.classList.add("accessibility-no-blur");
- } else {
- document.documentElement.classList.remove("accessibility-no-blur");
- }
- };
- window.addEventListener("tilepoint-theme-updated", handleSync);
- handleSync();
- return () => {
- window.removeEventListener("tilepoint-theme-updated", handleSync);
- };
- }, [darkMode]);
-
- useEffect(() => {
- if (lowPerformanceMode) {
- document.documentElement.classList.add("accessibility-no-blur");
- document.documentElement.classList.add("accessibility-no-animation");
- } else {
- const noAnim =
- localStorage.getItem("tilepoint-disable-animations") === "true";
- const noBlur = localStorage.getItem("tilepoint-disable-blurs") === "true";
- if (!noBlur)
- document.documentElement.classList.remove("accessibility-no-blur");
- if (!noAnim)
- document.documentElement.classList.remove("accessibility-no-animation");
- }
- }, [lowPerformanceMode]);
-
- const [showLogoutConfirmModal, setShowLogoutConfirmModal] = useState(false);
- const [showAccountSettingsModal, setShowAccountSettingsModal] =
- useState(false);
- const [showSetupWizard, setShowSetupWizard] = useState(false);
- const [showPosExitConfirmModal, setShowPosExitConfirmModal] = useState(false);
- const [showQuickSwitcherModal, setShowQuickSwitcherModal] = useState(false);
- const [pendingTabId, setPendingTabId] = useState<string | null>(null);
-
-
-
- useEffect(() => {
- const handleOpenWizard = () => {
- setShowSetupWizard(true);
- };
- window.addEventListener("open-setup-wizard", handleOpenWizard);
- return () => {
- window.removeEventListener("open-setup-wizard", handleOpenWizard);
- };
- }, []);
-
- const [isCompactColumns, setIsCompactColumns] = useState<boolean>(() => {
- const saved = localStorage.getItem("tilepoint_compact_columns");
- return saved !== "false";
- });
-
- const [isSidebarHidden, setIsSidebarHidden] = useState<boolean>(() => {
- const saved = localStorage.getItem("tilepoint_sidebar_hidden");
- return saved === "true";
- });
-
- useEffect(() => {
- localStorage.setItem("tilepoint_compact_columns", String(isCompactColumns));
- }, [isCompactColumns]);
-
- useEffect(() => {
- localStorage.setItem("tilepoint_sidebar_hidden", String(isSidebarHidden));
- }, [isSidebarHidden]);
-
- const [showDatabaseCoreModal, setShowDatabaseCoreModal] = useState(false);
- const [dbCoreTab, setDbCoreTab] = useState<
- "scheduler" | "ledger" | "import-export"
- >("scheduler");
- const [manualSnapshotName, setManualSnapshotName] = useState("");
- const [deleteSnapshotConfirm, setDeleteSnapshotConfirm] = useState<{ [snapId: string]: number }>({});
- const [clearAllConfirm, setClearAllConfirm] = useState<number>(0);
- const [dbBackupFileMessage, setDbBackupFileMessage] = useState<string | null>(
- null,
- );
- const [dbBackupFileError, setDbBackupFileError] = useState<string | null>(
- null,
- );
- const [toastMessage, setToastMessage] = useState<string | null>(null);
-
- // Password reset/update form localized states
- const [currentPassword, setCurrentPassword] = useState("");
- const [newPassword, setNewPassword] = useState("");
- const [confirmPassword, setConfirmPassword] = useState("");
- const [showCurrentPassword, setShowCurrentPassword] = useState(false);
- const [showNewPassword, setShowNewPassword] = useState(false);
- const [settingsError, setSettingsError] = useState("");
- const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
-
- // Profile customisation edit states
- const [editFullName, setEditFullName] = useState("");
- const [editUsername, setEditUsername] = useState("");
- const [editProfilePicture, setEditProfilePicture] = useState("");
-
- useEffect(() => {
- if (showAccountSettingsModal && currentUser) {
- setEditFullName(currentUser.fullName);
- setEditUsername(currentUser.username);
- setEditProfilePicture(currentUser.profilePicture || "");
- }
- }, [showAccountSettingsModal, currentUser]);
+  // Safety Watchdog: Ensure the top progress indicator never gets stuck or freezes under any condition
+  useEffect(() => {
+    if (percentProgress > 0) {
+      const watchdogTimer = setTimeout(() => {
+        setPercentProgress(0);
+        setIsTabChanging(false);
+      }, 500);
+      return () => clearTimeout(watchdogTimer);
+    }
+  }, [percentProgress]);
 
   useEffect(() => {
-  const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
-  const target = e.target as HTMLElement | null;
-  if (!target) return;
-  if (
-  isAccountDropdownOpen &&
-  !target.closest("#account-dropdown-container") &&
-  !target.closest("#account-dropdown-trigger")
-  ) {
-  setIsAccountDropdownOpen(false);
-  }
-  if (
-  isSidebarProfileDropdownOpen &&
-  !target.closest("#sidebar-profile-dropdown-container") &&
-  !target.closest("#sidebar-profile-dropdown-trigger")
-  ) {
-  setIsSidebarProfileDropdownOpen(false);
-  }
-  };
-
-  if (isAccountDropdownOpen || isSidebarProfileDropdownOpen) {
-  document.addEventListener("mousedown", handleOutsideClick);
-  document.addEventListener("touchstart", handleOutsideClick);
-  }
-
-  return () => {
-  document.removeEventListener("mousedown", handleOutsideClick);
-  document.removeEventListener("touchstart", handleOutsideClick);
-  };
-  }, [isAccountDropdownOpen, isSidebarProfileDropdownOpen]);
-
- const showToast = (msg: string) => {
- setToastMessage(msg);
- setTimeout(() => {
- setToastMessage(null);
- }, 4000);
- };
-
- const proceedWithTabChange = (tabId: string) => {
- trackModuleVisit(tabId);
- prefetchModule(tabId);
-
- // Synchronize tab state immediately to eliminate asynchronous routing glitches and bouncing
- setActiveTab(tabId);
-
- if (disableAnimations || lowPerformanceMode) {
- setIsTabChanging(false);
- setPercentProgress(0);
- return;
- }
-
- setIsTabChanging(true);
- setPercentProgress(35);
-
- // Fast top linear progress indicator
- const interval = setInterval(() => {
- setPercentProgress((prev) => {
- if (prev >= 95) {
- clearInterval(interval);
- return 95;
- }
- return prev + 20;
- });
- }, 30);
-
- setTimeout(() => {
- clearInterval(interval);
- setPercentProgress(100);
- setTimeout(() => {
- setIsTabChanging(false);
- setPercentProgress(0);
- }, 60);
- }, 120);
- };
-
- // Tab change simulator timer with active linear progress
- const changeTab = (tabId: string) => {
- if (tabId === activeTab) return;
-
- // Safety role clearance checker
- const targetItem = allSubModules.find((item) => item.id === tabId);
- if (targetItem && currentUser && targetItem.roles && !targetItem.roles.includes(currentUser.role)) {
- return;
- }
-
- // INTERCEPT ACTIVE ERP OS CHECKOUT EXIT: If we are in 'pos' and there is an active checkout (cart contains items), auto-hold/park the current order and clear the cart.
- if (activeTab === "pos") {
- const activeCartRaw = localStorage.getItem("tp_active_cart");
- if (activeCartRaw) {
- try {
- const parsedCart = JSON.parse(activeCartRaw);
- if (Array.isArray(parsedCart) && parsedCart.length > 0) {
- const customerName = localStorage.getItem("tp_active_customer_name") || "Walk-in Customer";
- const customerNotes = localStorage.getItem("tp_active_customer_notes") || "";
- // Auto hold current order!
- holdSale(parsedCart, customerName, customerNotes);
- 
- // Clear current cart so that POS is closed & reset
- localStorage.setItem("tp_active_cart", JSON.stringify([]));
- localStorage.setItem("tp_active_customer_name", "Walk-in Customer");
- localStorage.setItem("tp_active_customer_notes", "");
- 
- showToast("Active transaction automatically held in safe hold registers.");
- }
- } catch (_) {
- // ignore
- }
- }
- }
-
- proceedWithTabChange(tabId);
- };
-
-
- useEffect(() => {
-  const handleStorageFailure = (e: Event) => {
-   const customEvent = e as CustomEvent;
-   const message = customEvent.detail?.message || "Local storage quota auto-managed. Data synced with server.";
-   showToast(message);
-  };
-
-  window.addEventListener("tp_storage_failure", handleStorageFailure);
-  return () => {
-   window.removeEventListener("tp_storage_failure", handleStorageFailure);
-  };
- }, []);
-
- // Immersive ERP OS terminal distraction-free mode state
- const [showImmersiveControls, setShowImmersiveControls] = useState(true);
-
- useEffect(() => {
- setShowImmersiveControls(true);
- }, [activeTab]);
-
- // Global Keyboard Shortcut Listener for Cashiers & Managers (Ctrl+1..0 module switcher & Ctrl+K palette)
- useEffect(() => {
- const handleGlobalKeyboardShortcuts = (e: KeyboardEvent) => {
- // Do not block F12 or browser DevTools
- if (e.key === "F12") return;
-
- const isModifier = e.ctrlKey || e.metaKey || e.altKey;
-
- // Toggle Command Palette Quick Switcher Modal: Ctrl+K / Cmd+K / Ctrl+/ / Alt+/
- if (isModifier && (e.key.toLowerCase() === "k" || e.key === "/")) {
- e.preventDefault();
- setShowQuickSwitcherModal((prev) => !prev);
- return;
- }
-
- // Module Jump Map for Ctrl+1 through Ctrl+9 and Ctrl+0
- const numberShortcutMap: { [key: string]: { id: string; label: string } } = {
- "1": { id: "dashboard", label: "Branch Dashboard" },
- "2": { id: "pos", label: "ERP POS Checkout Mode" },
- "3": { id: "inventory-stocks", label: "Catalog Stock Ledger" },
- "4": { id: "procurement-po", label: "Procurement & PO" },
- "5": { id: "reconciliation-transmission", label: "Reconciliation & Transmission" },
- "6": { id: "shift", label: "Shift Drawer & Cash Register" },
- "7": { id: "deliveries-panel", label: "Cargo Delivery Center" },
- "8": { id: "calculator", label: "Tile Coverage Calculator" },
- "9": { id: "profit-analytics", label: "P&L Accounting Desk" },
- "0": { id: "tutorials", label: "Operational Walkthrough" },
- };
-
- if (isModifier && numberShortcutMap[e.key]) {
- e.preventDefault();
- const target = numberShortcutMap[e.key];
- 
- // Verify RBAC permissions for the logged in user
- const masterItem = allSubModules.find((m) => m.id === target.id);
- if (masterItem && currentUser && masterItem.roles && !masterItem.roles.includes(currentUser.role)) {
- showToast(`Shortcut [Ctrl+${e.key}]: Access restricted for ${currentUser.role} role.`);
- return;
- }
-
- changeTab(target.id);
- showToast(`Switched to ${target.label} [Ctrl+${e.key}]`);
- }
- };
-
- window.addEventListener("keydown", handleGlobalKeyboardShortcuts);
- return () => window.removeEventListener("keydown", handleGlobalKeyboardShortcuts);
- }, [currentUser?.role, activeTab]);
-
- const handleUpdatePassword = async (e: React.FormEvent) => {
- e.preventDefault();
- setSettingsError("");
- setIsUpdatingPassword(true);
-
- try {
- let passwordUpdates: Partial<User> = {};
-
- // Parse password updates if any of the fields are populated
- if (currentPassword || newPassword || confirmPassword) {
- if (!currentPassword || !newPassword || !confirmPassword) {
- setSettingsError(
- "To change password, please fill out all password fields.",
- );
- setIsUpdatingPassword(false);
- return;
- }
-
- // Verify current password match using our PBKDF2 hash
- const isMatch = await verifyPasswordWithToken(
- currentPassword,
- currentUser.passwordHash || "",
- );
- if (!isMatch) {
- setSettingsError(
- "Verification Failed: Current password is incorrect.",
- );
- setIsUpdatingPassword(false);
- return;
- }
-
- if (newPassword.length < 6) {
- setSettingsError(
- "Security Policy: New password must be at least 6 characters.",
- );
- setIsUpdatingPassword(false);
- return;
- }
-
- if (newPassword !== confirmPassword) {
- setSettingsError("Confirmation Error: New passwords do not match.");
- setIsUpdatingPassword(false);
- return;
- }
-
- // Create new salted PBKDF2 bcrypt hash token
- const salt = (editUsername || currentUser.username) + "_salt_tok";
- const hashedVal = await createSaltedHash(newPassword, salt, 2500);
- const formattedToken = formatHashToken(salt, hashedVal, 2500);
- passwordUpdates.passwordHash = formattedToken;
- }
-
- // Check name/username validations
- if (!editFullName.trim()) {
- setSettingsError("Validation Error: Full Name is required.");
- setIsUpdatingPassword(false);
- return;
- }
-
- if (!editUsername.trim()) {
- setSettingsError("Validation Error: Username is required.");
- setIsUpdatingPassword(false);
- return;
- }
-
- const cleanUsername = editUsername
- .trim()
- .toLowerCase()
- .replace(/[^a-z0-9_]/g, "");
-
- // Recalculate initials
- const newInitials =
- editFullName
- .split(" ")
- .map((n) => (n ? n[0] : ""))
- .join("")
- .toUpperCase()
- .slice(0, 2) || "AD";
-
- // Combine general updates
- const generalUpdates: Partial<User> = {
- fullName: editFullName.trim(),
- username: cleanUsername,
- profilePicture: editProfilePicture || undefined,
- avatarInitials: newInitials,
- ...passwordUpdates,
- };
-
- // Mutate database structure states
- updateUser(currentUser.id, generalUpdates);
- updateCurrentUser(generalUpdates);
-
- // Clean success flow
- setCurrentPassword("");
- setNewPassword("");
- setConfirmPassword("");
- setShowCurrentPassword(false);
- setShowNewPassword(false);
- setShowAccountSettingsModal(false);
- showToast("Account details successfully updated!");
- } catch (err) {
- console.error(err);
- setSettingsError("Dynamic crypt engine error: unable to update profile.");
- } finally {
- setIsUpdatingPassword(false);
- }
- };
-
- useEffect(() => {
- localStorage.setItem("tilepoint_dark_theme", String(darkMode));
- if (darkMode) {
- document.documentElement.classList.add("dark");
- } else {
- document.documentElement.classList.remove("dark");
- }
-
- // Auto-apply saved custom dynamic M3 theme color seed if exists
- const savedSeed = localStorage.getItem("tilepoint_custom_theme_primary");
- if (savedSeed) {
- try {
- const rawC = localStorage.getItem("tilepoint-color-contrast");
- const contrast = (rawC === "small" || rawC === "default") ? "small" : ((rawC as any) || "medium");
- const scheme = generateThemeFromSeed(savedSeed, darkMode, contrast);
- applyM3ThemeToDOM(scheme);
- } catch (err) {
- console.error(
- "[M3 Dynamic Theme] Failed to auto-apply saved color theme:",
- err,
- );
- }
- } else {
- resetM3ThemeOverride();
- }
- }, [darkMode]);
-
- if (isHydrating || isSystemHydrating) {
- return (
- <div className="fixed inset-0 bg-zinc-950 flex flex-col items-center justify-center p-6 z-[9999] select-none text-center">
- <div className="w-full max-w-md space-y-6">
- <div className="flex justify-center">
- <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-m3-primary" />
- </div>
- <div className="space-y-2">
- <h2 className="text-sm font-black text-white tracking-widest uppercase font-mono">
- TilePoint Secure Core
- </h2>
- <p className="text-xs text-zinc-400 font-medium">
- Resolving decentralized offline database states...
- </p>
- </div>
- <div className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-3">
- <div className="h-4 bg-zinc-800 rounded-lg animate-pulse w-3/4" />
- <div className="h-3 bg-zinc-800/60 rounded-lg animate-pulse w-5/6" />
- <div className="h-3 bg-zinc-800/40 rounded-lg animate-pulse w-2/3" />
- </div>
- </div>
- </div>
- );
- }
-
- if (!isConfigured) {
- return (
- <>
- <SetupModule />
- </>
- );
- }
-
- if (!isLoggedIn || !currentUser) {
- return (
- <>
- <LoginModule />
- </>
- );
- }
-
- const isEmployee = currentUser && (currentUser.role === UserRole.STAFF || currentUser.role === UserRole.CASHIER);
- const isOnboarded =
- isEmployee ||
- (typeof window !== "undefined" &&
- localStorage.getItem("tilepoint_onboarded_setup") === "true");
-
- if (!isOnboarded) {
- return (
- <>
- <OnboardingSetupWizard />
- <PrivacyAccessibilityHub darkMode={darkMode} />
- </>
- );
- }
-
- if (currentUser.role === UserRole.STAFF) {
- return (
- <>
- <StaffPortal darkMode={darkMode} setDarkMode={setDarkMode} />
- <PrivacyAccessibilityHub
- darkMode={darkMode}
- hideFloatingButton={true}
- />
- </>
- );
- }
-
-
-
- const getBranchName = (id: string | null) => {
- if (!id || id === "B1" || id === "main") {
- const stored = localStorage.getItem("tilepoint_company_name_v1");
- if (stored) return stored;
- }
- const b = branches.find((br) => br.id === id);
- if (!b) {
- const stored = localStorage.getItem("tilepoint_company_name_v1");
- if (stored) return stored;
- return "ETC_DIPOLOG MAIN";
- }
- return b.name;
- };
-
- const currentCategory = sidebarCategoryTree.find(
- (cat) =>
- cat.subItems.some((sub) => sub.id === activeTab) ||
- cat.id === activeTab,
- );
- const isInventoryCategory = currentCategory?.id === "inventory";
-
- return (
- <MotionConfig 
- reducedMotion={(disableAnimations || lowPerformanceMode) ? "always" : "never"}
- transition={{
- type: "spring",
- stiffness: 300,
- damping: 30,
- mass: 0.6,
- restDelta: 0.001,
- restSpeed: 0.001
- }}
- >
- {/* FIXED: STRETCH-PROOING COMPONENT CORE WITH ABSOLUTE VIEWPORT CONSTRAINTS */}
- <div
- className={`h-screen max-h-screen w-screen overflow-hidden flex flex-col font-sans transition-all duration-300 relative ${
- darkMode
- ? "dark bg-m3-surface text-m3-on-surface"
- : "bg-m3-surface text-m3-on-surface"
- }`}
- >
- <SimpleProgressBar isLoading={isSystemProcessing} className="fixed top-0 left-0 right-0 z-[100]" />
- {/* Dynamic Ambient Background Color Accent Glow using core M3 primary color token */}
- <div className="absolute top-[-10%] right-[-10%] w-[55vw] h-[55vw] rounded-full bg-m3-primary/[0.04] dark:bg-m3-primary/[0.07] blur-[130px] pointer-events-none z-0 transition-colors duration-500" />
- <div className="absolute bottom-[-10%] left-[-10%] w-[48vw] h-[48vw] rounded-full bg-m3-primary/[0.03] dark:bg-m3-primary/[0.05] blur-[110px] pointer-events-none z-0 transition-colors duration-500" />
-
- {/* GLOBAL STATUS CODE ERROR OVERLAYS & ACTIONS */}
- {apiErrorState && (
- <div className="fixed inset-x-0 top-0 z-[60] bg-m3-surface-container/95 backdrop-blur-md border-b border-m3-outline-variant/35 shadow-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top duration-300">
- <div className="flex items-center gap-3">
- <div className={`p-2 rounded-xl ${
- apiErrorState.statusCode === 429 
- ? "bg-amber-500/10 text-amber-500" 
- : apiErrorState.statusCode === 403 
- ? "bg-red-500/10 text-red-500" 
- : "bg-red-500/10 text-red-500"
- }`}>
- {apiErrorState.statusCode === 429 ? (
- <AlertTriangle className="w-5 h-5 animate-pulse" />
- ) : (
- <ShieldAlert className="w-5 h-5" />
- )}
- </div>
- <div className="text-left">
- <h4 className="font-bold text-sm tracking-tight flex items-center gap-2 text-m3-on-surface">
- <span>System Response Indicator: HTTP {apiErrorState.statusCode}</span>
- {apiErrorState.statusCode === 429 && (
- <span className="bg-amber-500/20 text-amber-500 text-[10px] px-1.5 py-0.5 rounded font-mono font-medium">
- COOL-DOWN ACTIVE
- </span>
- )}
- </h4>
- <p className="text-xs text-m3-on-surface-variant mt-0.5 max-w-2xl leading-relaxed">
- {apiErrorState.message}
- </p>
- </div>
- </div>
- <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
- {apiErrorState.statusCode === 429 ? (
- <div className="bg-amber-500/15 border border-amber-500/35 text-amber-500 rounded-lg px-3 py-1.5 text-xs font-mono font-medium flex items-center gap-2">
- <RefreshCw className="w-3.5 h-3.5 animate-spin" />
- Retry in {apiErrorState.retryAfter || 0}s
- </div>
- ) : apiErrorState.statusCode === 500 ? (
- <>
- <button
- onClick={() => {
- clearServerErrorState();
- syncFromSharedServer();
- }}
- className="flex items-center gap-2 bg-m3-primary text-m3-on-primary hover:bg-m3-primary-hover active:scale-95 transition-all text-xs font-semibold px-4 py-2 rounded-xl shadow-md cursor-pointer"
- >
- <RefreshCw className="w-3.5 h-3.5" />
- Retry Connection
- </button>
- <button
- onClick={clearServerErrorState}
- className="border border-m3-outline hover:bg-m3-surface-variant text-m3-on-surface text-xs font-semibold px-4 py-2 rounded-xl transition-all cursor-pointer"
- >
- Use Offline Fallback
- </button>
- </>
- ) : (
- <button
- onClick={clearServerErrorState}
- className="bg-m3-primary text-m3-on-primary hover:bg-m3-primary-hover active:scale-95 transition-all text-xs font-semibold px-4 py-2 rounded-xl shadow-md cursor-pointer"
- >
- Dismiss Warning
- </button>
- )}
- </div>
- </div>
- )}
-
- {/* TOP LINEAR HIGH-VIS PROGRESS BAR */}
- {percentProgress > 0 && (
- <div
- className="fixed top-0 left-0 h-1 bg-gradient-to-r from-m3-primary to-amber-500 lod-progress z-50 transition-all duration-[80ms]"
- style={{ width: `${percentProgress}%` }}
- />
- )}
-
- {/* HEADER SECTION with custom horizontal glowing accent bar & ambient overlay tint */}
- <header
- className={`py-4 px-6 border-b border-m3-outline-variant/15 flex justify-between items-center android-glass-header shadow-sm bg-m3-surface/75 dark:bg-m3-surface-low/80 backdrop-blur-md transition-all duration-300 overflow-visible md:hidden ${
- isAccountDropdownOpen ? "z-[9999]" : "z-[35]"
- } ${
- activeTab === "pos"
- ? `sticky top-0 md:fixed md:top-0 md:left-0 md:right-0 md:transform ${showImmersiveControls ? "md:translate-y-0 md:opacity-100 md:shadow-xl" : "md:-translate-y-full md:opacity-0 md:pointer-events-none"}`
- : "sticky top-0"
- }`}
- >
- {/* Subtle header brand overlay reflecting user custom color choice */}
- <div className="absolute inset-0 bg-gradient-to-b from-m3-primary/[0.03] to-transparent pointer-events-none z-[-1]" />
- {/* Horizontal glowing accent line reflecting selected color */}
- <div className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-m3-primary/35 via-m3-primary/10 to-transparent pointer-events-none" />
- <div className="flex items-center gap-3">
- {/* Logo */}
- <div className="flex items-center gap-2.5">
- <img
- src="/icon.svg"
- alt="TilePoint Favicon Logo"
- className="h-9 w-9 rounded-lg"
- referrerPolicy="no-referrer"
- />
- <div>
- <h1 className="text-base font-bold tracking-wide leading-none uppercase font-sans text-m3-primary">
- TilePoint
- </h1>
- <span className="text-[9px] text-m3-on-surface-variant font-bold block uppercase mt-0.5 tracking-widest leading-none">
- HQ ERP OS
- </span>
- </div>
- </div>
-
- {/* Branch tag indicator */}
- <span className="hidden sm:inline-block px-3 py-1 rounded-xl text-[10px] font-extrabold uppercase bg-m3-secondary-container text-m3-on-secondary-container border border-m3-outline-variant/40">
- {getBranchName(currentUser.branchAssignmentId)}
- </span>
- </div>
-
- {/* Right side controls with Dropdown Menu following strict user intent */}
- <div className="flex items-center gap-3 relative">
-
- <div className="relative animate-fade-in">
- <button
- id="account-dropdown-trigger"
- onClick={() => setIsAccountDropdownOpen(!isAccountDropdownOpen)}
- className="flex items-center gap-2 md:gap-3 p-1.5 pr-3 rounded-xl border border-m3-outline-variant/40 hover:bg-m3-primary/5 transition-all cursor-pointer text-left focus:outline-none bg-m3-surface-low select-none active:scale-[0.98]"
- >
- <div className="h-8 w-8 rounded-xl bg-m3-primary font-black text-xs items-center justify-center flex text-m3-on-primary shadow-sm m3-shape-asymmetric relative overflow-hidden">
- {(() => {
- const isErica =
- currentUser.fullName.toLowerCase().includes("erica") ||
- currentUser.username?.toLowerCase().includes("erica");
- if (isErica) {
- return "E";
- }
-
- const avatarSrc = currentUser.profilePicture || "";
-
- return (
- <>
- {avatarSrc ? (
- <img
- src={avatarSrc}
- alt={currentUser.fullName}
- className="h-full w-full object-cover"
- referrerPolicy="no-referrer"
- />
- ) : (
- currentUser.avatarInitials
- )}
- <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 border border-m3-surface animate-pulse" />
- </>
- );
- })()}
- </div>
- <div className="hidden sm:block">
- <div className="text-xs font-extrabold leading-none text-m3-on-surface flex items-center gap-1">
- <span>{currentUser.fullName}</span>
- </div>
- <span className="text-[9px] text-m3-on-surface-variant font-mono capitalize leading-none font-medium block mt-0.5">
- {currentUser.role} Account
- </span>
- </div>
- <svg
- className={`h-3 w-3 text-m3-on-surface-variant transition-transform duration-200 ${isAccountDropdownOpen ? "rotate-180" : ""}`}
- fill="none"
- viewBox="0 0 24 24"
- stroke="currentColor"
- strokeWidth="2.5"
- >
- <path
- strokeLinecap="round"
- strokeLinejoin="round"
- d="M19 9l-7 7-7-7"
- />
- </svg>
- </button>
-
- <AnimatePresence>
- {isAccountDropdownOpen && (
- <>
- {/* Backdrop overlay for dismissing dropdown on click-away */}
- <div
- className="fixed inset-0 z-[9998] bg-transparent"
- onClick={() => setIsAccountDropdownOpen(false)}
- />
- <motion.div
- id="account-dropdown-container"
- initial={{ opacity: 0, scale: 0.95, y: -8 }}
- animate={{ opacity: 1, scale: 1, y: 0 }}
- exit={{ opacity: 0, scale: 0.95, y: -8 }}
- transition={{ duration: 0.15, ease: "easeOut" }}
- className="absolute right-0 mt-2 w-56 rounded-2xl bg-m3-surface-low border border-m3-outline-variant/40 text-m3-on-surface shadow-2xl z-[9999] p-2 space-y-1.5 font-sans"
- >
- <div className="px-3 py-2 border-b border-m3-outline-variant/15 bg-m3-surface-high/10 rounded-xl flex items-center justify-between">
- <div className="min-w-0 flex-1 pr-2">
- <div className="text-xs font-black text-m3-on-surface truncate">
- {currentUser.fullName}
- </div>
- <div className="text-[9.5px] text-zinc-400 font-mono font-bold mt-0.5 uppercase tracking-wider">
- {currentUser.role} Mode
- </div>
- </div>
- <button
- type="button"
- onClick={() => setIsAccountDropdownOpen(false)}
- className="p-1 rounded-lg text-m3-on-surface-variant hover:text-m3-on-surface hover:bg-m3-outline-variant/20 transition-colors cursor-pointer shrink-0"
- title="Close account menu"
- aria-label="Close account menu"
- >
- <X className="h-3.5 w-3.5" />
- </button>
- </div>
-
- {/* Dark / Light Toggle */}
- <button
- type="button"
- onClick={() => {
- handleToggleDarkMode();
- setIsAccountDropdownOpen(false);
- }}
- className="w-full flex items-center justify-between text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
- >
- <div className="flex items-center gap-2">
- {darkMode ? (
- <Sun className="h-4 w-4 text-amber-500" />
- ) : (
- <Moon className="h-4 w-4 text-m3-primary" />
- )}
- <span>{darkMode ? "Light Theme" : "Dark Theme"}</span>
- </div>
- <span className="text-[9px] font-black uppercase text-zinc-400 px-1.5 py-0.5 bg-m3-outline-variant/20 rounded font-mono">
- {darkMode ? "LIGHT" : "DARK"}
- </span>
- </button>
-
- {/* Account Settings (Guarded password change Only) */}
- <button
- type="button"
- onClick={() => {
- setIsAccountDropdownOpen(false);
- setShowAccountSettingsModal(true);
- }}
- className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
- >
- <LockKeyhole className="h-4 w-4 text-amber-500" />
- <span>Account Settings</span>
- </button>
-
- {/* Operational Walkthrough */}
- <button
- type="button"
- onClick={() => {
- setIsAccountDropdownOpen(false);
- changeTab("tutorials");
- }}
- className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
- >
- <BookOpen className="h-4 w-4 text-m3-primary" />
- <span>Operational Walkthrough</span>
- </button>
-
- {/* System Settings trigger */}
- <button
- type="button"
- onClick={() => {
- setIsAccountDropdownOpen(false);
- window.dispatchEvent(new Event("open-privacy-hub"));
- }}
- className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
- >
- <Settings className="h-4 w-4 text-m3-primary" />
- <span>Settings</span>
- </button>
-
- <div className="h-px bg-m3-outline-variant/10 !my-1" />
-
- {/* Logout command trigger */}
- <button
- type="button"
- onClick={() => {
- setIsAccountDropdownOpen(false);
- setShowLogoutConfirmModal(true);
- }}
- className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-rose-500/10 text-rose-500 cursor-pointer transition-colors"
- >
- <Power className="h-4 w-4 text-rose-500" />
- <span>Logout Account</span>
- </button>
- </motion.div>
- </>
- )}
- </AnimatePresence>
- </div>
- </div>
- </header>
-
- {/* BODY CONTENT: Sidebar + Dynamic tab target */}
- <div className="flex-1 flex overflow-hidden min-h-0 relative">
- {/* FLOATING RESTORE SIDEBAR TRIGGER */}
- {isSidebarHidden && (
- <button
- onClick={() => setIsSidebarHidden(false)}
- className="fixed left-0 top-1/2 -translate-y-1/2 z-[45] p-2 bg-m3-primary text-m3-on-primary rounded-r-2xl border-y border-r border-m3-outline-variant/35 shadow-2xl hover:bg-m3-primary/95 hover:scale-110 active:scale-95 transition-all cursor-pointer flex items-center justify-center group"
- title="Restore Navigation Sidebar"
- >
- <ChevronRight className="h-5 w-5 animate-pulse group-hover:translate-x-0.5 transition-transform" />
- </button>
- )}
-
- {/* SIDEBAR NAVIGATION: Desktop (Unified with Brand Header & Profile) */}
- <motion.aside
- initial={false}
- animate={{
- width: isSidebarHidden ? 0 : isSidebarExpanded ? 288 : 80,
- }}
- style={{
- willChange: "width",
- }}
- transition={{
- duration: 0.25,
- ease: [0.16, 1, 0.3, 1],
- }}
- className={`border-r border-m3-outline-variant/15 select-none android-glass-sidebar py-5 px-3 sticky top-0 flex flex-col justify-between h-screen transition-colors duration-200 ${
- isSidebarProfileDropdownOpen ? "z-[9999] overflow-visible" : "z-40 overflow-hidden"
- } ${
- isSidebarHidden ? "hidden" : "hidden md:flex"
- }`}
- >
- {/* TOP SECTION: Brand Logo, Name and Branch assignment */}
- <div className="flex flex-col gap-4 min-w-0">
- {/* Brand Logo & Name */}
- <div
- className={`flex items-center gap-3 ${isSidebarExpanded ? "pl-2" : "justify-center"}`}
- >
- <img
- src="/icon.svg"
- alt="TilePoint Favicon Logo"
- className="h-9 w-9 rounded-xl shrink-0 shadow-sm"
- referrerPolicy="no-referrer"
- />
- <AnimatePresence initial={false}>
- {isSidebarExpanded && (
- <motion.div
- initial={{ opacity: 0, x: -10 }}
- animate={{ opacity: 1, x: 0 }}
- exit={{ opacity: 0, x: -10 }}
- transition={{ duration: 0.18, ease: [0.05, 0.7, 0.1, 1.0] }}
- className="truncate min-w-0"
- >
- <h1 className="text-sm font-black tracking-wide leading-none uppercase font-sans text-m3-primary">
- TilePoint
- </h1>
- <span className="text-[8px] text-m3-on-surface-variant font-bold block uppercase mt-1 tracking-widest leading-none">
- HQ ERP OS
- </span>
- </motion.div>
- )}
- </AnimatePresence>
- </div>
-
- {/* Branch Assignment tag badge */}
- {isSidebarExpanded ? (
- <motion.div
- initial={{ opacity: 0, scale: 0.95 }}
- animate={{ opacity: 1, scale: 1 }}
- exit={{ opacity: 0, scale: 0.95 }}
- transition={{ duration: 0.18, ease: [0.05, 0.7, 0.1, 1.0] }}
- className="px-1"
- >
- <div className="w-full text-center px-3 py-1.5 rounded-xl text-[9px] font-extrabold uppercase bg-m3-secondary-container text-m3-on-secondary-container border border-m3-outline-variant/35 tracking-wider truncate">
- {getBranchName(currentUser.branchAssignmentId)}
- </div>
- </motion.div>
- ) : (
- <div
- className="flex justify-center py-1"
- title={getBranchName(currentUser.branchAssignmentId)}
- >
- <span className="h-2.5 w-2.5 rounded-full bg-m3-primary animate-pulse" />
- </div>
- )}
-
- <div className="h-px bg-m3-outline-variant/10" />
-
- {/* Modules Label and Toggle Expand indicator */}
- <div
- className={`flex items-center ${isSidebarExpanded ? "justify-between pl-2 mb-1" : "justify-center mb-1"}`}
- >
- <AnimatePresence initial={false}>
- {isSidebarExpanded && (
- <motion.div
- initial={{ opacity: 0, x: -8 }}
- animate={{ opacity: 1, x: 0 }}
- exit={{ opacity: 0, x: -8 }}
- transition={{ duration: 0.18, ease: [0.05, 0.7, 0.1, 1.0] }}
- className="flex items-center gap-1.5 truncate"
- >
- <span className="text-[10px] font-black tracking-widest text-m3-on-surface-variant uppercase font-mono">
- Modules
- </span>
- </motion.div>
- )}
- </AnimatePresence>
- <button
- type="button"
- onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
- className={`p-1.5 text-m3-on-surface-variant rounded-xl opacity-80 hover:opacity-100 hover:bg-m3-outline-variant/10 transition-all duration-200 cursor-pointer ${
- !isSidebarExpanded ? "scale-105 text-m3-primary" : ""
- }`}
- title={isSidebarExpanded ? "Collapse Sidebar" : "Expand Sidebar"}
- >
- <ChevronLeft
- className={`h-4 w-4 transition-transform duration-300 ${!isSidebarExpanded ? "rotate-180" : ""}`}
- />
- </button>
- </div>
-
- {/* Navigation item lists */}
- {(() => {
-  const showSaleRedDot = parkedSales.some((p: any) => {
-    const pBranch = p.heldByBranchId || (p as any).branchId;
-    if (!pBranch) return false;
-    return isSameBranch(pBranch, currentUser?.branchAssignmentId || "B1", branches);
+    localStorage.setItem("tilepoint_sidebar_expanded", String(isSidebarExpanded));
+    localStorage.setItem(
+      "tilepoint_sidebar_minimized",
+      String(isSidebarMinimized),
+    );
+  }, [isSidebarExpanded, isSidebarMinimized]);
+
+  const [followSystemTheme, setFollowSystemTheme] = useState(() => {
+    const saved = localStorage.getItem("tilepoint_follow_system_theme");
+    return saved !== null ? saved === "true" : true;
   });
-  const showDeliveriesRedDot = deliveries.some(d => d.status === 'Scheduled' || d.status === 'Packed' || d.status === 'Out For Delivery');
-  
-  let showInventoryRedDot = false;
-  try {
-   const cached = localStorage.getItem("tp_batch_expirations");
-   if (cached) {
-    const parsed = JSON.parse(cached);
-    const today = new Date();
-    showInventoryRedDot = parsed.some((b: any) => {
-     if (!b.expiryDate) return false;
-     const exp = new Date(b.expiryDate);
-     const diffTime = exp.getTime() - today.getTime();
-     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-     return diffDays <= 30;
-    });
-   } else {
-    showInventoryRedDot = true;
-   }
-  } catch (_) {
-   showInventoryRedDot = true;
-  }
-  
-  const showTransferRedDot = stockTransfers.some(t => {
-   if (t.status !== 'Pending') return false;
-   return t.fromBranchId !== t.toBranchId;
+
+  const [darkMode, setDarkMode] = useState(() => {
+    const savedFollow = localStorage.getItem("tilepoint_follow_system_theme");
+    const isFollow = savedFollow !== null ? savedFollow === "true" : true;
+    if (isFollow) {
+      return typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
+    const saved = localStorage.getItem("tilepoint_dark_theme");
+    return saved !== null ? saved === "true" : true;
   });
-  
-  const showExpiryRedDot = showInventoryRedDot;
 
-  return (
-   <nav
-   id="sidebar-nav"
-   className="space-y-1.5 overflow-y-auto overflow-x-hidden max-h-[calc(100vh-250px)] p-1 scrollbar-thin"
-   >
-   {sidebarCategoryTree.map((category) => {
-   const CategoryIcon = category.icon;
+  const darkModeRef = useRef(darkMode);
+  const isTogglingDarkModeRef = useRef(false);
 
-   // Strong dynamic RBAC: Filter sub-items to only those this user has permission to see
-   const authorizedSubItems = category.subItems.filter((sub) => {
-     return sub.roles ? sub.roles.includes(currentUser.role) : true;
-   });
+  useEffect(() => {
+    darkModeRef.current = darkMode;
+  }, [darkMode]);
 
-   // Under strong RBAC, if there are no authorized sub-items, do not show the category folder at all
-   if (authorizedSubItems.length === 0) return null;
+  // Handle manual dark mode toggling, disabling "follow system"
+  const handleToggleDarkMode = (targetVal?: boolean) => {
+    if (isTogglingDarkModeRef.current) return;
+    const nextVal = targetVal !== undefined ? targetVal : !darkModeRef.current;
+    
+    setFollowSystemTheme(false);
+    localStorage.setItem("tilepoint_follow_system_theme", "false");
+    setDarkMode(nextVal);
+    darkModeRef.current = nextVal;
 
-   const hasActiveSubItem =
-   authorizedSubItems.some((sub) => activeTab === sub.id) ||
-   activeTab === category.id;
+    if (nextVal) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("tilepoint_dark_theme", "true");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("tilepoint_dark_theme", "false");
+    }
 
-   return (
-   <button
-   key={category.id}
-   onClick={() => {
-   const firstSub = authorizedSubItems[0]?.id || category.id;
-   changeTab(firstSub);
-   }}
-   className={`w-full flex items-center ${
-   isSidebarExpanded ? "justify-between px-3.5 py-2.5" : "justify-center h-11"
-   } rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer relative group ${
-   hasActiveSubItem
-   ? "bg-m3-primary text-m3-on-primary shadow-md shadow-m3-primary/10 font-black"
-   : "hover:bg-m3-primary/10 text-m3-on-surface-variant hover:text-m3-primary"
-   }`}
-   >
-   <div className="flex items-center gap-3 min-w-0">
-   <div className="relative shrink-0 flex items-center justify-center">
-   <CategoryIcon
-   className={`h-4.5 w-4.5 ${hasActiveSubItem ? "text-m3-on-primary" : "text-m3-on-surface-variant"}`}
-   />
-   {((category.id === "sale" && showSaleRedDot) ||
-   (category.id === "deliveries" && showDeliveriesRedDot) ||
-   (category.id === "inventory" && showInventoryRedDot)) && (
-   <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-rose-500 border border-m3-surface" />
-   )}
-   </div>
-   <AnimatePresence initial={false}>
-   {isSidebarExpanded && (
-   <motion.span
-   initial={{ opacity: 0, x: -8 }}
-   animate={{ opacity: 1, x: 0 }}
-   exit={{ opacity: 0, x: -8 }}
-   transition={{ duration: 0.18, ease: [0.05, 0.7, 0.1, 1.0] }}
-   className="truncate font-bold text-xs"
-   >
-   {category.name}
-   </motion.span>
-   )}
-   </AnimatePresence>
-   </div>
-   {!isSidebarExpanded && (
-   <div className="absolute left-14 scale-0 group-hover:scale-100 transition-all duration-200 origin-left bg-m3-on-surface text-m3-surface text-[10px] font-extrabold px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none border border-m3-outline-variant/30">
-   {category.name}
-   </div>
-   )}
-   </button>
-   );
-   })}
-   </nav>
+    // Explicitly save config and update HeroUI CSS variables
+    try {
+      saveHeroUIConfig({ mode: nextVal ? "dark" : "light" });
+      applyHeroUIThemeToDOM({ ...getStoredHeroUIConfig(), mode: nextVal ? "dark" : "light" });
+    } catch (e) {
+      console.warn("Failed to apply HeroUI theme variables:", e);
+    }
+    const savedSeed = localStorage.getItem("tilepoint_custom_theme_primary");
+    if (savedSeed) {
+      try {
+        const rawC = localStorage.getItem("tilepoint-color-contrast");
+        const contrast = (rawC === "small" || rawC === "default") ? "small" : ((rawC as any) || "medium");
+        const scheme = generateThemeFromSeed(savedSeed, nextVal, contrast);
+        applyHeroThemeToDOM(scheme, nextVal);
+      } catch (err) {
+        console.error("[HeroUI Dynamic Theme] Failed to apply color theme:", err);
+      }
+    } else {
+      resetHeroThemeOverride();
+    }
+
+    isTogglingDarkModeRef.current = true;
+    try {
+      window.dispatchEvent(new CustomEvent("tilepoint-dark-mode-toggle", { detail: nextVal }));
+      window.dispatchEvent(new CustomEvent("tilepoint-theme-updated", { detail: { darkMode: nextVal, cssVariablesUpdated: true } }));
+      window.dispatchEvent(new CustomEvent("tilepoint-css-vars-updated", { detail: { darkMode: nextVal, timestamp: Date.now() } }));
+    } finally {
+      isTogglingDarkModeRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    scheduleIdlePrefetch();
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("tilepoint_follow_system_theme", String(followSystemTheme));
+  }, [followSystemTheme]);
+
+  useEffect(() => {
+    if (!followSystemTheme) return;
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = (e: MediaQueryListEvent) => {
+      setDarkMode(e.matches);
+    };
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", handleChange);
+    } else {
+      (mediaQuery as any).addListener(handleChange);
+    }
+
+    setDarkMode(mediaQuery.matches);
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener("change", handleChange);
+      } else {
+        (mediaQuery as any).removeListener(handleChange);
+      }
+    };
+  }, [followSystemTheme]);
+
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    if (document.documentElement.classList.contains("accessibility-no-animation")) return;
+    document.documentElement.classList.add("theme-transition");
+    const t = setTimeout(() => {
+      document.documentElement.classList.remove("theme-transition");
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [darkMode]);
+
+  const [isSidebarHidden, setIsSidebarHidden] = useState(false);
+  const prevTabRef = useRef(activeTab);
+  const progressIntervalRef = useRef<any>(null);
+  const progressTimeoutRef = useRef<any>(null);
+  const finishTimeoutRef = useRef<any>(null);
+  const progressRafRef = useRef<number | null>(null);
+
+  const cleanupProgressTimers = useCallback(() => {
+    if (progressRafRef.current !== null) {
+      cancelAnimationFrame(progressRafRef.current);
+      progressRafRef.current = null;
+    }
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+    if (progressTimeoutRef.current) {
+      clearTimeout(progressTimeoutRef.current);
+      progressTimeoutRef.current = null;
+    }
+    if (finishTimeoutRef.current) {
+      clearTimeout(finishTimeoutRef.current);
+      finishTimeoutRef.current = null;
+    }
+    setPercentProgress(0);
+    setIsTabChanging(false);
+  }, []);
+
+  useEffect(() => {
+    const prev = prevTabRef.current;
+    if (prev !== activeTab) {
+      performTabTransitionCleanup(prev, activeTab);
+      trackModuleVisit(activeTab);
+    }
+    prevTabRef.current = activeTab;
+
+    return () => {
+      cleanupProgressTimers();
+    };
+  }, [activeTab, cleanupProgressTimers]);
+
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isQuickSwitcherOpen, setIsQuickSwitcherOpen] = useState(false);
+  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
+  const [disableAnimations] = useState(
+    () => localStorage.getItem("tilepoint-disable-animations") === "true",
   );
- })()}
- </div>
 
- {/* BOTTOM SECTION: Profile card & Upward-opening popup Menu */}
- <div className="pt-3 border-t border-m3-outline-variant/15 relative z-50">
+  useLayoutEffect(() => {
+    const handleSync = () => {
+      const contrast = localStorage.getItem("tilepoint-color-contrast");
+      const contrastMode: "default" | "small" | "medium" | "high" = (contrast === "small" || contrast === "default" || contrast === "high") ? (contrast as "small" | "default" | "high") : "medium";
+      const maxTextContrast =
+        localStorage.getItem("tilepoint-maximize-text-contrast") === "true";
+      const seed = localStorage.getItem("tilepoint_custom_theme_primary");
+      const noAnim =
+        localStorage.getItem("tilepoint-disable-animations") === "true";
+      const savedUiNoBlur = localStorage.getItem("tilepoint-disable-ui-blurs");
+      const savedBackdropNoBlur = localStorage.getItem("tilepoint-disable-backdrop-blurs");
+      const legacyNoBlur = localStorage.getItem("tilepoint-disable-blurs") === "true";
+      const noUiBlur = savedUiNoBlur !== null ? savedUiNoBlur === "true" : legacyNoBlur;
+      const noBackdropBlur = savedBackdropNoBlur !== null ? savedBackdropNoBlur === "true" : legacyNoBlur;
+      
+      const storedHeroConfig = getStoredHeroUIConfig();
+      const savedUiStyle = localStorage.getItem("tilepoint-ui-style") || storedHeroConfig.uiStyle;
+      const resolvedUiStyle =
+        savedUiStyle === "translucent" || savedUiStyle === "frosted" || savedUiStyle === "opaque"
+          ? savedUiStyle
+          : storedHeroConfig.uiStyle || (noUiBlur && noBackdropBlur ? "opaque" : "frosted");
 
+      const textSize = localStorage.getItem("tilepoint-text-size") || "normal";
+      const dyslexic =
+        localStorage.getItem("tilepoint-dyslexic-font") === "true";
+      const enhancedOutlines =
+        localStorage.getItem("tilepoint-enhanced-outlines") === "true";
 
- <button
- id="sidebar-profile-dropdown-trigger"
- onClick={() =>
- setIsSidebarProfileDropdownOpen(!isSidebarProfileDropdownOpen)
- }
- className={`w-full flex items-center gap-2.5 p-2 rounded-xl border border-m3-outline-variant/40 hover:bg-m3-primary/5 transition-all cursor-pointer text-left focus:outline-none bg-m3-surface-low select-none active:scale-[0.98] ${
- isSidebarExpanded ? "" : "justify-center"
- }`}
- >
- <div className="h-8.5 w-8.5 rounded-xl bg-m3-primary font-black text-xs items-center justify-center flex text-m3-on-primary shadow-sm m3-shape-asymmetric relative overflow-hidden shrink-0">
- {(() => {
- const isErica =
- currentUser.fullName.toLowerCase().includes("erica") ||
- currentUser.username?.toLowerCase().includes("erica");
- if (isErica) {
- return "E";
- }
+      try {
+        applyHeroUIThemeToDOM();
+      } catch (e) {
+        console.warn("Failed to apply HeroUI theme in App sync", e);
+      }
 
- const avatarSrc = currentUser.profilePicture || "";
+      if (seed) {
+        try {
+          const isDark =
+            document.documentElement.classList.contains("dark") ||
+            localStorage.getItem("tilepoint_dark_theme") === "true";
+          const scheme = generateThemeFromSeed(seed, isDark, contrastMode);
+          applyHeroThemeToDOM(scheme, isDark);
+        } catch (e) {
+          console.error("[HeroUI Dynamic Theme] Failed to apply color theme:", e);
+        }
+      } else {
+        resetHeroThemeOverride();
+      }
 
- return (
- <>
- {avatarSrc ? (
- <img
- src={avatarSrc}
- alt={currentUser.fullName}
- className="h-full w-full object-cover"
- referrerPolicy="no-referrer"
- />
- ) : (
- currentUser.avatarInitials
- )}
- <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 border border-m3-surface animate-pulse" />
- </>
- );
- })()}
- </div>
+      document.documentElement.setAttribute("data-ui-style", resolvedUiStyle);
+      document.documentElement.classList.remove("ui-style-translucent", "ui-style-frosted", "ui-style-opaque");
+      document.documentElement.classList.add(`ui-style-${resolvedUiStyle}`);
 
- <AnimatePresence initial={false}>
- {isSidebarExpanded && (
- <motion.div
- initial={{ opacity: 0, x: -8 }}
- animate={{ opacity: 1, x: 0 }}
- exit={{ opacity: 0, x: -8 }}
- transition={{ duration: 0.18, ease: [0.05, 0.7, 0.1, 1.0] }}
- className="flex-1 min-w-0"
- >
- <div className="text-[11px] font-extrabold leading-none text-m3-on-surface truncate">
- {currentUser.fullName}
- </div>
- <span className="text-[8.5px] text-m3-on-surface-variant font-mono capitalize leading-none font-bold block mt-1 truncate">
- {currentUser.role} Account
- </span>
- </motion.div>
- )}
- </AnimatePresence>
+      document.documentElement.classList.remove(
+        "accessibility-small-text",
+        "accessibility-large-text",
+        "accessibility-xlarge-text",
+      );
+      if (textSize === "small")
+        document.documentElement.classList.add("accessibility-small-text");
+      else if (textSize === "large")
+        document.documentElement.classList.add("accessibility-large-text");
+      else if (textSize === "xlarge")
+        document.documentElement.classList.add("accessibility-xlarge-text");
 
- {isSidebarExpanded && (
- <ChevronDown
- className={`h-3.5 w-3.5 text-m3-on-surface-variant transition-transform duration-200 shrink-0 ${isSidebarProfileDropdownOpen ? "rotate-180" : ""}`}
- />
- )}
- </button>
+      if (dyslexic) {
+        document.documentElement.classList.add("accessibility-dyslexic-font");
+      } else {
+        document.documentElement.classList.remove("accessibility-dyslexic-font");
+      }
 
- {/* Upward Dropdown Menu */}
- <AnimatePresence>
- {isSidebarProfileDropdownOpen && (
- <>
- <div
- className="fixed inset-0 z-[9998] bg-transparent"
- onClick={() => setIsSidebarProfileDropdownOpen(false)}
- />
- <motion.div
- id="sidebar-profile-dropdown-container"
- initial={{ opacity: 0, scale: 0.95, y: 8 }}
- animate={{ opacity: 1, scale: 1, y: 0 }}
- exit={{ opacity: 0, scale: 0.95, y: 8 }}
- transition={{ duration: 0.15, ease: "easeOut" }}
- className={`absolute bottom-full mb-2 w-56 rounded-2xl bg-m3-surface-low border border-m3-outline-variant/40 text-m3-on-surface shadow-2xl z-[9999] p-2 space-y-1.5 font-sans ${
- isSidebarMinimized ? "left-0" : "left-0 right-0"
- }`}
- >
- <div className="px-3 py-2 border-b border-m3-outline-variant/15 bg-m3-surface-high/10 rounded-xl flex items-center justify-between">
- <div className="min-w-0 flex-1 pr-2">
- <div className="text-xs font-black text-m3-on-surface truncate">
- {currentUser.fullName}
- </div>
- <div className="text-[9.5px] text-zinc-400 font-mono font-bold mt-0.5 uppercase tracking-wider">
- {currentUser.role} Mode
- </div>
- </div>
- <button
- type="button"
- onClick={() => setIsSidebarProfileDropdownOpen(false)}
- className="p-1 rounded-lg text-m3-on-surface-variant hover:text-m3-on-surface hover:bg-m3-outline-variant/20 transition-colors cursor-pointer shrink-0"
- title="Close account menu"
- aria-label="Close account menu"
- >
- <X className="h-3.5 w-3.5" />
- </button>
- </div>
+      if (enhancedOutlines) {
+        document.documentElement.classList.add(
+          "accessibility-enhanced-outlines",
+        );
+      } else {
+        document.documentElement.classList.remove(
+          "accessibility-enhanced-outlines",
+        );
+      }
 
- {/* Theme Toggle */}
- <button
- type="button"
- onClick={() => {
- handleToggleDarkMode();
- setIsSidebarProfileDropdownOpen(false);
- }}
- className="w-full flex items-center justify-between text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
- >
- <div className="flex items-center gap-2">
- {darkMode ? (
- <Sun className="h-4 w-4 text-amber-500" />
- ) : (
- <Moon className="h-4 w-4 text-m3-primary" />
- )}
- <span>{darkMode ? "Light Theme" : "Dark Theme"}</span>
- </div>
- <span className="text-[9px] font-black uppercase text-zinc-400 px-1.5 py-0.5 bg-m3-outline-variant/20 rounded font-mono">
- {darkMode ? "LIGHT" : "DARK"}
- </span>
- </button>
+      if (contrastMode === "high") {
+        document.documentElement.classList.add("accessibility-high-contrast");
+      } else {
+        document.documentElement.classList.remove(
+          "accessibility-high-contrast",
+        );
+      }
 
- {/* Account Settings */}
- <button
- type="button"
- onClick={() => {
- setIsSidebarProfileDropdownOpen(false);
- setShowAccountSettingsModal(true);
- }}
- className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
- >
- <LockKeyhole className="h-4 w-4 text-amber-500" />
- <span>Account Settings</span>
- </button>
+      if (maxTextContrast) {
+        document.documentElement.classList.add(
+          "accessibility-maximize-text-contrast",
+        );
+      } else {
+        document.documentElement.classList.remove(
+          "accessibility-maximize-text-contrast",
+        );
+      }
 
- {/* Operational Walkthrough */}
- <button
- type="button"
- onClick={() => {
- setIsSidebarProfileDropdownOpen(false);
- changeTab("tutorials");
- }}
- className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
- >
- <BookOpen className="h-4 w-4 text-m3-primary" />
- <span>Walkthrough</span>
- </button>
+      if (noAnim) {
+        document.documentElement.classList.add("accessibility-no-animation");
+      } else {
+        document.documentElement.classList.remove("accessibility-no-animation");
+      }
 
- {/* System Settings */}
- <button
- type="button"
- onClick={() => {
- setIsSidebarProfileDropdownOpen(false);
- window.dispatchEvent(new Event("open-privacy-hub"));
- }}
- className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-m3-primary/10 text-m3-on-surface cursor-pointer transition-colors"
- >
- <Settings className="h-4 w-4 text-m3-primary" />
- <span>Settings</span>
- </button>
+      if (noUiBlur || resolvedUiStyle === "opaque") {
+        document.documentElement.classList.add("accessibility-no-ui-blur");
+      } else {
+        document.documentElement.classList.remove("accessibility-no-ui-blur");
+      }
 
- <div className="h-px bg-m3-outline-variant/10 !my-1" />
+      if (noBackdropBlur || resolvedUiStyle === "opaque") {
+        document.documentElement.classList.add("accessibility-no-backdrop-blur");
+      } else {
+        document.documentElement.classList.remove("accessibility-no-backdrop-blur");
+      }
 
- {/* Logout */}
- <button
- type="button"
- onClick={() => {
- setIsSidebarProfileDropdownOpen(false);
- setShowLogoutConfirmModal(true);
- }}
- className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-rose-500/10 text-rose-500 cursor-pointer transition-colors"
- >
- <Power className="h-4 w-4 text-rose-500" />
- <span>Logout Account</span>
- </button>
- </motion.div>
- </>
- )}
- </AnimatePresence>
- </div>
- </motion.aside>
+      if ((noUiBlur && noBackdropBlur) || resolvedUiStyle === "opaque") {
+        document.documentElement.classList.add("accessibility-no-blur");
+      } else {
+        document.documentElement.classList.remove("accessibility-no-blur");
+      }
+    };
 
- {/* FIXED: ENFORCED RIGID VIEWPORT CONTAINER HEIGHT LIMITS ON COMPONENT MAIN MOUNT */}
- <main
-  className={`flex-1 relative flex flex-col text-m3-on-surface transition-all duration-300 overflow-x-hidden min-h-0 ${
-   activeTab === "pos" || activeTab === "ledger"
-    ? "p-4 md:p-5 overflow-hidden h-full max-h-full"
-    : "p-4 md:p-6 pb-26 md:pb-6 overflow-y-auto scroll-smooth"
-  } ${isCompactColumns || !isInventoryCategory ? "compact-fit" : ""}`}
- >
- {/* Elegant Collapsible Horizontal Sub-menu Navigation Pill Bar with Dynamic RBAC */}
- {(() => {
+    const handleDarkModeEvent = (e: Event) => {
+      if (isTogglingDarkModeRef.current) return;
+      const customEvent = e as CustomEvent<boolean>;
+      const target = typeof customEvent.detail === "boolean" ? customEvent.detail : !darkModeRef.current;
+      if (target !== darkModeRef.current) {
+        handleToggleDarkMode(target);
+      }
+    };
+
+    window.addEventListener("tilepoint-theme-updated", handleSync);
+    window.addEventListener("tilepoint-dark-mode-toggle", handleDarkModeEvent);
+    handleSync();
+    return () => {
+      window.removeEventListener("tilepoint-theme-updated", handleSync);
+      window.removeEventListener("tilepoint-dark-mode-toggle", handleDarkModeEvent);
+    };
+  }, [darkMode]);
+
+  useEffect(() => {
+    if (lowPerformanceMode) {
+      document.documentElement.classList.add("accessibility-no-blur");
+      document.documentElement.classList.add("accessibility-no-ui-blur");
+      document.documentElement.classList.add("accessibility-no-backdrop-blur");
+      document.documentElement.classList.add("accessibility-no-animation");
+    } else {
+      const noAnim = localStorage.getItem("tilepoint-disable-animations") === "true";
+      const savedUiNoBlur = localStorage.getItem("tilepoint-disable-ui-blurs");
+      const savedBackdropNoBlur = localStorage.getItem("tilepoint-disable-backdrop-blurs");
+      const legacyNoBlur = localStorage.getItem("tilepoint-disable-blurs") === "true";
+      const noUiBlur = savedUiNoBlur !== null ? savedUiNoBlur === "true" : legacyNoBlur;
+      const noBackdropBlur = savedBackdropNoBlur !== null ? savedBackdropNoBlur === "true" : legacyNoBlur;
+
+      if (!noUiBlur)
+        document.documentElement.classList.remove("accessibility-no-ui-blur");
+      if (!noBackdropBlur)
+        document.documentElement.classList.remove("accessibility-no-backdrop-blur");
+      if (!noUiBlur || !noBackdropBlur)
+        document.documentElement.classList.remove("accessibility-no-blur");
+      if (!noAnim)
+        document.documentElement.classList.remove("accessibility-no-animation");
+    }
+  }, [lowPerformanceMode]);
+
+  const [showLogoutConfirmModal, setShowLogoutConfirmModal] = useState(false);
+  const [showAccountSettingsModal, setShowAccountSettingsModal] = useState(false);
+  const [showSystemSettingsModal, setShowSystemSettingsModal] = useState(false);
+  const [showBackupModal, setShowBackupModal] = useState(false);
+  const [backupActiveSubTab, setBackupActiveSubTab] = useState<"scheduler" | "ledger" | "import-export">("scheduler");
+  const [manualSnapshotName, setManualSnapshotName] = useState("");
+  const [backupSuccessMsg, setBackupSuccessMsg] = useState<string | null>(null);
+  const [backupErrorMsg, setBackupErrorMsg] = useState<string | null>(null);
+  const [pendingUnsavedCartTargetTab, setPendingUnsavedCartTargetTab] = useState<string | null>(null);
+  const [showUnsavedCartModal, setShowUnsavedCartModal] = useState(false);
+  const isCompact = false;
+
+  // Profile update modal state
+  const [editFullName, setEditFullName] = useState("");
+  const [editUsername, setEditUsername] = useState("");
+  const [currentPasswordInput, setCurrentPasswordInput] = useState("");
+  const [newPasswordInput, setNewPasswordInput] = useState("");
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [editProfilePicture, setEditProfilePicture] = useState<string | null>(null);
+  const [profileModalError, setProfileModalError] = useState<string | null>(null);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+
+  useEffect(() => {
+    if (currentUser) {
+      setEditFullName(currentUser.fullName || "");
+      setEditUsername(currentUser.username || "");
+      setEditProfilePicture(currentUser.profilePicture || null);
+    }
+  }, [currentUser, showAccountSettingsModal]);
+
+  const handleSmoothTabChange = (nextTab: string) => {
+    cleanupProgressTimers();
+    setIsTabChanging(true);
+    setPercentProgress(15);
+
+    const startTime = performance.now();
+    const duration = 120; // ms for initial smooth simulated progress to ~85-90%
+
+    const step = (now: number) => {
+      const elapsed = now - startTime;
+      const progressRatio = Math.min(elapsed / duration, 1);
+      // Fast ease-out cubic curve from 15% to 88%
+      const currentProgress = 15 + (88 - 15) * (1 - Math.pow(1 - progressRatio, 3));
+      
+      setPercentProgress(Math.round(currentProgress));
+
+      if (progressRatio < 1) {
+        progressRafRef.current = requestAnimationFrame(step);
+      } else {
+        progressRafRef.current = null;
+      }
+    };
+
+    progressRafRef.current = requestAnimationFrame(step);
+
+    progressTimeoutRef.current = setTimeout(() => {
+      if (progressRafRef.current !== null) {
+        cancelAnimationFrame(progressRafRef.current);
+        progressRafRef.current = null;
+      }
+      setActiveTab(nextTab);
+      setPercentProgress(100);
+
+      finishTimeoutRef.current = setTimeout(() => {
+        setIsTabChanging(false);
+        setPercentProgress(0);
+        finishTimeoutRef.current = null;
+      }, 90);
+      progressTimeoutRef.current = null;
+    }, 110);
+  };
+
+  const handleChangeTab = (tabId: string) => {
+    if (tabId === activeTab) return;
+    const targetItem = allSubModules.find((sub) => sub.id === tabId);
+    if (targetItem && currentUser && targetItem.roles && !targetItem.roles.includes(currentUser.role)) {
+      showToastMsg(`Access Restricted: ${currentUser.role} role cannot view ${targetItem.name}.`);
+      return;
+    }
+
+    if (activeTab === "pos") {
+      const activeCart = localStorage.getItem("tp_active_cart");
+      if (activeCart) {
+        try {
+          const parsed = JSON.parse(activeCart);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const custName = localStorage.getItem("tp_active_customer_name") || "Walk-in Customer";
+            const custNotes = localStorage.getItem("tp_active_customer_notes") || "";
+            holdSale(parsed, custName, custNotes);
+            localStorage.setItem("tp_active_cart", JSON.stringify([]));
+            localStorage.setItem("tp_active_customer_name", "Walk-in Customer");
+            localStorage.setItem("tp_active_customer_notes", "");
+            showToastMsg("Active transaction automatically held in safe hold registers.");
+          }
+        } catch (_) {}
+      }
+    }
+
+    handleSmoothTabChange(tabId);
+  };
+
+  useEffect(() => {
+    const handleStorageFailure = (e: any) => {
+      const msg = e.detail?.message || "Local storage quota auto-managed. Data synced with server.";
+      showToastMsg(msg);
+    };
+    window.addEventListener("tp_storage_failure", handleStorageFailure);
+    return () => window.removeEventListener("tp_storage_failure", handleStorageFailure);
+  }, []);
+
+  const [showImmersiveControls, setShowImmersiveControls] = useState(true);
+  useEffect(() => {
+    setShowImmersiveControls(true);
+  }, [activeTab]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "F12") return;
+      const isCmdOrCtrl = e.ctrlKey || e.metaKey || e.altKey;
+      const isInput =
+        ["INPUT", "TEXTAREA", "SELECT"].includes((e.target as HTMLElement)?.tagName) ||
+        (e.target as HTMLElement)?.isContentEditable;
+
+      if (isCmdOrCtrl && (e.key.toLowerCase() === "k" || e.key === "/")) {
+        e.preventDefault();
+        setIsQuickSwitcherOpen((prev) => !prev);
+        return;
+      }
+      if (isCmdOrCtrl && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        if (isSidebarHidden) {
+          setIsSidebarHidden(false);
+          setIsSidebarExpanded(true);
+        } else {
+          setIsSidebarExpanded((prev) => !prev);
+        }
+        return;
+      }
+      if (!isInput && !isCmdOrCtrl && (e.key === "?" || (e.shiftKey && e.key === "?"))) {
+        e.preventDefault();
+        setIsShortcutsModalOpen((prev) => !prev);
+        return;
+      }
+
+      const shortcutMap: Record<string, { id: string; label: string }> = {
+        "1": { id: "dashboard", label: "Branch Dashboard" },
+        "2": { id: "pos", label: "ERP POS Checkout Mode" },
+        "3": { id: "inventory-stocks", label: "Catalog Stock Ledger" },
+        "4": { id: "procurement-po", label: "Procurement & PO" },
+        "5": { id: "reconciliation-transmission", label: "Reconciliation & Transmission" },
+        "6": { id: "shift", label: "Shift Drawer & Cash Register" },
+        "7": { id: "deliveries-panel", label: "Cargo Delivery Center" },
+        "8": { id: "calculator", label: "Tile Coverage Calculator" },
+        "9": { id: "profit-analytics", label: "P&L Accounting Desk" },
+        "0": { id: "tutorials", label: "Operational Walkthrough" },
+      };
+
+      if (isCmdOrCtrl && shortcutMap[e.key]) {
+        e.preventDefault();
+        const target = shortcutMap[e.key];
+        const targetItem = allSubModules.find((sub) => sub.id === target.id);
+        if (targetItem && currentUser && targetItem.roles && !targetItem.roles.includes(currentUser.role)) {
+          showToastMsg(`Shortcut [Ctrl+${e.key}]: Access restricted for ${currentUser.role} role.`);
+          return;
+        }
+        handleChangeTab(target.id);
+        showToastMsg(`Switched to ${target.label} [Ctrl+${e.key}]`);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [currentUser?.role, activeTab]);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setProfileModalError("");
+    setIsUpdatingProfile(true);
+
+    try {
+      let passwordUpdates: Partial<User> = {};
+      if (currentPasswordInput || newPasswordInput || confirmPasswordInput) {
+        if (!currentPasswordInput || !newPasswordInput || !confirmPasswordInput) {
+          setProfileModalError("To change password, please fill out all password fields.");
+          setIsUpdatingProfile(false);
+          return;
+        }
+        if (!await verifyPasswordWithToken(currentPasswordInput, currentUser?.passwordHash || "")) {
+          setProfileModalError("Verification Failed: Current password is incorrect.");
+          setIsUpdatingProfile(false);
+          return;
+        }
+        if (newPasswordInput.length < 6) {
+          setProfileModalError("Security Policy: New password must be at least 6 characters.");
+          setIsUpdatingProfile(false);
+          return;
+        }
+        if (newPasswordInput !== confirmPasswordInput) {
+          setProfileModalError("Confirmation Error: New passwords do not match.");
+          setIsUpdatingProfile(false);
+          return;
+        }
+        const userSalt = (editUsername || currentUser?.username || "") + "_salt_tok";
+        const hash = await createSaltedHash(newPasswordInput, userSalt, 2500);
+        const token = formatHashToken(userSalt, hash, 2500);
+        passwordUpdates.passwordHash = token;
+      }
+
+      if (!editFullName.trim()) {
+        setProfileModalError("Validation Error: Full Name is required.");
+        setIsUpdatingProfile(false);
+        return;
+      }
+      if (!editUsername.trim()) {
+        setProfileModalError("Validation Error: Username is required.");
+        setIsUpdatingProfile(false);
+        return;
+      }
+
+      const cleanUsername = editUsername.trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
+      const initials = editFullName
+        .split(" ")
+        .map((p) => (p ? p[0] : ""))
+        .join("")
+        .toUpperCase()
+        .slice(0, 2) || "AD";
+
+      const updatedData: Partial<User> = {
+        fullName: editFullName.trim(),
+        username: cleanUsername,
+        profilePicture: editProfilePicture || undefined,
+        avatarInitials: initials,
+        ...passwordUpdates,
+      };
+
+      if (currentUser?.id) {
+        updateUser(currentUser.id, updatedData);
+      }
+      updateCurrentUser(updatedData);
+
+      setCurrentPasswordInput("");
+      setNewPasswordInput("");
+      setConfirmPasswordInput("");
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowAccountSettingsModal(false);
+      showToastMsg("Account details successfully updated!");
+    } catch (err: any) {
+      console.error(err);
+      setProfileModalError("Dynamic crypt engine error: unable to update profile.");
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
+  if (isHydrating || isSystemHydrating) {
+    return null;
+  }
+
+  if (!isConfigured || !users || users.length === 0) {
+    return <SetupModule />;
+  }
+
+  if (!isLoggedIn || !currentUser) {
+    return <LoginModule />;
+  }
+
+  if (
+    !(
+      currentUser &&
+      (currentUser.role === UserRole.STAFF || currentUser.role === UserRole.CASHIER)
+    ) &&
+    !(typeof window !== "undefined" && localStorage.getItem("tilepoint_onboarded_setup") === "true")
+  ) {
+    return (
+      <>
+        <OnboardingSetupWizard />
+        <PrivacyAccessibilityHub
+          darkMode={darkMode}
+          onToggleDarkMode={handleToggleDarkMode}
+        />
+      </>
+    );
+  }
+
+  if (currentUser.role === UserRole.STAFF) {
+    return (
+      <>
+        <StaffPortal darkMode={darkMode} setDarkMode={handleToggleDarkMode} />
+        <PrivacyAccessibilityHub
+          darkMode={darkMode}
+          onToggleDarkMode={handleToggleDarkMode}
+          hideFloatingButton={true}
+        />
+      </>
+    );
+  }
+
+  const getBranchName = (bId?: string) => {
+    if (!bId || bId === "B1" || bId === "main") {
+      const saved = localStorage.getItem("tilepoint_company_name_v1");
+      if (saved) return saved;
+    }
+    const found = branches.find((b) => b.id === bId);
+    if (!found) {
+      const saved = localStorage.getItem("tilepoint_company_name_v1");
+      return saved || branches[0]?.name || "Main Branch";
+    }
+    return found.name;
+  };
+
   const activeCategory = sidebarCategoryTree.find(
-  (cat) =>
-  cat.subItems.some((sub) => sub.id === activeTab) ||
-  cat.id === activeTab,
+    (cat) => cat.subItems.some((sub) => sub.id === activeTab) || cat.id === activeTab,
   );
-  if (!activeCategory) return null;
-
-  // Enforce RBAC filtering for sub-pages so they match exactly what is authorized
-  const authorizedSubItems = activeCategory.subItems.filter(
-    (sub) => sub.roles ? sub.roles.includes(currentUser.role) : true,
-  );
-
-  if (authorizedSubItems.length <= 1 || activeTab === "pos")
-  return null;
-
-  // Submenu alert conditions
-  let showExpirySubRedDot = false;
-  try {
-   const cached = localStorage.getItem("tp_batch_expirations");
-   if (cached) {
-    const parsed = JSON.parse(cached);
-    const today = new Date();
-    showExpirySubRedDot = parsed.some((b: any) => {
-     if (!b.expiryDate) return false;
-     const exp = new Date(b.expiryDate);
-     const diffTime = exp.getTime() - today.getTime();
-     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-     return diffDays <= 30;
-    });
-   } else {
-    showExpirySubRedDot = true;
-   }
-  } catch (_) {
-   showExpirySubRedDot = true;
-  }
-  
-  const showTransferSubRedDot = stockTransfers.some(t => {
-   if (t.status !== 'Pending') return false;
-   return t.fromBranchId !== t.toBranchId;
-  });
+  const isInventorySection = activeCategory?.id === "inventory";
 
   return (
-  <div className={`mb-4 bg-m3-surface-low border border-m3-outline-variant/15 flex flex-col shrink-0 ${
-  isInventoryCategory ? "rounded-2xl p-2.5" : "rounded-xl p-1.5 pb-2"
-  }`}>
-  <div className={`flex items-center justify-between px-1.5 block ${isInventoryCategory ? "pb-1" : "pb-0.5"}`}>
-  <div className="flex items-center justify-between w-full">
-  <div className="flex items-center gap-2">
-  <span className="text-[10px] font-black tracking-widest text-m3-on-surface-variant uppercase font-mono">
-  {activeCategory.name} Sub-navigation
-  </span>
-  <span className="h-1.5 w-1.5 rounded-full bg-m3-primary animate-pulse" />
-  </div>
-  <div className="flex items-center gap-2">
-  {(activeTab === "inventory" || activeTab === "inventory-stocks") && (
-  <button
-  onClick={() => setIsCompactColumns(!isCompactColumns)}
-  className="p-1 px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/10 rounded-lg transition-all cursor-pointer border border-m3-outline-variant/15 bg-m3-surface flex items-center gap-1.5 shadow-sm"
-  title={
-  isCompactColumns
-  ? "Switch to Spacious mode for expanded tables and wider panels"
-  : "Switch to Compact mode for dense screen layouts"
-  }
-  >
-  <Sliders className="h-3.5 w-3.5" />
-  <span>{isCompactColumns ? "Spacious Layout" : "Compact Layout"}</span>
-  </button>
-  )}
-  <button
-  onClick={() =>
-  setIsSubMenuCollapsed(!isSubMenuCollapsed)
-  }
-  className="p-1 px-2 text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/10 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider"
-  title={
-  isSubMenuCollapsed
-  ? "Expand Sub-menu"
-  : "Collapse Sub-menu"
-  }
-  >
-  <span>
-  {isSubMenuCollapsed ? "Show Options" : "Hide Options"}
-  </span>
-  <ChevronDown
-  className={`h-3.5 w-3.5 transition-transform duration-300 ${isSubMenuCollapsed ? "" : "rotate-180"}`}
-  />
-  </button>
-  </div>
-  </div>
-  </div>
+    <MotionConfig
+      reducedMotion={disableAnimations || lowPerformanceMode ? "always" : "never"}
+      transition={{
+        type: "spring",
+        stiffness: 300,
+        damping: 30,
+        mass: 0.6,
+        restDelta: 0.001,
+        restSpeed: 0.001,
+      }}
+    >
+      <div
+        className={`h-screen max-h-screen w-screen overflow-hidden flex flex-col font-sans transition-all duration-300 relative ${
+          darkMode ? "dark bg-background text-foreground" : "bg-background text-foreground"
+        }`}
+      >
+        <SystemLoadingOverlay />
 
-  <AnimatePresence initial={false}>
-  {!isSubMenuCollapsed && (
-  <motion.div
-  initial={{ height: 0, opacity: 0, scaleY: 0.95 }}
-  animate={{ height: "auto", opacity: 1, scaleY: 1 }}
-  exit={{ height: 0, opacity: 0, scaleY: 0.95 }}
-  transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-  style={{ originY: 0 }}
-  className={`overflow-y-hidden w-full flex flex-nowrap overflow-x-auto pt-2 pb-1.5 whitespace-nowrap scrollbar-thin scroll-smooth touch-pan-x shrink-0 ${
-  isInventoryCategory ? "gap-2.5" : "gap-1.5"
-  }`}
-  >
-  {authorizedSubItems.map((sub) => {
-  const isSelected = activeTab === sub.id;
-  return (
-  <button
-  key={sub.id}
-  onClick={() => changeTab(sub.id)}
-  className={`text-xs font-bold tracking-wide transition-all cursor-pointer shrink-0 relative ${
-  isInventoryCategory
-  ? "px-4.5 py-2 rounded-2xl"
-  : "px-3 py-1.5 rounded-xl"
-  } ${
-  isSelected
-  ? "bg-m3-primary text-m3-on-primary shadow-md shadow-m3-primary/10 font-black"
-  : "bg-m3-surface border border-m3-outline-variant/15 text-m3-on-surface-variant hover:bg-m3-primary/10 hover:text-m3-primary"
-  }`}
-  >
-  <span>{sub.name}</span>
-  {((sub.id === "inventory-expiry" && showExpirySubRedDot) ||
-    (sub.id === "inventory-transfer" && showTransferSubRedDot)) && (
-    <span className="absolute -top-1.5 -right-1 h-2 w-2 rounded-full bg-rose-500 border border-m3-surface" />
-  )}
-  </button>
+        {apiErrorState && (
+          <div className="fixed inset-x-0 top-0 z-[60] bg-content2/95 backdrop-blur-md border-b border-divider/35 shadow-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top duration-300">
+            <div className="flex items-center gap-3">
+              <div
+                className={`p-2 rounded-xl ${
+                  apiErrorState.statusCode === 429
+                    ? "bg-amber-500/10 text-amber-500"
+                    : "bg-red-500/10 text-red-500"
+                }`}
+              >
+                {apiErrorState.statusCode === 429 ? (
+                  <Clock className="w-5 h-5 animate-pulse" />
+                ) : (
+                  <AlertTriangle className="w-5 h-5" />
+                )}
+              </div>
+              <div className="text-left">
+                <h4 className="font-bold text-sm tracking-tight flex items-center gap-2 text-foreground">
+                  <span>System Response Indicator: HTTP {apiErrorState.statusCode}</span>
+                  {apiErrorState.statusCode === 429 && (
+                    <span className="bg-amber-500/20 text-amber-500 text-[10px] px-1.5 py-0.5 rounded font-medium">
+                      COOL-DOWN ACTIVE
+                    </span>
+                  )}
+                </h4>
+                <p className="text-xs text-default-500 mt-0.5 max-w-2xl leading-relaxed">
+                  {apiErrorState.message}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              {apiErrorState.statusCode === 429 ? (
+                <div className="bg-amber-500/15 border border-amber-500/35 text-amber-500 rounded-lg px-3 py-1.5 text-xs font-medium flex items-center gap-2">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  Retry in {apiErrorState.retryAfter || 0}s
+                </div>
+              ) : apiErrorState.statusCode === 500 ? (
+                <>
+                  <button
+                    onClick={() => {
+                      clearServerErrorState();
+                      syncFromSharedServer();
+                    }}
+                    className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary-hover active:scale-95 transition-all text-xs font-semibold px-4 py-2 rounded-xl shadow-md cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    Retry Connection
+                  </button>
+                  <button
+                    onClick={clearServerErrorState}
+                    className="border border-default-200 hover:bg-default-100 text-foreground text-xs font-semibold px-4 py-2 rounded-xl transition-all cursor-pointer"
+                  >
+                    Use Offline Fallback
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={clearServerErrorState}
+                  className="bg-primary text-primary-foreground hover:bg-primary-hover active:scale-95 transition-all text-xs font-semibold px-4 py-2 rounded-xl shadow-md cursor-pointer"
+                >
+                  Dismiss Warning
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {percentProgress > 0 && (
+          <div
+            className="fixed top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-amber-500 lod-progress z-50 origin-left will-change-transform pointer-events-none transition-transform duration-75 ease-out"
+            style={{
+              transform: `scaleX(${Math.min(Math.max(percentProgress, 0), 100) / 100}) translateZ(0)`
+            }}
+          />
+        )}
+
+        <div className="flex-1 flex overflow-hidden min-h-0 relative">
+          {isSidebarHidden && (
+            <button
+              onClick={() => setIsSidebarHidden(false)}
+              className="fixed left-0 top-1/2 -translate-y-1/2 z-[45] p-2 bg-primary text-primary-foreground rounded-r-2xl border-y border-r border-divider/35 shadow-2xl hover:bg-primary/95 hover:scale-110 active:scale-95 transition-all cursor-pointer flex items-center justify-center group"
+              title="Restore Navigation Sidebar"
+            >
+              <ChevronRight className="h-5 w-5 animate-pulse group-hover:translate-x-0.5 transition-transform" />
+            </button>
+          )}
+
+          <Sidebar
+            isSidebarExpanded={isSidebarExpanded}
+            setIsSidebarExpanded={setIsSidebarExpanded}
+            isSidebarHidden={isSidebarHidden}
+            activeTab={activeTab}
+            changeTab={handleChangeTab}
+            currentUser={currentUser}
+            branches={branches}
+            darkMode={darkMode}
+            handleToggleDarkMode={handleToggleDarkMode}
+            setShowAccountSettingsModal={setShowAccountSettingsModal}
+            setShowSystemSettingsModal={setShowSystemSettingsModal}
+            setShowLogoutConfirmModal={setShowLogoutConfirmModal}
+            parkedSales={parkedSales}
+            deliveries={deliveries}
+            stockTransfers={stockTransfers}
+            getBranchName={getBranchName}
+            categories={sidebarCategoryTree}
+            isMobileOpen={isMobileMenuOpen}
+            onCloseMobile={() => setIsMobileMenuOpen(false)}
+          />
+
+          <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden relative">
+            <div className="px-2.5 sm:px-4 md:px-6 pt-3 pb-0 shrink-0">
+              <HeaderNavTabs
+                activeTab={activeTab}
+                onChangeTab={handleChangeTab}
+                currentUser={currentUser}
+                parkedSalesCount={parkedSales.length}
+                pendingDeliveriesCount={deliveries.filter(
+                  (d) => d.status === "Scheduled" || d.status === "Packed" || d.status === "Out For Delivery"
+                ).length}
+                pendingTransfersCount={stockTransfers.filter((t) => t.status === "Pending").length}
+                categories={sidebarCategoryTree}
+              />
+            </div>
+
+            <main
+              className={`flex-1 relative flex flex-col text-foreground transition-all duration-300 overflow-x-hidden min-h-0 ${
+                activeTab === "pos" || activeTab === "ledger"
+                  ? "p-2 sm:p-4 md:p-5 pb-20 md:pb-5 overflow-y-auto lg:overflow-hidden h-full max-h-full"
+                  : "p-2.5 sm:p-4 md:p-6 pb-20 md:pb-6 overflow-y-auto scroll-smooth mobile-scroll-container"
+              } ${isCompact || !isInventorySection ? "compact-fit" : ""}`}
+            >
+              <div className="flex-1 min-h-0">
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                    style={{ willChange: "transform, opacity" }}
+                    className="h-full flex flex-col min-h-0"
+                  >
+                    <Suspense fallback={<PageLoadingFallback />}>
+                      {activeTab === "tutorials" &&
+                        (currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.MANAGER ? (
+                          <TutorialOnboarding darkMode={darkMode} onNavigate={handleChangeTab} />
+                        ) : (
+                          <div className="p-8 text-center text-foreground">
+                            <p className="text-sm font-bold text-danger">Access Restricted to Admin and Manager.</p>
+                          </div>
+                        ))}
+
+                      {activeTab === "dashboard" && (
+                        <Dashboard darkMode={darkMode} onNavigate={handleChangeTab} />
+                      )}
+
+                      {activeTab === "profit-analytics" && (
+                        <AdminProfitModule
+                          darkMode={darkMode}
+                          selectedBranchId={selectedBranchId}
+                          setSelectedBranchId={setSelectedBranchId}
+                          getBranchName={getBranchName}
+                          showToastMsg={showToastMsg}
+                        />
+                      )}
+
+                      {activeTab === "pos" && (
+                        <PosModule
+                          darkMode={darkMode}
+                          onNavigate={handleChangeTab}
+                          viewMode="checkout"
+                          showImmersiveControls={showImmersiveControls}
+                        />
+                      )}
+
+                      {activeTab === "ledger" && (
+                        <PosModule
+                          darkMode={darkMode}
+                          onNavigate={handleChangeTab}
+                          viewMode="ledger"
+                          showImmersiveControls={showImmersiveControls}
+                        />
+                      )}
+
+                      {activeTab === "inventory" && (
+                        <InventoryModule
+                          darkMode={darkMode}
+                          initialSubTab="catalog"
+                          hideTabHeader={true}
+                          isCompactGlobal={isCompact}
+                          onSubTabChange={(newSub: string) => {
+                            const revMap: Record<string, string> = {
+                              catalog: "inventory-stocks",
+                              movements: "inventory-adjustments",
+                              transfers: "inventory-transfer",
+                              ledger: "inventory-logistics",
+                              import: "inventory-import",
+                              "branch-prices": "inventory-branch-prices",
+                              expiry: "inventory-expiry",
+                            };
+                            if (revMap[newSub]) handleChangeTab(revMap[newSub]);
+                          }}
+                        />
+                      )}
+
+                      {activeTab === "procurement" && <ProcurementModule darkMode={darkMode} />}
+
+                      {activeTab === "transmittal" && <TransmittalModule darkMode={darkMode} />}
+
+                      {activeTab === "shift" && <ShiftModule darkMode={darkMode} />}
+
+                      {activeTab === "calculator" && <CalculatorModule darkMode={darkMode} />}
+
+                      {activeTab === "branches" && <BranchModule darkMode={darkMode} />}
+
+                      {activeTab === "archives" && <ArchivesModule darkMode={darkMode} />}
+
+                      {activeTab === "system-settings" && (
+                        <SystemSettingsModule
+                          darkMode={darkMode}
+                          setDarkMode={handleToggleDarkMode}
+                          followSystemTheme={followSystemTheme}
+                          setFollowSystemTheme={setFollowSystemTheme}
+                        />
+                      )}
+
+                      {activeTab === "users" && <UsersModule darkMode={darkMode} />}
+
+                      {activeTab === "reconciliation-transmission" && (
+                        <ReconciliationTransmissionModule darkMode={darkMode} />
+                      )}
+
+                      {activeTab === "sales-transmission" && (
+                        <SalesTransmissionModule darkMode={darkMode} />
+                      )}
+
+                      {activeTab === "daily-reconciliation" && (
+                        <DailyReconciliationModule darkMode={darkMode} />
+                      )}
+
+                      {activeTab === "deliveries-panel" && (
+                        <DeliveriesModule darkMode={darkMode} />
+                      )}
+
+                      {activeTab === "inventory-damage" && (
+                        <DamageRegisterModule darkMode={darkMode} />
+                      )}
+
+                      {activeTab.startsWith("inventory-") && activeTab !== "inventory-damage" && (() => {
+                        const subMap: Record<string, string> = {
+                          "inventory-stocks": "catalog",
+                          "inventory-adjustments": "movements",
+                          "inventory-transfer": "transfers",
+                          "inventory-logistics": "ledger",
+                          "inventory-import": "import",
+                          "inventory-branch-prices": "branch-prices",
+                          "inventory-expiry": "expiry",
+                        };
+                        const targetSub = subMap[activeTab] || "catalog";
+                        return (
+                          <InventoryModule
+                            darkMode={darkMode}
+                            initialSubTab={targetSub}
+                            hideTabHeader={true}
+                            isCompactGlobal={isCompact}
+                            onSubTabChange={(newSub: string) => {
+                              const revMap: Record<string, string> = {
+                                catalog: "inventory-stocks",
+                                movements: "inventory-adjustments",
+                                transfers: "inventory-transfer",
+                                ledger: "inventory-logistics",
+                                import: "inventory-import",
+                                "branch-prices": "inventory-branch-prices",
+                                expiry: "inventory-expiry",
+                              };
+                              if (revMap[newSub]) handleChangeTab(revMap[newSub]);
+                            }}
+                          />
+                        );
+                      })()}
+
+                      {activeTab === "adjustments-void" && (
+                        <PosModule darkMode={darkMode} onNavigate={handleChangeTab} viewMode="ledger" />
+                      )}
+
+                      {(activeTab === "suppliers-manage" || activeTab === "procurement-po") && (
+                        <ProcurementModule darkMode={darkMode} />
+                      )}
+
+                      {[
+                        "members",
+                        "members-manage",
+                        "members-receivables",
+                        "members-loyalty",
+                        "members-search-sales",
+                        "expenses",
+                        "expenses-add",
+                        "expenses-search",
+                        "supplier",
+                        "suppliers-credits",
+                        "suppliers-calendar",
+                        "bir",
+                        "bir-xz",
+                        "bir-summary",
+                        "bir-pwd",
+                        "bir-athletes",
+                        "bir-solo",
+                        "bir-senior20",
+                        "bir-senior5",
+                        "bir-regular",
+                        "adjustments",
+                        "adjustments-return",
+                      ].includes(activeTab) && (
+                        <AtposExtraModules
+                          activeSubTab={
+                            activeTab === "members"
+                              ? "members-manage"
+                              : activeTab === "expenses"
+                              ? "expenses-add"
+                              : activeTab === "supplier"
+                              ? "suppliers-credits"
+                              : activeTab === "bir"
+                              ? "bir-xz"
+                              : activeTab === "adjustments"
+                              ? "adjustments-return"
+                              : activeTab
+                          }
+                          darkMode={darkMode}
+                          onNavigate={handleChangeTab}
+                        />
+                      )}
+                    </Suspense>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </main>
+          </div>
+        </div>
+
+        <MobileBottomNav
+          activeTab={activeTab}
+          changeTab={handleChangeTab}
+          onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
+          hasInventoryAlert={showInventoryRedDot}
+          hasSaleAlert={showSaleRedDot}
+          hasTotalAlerts={showSaleRedDot || showDeliveriesRedDot || showInventoryRedDot}
+        />
+
+        {/* LOGOUT CONFIRMATION MODAL */}
+        {showLogoutConfirmModal && typeof document !== 'undefined' && createPortal(
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 animate-fade-in font-sans">
+            <div 
+              className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
+              onClick={() => setShowLogoutConfirmModal(false)} 
+            />
+            <div className="relative w-full max-w-sm rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4 text-left font-sans">
+              <div className="flex items-center gap-3 border-b border-divider/15 pb-3">
+                <div className="p-2.5 rounded-2xl bg-rose-500/10 text-rose-500">
+                  <Power className="h-5 w-5 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-foreground uppercase tracking-wider">Confirm Sign Out</h3>
+                  <p className="text-[10px] text-zinc-400 font-bold">TILEPOINT SESSION CONTROL</p>
+                </div>
+              </div>
+              <p className="text-xs text-zinc-300 font-medium leading-relaxed">
+                Are you sure you want to log out of TilePoint terminal? Any unsaved active checkout carts will be lost.
+              </p>
+              <div className="flex gap-3 pt-2 font-sans">
+                <button
+                  type="button"
+                  onClick={() => setShowLogoutConfirmModal(false)}
+                  className="flex-1 py-2.5 rounded-full bg-background hover:bg-default-100 text-foreground font-extrabold text-xs uppercase tracking-wide border border-divider/10 cursor-pointer active:scale-95 transition-all text-center"
+                >
+                  No, Keep Active
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLogoutConfirmModal(false);
+                    logout();
+                  }}
+                  className="flex-1 py-2.5 rounded-full bg-rose-500 hover:bg-rose-400 text-black font-extrabold text-xs uppercase tracking-wide cursor-pointer active:scale-95 transition-all text-center shadow-lg shadow-rose-500/10"
+                >
+                  Yes, Sign Out
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {/* UNSAVED CART MODAL */}
+        {showUnsavedCartModal && typeof document !== 'undefined' && createPortal(
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-fade-in font-sans">
+            <div 
+              className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
+              onClick={() => { setShowUnsavedCartModal(false); setPendingUnsavedCartTargetTab(null); }} 
+            />
+            <div className="relative w-full max-w-sm rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4 text-left font-sans">
+              <div className="flex items-center gap-3 border-b border-divider/15 pb-3">
+                <div className="p-2.5 rounded-2xl bg-amber-500/10 text-amber-500">
+                  <AlertTriangle className="h-5 w-5 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-foreground uppercase tracking-wider">Unsaved Checkout Warning</h3>
+                  <p className="text-[10px] text-amber-500 font-bold uppercase tracking-wider">Active Transaction Guard</p>
+                </div>
+              </div>
+              <p className="text-xs text-zinc-300 font-medium leading-relaxed">
+                Are you sure you want to leave this site? Changes you made may not be saved.
+                <br /><br />
+                Leaving the ERP OS terminal now will disrupt the current active customer checkout session and clear the basket.
+              </p>
+              <div className="flex gap-3 pt-2 font-sans">
+                <button
+                  type="button"
+                  onClick={() => { setShowUnsavedCartModal(false); setPendingUnsavedCartTargetTab(null); }}
+                  className="flex-1 py-2.5 rounded-full bg-background hover:bg-default-100 text-foreground font-extrabold text-xs uppercase tracking-wide border border-divider/10 cursor-pointer active:scale-95 transition-all text-center"
+                >
+                  Cancel, Keep Basket
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUnsavedCartModal(false);
+                    if (pendingUnsavedCartTargetTab) handleSmoothTabChange(pendingUnsavedCartTargetTab);
+                    setPendingUnsavedCartTargetTab(null);
+                  }}
+                  className="flex-1 py-2.5 rounded-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs uppercase tracking-wide cursor-pointer active:scale-95 transition-all text-center shadow-lg shadow-amber-500/10"
+                >
+                  Yes, Leave Mode
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {/* DATABASE BACKUP & MAINTENANCE MODAL */}
+        {showBackupModal && typeof document !== 'undefined' && createPortal(
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-fade-in font-sans">
+            <div 
+              className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
+              onClick={() => { setShowBackupModal(false); setBackupSuccessMsg(null); setBackupErrorMsg(null); setManualSnapshotName(""); }} 
+            />
+            <div className="relative w-full max-w-2xl rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground flex flex-col max-h-[90vh] text-left">
+              <div className="flex justify-between items-center border-b border-divider/15 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-2xl">
+                    <Database className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black uppercase tracking-wider text-foreground flex items-center gap-2">
+                      Database Core Management
+                      <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${dbSyncStatus === "syncing" ? "bg-amber-500/20 text-amber-500 animate-pulse" : "bg-emerald-500/10 text-emerald-400"}`}>
+                        {dbSyncStatus === "syncing" ? "● Sync active" : "● Connected"}
+                      </span>
+                    </h3>
+                    <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">
+                      Disaster Recovery & Automated Backup Engine
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setShowBackupModal(false); setBackupSuccessMsg(null); setBackupErrorMsg(null); setManualSnapshotName(""); }}
+                  className="text-default-500 hover:text-rose-500 cursor-pointer p-1.5 rounded-full hover:bg-default-100 transition-colors"
+                  title="Close Database Panel"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="flex border-b border-divider/10 my-4 p-1 bg-content1/50 rounded-xl">
+                <button
+                  onClick={() => setBackupActiveSubTab("scheduler")}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center ${backupActiveSubTab === "scheduler" ? "bg-primary text-primary-foreground shadow-sm font-black" : "text-default-500 hover:bg-primary/10 hover:text-primary"}`}
+                >
+                  Auto-Backup Configuration
+                </button>
+                <button
+                  onClick={() => setBackupActiveSubTab("ledger")}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 ${backupActiveSubTab === "ledger" ? "bg-primary text-primary-foreground shadow-sm font-black" : "text-default-500 hover:bg-primary/10 hover:text-primary"}`}
+                >
+                  Recovery Ledger
+                  <span className="bg-primary-50 text-primary-700 text-[10px] font-bold px-1.5 py-0.2 rounded-full font-sans">
+                    {dbSnapshots.length}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setBackupActiveSubTab("import-export")}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center ${backupActiveSubTab === "import-export" ? "bg-primary text-primary-foreground shadow-sm font-black" : "text-default-500 hover:bg-primary/10 hover:text-primary"}`}
+                >
+                  Offline Backups & JSON
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto pr-1 space-y-4 max-h-[50vh]">
+                {backupActiveSubTab === "scheduler" && (
+                  <div className="space-y-4">
+                    <div className="p-3.5 rounded-2xl bg-primary/5 border border-primary/10 flex justify-between items-center text-xs">
+                      <div>
+                        <div className="font-extrabold text-primary uppercase text-[10px] tracking-wide">
+                          Optimization Status
+                        </div>
+                        <div className="text-zinc-400 mt-1 font-sans">
+                          Debounce cache buffer operates at{" "}
+                          <span className="font-bold text-foreground">{debounceDelay}ms</span>.
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-emerald-400 font-extrabold">{writeStatsCount.toLocaleString()}</div>
+                        <div className="text-[9px] text-zinc-500 uppercase mt-0.5">Database Writes Saved</div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-divider/20 p-4 space-y-4 bg-content1">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-primary">Automatic Background Scheduler</h4>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xs font-bold">Hourly Data Preservation</div>
+                          <div className="text-[10px] text-zinc-400 mt-0.5">Protect inventory journals and sales invoices against localStorage eviction.</div>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={currentUser?.role !== UserRole.ADMIN}
+                          onClick={() => {
+                            if (currentUser?.role !== UserRole.ADMIN) {
+                              showToastMsg("Access Denied: Admin authorization required.");
+                              return;
+                            }
+                            setAutoBackupEnabled(!autoBackupEnabled);
+                            showToastMsg(`Automated backup scheduler is now ${autoBackupEnabled ? "DISABLED" : "ENABLED"}`);
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${autoBackupEnabled ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-zinc-800 text-zinc-400"}`}
+                        >
+                          {autoBackupEnabled ? "Enabled" : "Disabled"}
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-3 border-t border-divider/10">
+                        <div>
+                          <div className="text-xs font-bold">Preservation Frequency Interval</div>
+                          <div className="text-[10px] text-zinc-400 mt-0.5">Frequency for background state snapshots.</div>
+                        </div>
+                        <select
+                          disabled={currentUser?.role !== UserRole.ADMIN}
+                          value={backupIntervalHours}
+                          onChange={(e) => setBackupIntervalHours(Number(e.target.value))}
+                          className="bg-background text-xs font-bold px-3 py-1.5 rounded-xl border border-divider/30 focus:outline-none focus:ring-1 focus:ring-primary/40 text-foreground"
+                        >
+                          <option value={1}>Every 1 Hour</option>
+                          <option value={3}>Every 3 Hours</option>
+                          <option value={6}>Every 6 Hours</option>
+                          <option value={12}>Every 12 Hours</option>
+                          <option value={24}>Every 24 Hours</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-divider/20 p-4 space-y-4 bg-content1">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-2.5 bg-primary/10 text-primary rounded-xl shrink-0">
+                            <Sparkles className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-2">
+                              Database Maintenance
+                              <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${dbMaintenanceEnabled ? "bg-emerald-500/10 text-emerald-400" : "bg-zinc-800 text-zinc-400"}`}>
+                                {dbMaintenanceEnabled ? "● Active Idle Sweep" : "● Disabled"}
+                              </span>
+                            </h4>
+                            <p className="text-[10px] text-zinc-400 mt-0.5">
+                              Daily index re-indexing and garbage collection sweep during idle periods to improve long-term system performance.
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={currentUser?.role !== UserRole.ADMIN}
+                          onClick={() => {
+                            if (currentUser?.role !== UserRole.ADMIN) {
+                              showToastMsg("Access Denied: Admin authorization required.");
+                              return;
+                            }
+                            setDbMaintenanceEnabled(!dbMaintenanceEnabled);
+                            showToastMsg(`Idle maintenance is now ${dbMaintenanceEnabled ? "DISABLED" : "ENABLED"}`);
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${dbMaintenanceEnabled ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-zinc-800 text-zinc-400"}`}
+                        >
+                          {dbMaintenanceEnabled ? "Enabled" : "Disabled"}
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-3 border-t border-divider/10">
+                        <div>
+                          <div className="text-xs font-bold">Last Database Sweep</div>
+                          <div className="text-[10px] text-zinc-400 mt-0.5">
+                            {lastMaintenanceTime ? new Date(lastMaintenanceTime).toLocaleString() : "Never executed on this client"}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={isMaintenanceRunning}
+                          onClick={async () => {
+                            await runDatabaseMaintenance();
+                            showToastMsg("Database re-indexed & maintenance completed!");
+                          }}
+                          className="px-3.5 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                          <Zap className="h-3.5 w-3.5 text-primary animate-pulse" />
+                          {isMaintenanceRunning ? "Optimizing..." : "Run Sweep Now"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {backupActiveSubTab === "ledger" && (
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border border-divider/20 p-4 space-y-3">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-primary">Instantiate Manual Backup Snapshot</h4>
+                      <div className="flex gap-2 font-sans">
+                        <input
+                          type="text"
+                          value={manualSnapshotName}
+                          onChange={(e) => setManualSnapshotName(e.target.value)}
+                          placeholder="Snapshot label (e.g. Pre-Audit Backup)"
+                          className="flex-1 bg-content1 text-xs text-foreground border border-divider/30 px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder-zinc-500 font-bold"
+                        />
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const name = manualSnapshotName.trim() || `Manual Snapshot ${new Date().toLocaleTimeString()}`;
+                            await triggerSystemProcessing(`Generating Snapshot: ${name}...`, 1200, "db", undefined, "Dumping relational records to snapshot store...");
+                            await createDbSnapshot(name);
+                            setManualSnapshotName("");
+                            showToastMsg(`Snapshot "${name}" generated successfully!`);
+                          }}
+                          className="px-4 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer transition-all shrink-0 shadow-md"
+                        >
+                          Create Snapshot
+                        </button>
+                      </div>
+                    </div>
+
+                    {dbSnapshots.length === 0 ? (
+                      <div className="p-8 text-center bg-content1/40 rounded-2xl border border-dashed border-divider/20 space-y-2">
+                        <HardDrive className="h-8 w-8 text-zinc-600 mx-auto" />
+                        <p className="text-xs text-zinc-400 font-bold">No Database Snapshots Found</p>
+                        <p className="text-[10px] text-zinc-500">Automated and manual snapshots will register here.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
+                        {dbSnapshots.map((snap) => (
+                          <div
+                            key={snap.id}
+                            className="p-3 bg-content1 hover:bg-primary/5 rounded-2xl border border-divider/15 flex items-center justify-between transition-all"
+                          >
+                            <div className="space-y-1">
+                              <div className="text-xs font-black text-foreground">{snap.name}</div>
+                              <div className="text-[9.5px] text-zinc-400 font-bold flex items-center gap-2 flex-wrap">
+                                <span className="text-primary text-[10px]">{snap.creator}</span>
+                                <span>•</span>
+                                <span>{new Date(snap.timestamp).toLocaleString()}</span>
+                                <span>•</span>
+                                <span className="text-zinc-500 bg-content1/55 px-1.5 rounded">
+                                  {((snap.sizeBytes || 0) / 1024).toFixed(1)} KB
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setConfirmRestoreSnap(snap)}
+                                className="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[11px] font-black uppercase rounded-lg border border-primary/20 cursor-pointer transition-all"
+                              >
+                                Restore
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => deleteDbSnapshot(snap.id)}
+                                className="p-1.5 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg cursor-pointer transition-all"
+                                title="Delete Snapshot"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {backupActiveSubTab === "import-export" && (
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border border-divider/20 p-4 space-y-3 bg-content1">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-primary">Full Database JSON Export</h4>
+                      <p className="text-[10px] text-zinc-400 leading-relaxed">
+                        Download a complete, offline snapshot containing all branch catalogs, member logs, transmittals, and historical sales transactions.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const dump = JSON.stringify(
+                            {
+                              version: "2.0",
+                              timestamp: Date.now(),
+                              users,
+                              branches,
+                              suppliers,
+                              products,
+                              purchaseOrders,
+                              poItems,
+                              transmittals,
+                              shifts,
+                              sales,
+                              saleItems,
+                              movements,
+                              auditLogs,
+                              parkedSales,
+                              stockTransfers,
+                              branchStock,
+                              ledgerEntries,
+                              branchSalesReports,
+                              deliveries,
+                            },
+                            null,
+                            2
+                          );
+                          const filename = `tilepoint_full_backup_${Date.now()}.json`;
+                          saveFileToBackup(dump, filename, "Database_Backups", "application/json")
+                            .then((res) => {
+                              showToastMsg(`Database backup exported to ${res.path || filename} successfully!`);
+                            })
+                            .catch(() => {
+                              const blob = new Blob([dump], { type: "application/json" });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement("a");
+                              a.setAttribute("href", url);
+                              a.setAttribute("download", filename);
+                              a.style.display = "none";
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                              URL.revokeObjectURL(url);
+                              showToastMsg("Raw physical database JSON file downloaded successfully!");
+                            });
+                        }}
+                        className="w-full py-2.5 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-extrabold uppercase tracking-wider rounded-xl border border-emerald-500/30 flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                      >
+                        <Download className="h-4 w-4" /> Export Complete Database JSON
+                      </button>
+                    </div>
+
+                    <div className="rounded-2xl border border-divider/20 p-4 space-y-3 bg-content1">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-primary">Import Database Snapshot File</h4>
+                      <p className="text-[10px] text-zinc-400 leading-relaxed">
+                        Upload a previously generated `.json` or `.backup` schema file to restore full database records.
+                      </p>
+                      <label className="w-full py-2.5 bg-background hover:bg-default-100 text-foreground text-xs font-extrabold uppercase tracking-wider rounded-xl border border-divider/20 flex items-center justify-center gap-1.5 cursor-pointer transition-colors">
+                        <Upload className="h-4 w-4 text-primary" /> Select Backup JSON File
+                        <input
+                          type="file"
+                          accept=".json,.backup"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = async (event) => {
+                              try {
+                                const raw = event.target?.result as string;
+                                const parsed = await verifyAndUnwrapBackup(raw);
+                                if (!parsed || typeof parsed !== "object") {
+                                  throw new Error("Invalid schema structure");
+                                }
+                                setBackupSuccessMsg("Database successfully imported! Reloading interface...");
+                                setTimeout(() => window.location.reload(), 1500);
+                              } catch (err: any) {
+                                setBackupErrorMsg(`ERROR: APPROVED FILE IS CORRUPTED OR INVALID SCHEMA: ${err.message}`);
+                                showToastMsg("Import rejected due to structural validation faults.");
+                              }
+                            };
+                            reader.readAsText(file);
+                          }}
+                        />
+                      </label>
+                    </div>
+
+                    {backupSuccessMsg && (
+                      <div className="p-3 text-[10.5px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/15 rounded-xl text-center">
+                        {backupSuccessMsg}
+                      </div>
+                    )}
+                    {backupErrorMsg && (
+                      <div className="p-3 text-[10.5px] font-bold text-rose-400 bg-rose-500/10 border border-rose-500/15 rounded-xl text-center">
+                        {backupErrorMsg}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-4 mt-4 border-t border-divider/15 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => { setShowBackupModal(false); setBackupSuccessMsg(null); setBackupErrorMsg(null); setManualSnapshotName(""); }}
+                  className="px-5 py-2.5 bg-background hover:bg-default-100 text-foreground font-extrabold text-xs uppercase tracking-wide border border-divider/10 rounded-full cursor-pointer transition-all"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {/* ACCOUNT PROFILE & SECURITY CREDENTIALS MODAL */}
+        {showAccountSettingsModal && typeof document !== 'undefined' && createPortal(
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-fade-in font-sans">
+            <div
+              className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity"
+              onClick={() => {
+                setCurrentPasswordInput("");
+                setNewPasswordInput("");
+                setConfirmPasswordInput("");
+                setProfileModalError("");
+                setShowAccountSettingsModal(false);
+              }}
+            />
+            <div className="relative w-full max-w-md rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-5 text-left max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center border-b border-divider/15 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-amber-500/10 text-amber-500 rounded-2xl">
+                    <LockKeyhole className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black uppercase tracking-wider text-foreground">
+                      Account Profile & Security
+                    </h3>
+                    <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">
+                      Personal Credentials & Security Vault
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentPasswordInput("");
+                    setNewPasswordInput("");
+                    setConfirmPasswordInput("");
+                    setProfileModalError("");
+                    setShowAccountSettingsModal(false);
+                  }}
+                  className="text-default-500 hover:text-rose-500 cursor-pointer p-1.5 rounded-full hover:bg-default-100 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveProfile} className="space-y-4">
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">
+                      Full Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editFullName}
+                      onChange={(e) => setEditFullName(e.target.value)}
+                      placeholder="e.g. John Doe"
+                      className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500 transition-colors rounded-lg font-bold"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">
+                      Username
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2 text-zinc-500 text-xs select-none">@</span>
+                      <input
+                        type="text"
+                        required
+                        value={editUsername}
+                        onChange={(e) => setEditUsername(e.target.value)}
+                        placeholder="Username"
+                        className="w-full bg-background border-b-2 border-divider pl-7 pr-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500 transition-colors rounded-lg"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3 pt-1 border-t border-divider/15">
+                  <div className="text-[10.5px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1 pl-1">
+                    <span>Update Security Password (Optional)</span>
+                  </div>
+
+                  <div className="space-y-1 relative">
+                    <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">
+                      Current Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showCurrentPassword ? "text" : "password"}
+                        value={currentPasswordInput}
+                        onChange={(e) => setCurrentPasswordInput(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500 transition-colors rounded-lg pr-9"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-2.5 top-2 text-zinc-400 hover:text-foreground cursor-pointer"
+                      >
+                        {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 relative">
+                    <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">
+                      New Password (Min 6 Characters)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showNewPassword ? "text" : "password"}
+                        value={newPasswordInput}
+                        onChange={(e) => setNewPasswordInput(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500 transition-colors rounded-lg pr-9"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-2.5 top-2 text-zinc-400 hover:text-foreground cursor-pointer"
+                      >
+                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">
+                      Confirm New Password
+                    </label>
+                    <input
+                      type="password"
+                      value={confirmPasswordInput}
+                      onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500 transition-colors rounded-lg"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  {profileModalError ? (
+                    <p className="text-[9.5px] font-bold text-rose-500 px-1 animate-pulse leading-normal">
+                      {profileModalError}
+                    </p>
+                  ) : (
+                    <p className="text-[9px] text-zinc-400 px-1 leading-normal font-medium flex items-center gap-1">
+                      <span>Your account security credentials will be encrypted and updated securely.</span>
+                    </p>
+                  )}
+                </div>
+
+                {(currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.MANAGER) && (
+                  <div className="pt-2 border-t border-divider/15">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAccountSettingsModal(false);
+                        setShowSystemSettingsModal(true);
+                      }}
+                      className="w-full flex items-center justify-between px-3.5 py-2.5 bg-default-100/70 hover:bg-default-200 border border-divider/30 rounded-xl text-xs font-bold text-foreground transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Settings className="h-4 w-4 text-primary" />
+                        <span>System Settings & Config</span>
+                      </div>
+                      <span className="text-[10px] text-default-400 group-hover:text-foreground">Configure &rarr;</span>
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-3 pt-3 border-t border-divider/15 font-sans">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentPasswordInput("");
+                      setNewPasswordInput("");
+                      setConfirmPasswordInput("");
+                      setProfileModalError("");
+                      setShowAccountSettingsModal(false);
+                    }}
+                    className="px-4 py-2 bg-default-100 hover:bg-default-100 rounded-full text-zinc-300 font-extrabold text-[10px] uppercase tracking-wider transition-all cursor-pointer text-center"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isUpdatingProfile}
+                    className="px-5 py-2 rounded-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[10px] uppercase tracking-wider transition-all cursor-pointer shadow-md disabled:brightness-50"
+                  >
+                    {isUpdatingProfile ? "Saving Hashed Token..." : "Update Password"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {/* SYSTEM SETTINGS MODAL */}
+        {showSystemSettingsModal && typeof document !== 'undefined' && createPortal(
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 animate-fade-in font-sans">
+            <div 
+              className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-md transition-opacity" 
+              onClick={() => setShowSystemSettingsModal(false)} 
+            />
+            <div className="relative w-full max-w-4xl rounded-2xl border border-divider/30 p-4 sm:p-6 z-20 shadow-2xl bg-content1 text-foreground max-h-[92vh] overflow-y-auto custom-scrollbar text-left">
+              <SystemSettingsModule
+                darkMode={darkMode}
+                setDarkMode={handleToggleDarkMode}
+                followSystemTheme={followSystemTheme}
+                setFollowSystemTheme={setFollowSystemTheme}
+                isModal={true}
+                onClose={() => setShowSystemSettingsModal(false)}
+              />
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {/* FLOATING TOAST NOTIFICATION */}
+        <ToastNotification
+          message={toastMessage}
+          onClose={() => setToastMessage(null)}
+        />
+
+        <PrivacyAccessibilityHub
+          darkMode={darkMode}
+          onToggleDarkMode={handleToggleDarkMode}
+          hideFloatingButton={true}
+        />
+
+        <QuickModuleSwitcherModal
+          isOpen={isQuickSwitcherOpen}
+          onClose={() => setIsQuickSwitcherOpen(false)}
+          currentUser={currentUser}
+          activeTab={activeTab}
+          onSelectTab={(tabId) => handleChangeTab(tabId)}
+        />
+
+        <DesktopKeyboardShortcutsModal
+          isOpen={isShortcutsModalOpen}
+          onClose={() => setIsShortcutsModalOpen(false)}
+          userRole={currentUser?.role}
+        />
+
+        <PwaInstallPrompt />
+        <IdleScreen />
+
+        {confirmRestoreSnap && (
+          <ConfirmationModal
+            isOpen={!!confirmRestoreSnap}
+            title="Restore Database Snapshot"
+            alertType="danger"
+            confirmText="Yes, Restore Snapshot"
+            cancelText="Cancel"
+            message={`Are you sure you want to restore all tables to the state in snap "${confirmRestoreSnap?.name || ""}"? This replaces current data in local storage.`}
+            onConfirm={async () => {
+              if (!confirmRestoreSnap) return;
+              const snap = confirmRestoreSnap;
+              setConfirmRestoreSnap(null);
+              await triggerSystemProcessing(`Restoring Database State: ${snap.name}...`, 1800, "db", undefined, "Shutting down write engines, swapping table pointers, and updating local indices...");
+              const success = await restoreDbSnapshot(snap.id);
+              if (success) {
+                showToastMsg(`Snapshot ${snap.id} restored successfully! Reloading UI...`);
+                setTimeout(() => window.location.reload(), 250);
+              } else {
+                showToastMsg("Corruption Error: Snapshot load failure!");
+              }
+            }}
+            onCancel={() => setConfirmRestoreSnap(null)}
+          />
+        )}
+      </div>
+    </MotionConfig>
   );
-  })}
-  </motion.div>
-  )}
-  </AnimatePresence>
-  </div>
- );
- })()}
-
- <div className="flex-1 min-h-0">
- <AnimatePresence mode="wait">
- {isTabChanging ? (
- <motion.div
- key="skeleton"
- initial={{ opacity: 0 }}
- animate={{ opacity: 1 }}
- exit={{ opacity: 0 }}
- transition={{ duration: 0.15 }}
- style={{ willChange: "opacity" }}
- className="w-full h-full"
- >
- <SkeletalLoader />
- </motion.div>
- ) : (
- <motion.div
- key={activeTab}
- initial={{ opacity: 0 }}
- animate={{ opacity: 1 }}
- exit={{ opacity: 0 }}
- transition={{ duration: 0.22, ease: "easeInOut" }}
- style={{ willChange: "opacity" }}
- className="h-full"
- >
- {isMobileViewport && ["dashboard", "profit-analytics", "procurement", "branches"].includes(activeTab) && !developerBypassTabs.includes(activeTab) ? (
- <MobilePcOnlyBlocker
- tabId={activeTab}
- onForceEnable={() => setDeveloperBypassTabs((prev) => [...prev, activeTab])}
- />
- ) : (
- <Suspense fallback={<PageLoadingFallback />}>
- {activeTab === "tutorials" && <TutorialOnboarding />}
- {activeTab === "dashboard" && (
- <React.Suspense fallback={<PageLoadingFallback />}>
- <Dashboard darkMode={darkMode} onNavigate={changeTab} />
- </React.Suspense>
- )}
- {activeTab === "profit-analytics" && (
- <AdminProfitModule
- darkMode={darkMode}
- selectedBranchId={selectedBranchId}
- setSelectedBranchId={setSelectedBranchId}
- getBranchName={getBranchName}
- showToastMsg={showToastMsg}
- />
- )}
- {activeTab === "pos" && (
- <PosModule
- darkMode={darkMode}
- onNavigate={changeTab}
- viewMode="checkout"
- showImmersiveControls={showImmersiveControls}
- />
- )}
- {activeTab === "ledger" && (
- <PosModule
- darkMode={darkMode}
- onNavigate={changeTab}
- viewMode="ledger"
- showImmersiveControls={showImmersiveControls}
- />
- )}
- {activeTab === "inventory" && (
- <InventoryModule
- darkMode={darkMode}
- isCompactGlobal={isCompactColumns}
- />
- )}
- {activeTab === "procurement" && (
- <ProcurementModule darkMode={darkMode} />
- )}
- {activeTab === "transmittal" && (
- <TransmittalModule darkMode={darkMode} />
- )}
- {activeTab === "shift" && (
- <ShiftModule darkMode={darkMode} />
- )}
- {activeTab === "calculator" && (
- <CalculatorModule darkMode={darkMode} />
- )}
- {activeTab === "branches" && (
- <BranchModule darkMode={darkMode} />
- )}
- {activeTab === "archives" && (
-							<ArchivesModule darkMode={darkMode} />
-						)}
-						{activeTab === "system-settings" && (
- <SystemSettingsModule
- darkMode={darkMode}
- setDarkMode={handleToggleDarkMode}
- followSystemTheme={followSystemTheme}
- setFollowSystemTheme={setFollowSystemTheme}
- />
- )}
- {activeTab === "users" && (
- <UsersModule darkMode={darkMode} />
- )}
- {activeTab === "reconciliation-transmission" && (
- <ReconciliationTransmissionModule darkMode={darkMode} />
- )}
- {activeTab === "deliveries-panel" && (
- <DeliveriesModule darkMode={darkMode} />
- )}
- {activeTab === "inventory-damage" && (
- <DamageRegisterModule darkMode={darkMode} />
- )}
-
- {/* ATPOS v2 Sub-items routing to standard Core Modules */}
- {activeTab.startsWith("inventory-") && activeTab !== "inventory-damage" &&
- (() => {
- const map: Record<
- string,
- | "catalog"
- | "movements"
- | "transfers"
- | "ledger"
- | "import"
- | "branch-prices"
- | "expiry"
- > = {
- "inventory-stocks": "catalog",
- "inventory-adjustments": "movements",
- "inventory-transfer": "transfers",
- "inventory-logistics": "ledger",
- "inventory-import": "import",
- "inventory-branch-prices": "branch-prices",
- "inventory-expiry": "expiry",
- };
- const subTab = map[activeTab] || "catalog";
- return (
- <InventoryModule
- darkMode={darkMode}
- initialSubTab={subTab}
- hideTabHeader={true}
- isCompactGlobal={isCompactColumns}
- onSubTabChange={(sub) => {
- const rMap: Record<string, string> = {
- catalog: "inventory-stocks",
- movements: "inventory-adjustments",
- transfers: "inventory-transfer",
- ledger: "inventory-logistics",
- import: "inventory-import",
- "branch-prices": "inventory-branch-prices",
- expiry: "inventory-expiry",
- };
- if (rMap[sub]) {
- setActiveTab(rMap[sub]);
- }
- }}
- />
- );
- })()}
-
- {activeTab === "adjustments-void" && (
- <PosModule
- darkMode={darkMode}
- onNavigate={changeTab}
- viewMode="ledger"
- />
- )}
- {(activeTab === "suppliers-manage" || activeTab === "procurement-po") && (
- <ProcurementModule darkMode={darkMode} />
- )}
-
- {/* Integration of ATPOS v2 Specific Submodules */}
- {[
- "members",
- "members-manage",
- "members-receivables",
- "members-loyalty",
- "members-search-sales",
- "expenses",
- "expenses-add",
- "expenses-search",
- "supplier",
- "suppliers-credits",
- "suppliers-calendar",
- "bir",
- "bir-xz",
- "bir-summary",
- "bir-pwd",
- "bir-athletes",
- "bir-solo",
- "bir-senior20",
- "bir-senior5",
- "bir-regular",
- "adjustments",
- "adjustments-return",
- ].includes(activeTab) && (
- <AtposExtraModules
- activeSubTab={
-   activeTab === "members" ? "members-manage" :
-   activeTab === "expenses" ? "expenses-add" :
-   activeTab === "supplier" ? "suppliers-credits" :
-   activeTab === "bir" ? "bir-xz" :
-   activeTab === "adjustments" ? "adjustments-return" :
-   activeTab
- }
- darkMode={darkMode}
- onNavigate={changeTab}
- />
- )}
- </Suspense>
- )}
- </motion.div>
- )}
- </AnimatePresence>
- </div>
- </main>
- </div>
-
- {/* BOTTOM NAVIGATION: Unified premium horizontal scrollbar across the system (Mobile Only) */}
- <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-m3-surface-low/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-m3-outline-variant/25 px-4 py-2 flex flex-row flex-nowrap items-center justify-start gap-3 rounded-t-[20px] shadow-2xl transition-all duration-300 overflow-x-auto scrollbar-none scroll-smooth touch-pan-x whitespace-nowrap">
- {/* Brand Modules badge */}
- <div className="flex items-center gap-2 shrink-0 pr-3 border-r border-m3-outline-variant/20 font-sans">
- <span className="h-2 w-2 rounded-full bg-m3-primary animate-pulse" />
- <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest font-mono">
- Modules
- </span>
- </div>
-
- {sidebarCategoryTree.map((category) => {
- // Dynamic RBAC filtering
- const authorizedSubItems = category.subItems.filter((sub) => {
-   return sub.roles ? sub.roles.includes(currentUser.role) : true;
- });
-
- // Branch authorization filter
- const filteredSubItems = authorizedSubItems.filter((sub) => {
- const currentBranch = branches.find(
- (b) => b.id === currentUser.branchAssignmentId,
- );
- const isAuthorizedBranch =
- currentUser.branchAssignmentId === "B1" ||
- !!currentBranch?.isDistributionBranch ||
- currentUser.role === "Admin";
- if (sub.id === "transmittal" && !isAuthorizedBranch) return false;
- return true;
- });
-
- if (filteredSubItems.length === 0) return null;
-
- // Routing goes to first authorized sub-item of category
- const firstSubTabId = filteredSubItems[0].id;
- const Icon = category.icon;
- const isSelected =
- filteredSubItems.some((sub) => sub.id === activeTab) ||
- activeTab === category.id;
-
- // Short friendly labels for bottom bar
- let shortLabel = category.name;
- if (category.id === "sale") shortLabel = "Sale";
- else if (category.id === "inventory") shortLabel = "Inventory";
- else if (category.id === "bir") shortLabel = "Reports";
- else if (category.id === "deliveries") shortLabel = "Cargo";
- else if (category.id === "members") shortLabel = "Members";
- else if (category.id === "supplier") shortLabel = "Suppliers";
- else if (category.id === "expenses") shortLabel = "Expenses";
- else if (category.id === "adjustments") shortLabel = "Voids";
- else if (category.id === "admin-bi") shortLabel = "BI";
- else if (category.id === "admin-org") shortLabel = "Staff";
-
- return (
- <button
- key={category.id}
- onClick={() => changeTab(firstSubTabId)}
- className="flex flex-col items-center gap-0.5 focus:outline-none cursor-pointer shrink-0 py-1 px-2.5 min-w-[58px] group transition-transform active:scale-95"
- >
- {/* Visual state capsule indicator */}
- <div
- className={`px-4 py-1 rounded-2xl transition-[background-color,color,transform] duration-200 relative ${
- isSelected
- ? "bg-m3-primary text-m3-on-primary shadow-sm shadow-m3-primary/10 "
- : "text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-primary/5"
- }`}
- >
- <Icon className="h-4.5 w-4.5 shrink-0 transition-transform group-hover:scale-110" />
- {((category.id === "sale" && showSaleRedDot) ||
-   (category.id === "deliveries" && showDeliveriesRedDot) ||
-   (category.id === "inventory" && showInventoryRedDot)) && (
-   <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-rose-500 border border-m3-surface" />
- )}
- </div>
- <span
- className={`text-[9px] font-black tracking-tight text-center leading-none mt-1 whitespace-nowrap ${
- isSelected
- ? "text-m3-primary font-black"
- : "text-zinc-400 dark:text-zinc-500 group-hover:text-m3-primary"
- }`}
- >
- {shortLabel}
- </span>
- </button>
- );
- })}
- </div>
-
- {/* CONFIRMATORY DIALOG: Logout verification check trigger */}
- {showLogoutConfirmModal && (
- <div className="fixed inset-0 bg-transparent flex items-center justify-center z-[99999] p-4 animate-fade-in">
- <div
- className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
- onClick={() => setShowLogoutConfirmModal(false)}
- />
- <div className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left font-sans">
- <div className="flex items-center gap-3 border-b border-m3-outline-variant/15 pb-3">
- <div className="p-2.5 rounded-2xl bg-rose-500/10 text-rose-500">
- <Power className="h-5 w-5 animate-pulse" />
- </div>
- <div>
- <h3 className="text-sm font-black text-m3-on-surface uppercase tracking-wider">
- Confirm Sign Out
- </h3>
- <p className="text-[10px] text-zinc-400 font-bold font-mono">
- TILEPOINT SESSION CONTROL
- </p>
- </div>
- </div>
-
- <p className="text-xs text-zinc-300 font-medium leading-relaxed">
- Are you sure you want to log out of TilePoint terminal? Any
- unsaved active checkout carts will be lost.
- </p>
-
- <div className="flex gap-3 pt-2 font-sans">
- <button
- type="button"
- onClick={() => setShowLogoutConfirmModal(false)}
- className="flex-1 py-2.5 rounded-full bg-m3-surface hover:bg-m3-outline-variant/15 text-m3-on-surface font-extrabold text-xs uppercase tracking-wide border border-m3-outline-variant/10 cursor-pointer active:scale-95 transition-all text-center"
- >
- No, Keep Active
- </button>
- <button
- type="button"
- onClick={() => {
- setShowLogoutConfirmModal(false);
- logout();
- }}
- className="flex-1 py-2.5 rounded-full bg-rose-500 hover:bg-rose-400 text-black font-extrabold text-xs uppercase tracking-wide cursor-pointer active:scale-95 transition-all text-center shadow-lg shadow-rose-500/10"
- >
- Yes, Sign Out
- </button>
- </div>
- </div>
- </div>
- )}
-
- {/* CONFIRMATORY DIALOG: ERP OS Exit Prevention */}
- {showPosExitConfirmModal && (
- <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
- <div
- className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
- onClick={() => {
- setShowPosExitConfirmModal(false);
- setPendingTabId(null);
- }}
- />
- <div className="relative w-full max-w-sm rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left font-sans">
- <div className="flex items-center gap-3 border-b border-m3-outline-variant/15 pb-3">
- <div className="p-2.5 rounded-2xl bg-amber-500/10 text-amber-500">
- <ShieldAlert className="h-5 w-5 animate-pulse" />
- </div>
- <div>
- <h3 className="text-sm font-black text-m3-on-surface uppercase tracking-wider">
- Unsaved Checkout Warning
- </h3>
- <p className="text-[10px] text-amber-500 font-bold font-mono uppercase tracking-wider">
- Active Transaction Guard
- </p>
- </div>
- </div>
-
- <p className="text-xs text-zinc-300 font-medium leading-relaxed">
- Are you sure you want to leave this site? Changes you made may
- not be saved.
- <br />
- <br />
- Leaving the ERP OS terminal now will disrupt the current
- active customer checkout session and clear the basket.
- </p>
-
- <div className="flex gap-3 pt-2 font-sans">
- <button
- type="button"
- onClick={() => {
- setShowPosExitConfirmModal(false);
- setPendingTabId(null);
- }}
- className="flex-1 py-2.5 rounded-full bg-m3-surface hover:bg-m3-outline-variant/15 text-m3-on-surface font-extrabold text-xs uppercase tracking-wide border border-m3-outline-variant/10 cursor-pointer active:scale-95 transition-all text-center"
- >
- Cancel, Keep Basket
- </button>
- <button
- type="button"
- onClick={() => {
- setShowPosExitConfirmModal(false);
- if (pendingTabId) {
- proceedWithTabChange(pendingTabId);
- }
- setPendingTabId(null);
- }}
- className="flex-1 py-2.5 rounded-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs uppercase tracking-wide cursor-pointer active:scale-95 transition-all text-center shadow-lg shadow-amber-500/10"
- >
- Yes, Leave Mode
- </button>
- </div>
- </div>
- </div>
- )}
-
-
- {/* MODAL: Database Core & Disaster Recovery Settings */}
- {showDatabaseCoreModal && (
- <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in font-sans">
- <div
- className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
- onClick={() => {
- setShowDatabaseCoreModal(false);
- setDbBackupFileMessage(null);
- setDbBackupFileError(null);
- setManualSnapshotName("");
- }}
- />
-
- <div className="relative w-full max-w-2xl rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface flex flex-col max-h-[90vh] text-left">
- {/* Modal Header */}
- <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-4">
- <div className="flex items-center gap-3">
- <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-2xl">
- <Database className="h-6 w-6" />
- </div>
- <div>
- <h3 className="text-base font-black uppercase tracking-wider text-m3-on-surface flex items-center gap-2">
- Database Core Management
- <span
- className={`text-[9px] font-mono px-2 py-0.5 rounded-full font-bold uppercase ${
- dbSyncStatus === "syncing"
- ? "bg-amber-500/20 text-amber-500 animate-pulse"
- : "bg-emerald-500/10 text-emerald-400"
- }`}
- >
- {dbSyncStatus === "syncing"
- ? "● Sync active"
- : "● Connected"}
- </span>
- </h3>
- <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-mono font-bold">
- Disaster Recovery & Automated Backup Engine
- </p>
- </div>
- </div>
- <button
- type="button"
- onClick={() => {
- setShowDatabaseCoreModal(false);
- setDbBackupFileMessage(null);
- setDbBackupFileError(null);
- setManualSnapshotName("");
- }}
- className="text-m3-on-surface-variant hover:text-rose-500 cursor-pointer p-1.5 rounded-full hover:bg-m3-outline-variant/10 transition-colors"
- title="Close Database Panel"
- >
- <X className="h-5 w-5" />
- </button>
- </div>
-
- {/* Modal Navigation Tabs */}
- <div className="flex border-b border-m3-outline-variant/10 my-4 p-1 bg-m3-surface-low/50 rounded-xl">
- <button
- onClick={() => setDbCoreTab("scheduler")}
- className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center ${
- dbCoreTab === "scheduler"
- ? "bg-m3-primary text-m3-on-primary shadow-sm font-black"
- : "text-m3-on-surface-variant hover:bg-m3-primary/10 hover:text-m3-primary"
- }`}
- >
- Auto-Backup Configuration
- </button>
- <button
- onClick={() => setDbCoreTab("ledger")}
- className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 ${
- dbCoreTab === "ledger"
- ? "bg-m3-primary text-m3-on-primary shadow-sm font-black"
- : "text-m3-on-surface-variant hover:bg-m3-primary/10 hover:text-m3-primary"
- }`}
- >
- Recovery Ledger
- <span className="bg-m3-primary-container text-m3-on-primary-container text-[10px] font-bold px-1.5 py-0.2 rounded-full font-sans">
- {dbSnapshots.length}
- </span>
- </button>
- <button
- onClick={() => setDbCoreTab("import-export")}
- className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center ${
- dbCoreTab === "import-export"
- ? "bg-m3-primary text-m3-on-primary shadow-sm font-black"
- : "text-m3-on-surface-variant hover:bg-m3-primary/10 hover:text-m3-primary"
- }`}
- >
- Offline Portability
- </button>
- </div>
-
- {/* Modal Main Content (Flexible Scroll Area) */}
- <div className="flex-1 overflow-y-auto pr-1 space-y-4 max-h-[50vh]">
- {/* Tab A: SCHEDULER & AUTO BACKUPS */}
- {dbCoreTab === "scheduler" && (
- <div className="space-y-4">
- {/* Performance stats banner */}
- <div className="p-3.5 rounded-2xl bg-m3-primary/5 border border-m3-primary/10 flex justify-between items-center text-xs">
- <div>
- <div className="font-extrabold text-m3-primary uppercase text-[10px] tracking-wide">
- Optimization Status
- </div>
- <div className="text-zinc-400 mt-1 font-sans">
- Debounce cache buffer operates at{" "}
- <span className="font-mono font-bold text-m3-on-surface">
- {debounceDelay}ms
- </span>
- .
- </div>
- </div>
- <div className="text-right">
- <div className="font-mono text-emerald-400 font-extrabold">
- {writeStatsCount.toLocaleString()}
- </div>
- <div className="text-[9px] text-zinc-500 uppercase font-mono mt-0.5">
- Database Writes Saved
- </div>
- </div>
- </div>
-
- <div className="rounded-2xl border border-m3-outline-variant/20 p-4 space-y-4 bg-m3-surface-low">
- <h4 className="text-xs font-black uppercase tracking-wider text-m3-primary">
- Automatic Background Scheduler
- </h4>
-
- <div className="flex items-center justify-between">
- <div>
- <div className="text-xs font-bold">
- Hourly Data Preservation
- </div>
- <div className="text-[10px] text-zinc-400 mt-0.5">
- Protect inventory journals and sales invoices
- against localStorage eviction.
- </div>
- </div>
- <button
- type="button"
- disabled={currentUser.role !== UserRole.ADMIN}
- onClick={() => {
- if (currentUser.role !== UserRole.ADMIN) {
- showToast(
- "Access Denied: Admin authorization required.",
- );
- return;
- }
- setAutoBackupEnabled(!autoBackupEnabled);
- showToast(
- `Automated backup scheduler is now ${!autoBackupEnabled ? "ENABLED" : "DISABLED"}`,
- );
- }}
- className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
- autoBackupEnabled
- ? "bg-emerald-500 text-black hover:bg-emerald-400"
- : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
- } ${currentUser.role !== UserRole.ADMIN ? "opacity-60 cursor-not-allowed" : ""}`}
- >
- {autoBackupEnabled
- ? " Active scheduler"
- : " Deactivated"}
- </button>
- </div>
-
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
- <div className="space-y-1.5">
- <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-1 block">
- Reserve Frequency
- </label>
- <select
- disabled={
- currentUser.role !== UserRole.ADMIN ||
- !autoBackupEnabled
- }
- value={backupIntervalHours ?? ''}
- onChange={(e) => {
- const val = Number(e.target.value);
- setBackupIntervalHours(val);
- showToast(
- `Automated backup frequency is configured to every ${val} hr.`,
- );
- }}
- className="w-full bg-m3-surface-lowest border border-m3-outline-variant/30 text-xs px-3 py-2 rounded-xl text-m3-on-surface font-extrabold focus:outline-none focus:ring-1 focus:ring-m3-primary/40 disabled:opacity-50 disabled:cursor-not-allowed"
- >
- <option value={1}>Every 1 Hour (Standard)</option>
- <option value={2}>Every 2 Hours (Mid-Day)</option>
- <option value={6}>Every 6 Hours (Periodic)</option>
- <option value={12}>
- Every 12 Hours (Half-Day)
- </option>
- <option value={24}>
- Every 24 Hours (End-of-Day)
- </option>
- </select>
- </div>
-
- <div className="space-y-1.5">
- <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-1 block">
- Last Successful Backup Run
- </label>
- <div className="w-full bg-m3-surface-lowest border border-m3-outline-variant/15 text-xs px-3 py-2 rounded-xl text-m3-on-surface-variant font-medium flex items-center gap-1.5 min-h-[36px]">
- <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
- {lastAutoBackupTime ? (
- <span className="font-mono text-[11px] font-bold">
- {new Date(lastAutoBackupTime).toLocaleString()}
- </span>
- ) : (
- <span className="italic text-zinc-500 font-bold">
- Never executed
- </span>
- )}
- </div>
- </div>
- </div>
- </div>
-
- {/* Database Maintenance & Index Optimization */}
- <div className="rounded-2xl border border-m3-outline-variant/20 p-4 space-y-4 bg-m3-surface-low">
- <div className="flex items-center justify-between gap-3">
- <div className="flex items-center gap-2.5">
- <div className="p-2.5 bg-indigo-500/10 text-indigo-400 rounded-xl shrink-0">
- <Wrench className="h-4 w-4" />
- </div>
- <div>
- <h4 className="text-xs font-black uppercase tracking-wider text-m3-primary flex items-center gap-2">
- Database Maintenance
- <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full font-bold uppercase ${
- dbMaintenanceEnabled ? "bg-emerald-500/10 text-emerald-400" : "bg-zinc-800 text-zinc-400"
- }`}>
- {dbMaintenanceEnabled ? "● Active Idle Sweep" : "● Disabled"}
- </span>
- </h4>
- <p className="text-[10px] text-zinc-400 mt-0.5">
- Daily index re-indexing and garbage collection sweep during idle periods to improve long-term system performance.
- </p>
- </div>
- </div>
- <button
- type="button"
- disabled={currentUser.role !== UserRole.ADMIN}
- onClick={() => {
- if (currentUser.role !== UserRole.ADMIN) {
- showToast("Access Denied: Admin authorization required.");
- return;
- }
- setDbMaintenanceEnabled(!dbMaintenanceEnabled);
- showToast(`Database Maintenance daily sweep is now ${!dbMaintenanceEnabled ? "ENABLED" : "DISABLED"}`);
- }}
- className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer shrink-0 ${
- dbMaintenanceEnabled
- ? "bg-emerald-500 text-black hover:bg-emerald-400"
- : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
- } ${currentUser.role !== UserRole.ADMIN ? "opacity-60 cursor-not-allowed" : ""}`}
- >
- {dbMaintenanceEnabled ? "Active Sweep" : "Deactivated"}
- </button>
- </div>
-
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
- <div className="space-y-1">
- <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-1 block">
- Last Index &amp; GC Sweep
- </span>
- <div className="w-full bg-m3-surface-lowest border border-m3-outline-variant/15 text-xs px-3 py-2 rounded-xl text-m3-on-surface-variant font-medium flex items-center gap-2 min-h-[36px]">
- <span className={`inline-block h-2 w-2 rounded-full ${lastMaintenanceTime ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`}></span>
- {lastMaintenanceTime ? (
- <span className="font-mono text-[11px] font-bold text-m3-on-surface">
- {new Date(lastMaintenanceTime).toLocaleString()}
- </span>
- ) : (
- <span className="italic text-zinc-500 font-bold">Never executed</span>
- )}
- </div>
- </div>
-
- <div className="space-y-1 flex flex-col justify-end">
- <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-1 block">
- Manual Maintenance Sweep
- </span>
- <button
- type="button"
- disabled={isMaintenanceRunning || currentUser.role !== UserRole.ADMIN}
- onClick={async () => {
- if (currentUser.role !== UserRole.ADMIN) {
- showToast("Access Denied: Admin authorization required.");
- return;
- }
- await triggerSystemProcessing(
- "Re-indexing Database & Garbage Collection...",
- 1200,
- "db",
- undefined,
- "Rebuilding collection index trees, flushing stale cache buffers, and compacting RAM memory..."
- );
- const res = await runDatabaseMaintenance();
- if (res.success) {
- showToast(`Maintenance complete! Re-indexed ${res.stats.itemsIndexed} items across ${res.stats.indicesOptimized} core indices.`);
- } else {
- showToast("Database maintenance completed with non-critical warnings.");
- }
- }}
- className="w-full py-2 px-3.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 hover:border-indigo-500/60 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
- >
- <Sparkles className="h-3.5 w-3.5 text-indigo-400 animate-pulse" />
- {isMaintenanceRunning ? "Optimizing..." : "Run Sweep Now"}
- </button>
- </div>
- </div>
- </div>
-
- <div className="rounded-2xl border border-m3-outline-variant/20 p-4 space-y-3">
- <h4 className="text-xs font-black uppercase tracking-wider text-m3-primary">
- Instantiate Manual Backup Snapshot
- </h4>
- <div className="flex gap-2 font-sans">
- <input
- type="text"
- value={manualSnapshotName ?? ''}
- onChange={(e) =>
- setManualSnapshotName(e.target.value)
- }
- placeholder="Snapshot label"
- className="flex-1 bg-m3-surface-lowest text-xs text-m3-on-surface border border-m3-outline-variant/30 px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-m3-primary/40 placeholder-zinc-500 font-bold"
- />
- <button
- type="button"
- onClick={async () => {
- const name =
- manualSnapshotName.trim() ||
- `Manual Snapshot - ${new Date().toLocaleTimeString()}`;
- await triggerSystemProcessing(
- `Compiling ${name}...`,
- 1400,
- "db",
- undefined,
- "Compressing tables, locking databases, and serializing snapshot packet...",
- );
- createDbSnapshot(name);
- setManualSnapshotName("");
- showToast(
- `Successfully registered database snapshot: "${name}"`,
- );
- }}
- className="px-4 py-2.5 bg-m3-primary hover:bg-m3-primary/95 text-m3-on-primary text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm transition-all"
- >
- Capture Snapshot
- </button>
- </div>
- </div>
- </div>
- )}
-
- {/* Tab B: DATABASE SNAPSHOTS LEDGER */}
- {dbCoreTab === "ledger" && (
- <div className="space-y-3">
- <div className="flex justify-between items-center px-1">
- <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
- Saved Backup History
- </span>
- {(() => {
- if (clearAllConfirm === 0) {
- return (
- <button
- onClick={() => {
- setClearAllConfirm(1);
- setTimeout(() => {
- setClearAllConfirm(prev => prev < 3 ? 0 : prev);
- }, 4000);
- }}
- className="text-[10px] font-black uppercase tracking-wider text-rose-500 hover:text-rose-400 transition-colors cursor-pointer"
- title="Clear database list (Requires 3x confirmation)"
- >
- Clear All Catalog
- </button>
- );
- } else if (clearAllConfirm === 1) {
- return (
- <button
- onClick={() => setClearAllConfirm(2)}
- className="text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded transition-colors cursor-pointer animate-pulse"
- title="Confirm Stage 1 of 3"
- >
- Confirm Clear All (1/3)
- </button>
- );
- } else {
- return (
- <button
- onClick={() => {
- dbSnapshots.forEach((snap) =>
- deleteDbSnapshot(snap.id),
- );
- setClearAllConfirm(0);
- showToast("Cleared recovery snapshot catalog.");
- }}
- className="text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white px-2 py-0.5 rounded hover:bg-rose-700 transition-colors cursor-pointer animate-bounce"
- title="Confirm Stage 2 of 3 - Clear All!"
- >
- Confirm Clear All (2/3 - Clear!)
- </button>
- );
- }
- })()}
- </div>
-
- {dbSnapshots.length === 0 ? (
- <div className="text-center py-10 bg-m3-surface-lowest border border-dashed border-m3-outline-variant/30 rounded-2xl text-zinc-500 space-y-2">
- <p className="text-sm font-bold">
- Digital Snapshot Archive is Empty
- </p>
- <p className="text-[10px] uppercase font-mono tracking-wider text-zinc-400">
- Automated or manual snapshots will register here.
- </p>
- </div>
- ) : (
- <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
- {dbSnapshots.map((snap) => (
- <div
- key={snap.id}
- className="p-3 bg-m3-surface-lowest hover:bg-m3-primary/5 rounded-2xl border border-m3-outline-variant/15 flex items-center justify-between transition-all"
- >
- <div className="space-y-1">
- <div className="text-xs font-black text-m3-on-surface">
- {snap.name}
- </div>
- <div className="text-[9.5px] text-zinc-400 font-mono font-bold flex items-center gap-2 flex-wrap">
- <span className="text-m3-primary text-[10px]">
- {snap.creator}
- </span>
- <span>•</span>
- <span>
- {new Date(snap.timestamp).toLocaleString()}
- </span>
- <span>•</span>
- <span className="text-zinc-500 bg-m3-surface-low/55 px-1.5 rounded">
- {((snap.sizeBytes || 0) / 1024).toFixed(1)} KB
- </span>
- </div>
- </div>
-
- <div className="flex items-center gap-1.5">
- <button
- type="button"
- onClick={() => setConfirmRestoreSnap(snap)}
- className="px-3 py-1.5 bg-m3-primary/10 hover:bg-m3-primary/20 text-m3-primary text-[10px] font-black cursor-pointer uppercase tracking-wider rounded-lg transition-colors"
- title="Overwrite current state with backup snapshot font"
- >
- Restore
- </button>
- {(() => {
- const confirmCount = deleteSnapshotConfirm[snap.id] || 0;
- if (confirmCount === 0) {
- return (
- <button
- type="button"
- onClick={() => {
- setDeleteSnapshotConfirm(prev => ({ ...prev, [snap.id]: 1 }));
- setTimeout(() => {
- setDeleteSnapshotConfirm(prev => {
- if (prev[snap.id] < 3) {
- const updated = { ...prev };
- delete updated[snap.id];
- return updated;
- }
- return prev;
- });
- }, 4000);
- }}
- className="p-1 px-1.5 text-zinc-400 hover:text-rose-500 hover:bg-rose-500/15 cursor-pointer rounded transition-colors"
- title="Delete snapshot (Requires 3x confirmation)"
- >
- <Trash2 className="h-4 w-4" />
- </button>
- );
- } else if (confirmCount === 1) {
- return (
- <button
- type="button"
- onClick={() => {
- setDeleteSnapshotConfirm(prev => ({ ...prev, [snap.id]: 2 }));
- }}
- className="px-2 py-1 text-[9px] font-black uppercase tracking-wider bg-amber-500 text-black hover:bg-amber-600 rounded transition-all cursor-pointer animate-pulse shrink-0"
- title="Confirm Stage 1 of 3"
- >
- Confirm 1/3
- </button>
- );
- } else {
- return (
- <button
- type="button"
- onClick={() => {
- deleteDbSnapshot(snap.id);
- showToast(
- `Removed backup snapshot ${snap.id}`,
- );
- setDeleteSnapshotConfirm(prev => {
- const updated = { ...prev };
- delete updated[snap.id];
- return updated;
- });
- }}
- className="px-2 py-1 text-[9px] font-black uppercase tracking-wider bg-rose-600 text-white hover:bg-rose-700 rounded transition-all cursor-pointer animate-bounce shrink-0"
- title="Confirm Stage 2 of 3 - Delete!"
- >
- Confirm 2/3 (Delete)
- </button>
- );
- }
- })()}
- </div>
- </div>
- ))}
- </div>
- )}
- </div>
- )}
-
- {/* Tab C: LOCAL JSON PORTABILITY */}
- {dbCoreTab === "import-export" && (
- <div className="space-y-4">
- {/* Local JSON Export */}
- <div className="rounded-2xl border border-m3-outline-variant/15 p-4 space-y-2.5 bg-m3-surface-low">
- <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider">
- Export Database Records
- </h4>
- <p className="text-[10px] text-zinc-400 font-medium">
- Physically package your corporate configuration, stock
- level logs, employee tables and ERP OS sales ledgers inside
- an offline executable JSON block.
- </p>
- <button
- type="button"
- onClick={() => {
- const payload = {
- isConfigured,
- users,
- branches,
- suppliers,
- products,
- purchaseOrders,
- poItems,
- transmittals,
- shifts,
- sales,
- saleItems,
- movements,
- auditLogs,
- parkedSales,
- stockTransfers,
- branchStock,
- ledgerEntries,
- branchSalesReports,
- deliveries,
- };
- const dataStr = JSON.stringify(payload, null, 2);
- const filename = `tilepoint_full_backup_${Date.now()}.json`;
-
- saveFileToBackup(dataStr, filename, "Database_Backups", "application/json")
- .then((res) => {
- showToast(
- `Database backup exported to ${res.path || filename} successfully!`,
- );
- })
- .catch(() => {
- const blob = new Blob([dataStr], { type: "application/json" });
- const url = URL.createObjectURL(blob);
- const element = document.createElement("a");
- element.setAttribute("href", url);
- element.setAttribute("download", filename);
- element.style.display = "none";
- document.body.appendChild(element);
- element.click();
- document.body.removeChild(element);
- URL.revokeObjectURL(url);
- showToast(
- "Raw physical database JSON file downloaded successfully!",
- );
- });
- }}
- className="w-full py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-xs font-extrabold uppercase tracking-wider rounded-xl border border-emerald-500/30 flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
- >
- <Download className="h-4 w-4" /> Export Raw JSON
- Database File
- </button>
- </div>
-
- {/* Local JSON Import */}
- <div className="rounded-2xl border border-m3-outline-variant/15 p-4 space-y-3 bg-m3-surface-low">
- <h4 className="text-xs font-black uppercase text-amber-500 tracking-wider">
- State Migration Recovery (Import JSON)
- </h4>
- <p className="text-[10px] text-zinc-400 font-medium">
- Overwrites the client dataset fully with a local JSON
- block. Approved files are validated on format before
- matching structure schemas.
- </p>
-
- <label className="flex flex-col items-center justify-center p-6 bg-m3-surface-lowest border-2 border-dashed border-m3-outline-variant/30 rounded-2xl hover:bg-m3-outline-variant/5 cursor-pointer transition-colors group">
- <Upload className="h-6 w-6 text-zinc-400 group-hover:text-amber-500 transition-colors" />
- <span className="text-[11px] font-extrabold mt-2">
- Select or Drop Portable Backup JSON file
- </span>
- <span className="text-[9px] text-zinc-500 uppercase font-mono mt-1 font-bold">
- Standard .json matches only
- </span>
- <input
- type="file"
- accept=".json"
- className="hidden"
- onChange={(e) => {
- const file = e.target.files?.[0];
- if (!file) return;
-
- const reader = new FileReader();
- reader.onload = async (evt) => {
- try {
- const rawText = evt.target?.result as string;
- const parsed = await verifyAndUnwrapBackup(rawText);
-
- if (
- !parsed.products ||
- !parsed.users ||
- !parsed.branches
- ) {
- throw new Error(
- "Schema validator failure: Missing core lists.",
- );
- }
-
- // Create snapshot entry to allow reversibility
- const newSnap: DbSnapshot = {
- id: `SNAP-IMPORT-${Date.now()}`,
- name: `Imported Backup File: ${file.name}`,
- timestamp: new Date().toISOString(),
- creator: currentUser.fullName,
- sizeBytes: new Blob([rawText]).size,
- data: JSON.stringify(parsed),
- };
-
- // Save to server
- await fetch('/api/db/backups', {
- method: 'POST',
- headers: { 'Content-Type': 'application/json' },
- body: JSON.stringify({ snapshot: newSnap })
- });
-
- // Apply changes directly using atomic restore
- await restoreDbSnapshot(newSnap.id);
-
- setDbBackupFileMessage(
- `SUCCESSFULLY IMPORTED PORTABLE BACKUP: "${file.name}" APPROVED. Reloading UI...`,
- );
- setDbBackupFileError(null);
- showToast(
- `Successfully restored imported backup!`,
- );
-
- setTimeout(() => {
- window.location.reload();
- }, 1500);
- } catch (err: any) {
- setDbBackupFileError(
- `ERROR: APPROVED FILE IS CORRUPTED OR INVALID SCHEMA: ${err.message}`,
- );
- setDbBackupFileMessage(null);
- showToast(
- `Import rejected due to structural validation faults.`,
- );
- }
- };
- reader.readAsText(file);
- }}
- />
- </label>
-
- {dbBackupFileMessage && (
- <div className="p-3 text-[10.5px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/15 rounded-xl text-center">
- {dbBackupFileMessage}
- </div>
- )}
- {dbBackupFileError && (
- <div className="p-3 text-[10.5px] font-bold text-rose-400 bg-rose-500/10 border border-rose-500/15 rounded-xl text-center">
- {dbBackupFileError}
- </div>
- )}
- </div>
- </div>
- )}
- </div>
-
- {/* Modal Actions Footer */}
- <div className="pt-4 mt-4 border-t border-m3-outline-variant/15 flex justify-end">
- <button
- type="button"
- onClick={() => {
- setShowDatabaseCoreModal(false);
- setDbBackupFileMessage(null);
- setDbBackupFileError(null);
- setManualSnapshotName("");
- }}
- className="px-5 py-2.5 bg-m3-surface hover:bg-m3-outline-variant/15 text-m3-on-surface font-extrabold text-xs uppercase tracking-wide border border-m3-outline-variant/10 rounded-full cursor-pointer transition-all hover:"
- >
- Done
- </button>
- </div>
- </div>
- </div>
- )}
-
- {/* MODAL: Account Settings Password update form (Cashiers can ONLY change password) */}
- {showAccountSettingsModal && (
- <div className="fixed inset-0 bg-transparent flex items-center justify-center z-[99999] p-4 animate-fade-in">
- <div
- className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
- onClick={() => {
- setCurrentPassword("");
- setNewPassword("");
- setConfirmPassword("");
- setSettingsError("");
- setShowAccountSettingsModal(false);
- }}
- />
- <form
- onSubmit={handleUpdatePassword}
- className="relative w-full max-w-md rounded-[28px] border border-m3-outline-variant/30 p-6 z-20 shadow-2xl bg-m3-surface-low text-m3-on-surface space-y-4 text-left font-sans"
- >
- <div className="flex justify-between items-center border-b border-m3-outline-variant/15 pb-3">
- <div className="flex items-center gap-2.5">
- <div className="p-2 mr-0.5 bg-amber-500/10 text-amber-500 rounded-2xl">
- <LockKeyhole className="h-5 w-5" />
- </div>
- <div>
- <h3 className="text-sm font-black text-m3-on-surface uppercase tracking-wider">
- Account Settings
- </h3>
- <p className="text-[10px] text-amber-500 font-extrabold font-mono uppercase tracking-widest">
- {currentUser.role === UserRole.CASHIER
- ? "Password Change Only"
- : "Corporate Identity Settings"}
- </p>
- </div>
- </div>
- <button
- type="button"
- onClick={() => {
- setCurrentPassword("");
- setNewPassword("");
- setConfirmPassword("");
- setSettingsError("");
- setShowAccountSettingsModal(false);
- }}
- className="text-m3-on-surface-variant hover:text-m3-on-surface cursor-pointer p-1 rounded-full hover:bg-m3-outline-variant/10 transition-colors"
- title="Dismiss Account Settings Window"
- >
- <X className="h-5 w-5" />
- </button>
- </div>
-
- {/* Profile Overview Card (Editable details & Avatar selector) */}
- <div className="space-y-4">
- <div className="text-[10.5px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1 pl-1">
- <span>Corporate Identity Details</span>
- </div>
-
- {/* Full Name & Username inputs */}
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
- <div className="space-y-1">
- <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">
- Full Name
- </label>
- <input
- type="text"
- required
- value={editFullName ?? ''}
- onChange={(e) => setEditFullName(e.target.value)}
- placeholder="Enter full name"
- className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-sans"
- />
- </div>
- <div className="space-y-1">
- <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">
- Username
- </label>
- <div className="relative">
- <span className="absolute left-3 top-2 text-zinc-500 text-xs font-mono select-none">
- @
- </span>
- <input
- type="text"
- required
- value={editUsername ?? ''}
- onChange={(e) => setEditUsername(e.target.value)}
- placeholder="Username"
- className="w-full bg-m3-surface border-b-2 border-m3-outline-variant pl-7 pr-3 py-2 text-xs text-m3-on-surface font-mono focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg"
- />
- </div>
- </div>
- </div>
- </div>
-
- {/* Change Password Form Container */}
- <div className="space-y-3 pt-1 border-t border-m3-outline-variant/15">
- <div className="text-[10.5px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1 pl-1">
- <span>Update Security Password (Optional)</span>
- </div>
-
- {/* Current Password field */}
- <div className="space-y-1 relative">
- <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">
- Current Password
- </label>
- <div className="relative">
- <input
- type={showCurrentPassword ? "text" : "password"}
- value={currentPassword ?? ''}
- onChange={(e) => {
- setCurrentPassword(e.target.value);
- setSettingsError("");
- }}
- placeholder="Provide current login password to verify"
- className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-sans"
- />
- <button
- type="button"
- onClick={() =>
- setShowCurrentPassword(!showCurrentPassword)
- }
- className="absolute right-2.5 top-2.5 text-zinc-400 hover:text-m3-on-surface transition-colors cursor-pointer"
- >
- {showCurrentPassword ? (
- <EyeOff className="h-4 w-4" />
- ) : (
- <Eye className="h-4 w-4" />
- )}
- </button>
- </div>
- </div>
-
- {/* New Password field */}
- <div className="space-y-1 relative">
- <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">
- New Password (Min 6 Characters)
- </label>
- <div className="relative">
- <input
- type={showNewPassword ? "text" : "password"}
- value={newPassword ?? ''}
- onChange={(e) => {
- setNewPassword(e.target.value);
- setSettingsError("");
- }}
- placeholder="Enter brand new terminal password"
- className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-sans"
- />
- <button
- type="button"
- onClick={() => setShowNewPassword(!showNewPassword)}
- className="absolute right-2.5 top-2.5 text-zinc-400 hover:text-m3-on-surface transition-colors cursor-pointer"
- >
- {showNewPassword ? (
- <EyeOff className="h-4 w-4" />
- ) : (
- <Eye className="h-4 w-4" />
- )}
- </button>
- </div>
- </div>
-
- {/* Confirm New Password field */}
- <div className="space-y-1 relative">
- <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">
- Confirm New Password
- </label>
- <input
- type={showNewPassword ? "text" : "password"}
- value={confirmPassword ?? ''}
- onChange={(e) => {
- setConfirmPassword(e.target.value);
- setSettingsError("");
- }}
- placeholder="Repeat brand new password to confirm"
- className="w-full bg-m3-surface border-b-2 border-m3-outline-variant px-3 py-2 text-xs text-m3-on-surface focus:outline-none focus:border-amber-500 transition-colors rounded-t-lg font-sans"
- />
- </div>
-
- {settingsError ? (
- <p className="text-[9.5px] font-bold text-rose-500 px-1 animate-pulse leading-normal">
- {settingsError}
- </p>
- ) : (
- <p className="text-[9px] text-zinc-400 px-1 leading-normal font-medium flex items-center gap-1">
- <span>
- Your account security credentials will be encrypted and
- updated securely.
- </span>
- </p>
- )}
- </div>
-
- <div className="flex justify-end gap-3 pt-3 border-t border-m3-outline-variant/15 font-sans">
- <button
- type="button"
- onClick={() => {
- setCurrentPassword("");
- setNewPassword("");
- setConfirmPassword("");
- setSettingsError("");
- setShowAccountSettingsModal(false);
- }}
- className="px-4 py-2 bg-m3-outline-variant/10 hover:bg-m3-outline-variant/20 rounded-full text-zinc-300 font-extrabold text-[10px] uppercase tracking-wider transition-all cursor-pointer text-center"
- >
- Cancel
- </button>
- <button
- type="submit"
- disabled={isUpdatingPassword}
- className="px-5 py-2 rounded-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[10px] uppercase tracking-wider transition-all cursor-pointer shadow-md disabled:brightness-50"
- >
- {isUpdatingPassword
- ? "Saving Hashed Token..."
- : "Update Password"}
- </button>
- </div>
- </form>
- </div>
- )}
-
- {/* FLOAT TOAST ALERT CHIP */}
- {toastMessage && (
- <div className="fixed bottom-24 md:bottom-6 right-6 bg-m3-on-surface text-m3-surface text-xs font-black py-3 px-5 rounded-[16px] shadow-2xl z-50 border border-m3-outline-variant/20 flex items-center gap-2 animate-slide-up max-w-[340px]">
- <span>{toastMessage}</span>
- </div>
- )}
-
- {/* PRIVACY SHIELD & ACCESSIBILITY HUB FLOATING SUITE */}
- <PrivacyAccessibilityHub
- darkMode={darkMode}
- hideFloatingButton={true}
- />
-
-
-
- {/* QUICK MODULE SWITCHER & KEYBOARD SHORTCUT COMMAND PALETTE */}
- <QuickModuleSwitcherModal
- isOpen={showQuickSwitcherModal}
- onClose={() => setShowQuickSwitcherModal(false)}
- currentUser={currentUser}
- activeTab={activeTab}
- onSelectTab={(tabId) => changeTab(tabId)}
- />
-
- {/* GLOBAL SYSTEM PROCESSING OVERLAY */}
- <SystemLoadingOverlay />
-
- {/* EXPRESSIVE MATERIAL 3 IDLE SCREEN OVERLAY */}
- <IdleScreen />
-
- {/* DYNAMIC ALWAYS-ON PWA INSTALL CONVERSION PROMPT */}
- <PwaInstallPrompt />
-
- {/* SHOW SETUP WIZARD OVERLAY MODAL */}
- {showSetupWizard && (
- <OnboardingSetupWizard onClose={() => setShowSetupWizard(false)} />
- )}
-
- {/* Restore Snapshot Confirmation Modal */}
- <ConfirmationModal
- isOpen={!!confirmRestoreSnap}
- title="Restore Database Snapshot"
- alertType="danger"
- confirmText="Yes, Restore Snapshot"
- cancelText="Cancel"
- message={`Are you sure you want to restore all tables to the state in snap "${confirmRestoreSnap?.name || ''}"? This replaces current data in local storage.`}
- onConfirm={async () => {
- if (!confirmRestoreSnap) return;
- const snap = confirmRestoreSnap;
- setConfirmRestoreSnap(null);
- await triggerSystemProcessing(
- `Restoring Database State: ${snap.name}...`,
- 1800,
- "db",
- undefined,
- "Shutting down write engines, swapping table pointers, and updating local indices...",
- );
- const success = await restoreDbSnapshot(snap.id);
- if (success) {
- showToast(
- `Snapshot ${snap.id} restored successfully! Reloading UI...`,
- );
- setTimeout(
- () => window.location.reload(),
- 250,
- );
- } else {
- showToast(
- "Corruption Error: Snapshot load failure!",
- );
- }
- }}
- onCancel={() => setConfirmRestoreSnap(null)}
- />
- </div>
- </MotionConfig>
- );
 }
 
 export default function App() {
- return (
- <DbProvider>
- <AppContent />
- </DbProvider>
- );
+  return (
+    <DbProvider>
+      <AppContent />
+    </DbProvider>
+  );
 }

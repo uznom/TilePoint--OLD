@@ -3,876 +3,1396 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
 import {
- Sliders,
- Eye,
- Sparkles,
- Type,
- CaseSensitive,
- Layers,
- Keyboard,
- RotateCcw,
- Settings,
- ShieldAlert,
- Download,
- Clock,
- Lock,
- Shield,
- Moon,
- Sun,
+  CaseSensitive,
+  Check,
+  Clock,
+  Download,
+  Droplets,
+  Keyboard,
+  Layers,
+  Lock,
+  Moon,
+  RotateCcw,
+  Settings,
+  Shield,
+  ShieldAlert,
+  Sliders,
+  Sparkles,
+  Square,
+  Sun,
+  Type,
+  X,
+  Info,
+  Building2,
+  Cpu,
+  Database,
+  Save,
+  CheckCircle2,
+  Tag,
+  Ruler,
+  CreditCard,
+  Percent,
+  AlertTriangle,
+  HardDrive,
+  RefreshCw,
+  FolderArchive,
+  ExternalLink
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { useDb } from '../context/DbContext';
+import { saveHeroUIConfig } from '../lib/herouiThemeEngine';
 import { UserRole } from '../types/db';
+import { HeroSwitch } from './common/ui/HeroSwitch';
 import { HoldToConfirmButton } from './HoldToConfirmButton';
+import { DynamicEntityConfigModal, DynamicConfigTab } from './DynamicEntityConfigModal';
+import { HeroUIAppearanceSettings } from './HeroUIAppearanceSettings';
 
 interface SystemSettingsModuleProps {
- darkMode: boolean;
- setDarkMode?: (dark: boolean) => void;
- followSystemTheme?: boolean;
- setFollowSystemTheme?: (follow: boolean) => void;
+  darkMode: boolean;
+  setDarkMode?: (dark: boolean) => void;
+  followSystemTheme?: boolean;
+  setFollowSystemTheme?: (follow: boolean) => void;
+  isModal?: boolean;
+  onClose?: () => void;
 }
 
 interface SettingToggleCardProps {
- icon: React.ElementType;
- title: string;
- subtitle?: string;
- active: boolean;
- onClick: () => void;
- activeLabel?: string;
- inactiveLabel?: string;
- disabled?: boolean;
+  icon: React.ElementType;
+  title: string;
+  subtitle?: string;
+  active: boolean;
+  onClick: () => void;
+  activeLabel?: string;
+  inactiveLabel?: string;
+  disabled?: boolean;
 }
 
 const SettingToggleCard: React.FC<SettingToggleCardProps> = ({
- icon: Icon,
- title,
- subtitle,
- active,
- onClick,
- activeLabel = 'ACTIVE',
- inactiveLabel = 'DISABLED',
- disabled = false,
+  icon: Icon,
+  title,
+  subtitle,
+  active,
+  onClick,
+  activeLabel = 'ACTIVE',
+  inactiveLabel = 'DISABLED',
+  disabled = false,
 }) => (
- <button
-  type="button"
-  disabled={disabled}
-  onClick={onClick}
-  className={`p-4 rounded-2xl border flex items-center justify-between gap-3 transition-all text-left cursor-pointer group ${
-   disabled ? 'opacity-50 cursor-not-allowed ' : ''
-  }${
-   active
-    ? 'bg-m3-primary/10 border-m3-primary/50 text-m3-on-surface shadow-xs'
-    : 'bg-m3-surface-low border-m3-outline-variant/15 hover:bg-m3-primary/5 hover:border-m3-outline-variant/30'
-  }`}
- >
-  <div className="flex items-center gap-3.5 min-w-0">
-   <div
-    className={`p-2.5 rounded-xl shrink-0 transition-transform group-hover:scale-105 ${
-     active
-      ? 'bg-m3-primary text-m3-on-primary shadow-sm'
-      : 'bg-m3-surface-container text-m3-on-surface-variant'
+  <div
+    role="button"
+    tabIndex={disabled ? -1 : 0}
+    onClick={!disabled ? onClick : undefined}
+    onKeyDown={(e) => {
+      if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        onClick();
+      }
+    }}
+    className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 transition-all text-left select-none cursor-pointer group ${
+      disabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
+    } ${
+      active
+        ? 'bg-primary/10 border-primary/40 text-foreground shadow-2xs'
+        : 'border-divider/20 hover:bg-content2 hover:border-divider/40 bg-content1'
     }`}
-   >
-    <Icon className="h-5 w-5" />
-   </div>
-   <div className="flex flex-col min-w-0">
-    <span className="text-xs font-black text-m3-on-surface font-sans truncate">
-     {title}
-    </span>
-    {subtitle && (
-     <span className="text-[10px] text-m3-on-surface-variant/70 font-mono font-medium truncate mt-0.5">
-      {subtitle}
-     </span>
-    )}
-   </div>
-  </div>
+  >
+    <div className="flex items-center gap-3 min-w-0">
+      <div
+        className={`p-2.5 rounded-xl shrink-0 transition-transform group-hover:scale-105 ${
+          active
+            ? 'bg-primary text-primary-foreground shadow-2xs'
+            : 'bg-content2 text-default-500'
+        }`}
+      >
+        <Icon className="h-4.5 w-4.5" />
+      </div>
+      <div className="flex flex-col min-w-0">
+        <span className="text-xs font-bold text-foreground font-sans truncate">
+          {title}
+        </span>
+        {subtitle && (
+          <span className="text-[10px] text-default-500 font-medium truncate mt-0.5">
+            {subtitle}
+          </span>
+        )}
+      </div>
+    </div>
 
-  <div className="flex items-center gap-2 shrink-0">
-   <span
-    className={`text-[9px] font-black uppercase font-mono px-2 py-0.5 rounded-md tracking-wider ${
-     active
-      ? 'bg-m3-primary/20 text-m3-primary border border-m3-primary/30'
-      : 'bg-m3-surface-container text-m3-on-surface-variant/60 border border-transparent'
-    }`}
-   >
-    {active ? activeLabel : inactiveLabel}
-   </span>
-   <div
-    className={`w-10 h-5.5 rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
-     active ? 'bg-m3-primary' : 'bg-m3-outline-variant/40'
-    }`}
-   >
-    <div
-     className={`w-4.5 h-4.5 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-in-out ${
-      active ? 'translate-x-4.5' : 'translate-x-0'
-     }`}
-    />
-   </div>
+    <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+      <span
+        className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider ${
+          active
+            ? 'bg-primary/20 text-primary border border-primary/30'
+            : 'bg-content2 text-default-500 border border-transparent'
+        }`}
+      >
+        {active ? activeLabel : inactiveLabel}
+      </span>
+      <HeroSwitch
+        size="sm"
+        color="primary"
+        isSelected={active}
+        onValueChange={() => onClick()}
+        isDisabled={disabled}
+      />
+    </div>
   </div>
- </button>
 );
 
 export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
- darkMode,
- setDarkMode,
- followSystemTheme = false,
- setFollowSystemTheme
+  darkMode,
+  setDarkMode,
+  followSystemTheme = false,
+  setFollowSystemTheme,
+  isModal = false,
+  onClose,
 }) => {
- const { currentUser, updateCurrentUser, truncateDatabase, isRowClearingBlocked, getRowClearingBlockedReason, forceCloseAllShifts } = useDb();
- const isAuthorized = currentUser && (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER);
- const [forceUnlockReset, setForceUnlockReset] = useState(false);
+  const {
+    currentUser,
+    updateCurrentUser,
+    truncateDatabase,
+    isRowClearingBlocked,
+    getRowClearingBlockedReason,
+    forceCloseAllShifts,
+    branches,
+    productCategories,
+    unitTypes,
+    paymentMethodsList,
+    discountSchemes,
+    damageReasonsList,
+    dbSnapshots,
+    createDbSnapshot,
+    autoBackupEnabled,
+    setAutoBackupEnabled,
+    backupIntervalHours,
+    setBackupIntervalHours,
+    generateMasterForensicBackup,
+  } = useDb();
 
- // Enterprise details states
- const [companyName, setCompanyName] = useState<string>(() => {
- return localStorage.getItem('tilepoint_company_name_v1') || 'Emman Tile Center';
- });
- const [currency, setCurrency] = useState<string>(() => {
- return localStorage.getItem('tilepoint_currency_v1') || '₱';
- });
- const [taxRate, setTaxRate] = useState<number>(() => {
- return Number(localStorage.getItem('tilepoint_tax_rate_v1') || '12');
- });
- const [logoSize, setLogoSize] = useState<number>(() => {
- return Number(localStorage.getItem('tilepoint_receipt_logo_size_v1') || '40');
- });
- const [managerPin, setManagerPin] = useState<string>('');
- const [resetConfirmation, setResetConfirmation] = useState<string>('');
+  const isAuthorized =
+    currentUser &&
+    (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER);
+  const [forceUnlockReset, setForceUnlockReset] = useState(false);
+  const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
+  const [snapshotSuccessToast, setSnapshotSuccessToast] = useState<string | null>(null);
 
- useEffect(() => {
- if (currentUser?.managerPin) {
- setManagerPin(currentUser.managerPin);
- }
- }, [currentUser]);
+  const handleExportDatabaseJson = () => {
+    try {
+      const backupData = generateMasterForensicBackup();
+      const jsonStr = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tilepoint-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      console.error('Failed to export database backup JSON', e);
+    }
+  };
 
- // Settings states loaded from localStorage
- const [textSize, setTextSize] = useState<'small' | 'normal' | 'large' | 'xlarge'>(() => {
- return (localStorage.getItem('tilepoint-text-size') as any) || 'normal';
- });
+  // Enterprise details states
+  const [companyName, setCompanyName] = useState<string>(() => {
+    return (
+      localStorage.getItem('tilepoint_company_name_v1') ||
+      branches[0]?.name ||
+      'Main Enterprise'
+    );
+  });
+  const [currency, setCurrency] = useState<string>(() => {
+    return localStorage.getItem('tilepoint_currency_v1') || '₱';
+  });
+  const [taxRate, setTaxRate] = useState<number>(() => {
+    return Number(localStorage.getItem('tilepoint_tax_rate_v1') || '12');
+  });
+  const [logoSize, setLogoSize] = useState<number>(() => {
+    return Number(localStorage.getItem('tilepoint_receipt_logo_size_v1') || '40');
+  });
+  const [managerPin, setManagerPin] = useState<string>('');
+  const [resetConfirmation, setResetConfirmation] = useState<string>('');
+  const [savedToast, setSavedToast] = useState(false);
 
- const [colorContrast, setColorContrast] = useState<'small' | 'default' | 'medium' | 'high'>(() => {
- const val = localStorage.getItem('tilepoint-color-contrast');
- if (val === 'small' || val === 'default') return 'small';
- return (val as any) || 'medium';
- });
+  useEffect(() => {
+    if (currentUser?.managerPin) {
+      setManagerPin(currentUser.managerPin);
+    }
+  }, [currentUser]);
 
- const [maximizeTextContrast, setMaximizeTextContrast] = useState<boolean>(() => {
- return localStorage.getItem('tilepoint-maximize-text-contrast') === 'true';
- });
+  // Settings states loaded from localStorage
+  const [textSize, setTextSize] = useState<'small' | 'normal' | 'large' | 'xlarge'>(() => {
+    const val = localStorage.getItem('tilepoint-text-size');
+    if (val === 'small' || val === 'large' || val === 'xlarge') return val;
+    return 'normal';
+  });
 
- const [dyslexicFont, setDyslexicFont] = useState<boolean>(() => {
- return localStorage.getItem('tilepoint-dyslexic-font') === 'true';
- });
+  const [colorContrast, setColorContrast] = useState<'small' | 'medium' | 'high'>(() => {
+    const val = localStorage.getItem('tilepoint-color-contrast');
+    if (val === 'small' || val === 'default') return 'small';
+    if (val === 'high') return 'high';
+    return 'medium';
+  });
 
- const [enhancedOutlines, setEnhancedOutlines] = useState<boolean>(() => {
- return localStorage.getItem('tilepoint-enhanced-outlines') === 'true';
- });
+  const [maximizeTextContrast, setMaximizeTextContrast] = useState<boolean>(() => {
+    return localStorage.getItem('tilepoint-maximize-text-contrast') === 'true';
+  });
 
- const [disableAnimations, setDisableAnimations] = useState<boolean>(() => {
- return localStorage.getItem('tilepoint-disable-animations') === 'true';
- });
+  const [dyslexicFont, setDyslexicFont] = useState<boolean>(() => {
+    return localStorage.getItem('tilepoint-dyslexic-font') === 'true';
+  });
 
- const [disableBlurs, setDisableBlurs] = useState<boolean>(() => {
- return localStorage.getItem('tilepoint-disable-blurs') === 'true';
- });
+  const [enhancedOutlines, setEnhancedOutlines] = useState<boolean>(() => {
+    return localStorage.getItem('tilepoint-enhanced-outlines') === 'true';
+  });
 
- const [disableInstallPrompt, setDisableInstallPrompt] = useState<boolean>(() => {
- return localStorage.getItem('tilepoint-disable-install-prompt') === 'true';
- });
+  const [disableAnimations, setDisableAnimations] = useState<boolean>(() => {
+    return localStorage.getItem('tilepoint-disable-animations') === 'true';
+  });
 
- const [disableIdleClock, setDisableIdleClock] = useState<boolean>(() => {
- return localStorage.getItem('tilepoint-disable-idle-clock') === 'true';
- });
+  const [disableUiBlurs, setDisableUiBlurs] = useState<boolean>(() => {
+    const saved = localStorage.getItem('tilepoint-disable-ui-blurs');
+    if (saved !== null) return saved === 'true';
+    return localStorage.getItem('tilepoint-disable-blurs') === 'true';
+  });
 
- const [saveSuccess, setSaveSuccess] = useState(false);
+  const [disableBackdropBlurs, setDisableBackdropBlurs] = useState<boolean>(() => {
+    const saved = localStorage.getItem('tilepoint-disable-backdrop-blurs');
+    if (saved !== null) return saved === 'true';
+    return localStorage.getItem('tilepoint-disable-blurs') === 'true';
+  });
 
- // Sync state changes with document element & localStorage, then dispatch global theme update event
- const updateSetting = (key: string, value: string | boolean) => {
- // Client-side visual, performance, and accessibility settings are customizable by any logged-in user
- const clientSettings = [
- 'tilepoint-text-size',
- 'tilepoint-color-contrast',
- 'tilepoint-maximize-text-contrast',
- 'tilepoint-dyslexic-font',
- 'tilepoint-enhanced-outlines',
- 'tilepoint-disable-animations',
- 'tilepoint-disable-blurs',
- 'tilepoint-disable-install-prompt',
- 'tilepoint-disable-idle-clock'
- ];
- if (!isAuthorized && !clientSettings.includes(key)) return;
- const root = document.documentElement;
- const strVal = String(value);
+  const [disableInstallPrompt, setDisableInstallPrompt] = useState<boolean>(() => {
+    return localStorage.getItem('tilepoint-disable-install-prompt') === 'true';
+  });
 
- // Save to localStorage
- localStorage.setItem(key, strVal);
+  const [disableIdleClock, setDisableIdleClock] = useState<boolean>(() => {
+    return localStorage.getItem('tilepoint-disable-idle-clock') === 'true';
+  });
 
- // Synchronize DOM classes
- if (key === 'tilepoint-text-size') {
- setTextSize(value as any);
- root.classList.remove('accessibility-small-text', 'accessibility-large-text', 'accessibility-xlarge-text');
- if (value === 'small') root.classList.add('accessibility-small-text');
- if (value === 'large') root.classList.add('accessibility-large-text');
- if (value === 'xlarge') root.classList.add('accessibility-xlarge-text');
- }
+  const [showDynamicConfig, setShowDynamicConfig] = useState(false);
+  const [dynamicConfigTab, setDynamicConfigTab] = useState<DynamicConfigTab>('categories');
 
- if (key === 'tilepoint-color-contrast') {
- setColorContrast(value as any);
- }
+  // Sync setting updates
+  const updateSetting = (key: string, value: string | boolean) => {
+    const clientSettings = [
+      'tilepoint-text-size',
+      'tilepoint-color-contrast',
+      'tilepoint-maximize-text-contrast',
+      'tilepoint-dyslexic-font',
+      'tilepoint-enhanced-outlines',
+      'tilepoint-disable-animations',
+      'tilepoint-disable-blurs',
+      'tilepoint-disable-ui-blurs',
+      'tilepoint-disable-backdrop-blurs',
+      'tilepoint-disable-install-prompt',
+      'tilepoint-disable-idle-clock',
+    ];
+    if (!isAuthorized && !clientSettings.includes(key)) return;
+    const root = document.documentElement;
+    const strVal = String(value);
 
- if (key === 'tilepoint-maximize-text-contrast') {
- setMaximizeTextContrast(value as boolean);
- if (value) {
- root.classList.add('accessibility-maximize-text-contrast');
- } else {
- root.classList.remove('accessibility-maximize-text-contrast');
- }
- }
+    localStorage.setItem(key, strVal);
 
- if (key === 'tilepoint-dyslexic-font') {
- setDyslexicFont(value as boolean);
- if (value) {
- root.classList.add('accessibility-dyslexic-font');
- } else {
- root.classList.remove('accessibility-dyslexic-font');
- }
- }
+    if (key === 'tilepoint-text-size') {
+      const sz = value as 'small' | 'normal' | 'large' | 'xlarge';
+      setTextSize(sz);
+      root.classList.remove(
+        'accessibility-small-text', 'accessibility-normal-text', 'accessibility-large-text', 'accessibility-xlarge-text',
+        'accessibility-text-sm', 'accessibility-text-base', 'accessibility-text-lg', 'accessibility-text-xl'
+      );
+      if (sz === 'small') {
+        root.classList.add('accessibility-small-text', 'accessibility-text-sm');
+        root.style.fontSize = '14px';
+        root.style.setProperty('--app-font-multiplier', '0.88');
+      } else if (sz === 'large') {
+        root.classList.add('accessibility-large-text', 'accessibility-text-lg');
+        root.style.fontSize = '18px';
+        root.style.setProperty('--app-font-multiplier', '1.125');
+      } else if (sz === 'xlarge') {
+        root.classList.add('accessibility-xlarge-text', 'accessibility-text-xl');
+        root.style.fontSize = '20px';
+        root.style.setProperty('--app-font-multiplier', '1.25');
+      } else {
+        root.classList.add('accessibility-normal-text', 'accessibility-text-base');
+        root.style.fontSize = '16px';
+        root.style.setProperty('--app-font-multiplier', '1.0');
+      }
+      try {
+        window.dispatchEvent(new Event('tilepoint:theme-sync'));
+      } catch (_) {}
+    }
 
- if (key === 'tilepoint-enhanced-outlines') {
- setEnhancedOutlines(value as boolean);
- if (value) {
- root.classList.add('accessibility-enhanced-outlines');
- } else {
- root.classList.remove('accessibility-enhanced-outlines');
- }
- }
+    if (key === 'tilepoint-color-contrast') {
+      setColorContrast(value as any);
+    }
 
- if (key === 'tilepoint-disable-animations') {
- setDisableAnimations(value as boolean);
- if (value) {
- root.classList.add('accessibility-no-animation');
- } else {
- root.classList.remove('accessibility-no-animation');
- }
- }
+    if (key === 'tilepoint-maximize-text-contrast') {
+      setMaximizeTextContrast(value as boolean);
+      if (value) root.classList.add('accessibility-maximize-text-contrast');
+      else root.classList.remove('accessibility-maximize-text-contrast');
+    }
 
- if (key === 'tilepoint-disable-blurs') {
- setDisableBlurs(value as boolean);
- if (value) {
- root.classList.add('accessibility-no-blur');
- } else {
- root.classList.remove('accessibility-no-blur');
- }
- }
+    if (key === 'tilepoint-dyslexic-font') {
+      setDyslexicFont(value as boolean);
+      if (value) root.classList.add('accessibility-dyslexic-font');
+      else root.classList.remove('accessibility-dyslexic-font');
+    }
 
- if (key === 'tilepoint-disable-install-prompt') {
- setDisableInstallPrompt(value as boolean);
- }
+    if (key === 'tilepoint-enhanced-outlines') {
+      setEnhancedOutlines(value as boolean);
+      if (value) root.classList.add('accessibility-enhanced-outlines');
+      else root.classList.remove('accessibility-enhanced-outlines');
+    }
 
- if (key === 'tilepoint-disable-idle-clock') {
- setDisableIdleClock(value as boolean);
- }
+    if (key === 'tilepoint-disable-animations') {
+      setDisableAnimations(value as boolean);
+      if (value) root.classList.add('accessibility-no-animation');
+      else root.classList.remove('accessibility-no-animation');
+    }
 
- // Trigger theme update
- window.dispatchEvent(new Event('tilepoint-theme-updated'));
+    if (key === 'tilepoint-disable-ui-blurs') {
+      const bVal = value as boolean;
+      setDisableUiBlurs(bVal);
+      if (bVal) root.classList.add('accessibility-no-ui-blur');
+      else root.classList.remove('accessibility-no-ui-blur');
+      const combined = bVal && disableBackdropBlurs;
+      localStorage.setItem('tilepoint-disable-blurs', String(combined));
+      if (combined) root.classList.add('accessibility-no-blur');
+      else root.classList.remove('accessibility-no-blur');
+    }
 
- // Visual toast feedback
- setSaveSuccess(true);
- setTimeout(() => setSaveSuccess(false), 2000);
- };
+    if (key === 'tilepoint-disable-backdrop-blurs') {
+      const bVal = value as boolean;
+      setDisableBackdropBlurs(bVal);
+      if (bVal) root.classList.add('accessibility-no-backdrop-blur');
+      else root.classList.remove('accessibility-no-backdrop-blur');
+      const combined = disableUiBlurs && bVal;
+      localStorage.setItem('tilepoint-disable-blurs', String(combined));
+      if (combined) root.classList.add('accessibility-no-blur');
+      else root.classList.remove('accessibility-no-blur');
+    }
 
- // Listen to external changes to stay in perfect sync
- useEffect(() => {
- const handleSync = () => {
- setTextSize((localStorage.getItem('tilepoint-text-size') as any) || 'normal');
- setColorContrast((localStorage.getItem('tilepoint-color-contrast') as any) || 'medium');
- setMaximizeTextContrast(localStorage.getItem('tilepoint-maximize-text-contrast') === 'true');
- setDyslexicFont(localStorage.getItem('tilepoint-dyslexic-font') === 'true');
- setEnhancedOutlines(localStorage.getItem('tilepoint-enhanced-outlines') === 'true');
- setDisableAnimations(localStorage.getItem('tilepoint-disable-animations') === 'true');
- setDisableBlurs(localStorage.getItem('tilepoint-disable-blurs') === 'true');
- setDisableInstallPrompt(localStorage.getItem('tilepoint-disable-install-prompt') === 'true');
- setDisableIdleClock(localStorage.getItem('tilepoint-disable-idle-clock') === 'true');
- setLogoSize(Number(localStorage.getItem('tilepoint_receipt_logo_size_v1') || '40'));
- };
+    if (key === 'tilepoint-disable-install-prompt') {
+      setDisableInstallPrompt(value as boolean);
+    }
 
- window.addEventListener('tilepoint-theme-updated', handleSync);
- return () => window.removeEventListener('tilepoint-theme-updated', handleSync);
- }, []);
+    if (key === 'tilepoint-disable-idle-clock') {
+      setDisableIdleClock(value as boolean);
+    }
 
- const handleResetToDefaults = () => {
- localStorage.removeItem('tilepoint-text-size');
- localStorage.removeItem('tilepoint-color-contrast');
- localStorage.removeItem('tilepoint-maximize-text-contrast');
- localStorage.removeItem('tilepoint-dyslexic-font');
- localStorage.removeItem('tilepoint-enhanced-outlines');
- localStorage.removeItem('tilepoint-disable-animations');
- localStorage.removeItem('tilepoint-disable-blurs');
- localStorage.removeItem('tilepoint-disable-install-prompt');
- localStorage.removeItem('tilepoint-disable-idle-clock');
+    window.dispatchEvent(new Event('tilepoint-theme-updated'));
+    setSavedToast(true);
+    setTimeout(() => setSavedToast(false), 2000);
+  };
 
- // Clean DOM
- const root = document.documentElement;
- root.classList.remove(
- 'accessibility-small-text',
- 'accessibility-large-text',
- 'accessibility-xlarge-text',
- 'accessibility-maximize-text-contrast',
- 'accessibility-dyslexic-font',
- 'accessibility-enhanced-outlines',
- 'accessibility-no-animation',
- 'accessibility-no-blur'
- );
+  const handleSaveEnterpriseSettings = () => {
+    localStorage.setItem('tilepoint_company_name_v1', companyName);
+    localStorage.setItem('tilepoint_tax_rate_v1', String(taxRate));
+    localStorage.setItem('tilepoint_currency_v1', currency);
+    localStorage.setItem('tilepoint_receipt_logo_size_v1', String(logoSize));
 
- // Reset local states
- setTextSize('normal');
- setColorContrast('medium');
- setMaximizeTextContrast(false);
- setDyslexicFont(false);
- setEnhancedOutlines(false);
- setDisableAnimations(false);
- setDisableBlurs(false);
- setDisableInstallPrompt(false);
- setDisableIdleClock(false);
+    if (managerPin && managerPin.length === 4) {
+      updateCurrentUser({ managerPin });
+    }
 
- // Global dispatch
- window.dispatchEvent(new Event('tilepoint-theme-updated'));
+    window.dispatchEvent(new Event('tilepoint-theme-updated'));
+    setSavedToast(true);
+    setTimeout(() => setSavedToast(false), 2000);
+  };
 
- setSaveSuccess(true);
- setTimeout(() => setSaveSuccess(false), 2000);
- };
+  const handleResetToDefaults = () => {
+    localStorage.removeItem('tilepoint-text-size');
+    localStorage.removeItem('tilepoint-color-contrast');
+    localStorage.removeItem('tilepoint-maximize-text-contrast');
+    localStorage.removeItem('tilepoint-dyslexic-font');
+    localStorage.removeItem('tilepoint-enhanced-outlines');
+    localStorage.removeItem('tilepoint-disable-animations');
+    localStorage.removeItem('tilepoint-disable-blurs');
+    localStorage.removeItem('tilepoint-disable-ui-blurs');
+    localStorage.removeItem('tilepoint-disable-backdrop-blurs');
+    localStorage.removeItem('tilepoint-disable-install-prompt');
+    localStorage.removeItem('tilepoint-disable-idle-clock');
 
- return (
- <div className="flex-1 flex flex-col h-full overflow-hidden" id="system-settings-module">
- {/* HEADER SECTION */}
- <div className="p-5 border-b border-m3-outline-variant/15 flex justify-between items-center bg-m3-surface-low shrink-0 rounded-t-[20px]">
- <div className="flex items-center gap-3">
- <div className="h-10 w-10 rounded-2xl bg-m3-primary/10 text-m3-primary flex items-center justify-center border border-m3-primary/20 shrink-0">
- <Settings className="h-5 w-5" />
- </div>
- <div>
- <h3 className="text-sm font-black uppercase font-mono tracking-wider text-m3-primary">
- System Settings & Configuration
- </h3>
- </div>
- </div>
+    const root = document.documentElement;
+    root.classList.remove(
+      'accessibility-small-text',
+      'accessibility-large-text',
+      'accessibility-xlarge-text',
+      'accessibility-maximize-text-contrast',
+      'accessibility-dyslexic-font',
+      'accessibility-enhanced-outlines',
+      'accessibility-no-animation',
+      'accessibility-no-blur',
+      'accessibility-no-ui-blur',
+      'accessibility-no-backdrop-blur'
+    );
 
- {isAuthorized ? (
- <button
- type="button"
- onClick={handleResetToDefaults}
- className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-m3-outline-variant/30 hover:bg-m3-primary/10 text-m3-on-surface-variant hover:text-m3-primary text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
- title="Reset to Factory Defaults"
- >
- <RotateCcw className="h-3.5 w-3.5" />
- <span>Reset Defaults</span>
- </button>
- ) : (
- <div className="flex items-center gap-1 text-[10px] uppercase font-black tracking-wider text-amber-500 bg-amber-550/10 px-3 py-1.5 rounded-xl border border-amber-500/20">
- <Lock className="h-3.5 w-3.5" />
- <span>RBAC Protected</span>
- </div>
- )}
- </div>
+    setTextSize('normal');
+    setColorContrast('medium');
+    setMaximizeTextContrast(false);
+    setDyslexicFont(false);
+    setEnhancedOutlines(false);
+    setDisableAnimations(false);
+    setDisableUiBlurs(false);
+    setDisableBackdropBlurs(false);
+    setDisableInstallPrompt(false);
+    setDisableIdleClock(false);
 
- {/* SCROLLABLE SETTINGS CONTAINER */}
- <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-m3-surface-low/80 border-x border-b border-m3-outline-variant/15 rounded-b-[20px] shadow-sm">
- 
- {/* UNAUTHORIZED ROLE BLOCK */}
- {!isAuthorized && (
- <div className="p-4 bg-amber-500/10 border border-amber-500/25 text-amber-500 rounded-xl flex items-start gap-3">
- <Shield className="h-5 w-5 shrink-0 mt-0.5" />
- <div>
- <p className="text-xs font-black uppercase tracking-wider">Restricted View-Only Mode</p>
- <p className="text-xs text-m3-on-surface leading-normal mt-0.5 font-sans font-medium">
- You do not possess the required administrator credentials to alter global system parameters. These features are read-only under role-based access control (RBAC).
- </p>
- </div>
- </div>
- )}
+    window.dispatchEvent(new Event('tilepoint-theme-updated'));
+    setSavedToast(true);
+    setTimeout(() => setSavedToast(false), 2000);
+  };
 
- {/* SUCCESS EVENT CHIP */}
- {saveSuccess && (
- <div className="p-3 bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 rounded-xl text-center text-xs font-bold font-mono uppercase tracking-wider animate-pulse">
- Preferences applied & propagated in real-time
- </div>
- )}
+  return (
+    <div className="space-y-6 animate-fade-in text-foreground pb-12" id="system-settings-module">
+      {/* HEADER SECTION */}
+      <div className="flex justify-between items-center bg-content1/95 backdrop-blur-md p-4 rounded-2xl border border-divider/30 sticky top-0 z-20 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20 shrink-0">
+            <Settings className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-xs font-black tracking-widest text-primary uppercase">
+              System Settings &amp; Configuration
+            </h3>
+            <p className="text-[11px] text-default-500 font-medium">
+              Global system parameters, visual appearance, accessibility &amp; enterprise business rules
+            </p>
+          </div>
+        </div>
 
- {/* PERFORMANCE & ENGINE CONTROLS SECTION */}
- <div className="space-y-4">
- <div>
- <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
- Visual & Performance Optimization
- </h4>
- </div>
+        <div className="flex items-center gap-2">
+          {savedToast && (
+            <span className="flex items-center gap-1 text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-xl border border-emerald-500/20 animate-fade-in">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <span>Saved</span>
+            </span>
+          )}
 
- <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-  {/* FOLLOW SYSTEM THEME TOGGLE */}
-  {setFollowSystemTheme && (
-   <SettingToggleCard
-    icon={Sliders}
-    title="Follow System Theme State"
-    subtitle="Auto sync theme with host device preferences"
-    active={followSystemTheme}
-    onClick={() => {
-     const newVal = !followSystemTheme;
-     setFollowSystemTheme(newVal);
-     if (newVal) {
-      const isDark = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (setDarkMode) setDarkMode(isDark);
-     }
-     window.dispatchEvent(new Event('tilepoint-theme-updated'));
-    }}
-    activeLabel="SYNCED"
-    inactiveLabel="OFF"
-   />
-  )}
+          {isAuthorized ? (
+            <button
+              type="button"
+              onClick={handleResetToDefaults}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-divider/30 hover:bg-primary/10 text-default-600 hover:text-primary text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
+              title="Reset accessibility &amp; visual preferences to default"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Reset Defaults</span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-1 text-[10px] uppercase font-black tracking-wider text-amber-500 bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20">
+              <Lock className="h-3.5 w-3.5" />
+              <span>RBAC Protected</span>
+            </div>
+          )}
 
-  {/* MANUAL DARK MODE SELECTION */}
-  {setDarkMode && (
-   <SettingToggleCard
-    icon={darkMode ? Moon : Sun}
-    title="Workspace Dark Theme"
-    subtitle="Dark high-contrast color scheme"
-    active={darkMode && !followSystemTheme}
-    onClick={() => {
-     if (setFollowSystemTheme) setFollowSystemTheme(false);
-     setDarkMode(!darkMode);
-     window.dispatchEvent(new Event('tilepoint-theme-updated'));
-    }}
-    activeLabel="DARK"
-    inactiveLabel="LIGHT"
-   />
-  )}
+          {isModal && onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-xl text-default-400 hover:text-foreground hover:bg-default-100 transition-colors cursor-pointer"
+              title="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
+        </div>
+      </div>
 
-  {/* TURN OFF BLURS TOGGLE */}
-  <SettingToggleCard
-   icon={Eye}
-   title="Turn Off UI Blurs & Glass"
-   subtitle="Removes backdrop filters for maximum rendering speed"
-   active={disableBlurs}
-   onClick={() => updateSetting('tilepoint-disable-blurs', !disableBlurs)}
-   activeLabel="OFF"
-   inactiveLabel="ON"
-  />
+      {/* DYNAMIC BUSINESS RULES & MASTER CATALOGS */}
+      <div className="p-5 rounded-2xl border border-primary/30 bg-primary/5 space-y-4 shadow-2xs">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="p-3 rounded-xl bg-primary text-primary-foreground shadow-2xs shrink-0">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs font-black uppercase text-foreground tracking-wider">
+                  Dynamic Master Catalogs &amp; Business Rules
+                </h4>
+                <span className="text-[9px] uppercase font-black px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                  Active Engine
+                </span>
+              </div>
+              <p className="text-[11px] text-default-500 font-medium mt-0.5">
+                Configure product categories, units of measure, custom payment methods, discount schemes, and damage causes.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setDynamicConfigTab('categories');
+              setShowDynamicConfig(true);
+            }}
+            className="px-4 py-2.5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl shadow-md hover:opacity-90 active:scale-95 transition-all cursor-pointer shrink-0 flex items-center gap-2"
+          >
+            <Sliders className="h-4 w-4" />
+            <span>Open Entity Config</span>
+          </button>
+        </div>
 
-  {/* REMOVE ANIMATIONS TOGGLE */}
-  <SettingToggleCard
-   icon={Sparkles}
-   title="Remove Animations & UI Motion"
-   subtitle="Instant zero-delay state transitions"
-   active={disableAnimations}
-   onClick={() => updateSetting('tilepoint-disable-animations', !disableAnimations)}
-   activeLabel="OFF"
-   inactiveLabel="ON"
-  />
+        {/* Quick entity overview chips */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 pt-2 border-t border-primary/10">
+          <button
+            type="button"
+            onClick={() => {
+              setDynamicConfigTab('categories');
+              setShowDynamicConfig(true);
+            }}
+            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer"
+          >
+            <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1">
+              <Tag className="h-3.5 w-3.5" />
+              <span className="text-[10px] font-black">{productCategories.length}</span>
+            </div>
+            <div className="text-[11px] font-bold text-foreground">Categories</div>
+            <div className="text-[9px] text-default-400">Custom taxonomy</div>
+          </button>
 
-  {/* DISABLE PWA INSTALL PROMPT TOGGLE */}
-  <SettingToggleCard
-   icon={Download}
-   title="Turn Off PWA Install Banner"
-   subtitle="Hides home screen app installation prompt"
-   active={disableInstallPrompt}
-   onClick={() => updateSetting('tilepoint-disable-install-prompt', !disableInstallPrompt)}
-   activeLabel="HIDDEN"
-   inactiveLabel="VISIBLE"
-  />
+          <button
+            type="button"
+            onClick={() => {
+              setDynamicConfigTab('units');
+              setShowDynamicConfig(true);
+            }}
+            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer"
+          >
+            <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1">
+              <Ruler className="h-3.5 w-3.5" />
+              <span className="text-[10px] font-black">{unitTypes.length}</span>
+            </div>
+            <div className="text-[11px] font-bold text-foreground">Units of Measure</div>
+            <div className="text-[9px] text-default-400">Pcs, Kgs, Liters...</div>
+          </button>
 
-  {/* DISABLE IDLE CLOCK OVERLAY TOGGLE */}
-  <SettingToggleCard
-   icon={Clock}
-   title="Turn Off Idle Clock Screensaver"
-   subtitle="Prevents idle timer screen lock overlay"
-   active={disableIdleClock}
-   onClick={() => updateSetting('tilepoint-disable-idle-clock', !disableIdleClock)}
-   activeLabel="OFF"
-   inactiveLabel="ON"
-  />
- </div>
- </div>
+          <button
+            type="button"
+            onClick={() => {
+              setDynamicConfigTab('payments');
+              setShowDynamicConfig(true);
+            }}
+            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer"
+          >
+            <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1">
+              <CreditCard className="h-3.5 w-3.5" />
+              <span className="text-[10px] font-black">{paymentMethodsList.length}</span>
+            </div>
+            <div className="text-[11px] font-bold text-foreground">Payment Methods</div>
+            <div className="text-[9px] text-default-400">Cash, GCash, Cards...</div>
+          </button>
 
- <div className="h-px bg-m3-outline-variant/15" />
+          <button
+            type="button"
+            onClick={() => {
+              setDynamicConfigTab('discounts');
+              setShowDynamicConfig(true);
+            }}
+            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer"
+          >
+            <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1">
+              <Percent className="h-3.5 w-3.5" />
+              <span className="text-[10px] font-black">{discountSchemes.length}</span>
+            </div>
+            <div className="text-[11px] font-bold text-foreground">Discounts</div>
+            <div className="text-[9px] text-default-400">Senior, PWD, VIP...</div>
+          </button>
 
- {/* ACCESSIBILITY & TEXT PREFERENCES SECTION */}
- <div className="space-y-5">
- <div>
- <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
- Accessibility & Typography preferences
- </h4>
- </div>
+          <button
+            type="button"
+            onClick={() => {
+              setDynamicConfigTab('damages');
+              setShowDynamicConfig(true);
+            }}
+            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer col-span-2 sm:col-span-1"
+          >
+            <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              <span className="text-[10px] font-black">{damageReasonsList.length}</span>
+            </div>
+            <div className="text-[11px] font-bold text-foreground">Damage Causes</div>
+            <div className="text-[9px] text-default-400">Breakage, Expiry...</div>
+          </button>
+        </div>
+      </div>
 
- {/* FONT SCALING REGION */}
- <div className="space-y-2">
- <div className="flex justify-between items-center">
- <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">
- System UI Font Size Multiplier
- </label>
- <span className="text-[9px] font-mono text-emerald-500 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">
- System UI Only (Receipts Excluded)
- </span>
- </div>
- <div className="grid grid-cols-3 gap-3">
- {[
- { id: 'small', name: 'Small (0.88x)', desc: 'Compact dense text scale' },
- { id: 'normal', name: 'Normal (1.0x)', desc: 'Standard readable UI size' },
- { id: 'large', name: 'Large (1.12x)', desc: 'Enlarged body text scale' }
- ].map((sz) => (
- <button
- key={sz.id}
- type="button"
- onClick={() => updateSetting('tilepoint-text-size', sz.id)}
- className={`p-3.5 rounded-xl border flex flex-col justify-center items-center gap-1.5 transition-all cursor-pointer text-center ${
- textSize === sz.id
- ? 'bg-m3-primary/10 border-m3-primary text-m3-primary shadow-xs'
- : 'bg-m3-surface border-m3-outline-variant/20 hover:bg-m3-primary/5 text-m3-on-surface-variant'
- }`}
- >
- <Type className="h-4.5 w-4.5" />
- <span className="text-[11px] font-black font-sans">{sz.name}</span>
- <span className="text-[9.5px] opacity-75 font-mono">{sz.desc}</span>
- </button>
- ))}
- </div>
- </div>
+      {/* Dynamic Entity Modal */}
+      {showDynamicConfig && (
+        <DynamicEntityConfigModal
+          isOpen={showDynamicConfig}
+          onClose={() => setShowDynamicConfig(false)}
+          initialTab={dynamicConfigTab}
+        />
+      )}
 
- {/* RECEIPT FONT SIZE ADJUSTER */}
- 
- {/* COLOR CONTRAST SELECTION */}
- <div className="space-y-2.5">
- <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono block">
- System Color Contrast Config
- </label>
- <div className="w-full p-4 rounded-xl border border-m3-outline-variant/15 bg-m3-surface-low space-y-3">
- <div className="grid grid-cols-3 gap-2 p-1.5 rounded-xl bg-m3-surface-container">
- {(['small', 'medium', 'high'] as const).map((level) => (
- <button
- key={level}
- type="button"
- onClick={() => updateSetting('tilepoint-color-contrast', level)}
- className={`py-2 px-3 rounded-lg text-[11px] font-black capitalize transition-all cursor-pointer text-center ${
- (colorContrast === level || (level === 'small' && colorContrast === 'default'))
- ? 'bg-m3-primary text-m3-on-primary shadow-sm scale-[1.01]'
- : 'text-m3-on-surface-variant hover:bg-m3-on-surface/5'
- }`}
- >
- {level} Contrast
- </button>
- ))}
- </div>
- </div>
- </div>
+      {/* RESTRICTED RBAC BANNER */}
+      {!isAuthorized && (
+        <div className="p-4 bg-amber-500/10 border border-amber-500/25 text-amber-500 rounded-2xl flex items-start gap-3">
+          <Shield className="h-5 w-5 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-black uppercase tracking-wider">Restricted View-Only Mode</p>
+            <p className="text-xs text-foreground font-medium leading-relaxed mt-0.5">
+              You are viewing system settings under role-based access control (RBAC). Global enterprise parameters and reset triggers require Administrator credentials.
+            </p>
+          </div>
+        </div>
+      )}
 
- <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-  {/* DYSLEXIC FRIENDLY toggle */}
-  <SettingToggleCard
-   icon={CaseSensitive}
-   title="Dyslexic-Friendly Typography"
-   subtitle="Enhanced letter shapes for increased readability"
-   active={dyslexicFont}
-   onClick={() => updateSetting('tilepoint-dyslexic-font', !dyslexicFont)}
-  />
+      {/* SECTION 1: APPEARANCE & THEMES */}
+      <div className="space-y-4">
+        <div>
+          <h4 className="text-xs font-black uppercase text-primary tracking-wider">
+            Appearance &amp; Theme Engine
+          </h4>
+          <p className="text-[11px] text-default-500">
+            Select color mode and visual theme presets for the workspace
+          </p>
+        </div>
 
-  {/* MAXIMIZE CONTRAST toggle */}
-  <SettingToggleCard
-   icon={Layers}
-   title="Maximize Text Contrast"
-   subtitle="WCAG AAA compliance for extreme clarity"
-   active={maximizeTextContrast}
-   onClick={() => updateSetting('tilepoint-text-contrast', !maximizeTextContrast)}
-  />
+        {/* HEROUI THEMES ENGINE */}
+        <HeroUIAppearanceSettings darkMode={darkMode} onToggleDarkMode={setDarkMode} />
 
-  {/* KEYBOARD OUTLINES toggle */}
-  <SettingToggleCard
-   icon={Keyboard}
-   title="Highlight Focus Outlines"
-   subtitle="High-visibility keyboard navigation focus rings"
-   active={enhancedOutlines}
-   onClick={() => updateSetting('tilepoint-enhanced-outlines', !enhancedOutlines)}
-  />
- </div>
- </div>
+        {/* COLOR MODE SELECTOR */}
+        <div className="p-4 border border-divider/20 rounded-2xl space-y-3 bg-content1 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-wider text-default-500">
+              Color Mode
+            </span>
+            <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20 tracking-wider">
+              {darkMode ? 'DARK ACTIVE' : 'LIGHT ACTIVE'}
+            </span>
+          </div>
 
- {currentUser?.role === UserRole.ADMIN && (
- <>
- <div className="h-px bg-m3-outline-variant/15" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Light Mode */}
+            <button
+              type="button"
+              onClick={() => {
+                if (setFollowSystemTheme) setFollowSystemTheme(false);
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('tilepoint_dark_theme', 'false');
+                saveHeroUIConfig({ mode: 'light' });
+                if (setDarkMode) setDarkMode(false);
+                window.dispatchEvent(new CustomEvent('tilepoint-dark-mode-toggle', { detail: false }));
+                window.dispatchEvent(new CustomEvent('tilepoint-theme-updated', { detail: { darkMode: false } }));
+              }}
+              className={`p-3 rounded-xl border flex items-center justify-between text-left transition-all cursor-pointer ${
+                !darkMode && !followSystemTheme
+                  ? 'bg-primary/10 border-primary text-foreground shadow-2xs'
+                  : 'border-divider/20 hover:bg-content2'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Sun className={`h-4 w-4 ${!darkMode && !followSystemTheme ? 'text-primary' : 'text-default-500'}`} />
+                <span className="text-xs font-bold font-sans">Light Mode</span>
+              </div>
+              {!darkMode && !followSystemTheme && <Check className="h-4 w-4 text-primary" />}
+            </button>
 
- {/* ENTERPRISE PROFILE & COMPLIANCE RULES */}
- <div className="space-y-5">
- <div>
- <h4 className="text-xs font-black uppercase text-m3-primary tracking-wider font-mono">
- Enterprise Profile & Business Rules
- </h4>
- </div>
+            {/* Dark Mode */}
+            <button
+              type="button"
+              onClick={() => {
+                if (setFollowSystemTheme) setFollowSystemTheme(false);
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('tilepoint_dark_theme', 'true');
+                saveHeroUIConfig({ mode: 'dark' });
+                if (setDarkMode) setDarkMode(true);
+                window.dispatchEvent(new CustomEvent('tilepoint-dark-mode-toggle', { detail: true }));
+                window.dispatchEvent(new CustomEvent('tilepoint-theme-updated', { detail: { darkMode: true } }));
+              }}
+              className={`p-3 rounded-xl border flex items-center justify-between text-left transition-all cursor-pointer ${
+                darkMode && !followSystemTheme
+                  ? 'bg-primary/10 border-primary text-foreground shadow-2xs'
+                  : 'border-divider/20 hover:bg-content2'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Moon className={`h-4 w-4 ${darkMode && !followSystemTheme ? 'text-primary' : 'text-default-500'}`} />
+                <span className="text-xs font-bold font-sans">Dark Mode</span>
+              </div>
+              {darkMode && !followSystemTheme && <Check className="h-4 w-4 text-primary" />}
+            </button>
 
- <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
- {/* Enterprise Name */}
- <div className="flex flex-col gap-1.5 bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-left">
- <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono">
- Enterprise Name Prefix
- </label>
- <input
- type="text"
- value={companyName ?? ''}
- disabled={!isAuthorized}
- onChange={(e) => {
- const val = e.target.value;
- setCompanyName(val);
- localStorage.setItem('tilepoint_company_name_v1', val);
- window.dispatchEvent(new Event('tilepoint-theme-updated'));
- }}
- className="bg-m3-surface-container border border-m3-outline-variant/35 rounded-xl text-xs font-bold p-2.5 w-full text-m3-on-surface outline-none focus:border-m3-primary disabled:opacity-65 font-sans"
- />
- </div>
+            {/* Follow System */}
+            {setFollowSystemTheme && (
+              <button
+                type="button"
+                onClick={() => {
+                  const newVal = !followSystemTheme;
+                  setFollowSystemTheme(newVal);
+                  if (newVal) {
+                    const isDark = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    if (setDarkMode) setDarkMode(isDark);
+                  }
+                  window.dispatchEvent(new Event('tilepoint-theme-updated'));
+                }}
+                className={`p-3 rounded-xl border flex items-center justify-between text-left transition-all cursor-pointer ${
+                  followSystemTheme
+                    ? 'bg-primary/10 border-primary text-foreground shadow-2xs'
+                    : 'border-divider/20 hover:bg-content2'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Sliders className={`h-4 w-4 ${followSystemTheme ? 'text-primary' : 'text-default-500'}`} />
+                  <span className="text-xs font-bold font-sans">System Auto</span>
+                </div>
+                {followSystemTheme && <Check className="h-4 w-4 text-primary" />}
+              </button>
+            )}
+          </div>
+        </div>
 
- {/* Tax Rate */}
- <div className="flex flex-col gap-1.5 bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-left">
- <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono">
- Standard VAT Tax Rate (%)
- </label>
- <input
- type="number"
- value={taxRate ?? ''}
- disabled={!isAuthorized}
- onChange={(e) => {
- const val = Math.max(0, Number(e.target.value));
- setTaxRate(val);
- localStorage.setItem('tilepoint_tax_rate_v1', String(val));
- window.dispatchEvent(new Event('tilepoint-theme-updated'));
- }}
- className="bg-m3-surface-container border border-m3-outline-variant/35 rounded-xl text-xs font-bold p-2.5 w-full text-m3-on-surface outline-none focus:border-m3-primary disabled:opacity-65 font-sans"
- />
- </div>
+        {/* PERFORMANCE & DISPLAY TOGGLES */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <SettingToggleCard
+            icon={Square}
+            title="Disable UI Blurs"
+            subtitle="Solid opaque backgrounds for modals and cards"
+            active={disableUiBlurs}
+            onClick={() => updateSetting('tilepoint-disable-ui-blurs', !disableUiBlurs)}
+            activeLabel="OFF"
+            inactiveLabel="ON"
+          />
 
- {/* Currency Symbol */}
- <div className="flex flex-col gap-1.5 bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-left">
- <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono">
- Base Currency Symbol
- </label>
- <select
- value={currency ?? ''}
- disabled={!isAuthorized}
- onChange={(e) => {
- const val = e.target.value;
- setCurrency(val);
- localStorage.setItem('tilepoint_currency_v1', val);
- window.dispatchEvent(new Event('tilepoint-theme-updated'));
- }}
- className="bg-m3-surface-container border border-m3-outline-variant/35 rounded-xl text-xs font-bold p-2.5 w-full text-m3-on-surface outline-none focus:border-m3-primary disabled:opacity-65 font-sans"
- >
- <option value="₱">₱ PHP Peso Sign</option>
- <option value="$">$ USD Dollar Symbol</option>
- <option value="€">€ EUR Euro Standard</option>
- <option value="¥">¥ JPY Yen Accent</option>
- </select>
- </div>
+          <SettingToggleCard
+            icon={Droplets}
+            title="Disable Ambient Gradients"
+            subtitle="Disables decorative background glow spheres"
+            active={disableBackdropBlurs}
+            onClick={() => updateSetting('tilepoint-disable-backdrop-blurs', !disableBackdropBlurs)}
+            activeLabel="OFF"
+            inactiveLabel="ON"
+          />
 
- {/* Manager PIN */}
- <div className="flex flex-col gap-1.5 bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-left">
- <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono">
- Manager Safety Authorization PIN
- </label>
- <input
- type="text"
- maxLength={4}
- value={managerPin ?? ''}
- disabled={!isAuthorized}
- onChange={(e) => {
- const val = e.target.value.replace(/\D/g, '');
- setManagerPin(val);
- if (val.length === 4) {
- updateCurrentUser({ managerPin: val });
- setSaveSuccess(true);
- setTimeout(() => setSaveSuccess(false), 2000);
- }
- }}
- className="bg-m3-surface-container border border-m3-outline-variant/35 rounded-xl text-xs font-bold p-2.5 w-full text-center font-mono tracking-widest text-m3-on-surface outline-none focus:border-m3-primary disabled:opacity-65"
- />
- </div>
+          <SettingToggleCard
+            icon={Sparkles}
+            title="Disable UI Animations"
+            subtitle="Instant zero-duration state transitions"
+            active={disableAnimations}
+            onClick={() => updateSetting('tilepoint-disable-animations', !disableAnimations)}
+            activeLabel="OFF"
+            inactiveLabel="ON"
+          />
 
- {/* Receipt Logo Height */}
- <div className="flex flex-col gap-1.5 bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-left">
- <div className="flex justify-between items-center">
- <label className="text-[10px] font-black uppercase tracking-wider text-m3-on-surface-variant font-mono">
- Global Receipt Logo Height
- </label>
- <span className="text-[11px] font-mono font-black text-m3-primary bg-m3-primary/10 px-1.5 py-0.5 rounded">{logoSize}px</span>
- </div>
- <div className="flex items-center gap-2 mt-2">
- <span className="text-[9px] text-zinc-500 font-mono">20px</span>
- <input
- type="range"
- min="20"
- max="120"
- value={logoSize ?? ''}
- disabled={!isAuthorized}
- onChange={(e) => {
- const val = Number(e.target.value);
- setLogoSize(val);
- localStorage.setItem('tilepoint_receipt_logo_size_v1', String(val));
- window.dispatchEvent(new Event('tilepoint-theme-updated'));
- setSaveSuccess(true);
- setTimeout(() => setSaveSuccess(false), 2000);
- }}
- className="flex-1 accent-m3-primary h-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer disabled:opacity-50"
- />
- <span className="text-[9px] text-zinc-500 font-mono">120px</span>
- </div>
- <p className="text-[8.5px] text-m3-on-surface-variant/70 leading-normal font-sans">
- System-wide default height in pixels for logos displayed on printed receipt acknowledgement slips.
- </p>
- </div>
- </div>
+          <SettingToggleCard
+            icon={Download}
+            title="Hide PWA Install Banner"
+            subtitle="Suppresses home screen installation prompt"
+            active={disableInstallPrompt}
+            onClick={() => updateSetting('tilepoint-disable-install-prompt', !disableInstallPrompt)}
+            activeLabel="HIDDEN"
+            inactiveLabel="VISIBLE"
+          />
 
- {/* SYSTEM RESET & PURGE SECTION */}
- <div className="h-px bg-m3-outline-variant/15 my-6" />
- <div className="space-y-5">
- <div>
- <h4 className="text-xs font-black uppercase text-rose-500 tracking-wider font-mono flex items-center gap-2">
- <ShieldAlert className="h-4 w-4" /> System Reset & Factory operations Center
- </h4>
- <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-relaxed">
- Permanently clear transactions, wipe inventory counts, or perform full database schema truncation. 
- <span className="text-rose-400 font-extrabold ml-1">Warning: These operations are destructive and cannot be undone.</span>
- </p>
- 
- {/* Historical retention warning banner */}
- <div className="mt-3 mb-4 p-3 rounded-xl border border-amber-500/15 bg-amber-500/5 text-[10px] text-zinc-300 leading-normal font-sans">
- <strong className="text-amber-400 uppercase tracking-wider block mb-0.5">️ Historical Audit Notice (Retention Safeguard)</strong>
- To preserve last year's records and historical tax logs for compliance, managers and administrators are required to save a device snapshot in their user-defined directory folder (configured in the <span className="font-extrabold text-amber-500">Database & Backups</span> settings panel) before launching any system reset operations.
- </div>
- <div className="bg-rose-500/5 border border-rose-500/20 p-5 rounded-2xl space-y-4">
- {isRowClearingBlocked() && !forceUnlockReset ? (
- <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl text-left space-y-2">
- <span className="text-[10px] font-black uppercase text-amber-500 font-mono tracking-wider block">️ System Clearing Operations Locked</span>
- <p className="text-[10.5px] text-zinc-300 leading-relaxed font-sans">
- Row-clearing and database truncations are deactivated because the register is currently holding: <strong className="text-amber-400 font-extrabold">{getRowClearingBlockedReason()}</strong>.
- </p>
- <div className="flex flex-wrap gap-2 pt-1">
- {getRowClearingBlockedReason().includes("unexported shift payload") && (
-  <button
-   type="button"
-   onClick={() => {
-    forceCloseAllShifts();
-    alert("All open or unclosed shifts have been forced to CLOSED status. The system clearing safety guard has been updated.");
-   }}
-   className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 font-mono text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors border border-amber-500/30 cursor-pointer"
-  >
-   Force-Close All Unclosed Shifts
-  </button>
- )}
- {getRowClearingBlockedReason().includes("open checkout list") && (
-  <button
-   type="button"
-   onClick={() => {
-    localStorage.removeItem("tp_active_cart");
-    window.location.reload();
-   }}
-   className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 font-mono text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors border border-amber-500/30 cursor-pointer"
-  >
-   Clear Active Cart
-  </button>
- )}
- <button
-  type="button"
-  onClick={() => {
-   setForceUnlockReset(true);
-  }}
-  className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 font-mono text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors border border-rose-500/30 cursor-pointer"
- >
-  Bypass Lock & Enable Reset
- </button>
- </div>
- </div>
- ) : (
- <div className="flex flex-col gap-1">
- <label className="text-[10px] font-black uppercase tracking-wider text-rose-400 font-mono">
- Reset Safety Guard {forceUnlockReset && <span className="text-amber-400">(Lock Bypassed)</span>}
- </label>
- <p className="text-[10.5px] text-zinc-300">
- To unlock the reset triggers, type <span className="font-extrabold text-rose-400 select-all font-mono">RESET</span> below:
- </p>
- <input
- type="text"
- value={resetConfirmation ?? ''}
- onChange={(e) => setResetConfirmation(e.target.value)}
- placeholder="Type RESET to authorize"
- className="bg-m3-surface border border-rose-500/30 rounded-xl text-xs font-mono font-bold p-2.5 w-full max-w-xs mt-1.5 text-rose-400 outline-none focus:border-rose-500 text-center tracking-widest uppercase"
- />
- </div>
- )}
+          <SettingToggleCard
+            icon={Clock}
+            title="Disable Idle Screensaver"
+            subtitle="Prevents idle timer screen overlay"
+            active={disableIdleClock}
+            onClick={() => updateSetting('tilepoint-disable-idle-clock', !disableIdleClock)}
+            activeLabel="OFF"
+            inactiveLabel="ON"
+          />
+        </div>
+      </div>
 
- <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-rose-500/10">
- {/* Clear Transactions */}
- <div className="flex flex-col justify-between bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-left space-y-3">
- <div>
- <span className="text-[10px] font-extrabold text-amber-500 font-mono uppercase block">Option A</span>
- <h5 className="font-black text-xs text-m3-on-surface mt-1">Reset All Stock Counts</h5>
- </div>
- <HoldToConfirmButton
- disabled={resetConfirmation !== 'RESET' || (isRowClearingBlocked() && !forceUnlockReset)}
- onConfirm={() => {
- truncateDatabase('transactions');
- setResetConfirmation('');
- alert('All transactions cleared and product inventory levels reset to 0 successfully!');
- }}
- variant="amber"
- >
- Hold to Reset Stocks
- </HoldToConfirmButton>
- </div>
+      <div className="h-px bg-divider/20" />
 
- {/* Complete Wipe */}
- <div className="flex flex-col justify-between bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-left space-y-3">
- <div>
- <span className="text-[10px] font-extrabold text-rose-500 font-mono uppercase block">Option B</span>
- <h5 className="font-black text-xs text-m3-on-surface mt-1">Full Database Wipe</h5>
- </div>
- <HoldToConfirmButton
- disabled={resetConfirmation !== 'RESET' || (isRowClearingBlocked() && !forceUnlockReset)}
- onConfirm={() => {
- truncateDatabase('all');
- setResetConfirmation('');
- alert('Full database truncation completed. All custom catalog items and transactions have been purged.');
- }}
- variant="rose"
- >
- Hold to Truncate All
- </HoldToConfirmButton>
- </div>
+      {/* SECTION 2: ACCESSIBILITY & TYPOGRAPHY */}
+      <div className="space-y-4">
+        <div>
+          <h4 className="text-xs font-black uppercase text-primary tracking-wider">
+            Accessibility &amp; Typography
+          </h4>
+          <p className="text-[11px] text-default-500">
+            Font scaling, contrast adjustment, and legibility preferences
+          </p>
+        </div>
 
- {/* Setup from 0 Wipe */}
- <div className="flex flex-col justify-between bg-m3-surface-low border border-m3-outline-variant/15 p-4 rounded-xl text-left space-y-3">
- <div>
- <span className="text-[10px] font-extrabold text-purple-500 font-mono uppercase block">Option C</span>
- <h5 className="font-black text-xs text-m3-on-surface mt-1">Factory Reset (Setup 0)</h5>
- </div>
- <HoldToConfirmButton
- disabled={resetConfirmation !== 'RESET'}
- onConfirm={async () => {
- try {
- await truncateDatabase('all');
- } catch (err) {
- console.warn("[Factory Reset] Server truncate call error:", err);
- }
- localStorage.clear();
- sessionStorage.clear();
- setResetConfirmation('');
- alert('System data and server database cleared completely. Rebooting to setup wizard from 0...');
- window.location.href = '/';
- }}
- variant="rose"
- >
- Hold to Setup From 0
- </HoldToConfirmButton>
- </div>
- </div>
- </div> </div>
- </div>
- </div>
- </>
- )}
+        {/* FONT SCALE MULTIPLIER */}
+        <div className="p-4 border border-divider/20 rounded-2xl space-y-3 bg-content1 shadow-2xs">
+          <div className="flex justify-between items-center">
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-wider text-default-500 block">
+                Font Size Multiplier
+              </label>
+              <span className="text-[10px] text-default-400">Scale all text, forms, tables, and buttons across TilePoint</span>
+            </div>
+            <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+              Active: {textSize === 'small' ? '0.88x (14px)' : textSize === 'large' ? '1.125x (18px)' : textSize === 'xlarge' ? '1.25x (20px)' : '1.0x (16px)'}
+            </span>
+          </div>
 
- </div>
- </div>
- );
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            {[
+              { id: 'small', name: 'Small', ratio: '0.88x (14px)', desc: 'Ultra Compact' },
+              { id: 'normal', name: 'Normal', ratio: '1.0x (16px)', desc: 'Standard POS' },
+              { id: 'large', name: 'Large', ratio: '1.125x (18px)', desc: 'Enlarged' },
+              { id: 'xlarge', name: 'X-Large', ratio: '1.25x (20px)', desc: 'Max Readability' },
+            ].map((sz) => (
+              <button
+                key={sz.id}
+                type="button"
+                onClick={() => updateSetting('tilepoint-text-size', sz.id)}
+                className={`p-3 rounded-xl border flex flex-col justify-center items-center gap-1 transition-all cursor-pointer text-center ${
+                  textSize === sz.id
+                    ? 'bg-primary/10 border-primary text-primary shadow-2xs'
+                    : 'bg-content2/50 border-divider/20 hover:bg-content2 text-default-600'
+                }`}
+              >
+                <Type className="h-4 w-4" />
+                <span className="text-xs font-black font-sans">{sz.name}</span>
+                <span className="text-[9.5px] font-bold text-primary/80">{sz.ratio}</span>
+                <span className="text-[9px] text-default-400">{sz.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* COLOR CONTRAST SELECTION */}
+        <div className="p-4 border border-divider/20 rounded-2xl space-y-3 bg-content1 shadow-2xs">
+          <label className="text-[10px] font-black uppercase tracking-wider text-default-500 block">
+            System Color Contrast
+          </label>
+          <div className="grid grid-cols-3 gap-2 p-1.5 rounded-xl bg-content2">
+            {(['small', 'medium', 'high'] as const).map((level) => (
+              <button
+                key={level}
+                type="button"
+                onClick={() => updateSetting('tilepoint-color-contrast', level)}
+                className={`py-2 px-3 rounded-lg text-xs font-bold capitalize transition-all cursor-pointer text-center ${
+                  colorContrast === level || (level === 'small' && colorContrast === 'small')
+                    ? 'bg-primary text-primary-foreground shadow-2xs'
+                    : 'text-default-500 hover:text-foreground'
+                }`}
+              >
+                {level === 'small' ? 'Standard' : level === 'medium' ? 'Enhanced' : 'High Contrast'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ACCESSIBILITY TOGGLES */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <SettingToggleCard
+            icon={CaseSensitive}
+            title="Dyslexic Font"
+            subtitle="Enhanced letter shape distinction"
+            active={dyslexicFont}
+            onClick={() => updateSetting('tilepoint-dyslexic-font', !dyslexicFont)}
+          />
+
+          <SettingToggleCard
+            icon={Layers}
+            title="Maximum Contrast"
+            subtitle="Extreme text contrast levels"
+            active={maximizeTextContrast}
+            onClick={() => updateSetting('tilepoint-maximize-text-contrast', !maximizeTextContrast)}
+          />
+
+          <SettingToggleCard
+            icon={Keyboard}
+            title="Focus Outlines"
+            subtitle="High-visibility keyboard focus rings"
+            active={enhancedOutlines}
+            onClick={() => updateSetting('tilepoint-enhanced-outlines', !enhancedOutlines)}
+          />
+        </div>
+      </div>
+
+      {/* SECTION 3: ENTERPRISE BUSINESS RULES (ADMIN ONLY) */}
+      {currentUser?.role === UserRole.ADMIN && (
+        <>
+          <div className="h-px bg-divider/20" />
+
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h4 className="text-xs font-black uppercase text-primary tracking-wider">
+                  Enterprise Profile &amp; Business Rules
+                </h4>
+                <p className="text-[11px] text-default-500">
+                  Company branding, tax rate, currency, and terminal receipt parameters
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSaveEnterpriseSettings}
+                className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl shadow-2xs hover:opacity-90 active:scale-95 transition-all cursor-pointer self-start sm:self-auto"
+              >
+                <Save className="h-3.5 w-3.5" />
+                <span>Save Changes</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {/* Enterprise Name */}
+              <div className="flex flex-col gap-1.5 border border-divider/20 bg-content1 p-4 rounded-2xl">
+                <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
+                  Enterprise Name
+                </label>
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  className="bg-content2 border border-divider/40 rounded-xl text-xs font-bold p-2.5 w-full text-foreground outline-none focus:border-primary font-sans"
+                  placeholder="e.g. TilePoint Enterprise"
+                />
+              </div>
+
+              {/* Tax Rate */}
+              <div className="flex flex-col gap-1.5 border border-divider/20 bg-content1 p-4 rounded-2xl">
+                <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
+                  Standard VAT Tax Rate (%)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={taxRate}
+                  onChange={(e) => setTaxRate(Math.max(0, Number(e.target.value)))}
+                  className="bg-content2 border border-divider/40 rounded-xl text-xs font-bold p-2.5 w-full text-foreground outline-none focus:border-primary font-sans"
+                />
+              </div>
+
+              {/* Currency Symbol */}
+              <div className="flex flex-col gap-1.5 border border-divider/20 bg-content1 p-4 rounded-2xl">
+                <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
+                  Base Currency
+                </label>
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="bg-content2 border border-divider/40 rounded-xl text-xs font-bold p-2.5 w-full text-foreground outline-none focus:border-primary font-sans"
+                >
+                  <option value="₱">₱ Philippine Peso (PHP)</option>
+                  <option value="$">$ US Dollar (USD)</option>
+                  <option value="€">€ Euro (EUR)</option>
+                  <option value="¥">¥ Japanese Yen (JPY)</option>
+                  <option value="£">£ British Pound (GBP)</option>
+                </select>
+              </div>
+
+              {/* Manager Safety PIN */}
+              <div className="flex flex-col gap-1.5 border border-divider/20 bg-content1 p-4 rounded-2xl">
+                <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
+                  Manager Safety PIN (4-Digits)
+                </label>
+                <input
+                  type="password"
+                  maxLength={4}
+                  value={managerPin}
+                  onChange={(e) => setManagerPin(e.target.value.replace(/\D/g, ''))}
+                  placeholder="••••"
+                  className="bg-content2 border border-divider/40 rounded-xl text-xs font-bold p-2.5 w-full text-center tracking-widest text-foreground outline-none focus:border-primary"
+                />
+              </div>
+
+              {/* Receipt Logo Height */}
+              <div className="flex flex-col gap-1.5 border border-divider/20 bg-content1 p-4 rounded-2xl sm:col-span-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
+                    Receipt Print Logo Height
+                  </label>
+                  <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md">
+                    {logoSize}px
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 mt-2">
+                  <span className="text-[10px] text-default-400 font-bold">20px</span>
+                  <input
+                    type="range"
+                    min="20"
+                    max="120"
+                    value={logoSize}
+                    onChange={(e) => setLogoSize(Number(e.target.value))}
+                    className="flex-1 accent-primary h-1.5 bg-content2 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <span className="text-[10px] text-default-400 font-bold">120px</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      <div className="h-px bg-divider/20" />
+
+      {/* SECTION 4: ABOUT & SYSTEM INFORMATION */}
+      <div className="space-y-4 text-left">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-xs font-black uppercase text-primary tracking-wider flex items-center gap-2">
+              <Info className="h-4 w-4" /> System &amp; Engine Health
+            </h4>
+            <p className="text-[11px] text-default-500">
+              Release specifications and active database cache status
+            </p>
+          </div>
+          <span className="text-[9.5px] font-black uppercase px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
+            v2.4.0-PROD
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Build Info */}
+          <div className="p-4 rounded-2xl border border-divider/20 bg-content1 space-y-1">
+            <div className="flex items-center gap-2 text-default-500">
+              <Cpu className="h-4 w-4 text-primary" />
+              <span className="text-[10px] font-black uppercase tracking-wider">Application Build</span>
+            </div>
+            <div className="text-xs font-bold text-foreground">TilePoint ERP v2.4.0</div>
+            <div className="text-[10px] text-default-400">High-Density Enterprise POS &amp; Inventory</div>
+          </div>
+
+          {/* Branch & Company */}
+          <div className="p-4 rounded-2xl border border-divider/20 bg-content1 space-y-1">
+            <div className="flex items-center gap-2 text-default-500">
+              <Building2 className="h-4 w-4 text-emerald-500" />
+              <span className="text-[10px] font-black uppercase tracking-wider">Current Enterprise</span>
+            </div>
+            <div className="text-xs font-bold text-foreground">{companyName || 'Main Enterprise'}</div>
+            <div className="text-[10px] text-default-400">
+              Active Node: {branches.find((b) => b.id === currentUser?.branchAssignmentId)?.name || branches[0]?.name || 'Central'}
+            </div>
+          </div>
+
+          {/* Database Engine */}
+          <div className="p-4 rounded-2xl border border-divider/20 bg-content1 space-y-1">
+            <div className="flex items-center gap-2 text-default-500">
+              <Database className="h-4 w-4 text-amber-500" />
+              <span className="text-[10px] font-black uppercase tracking-wider">Database Storage</span>
+            </div>
+            <div className="text-xs font-bold text-foreground flex items-center gap-1.5">
+              <span>MySQL Relational Engine</span>
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            </div>
+            <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">● Indexed &amp; Synchronized</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="h-px bg-divider/20" />
+
+      {/* SECTION 5: DATABASE ENGINE & BACKUP MANAGEMENT */}
+      <div className="space-y-4 text-left">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-xs font-black uppercase text-primary tracking-wider flex items-center gap-2">
+              <HardDrive className="h-4 w-4 text-primary" /> Database &amp; Backups Engine
+            </h4>
+            <p className="text-[11px] text-default-500">
+              Create instant recovery snapshots, schedule auto-backups, and access database archives
+            </p>
+          </div>
+          <span className="text-[9.5px] font-black uppercase px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+            Active Backups ({dbSnapshots?.length || 0})
+          </span>
+        </div>
+
+        {snapshotSuccessToast && (
+          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-2 animate-fade-in">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            <span>{snapshotSuccessToast}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Quick Actions Card */}
+          <div className="p-4 rounded-2xl border border-divider/20 bg-content1 space-y-3 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-default-500">
+                Snapshot &amp; Export Tools
+              </span>
+              <span className="text-[9px] text-default-400 font-medium">JSON Format</span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                type="button"
+                disabled={isCreatingSnapshot}
+                onClick={async () => {
+                  setIsCreatingSnapshot(true);
+                  try {
+                    await createDbSnapshot(
+                      `Manual Settings Snapshot - ${new Date().toLocaleTimeString()}`
+                    );
+                    handleExportDatabaseJson();
+                    setSnapshotSuccessToast('Snapshot created and database backup downloaded successfully.');
+                    setTimeout(() => setSnapshotSuccessToast(null), 4500);
+                  } catch (e: any) {
+                    alert('Failed to generate snapshot: ' + (e?.message || 'Unknown error'));
+                  } finally {
+                    setIsCreatingSnapshot(false);
+                  }
+                }}
+                className="flex-1 px-3.5 py-2.5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl shadow-2xs hover:opacity-90 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isCreatingSnapshot ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                <span>{isCreatingSnapshot ? 'Creating...' : 'Instant Snapshot'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  handleExportDatabaseJson();
+                  setSnapshotSuccessToast('Full database JSON exported.');
+                  setTimeout(() => setSnapshotSuccessToast(null), 3000);
+                }}
+                className="px-3.5 py-2.5 bg-content2 hover:bg-content3 text-foreground font-black text-xs uppercase tracking-wider rounded-xl border border-divider/30 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <FolderArchive className="h-4 w-4" />
+                <span>Export JSON</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Auto Backup Config Card */}
+          <div className="p-4 rounded-2xl border border-divider/20 bg-content1 space-y-3 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-default-500">
+                Automated Background Backup
+              </span>
+              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${autoBackupEnabled ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-default-100 text-default-500'}`}>
+                {autoBackupEnabled ? 'Enabled' : 'Disabled'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-default-600 font-medium whitespace-nowrap">
+                Interval:
+              </label>
+              <select
+                value={autoBackupEnabled ? backupIntervalHours : '0'}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  if (val === 0) {
+                    setAutoBackupEnabled(false);
+                  } else {
+                    setAutoBackupEnabled(true);
+                    setBackupIntervalHours(val);
+                  }
+                }}
+                className="flex-1 bg-content2 border border-divider/40 rounded-xl text-xs font-bold p-2 text-foreground outline-none focus:border-primary cursor-pointer"
+              >
+                <option value="0">Disabled (Manual Only)</option>
+                <option value="1">Every 1 Hour</option>
+                <option value="6">Every 6 Hours</option>
+                <option value="12">Every 12 Hours</option>
+                <option value="24">Every 24 Hours (Daily)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Direct Link / Navigation to Database & Backups Hub */}
+        <div className="p-4 rounded-2xl border border-primary/20 bg-primary/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
+              <Database className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-xs font-black uppercase tracking-wider text-foreground">
+                Database &amp; Backups Center
+              </div>
+              <p className="text-[11px] text-default-500 font-medium">
+                View detailed snapshot history, restore previous checkpoints, or inspect table records.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (onClose) onClose();
+              window.location.hash = '/archives';
+              window.dispatchEvent(new HashChangeEvent('hashchange'));
+            }}
+            className="px-4 py-2 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl shadow-2xs hover:opacity-90 active:scale-95 transition-all cursor-pointer shrink-0 flex items-center gap-1.5"
+          >
+            <span>Open Database Hub</span>
+            <ExternalLink className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* SECTION 5: FACTORY OPERATIONS & DATA RESET (ADMIN ONLY) */}
+      {currentUser?.role === UserRole.ADMIN && (
+        <>
+          <div className="h-px bg-divider/20" />
+
+          <div className="space-y-4">
+            <div>
+              <h4 className="text-xs font-black uppercase text-rose-500 tracking-wider flex items-center gap-2">
+                <ShieldAlert className="h-4 w-4" /> Data Purge &amp; Factory Reset
+              </h4>
+              <p className="text-[11px] text-default-500 mt-0.5">
+                Reset inventory counts, purge transactions, or perform factory initialization.
+              </p>
+            </div>
+
+            {/* Retention Notice */}
+            <div className="p-3.5 rounded-2xl border border-amber-500/20 bg-amber-500/5 text-xs text-default-600 flex items-start gap-2.5">
+              <Shield className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-amber-500 uppercase tracking-wider block text-[10px]">
+                  Audit &amp; Retention Safeguard
+                </strong>
+                <p className="text-[11px] mt-0.5">
+                  Ensure all daily shift reports and financial logs are exported in the Database &amp; Backups panel before initiating database truncations.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-rose-500/5 border border-rose-500/20 p-5 rounded-2xl space-y-4">
+              {isRowClearingBlocked() && !forceUnlockReset ? (
+                <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl text-left space-y-2">
+                  <span className="text-[10px] font-black uppercase text-amber-500 tracking-wider block">
+                    Clearing Guard Active
+                  </span>
+                  <p className="text-xs text-foreground font-medium">
+                    Reset operations are currently locked because: <strong className="text-amber-500">{getRowClearingBlockedReason()}</strong>.
+                  </p>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {getRowClearingBlockedReason().includes('unexported shift payload') && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          forceCloseAllShifts();
+                          alert('All unclosed shifts have been closed.');
+                        }}
+                        className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-500 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors border border-amber-500/30 cursor-pointer"
+                      >
+                        Force-Close Shifts
+                      </button>
+                    )}
+                    {getRowClearingBlockedReason().includes('open checkout list') && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          localStorage.removeItem('tp_active_cart');
+                          window.location.reload();
+                        }}
+                        className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-500 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors border border-amber-500/30 cursor-pointer"
+                      >
+                        Clear Cart
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setForceUnlockReset(true)}
+                      className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-500 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors border border-rose-500/30 cursor-pointer"
+                    >
+                      Bypass Safety Guard
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-wider text-rose-500">
+                      Authorization Key {forceUnlockReset && <span className="text-amber-500">(Bypassed)</span>}
+                    </label>
+                    <p className="text-xs text-default-500 mt-0.5">
+                      Type <span className="font-black text-rose-500 select-all">RESET</span> to authorize action buttons:
+                    </p>
+                  </div>
+                  <input
+                    type="text"
+                    value={resetConfirmation}
+                    onChange={(e) => setResetConfirmation(e.target.value.toUpperCase())}
+                    placeholder="Type RESET"
+                    className="bg-content1 border border-rose-500/40 rounded-xl text-xs font-bold p-2.5 w-full sm:w-48 text-rose-500 outline-none focus:border-rose-500 text-center tracking-widest uppercase"
+                  />
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t border-rose-500/10">
+                {/* Reset Stocks */}
+                <div className="border border-divider/20 bg-content1 p-4 rounded-2xl flex flex-col justify-between space-y-3">
+                  <div>
+                    <span className="text-[10px] font-black text-amber-500 uppercase block">Level 1</span>
+                    <h5 className="font-bold text-xs text-foreground mt-0.5">Reset Stock Quantities</h5>
+                    <p className="text-[10px] text-default-400 mt-1">Clears transactions &amp; sets inventory counts to 0</p>
+                  </div>
+                  <HoldToConfirmButton
+                    disabled={resetConfirmation !== 'RESET' || (isRowClearingBlocked() && !forceUnlockReset)}
+                    onConfirm={() => {
+                      truncateDatabase('transactions');
+                      setResetConfirmation('');
+                      alert('Inventory levels reset to 0.');
+                    }}
+                    variant="amber"
+                  >
+                    Hold to Reset Stocks
+                  </HoldToConfirmButton>
+                </div>
+
+                {/* Full DB Wipe */}
+                <div className="border border-divider/20 bg-content1 p-4 rounded-2xl flex flex-col justify-between space-y-3">
+                  <div>
+                    <span className="text-[10px] font-black text-rose-500 uppercase block">Level 2</span>
+                    <h5 className="font-bold text-xs text-foreground mt-0.5">Full Database Purge</h5>
+                    <p className="text-[10px] text-default-400 mt-1">Purges all catalog products and records</p>
+                  </div>
+                  <HoldToConfirmButton
+                    disabled={resetConfirmation !== 'RESET' || (isRowClearingBlocked() && !forceUnlockReset)}
+                    onConfirm={async () => {
+                      try {
+                        await truncateDatabase('all');
+                      } catch (err) {
+                        console.warn('[Full Wipe] Truncate error:', err);
+                      }
+                      setResetConfirmation('');
+                      alert('Full database purge completed.');
+                    }}
+                    variant="rose"
+                  >
+                    Hold to Truncate
+                  </HoldToConfirmButton>
+                </div>
+
+                {/* Factory Reset */}
+                <div className="border border-divider/20 bg-content1 p-4 rounded-2xl flex flex-col justify-between space-y-3">
+                  <div>
+                    <span className="text-[10px] font-black text-purple-500 uppercase block">Level 3</span>
+                    <h5 className="font-bold text-xs text-foreground mt-0.5">Factory Initialization</h5>
+                    <p className="text-[10px] text-default-400 mt-1">Wipes all data &amp; restarts setup wizard from 0</p>
+                  </div>
+                  <HoldToConfirmButton
+                    disabled={resetConfirmation !== 'RESET'}
+                    onConfirm={async () => {
+                      try {
+                        await truncateDatabase('all');
+                      } catch (err) {
+                        console.warn('[Factory Reset] Truncate error:', err);
+                      }
+                      localStorage.clear();
+                      sessionStorage.clear();
+                      localStorage.setItem('tp_is_configured', 'false');
+                      localStorage.setItem('tilepoint_onboarded_setup', 'false');
+                      setResetConfirmation('');
+                      alert('System data reset completely. Rebooting to setup wizard...');
+                      window.location.href = '/';
+                    }}
+                    variant="rose"
+                  >
+                    Hold to Factory Reset
+                  </HoldToConfirmButton>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
 };

@@ -1,5 +1,8 @@
 import React from 'react';
 import { Search, X, Filter } from 'lucide-react';
+import { sanitizeSearch } from '../../utils/sanitizers';
+import { HeroChip } from './ui/HeroChip';
+import { HeroTooltip } from './ui/HeroTooltip';
 
 export interface SearchFilterBarProps {
   id?: string;
@@ -27,53 +30,50 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
   return (
     <div
       id={id}
-      className={`flex flex-col gap-3 rounded-xl border border-m3-outline/20 bg-m3-surface-container-high p-3 sm:flex-row sm:items-center ${className}`}
+      className={`flex flex-col gap-3 rounded-xl border border-default-200/20 bg-content3 p-3 sm:flex-row sm:items-center ${className}`}
     >
       <div className="relative flex-1">
-        <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-m3-on-surface-variant/60" />
+        <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-default-500/60" />
         <input
           type="text"
           value={searchValue}
-          onChange={(e) => onSearchChange(e.target.value)}
+          onChange={(e) => onSearchChange(sanitizeSearch(e.target.value))}
           placeholder={placeholder}
-          className="w-full rounded-lg border border-m3-outline/30 bg-m3-surface p-2.5 pl-10 pr-9 text-xs font-medium text-m3-on-surface placeholder:text-m3-on-surface-variant/50 focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary"
+          className="w-full rounded-lg border border-default-200/30 bg-background p-2.5 pl-10 pr-9 text-xs font-medium text-foreground placeholder:text-default-500/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         />
         {searchValue && (
-          <button
-            onClick={() => onSearchChange('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-m3-on-surface-variant hover:text-m3-on-surface"
-            title="Clear search"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
+          <HeroTooltip content="Clear search" placement="left">
+            <button
+              type="button"
+              onClick={() => onSearchChange('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-default-400 hover:text-foreground cursor-pointer"
+              aria-label="Clear search"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </HeroTooltip>
         )}
       </div>
 
       {categories.length > 0 && onCategoryChange && (
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-          <Filter className="h-3.5 w-3.5 shrink-0 text-m3-on-surface-variant/60" />
-          <button
+          <Filter className="h-3.5 w-3.5 shrink-0 text-default-500/60" />
+          <HeroChip
+            variant={!selectedCategory || selectedCategory === 'All' ? 'primary' : 'neutral'}
+            size="sm"
             onClick={() => onCategoryChange('All')}
-            className={`shrink-0 rounded-lg border px-3 py-1.5 text-[11px] font-bold transition-all ${
-              !selectedCategory || selectedCategory === 'All'
-                ? 'border-m3-primary bg-m3-primary/15 text-m3-primary'
-                : 'border-m3-outline/30 bg-m3-surface text-m3-on-surface-variant hover:bg-m3-surface-container-highest'
-            }`}
           >
             All Categories
-          </button>
+          </HeroChip>
           {categories.map((cat) => (
-            <button
+            <HeroChip
               key={cat}
+              variant={selectedCategory === cat ? 'primary' : 'neutral'}
+              size="sm"
               onClick={() => onCategoryChange(cat)}
-              className={`shrink-0 rounded-lg border px-3 py-1.5 text-[11px] font-bold transition-all ${
-                selectedCategory === cat
-                  ? 'border-m3-primary bg-m3-primary/15 text-m3-primary'
-                  : 'border-m3-outline/30 bg-m3-surface text-m3-on-surface-variant hover:bg-m3-surface-container-highest'
-              }`}
             >
               {cat}
-            </button>
+            </HeroChip>
           ))}
         </div>
       )}
@@ -82,3 +82,5 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
     </div>
   );
 };
+
+export default SearchFilterBar;

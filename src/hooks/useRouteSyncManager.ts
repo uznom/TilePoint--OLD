@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { trackModuleVisit, prefetchModule, normalizeModuleKey } from '../components/LazyModules';
+import { useCallback,useEffect,useState } from 'react';
+import { useLocation,useNavigate } from 'react-router-dom';
+import { normalizeModuleKey,prefetchModule,trackModuleVisit } from '../components/LazyModules';
 import { UserRole } from '../types/db';
 
 export const TAB_TO_PATH: Record<string, string> = {
@@ -15,6 +15,9 @@ export const TAB_TO_PATH: Record<string, string> = {
   shift: '/shifts',
   calculator: '/calculator',
   branches: '/branches',
+  archives: '/archives',
+  'database-backups': '/archives',
+  backups: '/archives',
   'system-settings': '/settings',
   users: '/users',
   'reconciliation-transmission': '/reconciliation-transmission',
@@ -70,6 +73,10 @@ export const PATH_TO_TAB: Record<string, string> = {
   '/shifts': 'shift',
   '/calculator': 'calculator',
   '/branches': 'branches',
+  '/archives': 'archives',
+  '/backups': 'archives',
+  '/database-backups': 'archives',
+  '/database': 'archives',
   '/settings': 'system-settings',
   '/users': 'users',
   '/reconciliation-transmission': 'reconciliation-transmission',
@@ -124,6 +131,78 @@ export interface RouteValidationResult {
   path: string;
 }
 
+const CANONICAL_TAB_MAP: Record<string, string> = {
+  inventory: 'inventory-stocks',
+  'inventory-stocks': 'inventory-stocks',
+  'inventory-adjustments': 'inventory-adjustments',
+  'inventory-transfer': 'inventory-transfer',
+  'inventory-logistics': 'inventory-logistics',
+  'inventory-import': 'inventory-import',
+  'inventory-branch-prices': 'inventory-branch-prices',
+  'inventory-expiry': 'inventory-expiry',
+  'inventory-damage': 'inventory-damage',
+  'damage-register': 'inventory-damage',
+  supplier: 'suppliers-manage',
+  'suppliers-manage': 'suppliers-manage',
+  'suppliers-credits': 'suppliers-credits',
+  'suppliers-calendar': 'suppliers-calendar',
+  expenses: 'expenses-add',
+  'expenses-add': 'expenses-add',
+  'expenses-search': 'expenses-search',
+  bir: 'bir-xz',
+  'bir-xz': 'bir-xz',
+  'bir-summary': 'bir-summary',
+  'bir-pwd': 'bir-pwd',
+  'bir-athletes': 'bir-athletes',
+  'bir-solo': 'bir-solo',
+  'bir-senior20': 'bir-senior20',
+  'bir-senior5': 'bir-senior5',
+  'bir-regular': 'bir-regular',
+  adjustments: 'adjustments-return',
+  'adjustments-return': 'adjustments-return',
+  'adjustments-void': 'adjustments-void',
+  members: 'members-manage',
+  'members-manage': 'members-manage',
+  'members-receivables': 'members-receivables',
+  'members-loyalty': 'members-loyalty',
+  'members-search-sales': 'members-search-sales',
+  deliveries: 'deliveries-panel',
+  'deliveries-panel': 'deliveries-panel',
+  analytics: 'profit-analytics',
+  'profit-analytics': 'profit-analytics',
+  shifts: 'shift',
+  shift: 'shift',
+  portal: 'staff-portal',
+  'staff-portal': 'staff-portal',
+  settings: 'system-settings',
+  'system-settings': 'system-settings',
+  archives: 'archives',
+  backups: 'archives',
+  'database-backups': 'archives',
+  database: 'archives',
+  procurement: 'procurement',
+  'procurement-po': 'procurement-po',
+  dashboard: 'dashboard',
+  pos: 'pos',
+  ledger: 'ledger',
+  transmittal: 'transmittal',
+  calculator: 'calculator',
+  branches: 'branches',
+  users: 'users',
+  'reconciliation-transmission': 'reconciliation-transmission',
+  'sales-transmission': 'sales-transmission',
+  'daily-reconciliation': 'daily-reconciliation',
+  tutorials: 'tutorials',
+};
+
+export function canonicalizeTab(rawTab: string): string {
+  if (!rawTab) return 'dashboard';
+  const clean = rawTab.startsWith('/') ? rawTab.substring(1) : rawTab;
+  if (CANONICAL_TAB_MAP[clean]) return CANONICAL_TAB_MAP[clean];
+  const normalized = normalizeModuleKey(clean) || clean;
+  return CANONICAL_TAB_MAP[normalized] || normalized;
+}
+
 /**
  * Validates and normalizes any path or tab identifier into canonical route info
  */
@@ -134,18 +213,18 @@ export function validateAndNormalizeRoute(tabOrPath: string): RouteValidationRes
 
   // Check if it's a path
   if (tabOrPath.startsWith('/')) {
-    const tab = PATH_TO_TAB[tabOrPath] || tabOrPath.substring(1);
-    const normalizedTab = normalizeModuleKey(tab) || tab;
-    const path = TAB_TO_PATH[normalizedTab] || tabOrPath;
-    const isValid = Boolean(PATH_TO_TAB[tabOrPath] || TAB_TO_PATH[normalizedTab]);
-    return { isValid, tab: normalizedTab, path };
+    const rawTab = PATH_TO_TAB[tabOrPath] || tabOrPath.substring(1);
+    const canonicalTab = canonicalizeTab(rawTab);
+    const path = TAB_TO_PATH[canonicalTab] || tabOrPath;
+    const isValid = Boolean(PATH_TO_TAB[tabOrPath] || TAB_TO_PATH[canonicalTab]);
+    return { isValid, tab: canonicalTab, path };
   }
 
   // It's a tab key
-  const normalizedTab = normalizeModuleKey(tabOrPath) || tabOrPath;
-  const path = TAB_TO_PATH[normalizedTab] || `/${normalizedTab}`;
-  const isValid = Boolean(TAB_TO_PATH[normalizedTab] || PATH_TO_TAB[path]);
-  return { isValid, tab: normalizedTab, path };
+  const canonicalTab = canonicalizeTab(tabOrPath);
+  const path = TAB_TO_PATH[canonicalTab] || `/${canonicalTab}`;
+  const isValid = Boolean(TAB_TO_PATH[canonicalTab] || PATH_TO_TAB[path]);
+  return { isValid, tab: canonicalTab, path };
 }
 
 /**
@@ -178,76 +257,82 @@ export function useRouteSyncManager(options: UseRouteSyncOptions = {}) {
       typeof window !== 'undefined' &&
       localStorage.getItem('tp_first_login_done') !== 'true';
 
-    if (isFirstTime) return 'tutorials';
+    const isAdminOrManager =
+      currentUser?.role === UserRole.ADMIN ||
+      currentUser?.role === UserRole.MANAGER;
+
     if (currentUser?.role === UserRole.CASHIER) return 'pos';
+    if (currentUser?.role === UserRole.STAFF) return 'inventory-stocks';
+
+    if (isFirstTime && isAdminOrManager) return 'tutorials';
 
     return defaultTab;
   }, [currentUser, defaultTab]);
 
   const [activeTab, setActiveTabState] = useState<string>(resolveInitialTab);
 
-  // Track the expected target path corresponding to activeTab state
-  const initialRoute = validateAndNormalizeRoute(activeTab);
-  const targetPathRef = useRef<string>(initialRoute.path);
-
   // Pre-emptive route validation helper
   const isRouteValid = useCallback((tabOrPath: string): boolean => {
     return validateAndNormalizeRoute(tabOrPath).isValid;
   }, []);
 
-  // Set active tab with storage persist and prefetch trigger
+  // Set active tab with URL navigation, storage persist and prefetch trigger
   const setActiveTab = useCallback((nextTab: string | ((prev: string) => string)) => {
     setActiveTabState((prev) => {
       const target = typeof nextTab === 'function' ? nextTab(prev) : nextTab;
-      const normalized = normalizeModuleKey(target) || target;
+      const canonical = canonicalizeTab(target);
+      const targetPath = TAB_TO_PATH[canonical] || `/${canonical}`;
 
       if (typeof window !== 'undefined') {
-        localStorage.setItem('tilepoint_active_tab', normalized);
+        localStorage.setItem('tilepoint_active_tab', canonical);
       }
 
       // Pre-emptive route prefetch and visit tracking
-      trackModuleVisit(normalized);
-      prefetchModule(normalized);
+      trackModuleVisit(canonical);
+      prefetchModule(canonical);
 
-      return normalized;
+      // Navigate URL immediately if it differs from current pathname
+      if (window.location.pathname !== targetPath) {
+        navigate(targetPath);
+      }
+
+      return canonical;
     });
-  }, []);
+  }, [navigate]);
 
-  // Single unified Effect for bidirectional Route <-> Tab Syncing without race conditions or bouncing
+  // Unified Effect for URL -> Tab Syncing (handles Browser Back / Forward / Popstate / initial load)
   useEffect(() => {
     const currentPath = location.pathname;
-    const activeRouteInfo = validateAndNormalizeRoute(activeTab);
-    const expectedPath = activeRouteInfo.path;
+    const urlRouteInfo = validateAndNormalizeRoute(currentPath);
 
-    // Case 1: activeTab changed internally (via setActiveTab / changeTab)
-    // We need to update the browser URL to match activeTab.
-    if (currentPath !== expectedPath && targetPathRef.current !== expectedPath) {
-      targetPathRef.current = expectedPath;
-      navigate(expectedPath, { replace: true });
+    // Initial root redirect: if at root '/', replace with default active tab path
+    if (currentPath === '/') {
+      const activeRouteInfo = validateAndNormalizeRoute(activeTab);
+      const rootTargetPath = activeRouteInfo.path || '/dashboard';
+      navigate(rootTargetPath, { replace: true });
       return;
     }
 
-    // Case 2: Browser URL changed externally (via browser Back/Forward or direct navigation)
-    // We need to update activeTab to match the browser URL.
-    if (currentPath !== expectedPath && currentPath !== targetPathRef.current) {
-      const urlRouteInfo = validateAndNormalizeRoute(currentPath);
-      if (urlRouteInfo.isValid) {
-        targetPathRef.current = urlRouteInfo.path;
-        setActiveTabState(urlRouteInfo.tab);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('tilepoint_active_tab', urlRouteInfo.tab);
-        }
-        trackModuleVisit(urlRouteInfo.tab);
-        prefetchModule(urlRouteInfo.tab);
-      } else if (currentPath !== '/' && currentPath !== '/dashboard') {
-        const fallbackTab = currentUser?.role === UserRole.CASHIER ? 'pos' : defaultTab;
-        const fallbackPath = TAB_TO_PATH[fallbackTab] || '/dashboard';
-        targetPathRef.current = fallbackPath;
-        setActiveTabState(fallbackTab);
-        navigate(fallbackPath, { replace: true });
+    // When the browser URL matches a valid route and differs from activeTab state
+    // (e.g. Browser Back/Forward button clicked or user entered URL directly)
+    if (urlRouteInfo.isValid && urlRouteInfo.tab !== activeTab) {
+      setActiveTabState(urlRouteInfo.tab);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('tilepoint_active_tab', urlRouteInfo.tab);
       }
+      trackModuleVisit(urlRouteInfo.tab);
+      prefetchModule(urlRouteInfo.tab);
+      return;
     }
-  }, [activeTab, location.pathname, currentUser?.role, defaultTab, navigate]);
+
+    // Handle invalid URLs entered manually
+    if (!urlRouteInfo.isValid && currentPath !== '/' && currentPath !== '/dashboard') {
+      const fallbackTab = currentUser?.role === UserRole.CASHIER ? 'pos' : defaultTab;
+      const fallbackPath = TAB_TO_PATH[fallbackTab] || '/dashboard';
+      setActiveTabState(fallbackTab);
+      navigate(fallbackPath, { replace: true });
+    }
+  }, [location.pathname, activeTab, currentUser?.role, defaultTab, navigate]);
 
   return {
     activeTab,

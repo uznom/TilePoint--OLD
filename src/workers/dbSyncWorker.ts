@@ -353,6 +353,9 @@ self.onmessage = (event: MessageEvent<WorkerMessageRequest>) => {
         "atpos_v2_expenses", "atpos_v2_returns"
       ];
 
+      const rawIsConfigured = db["tp_is_configured"];
+      const isUnconfiguredOrReset = rawIsConfigured === false || rawIsConfigured === "false" || rawIsConfigured === 0 || rawIsConfigured === "0";
+
       activeCollectionNames.forEach((key) => {
         if (db[key] !== undefined) {
           const rawServer = typeof db[key] === "string" ? safeParse(db[key], []) : db[key];
@@ -364,13 +367,18 @@ self.onmessage = (event: MessageEvent<WorkerMessageRequest>) => {
             ? currentState
             : (Array.isArray(localStored) ? localStored : []);
 
-          const merged = key === "tp_parked_sales"
-            ? mergeParkedSales(localArr, serverArr, deletedParkedSet)
-            : mergeCollections(localArr, serverArr, optimisticMap);
+          let merged: any[] = [];
+          if (isUnconfiguredOrReset) {
+            merged = serverArr;
+          } else if (key === "tp_parked_sales") {
+            merged = mergeParkedSales(localArr, serverArr, deletedParkedSet);
+          } else {
+            merged = mergeCollections(localArr, serverArr, optimisticMap);
+          }
 
           const mergedStr = JSON.stringify(merged);
           const hasChanged = !areEntitiesEqual(currentState, merged);
-          const serverWasEmpty = merged.length > serverArr.length || (localArr.length > 0 && serverArr.length === 0 && merged.length > 0);
+          const serverWasEmpty = !isUnconfiguredOrReset && (merged.length > serverArr.length || (localArr.length > 0 && serverArr.length === 0 && merged.length > 0));
 
           collections[key] = {
             merged,

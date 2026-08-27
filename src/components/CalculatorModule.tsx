@@ -3,34 +3,30 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { useDb, useDbProducts, useDbBranchStock } from '../context/DbContext';
-import { Product } from '../types/db';
-import { isProductInBranch, getBranchStockQuantity } from '../lib/branchUtils';
-import { isTileProduct } from '../utils/productUtils';
 import {
- Calculator,
- Ruler,
- Boxes,
- Percent,
- Plus,
- Info,
- Sparkles,
- ChevronDown,
- Search,
- Check,
- AlertTriangle,
- Layers,
- ArrowRight
+ArrowRight,
+Boxes,
+Check,
+Info,
+Ruler,
+Search,
+Sparkles
 } from 'lucide-react';
+import React,{ useMemo,useState } from 'react';
+import { useDb,useDbBranchStock,useDbProducts } from '../context/DbContext';
+import { getBranchStockQuantity,isProductInBranch } from '../lib/branchUtils';
+import { Product } from '../types/db';
+import { isTileProduct } from '../utils/productUtils';
+import { HeroButton,HeroSwitch } from './common/ui';
 
 interface CalculatorModuleProps {
- darkMode: boolean;
- onApply?: (product: Product, quantity: number) => void;
+  darkMode?: boolean;
+  _darkMode?: boolean;
+  onApply?: (product: Product, quantity: number) => void;
 }
 
-export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, onApply }) => {
- const products = useDbProducts();
+export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, _darkMode, onApply }) => {
+   const products = useDbProducts();
  const branchStock = useDbBranchStock();
  const { branches, currentUser } = useDb();
 
@@ -196,16 +192,16 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  };
 
  return (
- <div className="space-y-6 text-m3-on-surface" id="tile-coverage-calculator-module">
+ <div className="space-y-6 text-foreground" id="tile-coverage-calculator-module">
  {/* Search Header Selector */}
- <div className="bg-m3-surface-low p-4 rounded-[20px] border border-m3-outline-variant/35 shadow-sm relative z-30">
- <span className="text-[10px] font-black uppercase text-m3-primary tracking-widest block mb-2.5">
+ <div className="bg-content1 p-4 rounded-xl border border-divider/35 shadow-sm relative z-30">
+ <span className="text-[10px] font-black uppercase text-primary tracking-widest block mb-2.5">
  Step 1: Link system product to calculate inventory ratios (Optional)
  </span>
  <div className="relative">
  <div className="flex gap-2.5">
  <div className="relative flex-1">
- <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-m3-on-surface-variant/70" />
+ <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-default-500/70" />
  <input
  type="text"
  placeholder="Search tile inventory by name, code or category..."
@@ -215,7 +211,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  setSearchQuery(e.target.value);
  setShowProductDropdown(true);
  }}
- className="w-full bg-m3-surface dark:bg-m3-surface-low/60 border border-m3-outline-variant/30 rounded-xl pl-9.5 pr-4 py-2.5 text-xs text-m3-on-surface dark:text-m3-on-surface placeholder-m3-on-surface-variant/50 focus:outline-none focus:ring-1 focus:ring-m3-primary font-medium"
+ className="w-full bg-background dark:bg-content1/60 border border-divider/30 rounded-xl pl-9.5 pr-4 py-2.5 text-xs text-foreground dark:text-foreground placeholder:text-default-400/50 focus:outline-none focus:ring-1 focus:ring-primary font-medium"
  />
  </div>
  {selectedProduct && (
@@ -236,32 +232,32 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  className="fixed inset-0 z-40" 
  onClick={() => setShowProductDropdown(false)} 
  />
- <div className="absolute left-0 right-0 mt-1.5 max-h-56 overflow-y-auto bg-m3-surface dark:bg-m3-surface-low border border-m3-outline-variant/30 rounded-xl shadow-2xl z-50 divide-y divide-m3-outline-variant/15">
+ <div className="absolute left-0 right-0 mt-1.5 max-h-56 overflow-y-auto bg-background dark:bg-content1 border border-divider/30 rounded-xl shadow-2xl z-50 divide-y divide-divider/15">
  {tileProducts.length > 0 ? (
  tileProducts.map((p) => (
  <div
  key={p.id}
  onClick={() => handleSelectProduct(p)}
- className="p-3 hover:bg-m3-primary/10 cursor-pointer transition-colors text-left flex items-center justify-between text-xs"
+ className="p-3 hover:bg-primary/10 cursor-pointer transition-colors text-left flex items-center justify-between text-xs"
  >
  <div>
- <p className="font-extrabold text-m3-on-surface dark:text-m3-on-surface">{p.productName}</p>
- <p className="text-[10px] text-m3-on-surface-variant dark:text-m3-on-surface-variant mt-0.5">
- Code: <span className="font-mono">{p.productCode}</span> • Size: <span className="font-bold">{p.size || 'Unspecified'}</span> • Box Qty: <span className="font-bold">{p.boxQuantity || 4} pcs</span>
+ <p className="font-extrabold text-foreground dark:text-foreground">{p.productName}</p>
+ <p className="text-[10px] text-default-500 dark:text-default-500 mt-0.5">
+ Code: <span className="">{p.productCode}</span> • Size: <span className="font-bold">{p.size || 'Unspecified'}</span> • Box Qty: <span className="font-bold">{p.boxQuantity || 4} pcs</span>
  </p>
  </div>
  <div className="text-right shrink-0">
- <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold block">₱{p.sellingPrice?.toLocaleString()} / {p.unit}</span>
+ <span className=" text-primary font-bold block">₱{p.sellingPrice?.toLocaleString()} / {p.unit}</span>
  {p.stockQuantity <= 0 ? (
 	<span className="text-[9px] font-black uppercase text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20 ml-1">NO STOCKS</span>
 ) : (
-	<span className="text-[10px] text-m3-on-surface-variant dark:text-m3-on-surface-variant">Stock: {p.stockQuantity}</span>
+	<span className="text-[10px] text-default-500 dark:text-default-500">Stock: {p.stockQuantity}</span>
 )}
  </div>
  </div>
  ))
  ) : (
- <div className="p-4 text-center text-m3-on-surface-variant dark:text-m3-on-surface-variant text-xs italic">
+ <div className="p-4 text-center text-default-500 dark:text-default-500 text-xs italic">
  No matching tile products found in inventory.
  </div>
  )}
@@ -271,15 +267,15 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  </div>
 
  {selectedProduct && (
- <div className="mt-3 p-3 bg-m3-primary/10 border border-m3-primary/20 rounded-xl flex items-center justify-between animate-fade-in text-xs">
+ <div className="mt-3 p-3 bg-primary/10 border border-primary/20 rounded-xl flex items-center justify-between animate-fade-in text-xs">
  <div>
- <span className="text-[9px] uppercase font-black tracking-widest text-m3-primary block">Linked Product</span>
- <p className="font-black text-m3-on-surface dark:text-m3-on-surface mt-0.5">{selectedProduct.productName}</p>
- <p className="text-[10px] text-m3-on-surface-variant dark:text-m3-on-surface-variant mt-0.5 font-mono">
+ <span className="text-[9px] uppercase font-black tracking-widest text-primary block">Linked Product</span>
+ <p className="font-black text-foreground dark:text-foreground mt-0.5">{selectedProduct.productName}</p>
+ <p className="text-[10px] text-default-500 dark:text-default-500 mt-0.5 ">
  Price: ₱{selectedProduct.sellingPrice} per {selectedProduct.unit} • Size: {selectedProduct.size || 'Auto'} • Pack Qty: {boxQuantity} pcs/box
  </p>
  </div>
- <div className="h-7 w-7 rounded-full bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
+ <div className="h-7 w-7 rounded-full bg-primary/10 text-primary border border-emerald-500/20 flex items-center justify-center">
  <Check className="h-4 w-4" />
  </div>
  </div>
@@ -291,11 +287,11 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  
  {/* Left Column (Dimensional Inputs) - 5 Cols */}
  <div className="lg:col-span-5 space-y-4">
- <div className="bg-m3-surface-low border border-m3-outline-variant/35 rounded-[24px] p-5 shadow-sm text-left">
- <div className="flex items-center gap-2 mb-4 border-b border-m3-outline-variant/15 pb-3">
- <Ruler className="h-5 w-5 text-m3-primary" />
+ <div className="bg-content1 border border-divider/35 rounded-2xl p-5 shadow-sm text-left">
+ <div className="flex items-center gap-2 mb-4 border-b border-divider/15 pb-3">
+ <Ruler className="h-5 w-5 text-primary" />
  <div>
- <h4 className="text-xs font-black uppercase tracking-wider text-m3-on-surface dark:text-m3-on-surface">Dimensional Inputs</h4>
+ <h4 className="text-xs font-black uppercase tracking-wider text-foreground dark:text-foreground">Dimensional Inputs</h4>
  
  </div>
  </div>
@@ -304,26 +300,26 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  {/* Length and Width */}
  <div className="grid grid-cols-2 gap-3">
  <div className="space-y-1">
- <label className="text-[10px] font-black uppercase text-m3-on-surface-variant dark:text-m3-on-surface-variant">Room Length (m)</label>
+ <label className="text-[10px] font-black uppercase text-default-500 dark:text-default-500">Room Length (m)</label>
  <input
  type="number"
  step="0.01"
  min="0"
  value={roomLength ?? ''}
  onChange={(e) => setRoomLength(e.target.value)}
- className="w-full bg-m3-surface dark:bg-m3-surface-low/60 border border-m3-outline-variant/30 text-xs px-3.5 py-2.5 rounded-xl font-mono text-m3-on-surface dark:text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary text-center font-bold"
+ className="w-full bg-background dark:bg-content1/60 border border-divider/30 text-xs px-3.5 py-2.5 rounded-xl text-foreground dark:text-foreground focus:outline-none focus:ring-1 focus:ring-primary text-center font-bold"
  placeholder="4.0"
  />
  </div>
  <div className="space-y-1">
- <label className="text-[10px] font-black uppercase text-m3-on-surface-variant dark:text-m3-on-surface-variant">Room Width (m)</label>
+ <label className="text-[10px] font-black uppercase text-default-500 dark:text-default-500">Room Width (m)</label>
  <input
  type="number"
  step="0.01"
  min="0"
  value={roomWidth ?? ''}
  onChange={(e) => setRoomWidth(e.target.value)}
- className="w-full bg-m3-surface dark:bg-m3-surface-low/60 border border-m3-outline-variant/30 text-xs px-3.5 py-2.5 rounded-xl font-mono text-m3-on-surface dark:text-m3-on-surface focus:outline-none focus:ring-1 focus:ring-m3-primary text-center font-bold"
+ className="w-full bg-background dark:bg-content1/60 border border-divider/30 text-xs px-3.5 py-2.5 rounded-xl text-foreground dark:text-foreground focus:outline-none focus:ring-1 focus:ring-primary text-center font-bold"
  placeholder="3.5"
  />
  </div>
@@ -331,7 +327,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
 
  {/* Tile Size Selector & Shortcuts */}
  <div className="space-y-2 pt-2">
- <span className="text-[10px] font-black uppercase text-m3-on-surface-variant dark:text-m3-on-surface-variant block">Tile Size Selector</span>
+ <span className="text-[10px] font-black uppercase text-default-500 dark:text-default-500 block">Tile Size Selector</span>
  
  {/* Standard shortcuts */}
  <div className="grid grid-cols-3 gap-1.5">
@@ -344,8 +340,8 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  onClick={() => handleApplyShortcut(sc)}
  className={`py-1.5 px-2 rounded-lg border text-[10px] font-bold text-center cursor-pointer transition-all ${
  isActive
- ? 'bg-m3-primary/10 border-m3-primary text-m3-primary font-black shadow-inner'
- : 'bg-m3-surface dark:bg-m3-surface-low/40 border-m3-outline-variant/25 text-m3-on-surface-variant dark:text-m3-on-surface-variant hover:text-m3-on-surface dark:hover:text-zinc-100 hover:border-m3-outline-variant/45'
+ ? 'bg-primary/10 border-primary text-primary font-black shadow-inner'
+ : 'bg-background dark:bg-content1/40 border-divider/25 text-default-500 dark:text-default-500 hover:text-foreground dark:hover:text-zinc-100 hover:border-divider/45'
  }`}
  >
  {sc.label}
@@ -357,74 +353,67 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  {/* Manual Size Entry */}
  <div className="grid grid-cols-3 gap-2.5 pt-1">
  <div className="space-y-1">
- <label className="text-[9px] font-bold text-m3-on-surface-variant dark:text-m3-on-surface-variant uppercase">Length (cm)</label>
+ <label className="text-[9px] font-bold text-default-500 dark:text-default-500 uppercase">Length (cm)</label>
  <input
  type="number"
  min="1"
  value={tileLength ?? ''}
  onChange={(e) => setTileLength(e.target.value)}
- className="w-full bg-m3-surface dark:bg-m3-surface-low/60 border border-m3-outline-variant/30 text-xs p-2 rounded-lg font-mono text-m3-on-surface dark:text-m3-on-surface text-center focus:outline-none focus:ring-1 focus:ring-m3-primary font-bold"
+ className="w-full bg-background dark:bg-content1/60 border border-divider/30 text-xs p-2 rounded-lg text-foreground dark:text-foreground text-center focus:outline-none focus:ring-1 focus:ring-primary font-bold"
  />
  </div>
  <div className="space-y-1">
- <label className="text-[9px] font-bold text-m3-on-surface-variant dark:text-m3-on-surface-variant uppercase">Width (cm)</label>
+ <label className="text-[9px] font-bold text-default-500 dark:text-default-500 uppercase">Width (cm)</label>
  <input
  type="number"
  min="1"
  value={tileWidth ?? ''}
  onChange={(e) => setTileWidth(e.target.value)}
- className="w-full bg-m3-surface dark:bg-m3-surface-low/60 border border-m3-outline-variant/30 text-xs p-2 rounded-lg font-mono text-m3-on-surface dark:text-m3-on-surface text-center focus:outline-none focus:ring-1 focus:ring-m3-primary font-bold"
+ className="w-full bg-background dark:bg-content1/60 border border-divider/30 text-xs p-2 rounded-lg text-foreground dark:text-foreground text-center focus:outline-none focus:ring-1 focus:ring-primary font-bold"
  />
  </div>
  <div className="space-y-1">
- <label className="text-[9px] font-bold text-m3-on-surface-variant dark:text-m3-on-surface-variant uppercase">Pcs / Box</label>
+ <label className="text-[9px] font-bold text-default-500 dark:text-default-500 uppercase">Pcs / Box</label>
  <input
  type="number"
  min="1"
  value={boxQuantity ?? ''}
  onChange={(e) => setBoxQuantity(e.target.value)}
- className="w-full bg-m3-surface dark:bg-m3-surface-low/60 border border-m3-outline-variant/30 text-xs p-2 rounded-lg font-mono text-m3-on-surface dark:text-m3-on-surface text-center focus:outline-none focus:ring-1 focus:ring-m3-primary font-bold"
+ className="w-full bg-background dark:bg-content1/60 border border-divider/30 text-xs p-2 rounded-lg text-foreground dark:text-foreground text-center focus:outline-none focus:ring-1 focus:ring-primary font-bold"
  />
  </div>
  </div>
  </div>
 
  {/* Waste Margin Override Toggle */}
- <div className="pt-3 border-t border-m3-outline-variant/15 flex items-center justify-between">
- <div>
- <span className="text-[10px] font-black uppercase text-m3-on-surface dark:text-zinc-300 block">Waste Margin Override</span>
- <span className="text-[9px] text-m3-on-surface-variant dark:text-m3-on-surface-variant">Append +10% standard reserve for corner trims & shards</span>
- </div>
+          <div className="pt-3 border-t border-divider/15 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-black uppercase text-foreground dark:text-zinc-300 block">Waste Margin Override</span>
+              <span className="text-[9px] text-default-500 dark:text-default-500">Append +10% standard reserve for corner trims & shards</span>
+            </div>
 
- <button
- type="button"
- onClick={() => setIsWasteOverride(!isWasteOverride)}
- className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
- isWasteOverride ? 'bg-m3-primary' : 'bg-m3-surface-container-high dark:bg-zinc-800'
- }`}
- >
- <span
- className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
- isWasteOverride ? 'translate-x-5' : 'translate-x-0'
- }`}
- />
- </button>
- </div>
+            <HeroSwitch
+              size="sm"
+              color="primary"
+              isSelected={isWasteOverride}
+              onValueChange={(val) => setIsWasteOverride(val)}
+            />
+          </div>
 
- </div>
- </div>
- </div>
+        </div>
+      </div>
+    </div>
 
- {/* Right Column (Instant Box Packing) - 7 Cols */}
+    {/* Right Column (Instant Box Packing) - 7 Cols */}
  <div className="lg:col-span-7 space-y-4">
- <div className="bg-m3-surface-low border border-m3-outline-variant/35 rounded-[24px] p-5 shadow-sm text-left h-full flex flex-col justify-between">
+ <div className="bg-content1 border border-divider/35 rounded-2xl p-5 shadow-sm text-left h-full flex flex-col justify-between">
  <div>
- <div className="flex items-center justify-between mb-4.5 border-b border-m3-outline-variant/15 pb-3">
+ <div className="flex items-center justify-between mb-4.5 border-b border-divider/15 pb-3">
  <div className="flex items-center gap-2">
- <Boxes className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
- <h4 className="text-xs font-black uppercase tracking-wider text-m3-on-surface dark:text-m3-on-surface">Instant Packing Output</h4>
+ <Boxes className="h-5 w-5 text-primary" />
+ <h4 className="text-xs font-black uppercase tracking-wider text-foreground dark:text-foreground">Instant Packing Output</h4>
  </div>
- <span className="text-[9.5px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 rounded-full font-bold">
+ <span className="text-[9.5px] bg-primary/10 text-primary px-2.5 py-0.5 rounded-full font-bold">
  LEDGER RATIO OK
  </span>
  </div>
@@ -432,62 +421,62 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  {/* The result card layout */}
  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
  {/* Surface Area */}
- <div className="p-4 rounded-2xl bg-m3-surface dark:bg-m3-surface-low/40 border border-m3-outline-variant/20 text-center">
- <span className="text-[9px] font-extrabold uppercase text-m3-on-surface-variant dark:text-m3-on-surface-variant block tracking-wider">Total Area</span>
- <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 font-mono">
+ <div className="p-4 rounded-2xl bg-background dark:bg-content1/40 border border-divider/20 text-center">
+ <span className="text-[9px] font-extrabold uppercase text-default-500 dark:text-default-500 block tracking-wider">Total Area</span>
+ <div className="text-2xl font-black text-primary mt-1 ">
  {calculations.areaSqm} <span className="text-xs">m²</span>
  </div>
- <span className="text-[9px] text-m3-on-surface-variant/70 dark:text-zinc-500 font-medium block mt-0.5">Floor plane size</span>
+ <span className="text-[9px] text-default-500/70 dark:text-zinc-500 font-medium block mt-0.5">Floor plane size</span>
  </div>
 
  {/* Total Boxes Required */}
- <div className="p-4 rounded-2xl bg-m3-primary/10 dark:bg-m3-primary/20 border border-m3-primary/30 text-center relative overflow-hidden">
- <div className="absolute top-0 right-0 h-8 w-8 bg-m3-primary/20 rounded-bl-2xl flex items-center justify-center text-m3-primary">
+ <div className="p-4 rounded-2xl bg-primary/10 dark:bg-primary/20 border border-primary/30 text-center relative overflow-hidden">
+ <div className="absolute top-0 right-0 h-8 w-8 bg-primary/20 rounded-bl-2xl flex items-center justify-center text-primary">
  <Sparkles className="h-3 w-3 animate-spin" style={{ animationDuration: '6s' }} />
  </div>
- <span className="text-[9px] font-extrabold uppercase text-m3-primary block tracking-wider">Boxes Needed</span>
- <div className="text-2xl font-black text-m3-on-surface dark:text-m3-on-surface mt-1 font-mono">
+ <span className="text-[9px] font-extrabold uppercase text-primary block tracking-wider">Boxes Needed</span>
+ <div className="text-2xl font-black text-foreground dark:text-foreground mt-1 ">
  {calculations.boxesNeeded} <span className="text-xs">Boxes</span>
  </div>
- <span className="text-[9px] text-m3-primary/80 font-bold block mt-0.5">Auto-rounded up</span>
+ <span className="text-[9px] text-primary/80 font-bold block mt-0.5">Auto-rounded up</span>
  </div>
 
  {/* Estimated Loose Breakage Pieces */}
- <div className="p-4 rounded-2xl bg-m3-surface dark:bg-m3-surface-low/40 border border-m3-outline-variant/20 text-center">
- <span className="text-[9px] font-extrabold uppercase text-m3-on-surface-variant dark:text-m3-on-surface-variant block tracking-wider">Est. Breakage</span>
- <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 font-mono">
+ <div className="p-4 rounded-2xl bg-background dark:bg-content1/40 border border-divider/20 text-center">
+ <span className="text-[9px] font-extrabold uppercase text-default-500 dark:text-default-500 block tracking-wider">Est. Breakage</span>
+ <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 ">
  {calculations.looseBreakage} <span className="text-xs">pcs</span>
  </div>
- <span className="text-[9px] text-m3-on-surface-variant/70 dark:text-zinc-500 font-medium block mt-0.5">~3% standard loss</span>
+ <span className="text-[9px] text-default-500/70 dark:text-zinc-500 font-medium block mt-0.5">~3% standard loss</span>
  </div>
  </div>
 
  {/* Tiling detail ledger statistics */}
- <div className="bg-m3-surface-container/60 dark:bg-m3-surface-low/50 rounded-xl p-3 border border-m3-outline-variant/20 space-y-1.5 text-xs">
- <div className="flex justify-between items-center text-[10.5px] text-m3-on-surface-variant dark:text-m3-on-surface-variant">
+ <div className="bg-content2/60 dark:bg-content1/50 rounded-xl p-3 border border-divider/20 space-y-1.5 text-xs">
+ <div className="flex justify-between items-center text-[10.5px] text-default-500 dark:text-default-500">
  <span>Single tile layout surface:</span>
- <span className="font-mono font-bold text-m3-on-surface dark:text-zinc-200">{calculations.tileAreaSqm.toFixed(4)} m² ({tileLength}x{tileWidth} cm)</span>
+ <span className=" font-bold text-foreground dark:text-zinc-200">{calculations.tileAreaSqm.toFixed(4)} m² ({tileLength}x{tileWidth} cm)</span>
  </div>
- <div className="flex justify-between items-center text-[10.5px] text-m3-on-surface-variant dark:text-m3-on-surface-variant">
+ <div className="flex justify-between items-center text-[10.5px] text-default-500 dark:text-default-500">
  <span>Net tile count required (Perfect layout):</span>
- <span className="font-mono font-bold text-m3-on-surface dark:text-zinc-200">{calculations.perfectTilesCount} pcs</span>
+ <span className=" font-bold text-foreground dark:text-zinc-200">{calculations.perfectTilesCount} pcs</span>
  </div>
- <div className="flex justify-between items-center text-[10.5px] text-m3-on-surface-variant dark:text-m3-on-surface-variant">
+ <div className="flex justify-between items-center text-[10.5px] text-default-500 dark:text-default-500">
  <span>Gross tiles required (With {isWasteOverride ? '10%' : '0%'} waste):</span>
- <span className="font-mono font-bold text-m3-on-surface dark:text-zinc-200">{calculations.tilesWithWaste} pcs</span>
+ <span className=" font-bold text-foreground dark:text-zinc-200">{calculations.tilesWithWaste} pcs</span>
  </div>
  {selectedProduct && (
- <div className="pt-2 border-t border-m3-outline-variant/15 flex justify-between items-center text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+ <div className="pt-2 border-t border-divider/15 flex justify-between items-center text-[11px] font-bold text-primary">
  <span>Estimated Retail Price:</span>
- <span className="font-mono text-sm">₱{estimatedCost?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+ <span className=" text-sm">₱{estimatedCost?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
  </div>
  )}
  </div>
  </div>
 
  {/* Layout representation */}
- <div className="mt-4 pt-3.5 border-t border-m3-outline-variant/15 flex items-center gap-2 text-[10px] text-m3-on-surface-variant dark:text-m3-on-surface-variant">
- <Info className="h-4.5 w-4.5 text-m3-primary shrink-0" />
+ <div className="mt-4 pt-3.5 border-t border-divider/15 flex items-center gap-2 text-[10px] text-default-500 dark:text-default-500">
+ <Info className="h-4.5 w-4.5 text-primary shrink-0" />
  <span>Calculated pack logic is optimized for batch shade consistency from wholesale tile crates.</span>
  </div>
  </div>
@@ -496,14 +485,14 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  </div>
 
  {/* Action Footer */}
- <div className="bg-m3-surface-low p-4 rounded-[20px] border border-m3-outline-variant/35 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
+ <div className="bg-content1 p-4 rounded-xl border border-divider/35 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
  <div className="flex items-center gap-2 text-left">
- <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg">
+ <div className="p-2 bg-primary/10 text-primary rounded-lg">
  <Check className="h-4.5 w-4.5" />
  </div>
  <div>
- <h5 className="text-[11px] font-black text-m3-on-surface dark:text-m3-on-surface uppercase tracking-wide">Add To Active Check</h5>
- <p className="text-[10px] text-m3-on-surface-variant dark:text-m3-on-surface-variant">
+ <h5 className="text-[11px] font-black text-foreground dark:text-foreground uppercase tracking-wide">Add To Active Check</h5>
+ <p className="text-[10px] text-default-500 dark:text-default-500">
  {selectedProduct 
  ? `Ready to push ${selectedProduct.unit?.toLowerCase().includes('box') ? calculations.boxesNeeded : calculations.tilesWithWaste} ${selectedProduct.unit} into invoice.`
  : 'Please search and select an inventory product above to commit the quantities.'}
@@ -511,19 +500,17 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, on
  </div>
  </div>
 
- <button
+ <HeroButton
  type="button"
- disabled={!selectedProduct || calculations.boxesNeeded <= 0}
+ disabled={!selectedProduct || calculations.boxesNeeded <= 0 || (selectedProduct.stockQuantity ?? 0) <= 0}
  onClick={handleApplyToInvoice}
- className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 cursor-pointer shadow-md transition-all ${
- selectedProduct && calculations.boxesNeeded > 0
- ? 'bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary hover:scale-[1.02] active:scale-95'
- : 'bg-m3-surface-container-high dark:bg-zinc-800 text-m3-on-surface-variant/50 dark:text-zinc-500 cursor-not-allowed border border-m3-outline-variant/30'
- }`}
+ variant={selectedProduct && calculations.boxesNeeded > 0 && (selectedProduct.stockQuantity ?? 0) > 0 ? "primary" : "flat"}
+ size="md"
+ endIcon={<ArrowRight className="h-4 w-4" />}
+ className="font-black uppercase tracking-wider shadow-md"
  >
- <span>{(selectedProduct && (selectedProduct.stockQuantity ?? 0) <= 0) ? "NO STOCKS AVAILABLE — PURCHASE DISABLED" : "Apply & Add to Active Invoice"}</span>
- <ArrowRight className="h-4 w-4" />
- </button>
+ {(selectedProduct && (selectedProduct.stockQuantity ?? 0) <= 0) ? "NO STOCKS AVAILABLE — PURCHASE DISABLED" : "Apply & Add to Active Invoice"}
+ </HeroButton>
  </div>
  </div>
  );

@@ -116,7 +116,7 @@ MODE CON COLS=80 LINES=28
 cls
 
 echo ====================================================================
-echo          🚀 TILEPOINT POS - AUTOMATED WINDOWS LAUNCHER
+echo          TILEPOINT POS - AUTOMATED WINDOWS LAUNCHER
 echo ====================================================================
 echo.
 echo [1/3] Scanning local network adapters for active IPv4 address...

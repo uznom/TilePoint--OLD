@@ -1,7 +1,7 @@
 {
   "id": "REP-2026-0726-001",
   "branchId": "B1",
-  "branchName": "ETC_DIPOLOG MAIN",
+  "branchName": "TILEPOINT MAIN",
   "reportingDate": "2026-07-26",
   "exportedByRole": "Branch Manager",
   "transmissionId": "TRANS-20260726-001",
@@ -10,7 +10,7 @@
   "totalSalesAmount": 6150.00,
   "totalVatAmount": 658.93,
   "totalDiscountAmount": 100.00,
-  "notes": "Daily sales ledger transmission package for Dipolog Main with branch operational data.",
+  "notes": "Daily sales ledger transmission package for Main Branch with branch operational data.",
   "sales": [
     {
       "id": "S-20260726-001",
@@ -87,7 +87,7 @@
       "fullName": "Erica Manaban",
       "role": "Cashier",
       "branchAssignmentId": "B1",
-      "branchAssignmentName": "ETC_DIPOLOG MAIN",
+      "branchAssignmentName": "TILEPOINT MAIN",
       "isNew": false
     },
     {
@@ -96,7 +96,7 @@
       "fullName": "Mark Santos",
       "role": "Branch Manager",
       "branchAssignmentId": "B1",
-      "branchAssignmentName": "ETC_DIPOLOG MAIN",
+      "branchAssignmentName": "TILEPOINT MAIN",
       "isNew": false
     }
   ],

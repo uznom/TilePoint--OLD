@@ -3,9 +3,9 @@
 :: TILEPOINT POS SYSTEM - AUTOMATED WINDOWS 10/11 INSTALLER & DEPLOYER
 :: =====================================================================
 :: This script automates Node.js dependency installation, 
-:: better-sqlite3 native add-on compilation & verification,
 :: local HTTPS certificate generation using mkcert, Windows Firewall setup, 
-:: environment file configuration, client production build, and background server execution.
+:: environment file configuration, client production build, desktop shortcut creation,
+:: and background server execution under PM2 or standalone Node.js.
 :: =====================================================================
 
 title TilePoint Enterprise POS Server Installer
@@ -20,7 +20,7 @@ echo          TILEPOINT RETAIL SYSTEMS - WINDOWS DEPLOYMENT UTILITY
 echo =====================================================================
 echo.
 echo This utility will configure your Windows machine as a resilient,
-echo offline-capable POS local server for all staff devices.
+echo offline-capable POS local server for all staff devices and cashier terminals.
 echo.
 
 :: Check for Administrator privileges
@@ -108,9 +108,9 @@ echo [OK] Active Node.js runtime:
 node -v
 echo.
 
-:: 1. Install Project Dependencies & Rebuild Native SQLite
+:: 1. Install Project Dependencies
 echo ---------------------------------------------------------------------
-echo STEP 1: Installing dependencies & compiling better-sqlite3...
+echo STEP 1: Installing project dependencies...
 echo ---------------------------------------------------------------------
 call npm install
 if %errorlevel% neq 0 (
@@ -119,17 +119,6 @@ if %errorlevel% neq 0 (
 ) else (
     echo [OK] Dependencies installed successfully!
 )
-
-echo Rebuilding better-sqlite3 C++ native add-on for current Node ABI...
-call npm rebuild better-sqlite3 >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [INFO] Native rebuild skipped or completed with prebuilts.
-) else (
-    echo [OK] better-sqlite3 compiled successfully!
-)
-
-:: Test better-sqlite3 native engine
-node -e "try { const Database = require('better-sqlite3'); const db = new Database(':memory:'); console.log('[OK] better-sqlite3 engine verified! SQLite version:', db.prepare('SELECT sqlite_version() AS v').get().v); } catch(e) { console.log('[!] SQLite Engine Warning:', e.message); }" 2>nul
 echo.
 
 :: 2. Get local IPv4 address
@@ -211,9 +200,17 @@ if %errorlevel% neq 0 (
 )
 echo.
 
-:: 7. Launch Background Server
+:: 7. Create Desktop Shortcut for Staff
 echo ---------------------------------------------------------------------
-echo STEP 6: Launching TilePoint Server under PM2...
+echo STEP 6: Creating Windows Desktop Launcher Shortcut...
+echo ---------------------------------------------------------------------
+powershell -NoProfile -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut([System.IO.Path]::Combine([System.Environment]::GetFolderPath('Desktop'), 'TilePoint POS.lnk')); $s.TargetPath = '%~dp0start-tilepoint.bat'; $s.WorkingDirectory = '%~dp0'; $s.Description = 'Launch TilePoint POS & Central Server'; $s.Save()" >nul 2>&1
+echo [OK] Created 'TilePoint POS' shortcut on your Windows Desktop!
+echo.
+
+:: 8. Launch Background Server
+echo ---------------------------------------------------------------------
+echo STEP 7: Launching TilePoint Server under PM2...
 echo ---------------------------------------------------------------------
 set "PATH=%PATH%;%APPDATA%\npm"
 
@@ -246,6 +243,7 @@ echo  TilePoint Enterprise Server is active and accepting connections!
 echo.
 echo   * CENTRAL ADMIN CONSOLE (this PC) : https://localhost:3000
 echo   * MOBILE CASHIER & TERMINAL IP    : https://%LOCAL_IP%:3000
+echo   * DESKTOP SHORTCUT CREATED        : 'TilePoint POS' on Desktop
 echo.
 echo =====================================================================
 echo                LAUNCHING APPLICATIONS
@@ -287,4 +285,5 @@ for /f "tokens=2*" %%A in ('reg query "HKCU\Environment" /v Path') do set "USER_
 call set "PATH=%SYS_PATH%;%USER_PATH%"
 set "PATH=%PATH%;C:\Program Files\nodejs;C:\Program Files\Git\cmd;%APPDATA%\npm"
 exit /b
+
 

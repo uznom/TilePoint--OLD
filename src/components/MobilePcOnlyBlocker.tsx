@@ -15,6 +15,7 @@ import {
  Building2,
  RefreshCw
 } from "lucide-react";
+import { HeroButton, HeroChip } from "./common/ui";
 
 interface MobilePcOnlyBlockerProps {
  tabId: string;
@@ -38,7 +39,7 @@ export function MobilePcOnlyBlocker({ tabId, onForceEnable }: MobilePcOnlyBlocke
  "Live real-time Server-Sent Events (SSE) telemetry visualization feeds with high graphics footprint.",
  "Detailed system-wide security audit trails and logs with high table column density."
  ],
- color: "from-blue-500/20 to-indigo-500/10",
+ color: "from-m3-primary/20 to-m3-primary/5",
  accentColor: "text-m3-primary border-m3-primary/20 bg-m3-primary/10",
  metricText: ""
  };
@@ -52,8 +53,8 @@ export function MobilePcOnlyBlocker({ tabId, onForceEnable }: MobilePcOnlyBlocke
  "Multi-axis SVG cost-benefit ratio charts requiring cursor hover precision.",
  "Direct ledger overrides and bulk price adjustments that require physical mouse confirmation for financial compliance."
  ],
- color: "from-emerald-500/20 to-teal-500/10",
- accentColor: "text-emerald-500 border-emerald-500/20 bg-emerald-500/10",
+ color: "from-m3-tertiary/20 to-m3-tertiary/5",
+ accentColor: "text-m3-tertiary border-m3-tertiary/20 bg-m3-tertiary/10",
  metricText: ""
  };
  case "procurement":
@@ -66,8 +67,8 @@ export function MobilePcOnlyBlocker({ tabId, onForceEnable }: MobilePcOnlyBlocke
  "Supplier catalog search filters with side-by-side spec sheet comparison drawers.",
  "Critical automated purchase order dispatch mechanics to prevent double-ordering errors."
  ],
- color: "from-purple-500/20 to-pink-500/10",
- accentColor: "text-purple-500 border-purple-500/20 bg-purple-500/10",
+ color: "from-m3-secondary/20 to-m3-secondary/5",
+ accentColor: "text-m3-secondary border-m3-secondary/20 bg-m3-secondary/10",
  metricText: "Enterprise Supply Line"
  };
  case "branches":
@@ -139,9 +140,9 @@ export function MobilePcOnlyBlocker({ tabId, onForceEnable }: MobilePcOnlyBlocke
  </div>
  {/* Simulated Complex Layout */}
  <div className="flex-1 grid grid-cols-3 gap-1">
- <div className="bg-emerald-500/20 border border-emerald-500/30 rounded p-0.5 flex flex-col justify-between">
- <div className="w-full h-1 bg-emerald-500/40 rounded" />
- <div className="w-1/2 h-1 bg-emerald-500/40 rounded mt-0.5" />
+ <div className="bg-m3-primary/20 border border-m3-primary/30 rounded p-0.5 flex flex-col justify-between">
+ <div className="w-full h-1 bg-m3-primary/40 rounded" />
+ <div className="w-1/2 h-1 bg-m3-primary/40 rounded mt-0.5" />
  </div>
  <div className="bg-m3-primary/10 border border-m3-primary/20 rounded p-0.5 flex flex-col justify-between">
  <div className="w-full h-1 bg-m3-primary/30 rounded" />
@@ -157,18 +158,18 @@ export function MobilePcOnlyBlocker({ tabId, onForceEnable }: MobilePcOnlyBlocke
  {/* Monitor Stand */}
  <div className="w-6 h-4 bg-m3-outline-variant/60 rounded-b" />
  <div className="w-14 h-1 bg-m3-outline" />
- <span className="text-[9px] text-m3-on-surface-variant font-mono font-medium mt-1.5 uppercase tracking-wider">
+ <span className="text-[9px] text-m3-on-surface-variant font-medium mt-1.5 uppercase tracking-wider">
  PC Optimization Active
  </span>
  </motion.div>
 
  {/* Connection Link */}
  <div className="flex flex-col items-center justify-center text-m3-outline-variant/75">
- <span className="text-[10px] font-bold font-mono tracking-widest text-amber-500 uppercase">
+ <span className="text-[10px] font-bold tracking-widest text-amber-500 uppercase">
  DESKTOP
  </span>
  <div className="h-0.5 w-8 bg-gradient-to-r from-emerald-500 via-amber-500 to-red-500 my-1 animate-pulse" />
- <span className="text-[9px] font-mono">REQUIRED</span>
+ <span className="text-[9px] ">REQUIRED</span>
  </div>
 
  {/* Mobile Screen Restricted */}
@@ -187,7 +188,7 @@ export function MobilePcOnlyBlocker({ tabId, onForceEnable }: MobilePcOnlyBlocke
  <div className="w-8 h-1 bg-m3-outline-variant/50 rounded mt-1.5" />
  </div>
  </div>
- <span className="text-[9px] text-amber-500 font-mono font-bold mt-5 uppercase tracking-wider">
+ <span className="text-[9px] text-amber-500 font-bold mt-5 uppercase tracking-wider">
  Mobile Shielded
  </span>
  </motion.div>
@@ -207,7 +208,7 @@ export function MobilePcOnlyBlocker({ tabId, onForceEnable }: MobilePcOnlyBlocke
  {/* Header Metadata */}
  {info.metricText && (
  <div className="flex items-center justify-between mb-5">
- <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-mono font-bold uppercase tracking-wider ${info.accentColor}`}>
+ <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${info.accentColor}`}>
  <Sparkles className="w-3 h-3 animate-pulse" />
  <span>{info.metricText}</span>
  </div>
@@ -223,7 +224,7 @@ export function MobilePcOnlyBlocker({ tabId, onForceEnable }: MobilePcOnlyBlocke
  <h3 className="text-xl font-black tracking-tight text-m3-on-surface">
  {info.title}
  </h3>
- <p className="text-xs text-m3-on-surface-variant font-medium mt-0.5 font-mono">
+ <p className="text-xs text-m3-on-surface-variant font-medium mt-0.5 ">
  {info.subtitle}
  </p>
  </div>
@@ -231,7 +232,7 @@ export function MobilePcOnlyBlocker({ tabId, onForceEnable }: MobilePcOnlyBlocke
 
  {/* Educational/Explanatory breakdown of PC design */}
  <div className="bg-m3-surface-variant/40 rounded-[24px] p-5 mb-6 border border-m3-outline-variant/20">
- <h4 className="text-xs font-bold uppercase tracking-wider text-m3-on-surface-variant flex items-center gap-1.5 mb-3 font-mono">
+ <h4 className="text-xs font-bold uppercase tracking-wider text-m3-on-surface-variant flex items-center gap-1.5 mb-3 ">
  <Info className="w-3.5 h-3.5 text-m3-primary" />
  <span>Why is this restricted to PC/Desktop?</span>
  </h4>
@@ -261,27 +262,27 @@ export function MobilePcOnlyBlocker({ tabId, onForceEnable }: MobilePcOnlyBlocke
  </p>
  </div>
 
- {/* Action Buttons with spring motion */}
+ {/* Action Buttons with HeroButton */}
  <div className="flex flex-col sm:flex-row gap-3">
- <motion.button
- whileHover={{ scale: 1.02 }}
- whileTap={{ scale: 0.98 }}
+ <HeroButton
  onClick={() => setShowConfirmation(true)}
- className="flex-1 flex items-center justify-center gap-2 border border-m3-outline-variant hover:bg-m3-surface-variant text-m3-on-surface font-semibold text-xs py-3.5 px-4 rounded-[20px] transition-all cursor-pointer"
+ variant="flat"
+ size="md"
+ startIcon={<Unlock className="w-4 h-4 text-amber-500" />}
+ className="flex-1 font-semibold text-xs py-3.5 px-4 rounded-[20px]"
  >
- <Unlock className="w-4 h-4 text-amber-500" />
  Override Restriction
- </motion.button>
+ </HeroButton>
 
- <motion.button
- whileHover={{ scale: 1.02 }}
- whileTap={{ scale: 0.98 }}
+ <HeroButton
  onClick={() => window.location.reload()}
- className="flex-1 flex items-center justify-center gap-2 bg-m3-primary text-m3-on-primary hover:opacity-90 font-bold text-xs py-3.5 px-4 rounded-[20px] shadow-md cursor-pointer"
+ variant="primary"
+ size="md"
+ startIcon={<RefreshCw className="w-4 h-4 animate-spin-slow" />}
+ className="flex-1 font-bold text-xs py-3.5 px-4 rounded-[20px] shadow-md"
  >
- <RefreshCw className="w-4 h-4 animate-spin-slow" />
  Reload Core System
- </motion.button>
+ </HeroButton>
  </div>
  </motion.div>
  ) : (
@@ -294,7 +295,7 @@ export function MobilePcOnlyBlocker({ tabId, onForceEnable }: MobilePcOnlyBlocke
  >
  <div className="flex items-center justify-center gap-2 text-amber-500">
  <AlertTriangle className="w-5 h-5 animate-bounce" />
- <h4 className="font-bold text-xs uppercase tracking-wider font-mono">
+ <h4 className="font-bold text-xs uppercase tracking-wider ">
  Administrative Bypass Warning
  </h4>
  </div>
@@ -303,30 +304,25 @@ export function MobilePcOnlyBlocker({ tabId, onForceEnable }: MobilePcOnlyBlocke
  </p>
  
  <div className="flex gap-2.5">
- <motion.button
- whileHover={{ scale: 1.02 }}
- whileTap={{ scale: 0.98 }}
+ <HeroButton
  onClick={() => setShowConfirmation(false)}
- className="flex-1 bg-m3-surface hover:bg-m3-surface-variant border border-m3-outline-variant text-m3-on-surface font-bold text-xs py-3 rounded-xl cursor-pointer"
+ variant="flat"
+ size="md"
+ className="flex-1 font-bold text-xs py-3 rounded-xl"
  >
  Cancel
- </motion.button>
+ </HeroButton>
 
- <motion.button
- whileHover={{ scale: 1.02 }}
- whileTap={{ scale: 0.98 }}
+ <HeroButton
  onClick={triggerForceBypass}
- className="flex-1 bg-amber-500 text-black hover:bg-amber-600 font-black text-xs py-3 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
+ variant="primary"
+ size="md"
+ isLoading={isSimulatingHaptic}
+ startIcon={!isSimulatingHaptic ? <Lock className="w-3.5 h-3.5" /> : undefined}
+ className="flex-1 !bg-amber-500 !text-black hover:!bg-amber-600 font-black text-xs py-3 rounded-xl shadow-md"
  >
- {isSimulatingHaptic ? (
- <RefreshCw className="w-3.5 h-3.5 animate-spin" />
- ) : (
- <>
- <Lock className="w-3.5 h-3.5" />
  Force Launch
- </>
- )}
- </motion.button>
+ </HeroButton>
  </div>
  </motion.div>
  )}
