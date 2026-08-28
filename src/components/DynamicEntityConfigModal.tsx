@@ -410,19 +410,26 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
         </div>
 
         {/* Tab Navigation */}
-        <div className="px-6 pt-3 border-b border-divider/15 flex gap-2 overflow-x-auto bg-content1 shrink-0 scrollbar-none">
+        <div
+          onWheel={(e) => {
+            if (e.deltaY !== 0 && e.currentTarget) {
+              e.currentTarget.scrollLeft += e.deltaY;
+            }
+          }}
+          className="px-6 pt-3 border-b border-divider/15 flex gap-2 overflow-x-auto overflow-y-hidden bg-content1 shrink-0 scroll-smooth touch-pan-x whitespace-nowrap scrollbar-thin"
+        >
           <button
             type="button"
             onClick={() => { setActiveTab('categories'); setShowCatForm(false); }}
-            className={`px-4 py-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 shrink-0 ${
+            className={`px-4 py-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 shrink-0 whitespace-nowrap ${
               activeTab === 'categories'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-default-500 hover:text-foreground'
             }`}
           >
-            <Tag className="h-4 w-4" />
+            <Tag className="h-4 w-4 shrink-0" />
             <span>Product Categories</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-default-100 text-default-600">
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-default-100 text-default-600 shrink-0">
               {productCategories.length}
             </span>
           </button>
@@ -430,15 +437,15 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
           <button
             type="button"
             onClick={() => { setActiveTab('units'); setShowUnitForm(false); }}
-            className={`px-4 py-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 shrink-0 ${
+            className={`px-4 py-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 shrink-0 whitespace-nowrap ${
               activeTab === 'units'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-default-500 hover:text-foreground'
             }`}
           >
-            <Ruler className="h-4 w-4" />
+            <Ruler className="h-4 w-4 shrink-0" />
             <span>Measurement Units</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-default-100 text-default-600">
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-default-100 text-default-600 shrink-0">
               {unitTypes.length}
             </span>
           </button>
@@ -446,15 +453,15 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
           <button
             type="button"
             onClick={() => { setActiveTab('payments'); setShowPmForm(false); }}
-            className={`px-4 py-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 shrink-0 ${
+            className={`px-4 py-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 shrink-0 whitespace-nowrap ${
               activeTab === 'payments'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-default-500 hover:text-foreground'
             }`}
           >
-            <CreditCard className="h-4 w-4" />
+            <CreditCard className="h-4 w-4 shrink-0" />
             <span>Payment Methods</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-default-100 text-default-600">
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-default-100 text-default-600 shrink-0">
               {paymentMethodsList.length}
             </span>
           </button>
@@ -462,15 +469,15 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
           <button
             type="button"
             onClick={() => { setActiveTab('discounts'); setShowDiscForm(false); }}
-            className={`px-4 py-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 shrink-0 ${
+            className={`px-4 py-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 shrink-0 whitespace-nowrap ${
               activeTab === 'discounts'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-default-500 hover:text-foreground'
             }`}
           >
-            <Percent className="h-4 w-4" />
+            <Percent className="h-4 w-4 shrink-0" />
             <span>Discounts & VAT Schemes</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-default-100 text-default-600">
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-default-100 text-default-600 shrink-0">
               {discountSchemes.length}
             </span>
           </button>
@@ -478,15 +485,15 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
           <button
             type="button"
             onClick={() => { setActiveTab('damages'); setShowDmgForm(false); }}
-            className={`px-4 py-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 shrink-0 ${
+            className={`px-4 py-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 shrink-0 whitespace-nowrap ${
               activeTab === 'damages'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-default-500 hover:text-foreground'
             }`}
           >
-            <AlertTriangle className="h-4 w-4" />
+            <AlertTriangle className="h-4 w-4 shrink-0" />
             <span>Damage Classifications</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-default-100 text-default-600">
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-default-100 text-default-600 shrink-0">
               {damageReasonsList.length}
             </span>
           </button>

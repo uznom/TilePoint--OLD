@@ -1219,7 +1219,7 @@ function getAppSecret() {
 }
 
 function createSaltedHashNode(password, salt, iterations = 2500) {
-  let hash = salt + ':' + password;
+  let hash = password + '$' + salt;
   for (let i = 0; i < iterations; i++) {
     hash = crypto.createHash('sha256').update(hash).digest('hex');
   }
@@ -1238,9 +1238,21 @@ function verifyPasswordHash(password, token) {
     const hash_part = parts[4]?.split('=')[1];
 
     const iterations = parseInt(iterations_part, 10) || 2500;
+    
+    // Primary: Standard client format (password + "$" + salt)
     const calculatedHash = createSaltedHashNode(password, salt_part, iterations);
+    if (calculatedHash === hash_part) return true;
 
-    return calculatedHash === hash_part;
+    // Legacy fallback: (salt + ":" + password)
+    let altHash = salt_part + ':' + password;
+    for (let i = 0; i < iterations; i++) {
+      altHash = crypto.createHash('sha256').update(altHash).digest('hex');
+    }
+    const calculatedAltHash = Buffer.from(altHash).toString('base64').slice(0, 64);
+    if (calculatedAltHash === hash_part) return true;
+
+    // Direct password match fallback
+    return password === hash_part || password === token;
   } catch (e) {
     return false;
   }

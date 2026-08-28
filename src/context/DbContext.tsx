@@ -1485,6 +1485,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     setRateLimitTimeLeft(0);
     setCurrentUser(targetUser);
     setIsLoggedIn(true);
+    const offlineToken = generateSessionToken(targetUser);
+    sessionStorage.setItem("tp_session_token", offlineToken);
+    localStorage.setItem("tp_session_token", offlineToken);
     sessionStorage.setItem("tp_is_logged_in", "true");
     sessionStorage.setItem("tp_current_user", JSON.stringify(targetUser));
     localStorage.setItem("tp_is_logged_in", "true");
