@@ -39,6 +39,12 @@ import {
 import { dbSyncWorkerClient } from "../services/dbSyncWorkerClient";
 import { mysqlDatabaseService } from "../services/mysqlDatabaseService";
 import {
+  transactionOutboxService,
+  OutboxRecord,
+  OutboxStats,
+  EnqueueOutboxOptions
+} from "../services/transactionOutboxService";
+import {
 ActiveSession,
 ArchivableCategory,
 AuditLog,
@@ -863,6 +869,18 @@ interface DbContextType {
  retentionPolicy: RetentionPolicyMap;
  updateRetentionPolicy: (category: ArchivableCategory, months: number) => void;
  runRetentionPolicyCleanup: () => Promise<PurgeResult[]>;
+
+ // Transactional Outbox Pattern Subsystem
+ outboxStats: OutboxStats;
+ outboxItems: OutboxRecord[];
+ isOutboxModalOpen: boolean;
+ setIsOutboxModalOpen: (open: boolean) => void;
+ flushOutbox: () => Promise<{ successCount: number; failCount: number }>;
+ retryOutboxItem: (queueId: string) => void;
+ retryAllOutboxItems: () => void;
+ clearCompletedOutbox: () => void;
+ clearDeadLetterOutbox: () => void;
+ enqueueOutboxTransaction: (options: EnqueueOutboxOptions) => OutboxRecord;
 }
 
 export interface DbSnapshot {
@@ -1170,6 +1188,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const [lockoutUntil, setLockoutUntil] = useState<number>(0);
  const [rateLimitTimeLeft, setRateLimitTimeLeft] = useState<number>(0);
  const [serverConnected, setServerConnected] = useState<boolean>(false);
+ const [outboxStats, setOutboxStats] = useState<OutboxStats>(() => transactionOutboxService.getStats());
+ const [outboxItems, setOutboxItems] = useState<OutboxRecord[]>(() => transactionOutboxService.getItems());
+ const [isOutboxModalOpen, setIsOutboxModalOpen] = useState<boolean>(false);
  const [apiErrorState, setApiErrorState] = useState<{
  statusCode: number;
  message: string;
@@ -2737,168 +2758,65 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }
  };
 
- const [_offlineQueue, setOfflineQueue] = useState<any[]>(() => {
- try {
- const txQ = localStorage.getItem("tp_transaction_sync_queue");
- if (txQ) return JSON.parse(txQ);
- const q = localStorage.getItem("tp_offline_queue");
- return q ? JSON.parse(q) : [];
- } catch (_) {
- return [];
- }
+ const [_offlineQueue, setOfflineQueue] = useState<any[]>([]);
+
+ // Initialize Transaction Outbox Service and attach listeners
+ useEffect(() => {
+ transactionOutboxService.initialize(safeApiFetch, getAuthHeaders);
+ const unsubscribe = transactionOutboxService.subscribe((stats, items) => {
+ setOutboxStats(stats);
+ setOutboxItems(items);
+ setOfflineQueue(items.filter((i) => i.status === 'pending' || i.status === 'processing' || i.status === 'failed'));
  });
+ return () => unsubscribe();
+ }, []);
 
  const enqueueTransaction = (txPkg: any) => {
- const itemToEnqueue = {
- queueId: `qtx-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
- id: txPkg.id || `tx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+ const priority = (txPkg.txType === "POS_CHECKOUT" || txPkg.txType === "POS_VOID_SALE") ? 1 : 2;
+ const branchId = currentUser?.branchAssignmentId || (currentUser as any)?.branch || (currentUser as any)?.branchId;
+ const userId = currentUser?.id;
+
+ return transactionOutboxService.enqueue({
+ id: txPkg.id,
  type: txPkg.type || "ATOMIC_TRANSACTION",
  txType: txPkg.txType || "POS_OPERATION",
- timestamp: txPkg.timestamp || Date.now(),
- retries: 0,
- status: "pending",
- payload: txPkg.payload || {}
- };
-
- setOfflineQueue((prev) => {
- const filtered = prev.filter((item) => item.id !== itemToEnqueue.id);
- const updated = [...filtered, itemToEnqueue];
- try {
- localStorage.setItem("tp_transaction_sync_queue", JSON.stringify(updated));
- localStorage.setItem("tp_offline_queue", JSON.stringify(updated));
- } catch (_) {}
- return updated;
+ endpoint: "/api/db/transaction",
+ payload: txPkg.payload || {},
+ priority,
+ branchId,
+ userId
  });
-
- setTimeout(() => {
- processTransactionSyncQueue();
- }, 50);
  };
 
  const enqueueOfflineRequest = (op: any) => {
  if (op && (op.type === "ATOMIC_TRANSACTION" || op.txType)) {
- enqueueTransaction(op);
- return;
+ return enqueueTransaction(op);
  }
- setOfflineQueue((prev) => {
- let filtered = prev;
- if (op.isLegacy) {
- filtered = prev.filter((item) => !item.isLegacy || item.key !== op.key);
- } else if (op.id) {
- filtered = prev.filter((item) => item.id !== op.id);
- }
- const updated = [...filtered, { ...op, queueId: `q-${Date.now()}-${Math.random()}` }];
- try {
- localStorage.setItem("tp_transaction_sync_queue", JSON.stringify(updated));
- localStorage.setItem("tp_offline_queue", JSON.stringify(updated));
- } catch (_) {}
- return updated;
+ if (op.type) {
+ return transactionOutboxService.enqueue({
+ id: op.id,
+ type: "DELTA",
+ txType: op.type,
+ endpoint: "/api/db/delta",
+ payload: op.payload || op,
+ priority: 2
  });
-
- setTimeout(() => {
- processTransactionSyncQueue();
- }, 50);
+ }
+ return transactionOutboxService.enqueue({
+ type: "LEGACY_WRITE",
+ endpoint: "/api/db",
+ payload: { key: op.key, value: op.value },
+ priority: 3
+ });
  };
 
- const isProcessingQueue = useRef(false);
  const isSyncingFromServer = useRef(false);
  const lastServerDbHash = useRef<string>("");
  const lastCollectionHashes = useRef<Record<string, string>>({});
  const lastSyncTimestamp = useRef<string>("");
 
  const processTransactionSyncQueue = async () => {
- if (isProcessingQueue.current) return;
- const authHeaders = getAuthHeaders();
- if (!authHeaders.Authorization) {
- console.log("[Tx Queue] Skipping transaction queue processing since user is logged out.");
- return;
- }
-
- let queue: any[] = [];
- try {
- const txQ = localStorage.getItem("tp_transaction_sync_queue");
- const legacyQ = localStorage.getItem("tp_offline_queue");
- queue = txQ ? JSON.parse(txQ) : (legacyQ ? JSON.parse(legacyQ) : []);
- } catch (_) {
- return;
- }
-
- if (queue.length === 0) return;
-
- isProcessingQueue.current = true;
- console.log(`[Tx Queue] Sequentially processing ${queue.length} pending atomic transaction packages...`);
-
- for (const item of queue) {
- try {
- let res;
- if (item.type === "ATOMIC_TRANSACTION") {
- res = await safeApiFetch("/api/db/transaction", {
- method: "POST",
- headers: {
- "Content-Type": "application/json",
- ...getAuthHeaders(),
- },
- body: JSON.stringify(item),
- });
- } else if (item.type) {
- res = await safeApiFetch("/api/db/delta", {
- method: "POST",
- headers: {
- "Content-Type": "application/json",
- ...getAuthHeaders(),
- },
- body: JSON.stringify(item),
- });
- } else {
- res = await safeApiFetch("/api/db", {
- method: "POST",
- headers: {
- "Content-Type": "application/json",
- ...getAuthHeaders(),
- },
- body: JSON.stringify({ key: item.key, value: item.value }),
- });
- }
-
- if (res && res.ok) {
- setOfflineQueue((currentQueue) => {
- const updated = currentQueue.filter((q) => q.queueId !== item.queueId);
- try {
- localStorage.setItem("tp_transaction_sync_queue", JSON.stringify(updated));
- localStorage.setItem("tp_offline_queue", JSON.stringify(updated));
- } catch (_) {}
- return updated;
- });
- await new Promise((r) => setTimeout(r, 100));
- } else if (res && (res.status === 401 || res.status === 403)) {
- console.warn(`[Tx Queue] Dropping un-retryable item due to HTTP status ${res.status}:`, item);
- setOfflineQueue((currentQueue) => {
- const updated = currentQueue.filter((q) => q.queueId !== item.queueId);
- try {
- localStorage.setItem("tp_transaction_sync_queue", JSON.stringify(updated));
- localStorage.setItem("tp_offline_queue", JSON.stringify(updated));
- } catch (_) {}
- return updated;
- });
- break;
- } else {
- console.warn(`[Tx Queue] Transient server response status ${res ? res.status : 'offline'}. Will retry transaction ${item.id} later.`);
- setOfflineQueue((currentQueue) => {
- const updated = currentQueue.map((q) => q.queueId === item.queueId ? { ...q, retries: (q.retries || 0) + 1, status: "failed" } : q);
- try {
- localStorage.setItem("tp_transaction_sync_queue", JSON.stringify(updated));
- localStorage.setItem("tp_offline_queue", JSON.stringify(updated));
- } catch (_) {}
- return updated;
- });
- break;
- }
- } catch (err) {
- console.warn("[Tx Queue] Connection failed during sequential transaction dequeueing:", err);
- break;
- }
- }
- isProcessingQueue.current = false;
+ return transactionOutboxService.flush();
  };
 
  const processOfflineQueue = processTransactionSyncQueue;
@@ -3855,6 +3773,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  socketClient.on("connect", () => {
  console.log("[Real-Time WebSocket] Socket.io connected successfully via", socketClient?.io?.engine?.transport?.name || "websocket");
  isSseConnected.current = true;
+ transactionOutboxService.scheduleFlush(150);
  });
 
  socketClient.on("db_pulse_update", (data: any) => {
@@ -3902,6 +3821,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  console.log("[Real-Time Sync] SSE Channel established. Switching to event-driven push mode.");
  isSseConnected.current = true;
  reconnectDelay = 5000; // Reset backoff on success
+ transactionOutboxService.scheduleFlush(150);
  };
 
  eventSource.onmessage = (event) => {
@@ -10849,6 +10769,16 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       getBranchStockStats,
       filterBranchStockByBranch,
       revalidateStockCounts,
+      outboxStats,
+      outboxItems,
+      isOutboxModalOpen,
+      setIsOutboxModalOpen,
+      flushOutbox: () => transactionOutboxService.flush(),
+      retryOutboxItem: (queueId: string) => transactionOutboxService.retryItem(queueId),
+      retryAllOutboxItems: () => transactionOutboxService.retryAll(),
+      clearCompletedOutbox: () => transactionOutboxService.clearCompleted(),
+      clearDeadLetterOutbox: () => transactionOutboxService.clearDeadLetters(),
+      enqueueOutboxTransaction: (options: EnqueueOutboxOptions) => transactionOutboxService.enqueue(options),
     }),
     [
       currentUser,
@@ -10931,6 +10861,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       revalidateStockCounts,
       selectedViewBranchId,
       setSelectedViewBranchId,
+      outboxStats,
+      outboxItems,
+      isOutboxModalOpen,
     ]
   );
 

@@ -47,6 +47,7 @@ import { PageLoadingFallback } from "./components/PageLoadingFallback";
 
 import { ConfirmationModal } from "./components/ConfirmationModal";
 import { DesktopKeyboardShortcutsModal } from "./components/DesktopKeyboardShortcutsModal";
+import { TransactionOutboxModal } from "./components/TransactionOutboxModal";
 import { HeaderNavTabs } from "./components/HeaderNavTabs";
 import { IdleScreen } from "./components/IdleScreen";
 import { MobileBottomNav } from "./components/MobileBottomNav";
@@ -278,6 +279,9 @@ function AppContent() {
     runDatabaseMaintenance,
     sessionSupersededNotice,
     clearSessionNotice,
+    outboxStats,
+    isOutboxModalOpen,
+    setIsOutboxModalOpen,
   } = useDb();
 
   const showSaleRedDot = parkedSales.some((p: any) => {
@@ -2162,6 +2166,34 @@ function AppContent() {
           isOpen={isShortcutsModalOpen}
           onClose={() => setIsShortcutsModalOpen(false)}
           userRole={currentUser?.role}
+        />
+
+        {/* Transaction Outbox Floating Indicator */}
+        {(outboxStats.pending > 0 || outboxStats.failed > 0 || outboxStats.deadLetter > 0) && (
+          <button
+            type="button"
+            id="outbox-floating-trigger"
+            onClick={() => setIsOutboxModalOpen(true)}
+            className="fixed bottom-20 right-4 sm:right-6 md:bottom-6 z-40 flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl bg-card border border-amber-500/40 text-foreground shadow-2xl hover:scale-105 transition-all cursor-pointer group"
+          >
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+            </span>
+            <span className="text-xs font-bold">
+              Outbox: {outboxStats.pending + outboxStats.failed}
+            </span>
+            {outboxStats.failed > 0 && (
+              <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                {outboxStats.failed} retry
+              </span>
+            )}
+          </button>
+        )}
+
+        <TransactionOutboxModal
+          isOpen={isOutboxModalOpen}
+          onClose={() => setIsOutboxModalOpen(false)}
         />
 
         <PwaInstallPrompt />
