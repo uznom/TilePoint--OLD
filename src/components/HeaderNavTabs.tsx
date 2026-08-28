@@ -4,6 +4,7 @@
  */
 
 import React, { useMemo, useRef, useEffect, useState } from 'react';
+import { useDb } from '../context/DbContext';
 import {
   Package,
   Activity,
@@ -215,6 +216,26 @@ export const HeaderNavTabs: React.FC<HeaderNavTabsProps> = ({
     }
   };
 
+  const { sessionRemainingSeconds, extendSession } = useDb();
+  const [isExtending, setIsExtending] = useState(false);
+
+  const formatRemainingTime = (secs: number) => {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m ${secs % 60}s`;
+  };
+
+  const handleExtend = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsExtending(true);
+    try {
+      await extendSession(60);
+    } finally {
+      setIsExtending(false);
+    }
+  };
+
   // If the active module does not have multiple sub-navigation items, don't show an empty bar
   if (currentSubTabs.length <= 1) {
     return null;
@@ -302,6 +323,24 @@ export const HeaderNavTabs: React.FC<HeaderNavTabsProps> = ({
             </button>
           );
         })}
+
+        {currentUser && sessionRemainingSeconds !== undefined && sessionRemainingSeconds > 0 && (
+          <div className="ml-auto flex items-center gap-1.5 pl-2 py-1 pr-1 bg-content1/80 border border-divider/30 rounded-lg text-[10.5px] shrink-0">
+            <Clock className={`h-3 w-3 ${sessionRemainingSeconds < 300 ? "text-rose-500 animate-pulse" : "text-primary"}`} />
+            <span className="font-semibold text-foreground tracking-tight">
+              {formatRemainingTime(sessionRemainingSeconds)}
+            </span>
+            <button
+              type="button"
+              onClick={handleExtend}
+              disabled={isExtending}
+              className="ml-1 px-1.5 py-0.5 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground text-[9.5px] font-bold rounded cursor-pointer transition-colors"
+              title="Extend session duration (+60m)"
+            >
+              {isExtending ? "..." : "+60m"}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Right scroll chevron */}

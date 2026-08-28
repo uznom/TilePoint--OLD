@@ -9,6 +9,12 @@ import dotenv from 'dotenv';
 import mysql from 'mysql2/promise';
 import alasql from 'alasql';
 import { Server as SocketIOServer } from 'socket.io';
+import cookieParser from 'cookie-parser';
+import {
+  computeCollectionHash,
+  computeAllCollectionHashes,
+  extractDeltaChanges
+} from './src/server/services/cdcSyncService.js';
 
 dotenv.config();
 
@@ -39,7 +45,12 @@ try {
 
 // --- CORS & PREFLIGHT MIDDLEWARE ---
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Session-Token, X-Client-ID');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -50,6 +61,7 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use(cookieParser());
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
@@ -114,32 +126,52 @@ let clients = [];
 
 const notifyClients = (type, info, senderClientId) => {
   const payload = JSON.stringify({ type, info });
-  clients.forEach(client => {
+  clients = clients.filter(client => {
+    if (!client || !client.res || client.res.writableEnded || client.res.destroyed) {
+      return false;
+    }
     if (senderClientId && client.id === senderClientId) {
-      return;
+      return true;
     }
     try {
       client.res.write(`data: ${payload}\n\n`);
-    } catch (e) {}
+      return true;
+    } catch (e) {
+      return false;
+    }
   });
 };
 
 setInterval(() => {
-  clients.forEach(client => {
+  clients = clients.filter(client => {
+    if (!client || !client.res || client.res.writableEnded || client.res.destroyed) {
+      return false;
+    }
     try {
       client.res.write(': keep-alive\n\n');
-    } catch (e) {}
+      return true;
+    } catch (e) {
+      return false;
+    }
   });
-}, 15000);
+}, 12000);
 
-// Unified Real-time Broadcast Trigger (Socket.io + SSE)
-const emitPulseUpdate = (key = 'all', hash = '', senderClientId = null) => {
-  io.emit('db_pulse_update', {
+// Unified Real-time Broadcast Trigger (Socket.io + SSE) with Collection-Level Watermark Hashing
+const emitPulseUpdate = (key = 'all', hash = '', senderClientId = null, collectionHash = '') => {
+  let colHash = collectionHash;
+  if (!colHash && key && key !== 'all' && key !== 'delta' && key !== 'transaction' && cachedFullDb && cachedFullDb[key]) {
+    colHash = computeCollectionHash(cachedFullDb[key]);
+  }
+
+  const payload = {
     timestamp: new Date().toISOString(),
     key: key || 'all',
-    hash: hash || ''
-  });
-  notifyClients('db_update', { hash, key }, senderClientId);
+    hash: hash || '',
+    collectionHash: colHash || ''
+  };
+
+  io.emit('db_pulse_update', payload);
+  notifyClients('db_update', payload, senderClientId);
 };
 
 // --- DATABASE HYBRID ENGINE: MYSQL + EMBEDDED ALASQL ENGINE ---
@@ -396,7 +428,7 @@ const TABLE_COLUMNS = {
   expenses: ['id', 'branchId', 'dateTime', 'category', 'amount', 'recordedBy', 'notes', 'isDeleted', 'deletedAt'],
   product_returns: ['id', 'saleId', 'productName', 'quantityReturned', 'amountRefunded', 'damageRestockFee', 'status', 'dateTime', 'isDeleted', 'deletedAt'],
   branch_sales_reports: ['id', 'branchId', 'branchName', 'reportingDate', 'totalSalesCount', 'totalSalesAmount', 'totalVatAmount', 'totalDiscountAmount', 'transmissionType', 'sales', 'saleItems', 'users', 'expenses', 'deliveries', 'purchaseOrders', 'pandl', 'heatmap', 'boa', 'notes', 'status', 'importVerificationId', 'securitySignature', 'approvedBy', 'auditedBy', 'auditedAt', 'transferredAt'],
-  active_sessions: ['id', 'userId', 'username', 'fullName', 'role', 'branchId', 'branchName', 'lastActive', 'userAgent'],
+  active_sessions: ['id', 'userId', 'username', 'fullName', 'role', 'branchId', 'branchName', 'lastActive', 'userAgent', 'fingerprint', 'deviceInfo', 'sessionStartedAt', 'expiresAt', 'maxDurationMinutes'],
   db_snapshots: ['id', 'name', 'creator', 'sizeBytes', 'data', 'timestamp']
 };
 
@@ -620,6 +652,12 @@ function readFullDatabaseFromAlasql() {
     }
   }
 
+  // Ensure configured flags are always present if users exist
+  if (Array.isArray(db.tp_users) && db.tp_users.length > 0) {
+    db.tp_is_configured = 'true';
+    db.tilepoint_onboarded_setup = 'true';
+  }
+
   const hash = computeDatabaseHash(db);
   return { db, hash };
 }
@@ -655,6 +693,12 @@ async function readFullDatabaseFromMysql() {
     } else {
       console.warn('[MySQL Read Error]', res.reason?.message);
     }
+  }
+
+  // Ensure configured flags are always present if users exist
+  if (Array.isArray(db.tp_users) && db.tp_users.length > 0) {
+    db.tp_is_configured = 'true';
+    db.tilepoint_onboarded_setup = 'true';
   }
 
   const hash = computeDatabaseHash(db);
@@ -1168,12 +1212,69 @@ function sha256Pure(str) {
   return crypto.createHash('sha256').update(str).digest('hex');
 }
 
+const SESSION_IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes without activity/heartbeat
+
+function getAppSecret() {
+  return process.env.VITE_SECURITY_SECRET || process.env.SECURITY_SECRET || "tile_point_salt_retneC eliT nammE_secure_fallback";
+}
+
+function createSaltedHashNode(password, salt, iterations = 2500) {
+  let hash = salt + ':' + password;
+  for (let i = 0; i < iterations; i++) {
+    hash = crypto.createHash('sha256').update(hash).digest('hex');
+  }
+  return Buffer.from(hash).toString('base64').slice(0, 64);
+}
+
+function verifyPasswordHash(password, token) {
+  if (!token || typeof token !== 'string') return false;
+  if (!token.startsWith('$argon2-pbkdf2$')) {
+    return password === token;
+  }
+  try {
+    const parts = token.split('$');
+    const iterations_part = parts[2]?.split('=')[1];
+    const salt_part = parts[3]?.split('=')[1];
+    const hash_part = parts[4]?.split('=')[1];
+
+    const iterations = parseInt(iterations_part, 10) || 2500;
+    const calculatedHash = createSaltedHashNode(password, salt_part, iterations);
+
+    return calculatedHash === hash_part;
+  } catch (e) {
+    return false;
+  }
+}
+
+function generateServerSessionToken(user, sessionId) {
+  const payload = {
+    id: user.id,
+    username: user.username || user.fullName || "User",
+    role: user.role,
+    sessionId: sessionId || ("SESS_" + Math.random().toString(36).substring(2, 11).toUpperCase()),
+    timestamp: Date.now()
+  };
+  const payloadJson = JSON.stringify(payload);
+  const payloadBase64 = Buffer.from(payloadJson, 'utf8').toString('base64');
+  const secret = getAppSecret();
+  const signature = sha256Pure(payloadBase64 + "." + secret);
+  return `${payloadBase64}.${signature}`;
+}
+
 function verifyAndExtractToken(req) {
   const authHeader = req.headers['authorization'];
   let token = req.headers['x-session-token'];
 
   if (!token && authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.substring(7);
+  }
+
+  if (!token && req.cookies && req.cookies.tp_session) {
+    token = req.cookies.tp_session;
+  }
+
+  if (!token && req.cookies && req.cookies.tilepoint_session) {
+    token = req.cookies.tilepoint_session;
   }
 
   if (!token) {
@@ -1211,39 +1312,602 @@ function verifyAndExtractToken(req) {
       return null;
     }
 
+    payload._token = token;
     return payload;
   } catch (err) {
     return null;
   }
 }
 
+async function getActiveSessionsList() {
+  if (isMysqlActive) {
+    try {
+      const [rows] = await pool.query('SELECT * FROM `active_sessions` ORDER BY `lastActive` DESC');
+      return rows.map(r => ({
+        ...r,
+        lastActive: r.lastActive instanceof Date ? r.lastActive.toISOString() : (r.lastActive || new Date().toISOString())
+      }));
+    } catch (err) {
+      console.warn('[Session Store] MySQL active sessions query warning:', err.message);
+    }
+  }
+  const db = readDbFile();
+  const sessions = db.tp_active_sessions || [];
+  return Array.isArray(sessions) ? sessions : (typeof sessions === 'string' ? JSON.parse(sessions) : []);
+}
+
+const DEFAULT_SESSION_MAX_DURATION_MINUTES = 480; // 8 hours default standard shift
+
+async function saveActiveSessionRecord(session) {
+  if (!session || !session.id || !session.userId) return;
+
+  const maxDuration = session.maxDurationMinutes || DEFAULT_SESSION_MAX_DURATION_MINUTES;
+  const startedAt = session.sessionStartedAt ? new Date(session.sessionStartedAt) : new Date();
+  const expiresAt = session.expiresAt ? new Date(session.expiresAt) : new Date(startedAt.getTime() + maxDuration * 60 * 1000);
+
+  if (isMysqlActive) {
+    try {
+      await upsertRecordMysql('active_sessions', {
+        id: session.id,
+        userId: session.userId,
+        username: session.username || '',
+        fullName: session.fullName || '',
+        role: session.role || 'Cashier',
+        branchId: session.branchId || 'B1',
+        branchName: session.branchName || 'Main Branch',
+        lastActive: session.lastActive ? new Date(session.lastActive) : new Date(),
+        userAgent: session.userAgent || '',
+        fingerprint: session.fingerprint || '',
+        deviceInfo: typeof session.deviceInfo === 'object' ? JSON.stringify(session.deviceInfo) : (session.deviceInfo || ''),
+        sessionStartedAt: startedAt,
+        expiresAt: expiresAt,
+        maxDurationMinutes: maxDuration
+      });
+    } catch (e) {
+      console.warn('[Session Store] MySQL active session save warning:', e.message);
+    }
+  }
+
+  const db = readDbFile();
+  let sessions = db.tp_active_sessions || [];
+  if (typeof sessions === 'string') {
+    try { sessions = JSON.parse(sessions); } catch (_) { sessions = []; }
+  }
+  if (!Array.isArray(sessions)) sessions = [];
+
+  const existingIdx = sessions.findIndex(s => s.id === session.id);
+  const normalizedSession = {
+    ...session,
+    sessionStartedAt: startedAt.toISOString(),
+    expiresAt: expiresAt.toISOString(),
+    maxDurationMinutes: maxDuration
+  };
+
+  if (existingIdx >= 0) {
+    sessions[existingIdx] = { ...sessions[existingIdx], ...normalizedSession };
+  } else {
+    // Keep single active session per userId in registry (supersede old sessions for this user)
+    sessions = sessions.filter(s => s.userId !== session.userId);
+    sessions.push(normalizedSession);
+  }
+  db.tp_active_sessions = sessions;
+  writeDbFile(db);
+}
+
+async function removeActiveSessionRecord(sessionId, userId) {
+  if (isMysqlActive) {
+    try {
+      if (sessionId) {
+        await pool.query('DELETE FROM `active_sessions` WHERE `id` = ?', [sessionId]);
+      } else if (userId) {
+        await pool.query('DELETE FROM `active_sessions` WHERE `userId` = ?', [userId]);
+      }
+    } catch (e) {
+      console.warn('[Session Store] MySQL active session delete warning:', e.message);
+    }
+  }
+
+  const db = readDbFile();
+  let sessions = db.tp_active_sessions || [];
+  if (typeof sessions === 'string') {
+    try { sessions = JSON.parse(sessions); } catch (_) { sessions = []; }
+  }
+  if (Array.isArray(sessions)) {
+    if (sessionId) {
+      sessions = sessions.filter(s => s.id !== sessionId);
+    } else if (userId) {
+      sessions = sessions.filter(s => s.userId !== userId);
+    }
+    db.tp_active_sessions = sessions;
+    writeDbFile(db);
+  }
+}
+
+async function pruneExpiredSessions() {
+  const cutoff = new Date(Date.now() - SESSION_IDLE_TIMEOUT_MS);
+  if (isMysqlActive) {
+    try {
+      await pool.query('DELETE FROM `active_sessions` WHERE `lastActive` < ? OR (`expiresAt` IS NOT NULL AND `expiresAt` < NOW())', [cutoff]);
+    } catch (e) {}
+  }
+  const db = readDbFile();
+  let sessions = db.tp_active_sessions || [];
+  if (typeof sessions === 'string') {
+    try { sessions = JSON.parse(sessions); } catch (_) { sessions = []; }
+  }
+  if (Array.isArray(sessions) && sessions.length > 0) {
+    const fresh = sessions.filter(s => {
+      const t = new Date(s.lastActive || 0).getTime();
+      const notIdle = t >= Date.now() - SESSION_IDLE_TIMEOUT_MS;
+      const notExpired = !s.expiresAt || new Date(s.expiresAt).getTime() > Date.now();
+      return notIdle && notExpired;
+    });
+    if (fresh.length !== sessions.length) {
+      db.tp_active_sessions = fresh;
+      writeDbFile(db);
+    }
+  }
+}
+
+setInterval(pruneExpiredSessions, 60000);
+
+/**
+ * Validates token, client fingerprint, and checks for concurrent login activity
+ * against server-side active sessions registry upon every API request.
+ */
+async function verifySessionAndCheckConcurrency(req) {
+  const payload = verifyAndExtractToken(req);
+  if (!payload || !payload.id) {
+    return { valid: false, status: 401, code: 'UNAUTHORIZED', error: 'Authentication token missing or invalid.' };
+  }
+
+  const incomingSessionId = req.headers['x-client-id'] || req.headers['x-session-id'] || payload.sessionId;
+  const incomingFingerprint = req.headers['x-client-fingerprint'] || req.headers['x-fingerprint'];
+  const incomingDeviceKey = req.headers['x-device-key'];
+
+  const activeSessions = await getActiveSessionsList();
+  const userSession = activeSessions.find(s => s.userId === payload.id);
+
+  if (!userSession) {
+    // Session was logged out or terminated
+    return {
+      valid: false,
+      status: 401,
+      code: 'SESSION_TERMINATED',
+      error: 'Your session has ended or was terminated by administrator.',
+      user: payload
+    };
+  }
+
+  const now = Date.now();
+
+  // 1. Session Duration Check
+  if (userSession.expiresAt) {
+    const expTime = new Date(userSession.expiresAt).getTime();
+    if (now >= expTime) {
+      return {
+        valid: false,
+        status: 401,
+        code: 'SESSION_EXPIRED',
+        expired: true,
+        error: 'Your session duration has expired. Please sign in again to verify your corporate identity.',
+        user: payload,
+        session: userSession
+      };
+    }
+  }
+
+  // 2. Concurrency & Fingerprint Validation Check
+  if (incomingSessionId && userSession.id && userSession.id !== incomingSessionId) {
+    return {
+      valid: false,
+      status: 401,
+      code: 'SESSION_SUPERSEDED',
+      superseded: true,
+      error: 'Concurrent login detected: Your account was signed into on another device/browser. This session has been terminated.',
+      user: payload,
+      activeSession: {
+        id: userSession.id,
+        branchName: userSession.branchName,
+        lastActive: userSession.lastActive,
+        userAgent: userSession.userAgent,
+        deviceInfo: userSession.deviceInfo
+      }
+    };
+  }
+
+  // 3. Client Hardware / Fingerprint Mismatch Check (if fingerprint was recorded for this session)
+  if (incomingFingerprint && userSession.fingerprint && userSession.fingerprint !== incomingFingerprint && incomingSessionId !== userSession.id) {
+    return {
+      valid: false,
+      status: 401,
+      code: 'SESSION_SUPERSEDED',
+      superseded: true,
+      error: 'Device fingerprint mismatch: Concurrent login detected from a different terminal.',
+      user: payload,
+      activeSession: userSession
+    };
+  }
+
+  // Session is valid; update lastActive
+  userSession.lastActive = new Date().toISOString();
+  if (incomingFingerprint && !userSession.fingerprint) {
+    userSession.fingerprint = incomingFingerprint;
+  }
+  await saveActiveSessionRecord(userSession);
+
+  const expiresTime = userSession.expiresAt ? new Date(userSession.expiresAt).getTime() : (now + DEFAULT_SESSION_MAX_DURATION_MINUTES * 60000);
+  const remainingSeconds = Math.max(0, Math.floor((expiresTime - now) / 1000));
+
+  return {
+    valid: true,
+    user: payload,
+    session: userSession,
+    remainingSeconds
+  };
+}
+
+// API: Authentication - Login with Concurrency Single-Session Lock & Fingerprint Registration
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password, branchId, branchName, userAgent, sessionId, fingerprint, deviceInfo, maxDurationMinutes } = req.body || {};
+    if (!username || !password) {
+      return res.status(400).json({ success: false, error: 'Username and password are required.' });
+    }
+
+    const fullDb = await readFullDatabase();
+    const users = fullDb.db.tp_users || [];
+    const targetUser = users.find(u => (u.username || '').trim().toLowerCase() === username.trim().toLowerCase());
+
+    if (!targetUser) {
+      return res.status(401).json({ success: false, error: 'Invalid employee ID or security password code.' });
+    }
+
+    if (targetUser.status && targetUser.status !== 'Active') {
+      return res.status(403).json({ success: false, error: 'Suspended Account: Terminal credentials restricted by Administration.' });
+    }
+
+    const isMatch = verifyPasswordHash(password, targetUser.passwordHash || '');
+    if (!isMatch) {
+      return res.status(401).json({ success: false, error: 'Invalid employee ID or security password code.' });
+    }
+
+    await pruneExpiredSessions();
+    const activeSessions = await getActiveSessionsList();
+    const now = Date.now();
+    const incomingSessionId = sessionId || req.headers['x-client-id'] || ("SESS_" + Math.random().toString(36).substring(2, 11).toUpperCase());
+    const clientFingerprint = fingerprint || req.headers['x-client-fingerprint'] || '';
+    const clientDeviceInfo = deviceInfo || req.headers['x-client-info'] || '';
+    const durationMinutes = parseInt(maxDurationMinutes, 10) || DEFAULT_SESSION_MAX_DURATION_MINUTES;
+
+    const existingActiveSession = activeSessions.find(s => {
+      if (s.userId !== targetUser.id) return false;
+      const lastActiveTime = new Date(s.lastActive || 0).getTime();
+      const isActive = (now - lastActiveTime) < SESSION_IDLE_TIMEOUT_MS;
+      return isActive && s.id !== incomingSessionId;
+    });
+
+    const verifiedSessionId = incomingSessionId;
+    const sessionToken = generateServerSessionToken(targetUser, verifiedSessionId);
+    const sessionStartedAt = new Date().toISOString();
+    const expiresAt = new Date(now + durationMinutes * 60 * 1000).toISOString();
+
+    const sessionRecord = {
+      id: verifiedSessionId,
+      userId: targetUser.id,
+      username: targetUser.username,
+      fullName: targetUser.fullName,
+      role: targetUser.role,
+      branchId: branchId || targetUser.branchAssignmentId || 'B1',
+      branchName: branchName || 'Main Branch',
+      lastActive: new Date().toISOString(),
+      userAgent: userAgent || req.headers['user-agent'] || '',
+      fingerprint: clientFingerprint,
+      deviceInfo: typeof clientDeviceInfo === 'object' ? JSON.stringify(clientDeviceInfo) : clientDeviceInfo,
+      sessionStartedAt,
+      expiresAt,
+      maxDurationMinutes: durationMinutes
+    };
+
+    // If an existing session was active on another terminal, notify it immediately via SSE and Socket.io
+    if (existingActiveSession) {
+      console.log(`[Auth] User ${targetUser.username} logged in from new terminal ${verifiedSessionId}. Superseding previous session ${existingActiveSession.id}`);
+      notifyClients('session_superseded', {
+        userId: targetUser.id,
+        supersededSessionId: existingActiveSession.id,
+        newSessionId: verifiedSessionId,
+        newSessionInfo: {
+          branchName: sessionRecord.branchName,
+          deviceInfo: sessionRecord.deviceInfo,
+          userAgent: sessionRecord.userAgent,
+          sessionStartedAt
+        }
+      });
+      io.emit('session_superseded', {
+        userId: targetUser.id,
+        supersededSessionId: existingActiveSession.id,
+        newSessionId: verifiedSessionId,
+        newSessionInfo: {
+          branchName: sessionRecord.branchName,
+          deviceInfo: sessionRecord.deviceInfo,
+          userAgent: sessionRecord.userAgent,
+          sessionStartedAt
+        }
+      });
+    }
+
+    await saveActiveSessionRecord(sessionRecord);
+
+    // Set secure HTTP-Only cookie that survives IP address changes
+    res.cookie('tp_session', sessionToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    const updatedSessions = await getActiveSessionsList();
+    emitPulseUpdate('tp_active_sessions', computeDatabaseHash(updatedSessions));
+
+    const safeUser = { ...targetUser };
+    delete safeUser.passwordHash;
+    delete safeUser.managerPin;
+
+    return res.json({
+      success: true,
+      token: sessionToken,
+      sessionId: verifiedSessionId,
+      user: safeUser,
+      session: sessionRecord,
+      sessionStartedAt,
+      expiresAt,
+      maxDurationMinutes: durationMinutes,
+      remainingSeconds: durationMinutes * 60
+    });
+  } catch (err) {
+    console.error('[Auth API] Login error:', err);
+    return res.status(500).json({ success: false, error: 'Internal server authentication error: ' + err.message });
+  }
+});
+
+// API: Authentication - Get Current Server Session & Validate Concurrency / Duration
+app.get(['/api/auth/session', '/api/auth/me'], async (req, res) => {
+  try {
+    const check = await verifySessionAndCheckConcurrency(req);
+    if (!check.valid) {
+      if (check.code === 'SESSION_SUPERSEDED' || check.code === 'SESSION_EXPIRED') {
+        return res.status(401).json({
+          success: false,
+          user: null,
+          code: check.code,
+          error: check.error,
+          superseded: Boolean(check.superseded),
+          expired: Boolean(check.expired),
+          activeSession: check.activeSession
+        });
+      }
+      return res.json({ success: false, user: null, message: check.error || 'No active valid session.' });
+    }
+
+    const fullDb = await readFullDatabase();
+    const users = fullDb.db.tp_users || [];
+    const targetUser = users.find(u => u.id === check.user.id);
+
+    if (!targetUser || targetUser.status === 'Suspended') {
+      res.clearCookie('tp_session', { path: '/' });
+      return res.json({ success: false, user: null, message: 'User account not found or suspended.' });
+    }
+
+    const safeUser = { ...targetUser };
+    delete safeUser.passwordHash;
+    delete safeUser.managerPin;
+
+    res.setHeader('X-Session-Remaining-Seconds', check.remainingSeconds);
+
+    return res.json({
+      success: true,
+      user: safeUser,
+      sessionId: check.session ? check.session.id : check.user.sessionId,
+      session: check.session,
+      token: check.user._token,
+      sessionStartedAt: check.session?.sessionStartedAt,
+      expiresAt: check.session?.expiresAt,
+      remainingSeconds: check.remainingSeconds
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Authentication - Heartbeat & Concurrency Validation
+app.post('/api/auth/heartbeat', async (req, res) => {
+  try {
+    const check = await verifySessionAndCheckConcurrency(req);
+    if (!check.valid) {
+      return res.status(check.status || 401).json({
+        success: false,
+        code: check.code,
+        error: check.error,
+        superseded: Boolean(check.superseded),
+        expired: Boolean(check.expired),
+        activeSession: check.activeSession
+      });
+    }
+
+    res.setHeader('X-Session-Remaining-Seconds', check.remainingSeconds);
+
+    return res.json({
+      success: true,
+      lastActive: check.session.lastActive,
+      expiresAt: check.session.expiresAt,
+      remainingSeconds: check.remainingSeconds
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Authentication - Extend Session Duration
+app.post('/api/auth/extend-session', async (req, res) => {
+  try {
+    const check = await verifySessionAndCheckConcurrency(req);
+    if (!check.valid) {
+      return res.status(check.status || 401).json({
+        success: false,
+        code: check.code,
+        error: check.error,
+        superseded: Boolean(check.superseded),
+        expired: Boolean(check.expired)
+      });
+    }
+
+    const additionalMinutes = parseInt(req.body?.additionalMinutes, 10) || DEFAULT_SESSION_MAX_DURATION_MINUTES;
+    const now = Date.now();
+    const newExpiresAt = new Date(now + additionalMinutes * 60 * 1000).toISOString();
+
+    check.session.expiresAt = newExpiresAt;
+    check.session.maxDurationMinutes = additionalMinutes;
+    check.session.lastActive = new Date().toISOString();
+
+    await saveActiveSessionRecord(check.session);
+
+    const remainingSeconds = additionalMinutes * 60;
+    res.setHeader('X-Session-Remaining-Seconds', remainingSeconds);
+
+    return res.json({
+      success: true,
+      message: `Session duration successfully extended by ${Math.round(additionalMinutes / 60)} hours.`,
+      expiresAt: newExpiresAt,
+      remainingSeconds
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Authentication - Fast Verify Session Status
+app.get('/api/auth/verify-session', async (req, res) => {
+  try {
+    const check = await verifySessionAndCheckConcurrency(req);
+    if (!check.valid) {
+      return res.status(check.status || 401).json({
+        success: false,
+        code: check.code,
+        error: check.error,
+        superseded: Boolean(check.superseded),
+        expired: Boolean(check.expired),
+        activeSession: check.activeSession
+      });
+    }
+    return res.json({
+      success: true,
+      valid: true,
+      sessionId: check.session.id,
+      fingerprint: check.session.fingerprint,
+      sessionStartedAt: check.session.sessionStartedAt,
+      expiresAt: check.session.expiresAt,
+      remainingSeconds: check.remainingSeconds
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Authentication - Logout and Release Session Lock
+app.post('/api/auth/logout', async (req, res) => {
+  try {
+    const payload = verifyAndExtractToken(req);
+    const sessionId = req.body?.sessionId || payload?.sessionId || req.headers['x-client-id'];
+    const userId = payload?.id || req.body?.userId;
+
+    if (sessionId || userId) {
+      await removeActiveSessionRecord(sessionId, userId);
+    }
+
+    res.clearCookie('tp_session', { path: '/' });
+    res.clearCookie('tilepoint_session', { path: '/' });
+
+    const updatedSessions = await getActiveSessionsList();
+    emitPulseUpdate('tp_active_sessions', computeDatabaseHash(updatedSessions));
+
+    return res.json({ success: true, message: 'Session terminated and lock released.' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Authentication - Admin Terminate Session
+app.post('/api/auth/terminate-session', async (req, res) => {
+  try {
+    const user = verifyAndExtractToken(req);
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    }
+
+    const { sessionId } = req.body;
+    if (sessionId) {
+      await removeActiveSessionRecord(sessionId, null);
+      const updatedSessions = await getActiveSessionsList();
+      emitPulseUpdate('tp_active_sessions', computeDatabaseHash(updatedSessions));
+
+      notifyClients('session_terminated', { sessionId });
+      io.emit('session_terminated', { sessionId });
+    }
+
+    return res.json({ success: true, message: `Session ${sessionId} terminated.` });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Authentication - List Active Sessions
+app.get('/api/auth/active-sessions', async (req, res) => {
+  try {
+    await pruneExpiredSessions();
+    const sessions = await getActiveSessionsList();
+    return res.json({ success: true, sessions });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // API: Service Health Check
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  const configured = await isDatabaseConfiguredStore();
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     dbEngine: isMysqlActive ? 'MySQL' : 'AlaSQL (Embedded Relational)',
-    isConfigured: isConfiguredCache
+    isConfigured: configured
   });
 });
 
-// SSE real-time event subscription endpoint
+// SSE real-time event subscription endpoint with tunnel buffer-bypass & robust disconnect handling
 app.get('/api/db/events', (req, res) => {
-  const clientId = req.query.clientId || 'anonymous';
+  const clientId = req.query.clientId || 'anonymous_' + Math.random().toString(36).slice(2, 8);
 
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.flushHeaders();
 
   res.write(`data: ${JSON.stringify({ type: 'handshake', info: { connected: true } })}\n\n`);
-  clients.push({ id: clientId, res });
+  
+  const clientObj = { id: clientId, res };
+  clients.push(clientObj);
 
-  req.on('close', () => {
-    clients = clients.filter(c => c.res !== res);
-  });
+  const cleanup = () => {
+    clients = clients.filter(c => c !== clientObj);
+  };
+
+  req.on('close', cleanup);
+  req.on('error', cleanup);
+  res.on('close', cleanup);
+  res.on('error', cleanup);
 });
 
 // API: Get full database state with ETag & Hash optimization
@@ -1288,6 +1952,146 @@ app.get('/api/db', async (req, res) => {
       hash: hash,
       timestamp: new Date().toISOString(),
       data: dbCopy
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Incremental CDC Delta Sync Endpoint (GET)
+// Efficiently returns only changed rows across collections since client watermark
+app.get(['/api/sync/delta', '/api/db/delta-sync'], async (req, res) => {
+  try {
+    const sinceTimestamp = req.query.since || req.query.sinceTimestamp;
+    const clientHash = req.query.hash || req.query.globalHash;
+    const branchId = req.query.branchId;
+
+    if (clientHash && cachedDbHash && clientHash === cachedDbHash && !isDbCacheDirty) {
+      res.setHeader('ETag', `"${cachedDbHash}"`);
+      res.setHeader('Cache-Control', 'private, no-cache');
+      return res.json({
+        success: true,
+        unchanged: true,
+        hash: cachedDbHash,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const { db, hash } = await readFullDatabase();
+    res.setHeader('ETag', `"${hash}"`);
+    res.setHeader('Cache-Control', 'private, no-cache');
+
+    if (clientHash && clientHash === hash) {
+      return res.json({
+        success: true,
+        unchanged: true,
+        hash: hash,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const deltaResult = extractDeltaChanges(db, {
+      sinceTimestamp,
+      branchId
+    });
+
+    res.json({
+      ...deltaResult,
+      globalHash: hash
+    });
+  } catch (err) {
+    console.error('[CDC Sync] Delta sync error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Granular Collection-Level Watermark Diffing (POST)
+// Accepts a dictionary of { clientHashes: { tp_products: '...', ... } } and returns ONLY desynchronized collections
+app.post('/api/sync/delta/query', async (req, res) => {
+  try {
+    const { since, clientHashes = {}, branchId, globalHash } = req.body || {};
+
+    if (globalHash && cachedDbHash && globalHash === cachedDbHash && !isDbCacheDirty) {
+      return res.json({
+        success: true,
+        unchanged: true,
+        hash: cachedDbHash,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const { db, hash } = await readFullDatabase();
+
+    if (globalHash && globalHash === hash) {
+      return res.json({
+        success: true,
+        unchanged: true,
+        hash: hash,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const deltaResult = extractDeltaChanges(db, {
+      sinceTimestamp: since,
+      clientHashes,
+      branchId
+    });
+
+    res.json({
+      ...deltaResult,
+      globalHash: hash
+    });
+  } catch (err) {
+    console.error('[CDC Sync] Delta query error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Get Current Table Watermarks & Collection Checksums
+app.get('/api/sync/watermarks', async (req, res) => {
+  try {
+    const { db, hash } = await readFullDatabase();
+    const collectionHashes = computeAllCollectionHashes(db);
+
+    res.setHeader('Cache-Control', 'private, no-cache');
+    res.json({
+      success: true,
+      globalHash: hash,
+      collectionHashes,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Fast Single Collection Sync (Targeted Fetch)
+app.get('/api/sync/collection/:key', async (req, res) => {
+  try {
+    const key = req.params.key;
+    const clientHash = req.query.hash;
+
+    const { db, hash } = await readFullDatabase();
+    const collectionData = db[key] !== undefined ? db[key] : [];
+    const collectionHash = computeCollectionHash(collectionData);
+
+    if (clientHash && clientHash === collectionHash) {
+      return res.json({
+        success: true,
+        unchanged: true,
+        key,
+        hash: collectionHash,
+        globalHash: hash
+      });
+    }
+
+    res.json({
+      success: true,
+      unchanged: false,
+      key,
+      hash: collectionHash,
+      globalHash: hash,
+      data: collectionData
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -1648,9 +2452,19 @@ app.post('/api/db/transaction', async (req, res) => {
 
   const configured = await isDatabaseConfiguredStore();
   if (configured) {
-    const user = verifyAndExtractToken(req);
-    if (!user) {
-      return res.status(401).json({ success: false, error: 'Unauthorized session or token.' });
+    const check = await verifySessionAndCheckConcurrency(req);
+    if (!check.valid) {
+      return res.status(check.status || 401).json({
+        success: false,
+        code: check.code,
+        error: check.error,
+        superseded: Boolean(check.superseded),
+        expired: Boolean(check.expired),
+        activeSession: check.activeSession
+      });
+    }
+    if (check.remainingSeconds !== undefined) {
+      res.setHeader('X-Session-Remaining-Seconds', check.remainingSeconds);
     }
   }
 
@@ -1673,9 +2487,19 @@ app.post('/api/db/delta', async (req, res) => {
   if (delta.type === 'ATOMIC_TRANSACTION') {
     const configured = await isDatabaseConfiguredStore();
     if (configured) {
-      const user = verifyAndExtractToken(req);
-      if (!user) {
-        return res.status(401).json({ success: false, error: 'Unauthorized session or token.' });
+      const check = await verifySessionAndCheckConcurrency(req);
+      if (!check.valid) {
+        return res.status(check.status || 401).json({
+          success: false,
+          code: check.code,
+          error: check.error,
+          superseded: Boolean(check.superseded),
+          expired: Boolean(check.expired),
+          activeSession: check.activeSession
+        });
+      }
+      if (check.remainingSeconds !== undefined) {
+        res.setHeader('X-Session-Remaining-Seconds', check.remainingSeconds);
       }
     }
     try {
@@ -1688,11 +2512,22 @@ app.post('/api/db/delta', async (req, res) => {
 
   const configured = await isDatabaseConfiguredStore();
   if (configured) {
-    const user = verifyAndExtractToken(req);
-    if (!user) {
-      return res.status(401).json({ success: false, error: 'Unauthorized session or token.' });
+    const check = await verifySessionAndCheckConcurrency(req);
+    if (!check.valid) {
+      return res.status(check.status || 401).json({
+        success: false,
+        code: check.code,
+        error: check.error,
+        superseded: Boolean(check.superseded),
+        expired: Boolean(check.expired),
+        activeSession: check.activeSession
+      });
+    }
+    if (check.remainingSeconds !== undefined) {
+      res.setHeader('X-Session-Remaining-Seconds', check.remainingSeconds);
     }
 
+    const user = check.user;
     const payload = delta.payload || {};
     const key = payload.key;
     const userRoleLower = (user.role || '').toLowerCase();
@@ -1858,11 +2693,22 @@ app.post('/api/db', async (req, res) => {
 
   const configured = await isDatabaseConfiguredStore();
   if (configured && key !== 'tp_bootstrap_init') {
-    const user = verifyAndExtractToken(req);
-    if (!user) {
-      return res.status(401).json({ success: false, error: 'Unauthorized: Session token required.' });
+    const check = await verifySessionAndCheckConcurrency(req);
+    if (!check.valid) {
+      return res.status(check.status || 401).json({
+        success: false,
+        code: check.code,
+        error: check.error,
+        superseded: Boolean(check.superseded),
+        expired: Boolean(check.expired),
+        activeSession: check.activeSession
+      });
+    }
+    if (check.remainingSeconds !== undefined) {
+      res.setHeader('X-Session-Remaining-Seconds', check.remainingSeconds);
     }
 
+    const user = check.user;
     const userRoleLower = (user.role || '').toLowerCase();
     const isRoleAdminOrManager = userRoleLower === 'admin' || userRoleLower === 'manager';
     const isRoleAdmin = userRoleLower === 'admin';
@@ -1890,22 +2736,30 @@ app.post('/api/db/bulk', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Payload object data is required' });
   }
 
-  const isSetupPayload = Boolean(
-    data.tilepoint_onboarded_setup !== undefined ||
-    data.tp_bootstrap_init !== undefined ||
-    data.tp_is_configured !== undefined
-  );
-  
   const configured = await isDatabaseConfiguredStore();
-  if (configured && !isSetupPayload) {
-    const user = verifyAndExtractToken(req);
-    if (!user) {
-      return res.status(401).json({ success: false, error: 'Unauthorized: Session token required.' });
+  if (configured) {
+    const check = await verifySessionAndCheckConcurrency(req);
+    if (!check.valid) {
+      return res.status(check.status || 401).json({
+        success: false,
+        code: check.code,
+        error: check.error,
+        superseded: Boolean(check.superseded),
+        expired: Boolean(check.expired),
+        activeSession: check.activeSession
+      });
+    }
+    if (check.remainingSeconds !== undefined) {
+      res.setHeader('X-Session-Remaining-Seconds', check.remainingSeconds);
     }
   }
 
   try {
     for (const key of Object.keys(data)) {
+      // Guard against accidental wipes of users if configured
+      if (configured && key === 'tp_users' && Array.isArray(data[key]) && data[key].length === 0) {
+        continue;
+      }
       await saveKeyToStore(key, data[key]);
     }
 

@@ -21,10 +21,20 @@ export interface ProcessSyncResponsePayload {
   activeSessionId?: string | null;
 }
 
+export interface ProcessDeltaResponsePayload {
+  deltas: Record<string, any>;
+  collectionStates: Record<string, any>;
+  localStoredCollections: Record<string, any>;
+  volatileCache: Record<string, string>;
+  deletedParkedSaleIds: string[];
+  optimisticStockEntries: OptimisticStockItem[];
+}
+
 export interface WorkerMessageRequest {
   id: string;
-  type: 'PROCESS_SYNC_RESPONSE' | 'PREPARE_BULK_PAYLOAD' | 'SERIALIZE_DATA';
+  type: 'PROCESS_SYNC_RESPONSE' | 'PROCESS_DELTA_RESPONSE' | 'PREPARE_BULK_PAYLOAD' | 'SERIALIZE_DATA';
   syncPayload?: ProcessSyncResponsePayload;
+  deltaPayload?: ProcessDeltaResponsePayload;
   bulkPayload?: any;
   serializeData?: any;
 }
@@ -38,7 +48,7 @@ export interface CollectionResult {
 
 export interface WorkerMessageResponse {
   id: string;
-  type: 'SYNC_RESPONSE_PROCESSED' | 'BULK_PAYLOAD_READY' | 'SERIALIZE_DATA_READY' | 'ERROR';
+  type: 'SYNC_RESPONSE_PROCESSED' | 'DELTA_RESPONSE_PROCESSED' | 'BULK_PAYLOAD_READY' | 'SERIALIZE_DATA_READY' | 'ERROR';
   error?: string;
   nonCollectionWrites?: Record<string, string>;
   collections?: Record<string, CollectionResult>;
@@ -461,6 +471,61 @@ self.onmessage = (event: MessageEvent<WorkerMessageRequest>) => {
       };
 
       self.postMessage(response);
+    } else if (type === 'PROCESS_DELTA_RESPONSE') {
+      const payload = event.data.deltaPayload;
+      if (!payload) throw new Error('Missing deltaPayload for PROCESS_DELTA_RESPONSE');
+
+      const {
+        deltas,
+        collectionStates,
+        localStoredCollections,
+        deletedParkedSaleIds = [],
+        optimisticStockEntries = []
+      } = payload;
+
+      const optimisticStockMap = new Map<string, OptimisticStockItem>();
+      optimisticStockEntries.forEach((entry) => {
+        if (entry && entry.key) optimisticStockMap.set(entry.key, entry);
+      });
+
+      const deletedParkedSaleSet = new Set<string>(deletedParkedSaleIds);
+      const collections: Record<string, CollectionResult> = {};
+
+      Object.keys(deltas).forEach((key) => {
+        const deltaItems = deltas[key];
+        const serverDeltaArr = Array.isArray(deltaItems) ? deltaItems : (deltaItems ? [deltaItems] : []);
+        if (serverDeltaArr.length === 0) return;
+
+        const currentState = collectionStates[key] || [];
+        const localStored = localStoredCollections[key] || [];
+
+        const localArr = (Array.isArray(currentState) && currentState.length > 0 && Array.isArray(localStored) && localStored.length > 0)
+          ? mergeCollections(currentState, localStored, optimisticStockMap)
+          : ((Array.isArray(currentState) && currentState.length > 0) ? currentState : (Array.isArray(localStored) ? localStored : []));
+
+        let merged: any[] = [];
+        if (key === 'tp_parked_sales') {
+          merged = mergeParkedSales(localArr, serverDeltaArr, deletedParkedSaleSet);
+        } else {
+          merged = mergeCollections(localArr, serverDeltaArr, optimisticStockMap);
+        }
+
+        const mergedStr = JSON.stringify(merged);
+        const hasChanged = !areEntitiesEqual(currentState, merged);
+
+        collections[key] = {
+          merged,
+          mergedStr,
+          hasChanged,
+          serverWasEmpty: false
+        };
+      });
+
+      self.postMessage({
+        id,
+        type: 'DELTA_RESPONSE_PROCESSED',
+        collections
+      });
     } else if (type === 'PREPARE_BULK_PAYLOAD') {
       const payload = event.data.bulkPayload;
       const serialized = JSON.stringify({ data: payload });

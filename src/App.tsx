@@ -276,6 +276,8 @@ function AppContent() {
     lastMaintenanceTime,
     isMaintenanceRunning,
     runDatabaseMaintenance,
+    sessionSupersededNotice,
+    clearSessionNotice,
   } = useDb();
 
   const showSaleRedDot = parkedSales.some((p: any) => {
@@ -982,7 +984,13 @@ function AppContent() {
   };
 
   if (isHydrating || isSystemHydrating) {
-    return null;
+    return (
+      <PageLoadingFallback
+        title="Enterprise System Boot"
+        message="Connecting to central enterprise database and initializing security context..."
+        moduleKey="system-settings"
+      />
+    );
   }
 
   if (!isConfigured || !users || users.length === 0) {
@@ -2097,6 +2105,34 @@ function AppContent() {
                 isModal={true}
                 onClose={() => setShowSystemSettingsModal(false)}
               />
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {/* SESSION SUPERSEDED & DURATION EXPIRY MODAL */}
+        {sessionSupersededNotice && typeof document !== 'undefined' && createPortal(
+          <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4 animate-fade-in font-sans">
+            <div className="fixed inset-0 bg-black/75 backdrop-blur-md" onClick={clearSessionNotice} />
+            <div className="relative w-full max-w-md rounded-3xl border border-rose-500/30 p-6 z-20 shadow-2xl bg-content1 text-foreground text-center space-y-4">
+              <div className="mx-auto w-14 h-14 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-500">
+                <AlertTriangle className="h-7 w-7" />
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="text-lg font-black text-foreground">Single Active Terminal Security Alert</h3>
+                <p className="text-xs text-default-600 leading-relaxed font-medium text-left bg-content2/60 p-3.5 rounded-2xl border border-divider/25">
+                  {sessionSupersededNotice}
+                </p>
+              </div>
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={clearSessionNotice}
+                  className="w-full py-2.5 px-4 bg-primary text-primary-foreground font-bold text-xs rounded-xl shadow-md hover:opacity-90 cursor-pointer transition-all"
+                >
+                  Acknowledge & Sign In
+                </button>
+              </div>
             </div>
           </div>,
           document.body

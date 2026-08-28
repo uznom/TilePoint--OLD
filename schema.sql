@@ -669,10 +669,17 @@ CREATE TABLE IF NOT EXISTS `active_sessions` (
   `branchName` VARCHAR(191) NOT NULL,
   `lastActive` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `userAgent` TEXT NULL,
+  `fingerprint` VARCHAR(191) NULL,
+  `deviceInfo` TEXT NULL,
+  `sessionStartedAt` DATETIME NULL,
+  `expiresAt` DATETIME NULL,
+  `maxDurationMinutes` INT NULL DEFAULT 480,
   PRIMARY KEY (`id`),
   KEY `idx_sessions_user_id` (`userId`),
   KEY `idx_sessions_branch_id` (`branchId`),
-  KEY `idx_sessions_last_active` (`lastActive`)
+  KEY `idx_sessions_last_active` (`lastActive`),
+  KEY `idx_sessions_fingerprint` (`fingerprint`),
+  KEY `idx_sessions_expires_at` (`expiresAt`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 27. DB Snapshots Table

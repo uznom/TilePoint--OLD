@@ -43,6 +43,7 @@ import {
   Copy,
   Check,
   Smartphone,
+  Fingerprint,
   Monitor
 } from 'lucide-react';
 
@@ -60,8 +61,24 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
     currentUser,
     activeSessions,
     activeSessionId,
-    terminateSession
+    terminateSession,
+    sessionRemainingSeconds,
+    sessionExpiresAt,
+    extendSession
   } = useDb();
+  const [extendingSession, setExtendingSession] = useState(false);
+
+  const handleExtendCurrentSession = async () => {
+    setExtendingSession(true);
+    try {
+      const ok = await extendSession(60);
+      if (ok) {
+        // toast or notice handled via state
+      }
+    } finally {
+      setExtendingSession(false);
+    }
+  };
 
   const [subTab, setSubTab] = useState<'employees' | 'active_sessions'>('employees');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
@@ -1389,6 +1406,36 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                               {session.id.slice(0, 14)}...
                             </span>
                           </div>
+                          {session.fingerprint && (
+                            <div className="flex justify-between items-center text-[11px]">
+                              <span className="text-default-500 font-medium flex items-center gap-1">
+                                <Fingerprint className="h-3 w-3 text-indigo-500" />
+                                <span>Fingerprint:</span>
+                              </span>
+                              <span className="font-mono font-semibold text-foreground text-[10px] bg-content2 px-1.5 py-0.5 rounded" title={session.fingerprint}>
+                                {session.fingerprint.slice(0, 12)}...
+                              </span>
+                            </div>
+                          )}
+                          {session.hardwareKey && (
+                            <div className="flex justify-between items-center text-[11px]">
+                              <span className="text-default-500 font-medium flex items-center gap-1">
+                                <KeyRound className="h-3 w-3 text-amber-500" />
+                                <span>Hardware Key:</span>
+                              </span>
+                              <span className="font-mono font-semibold text-foreground text-[10px] bg-content2 px-1.5 py-0.5 rounded" title={session.hardwareKey}>
+                                {session.hardwareKey.slice(0, 12)}...
+                              </span>
+                            </div>
+                          )}
+                          {session.ip && (
+                            <div className="flex justify-between items-center text-[11px]">
+                              <span className="text-default-500 font-medium">IP Address:</span>
+                              <span className="font-mono font-semibold text-foreground text-[10px]">
+                                {session.ip}
+                              </span>
+                            </div>
+                          )}
                           <div className="flex justify-between items-center text-[11px]">
                             <span className="text-default-500 font-medium">Branch:</span>
                             <span className="font-bold flex items-center gap-1 text-foreground">
@@ -1410,12 +1457,36 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                               {getRelativeTime(session.lastActive)}
                             </span>
                           </div>
+                          {isCurrent && sessionExpiresAt && (
+                            <div className="flex justify-between items-center text-[11px]">
+                              <span className="text-default-500 font-medium">Session Expires:</span>
+                              <span className="font-mono font-medium text-foreground text-[10.5px]">
+                                {new Date(sessionExpiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
                       {/* Actions panel */}
-                      {!isCurrent && (isUserAdmin || (currentUser?.role === UserRole.MANAGER && users.find(u => u.username === session.username)?.branchAssignmentId === userBranchId)) && (
-                        <div className="border-t border-divider/20 pt-3 mt-4 flex justify-end">
+                      <div className="border-t border-divider/20 pt-3 mt-4 flex flex-col gap-2">
+                        {isCurrent ? (
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="text-[11px] text-default-500 font-medium flex items-center gap-1">
+                              <Clock className="h-3 w-3 text-primary" />
+                              <span>{Math.floor(sessionRemainingSeconds / 60)}m left</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleExtendCurrentSession}
+                              disabled={extendingSession}
+                              className="px-3 py-1.5 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground border border-primary/20 text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer transition-colors"
+                              title="Extend corporate session duration by 60 minutes"
+                            >
+                              {extendingSession ? "Extending..." : "+60m Extend"}
+                            </button>
+                          </div>
+                        ) : (isUserAdmin || (currentUser?.role === UserRole.MANAGER && users.find(u => u.username === session.username)?.branchAssignmentId === userBranchId)) ? (
                           <button
                             type="button"
                             onClick={() => handleTerminateRemote(session.id, session.fullName)}
@@ -1424,8 +1495,8 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                           >
                             <PowerOff className="h-3.5 w-3.5" /> Terminate Remote Session
                           </button>
-                        </div>
-                      )}
+                        ) : null}
+                      </div>
                     </motion.div>
                   );
                 })}

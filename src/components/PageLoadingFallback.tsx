@@ -14,7 +14,7 @@ export interface PageLoadingFallbackProps {
 interface ModuleMeta {
   displayName: string;
   sizeKB: number;
-  complexity: 'Light' | 'Standard' | 'High' | 'Heavy';
+  complexity: 'Light' | 'Standard' | 'Medium' | 'High' | 'Heavy';
   category: string;
 }
 
@@ -26,7 +26,7 @@ const MODULE_REGISTRY: Record<string, ModuleMeta> = {
   procurement: { displayName: 'Procurement & Purchase Orders', sizeKB: 124, complexity: 'High', category: 'Supply Chain' },
   'procurement-po': { displayName: 'Purchase Order Management', sizeKB: 124, complexity: 'High', category: 'Supply Chain' },
   'sales-transmission': { displayName: 'Sales Transmission Hub', sizeKB: 118, complexity: 'High', category: 'Integration' },
-  branches: { displayName: 'Multi-Branch Operations', sizeKB: 89, complexity: 'Medium' as any, category: 'Enterprise' },
+  branches: { displayName: 'Multi-Branch Operations', sizeKB: 89, complexity: 'Medium', category: 'Enterprise' },
   inventory: { displayName: 'Inventory & Stock Management', sizeKB: 79, complexity: 'Standard', category: 'Warehousing' },
   'inventory-stocks': { displayName: 'Stock Level Overview', sizeKB: 79, complexity: 'Standard', category: 'Warehousing' },
   'inventory-adjustments': { displayName: 'Stock Adjustments', sizeKB: 79, complexity: 'Standard', category: 'Warehousing' },

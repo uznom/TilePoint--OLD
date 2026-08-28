@@ -30,6 +30,12 @@ DEFAULT_PRODUCT_CATEGORIES,
 DEFAULT_UNIT_TYPES,
 } from "../lib/dynamicConfigDefaults";
 import { saveFileToBackup } from "../lib/fileBackupHelper";
+import {
+  getClientFingerprintHash,
+  getClientDeviceInfo,
+  getDeviceHardwareKey,
+  getClientDeviceSummary
+} from "../lib/fingerprint";
 import { dbSyncWorkerClient } from "../services/dbSyncWorkerClient";
 import { mysqlDatabaseService } from "../services/mysqlDatabaseService";
 import {
@@ -821,6 +827,11 @@ interface DbContextType {
  activeSessions: ActiveSession[];
  activeSessionId: string | null;
  terminateSession: (sessionId: string) => void;
+ sessionRemainingSeconds: number;
+ sessionExpiresAt: string | null;
+ extendSession: (additionalMinutes?: number) => Promise<boolean>;
+ sessionSupersededNotice: string | null;
+ clearSessionNotice: () => void;
  completeOnboarding: (
     newProducts?: Product[],
  newBranchesList?: Branch[],
@@ -1055,13 +1066,21 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }
  } catch (_) {}
 
- const token = generateSessionToken(user);
- const activeSessionId = localStorage.getItem("tp_active_session_id") || sessionStorage.getItem("tp_active_session_id") || "unknown";
- return {
- "Authorization": `Bearer ${token}`,
- "X-Session-Token": token,
- "X-Client-ID": activeSessionId,
- };
+   const savedToken = sessionStorage.getItem("tp_session_token") || localStorage.getItem("tp_session_token");
+  const token = savedToken || generateSessionToken(user);
+  const activeSessionId = localStorage.getItem("tp_active_session_id") || sessionStorage.getItem("tp_active_session_id") || "unknown";
+  const fingerprint = getClientFingerprintHash();
+  const hardwareKey = getDeviceHardwareKey();
+  const clientSummary = getClientDeviceSummary();
+  return {
+    "Authorization": `Bearer ${token}`,
+    "X-Session-Token": token,
+    "X-Client-ID": activeSessionId,
+    "X-Session-ID": activeSessionId,
+    "X-Client-Fingerprint": fingerprint,
+    "X-Device-Key": hardwareKey,
+    "X-Client-Info": clientSummary,
+  };
  };
 
  const [isHydrating, setIsHydrating] = useState<boolean>(true);
@@ -1244,150 +1263,248 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  setRateLimitTimeLeft(0);
  };
 
- const terminateSession = (sessionId: string) => {
- setActiveSessions((prev) => prev.filter((s) => s.id !== sessionId));
- addAuditLog(
- "SESSION_TERMINATED",
- `Administrative force logout executed for session ${sessionId}`,
- "Users",
- sessionId,
- );
- };
+  const terminateSession = (sessionId: string) => {
+    setActiveSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    safeApiFetch("/api/auth/terminate-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId })
+    }).catch(() => {});
+    addAuditLog(
+      "SESSION_TERMINATED",
+      `Administrative force logout executed for session ${sessionId}`,
+      "Users",
+      sessionId,
+    );
+  };
 
- const login = async (
- username: string,
- password: string,
- ): Promise<{ success: boolean; error?: string; sqliBlocked?: boolean }> => {
- // Dynamic credential verification
+  const login = async (
+    username: string,
+    password: string,
+  ): Promise<{ success: boolean; error?: string; sqliBlocked?: boolean }> => {
+    // Dynamic credential verification
 
- // 1. Check for SQL Injection (SQLi)
- const sqlCheckUser = detectSQLi(username);
- const sqlCheckPass = detectSQLi(password);
- if (!sqlCheckUser.isSafe || !sqlCheckPass.isSafe) {
- const reason =
- (!sqlCheckUser.isSafe ? sqlCheckUser.reason : sqlCheckPass.reason) ||
- "SQLi Signature Detected";
- addAuditLog(
- "SECURITY_ALERT",
- `SQL Injection attempt blocked on input username/password! Vector: ${reason}`,
- "Users",
- "SYSTEM",
- );
- return {
- success: false,
- error: `SECURITY VIOLATION: SQL injection pattern detected (${reason}). Authentication halted. Attempt logged in corporate security log.`,
- sqliBlocked: true,
- };
- }
+    // 1. Check for SQL Injection (SQLi)
+    const sqlCheckUser = detectSQLi(username);
+    const sqlCheckPass = detectSQLi(password);
+    if (!sqlCheckUser.isSafe || !sqlCheckPass.isSafe) {
+      const reason =
+        (!sqlCheckUser.isSafe ? sqlCheckUser.reason : sqlCheckPass.reason) ||
+        "SQLi Signature Detected";
+      addAuditLog(
+        "SECURITY_ALERT",
+        `SQL Injection attempt blocked on input username/password! Vector: ${reason}`,
+        "Users",
+        "SYSTEM",
+      );
+      return {
+        success: false,
+        error: `SECURITY VIOLATION: SQL injection pattern detected (${reason}). Authentication halted. Attempt logged in corporate security log.`,
+        sqliBlocked: true,
+      };
+    }
 
- // 2. Check for Rate Limiting Lockout
- const now = Date.now();
- if (now < lockoutUntil) {
- const left = Math.ceil((lockoutUntil - now) / 1000);
- return {
- success: false,
- error: `TOO MANY ATTEMPTS: Access locked out. Please try again in ${left} seconds.`,
- };
- }
+    // 2. Check for Rate Limiting Lockout
+    const now = Date.now();
+    if (now < lockoutUntil) {
+      const left = Math.ceil((lockoutUntil - now) / 1000);
+      return {
+        success: false,
+        error: `TOO MANY ATTEMPTS: Access locked out. Please try again in ${left} seconds.`,
+      };
+    }
 
- // Find user in db
- const targetUser = users.find(
- (u) => u.username.trim().toLowerCase() === username.trim().toLowerCase(),
- );
- if (!targetUser) {
- // Fast local verification
- await new Promise((r) => setTimeout(r, 50));
- handleFailedLogin();
- return {
- success: false,
- error: "Invalid employee ID or security password code.",
- };
- }
+    // Find user in db for branch info & offline fallback
+    const targetUser = users.find(
+      (u) => u.username.trim().toLowerCase() === username.trim().toLowerCase(),
+    );
 
- // Check account status
- if (targetUser.status !== "Active") {
- return {
- success: false,
- error:
- "Suspended Account: This terminal credentials have been restricted by Administration.",
- };
- }
+    const activeBranchName =
+      branches.find((b) => b.id === targetUser?.branchAssignmentId)?.name ||
+      branches[0]?.name ||
+      (localStorage.getItem("tilepoint_company_name_v1") || "Main Branch");
 
- // 3. E2EE Packets Emulation Demonstration
- const encryptedParcel = await encryptCredentialPacket({
- username,
- password,
- });
+    const existingSessionId = localStorage.getItem("tp_active_session_id") || undefined;
 
- // Decrypt on our simulated Auth Node
- const decryptedPayload = await decryptCredentialPacket(encryptedParcel);
+    // 3. Authenticate via Server API (Enforces Single-Session Lock & Sets Secure HTTP-Only Cookie)
+    try {
+      const clientFingerprint = getClientFingerprintHash();
+      const clientHardwareKey = getDeviceHardwareKey();
+      const clientDeviceInfo = getClientDeviceInfo();
+      const clientDeviceSummary = getClientDeviceSummary();
 
- // 4. Verify password with salted PBKDF2 bcrypt hash
- const isMatch = await verifyPasswordWithToken(
- decryptedPayload.password,
- targetUser.passwordHash || "",
- );
- if (!isMatch) {
- handleFailedLogin();
- return {
- success: false,
- error: "Invalid employee ID or security password code.",
- };
- }
+      const serverAuthRes = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          username,
+          password,
+          branchId: targetUser?.branchAssignmentId || "B1",
+          branchName: activeBranchName,
+          userAgent: navigator.userAgent,
+          sessionId: existingSessionId,
+          fingerprint: clientFingerprint,
+          hardwareKey: clientHardwareKey,
+          deviceInfo: clientDeviceInfo,
+          deviceSummary: clientDeviceSummary
+        })
+      });
 
- // Success Authentication
- setFailedAttempts(0);
- setLockoutUntil(0);
- setRateLimitTimeLeft(0);
- setCurrentUser(targetUser);
- setIsLoggedIn(true);
- sessionStorage.setItem("tp_is_logged_in", "true");
- sessionStorage.setItem("tp_current_user", JSON.stringify(targetUser));
- localStorage.setItem("tp_is_logged_in", "true");
- localStorage.setItem("tp_current_user", JSON.stringify(targetUser));
+      const authData = await serverAuthRes.json();
 
- // Register concurrent-safe unique session state
- const newSessionId =
- "SESS_" + Math.random().toString(36).substring(2, 11).toUpperCase();
- setActiveSessionId(newSessionId);
- localStorage.setItem("tp_active_session_id", newSessionId);
- sessionStorage.setItem("tp_active_session_id", newSessionId);
+      if (!serverAuthRes.ok || !authData.success) {
+        // Concurrency Restriction: "whoever logged in the account first gets it"
+        if (serverAuthRes.status === 409 || authData.isLocked) {
+          return {
+            success: false,
+            error: authData.error || "Account is already active on another terminal. Concurrent logins are restricted."
+          };
+        }
+        if (serverAuthRes.status === 401 || serverAuthRes.status === 400 || serverAuthRes.status === 403) {
+          handleFailedLogin();
+          return {
+            success: false,
+            error: authData.error || "Invalid employee ID or security password code."
+          };
+        }
+      } else if (authData.success && authData.user) {
+        // Success Server-Side Authentication
+        const authedUser = authData.user;
+        setFailedAttempts(0);
+        setLockoutUntil(0);
+        setRateLimitTimeLeft(0);
+        setCurrentUser(authedUser);
+        setIsLoggedIn(true);
 
- const nowStr = new Date().toISOString();
- const cleanSessions = activeSessions.filter(
- (s) => s.userId !== targetUser.id,
- );
- const activeBranchName =
- branches.find((b) => b.id === targetUser.branchAssignmentId)?.name ||
- branches[0]?.name ||
- (localStorage.getItem("tilepoint_company_name_v1") || "Main Branch");
- const updatedSessions = [
- ...cleanSessions,
- {
- id: newSessionId,
- userId: targetUser.id,
- username: targetUser.username,
- fullName: targetUser.fullName,
- role: targetUser.role,
- branchId: targetUser.branchAssignmentId || "B1",
- branchName: activeBranchName,
- lastActive: nowStr,
- userAgent: navigator.userAgent,
- },
- ];
- setActiveSessions(updatedSessions);
- saveToStorageWithDebounce("tp_active_sessions", updatedSessions, true);
+        if (authData.token) {
+          sessionStorage.setItem("tp_session_token", authData.token);
+          localStorage.setItem("tp_session_token", authData.token);
+        }
+        if (authData.sessionDurationSeconds) {
+          setSessionRemainingSeconds(authData.sessionDurationSeconds);
+          sessionStorage.setItem("tp_session_remaining_seconds", String(authData.sessionDurationSeconds));
+        }
+        if (authData.expiresAt) {
+          setSessionExpiresAt(authData.expiresAt);
+          sessionStorage.setItem("tp_session_expires_at", authData.expiresAt);
+        }
+        sessionStorage.setItem("tp_is_logged_in", "true");
+        sessionStorage.setItem("tp_current_user", JSON.stringify(authedUser));
+        localStorage.setItem("tp_is_logged_in", "true");
+        localStorage.setItem("tp_current_user", JSON.stringify(authedUser));
 
- // Audit logs of E2EE handshake
- addAuditLog(
- "USER_LOGIN",
- `E2EE Secure Client Session cipher verified successfully. Active: ${targetUser.fullName} (Session: ${newSessionId}, E2EE payload: ${encryptedParcel.encryptedData.slice(0, 32)}...)`,
- "Users",
- targetUser.id,
- );
+        const verifiedSessionId = authData.sessionId || ("SESS_" + Math.random().toString(36).substring(2, 11).toUpperCase());
+        setActiveSessionId(verifiedSessionId);
+        localStorage.setItem("tp_active_session_id", verifiedSessionId);
+        sessionStorage.setItem("tp_active_session_id", verifiedSessionId);
 
- return { success: true };
- };
+        if (authData.session) {
+          setActiveSessions((prev) => {
+            const filtered = prev.filter((s) => s.userId !== authedUser.id && s.id !== verifiedSessionId);
+            return [...filtered, authData.session];
+          });
+        }
+
+        addAuditLog(
+          "USER_LOGIN",
+          `Server-authenticated secure session established. Active: ${authedUser.fullName} (Session: ${verifiedSessionId})`,
+          "Users",
+          authedUser.id,
+        );
+
+        return { success: true };
+      }
+    } catch (networkErr) {
+      console.warn("[Auth Bridge] Network server login unreachable, evaluating offline authentication...", networkErr);
+    }
+
+    // 4. Offline Fallback Authentication
+    if (!targetUser) {
+      await new Promise((r) => setTimeout(r, 50));
+      handleFailedLogin();
+      return {
+        success: false,
+        error: "Invalid employee ID or security password code.",
+      };
+    }
+
+    if (targetUser.status !== "Active") {
+      return {
+        success: false,
+        error:
+          "Suspended Account: This terminal credentials have been restricted by Administration.",
+      };
+    }
+
+    // E2EE Packets Emulation Demonstration
+    const encryptedParcel = await encryptCredentialPacket({
+      username,
+      password,
+    });
+
+    const decryptedPayload = await decryptCredentialPacket(encryptedParcel);
+
+    // Verify password with salted PBKDF2 bcrypt hash
+    const isMatch = await verifyPasswordWithToken(
+      decryptedPayload.password,
+      targetUser.passwordHash || "",
+    );
+    if (!isMatch) {
+      handleFailedLogin();
+      return {
+        success: false,
+        error: "Invalid employee ID or security password code.",
+      };
+    }
+
+    // Success Authentication (Offline)
+    setFailedAttempts(0);
+    setLockoutUntil(0);
+    setRateLimitTimeLeft(0);
+    setCurrentUser(targetUser);
+    setIsLoggedIn(true);
+    sessionStorage.setItem("tp_is_logged_in", "true");
+    sessionStorage.setItem("tp_current_user", JSON.stringify(targetUser));
+    localStorage.setItem("tp_is_logged_in", "true");
+    localStorage.setItem("tp_current_user", JSON.stringify(targetUser));
+
+    const newSessionId =
+      "SESS_" + Math.random().toString(36).substring(2, 11).toUpperCase();
+    setActiveSessionId(newSessionId);
+    localStorage.setItem("tp_active_session_id", newSessionId);
+    sessionStorage.setItem("tp_active_session_id", newSessionId);
+
+    const nowStr = new Date().toISOString();
+    const cleanSessions = activeSessions.filter(
+      (s) => s.userId !== targetUser.id,
+    );
+    const updatedSessions = [
+      ...cleanSessions,
+      {
+        id: newSessionId,
+        userId: targetUser.id,
+        username: targetUser.username,
+        fullName: targetUser.fullName,
+        role: targetUser.role,
+        branchId: targetUser.branchAssignmentId || "B1",
+        branchName: activeBranchName,
+        lastActive: nowStr,
+        userAgent: navigator.userAgent,
+      },
+    ];
+    setActiveSessions(updatedSessions);
+    saveToStorageWithDebounce("tp_active_sessions", updatedSessions, true);
+
+    addAuditLog(
+      "USER_LOGIN",
+      `Offline verified session active. User: ${targetUser.fullName} (Session: ${newSessionId})`,
+      "Users",
+      targetUser.id,
+    );
+
+    return { success: true };
+  };
 
   const logBranchAccessScope = (
     operation: string,
@@ -1451,8 +1568,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  setCurrentUser(null);
  sessionStorage.setItem("tp_is_logged_in", "false");
  sessionStorage.removeItem("tp_current_user");
+ sessionStorage.removeItem("tp_session_token");
  localStorage.removeItem("tp_is_logged_in");
  localStorage.removeItem("tp_current_user");
+ localStorage.removeItem("tp_session_token");
  localStorage.removeItem("tp_active_tab");
  sessionStorage.removeItem("tp_active_tab");
  localStorage.removeItem("tilepoint_active_tab");
@@ -1462,6 +1581,14 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  localStorage.removeItem("tp_offline_queue");
  sessionStorage.removeItem("tp_offline_queue");
  setOfflineQueue([]);
+
+ // Inform server to release session lock and clear cookie
+ fetch("/api/auth/logout", {
+ method: "POST",
+ headers: { "Content-Type": "application/json" },
+ credentials: "include",
+ body: JSON.stringify({ sessionId: activeSessionId, userId: currentUser?.id })
+ }).catch(() => {});
 
  // Remove our session from activeSessions list so other client notices immediately
  if (activeSessionId) {
@@ -1505,6 +1632,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  const authHeaders = getAuthHeaders();
   const mergedInit = { ...init };
+  if (mergedInit.credentials === undefined) {
+    mergedInit.credentials = "include";
+  }
   if (Object.keys(authHeaders).length > 0) {
     if (!mergedInit.headers) {
       mergedInit.headers = authHeaders;
@@ -1539,6 +1669,14 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       const res = await fetch(input, { ...mergedInit, signal });
       clearTimeout(fetchTimeout);
 
+      const remainingSecHeader = res.headers.get("x-session-remaining-seconds");
+      if (remainingSecHeader) {
+        const secVal = parseInt(remainingSecHeader, 10);
+        if (secVal > 0) {
+          setSessionRemainingSeconds(secVal);
+        }
+      }
+
       if (!res.ok) {
         const statusCode = res.status;
 
@@ -1566,12 +1704,25 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         if (statusCode === 401) {
           const userStr = sessionStorage.getItem("tp_current_user") || localStorage.getItem("tp_current_user");
           if (userStr) {
-            console.warn("[API Interceptor] 401 Unauthorized received. Clearing session and redirecting to login.");
-            logout();
-            setApiErrorState({
-              statusCode: 401,
-              message: "Your session has expired. Please sign in again to verify your corporate identity.",
-            });
+            let parsedErr: any = null;
+            try {
+              parsedErr = await res.clone().json();
+            } catch (_) {}
+
+            if (parsedErr?.code === 'SESSION_SUPERSEDED' || parsedErr?.superseded) {
+              console.warn("[API Interceptor] 401 Concurrent Session Superseded received.");
+              handleSupersededSession(parsedErr.activeSession, parsedErr.error);
+            } else if (parsedErr?.code === 'SESSION_EXPIRED' || parsedErr?.expired) {
+              console.warn("[API Interceptor] 401 Session Duration Expired received.");
+              handleExpiredSession(parsedErr.error);
+            } else {
+              console.warn("[API Interceptor] 401 Unauthorized received. Clearing session.");
+              logout();
+              setApiErrorState({
+                statusCode: 401,
+                message: parsedErr?.error || "Your session has expired. Please sign in again to verify your corporate identity.",
+              });
+            }
           }
         } else if (statusCode === 403) {
           console.warn("[API Interceptor] 403 Forbidden received. Restricting workspace access.");
@@ -2090,14 +2241,122 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return safeParse<ActiveSession[]>("tp_active_sessions", []);
  });
 
- const [activeSessionId, setActiveSessionId] = useState<string | null>(() => {
- if (typeof window === "undefined") return null;
- return (
- localStorage.getItem("tp_active_session_id") ||
- sessionStorage.getItem("tp_active_session_id") ||
- null
- );
- });
+   const [activeSessionId, setActiveSessionId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return (
+      localStorage.getItem("tp_active_session_id") ||
+      sessionStorage.getItem("tp_active_session_id") ||
+      null
+    );
+  });
+
+  const [sessionRemainingSeconds, setSessionRemainingSeconds] = useState<number>(() => {
+    if (typeof window === "undefined") return 14400;
+    const saved = sessionStorage.getItem("tp_session_remaining_seconds");
+    return saved ? parseInt(saved, 10) : 14400;
+  });
+
+  const [sessionExpiresAt, setSessionExpiresAt] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return sessionStorage.getItem("tp_session_expires_at") || null;
+  });
+
+  const [sessionSupersededNotice, setSessionSupersededNotice] = useState<string | null>(null);
+
+  const clearSessionNotice = useCallback(() => {
+    setSessionSupersededNotice(null);
+  }, []);
+
+  const handleSupersededSession = useCallback((activeSession?: any, customMsg?: string) => {
+    console.warn("[Session Guard] Account session superseded by another terminal/device. Triggering immediate local sign-out.");
+    const deviceStr = activeSession ? `${activeSession.os || 'Remote OS'} • ${activeSession.browser || 'Browser'} (${activeSession.ip || 'Remote IP'})` : "another terminal / browser";
+    const reason = customMsg || `Your account was accessed on ${deviceStr}. To prevent data collisions and enforce single active terminal integrity, this local session was signed out.`;
+    setSessionSupersededNotice(reason);
+    setIsLoggedIn(false);
+    setCurrentUser(null);
+    sessionStorage.setItem("tp_is_logged_in", "false");
+    sessionStorage.removeItem("tp_current_user");
+    sessionStorage.removeItem("tp_session_token");
+    localStorage.removeItem("tp_is_logged_in");
+    localStorage.removeItem("tp_current_user");
+    localStorage.removeItem("tp_session_token");
+    localStorage.removeItem("tp_active_session_id");
+    sessionStorage.removeItem("tp_active_session_id");
+  }, []);
+
+  const handleExpiredSession = useCallback((customMsg?: string) => {
+    console.warn("[Session Guard] Session duration expired. Triggering local sign-out.");
+    const reason = customMsg || "Your corporate session duration limit has reached its expiration. Please sign in again.";
+    setSessionSupersededNotice(reason);
+    setIsLoggedIn(false);
+    setCurrentUser(null);
+    sessionStorage.setItem("tp_is_logged_in", "false");
+    sessionStorage.removeItem("tp_current_user");
+    sessionStorage.removeItem("tp_session_token");
+    localStorage.removeItem("tp_is_logged_in");
+    localStorage.removeItem("tp_current_user");
+    localStorage.removeItem("tp_session_token");
+    localStorage.removeItem("tp_active_session_id");
+    sessionStorage.removeItem("tp_active_session_id");
+  }, []);
+
+  const extendSession = useCallback(async (additionalMinutes: number = 60): Promise<boolean> => {
+    try {
+      const activeId = localStorage.getItem("tp_active_session_id") || sessionStorage.getItem("tp_active_session_id");
+      const res = await fetch("/api/auth/extend-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          sessionId: activeId,
+          additionalMinutes
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.remainingSeconds !== undefined) {
+        setSessionRemainingSeconds(data.remainingSeconds);
+        sessionStorage.setItem("tp_session_remaining_seconds", String(data.remainingSeconds));
+        if (data.expiresAt) {
+          setSessionExpiresAt(data.expiresAt);
+          sessionStorage.setItem("tp_session_expires_at", data.expiresAt);
+        }
+        addAuditLog(
+          "SESSION_EXTENDED",
+          `Session duration extended by ${additionalMinutes} minutes. New expiration: ${data.expiresAt}`,
+          "Users",
+          currentUser?.id || "SYSTEM"
+        );
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.warn("[Session Duration] Failed to extend session:", err);
+      return false;
+    }
+  }, [currentUser]);
+
+  // Session Duration Countdown Timer (1s interval)
+  useEffect(() => {
+    if (!isLoggedIn || !currentUser) return;
+    const timer = setInterval(() => {
+      setSessionRemainingSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          handleExpiredSession();
+          return 0;
+        }
+        const next = prev - 1;
+        if (next % 30 === 0) {
+          sessionStorage.setItem("tp_session_remaining_seconds", String(next));
+        }
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isLoggedIn, currentUser?.id, handleExpiredSession]);
 
  // Derived Active Branch
  const activeBranch = useMemo(() => {
@@ -2119,17 +2378,31 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return openShift || null;
  }, [shifts, currentUser]);
 
- // Heartbeat to update our active session timestamp every 20 seconds
+ // Heartbeat to update our active session timestamp every 15 seconds
  useEffect(() => {
  if (!isLoggedIn || !currentUser || !activeSessionId) return;
 
+ const pingServer = () => {
+ fetch("/api/auth/heartbeat", {
+ method: "POST",
+ headers: { "Content-Type": "application/json" },
+ credentials: "include",
+ body: JSON.stringify({
+ sessionId: activeSessionId,
+ branchId: currentUser.branchAssignmentId || "B1",
+ branchName: branches.find((b) => b.id === currentUser.branchAssignmentId)?.name || branches[0]?.name || "Main Branch"
+ })
+ }).catch(() => {});
+ };
+
  const heartbeatInterval = setInterval(() => {
+ pingServer();
  setActiveSessions((prev) => {
  const nowStr = new Date().toISOString();
  let sessionExists = false;
 
- // Prune sessions older than 3 minutes to keep list clean
- const cutoffTime = Date.now() - 3 * 60 * 1000;
+ // Prune sessions older than 5 minutes to keep list clean
+ const cutoffTime = Date.now() - 5 * 60 * 1000;
  const freshSessions = prev.filter(
  (s) => new Date(s.lastActive).getTime() > cutoffTime,
  );
@@ -2143,15 +2416,6 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  });
 
  if (!sessionExists) {
- // If we are not in the list, check if someone else is logged into our account
- const hasConcurrent = freshSessions.some(
- (s) => s.userId === currentUser.id && s.id !== activeSessionId,
- );
- if (hasConcurrent) {
- // Under offline ERP OS mode, support concurrent handheld lookups and multi-terminal operations on shared employee accounts
- console.log("[Concurrent Monitor] Multi-device session active on account:", currentUser.fullName);
- }
-
  const activeBranchName =
  branches.find((b) => b.id === currentUser.branchAssignmentId)
  ?.name || branches[0]?.name || (localStorage.getItem("tilepoint_company_name_v1") || "Main Branch");
@@ -2166,20 +2430,14 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  lastActive: nowStr,
  userAgent: navigator.userAgent,
  });
- } else {
- // If we exist, check if a newer session has taken over
- const hasConcurrent = freshSessions.some(
- (s) => s.userId === currentUser.id && s.id !== activeSessionId,
- );
- if (hasConcurrent) {
- // Under offline ERP OS mode, support concurrent handheld lookups and multi-terminal operations on shared employee accounts
- console.log("[Concurrent Monitor] Multi-device session active on account:", currentUser.fullName);
- }
  }
 
  return updatedSessions;
  });
- }, 8000);
+ }, 15000);
+
+ // Initial heartbeat ping on mount
+ pingServer();
 
  return () => clearInterval(heartbeatInterval);
  }, [isLoggedIn, currentUser?.id, activeSessionId, branches]);
@@ -2545,6 +2803,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const isProcessingQueue = useRef(false);
  const isSyncingFromServer = useRef(false);
  const lastServerDbHash = useRef<string>("");
+ const lastCollectionHashes = useRef<Record<string, string>>({});
+ const lastSyncTimestamp = useRef<string>("");
 
  const processTransactionSyncQueue = async () => {
  if (isProcessingQueue.current) return;
@@ -2669,19 +2929,159 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  }
  try {
  isSyncingFromServer.current = true;
+ let responseData: any = null;
+ let isDeltaMode = false;
+
+ // Try incremental Delta Sync if client has already synced and has timestamp
+ if (lastSyncTimestamp.current && lastServerDbHash.current) {
+ try {
+ const deltaRes = await safeApiFetch("/api/sync/delta/query", {
+ method: "POST",
+ headers: { "Content-Type": "application/json" },
+ body: JSON.stringify({
+ since: lastSyncTimestamp.current,
+ clientHashes: lastCollectionHashes.current,
+ globalHash: lastServerDbHash.current,
+ branchId: (currentUser as any)?.branchId || (currentUser as any)?.branch
+ })
+ });
+ if (deltaRes && deltaRes.ok) {
+ const deltaData = await deltaRes.json();
+ if (deltaData && deltaData.success) {
+ responseData = deltaData;
+ isDeltaMode = Boolean(deltaData.isDelta && deltaData.deltas);
+ }
+ }
+ } catch (deltaErr) {
+ console.warn("[Delta Sync] Incremental query failed, falling back to full sync:", deltaErr);
+ }
+ }
+
+ // Fallback to full sync if delta not available or returned fullResyncNeeded
+ if (!responseData || (!isDeltaMode && !responseData.unchanged)) {
  const syncUrl = lastServerDbHash.current
  ? `/api/db?hash=${encodeURIComponent(lastServerDbHash.current)}`
  : "/api/db";
  const res = await safeApiFetch(syncUrl);
  if (!res.ok)
  throw new Error("Shared server returned status " + res.status);
- const responseData = await res.json();
+ responseData = await res.json();
+ }
+
  if (responseData && responseData.success) {
- if (responseData.hash) {
- lastServerDbHash.current = responseData.hash;
+ if (responseData.globalHash || responseData.hash) {
+ lastServerDbHash.current = responseData.globalHash || responseData.hash;
+ }
+ if (responseData.collectionHashes) {
+ lastCollectionHashes.current = responseData.collectionHashes;
+ }
+ if (responseData.serverTimestamp || responseData.timestamp) {
+ lastSyncTimestamp.current = responseData.serverTimestamp || responseData.timestamp;
  }
  if (responseData.unchanged) {
  // Shared database is identical on host. Bypassing state comparisons & localStorage writes completely!
+ setServerConnected(true);
+ return;
+ }
+
+ if (isDeltaMode && responseData.deltas) {
+ const deltas = responseData.deltas;
+ const deltaKeys = Object.keys(deltas);
+ if (deltaKeys.length > 0 && dbSyncWorkerClient.isWorkerAvailable) {
+ try {
+ const optimisticStockEntries: any[] = [];
+ optimisticStockCacheRef.current.forEach((val, key) => {
+ if (val) optimisticStockEntries.push({ key, ...val });
+ });
+
+ const collectionStates: Record<string, any> = {
+ tp_users: users,
+ tp_branches: branches,
+ tp_suppliers: suppliers,
+ tp_brands: brands,
+ tp_products: products,
+ tp_purchase_orders: purchaseOrders,
+ tp_po_items: poItems,
+ tp_transmittals: transmittals,
+ tp_shifts: shifts,
+ tp_sales: sales,
+ tp_sale_items: saleItems,
+ tp_movements: movements,
+ tp_audit_logs: auditLogs,
+ tp_parked_sales: parkedSales,
+ tp_stock_transfers: stockTransfers,
+ tp_branch_stock: branchStock,
+ tp_ledger_entries: ledgerEntries,
+ tp_branch_sales_reports: branchSalesReports,
+ tp_deliveries: deliveries,
+ tp_damage_logs: damageLogs,
+ atpos_v2_custom_bills: customBills,
+ atpos_v2_members_list: members,
+ atpos_v2_expenses: expenses,
+ atpos_v2_returns: productReturns
+ };
+
+ const localStoredCollections: Record<string, any> = {};
+ deltaKeys.forEach((k) => {
+ if (!collectionStates[k] || collectionStates[k].length === 0) {
+ localStoredCollections[k] = safeParse<any[]>(k, []);
+ }
+ });
+
+ const workerRes = await dbSyncWorkerClient.processDeltaResponse({
+ deltas,
+ collectionStates,
+ localStoredCollections,
+ volatileCache: volatileCache.current,
+ deletedParkedSaleIds: Array.from(deletedParkedSaleIds.current),
+ optimisticStockEntries
+ });
+
+ if (workerRes && workerRes.type === 'DELTA_RESPONSE_PROCESSED' && workerRes.collections) {
+ const setters: Record<string, (val: any) => void> = {
+ tp_users: setUsers,
+ tp_branches: setBranches,
+ tp_suppliers: setSuppliers,
+ tp_brands: setBrands,
+ tp_products: setProducts,
+ tp_purchase_orders: setPurchaseOrders,
+ tp_po_items: setPoItems,
+ tp_transmittals: setTransmittals,
+ tp_shifts: setShifts,
+ tp_sales: setSales,
+ tp_sale_items: setSaleItems,
+ tp_movements: setMovements,
+ tp_audit_logs: setAuditLogs,
+ tp_parked_sales: setParkedSales,
+ tp_stock_transfers: setStockTransfers,
+ tp_branch_stock: setBranchStock,
+ tp_ledger_entries: setLedgerEntries,
+ tp_branch_sales_reports: setBranchSalesReports,
+ tp_deliveries: setDeliveries,
+ tp_damage_logs: setDamageLogs,
+ atpos_v2_custom_bills: setCustomBills,
+ atpos_v2_members_list: setMembers,
+ atpos_v2_expenses: setExpenses,
+ atpos_v2_returns: setProductReturns
+ };
+
+ Object.keys(workerRes.collections).forEach((k) => {
+ const item = workerRes.collections![k];
+ if (item) {
+ if (volatileCache.current[k] !== item.mergedStr) {
+ volatileCache.current[k] = item.mergedStr;
+ try { localStorage.setItem(k, item.mergedStr); } catch (_) {}
+ }
+ if (item.hasChanged && setters[k]) {
+ setters[k](item.merged);
+ }
+ }
+ });
+ }
+ } catch (err) {
+ console.warn('[Delta Sync] Delta worker error, will re-sync on next cycle:', err);
+ }
+ }
  setServerConnected(true);
  return;
  }
@@ -2815,27 +3215,26 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  if (workerRes.activeSessionsChanged && workerRes.updatedSessions) {
  setActiveSessions(workerRes.updatedSessions);
  }
- if (workerRes.isConfiguredValue !== undefined) {
-      const hasLocalConfig = localStorage.getItem("tp_is_configured") === "true";
-      const hasUsers = (() => {
-        try {
-          const u = JSON.parse(localStorage.getItem("tp_users") || "[]");
-          return Array.isArray(u) && u.length > 0;
-        } catch (_) { return false; }
-      })();
+ if (workerRes.isConfiguredValue !== undefined || (workerRes.collections?.tp_users?.merged && workerRes.collections.tp_users.merged.length > 0)) {
+      const serverConfigured = workerRes.isConfiguredValue === true;
+      const hasServerUsers = Array.isArray(workerRes.collections?.tp_users?.merged) && workerRes.collections.tp_users.merged.length > 0;
 
-      if (!workerRes.isConfiguredValue || !hasUsers) {
-        if (!hasLocalConfig || !hasUsers) {
-          localStorage.setItem("tp_is_configured", "false");
-          localStorage.setItem("tilepoint_onboarded_setup", "false");
-          setIsConfigured(false);
-        } else {
-          forceSyncAllToServer();
-        }
-      } else {
+      if (serverConfigured || hasServerUsers) {
         localStorage.setItem("tp_is_configured", "true");
         localStorage.setItem("tilepoint_onboarded_setup", "true");
         setIsConfigured(true);
+      } else {
+        const hasLocalUsers = (() => {
+          try {
+            const u = JSON.parse(localStorage.getItem("tp_users") || "[]");
+            return Array.isArray(u) && u.length > 0;
+          } catch (_) { return false; }
+        })();
+        if (!hasLocalUsers) {
+          localStorage.setItem("tp_is_configured", "false");
+          localStorage.setItem("tilepoint_onboarded_setup", "false");
+          setIsConfigured(false);
+        }
       }
     }
  }
@@ -3183,37 +3582,46 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  updateIfChanged(activeSessions, updatedSessions, setActiveSessions);
  }
 
- if (db["tp_is_configured"] !== undefined) {
+ if (db["tp_is_configured"] !== undefined || (db["tp_users"] && (Array.isArray(db["tp_users"]) ? db["tp_users"].length > 0 : true))) {
       const serverConfigured = db["tp_is_configured"] === "true" || db["tp_is_configured"] === true;
-      const hasLocalConfig = localStorage.getItem("tp_is_configured") === "true";
-      const hasUsers = (() => {
-        try {
-          const u = JSON.parse(localStorage.getItem("tp_users") || "[]");
-          return Array.isArray(u) && u.length > 0;
-        } catch (_) { return false; }
-      })();
+      const rawUsers = db["tp_users"];
+      const serverUsersArr = Array.isArray(rawUsers) ? rawUsers : (typeof rawUsers === 'string' ? safeParse(rawUsers, []) : []);
+      const hasServerUsers = serverUsersArr.length > 0;
 
-      if (!serverConfigured || !hasUsers) {
-        if (!hasLocalConfig || !hasUsers) {
+      if (serverConfigured || hasServerUsers) {
+        localStorage.setItem("tp_is_configured", "true");
+        localStorage.setItem("tilepoint_onboarded_setup", "true");
+        setIsConfigured(true);
+      } else {
+        const hasLocalUsers = (() => {
+          try {
+            const u = JSON.parse(localStorage.getItem("tp_users") || "[]");
+            return Array.isArray(u) && u.length > 0;
+          } catch (_) { return false; }
+        })();
+        if (!hasLocalUsers) {
           localStorage.setItem("tp_is_configured", "false");
           localStorage.setItem("tilepoint_onboarded_setup", "false");
           setIsConfigured(false);
-        } else {
-          forceSyncAllToServer();
         }
-      } else {
-        localStorage.setItem("tp_is_configured", "true");
-        setIsConfigured(true);
       }
     }
  }
  } else {
  // Shared server db is empty (first-time launch of the server!)
- // Bootstrap server with local client-side state so we don't lose anything
- console.log(
- "[Shared DB Client] Server DB is empty. Bootstrapping server with local state...",
- );
- await forceSyncAllToServer();
+ // Bootstrap server with local client-side state only if local state actually has users
+ const hasLocalUsers = (() => {
+   try {
+     const u = JSON.parse(localStorage.getItem("tp_users") || "[]");
+     return Array.isArray(u) && u.length > 0;
+   } catch (_) { return false; }
+ })();
+ if (hasLocalUsers) {
+   console.log(
+     "[Shared DB Client] Server DB is empty. Bootstrapping server with local state...",
+   );
+   await forceSyncAllToServer();
+ }
  }
  setServerConnected(true);
  }
@@ -3310,14 +3718,45 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  setIsSystemHydrating(false);
  setIsHydrating(false);
  }
- }, 1500);
+ }, 7000);
 
  const initializeDatabase = async () => {
  try {
  setIsSystemHydrating(true);
+
+ // Server-Side Session Identification Check (survives IP changes & browser tunnel reconnects)
+ try {
+ const sessRes = await fetch("/api/auth/session", {
+ method: "GET",
+ credentials: "include"
+ });
+ if (sessRes.ok) {
+ const sessData = await sessRes.json();
+ if (sessData.success && sessData.user) {
+ setCurrentUser(sessData.user);
+ setIsLoggedIn(true);
+ sessionStorage.setItem("tp_is_logged_in", "true");
+ sessionStorage.setItem("tp_current_user", JSON.stringify(sessData.user));
+ localStorage.setItem("tp_is_logged_in", "true");
+ localStorage.setItem("tp_current_user", JSON.stringify(sessData.user));
+ if (sessData.token) {
+ sessionStorage.setItem("tp_session_token", sessData.token);
+ localStorage.setItem("tp_session_token", sessData.token);
+ }
+ if (sessData.sessionId) {
+ setActiveSessionId(sessData.sessionId);
+ localStorage.setItem("tp_active_session_id", sessData.sessionId);
+ sessionStorage.setItem("tp_active_session_id", sessData.sessionId);
+ }
+ }
+ }
+ } catch (authErr) {
+ console.warn("[Session Handshake] Session probe warning:", authErr);
+ }
+
  await Promise.race([
  syncFromSharedServer(),
- new Promise((resolve) => setTimeout(resolve, 2000)),
+ new Promise((resolve) => setTimeout(resolve, 8000)),
  ]);
  runDatabasePruning();
  await fetchDbSnapshots().catch(() => {});
@@ -3366,6 +3805,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  let socketClient: Socket | null = null;
  let reconnectTimeout: any = null;
  let reconnectDelay = 5000;
+ let pulseDebounceTimer: any = null;
 
  let clientId = localStorage.getItem("tp_active_session_id") || sessionStorage.getItem("tp_active_session_id");
  if (!clientId || clientId === "unknown") {
@@ -3375,6 +3815,24 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  localStorage.setItem("tp_client_instance_id", clientId);
  }
  }
+
+ const triggerDebouncedPulseSync = (hash?: string, key?: string, collectionHash?: string) => {
+ if (hash && lastServerDbHash.current && hash === lastServerDbHash.current) {
+ if (!key || (collectionHash && lastCollectionHashes.current[key] === collectionHash)) {
+ return;
+ }
+ }
+ if (pulseDebounceTimer) {
+ clearTimeout(pulseDebounceTimer);
+ }
+ pulseDebounceTimer = setTimeout(async () => {
+ try {
+ await syncFromSharedServer(true);
+ } catch (e) {
+ console.warn("[Real-Time Sync] Debounced pulse sync error:", e);
+ }
+ }, 100);
+ };
 
  // 1. Connect WebSocket / Socket.io for low-latency full-duplex tunnel synchronization
  const connectSocketIO = () => {
@@ -3399,12 +3857,16 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  isSseConnected.current = true;
  });
 
- socketClient.on("db_pulse_update", async (data: any) => {
- if (data && data.hash && data.hash === lastServerDbHash.current) {
- return;
+ socketClient.on("db_pulse_update", (data: any) => {
+ triggerDebouncedPulseSync(data?.hash, data?.key, data?.collectionHash);
+ });
+
+ socketClient.on("session_superseded", (data: any) => {
+ console.warn("[Real-Time WebSocket] Received session_superseded event:", data);
+ const currentSessId = localStorage.getItem("tp_active_session_id") || sessionStorage.getItem("tp_active_session_id");
+ if (data && (data.supersededSessionId === currentSessId || (data.userId && data.activeSession?.id !== currentSessId))) {
+ handleSupersededSession(data.activeSession, data.message);
  }
- console.log("[Real-Time WebSocket] Database pulse received. Syncing silently...");
- await syncFromSharedServer(true);
  });
 
  socketClient.on("disconnect", (reason) => {
@@ -3442,7 +3904,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  reconnectDelay = 5000; // Reset backoff on success
  };
 
- eventSource.onmessage = async (event) => {
+ eventSource.onmessage = (event) => {
  try {
  const payload = JSON.parse(event.data);
  if (payload.type === 'handshake') {
@@ -3450,12 +3912,14 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  isSseConnected.current = true;
  reconnectDelay = 5000; // Reset backoff on success
  } else if (payload.type === 'db_update') {
- if (payload.info && payload.info.hash && payload.info.hash === lastServerDbHash.current) {
- return;
+ const info = payload.info || payload;
+ triggerDebouncedPulseSync(info?.hash, info?.key, info?.collectionHash);
+ } else if (payload.type === 'session_superseded') {
+ console.warn("[Real-Time SSE] Received session_superseded event:", payload);
+ const currentSessId = localStorage.getItem("tp_active_session_id") || sessionStorage.getItem("tp_active_session_id");
+ if (payload.supersededSessionId === currentSessId || (payload.userId && payload.activeSession?.id !== currentSessId)) {
+ handleSupersededSession(payload.activeSession, payload.message);
  }
- console.log("[Real-Time Sync] Central database updated. Pulling changes silently...");
- // Execute silent pull sync to update cashier or staff screens instantly
- await syncFromSharedServer(true);
  }
  } catch (e) {
  console.warn("[Real-Time Sync] Failed parsing push message payload:", e);
@@ -10355,6 +10819,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       activeSessions,
       activeSessionId,
       terminateSession,
+      sessionRemainingSeconds,
+      sessionExpiresAt,
+      extendSession,
+      sessionSupersededNotice,
+      clearSessionNotice,
       completeOnboarding,
       isRowClearingBlocked,
       getRowClearingBlockedReason,
@@ -10446,6 +10915,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       lowPerformanceMode,
       activeSessions,
       activeSessionId,
+      sessionRemainingSeconds,
+      sessionExpiresAt,
+      extendSession,
+      sessionSupersededNotice,
+      clearSessionNotice,
       pessimisticLocks,
       apiErrorState,
       exportAndPurgeCategoryData,

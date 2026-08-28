@@ -3,6 +3,7 @@
 
 import type {
   ProcessSyncResponsePayload,
+  ProcessDeltaResponsePayload,
   WorkerMessageRequest,
   WorkerMessageResponse
 } from '../workers/dbSyncWorker';
@@ -87,6 +88,16 @@ class DbSyncWorkerClient {
     return this.sendRequest({
       type: 'PROCESS_SYNC_RESPONSE',
       syncPayload: payload
+    });
+  }
+
+  /**
+   * Offloads incremental delta sync merging and state diffing to background worker
+   */
+  public async processDeltaResponse(payload: ProcessDeltaResponsePayload): Promise<WorkerMessageResponse> {
+    return this.sendRequest({
+      type: 'PROCESS_DELTA_RESPONSE',
+      deltaPayload: payload
     });
   }
 

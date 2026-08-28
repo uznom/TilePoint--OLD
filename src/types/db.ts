@@ -439,6 +439,11 @@ export interface ActiveSession {
  branchName: string;
  lastActive: string;
  userAgent: string;
+ fingerprint?: string;
+ deviceInfo?: string;
+ sessionStartedAt?: string;
+ expiresAt?: string;
+ maxDurationMinutes?: number;
 }
 
 export interface BranchSalesReport {
