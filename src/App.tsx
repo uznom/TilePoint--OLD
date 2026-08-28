@@ -1203,7 +1203,7 @@ function AppContent() {
                     style={{ willChange: "transform, opacity" }}
                     className="h-full flex flex-col min-h-0"
                   >
-                    <Suspense fallback={<PageLoadingFallback />}>
+                    <Suspense fallback={<PageLoadingFallback activeTab={activeTab} />}>
                       {activeTab === "tutorials" &&
                         (currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.MANAGER ? (
                           <TutorialOnboarding darkMode={darkMode} onNavigate={handleChangeTab} />
