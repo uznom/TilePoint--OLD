@@ -11,7 +11,8 @@
     "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
     "lint": "tsc --noEmit",
     "test:secrets": "node scripts/check-no-secrets.js",
-    "test": "node scripts/check-no-secrets.js"
+    "test:backups": "node scripts/test_backup_endpoints.js",
+    "test": "node scripts/check-no-secrets.js && node scripts/test_backup_endpoints.js"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.2.8",

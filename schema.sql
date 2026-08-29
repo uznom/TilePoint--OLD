@@ -690,6 +690,9 @@ CREATE TABLE IF NOT EXISTS `db_snapshots` (
   `sizeBytes` BIGINT NOT NULL DEFAULT 0,
   `data` LONGTEXT NOT NULL,
   `timestamp` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `isDeleted` TINYINT(1) NOT NULL DEFAULT 0,
+  `deletedAt` DATETIME NULL,
   PRIMARY KEY (`id`),
-  KEY `idx_snapshots_timestamp` (`timestamp`)
+  KEY `idx_snapshots_timestamp` (`timestamp`),
+  KEY `idx_snapshots_is_deleted` (`isDeleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

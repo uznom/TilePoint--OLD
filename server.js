@@ -491,7 +491,7 @@ const TABLE_COLUMNS = {
   product_returns: ['id', 'saleId', 'productName', 'quantityReturned', 'amountRefunded', 'damageRestockFee', 'status', 'dateTime', 'isDeleted', 'deletedAt'],
   branch_sales_reports: ['id', 'branchId', 'branchName', 'reportingDate', 'totalSalesCount', 'totalSalesAmount', 'totalVatAmount', 'totalDiscountAmount', 'transmissionType', 'sales', 'saleItems', 'users', 'expenses', 'deliveries', 'purchaseOrders', 'pandl', 'heatmap', 'boa', 'notes', 'status', 'importVerificationId', 'securitySignature', 'approvedBy', 'auditedBy', 'auditedAt', 'transferredAt'],
   active_sessions: ['id', 'userId', 'username', 'fullName', 'role', 'branchId', 'branchName', 'lastActive', 'userAgent', 'fingerprint', 'deviceInfo', 'sessionStartedAt', 'expiresAt', 'maxDurationMinutes'],
-  db_snapshots: ['id', 'name', 'creator', 'sizeBytes', 'data', 'timestamp']
+  db_snapshots: ['id', 'name', 'creator', 'sizeBytes', 'data', 'timestamp', 'isDeleted', 'deletedAt']
 };
 
 // Initialize database schema tables if MySQL is available
@@ -2405,37 +2405,32 @@ app.get('/api/db/shifts/:shiftId/summary', async (req, res) => {
   }
 });
 
-// API: Get backups/snapshots list
+// API: Get backups/snapshots list (Unconditional Token Required)
 app.get('/api/db/backups', async (req, res) => {
   try {
-    const configured = await isDatabaseConfiguredStore();
-    if (configured) {
-      const user = verifyAndExtractToken(req);
-      if (!user) {
-        return res.status(401).json({ success: false, error: 'Unauthorized session.' });
-      }
-      if (user.role !== 'Admin' && user.role !== 'Manager') {
-        return res.status(403).json({ success: false, error: 'Forbidden.' });
-      }
+    const user = verifyAndExtractToken(req);
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
     }
+
     const metadataOnly = req.query.metadataOnly === 'true';
 
     if (isMysqlActive || mysqlEnforced) {
       try {
         if (metadataOnly) {
-          const [rows] = await pool.query('SELECT id, name, creator, sizeBytes, timestamp FROM db_snapshots ORDER BY timestamp DESC');
+          const [rows] = await pool.query('SELECT id, name, creator, sizeBytes, timestamp FROM db_snapshots WHERE (isDeleted = 0 OR isDeleted IS NULL) ORDER BY timestamp DESC');
           return res.json({ success: true, data: rows });
         }
-        const [rows] = await pool.query('SELECT * FROM db_snapshots ORDER BY timestamp DESC');
+        const [rows] = await pool.query('SELECT * FROM db_snapshots WHERE (isDeleted = 0 OR isDeleted IS NULL) ORDER BY timestamp DESC');
         return res.json({ success: true, data: rows.map(r => parseRowFromMysql('db_snapshots', r)) });
       } catch (err) {
         isMysqlActive = false;
-      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
-    }
+        if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
+      }
     }
 
     const db = readDbFile();
-    const snapshots = db.tp_db_snapshots || [];
+    const snapshots = (db.tp_db_snapshots || []).filter(s => !s.isDeleted);
     if (metadataOnly) {
       const meta = snapshots.map(s => ({
         id: s.id,
@@ -2452,33 +2447,28 @@ app.get('/api/db/backups', async (req, res) => {
   }
 });
 
-// API: Get single full snapshot details
+// API: Get single full snapshot details (Unconditional Token Required)
 app.get('/api/db/backups/:id', async (req, res) => {
   try {
-    const configured = await isDatabaseConfiguredStore();
-    if (configured) {
-      const user = verifyAndExtractToken(req);
-      if (!user) {
-        return res.status(401).json({ success: false, error: 'Unauthorized session.' });
-      }
-      if (user.role !== 'Admin' && user.role !== 'Manager') {
-        return res.status(403).json({ success: false, error: 'Forbidden.' });
-      }
+    const user = verifyAndExtractToken(req);
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
     }
+
     if (isMysqlActive || mysqlEnforced) {
       try {
-        const [rows] = await pool.query('SELECT * FROM db_snapshots WHERE id = ?', [req.params.id]);
+        const [rows] = await pool.query('SELECT * FROM db_snapshots WHERE id = ? AND (isDeleted = 0 OR isDeleted IS NULL)', [req.params.id]);
         if (rows.length > 0) {
           return res.json({ success: true, data: parseRowFromMysql('db_snapshots', rows[0]) });
         }
       } catch (err) {
         isMysqlActive = false;
-      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
-    }
+        if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
+      }
     }
 
     const db = readDbFile();
-    const snapshots = db.tp_db_snapshots || [];
+    const snapshots = (db.tp_db_snapshots || []).filter(s => !s.isDeleted);
     const found = snapshots.find(s => s.id === req.params.id);
     if (!found) {
       return res.status(404).json({ success: false, error: 'Snapshot not found' });
@@ -2489,18 +2479,15 @@ app.get('/api/db/backups/:id', async (req, res) => {
   }
 });
 
-// API: Save heavy snapshot
+// API: Save heavy snapshot (Unconditional Token Required, Admin Restricted)
 app.post('/api/db/backups', express.json({ limit: '100mb' }), async (req, res) => {
   try {
-    const configured = await isDatabaseConfiguredStore();
-    if (configured) {
-      const user = verifyAndExtractToken(req);
-      if (!user) {
-        return res.status(401).json({ success: false, error: 'Unauthorized session.' });
-      }
-      if (user.role !== 'Admin') {
-        return res.status(403).json({ success: false, error: 'Forbidden.' });
-      }
+    const user = verifyAndExtractToken(req);
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
+    }
+    if (user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Forbidden: Admin role required to create database backups.' });
     }
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Internal server error' });
@@ -2512,22 +2499,28 @@ app.post('/api/db/backups', express.json({ limit: '100mb' }), async (req, res) =
   }
 
   try {
+    const snapshotRecord = {
+      ...snapshot,
+      isDeleted: 0,
+      deletedAt: null
+    };
+
     if (isMysqlActive || mysqlEnforced) {
       try {
-        await upsertRecordMysql('db_snapshots', snapshot);
+        await upsertRecordMysql('db_snapshots', snapshotRecord);
       } catch (err) {
         isMysqlActive = false;
-      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
-    }
+        if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
+      }
     }
 
     const db = readDbFile();
     const snapshots = db.tp_db_snapshots || [];
     const idx = snapshots.findIndex(s => s.id === snapshot.id);
     if (idx >= 0) {
-      snapshots[idx] = snapshot;
+      snapshots[idx] = { ...snapshotRecord, isDeleted: false, deletedAt: null };
     } else {
-      snapshots.push(snapshot);
+      snapshots.push({ ...snapshotRecord, isDeleted: false, deletedAt: null });
     }
     db.tp_db_snapshots = snapshots;
     writeDbFile(db);
@@ -2540,41 +2533,79 @@ app.post('/api/db/backups', express.json({ limit: '100mb' }), async (req, res) =
   }
 });
 
-// API: Delete snapshot
+// API: Delete snapshot (Soft Deletion - Unconditional Token Required, Admin Restricted)
 app.delete('/api/db/backups/:id', async (req, res) => {
   try {
-    const configured = await isDatabaseConfiguredStore();
-    if (configured) {
-      const user = verifyAndExtractToken(req);
-      if (!user) {
-        return res.status(401).json({ success: false, error: 'Unauthorized session.' });
-      }
-      if (user.role !== 'Admin') {
-        return res.status(403).json({ success: false, error: 'Forbidden.' });
-      }
+    const user = verifyAndExtractToken(req);
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
     }
+    if (user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Forbidden: Admin role required to delete database backups.' });
+    }
+
+    const nowIso = new Date().toISOString();
+
     if (isMysqlActive || mysqlEnforced) {
       try {
-        await pool.execute('DELETE FROM db_snapshots WHERE id = ?', [req.params.id]);
+        await pool.execute('UPDATE db_snapshots SET isDeleted = 1, deletedAt = NOW() WHERE id = ?', [req.params.id]);
       } catch (err) {
         isMysqlActive = false;
-      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
-    }
+        if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
+      }
     }
 
     const db = readDbFile();
     if (Array.isArray(db.tp_db_snapshots)) {
-      db.tp_db_snapshots = db.tp_db_snapshots.filter(s => s.id !== req.params.id);
+      db.tp_db_snapshots = db.tp_db_snapshots.map(s => {
+        if (s.id === req.params.id) {
+          return { ...s, isDeleted: true, deletedAt: nowIso };
+        }
+        return s;
+      });
       writeDbFile(db);
     }
 
     const { hash } = await readFullDatabase();
     emitPulseUpdate('tp_db_snapshots', hash, req.headers['x-client-id']);
-    res.json({ success: true });
+    res.json({ success: true, message: 'Backup soft-deleted successfully.' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
+
+// Scheduled Sweeper: Purge expired soft-deleted backups after retention window (7 days)
+const BACKUP_SOFT_DELETE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+
+async function sweepSoftDeletedBackups() {
+  try {
+    const cutoffDate = new Date(Date.now() - BACKUP_SOFT_DELETE_RETENTION_MS);
+    if (isMysqlActive || mysqlEnforced) {
+      try {
+        await pool.execute('DELETE FROM db_snapshots WHERE isDeleted = 1 AND deletedAt IS NOT NULL AND deletedAt < ?', [cutoffDate]);
+      } catch (err) {
+        console.warn('[Backup Sweeper] MySQL sweep warning:', err.message);
+      }
+    }
+    const db = readDbFile();
+    if (Array.isArray(db.tp_db_snapshots)) {
+      const beforeCount = db.tp_db_snapshots.length;
+      db.tp_db_snapshots = db.tp_db_snapshots.filter(s => {
+        if (!s.isDeleted) return true;
+        if (!s.deletedAt) return true;
+        return new Date(s.deletedAt).getTime() >= cutoffDate.getTime();
+      });
+      if (db.tp_db_snapshots.length !== beforeCount) {
+        writeDbFile(db);
+      }
+    }
+  } catch (sweepErr) {
+    console.warn('[Backup Sweeper] Scheduled sweep failed:', sweepErr.message);
+  }
+}
+
+// Sweep soft-deleted backups every 24 hours
+setInterval(sweepSoftDeletedBackups, 24 * 60 * 60 * 1000);
 
 // Atomic Transaction Package Processor
 async function handleAtomicTransactionPackage(tx, req) {
