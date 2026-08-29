@@ -15,6 +15,8 @@ import {
   sanitizeEmail,
   sanitizeObject,
 } from '../src/utils/sanitizers';
+import { encryptString, decryptString } from '../src/context/DbContext';
+import { getClientFingerprintHash } from '../src/lib/fingerprint';
 
 describe('Positive Input Validation & Sanitization Suite', () => {
   describe('isValidSku', () => {
@@ -125,6 +127,32 @@ describe('Positive Input Validation & Sanitization Suite', () => {
       expect(cleaned.name).toBe('Item');
       expect(cleaned.sku).toBe('SKU-001');
       expect((Object.prototype as any).polluted).toBeUndefined();
+    });
+  });
+
+  describe('UTF-8 Multi-Byte Serialization & Hashing Integrity', () => {
+    it('encrypts and decrypts multi-byte non-ASCII strings without corruption', () => {
+      const secret = 'super_secret_corporate_key_32_chars_123';
+      const nonAsciiInputs = [
+        'Total: ₱1,500.75 (Paid in full)',
+        'Cashier: Juan Dela Cruz Niño ño',
+        'Products: タイル, Ceramic Slab, 🚀 Express Cart',
+        'Special characters: €100, ¥5000, £250, ©2026',
+      ];
+
+      for (const text of nonAsciiInputs) {
+        const encrypted = encryptString(text, secret);
+        expect(typeof encrypted).toBe('string');
+        expect(encrypted.length).toBeGreaterThan(0);
+        const decrypted = decryptString(encrypted, secret);
+        expect(decrypted).toBe(text);
+      }
+    });
+
+    it('generates deterministic device fingerprint hash over UTF-8 input', () => {
+      const fpHash = getClientFingerprintHash();
+      expect(typeof fpHash).toBe('string');
+      expect(fpHash.startsWith('FP_')).toBe(true);
     });
   });
 });

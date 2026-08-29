@@ -983,37 +983,37 @@ export const sanitizeAndValidateNumber = (val: any, fallback = 0): number => {
 };
 
 /**
- * Simple Cryptographic Encryption using character level XOR transposition with dynamic secret salts.
- * High portability representation to secure JSON payloads without external dependency imports.
+ * Cryptographic Serialization using byte-level XOR transposition with TextEncoder/TextDecoder.
+ * Ensures non-ASCII and multi-byte UTF-8 characters survive encoding and decoding without corruption.
  */
 export const encryptString = (text: string, secretKey: string): string => {
- let result = "";
- const keyLength = secretKey.length;
- for (let i = 0; i < text.length; i++) {
- const charCode = text.charCodeAt(i);
- const keyChar = secretKey.charCodeAt(i % keyLength);
- const encryptedChar = charCode ^ keyChar;
- result += ("00" + encryptedChar.toString(16)).slice(-2);
- }
- return btoa(result);
+  const textBytes = new TextEncoder().encode(text || "");
+  const keyBytes = new TextEncoder().encode(secretKey || "TilePoint_Secret_Fallback");
+  const keyLength = keyBytes.length || 1;
+  let hexResult = "";
+  for (let i = 0; i < textBytes.length; i++) {
+    const encryptedByte = textBytes[i] ^ keyBytes[i % keyLength];
+    hexResult += encryptedByte.toString(16).padStart(2, "0");
+  }
+  return btoa(hexResult);
 };
 
 export const decryptString = (cipherStr: string, secretKey: string): string => {
- try {
- const decoded = atob(cipherStr);
- let result = "";
- const keyLength = secretKey.length;
- for (let i = 0; i < decoded.length; i += 2) {
- const hexPart = decoded.slice(i, i + 2);
- const encryptedChar = parseInt(hexPart, 16);
- const keyChar = secretKey.charCodeAt((i / 2) % keyLength);
- const decryptedChar = encryptedChar ^ keyChar;
- result += String.fromCharCode(decryptedChar);
- }
- return result;
- } catch (e) {
- return "";
- }
+  try {
+    if (!cipherStr) return "";
+    const hexStr = atob(cipherStr);
+    const keyBytes = new TextEncoder().encode(secretKey || "TilePoint_Secret_Fallback");
+    const keyLength = keyBytes.length || 1;
+    const decryptedBytes = new Uint8Array(hexStr.length / 2);
+    for (let i = 0; i < hexStr.length; i += 2) {
+      const byteVal = parseInt(hexStr.slice(i, i + 2), 16);
+      decryptedBytes[i / 2] = byteVal ^ keyBytes[(i / 2) % keyLength];
+    }
+    return new TextDecoder().decode(decryptedBytes);
+  } catch (e) {
+    console.debug("[DbContext] Decryption fallback handled:", e);
+    return "";
+  }
 };
 
 /**

@@ -90,13 +90,15 @@ export function detectOS(): string {
 }
 
 /**
- * Computes a fast 64-character deterministic hex hash from a string
+ * Computes a fast 64-character deterministic hex hash from a string.
+ * Uses TextEncoder so non-ASCII and multi-byte UTF-8 characters survive hashing without corruption.
  */
 function simpleHexHash(input: string): string {
+  const bytes = new TextEncoder().encode(input);
   let hash1 = 0xdeadbeef;
   let hash2 = 0x41c6ce57;
-  for (let i = 0; i < input.length; i++) {
-    const ch = input.charCodeAt(i);
+  for (let i = 0; i < bytes.length; i++) {
+    const ch = bytes[i];
     hash1 = Math.imul(hash1 ^ ch, 2654435761);
     hash2 = Math.imul(hash2 ^ ch, 1597334677);
   }
@@ -136,7 +138,7 @@ export function getClientDeviceInfo(): ClientDeviceInfo {
   const platform = typeof navigator !== "undefined" ? navigator.platform || "Web" : "Web";
   const hardwareConcurrency = typeof navigator !== "undefined" ? navigator.hardwareConcurrency || 4 : 4;
   const deviceMemory = typeof navigator !== "undefined" ? (navigator as any).deviceMemory : undefined;
-  const touchSupport = typeof navigator !== "undefined" ? (navigator.maxTouchPoints > 0 || "ontouchstart" in window) : false;
+  const touchSupport = typeof navigator !== "undefined" ? (navigator.maxTouchPoints > 0 || (typeof window !== "undefined" && "ontouchstart" in window)) : false;
 
   const rawSeed = [
     deviceKey,
