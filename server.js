@@ -1273,18 +1273,34 @@ async function getSalesWithItemsLookups(filters = {}) {
 
   // AlaSQL fallback
   try {
-    let query = 'SELECT * FROM sales WHERE isDeleted = ' + (isDeleted ? '1' : '0');
-    if (branchId) query += ` AND branchId = '${branchId}'`;
-    if (shiftId) query += ` AND shiftId = '${shiftId}'`;
-    if (cashierId) query += ` AND cashierId = '${cashierId}'`;
-    if (saleNumber) query += ` AND saleNumber = '${saleNumber}'`;
-    query += ' ORDER BY createdAt DESC';
+    const conditions = ['isDeleted = ?'];
+    const params = [isDeleted ? 1 : 0];
 
-    let sales = alasql(query) || [];
+    if (branchId) {
+      conditions.push('branchId = ?');
+      params.push(branchId);
+    }
+    if (shiftId) {
+      conditions.push('shiftId = ?');
+      params.push(shiftId);
+    }
+    if (cashierId) {
+      conditions.push('cashierId = ?');
+      params.push(cashierId);
+    }
+    if (saleNumber) {
+      conditions.push('saleNumber = ?');
+      params.push(saleNumber);
+    }
+
+    const whereClause = conditions.join(' AND ');
+    const query = `SELECT * FROM sales WHERE ${whereClause} ORDER BY createdAt DESC`;
+
+    let sales = alasql(query, params) || [];
     if (startDate) sales = sales.filter(s => new Date(s.createdAt) >= new Date(startDate));
     if (endDate) sales = sales.filter(s => new Date(s.createdAt) <= new Date(endDate));
 
-    const allItems = alasql('SELECT * FROM sale_items WHERE isDeleted = 0') || [];
+    const allItems = alasql('SELECT * FROM sale_items WHERE isDeleted = ?', [0]) || [];
     const itemsMap = new Map();
     allItems.forEach(i => {
       if (!itemsMap.has(i.saleId)) itemsMap.set(i.saleId, []);
@@ -1381,12 +1397,34 @@ async function getInventoryAndBranchStockLookups(filters = {}) {
 
   // AlaSQL fallback
   try {
-    let products = alasql('SELECT * FROM products WHERE isDeleted = ' + (isDeleted ? '1' : '0')) || [];
-    if (targetCat) products = products.filter(p => p.category === targetCat || p.category_id === targetCat);
-    if (brand) products = products.filter(p => p.brand === brand);
-    if (supplierId) products = products.filter(p => p.supplierId === supplierId);
-    if (targetSku) products = products.filter(p => p.sku === targetSku || p.product_sku === targetSku);
-    if (barcode) products = products.filter(p => p.barcode === barcode);
+    const conditions = ['isDeleted = ?'];
+    const params = [isDeleted ? 1 : 0];
+
+    if (targetCat) {
+      conditions.push('(category = ? OR category_id = ?)');
+      params.push(targetCat, targetCat);
+    }
+    if (brand) {
+      conditions.push('brand = ?');
+      params.push(brand);
+    }
+    if (supplierId) {
+      conditions.push('supplierId = ?');
+      params.push(supplierId);
+    }
+    if (targetSku) {
+      conditions.push('(sku = ? OR product_sku = ?)');
+      params.push(targetSku, targetSku);
+    }
+    if (barcode) {
+      conditions.push('barcode = ?');
+      params.push(barcode);
+    }
+
+    const whereClause = conditions.join(' AND ');
+    const query = `SELECT * FROM products WHERE ${whereClause} ORDER BY productName ASC`;
+    let products = alasql(query, params) || [];
+
     if (search) {
       const term = search.toLowerCase();
       products = products.filter(p => 
@@ -1400,7 +1438,7 @@ async function getInventoryAndBranchStockLookups(filters = {}) {
 
     let branchStocks = [];
     if (branchId) {
-      branchStocks = alasql(`SELECT * FROM branch_stock WHERE branchId = ?`, [branchId]) || [];
+      branchStocks = alasql('SELECT * FROM branch_stock WHERE branchId = ?', [branchId]) || [];
     }
     const bsMap = new Map(branchStocks.map(bs => [bs.productId, bs]));
 
@@ -1482,14 +1520,30 @@ async function getInventoryMovementsLookups(filters = {}) {
 
   // AlaSQL fallback
   try {
-    let query = 'SELECT * FROM inventory_movements WHERE isDeleted = 0';
-    if (productId) query += ` AND productId = '${productId}'`;
-    if (sourceBranchId) query += ` AND sourceBranchId = '${sourceBranchId}'`;
-    if (destinationBranchId) query += ` AND destinationBranchId = '${destinationBranchId}'`;
-    if (userId) query += ` AND userId = '${userId}'`;
-    query += ' ORDER BY timestamp DESC';
+    const conditions = ['isDeleted = ?'];
+    const params = [0];
 
-    let movements = alasql(query) || [];
+    if (productId) {
+      conditions.push('productId = ?');
+      params.push(productId);
+    }
+    if (sourceBranchId) {
+      conditions.push('sourceBranchId = ?');
+      params.push(sourceBranchId);
+    }
+    if (destinationBranchId) {
+      conditions.push('destinationBranchId = ?');
+      params.push(destinationBranchId);
+    }
+    if (userId) {
+      conditions.push('userId = ?');
+      params.push(userId);
+    }
+
+    const whereClause = conditions.join(' AND ');
+    const query = `SELECT * FROM inventory_movements WHERE ${whereClause} ORDER BY timestamp DESC`;
+
+    let movements = alasql(query, params) || [];
     if (startDate) movements = movements.filter(m => new Date(m.timestamp) >= new Date(startDate));
     if (endDate) movements = movements.filter(m => new Date(m.timestamp) <= new Date(endDate));
 
@@ -4217,8 +4271,29 @@ app.get(['/api/db/audit-trails', '/api/mysql/audit-trails', '/api/sqlite/audit-t
       return res.json({ success: true, count: parsed.length, data: parsed });
     }
 
-    const rows = alasql('SELECT * FROM audit_logs') || [];
-    const parsed = rows.map(r => parseRowFromMysql('audit_logs', r));
+    const conditions = [];
+    const params = [];
+    if (branchId) {
+      conditions.push('branchId = ?');
+      params.push(branchId);
+    }
+    if (module && module !== 'All') {
+      conditions.push('module = ?');
+      params.push(module);
+    }
+    if (performerId) {
+      conditions.push('userId = ?');
+      params.push(performerId);
+    }
+    if (referenceId) {
+      conditions.push('referenceId = ?');
+      params.push(referenceId);
+    }
+
+    const whereClause = conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : '';
+    const alasqlQuery = `SELECT * FROM audit_logs${whereClause} ORDER BY timestamp DESC`;
+    const rows = alasql(alasqlQuery, params) || [];
+    const parsed = rows.slice(0, Number(limit) || 100).map(r => parseRowFromMysql('audit_logs', r));
     res.json({ success: true, count: parsed.length, data: parsed });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -4341,8 +4416,29 @@ app.get(['/api/db/stock-transfers', '/api/mysql/stock-transfers', '/api/sqlite/s
       return res.json({ success: true, count: parsed.length, data: parsed });
     }
 
-    const rows = alasql('SELECT * FROM stock_transfers WHERE (isDeleted IS NULL OR isDeleted = 0)') || [];
-    const parsed = rows.map(r => parseRowFromMysql('stock_transfers', r));
+    const conditions = ['(isDeleted IS NULL OR isDeleted = ?)'];
+    const params = [0];
+    if (branchId) {
+      conditions.push('(branchId = ? OR fromBranchId = ? OR toBranchId = ?)');
+      params.push(branchId, branchId, branchId);
+    }
+    if (fromBranchId) {
+      conditions.push('fromBranchId = ?');
+      params.push(fromBranchId);
+    }
+    if (toBranchId) {
+      conditions.push('toBranchId = ?');
+      params.push(toBranchId);
+    }
+    if (status) {
+      conditions.push('status = ?');
+      params.push(status);
+    }
+
+    const whereClause = conditions.join(' AND ');
+    const alasqlQuery = `SELECT * FROM stock_transfers WHERE ${whereClause} ORDER BY timestamp DESC`;
+    const rows = alasql(alasqlQuery, params) || [];
+    const parsed = rows.slice(0, Number(limit) || 100).map(r => parseRowFromMysql('stock_transfers', r));
     res.json({ success: true, count: parsed.length, data: parsed });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
