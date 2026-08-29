@@ -1,16 +1,16 @@
-export interface SearchIndexOptions<T> {
+export interface SearchIndexOptions<T extends object> {
   extractExactKeys?: (item: T) => (string | undefined | null)[];
   extractSearchText?: (item: T) => string;
 }
 
-export interface IndexedItem<T> {
+export interface IndexedItem<T extends object> {
   item: T;
   rawCombined: string;
   tokens: string[];
   exactKeys?: string[];
 }
 
-export interface FastSearchIndex<T> {
+export interface FastSearchIndex<T extends object> {
   items: IndexedItem<T>[];
   exactKeyMap: Map<string, T>;
   cache: Map<string, T[]>;
@@ -21,7 +21,7 @@ const MAX_CACHE_SIZE = 50;
 /**
  * Creates an optimized search index with pre-computed tokens and O(1) exact-key Map lookups.
  */
-export function createSearchIndex<T>(
+export function createSearchIndex<T extends object>(
   items: T[],
   extractSearchText: (item: T) => string,
   extractExactKeys?: (item: T) => (string | undefined | null)[]
@@ -71,7 +71,7 @@ export function createSearchIndex<T>(
 /**
  * Searches the index using a multi-token ranked relevance scoring algorithm and O(1) exact matches.
  */
-export function searchIndex<T>(
+export function searchIndex<T extends object>(
   index: FastSearchIndex<T> | IndexedItem<T>[],
   query: string,
   maxResults?: number

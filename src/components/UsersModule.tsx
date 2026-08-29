@@ -1386,7 +1386,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                         {/* Profile details */}
                         <div className="flex items-center gap-3">
                           <div className="h-11 w-11 rounded-2xl bg-primary/10 text-primary text-xs font-black flex items-center justify-center border border-primary/20 shrink-0">
-                            {session.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                            {(session.fullName || '').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
                           </div>
                           <div className="min-w-0">
                             <h4 className="text-sm font-black text-foreground truncate">{session.fullName}</h4>

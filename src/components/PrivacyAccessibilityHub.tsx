@@ -2257,7 +2257,7 @@ startxref
  id: `IMPORT-${Date.now()}`,
  name: `Imported Database - ${file.name}`,
  timestamp: new Date().toISOString(),
- creator: db.currentUser.fullName,
+ creator: db.currentUser?.fullName || "SYSTEM",
  sizeBytes: file.size,
  data: JSON.stringify(payload)
  };

@@ -854,7 +854,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                           <div className="text-foreground">{p.unit}</div>
                           {p.size && (
                             <div className="text-[10px] text-default-500 font-medium">
-                              {p.size} {p.boxQuantity > 1 && `(${p.boxQuantity} pcs)`}
+                              {p.size} {(p.boxQuantity ?? 0) > 1 && `(${p.boxQuantity} pcs)`}
                             </div>
                           )}
                         </HeroTable.Cell>
@@ -1076,7 +1076,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                                         const qty = branchRecord?.quantity || 0;
                                         const overrideLimit = branchRecord?.lowStockThresholdOverride !== undefined
                                           ? branchRecord.lowStockThresholdOverride
-                                          : p.minimumStock;
+                                          : (p.minimumStock ?? 0);
 
                                         let statusBg = 'bg-success/10 text-success border-success/20';
                                         if (qty === 0) statusBg = 'bg-danger/10 text-danger border-danger/20';
@@ -1099,7 +1099,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                                                   value={overrideLimit ?? ''}
                                                   onChange={(e) => {
                                                     const val = parseInt(e.target.value);
-                                                    updateBranchLowStockThreshold(p.id, b.id, isNaN(val) ? p.minimumStock : val);
+                                                    updateBranchLowStockThreshold(p.id, b.id, isNaN(val) ? (p.minimumStock ?? 0) : val);
                                                   }}
                                                   min={0}
                                                 />

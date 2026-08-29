@@ -1057,6 +1057,7 @@ export default function AtposExtraModules({
      const payments = (auditLogs || [])
        .filter((log) => log.action === "MEMBER_PAYMENT")
        .map((log) => {
+         const desc = log.description || "";
          let paymentAmt = 0;
          try {
            if (log.changePayload) {
@@ -1064,7 +1065,7 @@ export default function AtposExtraModules({
              paymentAmt = parsed.paymentAmount || 0;
            }
          } catch (e) {
-           const match = log.description.match(/₱([\d,.]+)/);
+           const match = desc.match(/₱([\d,.]+)/);
            if (match) {
              paymentAmt = parseFloat(match[1].replace(/,/g, ""));
            }
@@ -1073,12 +1074,12 @@ export default function AtposExtraModules({
          return {
            id: log.id,
            date: log.timestamp,
-           memberName: matchingM ? matchingM.fullName : (log.description.includes("for member ") ? log.description.split("for member ")[1]?.split(".")[0]?.trim() : "Unknown Member"),
+           memberName: matchingM ? matchingM.fullName : (desc.includes("for member ") ? desc.split("for member ")[1]?.split(".")[0]?.trim() : "Unknown Member"),
            memberId: log.recordId,
            type: "PAYMENT",
            reference: log.id.slice(0, 8).toUpperCase(),
            amount: paymentAmt,
-           description: log.description,
+           description: desc,
            cashier: log.username || "Cashier",
          };
        });
@@ -1089,7 +1090,7 @@ export default function AtposExtraModules({
          if (!selectedMember) return true;
          return item.memberId === selectedMember.id;
        })
-       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+       .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
 
      if (combined.length === 0) {
        return (
@@ -1126,7 +1127,7 @@ export default function AtposExtraModules({
                <div className="flex items-center gap-1.5 text-[10px] text-default-500 font-semibold font-sans flex-wrap">
                  {!selectedMember && <span className="text-primary font-bold">{item.memberName}</span>}
                  {!selectedMember && <span>•</span>}
-                 <span>{new Date(item.date).toLocaleString()}</span>
+                 <span>{new Date(item.date || 0).toLocaleString()}</span>
                  <span>•</span>
                  <span>By: {item.cashier}</span>
                </div>
@@ -2139,7 +2140,7 @@ export default function AtposExtraModules({
  (item) => item.poId === po.id,
  );
  const poSum = relatedItems.reduce(
- (s, it) => s + it.costPrice * it.quantityRequested,
+ (s, it) => s + (it.costPrice ?? 0) * (it.quantityRequested ?? 0),
  0,
  );
  return total + poSum;

@@ -23,6 +23,7 @@
       ]
     },
     "allowImportingTsExtensions": true,
+    "strict": true,
     "noUnusedLocals": true,
     "noEmit": true
   }

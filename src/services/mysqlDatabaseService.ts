@@ -7,6 +7,8 @@
  * and stock transfers directly via MySQL endpoints.
  */
 
+import { BranchStockSchema, AuditLogSchema, safeParseApiArray } from '../types/schemas';
+
 export interface BranchStockRecord {
   id: string;
   productName: string;
@@ -195,7 +197,9 @@ class MysqlDatabaseService {
       }
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
-        this.stockCache.set(cacheKey, { data: json.data, count: json.count || json.data.length, timestamp: Date.now() });
+        const validatedData = safeParseApiArray(BranchStockSchema, json.data) as unknown as BranchStockRecord[];
+        this.stockCache.set(cacheKey, { data: validatedData, count: json.count || validatedData.length, timestamp: Date.now() });
+        return { ...json, data: validatedData, count: validatedData.length };
       }
       return json;
     } catch (err: any) {
@@ -209,7 +213,8 @@ class MysqlDatabaseService {
           headers: this.getHeaders()
         });
         const fbJson = await fbRes.json();
-        return { success: fbJson.success || false, count: fbJson.data?.length || 0, data: fbJson.data || [] };
+        const validatedFallback = safeParseApiArray(BranchStockSchema, fbJson.data || []) as unknown as BranchStockRecord[];
+        return { success: fbJson.success || false, count: validatedFallback.length, data: validatedFallback };
       } catch (fbErr: any) {
         return { success: false, count: 0, data: [], error: err.message };
       }
@@ -356,7 +361,12 @@ class MysqlDatabaseService {
         headers: this.getHeaders()
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        const validated = safeParseApiArray(AuditLogSchema, json.data);
+        return { ...json, data: validated, count: validated.length };
+      }
+      return json;
     } catch (err: any) {
       return { success: false, count: 0, data: [], error: err.message };
     }

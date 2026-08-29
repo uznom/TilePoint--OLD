@@ -27,29 +27,27 @@ try {
 } catch (e) {
  console.warn('[Storage Fallback] localStorage is blocked, restricted, or unsupported in this browser environment. Initializing high-fidelity in-memory storage fallback...', e);
  
- // Custom in-memory storage fallback mapping to prevent runtime crashes
- const memStore: Record<string, string> = {};
- const mockStorage: Storage = {
- length: 0,
- clear() {
- for (const k in memStore) delete memStore[k];
- this.length = 0;
- },
- getItem(key: string): string | null {
- return key in memStore ? memStore[key] : null;
- },
- key(index: number): string | null {
- return Object.keys(memStore)[index] || null;
- },
- removeItem(key: string) {
- delete memStore[key];
- this.length = Object.keys(memStore).length;
- },
- setItem(key: string, value: string) {
- memStore[key] = String(value);
- this.length = Object.keys(memStore).length;
- }
- };
+  const memStore: Record<string, string> = {};
+  const mockStorage: Storage = {
+    get length(): number {
+      return Object.keys(memStore).length;
+    },
+    clear() {
+      for (const k in memStore) delete memStore[k];
+    },
+    getItem(key: string): string | null {
+      return key in memStore ? memStore[key] : null;
+    },
+    key(index: number): string | null {
+      return Object.keys(memStore)[index] || null;
+    },
+    removeItem(key: string) {
+      delete memStore[key];
+    },
+    setItem(key: string, value: string) {
+      memStore[key] = String(value);
+    }
+  };
 
  Object.defineProperty(window, 'localStorage', {
  value: mockStorage,

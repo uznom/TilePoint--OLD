@@ -68,7 +68,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
 
  // Form States
  const [selectedProductId, setSelectedProductId] = useState('');
- const [selectedBranchId, setSelectedBranchId] = useState(currentUser.branchAssignmentId || '');
+ const [selectedBranchId, setSelectedBranchId] = useState(currentUser?.branchAssignmentId || '');
  const [quantity, setQuantity] = useState<number>(5);
  const [unitType, setUnitType] = useState<'Box' | 'Piece'>('Box');
  const [category, setCategory] = useState<DamageCategory>('Warehouse Breakage');
@@ -132,22 +132,23 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  };
 
  // Filter existing logs
- const filteredLogs = damageLogs.filter(log => {
- if (log.isDeleted) return false;
- const prod = products.find(p => p.id === log.productId);
- const prodName = prod ? prod.productName : log.productName;
- const prodSku = prod ? prod.sku : log.productSku;
- 
- const matchesSearch = 
- prodName.toLowerCase().includes(searchTerm.toLowerCase()) || 
- prodSku.toLowerCase().includes(searchTerm.toLowerCase()) ||
- log.notes.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredLogs = damageLogs.filter(log => {
+    if (log.isDeleted) return false;
+    const prod = products.find(p => p.id === log.productId);
+    const prodName = (prod ? prod.productName : log.productName) || '';
+    const prodSku = (prod ? prod.sku : log.productSku) || '';
+    const logNotes = log.notes || '';
+    
+    const matchesSearch = 
+      prodName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      prodSku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      logNotes.toLowerCase().includes(searchTerm.toLowerCase());
 
- const matchesCategory = categoryFilter === 'All' || log.category === categoryFilter;
- const matchesBranch = branchFilter === 'All' || log.branchId === branchFilter;
+    const matchesCategory = categoryFilter === 'All' || log.category === categoryFilter;
+    const matchesBranch = branchFilter === 'All' || log.branchId === branchFilter;
 
- return matchesSearch && matchesCategory && matchesBranch;
- });
+    return matchesSearch && matchesCategory && matchesBranch;
+  });
 
   // Calculate Aggregates dynamically based on filtered logs (respects branch and search filters)
   const statsTotalShatteredBoxes = filteredLogs
@@ -171,7 +172,9 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
   // Count by Category
   const categorySummaryCount = filteredLogs
     .reduce((acc, curr) => {
-      acc[curr.category] = (acc[curr.category] || 0) + Number(curr.quantity || 0);
+      if (curr.category) {
+        acc[curr.category] = (acc[curr.category] || 0) + Number(curr.quantity || 0);
+      }
       return acc;
     }, {} as Record<DamageCategory, number>);
 
@@ -318,7 +321,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <div className="text-[9px] text-zinc-500 mt-0.5">{p.sku} | {p.size}</div>
  </div>
  <div className="text-right">
- <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${p.stockQuantity <= p.minimumStock ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+ <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${p.stockQuantity <= (p.minimumStock ?? 0) ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
  {p.stockQuantity} box
  </span>
  </div>

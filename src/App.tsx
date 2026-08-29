@@ -1044,7 +1044,7 @@ function AppContent() {
     );
   }
 
-  const getBranchName = (bId?: string) => {
+  const getBranchName = (bId?: string | null) => {
     if (!bId || bId === "B1" || bId === "main") {
       const saved = localStorage.getItem("tilepoint_company_name_v1");
       if (saved) return saved;

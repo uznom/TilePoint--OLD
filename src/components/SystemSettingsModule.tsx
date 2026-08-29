@@ -653,7 +653,10 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
         </div>
 
         {/* HEROUI THEMES ENGINE */}
-        <HeroUIAppearanceSettings darkMode={darkMode} onToggleDarkMode={setDarkMode} />
+        <HeroUIAppearanceSettings
+          darkMode={darkMode}
+          onToggleDarkMode={setDarkMode ? (targetVal?: boolean) => setDarkMode(targetVal ?? !darkMode) : undefined}
+        />
 
         {/* COLOR MODE SELECTOR */}
         <div className="p-4 border border-divider/20 rounded-2xl space-y-3 bg-content1 shadow-2xs">

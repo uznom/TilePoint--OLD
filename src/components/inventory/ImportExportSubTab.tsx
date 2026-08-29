@@ -25,7 +25,7 @@ interface ImportExportSubTabProps {
   allowedToImport: boolean;
   products: Product[];
   branchProducts: Product[];
-  saveFileToBackup: (content: string, filename: string, folder: string, mime: string) => Promise<any>;
+  saveFileToBackup: (content: string, filename: string, folder: 'Database_Backups' | 'Transmittals' | 'Sales_Reports' | 'Inventory_Exports' | 'Archives', mime?: string) => Promise<any>;
   showToast: (msg: string) => void;
   getBranchStockQuantity: (p: Product, bId: string, branchStock: any[], branches: Branch[]) => number;
   selectedViewBranchId: string;

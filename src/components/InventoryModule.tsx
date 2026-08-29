@@ -16,9 +16,13 @@ import { exportInventoryCatalogToXLSX,exportStockAlertsToXLSX } from '../lib/exc
 import { saveFileToBackup } from '../lib/fileBackupHelper';
 import { PreflightReport,runPreflightValidation } from '../lib/preflightValidator';
 import {
-Product,
-TransferType,
-UserRole
+  Branch,
+  BranchStock,
+  InventoryMovement,
+  LedgerEntry,
+  Product,
+  TransferType,
+  UserRole
 } from '../types/db';
 import { generateCode128SvgHtml,generateEan13Barcode } from '../utils/barcodeGenerator';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -152,7 +156,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
   const isBranchLoading = isFetching;
 
   const handleQueueRestock = (productIdOrProd: string | Product) => {
-    const prod = typeof productIdOrProd === 'string' ? products.find(p => p.id === productIdOrProd) : productIdOrProd;
+    const prod = typeof productIdOrProd === 'string' ? products.find((p: Product) => p.id === productIdOrProd) : productIdOrProd;
     if (prod && syncPoCart) {
       syncPoCart([...(poCart || []), { product: prod, quantity: 20 }]);
     }
@@ -162,11 +166,11 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
 
   // Branch inventory scope: filter items based on selected branch ID to prevent cross-branch consolidation
   const branchProducts = React.useMemo(() => {
-    const nonDeleted = products.filter(p => p && !p.isDeleted);
+    const nonDeleted = products.filter((p: Product) => p && !p.isDeleted);
     if (!selectedViewBranchId || selectedViewBranchId === 'consolidated' || selectedViewBranchId === 'all' || selectedViewBranchId === 'ALL') {
       return nonDeleted;
     }
-    return nonDeleted.filter(p => isProductInBranch(p, selectedViewBranchId, branchStock, branches));
+    return nonDeleted.filter((p: Product) => isProductInBranch(p, selectedViewBranchId, branchStock, branches));
   }, [products, selectedViewBranchId, branchStock, branches]);
   // Highlight and filter product for "Inspect Section" interactions
   const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null);
@@ -178,7 +182,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
         localStorage.removeItem("tp_pending_product_filter");
         
         const query = code.trim().toLowerCase();
-        const found = products.find(p => 
+        const found = products.find((p: Product) => 
           !p.isDeleted && (
             p.productCode.toLowerCase() === query ||
             (p.barcode && p.barcode.toLowerCase() === query) ||
@@ -195,8 +199,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
               showToast("Scanned item is allocated to another branch. Switched view to Consolidated Inventory.");
             } else {
               const assignedBranches = branchStock
-                .filter(bs => bs.productId === found.id && bs.quantity > 0)
-                .map(bs => branches.find(b => b.id === bs.branchId)?.name || bs.branchId);
+                .filter((bs: BranchStock) => bs.productId === found.id && bs.quantity > 0)
+                .map((bs: BranchStock) => branches.find((b: Branch) => b.id === bs.branchId)?.name || bs.branchId);
               const bNames = assignedBranches.length > 0 ? assignedBranches.join(", ") : "other branches";
               showToast("Scanned item is allocated to " + bNames + " (not in your assigned branch).");
             }
@@ -275,10 +279,10 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
       updatedList = updatedList.filter(b => b.id !== "batch-1" && b.id !== "batch-2" && b.id !== "batch-3");
 
       // Find all catalog products in active branch scope that have expiration flagged or expiry dates
-      const expiryTrackedProds = branchProducts.filter(p => p.hasExpiration || p.expirationDate);
+      const expiryTrackedProds = branchProducts.filter((p: Product) => p.hasExpiration || p.expirationDate);
 
       // Ensure every tracked product has at least one dynamic batch entry
-      expiryTrackedProds.forEach(prod => {
+      expiryTrackedProds.forEach((prod: Product) => {
         const exists = updatedList.some(b => b.productId === prod.id);
         if (!exists) {
           const expDate = prod.expirationDate || new Date(Date.now() + 180 * 86400000).toISOString().split('T')[0];
@@ -300,7 +304,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
       });
 
       // Build fast Map lookup to avoid O(N*M) linear search across 2000+ products
-      const productMap = new Map<string, Product>(products.map(p => [p.id, p]));
+      const productMap = new Map<string, Product>(products.map((p: Product) => [p.id, p]));
 
       // Update names, codes, quantities, and live status for all existing batches from products catalog
       return updatedList.map(b => {
@@ -347,7 +351,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
       return;
     }
 
-    const prod = products.find(p => p.id === batchFormProductId);
+    const prod = products.find((p: Product) => p.id === batchFormProductId);
     if (!prod) return;
 
     const bNo = batchFormNo.trim() || `B-${prod.productCode.replace(/[^A-Z0-9]/gi, '')}-${Date.now().toString().slice(-4)}`;
@@ -391,8 +395,8 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
 
   const handleExecuteResetSimulationBatches = () => {
     localStorage.removeItem("tp_batch_expirations");
-    const expiryTrackedProds = branchProducts.filter(p => p.hasExpiration || p.expirationDate);
-    const freshBatches: BatchExpiration[] = expiryTrackedProds.map(prod => {
+    const expiryTrackedProds = branchProducts.filter((p: Product) => p.hasExpiration || p.expirationDate);
+    const freshBatches: BatchExpiration[] = expiryTrackedProds.map((prod: Product) => {
       const expDate = prod.expirationDate || new Date(Date.now() + 180 * 86400000).toISOString().split('T')[0];
       const mfgDate = new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0];
       return {
@@ -488,7 +492,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
  const [tempQty, setTempQty] = useState(15);
 
  const handleTriggerTransfer = (b: BatchExpiration) => {
-   const prod = products.find(p => p.id === b.productId);
+   const prod = products.find((p: Product) => p.id === b.productId);
    const pName = prod ? prod.productName : b.productName;
    const pUnit = prod?.unit || 'bags';
    setSelectedBatchDetail(null);
@@ -627,10 +631,10 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
  const [confirmDeleteName, setConfirmDeleteName] = useState<string>('');
  const getDefaultBranchId = (): string => {
-   if (currentUser?.branchAssignmentId && branches.some(b => b.id === currentUser.branchAssignmentId && !b.isDeleted)) {
+   if (currentUser?.branchAssignmentId && branches.some((b: Branch) => b.id === currentUser.branchAssignmentId && !b.isDeleted)) {
      return currentUser.branchAssignmentId;
    }
-   const activeB = branches.find(b => !b.isDeleted);
+   const activeB = branches.find((b: Branch) => !b.isDeleted);
    if (activeB) return activeB.id;
    return branches[0]?.id || branches[0]?.branchCode || 'main';
  };
@@ -641,10 +645,10 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
  useEffect(() => {
    const activeDefaultId = getDefaultBranchId();
    if (activeDefaultId) {
-     if (!branches.some(b => b.id === targetBranchId && !b.isDeleted)) {
+     if (!branches.some((b: Branch) => b.id === targetBranchId && !b.isDeleted)) {
        setTargetBranchId(activeDefaultId);
      }
-     if (!branches.some(b => b.id === importTargetBranchId && !b.isDeleted)) {
+     if (!branches.some((b: Branch) => b.id === importTargetBranchId && !b.isDeleted)) {
        setImportTargetBranchId(activeDefaultId);
      }
    }
@@ -795,10 +799,10 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
  const set = new Set<string>();
  if (productCategories && productCategories.length > 0) {
  productCategories
- .filter(c => c.isActive !== false)
- .forEach(c => set.add(c.name));
+ .filter((c: any) => c.isActive !== false)
+ .forEach((c: any) => set.add(c.name));
  }
- products.forEach(p => {
+ products.forEach((p: Product) => {
  if (p.category && p.category.trim() !== '') {
  set.add(p.category.trim());
  }
@@ -806,7 +810,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
  return Array.from(set).sort();
  }, [products, productCategories]);
 
- const allowedToModify = currentUser.role === UserRole.MANAGER || currentUser.role === UserRole.ADMIN;
+ const allowedToModify = currentUser?.role === UserRole.MANAGER || currentUser?.role === UserRole.ADMIN;
  const allowedToImport = currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER;
 
  // Auto-coverage calculator effect based on tile dimensions & box contents
@@ -828,16 +832,16 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
  }, [size, boxQuantity, category]);
 
  const getSelectedProducts = () => {
- return branchProducts.filter(p => selectedProdIds[p.id]);
+ return branchProducts.filter((p: Product) => selectedProdIds[p.id]);
  };
 
  const filteredLedgerEntries = React.useMemo(() => {
-   return ledgerEntries.filter(le => {
+   return ledgerEntries.filter((le: LedgerEntry) => {
      if (activeBranchId !== 'consolidated' && activeBranchId) {
        const matchBranch = isSameBranch(le.branchId, activeBranchId, branches);
        if (!matchBranch) return false;
      }
-     const prod = products.find(p => p.id === le.productId || p.productName === le.productName);
+     const prod = products.find((p: Product) => p.id === le.productId || p.productName === le.productName);
      if (prod && !isProductInBranch(prod, activeBranchId, branchStock, branches)) return false;
      return true;
    });
@@ -856,7 +860,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
 
   // List of all products with stock alerts (Out of Stock, Critical, Low Stock) for current branch scope
   const alertProductsList = React.useMemo(() => {
-    return branchProducts.map(p => {
+    return branchProducts.map((p: Product) => {
       const qty = getBranchStockQuantity(p, selectedViewBranchId, branchStock, branches);
       const bsRec = getBranchStockRecord(p, selectedViewBranchId, branchStock, branches);
       const threshold = selectedViewBranchId === 'consolidated'
@@ -875,12 +879,12 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
         alertType,
         deficit: Math.max(0, threshold - qty)
       };
-    }).filter(item => item.alertType !== 'NORMAL');
+    }).filter((item: any) => item.alertType !== 'NORMAL');
   }, [branchProducts, selectedViewBranchId, branchStock, branches]);
 
   // Filtered alert items inside modal based on tab filter, search, and category
   const modalFilteredAlertItems = React.useMemo(() => {
-    return alertProductsList.filter(item => {
+    return alertProductsList.filter((item: any) => {
       const matchFilter = 
         stockAlertModalFilter === 'ALL' ||
         (stockAlertModalFilter === 'OUT_OF_STOCK' && item.alertType === 'OUT_OF_STOCK') ||
@@ -912,7 +916,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
     let updated = [...poCart];
     let countAdded = 0;
 
-    modalFilteredAlertItems.forEach(item => {
+    modalFilteredAlertItems.forEach((item: any) => {
       const requiredQty = item.deficit > 0 ? Math.max(item.deficit, 50) : 50;
       const idx = updated.findIndex(cartItem => cartItem.productId === item.product.id);
       if (idx >= 0) {
@@ -932,7 +936,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
     const isConsolidated = selectedViewBranchId === 'consolidated' || !selectedViewBranchId;
     const nonDeleted = isConsolidated
       ? branchProducts
-      : branchProducts.filter(p => isProductInBranch(p, selectedViewBranchId, branchStock, branches));
+      : branchProducts.filter((p: Product) => isProductInBranch(p, selectedViewBranchId, branchStock, branches));
 
     let totalValue = 0;
     let totalItems = 0;
@@ -940,7 +944,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
     let criticalStock = 0;
     let outOfStock = 0;
 
-    nonDeleted.forEach(p => {
+    nonDeleted.forEach((p: Product) => {
       const qty = getBranchStockQuantity(p, selectedViewBranchId, branchStock, branches);
 
       const bsRec = getBranchStockRecord(p, selectedViewBranchId, branchStock, branches);
@@ -981,14 +985,14 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
   }, [branchProducts, branchStock, branches, activeBranchId, selectedViewBranchId]);
 
  // Movemet logs filtering logic
- const filteredMovements = movements.filter(m => {
- const p = products.find(prod => prod.id === m.productId);
+ const filteredMovements = movements.filter((m: InventoryMovement) => {
+ const p = products.find((prod: Product) => prod.id === m.productId);
  const prodName = p ? p.productName.toLowerCase() : '';
  const prodCode = p ? p.productCode.toLowerCase() : '';
  const skuCode = p ? p.sku.toLowerCase() : '';
 
  const matchSearch = 
- m.notes.toLowerCase().includes(movementSearch.toLowerCase()) ||
+ (m.notes || '').toLowerCase().includes(movementSearch.toLowerCase()) ||
  m.referenceId.toLowerCase().includes(movementSearch.toLowerCase()) ||
  m.username.toLowerCase().includes(movementSearch.toLowerCase()) ||
  prodName.includes(movementSearch.toLowerCase()) ||
@@ -1010,7 +1014,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
  const filteredBatches = React.useMemo(() => {
  return batches.filter(b => {
  const matchBranch = activeBranchId === 'consolidated' || isSameBranch(b.branchId, activeBranchId, branches);
- const prod = products.find(p => p.id === b.productId);
+ const prod = products.find((p: Product) => p.id === b.productId);
  const pName = prod ? prod.productName.toLowerCase() : (b.productName?.toLowerCase() || '');
  const pCode = prod ? prod.productCode.toLowerCase() : (b.productCode?.toLowerCase() || '');
  const bNo = b.batchNumber ? b.batchNumber.toLowerCase() : '';
@@ -1095,10 +1099,10 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
  setCategory(p.category);
  setIsCustomCategoryInput(!categories.includes(p.category));
  setBrand(p.brand);
- setSupplierId(p.supplierId);
+ setSupplierId(p.supplierId || '');
  setUnit(p.unit);
- setSize(p.size);
- setBoxQuantity(p.boxQuantity);
+ setSize(p.size || '');
+ setBoxQuantity(p.boxQuantity || 1);
  setCoveragePerBox(p.coveragePerBox || 1.44);
  setProductImage(p.image || '');
  setCostPrice(p.costPrice);
@@ -1107,7 +1111,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
  setMarkupPercent(calculatedMarkup);
  setTaxType(p.taxType || '12% VAT');
  setStockQuantity(p.stockQuantity);
- setMinimumStock(p.minimumStock);
+ setMinimumStock(p.minimumStock ?? 0);
  setOrigin(p.origin || '');
  setTargetBranchId(p.origin || (currentUser?.branchAssignmentId || 'B1'));
  setHasExpiration(!!p.hasExpiration);
@@ -1233,7 +1237,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
  releasePessimisticLock(editingId);
  } else {
  createProduct(payload);
- const targetBName = branches.find(b => b.id === targetBranchId)?.name || targetBranchId;
+ const targetBName = branches.find((b: Branch) => b.id === targetBranchId)?.name || targetBranchId;
  showToast(`Registered new item assigned to ${targetBName} branch.`);
  }
  setShowModal(false);
@@ -1241,7 +1245,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
 
  // Safe deletion routine
  const handleDeleteTrigger = (id: string, name: string) => {
-   const hasActiveShift = !!activeShift || (shifts && shifts.some(s => s.status === "Open" || s.status === "OPEN"));
+   const hasActiveShift = !!activeShift || (shifts && shifts.some((s: any) => s.status === "Open" || s.status === "OPEN"));
    if (hasActiveShift) {
      showToast("Cannot delete products while there is an active register shift.");
      return;
@@ -1266,7 +1270,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
 
  const handleAdjustSubmit = (e: React.FormEvent) => {
  e.preventDefault();
- const p = products.find(prod => prod.id === adjustProductId);
+ const p = products.find((prod: Product) => prod.id === adjustProductId);
  if (!p) return;
 
  if (!allowedToModify) {
@@ -1758,17 +1762,17 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
 
  const handleBulkSubmitDamage = (e: React.FormEvent) => {
  e.preventDefault();
- const selected = branchProducts.filter(p => selectedProdIds[p.id]);
+ const selected = branchProducts.filter((p: Product) => selectedProdIds[p.id]);
  if (selected.length === 0) {
  showToast("Error: No items selected.");
  return;
  }
 
- const branchObj = branches.find(b => b.id === bulkDamageBranchId);
+ const branchObj = branches.find((b: Branch) => b.id === bulkDamageBranchId);
  const branchName = branchObj?.name || bulkDamageBranchId;
 
  let successCount = 0;
- selected.forEach(p => {
+ selected.forEach((p: Product) => {
  const qty = bulkDamageQuantities[p.id] || 1;
  if (qty > 0) {
  createDamageLog({

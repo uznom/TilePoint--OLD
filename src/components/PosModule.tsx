@@ -2261,8 +2261,10 @@ export const PosModule: React.FC<PosModuleProps> = ({
     </div>
   );
 
-   const renderPosDeliveryReceiptCopy = (copyType: "STORE COPY" | "CUSTOMER COPY") => (
-    <div key={copyType} className="border border-gray-300 rounded-lg p-3 bg-white text-black text-[11px] leading-relaxed space-y-2 shadow-xs text-left">
+   const renderPosDeliveryReceiptCopy = (copyType: "STORE COPY" | "CUSTOMER COPY") => {
+     if (!activeReceipt) return null;
+     return (
+       <div key={copyType} className="border border-gray-300 rounded-lg p-3 bg-white text-black text-[11px] leading-relaxed space-y-2 shadow-xs text-left">
       <div className="text-center pb-2 border-b-2 border-black space-y-1">
         {receiptBranch?.storeLogo ? (
           <div className="mb-1 flex items-center justify-center h-8">
@@ -2401,6 +2403,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
       </div>
     </div>
   );
+};
 
   const renderCutSeparator = (label: string) => (
     <div key={label} className="bir-receipt-cut-separator relative flex my-3 py-1.5 items-center justify-center text-center">

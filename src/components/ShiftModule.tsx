@@ -39,11 +39,11 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
 
  // Find the last closed shift at this branch to pre-fill starting cash
  const previouslyClosedShift = React.useMemo(() => {
- if (!shifts || shifts.length === 0) return null;
+ if (!shifts || shifts.length === 0 || !currentUser) return null;
  return [...shifts]
- .filter(s => s.status === 'CLOSED' && s.branchId === currentUser.branchAssignmentId)
+ .filter(s => s.status === 'CLOSED' && s.branchId === currentUser?.branchAssignmentId)
  .sort((a, b) => new Date(b.closedAt || 0).getTime() - new Date(a.closedAt || 0).getTime())[0] || null;
- }, [shifts, currentUser.branchAssignmentId]);
+ }, [shifts, currentUser?.branchAssignmentId]);
 
  const [startCashInput, setStartCashInput] = useState('5000');
  const [closingCashInput, setClosingCashInput] = useState('');
@@ -435,13 +435,13 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
   <td className="py-2.5 px-3 text-right ">{formatCurrency(s.endCash !== undefined && s.endCash !== null ? s.endCash : (s.startCash + (s.shiftSalesTotal || 0)))}</td>
   <td className="py-2.5 px-3 text-right ">{formatCurrency(s.cashCount !== undefined && s.cashCount !== null ? s.cashCount : 0)}</td>
   <td className={`py-2.5 px-3 text-right font-bold ${
-  s.variance === 0
+  (s.variance ?? 0) === 0
   ? 'text-secondary'
-  : s.variance > 0
+  : (s.variance ?? 0) > 0
   ? 'text-primary'
   : 'text-red-550'
   }`}>
-  {formatCurrency(s.variance)}
+  {formatCurrency(s.variance ?? 0)}
   </td>
   <td className="py-2.5 px-3 text-center">
   <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest border ${

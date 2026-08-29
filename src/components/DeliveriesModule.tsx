@@ -57,7 +57,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  // Branch isolation state
  const { fontClass: receiptFontClass } = useReceiptFontSize();
  const [selectedBranchId, setSelectedBranchId] = useState<string>(
- currentUser.branchAssignmentId || 'ALL'
+   currentUser?.branchAssignmentId || 'ALL'
  );
 
  // Search and status filters
@@ -300,14 +300,14 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
 
  // Pre-filter deliveries based on role and branch selection
  const branchFilteredDeliveries = useMemo(() => {
- return deliveries.filter(d => {
- if (currentUser.role === UserRole.ADMIN) {
- if (selectedBranchId === 'ALL') return true;
- return d.branchId === selectedBranchId;
- }
- // Non-admins only see deliveries from their designated outlet
- return d.branchId === currentUser.branchAssignmentId;
- });
+   return deliveries.filter(d => {
+     if (currentUser?.role === UserRole.ADMIN) {
+       if (selectedBranchId === 'ALL') return true;
+       return d.branchId === selectedBranchId;
+     }
+     // Non-admins only see deliveries from their designated outlet
+     return d.branchId === (currentUser?.branchAssignmentId || '');
+   });
  }, [deliveries, currentUser, selectedBranchId]);
 
   // Multi-column sorting for deliveries
@@ -725,7 +725,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  </button>
 
  {/* Branch scope controller for system admin */}
- {currentUser.role === UserRole.ADMIN && (
+ {currentUser?.role === UserRole.ADMIN && (
  <div className="flex items-center gap-2 bg-content1 border border-divider/30 p-2 rounded-2xl shadow-sm pl-4 pr-3 shrink-0">
  <span className="text-[10px] font-black uppercase text-primary tracking-widest ">
  Outlet Scope:
@@ -754,7 +754,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  />
 
  {/* RECONCILIATION AUDIT STATUS CARD */}
- {false && (
+ {reconciliationStats && (
  <div className="bg-content1 border border-divider/30 rounded-2xl p-3 px-4 text-xs shadow-xs flex flex-wrap items-center justify-between gap-3 font-sans">
  <div className="flex items-center gap-2.5">
  <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />

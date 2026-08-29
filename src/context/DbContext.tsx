@@ -1437,6 +1437,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
         return { success: true };
       }
+
+      return {
+        success: false,
+        error: authData.error || "Authentication failed."
+      };
     } catch (networkErr) {
       console.warn("[Auth Bridge] Network server login unreachable. Offline authentication is disabled for security reasons.", networkErr);
       return {
@@ -4151,7 +4156,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  (a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()
  );
  const filtered = sorted.filter((log, idx) => {
- return idx < 50 || new Date(log.timestamp).getTime() >= cutoffTime;
+ return idx < 50 || new Date(log.timestamp || 0).getTime() >= cutoffTime;
  }).slice(0, 50);
  try {
  localStorage.setItem("tp_audit_logs", JSON.stringify(filtered));
@@ -4674,252 +4679,248 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return newSnapshot;
  };
 
- const createDbSnapshot = async (name: string): Promise<void> => {
- if (currentUser.role !== UserRole.ADMIN && currentUser.role !== UserRole.MANAGER) {
- console.error(
- "Security alert: createDbSnapshot is restricted to system administrators and managers.",
- );
- return;
- }
- const payload = {
- isConfigured,
- users,
- branches,
- suppliers,
- products,
- purchaseOrders,
- poItems,
- transmittals,
- shifts,
- sales,
- saleItems,
- movements,
- auditLogs,
- parkedSales,
- stockTransfers,
- branchStock,
- ledgerEntries,
- branchSalesReports,
- deliveries,
- atpos_v2_custom_bills: customBills,
- atpos_v2_members_list: members,
- atpos_v2_expenses: expenses,
- atpos_v2_returns: productReturns,
- };
- const dataStr = JSON.stringify(payload);
- const id = `SNAP-${Date.now()}`;
- const newSnapshot: DbSnapshot = {
- id,
- name: name || `Backup snapshot - ${new Date().toLocaleTimeString()}`,
- timestamp: new Date().toISOString(),
- creator: currentUser.fullName,
- sizeBytes: new Blob([dataStr]).size,
- data: dataStr,
- };
+  const createDbSnapshot = async (name: string): Promise<void> => {
+    if (!currentUser || (currentUser.role !== UserRole.ADMIN && currentUser.role !== UserRole.MANAGER)) {
+      console.error(
+        "Security alert: createDbSnapshot is restricted to system administrators and managers.",
+      );
+      return;
+    }
+    const payload = {
+      isConfigured,
+      users,
+      branches,
+      suppliers,
+      products,
+      purchaseOrders,
+      poItems,
+      transmittals,
+      shifts,
+      sales,
+      saleItems,
+      movements,
+      auditLogs,
+      parkedSales,
+      stockTransfers,
+      branchStock,
+      ledgerEntries,
+      branchSalesReports,
+      deliveries,
+      atpos_v2_custom_bills: customBills,
+      atpos_v2_members_list: members,
+      atpos_v2_expenses: expenses,
+      atpos_v2_returns: productReturns,
+    };
+    const dataStr = JSON.stringify(payload);
+    const id = `SNAP-${Date.now()}`;
+    const newSnapshot: DbSnapshot = {
+      id,
+      name: name || `Backup snapshot - ${new Date().toLocaleTimeString()}`,
+      timestamp: new Date().toISOString(),
+      creator: currentUser.fullName || "SYSTEM",
+      sizeBytes: new Blob([dataStr]).size,
+      data: dataStr,
+    };
 
- try {
- await safeApiFetch("/api/db/backups", {
- method: "POST",
- headers: { "Content-Type": "application/json" },
- body: JSON.stringify({ snapshot: newSnapshot })
- });
- await fetchDbSnapshots();
- } catch (e) {
- console.warn("[System Guard] Server offline; manual backup snapshot stored in offline cache:", e);
- setDbSnapshots((prev) => {
- const next = [newSnapshot, ...prev.filter((s) => s.id !== newSnapshot.id)].slice(0, 50);
- try {
- const metaOnly = next.map(({ data, ...m }: any) => m);
- localStorage.setItem("tp_db_snapshots", JSON.stringify(metaOnly));
- localStorage.setItem(`tp_snap_payload_${newSnapshot.id}`, newSnapshot.data);
- } catch (_) {}
- return next;
- });
- }
+    try {
+      await safeApiFetch("/api/db/backups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ snapshot: newSnapshot })
+      });
+      await fetchDbSnapshots();
+    } catch (e) {
+      console.warn("[System Guard] Server offline; manual backup snapshot stored in offline cache:", e);
+      setDbSnapshots((prev) => {
+        const next = [newSnapshot, ...prev.filter((s) => s.id !== newSnapshot.id)].slice(0, 50);
+        try {
+          const metaOnly = next.map(({ data: _, ...m }: any) => m);
+          localStorage.setItem("tp_db_snapshots", JSON.stringify(metaOnly));
+          localStorage.setItem(`tp_snap_payload_${newSnapshot.id}`, newSnapshot.data);
+        } catch (_) {}
+        return next;
+      });
+    }
 
- addAuditLog(
- "DB_BACKUP_CREATE",
- `Created manual backup snapshot: ${newSnapshot.name}`,
- "SYSTEM",
- id,
- );
- };
+    addAuditLog(
+      "DB_BACKUP_CREATE",
+      `Created manual backup snapshot: ${newSnapshot.name}`,
+      "SYSTEM",
+      id,
+    );
+  };
 
- const restoreDbSnapshot = async (snapshotId: string): Promise<boolean> => {
- if (currentUser.role !== UserRole.ADMIN && currentUser.role !== UserRole.MANAGER) {
- console.error(
- "Security alert: restoreDbSnapshot is restricted to system administrators and managers.",
- );
- return false;
- }
- 
- let snap: DbSnapshot | null = null;
- try {
- const res = await safeApiFetch(`/api/db/backups/${snapshotId}`);
- if (res.ok) {
- const body = await res.json();
- if (body.success && body.data) {
- snap = body.data;
- }
- }
- } catch (e) {
- console.warn("[System Guard] Server unavailable for remote snapshot retrieval; checking offline storage:", e);
- }
+  const restoreDbSnapshot = async (snapshotId: string): Promise<boolean> => {
+    if (!currentUser || (currentUser.role !== UserRole.ADMIN && currentUser.role !== UserRole.MANAGER)) {
+      console.error(
+        "Security alert: restoreDbSnapshot is restricted to system administrators and managers.",
+      );
+      return false;
+    }
 
- // Offline fallback: check local storage snapshot metadata / cached payload
- if (!snap) {
- try {
- const cachedSnap = dbSnapshots.find((s) => s.id === snapshotId);
- const cachedRawData = localStorage.getItem(`tp_snap_payload_${snapshotId}`);
- if (cachedSnap && (cachedSnap.data || cachedRawData)) {
- snap = {
- ...cachedSnap,
- data: cachedSnap.data || cachedRawData || "{}",
- };
- }
- } catch (cacheErr) {
- console.error("[System Guard] Failed to resolve offline snapshot:", cacheErr);
- }
- }
+    let snap: DbSnapshot | null = null;
+    try {
+      const res = await safeApiFetch(`/api/db/backups/${snapshotId}`);
+      if (res.ok) {
+        const body = await res.json();
+        if (body.success && body.data) {
+          snap = body.data;
+        }
+      }
+    } catch (e) {
+      console.warn("[System Guard] Server unavailable for remote snapshot retrieval; checking offline storage:", e);
+    }
 
- if (!snap) return false;
- try {
- const payload = JSON.parse(snap.data);
- if (payload.users) setUsers(payload.users);
- if (payload.branches) setBranches(payload.branches);
- if (payload.suppliers) setSuppliers(payload.suppliers);
- if (payload.products) setProducts(payload.products);
- if (payload.purchaseOrders) setPurchaseOrders(payload.purchaseOrders);
- if (payload.poItems) setPoItems(payload.poItems);
- if (payload.transmittals) setTransmittals(payload.transmittals);
- if (payload.shifts) setShifts(payload.shifts);
- if (payload.sales) setSales(payload.sales);
- if (payload.saleItems) setSaleItems(payload.saleItems);
- if (payload.movements) setMovements(payload.movements);
- if (payload.auditLogs) setAuditLogs(payload.auditLogs);
- if (payload.parkedSales) setParkedSales(payload.parkedSales);
- if (payload.stockTransfers) setStockTransfers(payload.stockTransfers);
- if (payload.branchStock) setBranchStock(payload.branchStock);
- if (payload.ledgerEntries) setLedgerEntries(payload.ledgerEntries);
- if (payload.branchSalesReports)
- setBranchSalesReports(payload.branchSalesReports);
- if (payload.deliveries) setDeliveries(payload.deliveries);
- if (payload.atpos_v2_custom_bills)
- setCustomBills(payload.atpos_v2_custom_bills);
- if (payload.atpos_v2_members_list)
- setMembers(payload.atpos_v2_members_list);
- else if (payload.members)
- setMembers(payload.members);
- if (payload.atpos_v2_expenses)
- setExpenses(payload.atpos_v2_expenses);
- else if (payload.expenses)
- setExpenses(payload.expenses);
- if (payload.atpos_v2_returns)
- setProductReturns(payload.atpos_v2_returns);
- else if (payload.productReturns)
- setProductReturns(payload.productReturns);
- if (payload.atpos_v2_calendar_notes !== undefined)
- setCalendarNotes(payload.atpos_v2_calendar_notes);
- if (payload.atpos_v2_calendar_day_memos !== undefined)
- setDayMemos(payload.atpos_v2_calendar_day_memos);
- if (payload.damageLogs) {
- setDamageLogs(payload.damageLogs);
- } else if (payload.tp_damage_logs) {
- setDamageLogs(payload.tp_damage_logs);
- } else {
- setDamageLogs([]);
- }
- if (payload.isConfigured !== undefined)
- setIsConfigured(payload.isConfigured);
+    // Offline fallback: check local storage snapshot metadata / cached payload
+    if (!snap) {
+      try {
+        const cachedSnap = dbSnapshots.find((s) => s.id === snapshotId);
+        const cachedRawData = localStorage.getItem(`tp_snap_payload_${snapshotId}`);
+        if (cachedSnap && (cachedSnap.data || cachedRawData)) {
+          snap = {
+            ...cachedSnap,
+            data: cachedSnap.data || cachedRawData || "{}",
+          };
+        }
+      } catch (cacheErr) {
+        console.error("[System Guard] Failed to resolve offline snapshot:", cacheErr);
+      }
+    }
 
- // Immediately save back to avoid delays during system transitions
- const keysToSave = {
- tp_users: payload.users,
- tp_branches: payload.branches,
- tp_suppliers: payload.suppliers,
- tp_products: payload.products,
- tp_purchase_orders: payload.purchaseOrders,
- tp_po_items: payload.poItems,
- tp_transmittals: payload.transmittals,
- tp_shifts: payload.shifts,
- tp_sales: payload.sales,
- tp_sale_items: payload.saleItems,
- tp_movements: payload.movements,
- tp_audit_logs: payload.auditLogs,
- tp_parked_sales: payload.parkedSales,
- tp_stock_transfers: payload.stockTransfers,
- tp_branch_stock: payload.branchStock,
- tp_ledger_entries: payload.ledgerEntries,
- tp_branch_sales_reports: payload.branchSalesReports,
- tp_deliveries: payload.deliveries,
- tp_damage_logs: payload.damageLogs || payload.tp_damage_logs || [],
- atpos_v2_custom_bills: payload.atpos_v2_custom_bills || [],
- atpos_v2_members_list: payload.atpos_v2_members_list || payload.members || [],
- atpos_v2_expenses: payload.atpos_v2_expenses || payload.expenses || [],
- atpos_v2_returns: payload.atpos_v2_returns || payload.productReturns || [],
- atpos_v2_calendar_notes: payload.atpos_v2_calendar_notes,
- atpos_v2_calendar_day_memos: payload.atpos_v2_calendar_day_memos,
- tp_is_configured: String(payload.isConfigured),
- };
+    if (!snap) return false;
+    try {
+      const payload = JSON.parse(snap.data);
+      if (payload.users) setUsers(payload.users);
+      if (payload.branches) setBranches(payload.branches);
+      if (payload.suppliers) setSuppliers(payload.suppliers);
+      if (payload.products) setProducts(payload.products);
+      if (payload.purchaseOrders) setPurchaseOrders(payload.purchaseOrders);
+      if (payload.poItems) setPoItems(payload.poItems);
+      if (payload.transmittals) setTransmittals(payload.transmittals);
+      if (payload.shifts) setShifts(payload.shifts);
+      if (payload.sales) setSales(payload.sales);
+      if (payload.saleItems) setSaleItems(payload.saleItems);
+      if (payload.movements) setMovements(payload.movements);
+      if (payload.auditLogs) setAuditLogs(payload.auditLogs);
+      if (payload.parkedSales) setParkedSales(payload.parkedSales);
+      if (payload.stockTransfers) setStockTransfers(payload.stockTransfers);
+      if (payload.branchStock) setBranchStock(payload.branchStock);
+      if (payload.ledgerEntries) setLedgerEntries(payload.ledgerEntries);
+      if (payload.branchSalesReports)
+        setBranchSalesReports(payload.branchSalesReports);
+      if (payload.deliveries) setDeliveries(payload.deliveries);
+      if (payload.atpos_v2_custom_bills)
+        setCustomBills(payload.atpos_v2_custom_bills);
+      if (payload.atpos_v2_members_list)
+        setMembers(payload.atpos_v2_members_list);
+      else if (payload.members)
+        setMembers(payload.members);
+      if (payload.atpos_v2_expenses)
+        setExpenses(payload.atpos_v2_expenses);
+      else if (payload.expenses)
+        setExpenses(payload.expenses);
+      if (payload.atpos_v2_returns)
+        setProductReturns(payload.atpos_v2_returns);
+      else if (payload.productReturns)
+        setProductReturns(payload.productReturns);
+      if (payload.atpos_v2_calendar_notes !== undefined)
+        setCalendarNotes(payload.atpos_v2_calendar_notes);
+      if (payload.atpos_v2_calendar_day_memos !== undefined)
+        setDayMemos(payload.atpos_v2_calendar_day_memos);
+      if (payload.damageLogs) {
+        setDamageLogs(payload.damageLogs);
+      } else if (payload.tp_damage_logs) {
+        setDamageLogs(payload.tp_damage_logs);
+      } else {
+        setDamageLogs([]);
+      }
+      if (payload.isConfigured !== undefined)
+        setIsConfigured(payload.isConfigured);
 
- Object.entries(keysToSave).forEach(([k, val]) => {
- if (val !== undefined) {
- localStorage.setItem(
- k,
- typeof val === "string" ? val : JSON.stringify(val),
- );
- }
- });
+      // Immediately save back to avoid delays during system transitions
+      const keysToSave = {
+        tp_users: payload.users,
+        tp_branches: payload.branches,
+        tp_suppliers: payload.suppliers,
+        tp_products: payload.products,
+        tp_purchase_orders: payload.purchaseOrders,
+        tp_po_items: payload.poItems,
+        tp_transmittals: payload.transmittals,
+        tp_shifts: payload.shifts,
+        tp_sales: payload.sales,
+        tp_sale_items: payload.saleItems,
+        tp_movements: payload.movements,
+        tp_audit_logs: payload.auditLogs,
+        tp_parked_sales: payload.parkedSales,
+        tp_stock_transfers: payload.stockTransfers,
+        tp_branch_stock: payload.branchStock,
+        tp_ledger_entries: payload.ledgerEntries,
+        tp_branch_sales_reports: payload.branchSalesReports,
+        tp_deliveries: payload.deliveries,
+        tp_damage_logs: payload.damageLogs || payload.tp_damage_logs || [],
+        atpos_v2_custom_bills: payload.atpos_v2_custom_bills || [],
+        atpos_v2_members_list: payload.atpos_v2_members_list || payload.members || [],
+        atpos_v2_expenses: payload.atpos_v2_expenses || payload.expenses || [],
+        atpos_v2_returns: payload.atpos_v2_returns || payload.productReturns || [],
+        atpos_v2_calendar_notes: payload.atpos_v2_calendar_notes,
+        atpos_v2_calendar_day_memos: payload.atpos_v2_calendar_day_memos,
+        tp_is_configured: String(payload.isConfigured),
+      };
 
- const restoreLog: AuditLog = {
- id: `AL-RESTORE-${Date.now()}`,
- timestamp: new Date().toISOString(),
- userId: currentUser.id,
- username: currentUser.username,
- action: "DB_BACKUP_RESTORE",
- description: `Successfully restored database from snapshot "${snap.name}".`,
- tableAffected: "ALL",
- recordId: snapshotId,
- };
- setAuditLogs((prev) => [restoreLog, ...prev]);
- return true;
- } catch (err) {
- console.error(err);
- return false;
- }
- };
+      Object.entries(keysToSave).forEach(([k, val]) => {
+        if (val !== undefined) {
+          localStorage.setItem(
+            k,
+            typeof val === "string" ? val : JSON.stringify(val),
+          );
+        }
+      });
 
- const deleteDbSnapshot = async (snapshotId: string): Promise<void> => {
- if (currentUser.role !== UserRole.ADMIN && currentUser.role !== UserRole.MANAGER) {
- console.error(
- "Security alert: deleteDbSnapshot is restricted to system administrators and managers.",
- );
- return;
- }
- try {
- await safeApiFetch(`/api/db/backups/${snapshotId}`, {
- method: "DELETE"
- });
- await fetchDbSnapshots();
- } catch (e) {
- console.error("[System Guard] Failed to delete backup from server:", e);
- }
- addAuditLog(
- "DB_BACKUP_DELETE",
- `Deleted backup snapshot key: ${snapshotId}`,
- "SYSTEM",
- snapshotId,
- );
- };
+      const restoreLog: AuditLog = {
+        id: `AL-RESTORE-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        userId: currentUser?.id || "SYSTEM",
+        username: currentUser?.username || "system",
+        action: "DB_BACKUP_RESTORE",
+        description: `Successfully restored database from snapshot "${snap.name}".`,
+        tableAffected: "ALL",
+        recordId: snapshotId,
+      };
+      setAuditLogs((prev) => [restoreLog, ...prev]);
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  };
 
- const exportAndPurgeCategoryData = async (
- category: ArchivableCategory,
- ageMonths: number
- ): Promise<PurgeResult> => {
- if (currentUser.role !== UserRole.ADMIN && currentUser.role !== UserRole.MANAGER) {
- console.error("Security alert: exportAndPurgeCategoryData is restricted to system administrators.");
- return { count: 0, exportedFilename: null, category, ageMonths, timestamp: new Date().toISOString() };
- }
+  const deleteDbSnapshot = async (snapshotId: string): Promise<void> => {
+    if (!currentUser || (currentUser.role !== UserRole.ADMIN && currentUser.role !== UserRole.MANAGER)) {
+      console.error(
+        "Security alert: deleteDbSnapshot is restricted to system administrators and managers.",
+      );
+      return;
+    }
+    try {
+      await safeApiFetch(`/api/db/backups/${snapshotId}`, {
+        method: "DELETE"
+      });
+      await fetchDbSnapshots();
+    } catch (e) {
+      console.error("[System Guard] Failed to delete backup from server:", e);
+    }
+    addAuditLog(
+      "DB_BACKUP_DELETE",
+      `Deleted backup snapshot key: ${snapshotId}`,
+      "SYSTEM",
+      snapshotId,
+    );
+  };
+
+  const exportAndPurgeCategoryData = async (
+    category: ArchivableCategory,
+    ageMonths: number
+  ): Promise<PurgeResult> => {
 
  const now = Date.now();
  const cutoffMs = ageMonths > 0 ? now - ageMonths * 30 * 24 * 60 * 60 * 1000 : now + 100000;
@@ -5074,10 +5075,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const runRetentionPolicyCleanup = async (): Promise<PurgeResult[]> => {
- if (currentUser.role !== UserRole.ADMIN && currentUser.role !== UserRole.MANAGER) {
- console.error("Security alert: runRetentionPolicyCleanup is restricted to system administrators.");
- return [];
- }
+    if (!currentUser || (currentUser.role !== UserRole.ADMIN && currentUser.role !== UserRole.MANAGER)) {
+      console.error("Security alert: runRetentionPolicyCleanup is restricted to system administrators.");
+      return [];
+    }
 
  const categories: ArchivableCategory[] = ["auditLogs", "movements", "sales", "expenses", "returns", "damageLogs"];
  const results: PurgeResult[] = [];
@@ -5274,23 +5275,23 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  // Log manual adjustments or stock updates
  const logManualAdjustment = (
- productId: string,
- quantity: number,
- notes: string,
+   productId: string,
+   quantity: number,
+   notes: string,
  ) => {
- const newMove: InventoryMovement = {
- id: `M-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
- productId,
- type: "ADJUST",
- quantity,
- destinationBranchId: currentUser.branchAssignmentId,
- referenceId: "MANUAL",
- notes,
- timestamp: new Date().toISOString(),
- userId: currentUser.id,
- username: currentUser.username,
- };
- setMovements((prev) => [newMove, ...prev]);
+   const newMove: InventoryMovement = {
+     id: `M-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+     productId,
+     type: "ADJUST",
+     quantity,
+     destinationBranchId: currentUser?.branchAssignmentId || undefined,
+     referenceId: "MANUAL",
+     notes,
+     timestamp: new Date().toISOString(),
+     userId: currentUser?.id || "SYSTEM",
+     username: currentUser?.username || "system",
+   };
+   setMovements((prev) => [newMove, ...prev]);
  };
 
  const createManualLedgerEntry = (entry: {
@@ -5369,7 +5370,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  stockQuantity: Math.max(0, p.stockQuantity + changeValue),
  version: (p.version || 0) + 1,
  updatedAt: new Date().toISOString(),
- updatedBy: currentUser.fullName,
+ updatedBy: currentUser?.fullName || "SYSTEM",
  };
  }
  return p;
@@ -5385,8 +5386,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  referenceId: entry.referenceNo,
  notes: entry.remarks,
  timestamp: new Date().toISOString(),
- userId: currentUser.id,
- username: currentUser.username,
+ userId: currentUser?.id || "SYSTEM",
+ username: currentUser?.username || "system",
  };
  setMovements((prev) => [newMove, ...prev]);
 
@@ -5578,12 +5579,14 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const completeOnboarding = async (
- newProducts: Product[],
+ newProducts?: Product[],
  newBranchesList?: Branch[],
  ) => {
  localStorage.setItem("tp_setting_up", "true");
+ if (newProducts) {
  setProducts(newProducts);
  localStorage.setItem("tp_products", JSON.stringify(newProducts));
+ }
 
  if (newBranchesList && newBranchesList.length > 0) {
  setBranches(newBranchesList);
@@ -6050,19 +6053,19 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
  }
 
- const finalExporterRole = exportedByRole || parsed.exportedByRole;
- if (finalExporterRole === "Admin") {
- if (currentUser.role !== UserRole.ADMIN) {
- const establishmentName =
- localStorage.getItem("tilepoint_company_name_v1") ||
- (branches && branches[0]?.name) ||
- "Main Store";
- return {
- success: false,
- error: `This sales report is for admin only of ${establishmentName}.`,
- };
- }
- }
+  const finalExporterRole = exportedByRole || parsed.exportedByRole;
+  if (finalExporterRole === "Admin") {
+    if (!currentUser || currentUser.role !== UserRole.ADMIN) {
+      const establishmentName =
+        localStorage.getItem("tilepoint_company_name_v1") ||
+        (branches && branches[0]?.name) ||
+        "Main Store";
+      return {
+        success: false,
+        error: `This sales report is for admin only of ${establishmentName}.`,
+      };
+    }
+  }
 
  // Check if already exists
  const duplicate = branchSalesReports.find(
@@ -6450,7 +6453,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  ...r,
  status,
  notes: notes || r.notes,
- auditedBy: currentUser.fullName,
+ auditedBy: currentUser?.fullName || "SYSTEM",
  auditedAt: new Date().toISOString(),
  };
  }
@@ -6462,7 +6465,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
  addAuditLog(
  "SALES_AUDIT",
- `Audit result matching [${status}] registered on sales report [${reportId}] by manager ${currentUser.fullName}`,
+ `Audit result matching [${status}] registered on sales report [${reportId}] by manager ${currentUser?.fullName || "manager"}`,
  "BranchSalesReport",
  reportId,
  );
@@ -6475,7 +6478,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  >,
  ): Delivery => {
  const currentBranch =
- branches.find((b) => b.id === currentUser.branchAssignmentId) ||
+ (currentUser?.branchAssignmentId && branches.find((b) => b.id === currentUser.branchAssignmentId)) ||
  branches[0];
  const isScheduled = Boolean(delivery.truck?.trim() && delivery.driver?.trim());
  const newDelivery: Delivery = {
@@ -6581,7 +6584,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  proofPhotoUrl,
  customerSignature,
  receiverName: receiverName || d.customerName,
- deliveredBy: currentUser.fullName,
+ deliveredBy: currentUser?.fullName || "SYSTEM",
  deliveredAt: new Date().toISOString(),
  updatedAt: new Date().toISOString(),
  };
@@ -6607,7 +6610,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const newLog: DamageLog = {
  ...log,
  id: newId,
- reportedBy: currentUser.fullName,
+ reportedBy: currentUser?.fullName || "SYSTEM",
  reportedAt: new Date().toISOString(),
  };
 
@@ -6624,7 +6627,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  ...p,
  stockQuantity: Math.max(0, p.stockQuantity + changeValue),
  updatedAt: new Date().toISOString(),
- updatedBy: currentUser.fullName,
+ updatedBy: currentUser?.fullName || "SYSTEM",
  };
  }
  return p;
@@ -6656,8 +6659,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  referenceId: newId,
  notes: `[Damage: ${log.category}] ${log.actionTaken}. Notes: ${log.notes}`,
  timestamp: new Date().toISOString(),
- userId: currentUser.id,
- username: currentUser.username,
+ userId: currentUser?.id || "SYSTEM",
+ username: currentUser?.username || "system",
  };
  setMovements((prev) => [newMove, ...prev]);
 
@@ -6978,7 +6981,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       username: sanitizeInputText(userFields.username),
       fullName: sanitizeInputText(userFields.fullName),
       role: sanitizeInputText(userFields.role) as any,
-      branchAssignmentId: sanitizeInputText(userFields.branchAssignmentId),
+      branchAssignmentId: userFields.branchAssignmentId ? sanitizeInputText(userFields.branchAssignmentId) : null,
       passwordHash,
       id: `U-${Date.now()}`,
       isNew: userFields.isNew !== undefined ? userFields.isNew : true,
@@ -7362,7 +7365,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  barcode: sanitizeInputText(prodFields.barcode),
  category: sanitizeInputText(prodFields.category) || "Porcelain Tiles",
  brand: sanitizeInputText(prodFields.brand) || "Generic",
- size: sanitizeInputText(prodFields.size),
+ size: prodFields.size ? sanitizeInputText(prodFields.size) : undefined,
  designName: sanitizeInputText(prodFields.designName || "Standard"),
  supplierId: sanitizeInputText(prodFields.supplierId || "central"),
  unit: sanitizeInputText(prodFields.unit) || "Unit",
@@ -7392,8 +7395,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  isDeleted: false,
  createdAt: new Date().toISOString(),
  updatedAt: new Date().toISOString(),
- createdBy: currentUser.fullName,
- updatedBy: currentUser.fullName,
+ createdBy: currentUser?.fullName || "SYSTEM",
+ updatedBy: currentUser?.fullName || "SYSTEM",
  version: 1,
  };
  setProducts((prev) => [...prev, newProd]);
@@ -7403,7 +7406,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  sanitizedFields.origin &&
  branches.some((b) => b.id === sanitizedFields.origin)
  ? sanitizedFields.origin
- : currentUser.branchAssignmentId || "B1";
+ : currentUser?.branchAssignmentId || "B1";
 
  setBranchStock((prev) => [
  ...prev,
@@ -7428,8 +7431,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  ? `Initial stock intake. Origin/Source: ${sanitizedFields.origin}`
  : "Initial stock intake upon product registration",
  timestamp: new Date().toISOString(),
- userId: currentUser.id,
- username: currentUser.username,
+ userId: currentUser?.id || "SYSTEM",
+ username: currentUser?.username || "system",
  };
  setMovements((prev) => [initMove, ...prev]);
 
@@ -7474,7 +7477,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  );
 
  setBranchStock((stockList) => {
- const targetBranchId = currentUser.branchAssignmentId || "B1";
+ const targetBranchId = currentUser?.branchAssignmentId || "B1";
  const idx = stockList.findIndex(
  (bs) => bs.productId === id && bs.branchId === targetBranchId,
  );
@@ -7565,7 +7568,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  ...sanitizedUpdates,
  version: (p.version || 1) + 1,
  updatedAt: new Date().toISOString(),
- updatedBy: currentUser.fullName,
+ updatedBy: currentUser?.fullName || "SYSTEM",
  };
  }
  return p;
@@ -7590,7 +7593,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  ...p,
  isDeleted: true,
  updatedAt: new Date().toISOString(),
- updatedBy: currentUser.fullName,
+ updatedBy: currentUser?.fullName || "SYSTEM",
  }
  : p,
  ),
@@ -8255,45 +8258,45 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const rawPName = sanitizeInputText(p.productName) || "Unnamed Imported Product";
  const pName = correctProductName(rawPName);
 
- // Extrapolate size if not set e.g. from productName "20X30 # SENEPA BEIGE"
- let size = sanitizeInputText(p.size);
- if (!size && pName) {
- const sizeMatch = pName.match(
- /(\d+(?:\.\d+)?)\s*[xX]\s*(\d+(?:\.\d+)?)/,
- );
- if (sizeMatch) {
- size = `${sizeMatch[1]}x${sizeMatch[2]} cm`;
- }
- }
- if (!size) {
- const catLower = (p.category || "").toLowerCase();
- const isTile =
- catLower.includes("tile") ||
- catLower.includes("slab") ||
- catLower.includes("stone");
- size = isTile ? "60x60 cm" : "N/A";
- }
+      // Extrapolate size if not set e.g. from productName "20X30 # SENEPA BEIGE"
+      let size = sanitizeInputText(p.size || "");
+      if (!size && pName) {
+        const sizeMatch = pName.match(
+          /(\d+(?:\.\d+)?)\s*[xX]\s*(\d+(?:\.\d+)?)/,
+        );
+        if (sizeMatch) {
+          size = `${sizeMatch[1]}x${sizeMatch[2]} cm`;
+        }
+      }
+      if (!size) {
+        const catLower = (p.category || "").toLowerCase();
+        const isTile =
+          catLower.includes("tile") ||
+          catLower.includes("slab") ||
+          catLower.includes("stone");
+        size = isTile ? "60x60 cm" : "N/A";
+      }
 
- const sku =
- sanitizeInputText(p.sku) ||
- (barcode ? `SKU-${barcode}` : `SKU-IMP-${Date.now()}-${i}`);
+      const sku =
+        sanitizeInputText(p.sku) ||
+        (barcode ? `SKU-${barcode}` : `SKU-IMP-${Date.now()}-${i}`);
 
- const finalId = p.id || `P-IMPORT-${Date.now()}-${i}`;
+      const finalId = p.id || `P-IMPORT-${Date.now()}-${i}`;
 
- return {
- ...p,
- id: finalId,
- productCode,
- productName: pName,
- sku,
- barcode,
- qrCode: p.qrCode || `TP-${productCode}`,
- category: correctCategoryName(sanitizeInputText(p.category)),
- brand: sanitizeInputText(p.brand) || "Generic",
- size,
- designName: correctProductName(sanitizeInputText(p.designName) || p.productName || pName),
- supplierId: sanitizeInputText(p.supplierId) || "central",
- unit: correctUnitName(sanitizeInputText(p.unit) || "Unit"),
+      return {
+        ...p,
+        id: finalId,
+        productCode,
+        productName: pName,
+        sku,
+        barcode,
+        qrCode: p.qrCode || `TP-${productCode}`,
+        category: correctCategoryName(sanitizeInputText(p.category || "")),
+        brand: sanitizeInputText(p.brand || "") || "Generic",
+        size,
+        designName: correctProductName(sanitizeInputText(p.designName || "") || p.productName || pName),
+        supplierId: sanitizeInputText(p.supplierId || "") || "central",
+        unit: correctUnitName(sanitizeInputText(p.unit || "") || "Unit"),
  origin: p.origin ? sanitizeInputText(p.origin) : undefined,
 
  boxQuantity: sanitizeAndValidateNumber(
@@ -8336,7 +8339,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
   const nowIso = new Date().toISOString();
   sanitized.forEach((item) => {
     if (item.stockQuantity > 0) {
-      let targetBranchId = (branchMapping && branchMapping['default']) || currentUser.branchAssignmentId || "B1";
+      let targetBranchId = (branchMapping && branchMapping['default']) || currentUser?.branchAssignmentId || "B1";
       if (item.origin) {
         const cleanedOrigin = item.origin.toLowerCase().trim();
         if (branchMapping && branchMapping[cleanedOrigin]) {
@@ -8386,7 +8389,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
                     (item.productName || "").toUpperCase().includes("DAMAGE") ||
                     (item.category || "").toUpperCase().includes("DAMAGE");
    if (isDamage && item.stockQuantity > 0) {
-     let targetBranchId = (branchMapping && branchMapping['default']) || currentUser.branchAssignmentId || "B1";
+     let targetBranchId = (branchMapping && branchMapping['default']) || currentUser?.branchAssignmentId || "B1";
      let targetBranchName = branches.find(b => b.id === targetBranchId)?.name || branches[0]?.name || "Main Branch";
      if (item.origin) {
        const cleanedOrigin = item.origin.toLowerCase().trim();
@@ -8421,18 +8424,23 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
      if ((item.productName || "").toUpperCase().includes("BOA")) {
        cat = "BOA";
      } else if ((item.productName || "").toUpperCase().includes("TRANSIT") || (item.productName || "").toUpperCase().includes("DELIVERY")) {
-       cat = "Delivery Transit";
-     } else if ((item.productName || "").toUpperCase().includes("SHOWROOM") || (item.productName || "").toUpperCase().includes("SLIGHT")) {
-       cat = "Showroom Casualty";
+       cat = "Breakage in Transit";
+     } else if ((item.productName || "").toUpperCase().includes("FACTORY") || (item.productName || "").toUpperCase().includes("DEFECT")) {
+       cat = "Factory Defect";
+     } else if ((item.productName || "").toUpperCase().includes("DISPLAY")) {
+       cat = "Display Sample Wear";
      }
 
-     let action = "Disposed / Scrapped";
-     if ((item.productName || "").toUpperCase().includes("MOSAIC") || (item.productName || "").toUpperCase().includes("BARGAIN") || (item.productName || "").toUpperCase().includes("SLIGHT")) {
-       action = "Saved for Mosaic";
+     // Determine action taken
+     let action = "Written Off (Scrapped)";
+     if (cat === "Factory Defect") {
+       action = "Supplier Return / Claim";
+     } else if (cat === "Display Sample Wear") {
+       action = "Discounted Clearance Sale";
      }
 
      importedDamageLogs.push({
-       id: `DMG-IMPORT-${item.id}`,
+       id: `DMG-IMP-${Date.now()}-${item.id}`,
        productId: item.id,
        productName: item.productName,
        productSku: item.sku,
@@ -8443,7 +8451,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
        category: cat,
        actionTaken: action,
        notes: `Legacy stock damage imported from ERP file.`,
-       reportedBy: currentUser.fullName || "Admin",
+       reportedBy: currentUser?.fullName || "Admin",
        reportedAt: new Date().toISOString(),
        createdAt: new Date().toISOString(),
        isDeleted: false,
@@ -9350,11 +9358,11 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  quantity: item.quantity,
  sourceBranchId: targetSale.branchId,
  referenceId: saleId,
- notes: `Restored: Voided invoice ${targetSale.saleNumber} by ${currentUser.fullName}`,
- timestamp: new Date().toISOString(),
- userId: currentUser.id,
- username: currentUser.username,
- }),
+        notes: `Restored: Voided invoice ${targetSale.saleNumber} by ${currentUser?.fullName || "SYSTEM"}`,
+        timestamp: new Date().toISOString(),
+        userId: currentUser?.id || "SYSTEM",
+        username: currentUser?.username || "system",
+      }),
  );
 
  setMovements((prev) => [...newMovements, ...prev]);
@@ -9482,24 +9490,24 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return;
  }
 
- const shiftId = `SH-${Date.now()}`;
- const newShift: Shift = {
- id: shiftId,
- cashierId: currentUser.id,
- cashierName: currentUser.fullName,
- branchId: currentUser.branchAssignmentId,
- status: "OPEN",
- startCash,
- endCash: 0,
- cashCount: 0,
- variance: 0,
- openedAt: new Date().toISOString(),
- closedAt: null,
- shiftSalesCount: 0,
- shiftSalesTotal: 0,
- shiftVatTotal: 0,
- shiftDiscountTotal: 0,
- };
+    const shiftId = `SH-${Date.now()}`;
+    const newShift: Shift = {
+      id: shiftId,
+      cashierId: currentUser.id,
+      cashierName: currentUser.fullName,
+      branchId: currentUser.branchAssignmentId || "B1",
+      status: "OPEN",
+      startCash,
+      endCash: 0,
+      cashCount: 0,
+      variance: 0,
+      openedAt: new Date().toISOString(),
+      closedAt: undefined,
+      shiftSalesCount: 0,
+      shiftSalesTotal: 0,
+      shiftVatTotal: 0,
+      shiftDiscountTotal: 0,
+    };
 
  setShifts((prev) => [
  newShift,
@@ -9699,7 +9707,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  supplierId,
  branchId,
  status: (status || "Pending") as POStatus,
- requestedBy: currentUser.fullName,
+ requestedBy: currentUser?.fullName || "SYSTEM",
  date: todayStr,
  notes,
  paymentMode: paymentMode || "terms",
@@ -9798,12 +9806,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  productId: prodId,
  type: "IN",
  quantity: qty,
- destinationBranchId: originalPo.branchId,
+ destinationBranchId: originalPo.branchId || "B1",
  referenceId: id,
  notes: `Received cargo on PO ${originalPo.poNumber}`,
  timestamp: new Date().toISOString(),
- userId: currentUser.id,
- username: currentUser.username,
+ userId: currentUser?.id || "SYSTEM",
+ username: currentUser?.fullName || "system",
  }));
 
  setMovements((prev) => [...newItemsMoved, ...prev]);
@@ -9826,7 +9834,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  } else {
  nextList.push({
  id: `${originalPo.branchId}_${prodId}`,
- branchId: originalPo.branchId,
+ branchId: originalPo.branchId || "B1",
  productId: prodId,
  quantity: qty,
  updatedAt: new Date().toISOString(),
@@ -9844,7 +9852,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  poItemsForThis.forEach((item) => {
  const receivedAfter =
  item.quantityReceived + (receivedMap[item.productId] || 0);
- if (receivedAfter < item.quantityRequested) {
+ if (receivedAfter < (item.quantityRequested ?? 0)) {
  allCompleted = false;
  }
  });
@@ -9889,9 +9897,9 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  const newTrans: Transmittal = {
  id: transId,
  documentType: docType,
- fromBranchId: currentUser.branchAssignmentId,
+ fromBranchId: currentUser?.branchAssignmentId || "B1",
  toBranchId,
- submittedBy: currentUser.fullName,
+ submittedBy: currentUser?.fullName || "SYSTEM",
  status: "Submitted" as TransmittalStatus,
  payloadJson,
  notes,
@@ -9949,238 +9957,219 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
  });
 
- const newTransfer: StockTransfer = {
- id,
- transferNo,
- fromBranchId,
- toBranchId,
- transferType,
- requestedBy: currentUser.fullName,
- status: "Pending",
- reason,
- createdAt: new Date().toISOString(),
- updatedAt: new Date().toISOString(),
- items,
- };
+  const newTransfer: StockTransfer = {
+    id,
+    transferNo,
+    fromBranchId,
+    toBranchId,
+    transferType,
+    requestedBy: currentUser?.fullName || "SYSTEM",
+    status: "Pending",
+    reason,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    items,
+  };
 
- setStockTransfers((prev) => [newTransfer, ...prev]);
- addAuditLog(
- "TRANSFER_CREATE",
- `Created Stock Transfer Request ${transferNo} (${transferType}) from ${fromBranchId} to ${toBranchId}`,
- "StockTransfer",
- id,
- );
- };
+  setStockTransfers((prev) => [newTransfer, ...prev]);
+  addAuditLog(
+    "TRANSFER_CREATE",
+    `Created Stock Transfer Request ${transferNo} (${transferType}) from ${fromBranchId} to ${toBranchId}`,
+    "StockTransfer",
+    id,
+  );
+  };
 
- const updateStockTransferStatus = (id: string, status: TransferStatus) => {
-  logBranchAccessScope("UPDATE", "StockTransfer", null, id, { status });
- setStockTransfers((prev) =>
- prev.map((t) => {
- if (t.id === id) {
- const prevStatus = t.status;
+  const updateStockTransferStatus = (id: string, status: TransferStatus) => {
+   logBranchAccessScope("UPDATE", "StockTransfer", null, id, { status });
+  setStockTransfers((prev) =>
+  prev.map((t) => {
+  if (t.id === id) {
+  const prevStatus = t.status;
 
- // Only run transition logic if status changed
- if (prevStatus !== status) {
- // 1. If moving from 'Pending' to 'Approved' or 'In Transit', deduct from fromBranchId exactly once
- if (
- (status === "In Transit" || status === "Approved") &&
- prevStatus === "Pending"
- ) {
- setBranchStock((bStock) => {
- const updatedStock = [...bStock];
- (t.items || []).forEach((item) => {
- const idx = updatedStock.findIndex(
- (bs) =>
- bs.productId === item.productId &&
- bs.branchId === t.fromBranchId,
- );
- const deductionQty = item.quantity;
- if (idx !== -1) {
- const bs = updatedStock[idx];
- const nextQty = Math.max(0, bs.quantity - deductionQty);
- updatedStock[idx] = {
- ...bs,
- quantity: nextQty,
- version: (bs.version || 0) + 1,
- updatedAt: new Date().toISOString(),
- };
- if (isSameBranch(t.fromBranchId, (localStorage.getItem("tilepoint_primary_branch_id") || "B1"), branches)) {
- setProducts((prods) =>
- prods.map((prod) =>
- prod.id === bs.productId
- ? { ...prod, stockQuantity: nextQty, version: (prod.version || 0) + 1, updatedAt: new Date().toISOString() }
- : prod,
- ),
- );
- }
- } else {
- const newBs: InventoryLocationStock = {
- id: `${t.fromBranchId}_${item.productId}`,
- branchId: t.fromBranchId,
- productId: item.productId,
- quantity: 0,
- version: 1,
- updatedAt: new Date().toISOString(),
- };
- updatedStock.push(newBs);
- if (isSameBranch(t.fromBranchId, (localStorage.getItem("tilepoint_primary_branch_id") || "B1"), branches)) {
- setProducts((prods) =>
- prods.map((prod) =>
- prod.id === item.productId
- ? { ...prod, stockQuantity: 0, version: (prod.version || 0) + 1, updatedAt: new Date().toISOString() }
- : prod,
- ),
- );
- }
- }
- });
- return updatedStock;
- });
+  // Only run transition logic if status changed
+  if (prevStatus !== status) {
+  // 1. If moving from 'Pending' to 'Approved' or 'In Transit', deduct from fromBranchId exactly once
+  if (
+  (status === "In Transit" || status === "Approved") &&
+  prevStatus === "Pending"
+  ) {
+  setBranchStock((bStock) => {
+  const updatedStock = [...bStock];
+  (t.items || []).forEach((item) => {
+  const idx = updatedStock.findIndex(
+  (bs) =>
+  bs.productId === item.productId &&
+  bs.branchId === t.fromBranchId,
+  );
+  const deductionQty = -item.quantity;
+  if (idx !== -1) {
+  const bs = updatedStock[idx];
+  const nextQty = Math.max(0, bs.quantity + deductionQty);
+  updatedStock[idx] = {
+  ...bs,
+  quantity: nextQty,
+  version: (bs.version || 0) + 1,
+  updatedAt: new Date().toISOString(),
+  };
+  if (isSameBranch(t.fromBranchId, (localStorage.getItem("tilepoint_primary_branch_id") || "B1"), branches)) {
+  setProducts((prods) =>
+  prods.map((prod) =>
+  prod.id === bs.productId
+  ? { ...prod, stockQuantity: nextQty }
+  : prod,
+  ),
+  );
+  }
+  }
+  });
+  return updatedStock;
+  });
 
- // Record Ledger / Movements for dispatch
- (t.items || []).forEach((item) => {
- const ledgerId = `L-TR-DISP-${id}-${item.productId}`;
- const entry: LedgerEntry = {
- id: ledgerId,
- date: new Date().toISOString(),
- productId: item.productId,
- productName: item.productName,
- branchId: t.fromBranchId,
- movementType: "TRANSFER",
- quantity: -item.quantity,
- referenceNo: t.transferNo,
- remarks: `Dispatched ${t.transferType} stock to ${t.toBranchId}`,
- };
- setLedgerEntries((entries) => [entry, ...entries]);
+  // Record Ledger / Movements for dispatch
+  (t.items || []).forEach((item) => {
+  const ledgerId = `L-TR-DISP-${id}-${item.productId}`;
+  const entry: LedgerEntry = {
+  id: ledgerId,
+  date: new Date().toISOString(),
+  productId: item.productId,
+  productName: item.productName,
+  branchId: t.fromBranchId,
+  movementType: "TRANSFER",
+  quantity: -item.quantity,
+  referenceNo: t.transferNo,
+  remarks: `Shipped ${t.transferType} stock to ${t.toBranchId}`,
+  };
+  setLedgerEntries((entries) => [entry, ...entries]);
 
- // Also add general inventory movement log
- const moveId = `M-TR-DISP-${id}-${item.productId}`;
- const moveItem: InventoryMovement = {
- id: moveId,
- productId: item.productId,
- type: "TRANSFER",
- quantity: -item.quantity,
- sourceBranchId: t.fromBranchId,
- destinationBranchId: t.toBranchId,
- referenceId: t.id,
- notes: `Shipped ${item.quantity} boxes for ${t.transferType} (${t.transferNo})`,
- timestamp: new Date().toISOString(),
- userId: currentUser.id,
- username: currentUser.username,
- };
- setMovements((moves) => [moveItem, ...moves]);
- });
- }
+  // Also add general inventory movement log
+  const moveId = `M-TR-DISP-${id}-${item.productId}`;
+  const moveItem: InventoryMovement = {
+  id: moveId,
+  productId: item.productId,
+  type: "TRANSFER",
+  quantity: -item.quantity,
+  sourceBranchId: t.fromBranchId,
+  destinationBranchId: t.toBranchId,
+  referenceId: t.id,
+  notes: `Shipped ${item.quantity} boxes for ${t.transferType} (${t.transferNo})`,
+  timestamp: new Date().toISOString(),
+  userId: currentUser?.id || "SYSTEM",
+  username: currentUser?.username || "system",
+  };
+  setMovements((moves) => [moveItem, ...moves]);
+  });
+  }
 
- // 2. If moving to 'Received', add to toBranchId (create record if it does not exist)
- if (status === "Received") {
- setBranchStock((bStock) => {
- const updatedStock = [...bStock];
- (t.items || []).forEach((item) => {
- const idx = updatedStock.findIndex(
- (bs) =>
- bs.productId === item.productId &&
- bs.branchId === t.toBranchId,
- );
- const additionQty = item.quantity;
- if (idx !== -1) {
- const bs = updatedStock[idx];
- const nextQty = bs.quantity + additionQty;
- updatedStock[idx] = {
- ...bs,
- quantity: nextQty,
- version: (bs.version || 0) + 1,
- updatedAt: new Date().toISOString(),
- };
- if (isSameBranch(t.toBranchId, (localStorage.getItem("tilepoint_primary_branch_id") || "B1"), branches)) {
- setProducts((prods) =>
- prods.map((prod) =>
- prod.id === bs.productId
- ? { ...prod, stockQuantity: nextQty }
- : prod,
- ),
- );
- }
- } else {
- const nextQty = additionQty;
- const newBs: InventoryLocationStock = {
- id: `${t.toBranchId}_${item.productId}`,
- branchId: t.toBranchId,
- productId: item.productId,
- quantity: nextQty,
- version: 1,
- updatedAt: new Date().toISOString(),
- };
- updatedStock.push(newBs);
- if (isSameBranch(t.toBranchId, (localStorage.getItem("tilepoint_primary_branch_id") || "B1"), branches)) {
- setProducts((prods) =>
- prods.map((prod) =>
- prod.id === item.productId
- ? { ...prod, stockQuantity: nextQty, version: (prod.version || 0) + 1, updatedAt: new Date().toISOString() }
- : prod,
- ),
- );
- }
- }
- });
- return updatedStock;
- });
+  // 2. If moving to 'Received', add to toBranchId (create record if it does not exist)
+  if (status === "Received") {
+  setBranchStock((bStock) => {
+  const updatedStock = [...bStock];
+  (t.items || []).forEach((item) => {
+  const idx = updatedStock.findIndex(
+  (bs) =>
+  bs.productId === item.productId &&
+  bs.branchId === t.toBranchId,
+  );
+  const additionQty = item.quantity;
+  if (idx !== -1) {
+  const bs = updatedStock[idx];
+  const nextQty = bs.quantity + additionQty;
+  updatedStock[idx] = {
+  ...bs,
+  quantity: nextQty,
+  version: (bs.version || 0) + 1,
+  updatedAt: new Date().toISOString(),
+  };
+  if (isSameBranch(t.toBranchId, (localStorage.getItem("tilepoint_primary_branch_id") || "B1"), branches)) {
+  setProducts((prods) =>
+  prods.map((prod) =>
+  prod.id === bs.productId
+  ? { ...prod, stockQuantity: nextQty }
+  : prod,
+  ),
+  );
+  }
+  } else {
+  const nextQty = additionQty;
+  const newBs: InventoryLocationStock = {
+  id: `${t.toBranchId}_${item.productId}`,
+  branchId: t.toBranchId,
+  productId: item.productId,
+  quantity: nextQty,
+  version: 1,
+  updatedAt: new Date().toISOString(),
+  };
+  updatedStock.push(newBs);
+  if (isSameBranch(t.toBranchId, (localStorage.getItem("tilepoint_primary_branch_id") || "B1"), branches)) {
+  setProducts((prods) =>
+  prods.map((prod) =>
+  prod.id === item.productId
+  ? { ...prod, stockQuantity: nextQty, version: (prod.version || 0) + 1, updatedAt: new Date().toISOString() }
+  : prod,
+  ),
+  );
+  }
+  }
+  });
+  return updatedStock;
+  });
 
- // Record Ledger / Movements for receipt
- (t.items || []).forEach((item) => {
- const ledgerId = `L-TR-REC-${id}-${item.productId}`;
- const entry: LedgerEntry = {
- id: ledgerId,
- date: new Date().toISOString(),
- productId: item.productId,
- productName: item.productName,
- branchId: t.toBranchId,
- movementType: "TRANSFER",
- quantity: item.quantity,
- referenceNo: t.transferNo,
- remarks: `Received ${t.transferType} stock from ${t.fromBranchId}`,
- };
- setLedgerEntries((entries) => [entry, ...entries]);
+  // Record Ledger / Movements for receipt
+  (t.items || []).forEach((item) => {
+  const ledgerId = `L-TR-REC-${id}-${item.productId}`;
+  const entry: LedgerEntry = {
+  id: ledgerId,
+  date: new Date().toISOString(),
+  productId: item.productId,
+  productName: item.productName,
+  branchId: t.toBranchId,
+  movementType: "TRANSFER",
+  quantity: item.quantity,
+  referenceNo: t.transferNo,
+  remarks: `Received ${t.transferType} stock from ${t.fromBranchId}`,
+  };
+  setLedgerEntries((entries) => [entry, ...entries]);
 
- // Also add general inventory movement log
- const moveId = `M-TR-REC-${id}-${item.productId}`;
- const moveItem: InventoryMovement = {
- id: moveId,
- productId: item.productId,
- type: "TRANSFER",
- quantity: item.quantity,
- sourceBranchId: t.fromBranchId,
- destinationBranchId: t.toBranchId,
- referenceId: t.id,
- notes: `Received ${item.quantity} boxes for ${t.transferType} (${t.transferNo})`,
- timestamp: new Date().toISOString(),
- userId: currentUser.id,
- username: currentUser.username,
- };
- setMovements((moves) => [moveItem, ...moves]);
- });
- }
- }
+  // Also add general inventory movement log
+  const moveId = `M-TR-REC-${id}-${item.productId}`;
+  const moveItem: InventoryMovement = {
+  id: moveId,
+  productId: item.productId,
+  type: "TRANSFER",
+  quantity: item.quantity,
+  sourceBranchId: t.fromBranchId,
+  destinationBranchId: t.toBranchId,
+  referenceId: t.id,
+  notes: `Received ${item.quantity} boxes for ${t.transferType} (${t.transferNo})`,
+  timestamp: new Date().toISOString(),
+  userId: currentUser?.id || "SYSTEM",
+  username: currentUser?.username || "system",
+  };
+  setMovements((moves) => [moveItem, ...moves]);
+  });
+  }
+  }
 
- return {
- ...t,
- status,
- approvedBy:
- status === "Approved" ? currentUser.fullName : t.approvedBy,
- updatedAt: new Date().toISOString(),
- };
- }
- return t;
- }),
- );
+  return {
+  ...t,
+  status,
+  approvedBy:
+  status === "Approved" ? (currentUser?.fullName || "SYSTEM") : t.approvedBy,
+  updatedAt: new Date().toISOString(),
+  };
+  }
+  return t;
+  }),
+  );
 
- addAuditLog(
- "TRANSFER_UPDATE",
- `Updated Stock Transfer ${id} to status ${status}`,
- "StockTransfer",
- id,
- );
- };
+  addAuditLog(
+  "TRANSFER_UPDATE",
+  `Updated Stock Transfer ${id} to status ${status}`,
+  "StockTransfer",
+  id,
+  );
+  };
 
  // ==========================================
  // LOCKING & PESSIMISTIC UPDATES SUBMODULE
@@ -10347,9 +10336,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // CALCULATE LIVE SYSTEM KPIs (Memoized to prevent UI stuttering on non-related updates)
   const stats = useMemo((): SummaryStats => {
- const effectiveBranch = (currentUser?.role as any) === 'Admin' || currentUser?.role === UserRole.ADMIN
- ? (currentUser.branchAssignmentId && currentUser.branchAssignmentId !== 'ALL' && currentUser.branchAssignmentId !== 'consolidated' ? currentUser.branchAssignmentId : 'consolidated')
- : (currentUser?.branchAssignmentId || 'B1');
+    const effectiveBranch =
+      currentUser && ((currentUser.role as any) === 'Admin' || currentUser.role === UserRole.ADMIN)
+        ? (currentUser.branchAssignmentId && currentUser.branchAssignmentId !== 'ALL' && currentUser.branchAssignmentId !== 'consolidated'
+            ? currentUser.branchAssignmentId
+            : 'consolidated')
+        : (currentUser?.branchAssignmentId || 'B1');
 
  const branchStats = getBranchStockStats(effectiveBranch);
 

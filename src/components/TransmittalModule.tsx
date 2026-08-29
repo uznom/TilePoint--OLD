@@ -53,302 +53,302 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  } = useDb();
 
  // Create Modal state
- const [showModal, setShowModal] = useState(false);
- const [transPage, setTransPage] = useState(1);
- const transPageSize = useResponsivePageSize(64, 460, 10);
- const [selectedDocType, setSelectedDocType] = useState<TransmittalDocType>(
- "Full Branch State Snapshot",
- );
- const [toBranchId, setToBranchId] = useState("B2");
- const [payloadText, setPayloadText] = useState("");
- const [notes, setNotes] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [transPage, setTransPage] = useState(1);
+  const transPageSize = useResponsivePageSize(64, 460, 10);
+  const [selectedDocType, setSelectedDocType] = useState<TransmittalDocType>(
+    "Full Branch State Snapshot",
+  );
+  const [toBranchId, setToBranchId] = useState("B2");
+  const [payloadText, setPayloadText] = useState("");
+  const [notes, setNotes] = useState("");
 
- const compileBranchData = async (docType: TransmittalDocType) => {
- const currentBranchId = currentUser.branchAssignmentId || "B1";
- const bName = getBranchName(currentBranchId);
+  // Selected details modal
+  const [activeTrans, setActiveTrans] = useState<Transmittal | null>(null);
+  const [inspectTab, setInspectTab] = useState<"itemized" | "raw">("itemized");
 
- await triggerSystemProcessing(
- `Compiling ${docType}...`,
- 1200,
- "db",
- undefined,
- "Querying branch stock allocation indices and compiling tax invoice registries...",
- );
+  // Custom visual feedback state
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [rawImportText, setRawImportText] = useState("");
 
- if (docType === "Full Branch State Snapshot") {
- // 1. FIXED LOGISTICS INTERCEPTOR: Live Branch Inventory Stock Allocations containing dynamic local pricing overrides
- const filteredStocks = branchStock
- .filter((bs) => bs.branchId === currentBranchId)
- .map((bs) => {
- const p = products.find((prod) => prod.id === bs.productId);
- return {
- productId: bs.productId,
- productName: p ? p.productName : "Unknown Tile",
- sku: p ? p.sku : "",
- quantity: bs.quantity,
- // CRITICAL ALIGNMENT MATRIX EXTRACTION: Transmit local price modifications to central nodes
- sellingPriceOverride:
- bs.sellingPriceOverride !== undefined &&
- bs.sellingPriceOverride > 0
- ? bs.sellingPriceOverride
- : undefined,
- baseEnterpriseSellingPrice: p ? p.sellingPrice : 0,
- effectiveAssetValueRetail:
- bs.quantity *
- (bs.sellingPriceOverride !== undefined &&
- bs.sellingPriceOverride > 0
- ? bs.sellingPriceOverride
- : p
- ? p.sellingPrice
- : 0),
- };
- });
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  };
 
- // 2. Clear Cashiers & Employee Directory belonging to this branch
- const branchStaff = users
- .filter((u) => u.branchAssignmentId === currentBranchId)
- .map((u) => ({
- id: u.id,
- fullName: u.fullName,
- username: u.username,
- email: u.email,
- role: u.role,
- status: u.status,
- }));
+  const getBranchName = (id: string | null) => {
+    if (!id || id === "B1" || id === "main") {
+      const stored = localStorage.getItem("tilepoint_company_name_v1");
+      if (stored) return stored;
+    }
+    const b = branches.find((br) => br.id === id);
+    if (!b) {
+      const stored = localStorage.getItem("tilepoint_company_name_v1");
+      if (stored) return stored;
+      return branches[0]?.name || "Main Branch";
+    }
+    return b.name;
+  };
 
- // 3. Complete Cashier Shift Audits logged for this branch
- const branchShifts = shifts.filter(
- (sh) => sh.branchId === currentBranchId,
- );
+  const compileBranchData = async (docType: TransmittalDocType) => {
+    const currentBranchId = currentUser?.branchAssignmentId || "B1";
+    const bName = getBranchName(currentBranchId);
 
- // 4. Detailed Cashier Sales Invoices & itemized products
- const branchSales = sales
- .filter((s) => s.branchId === currentBranchId && !s.isDeleted)
- .map((s) => {
- const items = saleItems.filter(
- (si) => si.saleId === s.id && !si.isDeleted,
- );
- return {
- id: s.id,
- saleNumber: s.saleNumber,
- shiftId: s.shiftId,
- cashierId: s.cashierId,
- cashierName: s.cashierName,
- customerName: s.customerName,
- subtotal: s.subtotal,
- vat: s.vat,
- discount: s.discount,
- grandTotal: s.grandTotal,
- paymentMethod: s.paymentMethod,
- amountTendered: s.amountTendered,
- changeAmount: s.changeAmount,
- notes: s.notes,
- createdAt: s.createdAt,
- itemizedProducts: items.map((it) => ({
- productId: it.productId,
- productName: it.productName,
- unitPrice: it.unitPrice,
- quantity: it.quantity,
- total: it.total,
- })),
- };
- });
+    await triggerSystemProcessing(
+      `Compiling ${docType}...`,
+      1200,
+      "db",
+      undefined,
+      "Querying branch stock allocation indices and compiling tax invoice registries...",
+    );
 
- // 5. Operating Petty Cash Expenses registered under this branch from standard LocalStorage
- const branchExpenses = expenses.filter(
- (ex: any) => ex.branchId === currentBranchId,
- );
+    if (docType === "Full Branch State Snapshot") {
+      // 1. FIXED LOGISTICS INTERCEPTOR: Live Branch Inventory Stock Allocations containing dynamic local pricing overrides
+      const filteredStocks = branchStock
+        .filter((bs) => bs.branchId === currentBranchId)
+        .map((bs) => {
+          const p = products.find((prod) => prod.id === bs.productId);
+          return {
+            productId: bs.productId,
+            productName: p ? p.productName : "Unknown Tile",
+            sku: p ? p.sku : "",
+            quantity: bs.quantity,
+            // CRITICAL ALIGNMENT MATRIX EXTRACTION: Transmit local price modifications to central nodes
+            sellingPriceOverride:
+              bs.sellingPriceOverride !== undefined &&
+              bs.sellingPriceOverride > 0
+                ? bs.sellingPriceOverride
+                : undefined,
+            baseEnterpriseSellingPrice: p ? p.sellingPrice : 0,
+            effectiveAssetValueRetail:
+              bs.quantity *
+              (bs.sellingPriceOverride !== undefined &&
+              bs.sellingPriceOverride > 0
+                ? bs.sellingPriceOverride
+                : p
+                ? p.sellingPrice
+                : 0),
+          };
+        });
 
- // 6. Local Inventory Movements logged for this branch
- const branchMovements = movements.filter(
- (m) =>
- m.sourceBranchId === currentBranchId ||
- m.destinationBranchId === currentBranchId,
- );
+      // 2. Clear Cashiers & Employee Directory belonging to this branch
+      const branchStaff = users
+        .filter((u) => u.branchAssignmentId === currentBranchId)
+        .map((u) => ({
+          id: u.id,
+          fullName: u.fullName,
+          username: u.username,
+          email: u.email,
+          role: u.role,
+          status: u.status,
+        }));
 
- // 7. Dynamic Inter-Branch Stocks Transfers
- const branchTransfers = stockTransfers.filter(
- (st) =>
- st.fromBranchId === currentBranchId ||
- st.toBranchId === currentBranchId,
- );
+      // 3. Complete Cashier Shift Audits logged for this branch
+      const branchShifts = shifts.filter(
+        (sh) => sh.branchId === currentBranchId,
+      );
 
- const packet = {
- compiledAt: new Date().toISOString(),
- branchId: currentBranchId,
- branchName: bName,
- operatorName: currentUser.fullName,
- recordCounts: {
- inventoryStocksCount: filteredStocks.length,
- salesTransactionsCount: branchSales.length,
- expensesDisbursementsCount: branchExpenses.length,
- cashierShiftsCount: branchShifts.length,
- registeredCashiersCount: branchStaff.length,
- inventoryMovementsHistory: branchMovements.length,
- interBranchTransfers: branchTransfers.length,
- },
- inventoryStocks: filteredStocks,
- cashierDirectory: branchStaff,
- cashierShifts: branchShifts,
- salesHistory: branchSales,
- expenseLedger: branchExpenses,
- inventoryMovements: branchMovements,
- stockTransfers: branchTransfers,
- authSignature: `TP-SECURE-STAMP-${currentBranchId}-${Math.floor(Math.random() * 90000 + 10000)}`,
- };
+      // 4. Detailed Cashier Sales Invoices & itemized products
+      const branchSales = sales
+        .filter((s) => s.branchId === currentBranchId && !s.isDeleted)
+        .map((s) => {
+          const items = saleItems.filter(
+            (si) => si.saleId === s.id && !si.isDeleted,
+          );
+          return {
+            id: s.id,
+            saleNumber: s.saleNumber,
+            shiftId: s.shiftId,
+            cashierId: s.cashierId,
+            cashierName: s.cashierName,
+            customerName: s.customerName,
+            subtotal: s.subtotal,
+            vat: s.vat,
+            discount: s.discount,
+            grandTotal: s.grandTotal,
+            paymentMethod: s.paymentMethod,
+            amountTendered: s.amountTendered,
+            changeAmount: s.changeAmount,
+            notes: s.notes,
+            createdAt: s.createdAt,
+            itemizedProducts: items.map((it) => ({
+              productId: it.productId,
+              productName: it.productName,
+              unitPrice: it.unitPrice,
+              quantity: it.quantity,
+              total: it.total,
+            })),
+          };
+        });
 
- setPayloadText(JSON.stringify(packet, null, 2));
- setNotes(
- `Automated Full Audit Snapshot compiled with local overrides: ${filteredStocks.length} Stocks, ${branchSales.length} Invoices, ${branchExpenses.length} Expenses.`,
- );
- showToast(
- "Full core database of branch compiled into snapshot packet containing local overrides!",
- );
- } else if (docType === "Daily Sales Report") {
- const branchSales = sales.filter(
- (s) => s.branchId === currentBranchId && !s.isDeleted,
- );
- const totalAmount = branchSales.reduce((sum, s) => sum + (Number(s.grandTotal) || 0), 0);
- const packet = {
- compiledAt: new Date().toISOString(),
- branchId: currentBranchId,
- branchName: bName,
- reportDate: new Date().toISOString().slice(0, 10),
- registeredSalesTransactions: branchSales.length,
- totalSalesValue: totalAmount,
- currency: "PHP",
- verifiedBy: currentUser.fullName,
- };
- setPayloadText(JSON.stringify(packet, null, 2));
- setNotes(
- `Daily sales ledger report: ${branchSales.length} transactions, total: ₱${totalAmount.toLocaleString()}`,
- );
- showToast("Branch Sales ledger record compiled.");
- } else if (docType === "Inventory Count Report") {
- const filteredStocks = branchStock
- .filter((bs) => bs.branchId === currentBranchId)
- .map((bs) => {
- const p = products.find((prod) => prod.id === bs.productId);
- return {
- productId: bs.productId,
- productName: p ? p.productName : "Unknown Tile",
- sku: p ? p.sku : "",
- quantity: bs.quantity,
- sellingPriceOverride:
- bs.sellingPriceOverride !== undefined &&
- bs.sellingPriceOverride > 0
- ? bs.sellingPriceOverride
- : undefined,
- };
- });
- const packet = {
- compiledAt: new Date().toISOString(),
- branchId: currentBranchId,
- branchName: bName,
- inventoryVerifiedCount: filteredStocks.length,
- stocks: filteredStocks,
- };
- setPayloadText(JSON.stringify(packet, null, 2));
- setNotes(
- `Stock count Audit: verified ${filteredStocks.length} physical line levels with price tiers.`,
- );
- showToast("Core branch stock allocations compiled.");
- } else {
- const packet = {
- compiledAt: new Date().toISOString(),
- branchId: currentBranchId,
- branchName: bName,
- operator: currentUser.fullName,
- docCategory: docType,
- };
- setPayloadText(JSON.stringify(packet, null, 2));
- showToast("Base digital cargo packet compiled.");
- }
- };
+      // 5. Operating Petty Cash Expenses registered under this branch
+      const branchExpenses = (expenses || []).filter(
+        (ex: any) => ex.branchId === currentBranchId,
+      );
 
- // Selected details modal
- const [activeTrans, setActiveTrans] = useState<Transmittal | null>(null);
- const [inspectTab, setInspectTab] = useState<"itemized" | "raw">("itemized");
+      // 6. Local Inventory Movements logged for this branch
+      const branchMovements = movements.filter(
+        (m) =>
+          m.sourceBranchId === currentBranchId ||
+          m.destinationBranchId === currentBranchId,
+      );
 
- // Custom visual feedback state
- const [toastMessage, setToastMessage] = useState<string | null>(null);
- const [showImportModal, setShowImportModal] = useState(false);
- const [rawImportText, setRawImportText] = useState("");
+      // 7. Dynamic Inter-Branch Stocks Transfers
+      const branchTransfers = stockTransfers.filter(
+        (st) =>
+          st.fromBranchId === currentBranchId ||
+          st.toBranchId === currentBranchId,
+      );
 
- const showToast = (msg: string) => {
- setToastMessage(msg);
- setTimeout(() => {
- setToastMessage(null);
- }, 4000);
- };
+      const packet = {
+        compiledAt: new Date().toISOString(),
+        branchId: currentBranchId,
+        branchName: bName,
+        operatorName: currentUser?.fullName || "SYSTEM",
+        recordCounts: {
+          inventoryStocksCount: filteredStocks.length,
+          salesTransactionsCount: branchSales.length,
+          expensesDisbursementsCount: branchExpenses.length,
+          cashierShiftsCount: branchShifts.length,
+          registeredCashiersCount: branchStaff.length,
+          inventoryMovementsHistory: branchMovements.length,
+          interBranchTransfers: branchTransfers.length,
+        },
+        inventoryStocks: filteredStocks,
+        cashierDirectory: branchStaff,
+        cashierShifts: branchShifts,
+        salesHistory: branchSales,
+        expenseLedger: branchExpenses,
+        inventoryMovements: branchMovements,
+        stockTransfers: branchTransfers,
+        authSignature: `TP-SECURE-STAMP-${currentBranchId}-${Math.floor(Math.random() * 90000 + 10000)}`,
+      };
 
- const getBranchName = (id: string | null) => {
- if (!id || id === "B1" || id === "main") {
- const stored = localStorage.getItem("tilepoint_company_name_v1");
- if (stored) return stored;
- }
- const b = branches.find((br) => br.id === id);
- if (!b) {
- const stored = localStorage.getItem("tilepoint_company_name_v1");
- if (stored) return stored;
-  return branches[0]?.name || "Main Branch";
- }
- return b.name;
- };
+      setPayloadText(JSON.stringify(packet, null, 2));
+      setNotes(
+        `Automated Full Audit Snapshot compiled with local overrides: ${filteredStocks.length} Stocks, ${branchSales.length} Invoices, ${branchExpenses.length} Expenses.`,
+      );
+      showToast(
+        "Full core database of branch compiled into snapshot packet containing local overrides!",
+      );
+    } else if (docType === "Sales Report" || docType === "Daily Sales Report") {
+      const branchSales = sales.filter(
+        (s) => s.branchId === currentBranchId && !s.isDeleted,
+      );
+      const totalAmount = branchSales.reduce((sum, s) => sum + (Number(s.grandTotal) || 0), 0);
+      const packet = {
+        compiledAt: new Date().toISOString(),
+        branchId: currentBranchId,
+        branchName: bName,
+        reportDate: new Date().toISOString().slice(0, 10),
+        registeredSalesTransactions: branchSales.length,
+        totalSalesValue: totalAmount,
+        currency: "PHP",
+        verifiedBy: currentUser?.fullName || "SYSTEM",
+      };
+      setPayloadText(JSON.stringify(packet, null, 2));
+      setNotes(
+        `Daily sales ledger report: ${branchSales.length} transactions, total: ₱${totalAmount.toLocaleString()}`,
+      );
+      showToast("Branch Sales ledger record compiled.");
+    } else if (docType === "Inventory Count Report") {
+      const filteredStocks = branchStock
+        .filter((bs) => bs.branchId === currentBranchId)
+        .map((bs) => {
+          const p = products.find((prod) => prod.id === bs.productId);
+          return {
+            productId: bs.productId,
+            productName: p ? p.productName : "Unknown Tile",
+            sku: p ? p.sku : "",
+            quantity: bs.quantity,
+            sellingPriceOverride:
+              bs.sellingPriceOverride !== undefined &&
+              bs.sellingPriceOverride > 0
+                ? bs.sellingPriceOverride
+                : undefined,
+          };
+        });
+      const packet = {
+        compiledAt: new Date().toISOString(),
+        branchId: currentBranchId,
+        branchName: bName,
+        inventoryVerifiedCount: filteredStocks.length,
+        stocks: filteredStocks,
+      };
+      setPayloadText(JSON.stringify(packet, null, 2));
+      setNotes(
+        `Stock count Audit: verified ${filteredStocks.length} physical line levels with price tiers.`,
+      );
+      showToast("Core branch stock allocations compiled.");
+    } else {
+      const packet = {
+        compiledAt: new Date().toISOString(),
+        branchId: currentBranchId,
+        branchName: bName,
+        operator: currentUser?.fullName || "SYSTEM",
+        docCategory: docType,
+      };
+      setPayloadText(JSON.stringify(packet, null, 2));
+      showToast("Base digital cargo packet compiled.");
+    }
+  };
 
- const handleCreateTrans = async (e: React.FormEvent) => {
- e.preventDefault();
+  const handleCreateTrans = async (e: React.FormEvent) => {
+    e.preventDefault();
 
- // Validate payload shape JSON
- try {
- JSON.parse(payloadText);
- } catch (err) {
- showToast("JSON Syntax Error: Payload must be properly structured.");
- return;
- }
+    // Validate payload shape JSON
+    try {
+      JSON.parse(payloadText);
+    } catch (err) {
+      showToast("JSON Syntax Error: Payload must be properly structured.");
+      return;
+    }
 
- await triggerSystemProcessing(
- "Transmitting Snapshot Packet to Branch...",
- 1400,
- "progress",
- undefined,
- "Opening secure tunnel streams and broadcasting encrypted transmittal payload...",
- );
+    await triggerSystemProcessing(
+      "Transmitting Snapshot Packet to Branch...",
+      1400,
+      "progress",
+      undefined,
+      "Opening secure tunnel streams and broadcasting encrypted transmittal payload...",
+    );
 
- const newId = createTransmittal(
- selectedDocType,
- toBranchId,
- payloadText,
- notes,
- );
+    const newId = createTransmittal(
+      selectedDocType,
+      toBranchId,
+      payloadText,
+      notes,
+    );
 
- const newlyCreated: Transmittal = {
- id: newId,
- documentType: selectedDocType,
- fromBranchId: currentUser.branchAssignmentId || "B1",
- toBranchId,
- submittedBy: currentUser.fullName,
- status: "Submitted",
- payloadJson: payloadText,
- notes,
- submittedAt: new Date().toISOString(),
- isDeleted: false,
- };
+    const newlyCreated: Transmittal = {
+      id: newId,
+      documentType: selectedDocType,
+      fromBranchId: currentUser?.branchAssignmentId || "B1",
+      toBranchId,
+      submittedBy: currentUser?.fullName || "SYSTEM",
+      status: "Submitted",
+      payloadJson: payloadText,
+      notes,
+      submittedAt: new Date().toISOString(),
+      isDeleted: false,
+    };
 
- // Reset modals
- setNotes("");
- setPayloadText(
- '{\n "totalSales": 35400,\n "discrepancies": 0,\n "countVerified": true\n}',
- );
- setShowModal(false);
+    // Reset modals
+    setNotes("");
+    setPayloadText(
+      '{\n  "totalSales": 35400,\n  "discrepancies": 0,\n  "countVerified": true\n}',
+    );
+    setShowModal(false);
 
- // Auto-open inspector for immediate print
- setInspectTab("itemized");
- setActiveTrans(newlyCreated);
- showToast("Dispatched! Delivery slip opened for printing / PDF export.");
- };
+    // Auto-open inspector for immediate print
+    setInspectTab("itemized");
+    setActiveTrans(newlyCreated);
+    showToast("Dispatched! Delivery slip opened for printing / PDF export.");
+  };
 
- const handleExportTransmittal = (t: Transmittal) => {
+  const handleExportTransmittal = (t: Transmittal) => {
  const fromBranchId = t.fromBranchId;
  const fromBranchName = getBranchName(fromBranchId);
 
@@ -417,24 +417,24 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  return sum + bs.quantity * (prod ? prod.costPrice : 0);
  }, 0);
 
- // Catalog low and critical stocks
- const lowStockAlerts = bStock
- .filter((bs) => {
- const prod = products.find((p) => p.id === bs.productId);
- const min = prod ? prod.minimumStock : 10;
- return bs.quantity > 0 && bs.quantity <= min;
- })
- .map((bs) => {
- const prod = products.find((p) => p.id === bs.productId);
- return {
- productId: bs.productId,
- productName: prod ? prod.productName : "Tile SKU",
- sku: prod ? prod.sku : "",
- category: prod ? prod.category : "",
- quantity: bs.quantity,
- minimumRequired: prod ? prod.minimumStock : 10,
- };
- });
+  // Catalog low and critical stocks
+  const lowStockAlerts = bStock
+    .filter((bs) => {
+      const prod = products.find((p) => p.id === bs.productId);
+      const min = (prod && prod.minimumStock !== undefined) ? prod.minimumStock : 10;
+      return bs.quantity > 0 && bs.quantity <= min;
+    })
+    .map((bs) => {
+      const prod = products.find((p) => p.id === bs.productId);
+      return {
+        productId: bs.productId,
+        productName: prod ? prod.productName : "Tile SKU",
+        sku: prod ? prod.sku : "",
+        category: prod ? prod.category : "",
+        quantity: bs.quantity,
+        minimumRequired: (prod && prod.minimumStock !== undefined) ? prod.minimumStock : 10,
+      };
+    });
 
  const outOfStockAlerts = bStock
  .filter((bs) => bs.quantity <= 0)
@@ -577,8 +577,8 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  exportTimestamp: new Date().toISOString(),
  reportingBranchId: fromBranchId,
  reportingBranchName: fromBranchName,
- curatorName: currentUser.fullName,
- curatorRole: currentUser.role,
+ curatorName: currentUser?.fullName || "SYSTEM",
+ curatorRole: currentUser?.role || "Cashier",
  notes: t.notes || "Integrated Branch BI analytical packet.",
  },
  financialKpiIndicators: {
@@ -679,7 +679,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  // Construct transmittal entry
  createTransmittal(
  parsed.docType as TransmittalDocType,
- currentUser.branchAssignmentId, // to current cashier branch
+ currentUser?.branchAssignmentId || "B1", // to current cashier branch
  JSON.stringify(parsed.contents || {}),
  `Imported cargo: ${parsed.notes || "No description"}. (Origin: ${parsed.sentFrom})`,
  );
@@ -1144,19 +1144,20 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  );
  }
 
- return (
- <pre className="p-2 border border-zinc-300 dark:border-divider/20 bg-zinc-50 dark:bg-background text-[9px] overflow-auto whitespace-pre-wrap max-h-[140px] text-default-500 print:text-black print:bg-white print:border-zinc-400">
- {JSON.stringify(data, null, 2)}
- </pre>
- );
+    return (
+      <pre className="p-2 border border-zinc-300 dark:border-divider/20 bg-zinc-50 dark:bg-background text-[9px] overflow-auto whitespace-pre-wrap max-h-[140px] text-default-500 print:text-black print:bg-white print:border-zinc-400">
+        {JSON.stringify(data, null, 2)}
+      </pre>
+    );
  };
 
  const currentBranch = branches.find(
- (b) => b.id === currentUser.branchAssignmentId,
- );
- const isAuthorizedBranch =
- currentUser.branchAssignmentId === "B1" ||
- (currentBranch && currentBranch.isDistributionBranch);
+    (b) => b.id === (currentUser?.branchAssignmentId || "B1"),
+  );
+  const isAuthorizedBranch =
+    !currentUser ||
+    currentUser.branchAssignmentId === "B1" ||
+    (currentBranch && currentBranch.isDistributionBranch);
 
  if (!isAuthorizedBranch) {
  return (
@@ -1226,7 +1227,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  size="sm"
  onClick={() => {
  setToBranchId(
- branches.find((b) => b.id !== currentUser.branchAssignmentId)
+ branches.find((b) => b.id !== (currentUser?.branchAssignmentId || "B1"))
  ?.id || "B2",
  );
  setSelectedDocType("Full Branch State Snapshot");
@@ -1434,7 +1435,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg cursor-pointer"
  >
  {branches
- .filter((b) => b.id !== currentUser.branchAssignmentId)
+ .filter((b) => b.id !== (currentUser?.branchAssignmentId || 'B1'))
  .map((b) => (
  <option key={b.id} value={b.id}>
  {b.name}
@@ -1632,7 +1633,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </div>
 
  {/* Verification action row */}
- {currentUser.role === UserRole.ADMIN &&
+ {currentUser?.role === UserRole.ADMIN &&
  activeTrans.status !== "Approved" && (
  <div className="pt-1 flex-shrink-0">
  <button

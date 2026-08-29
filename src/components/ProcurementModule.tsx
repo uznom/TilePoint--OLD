@@ -105,10 +105,10 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  }, [paymentTerm]);
 
  React.useEffect(() => {
- if (currentUser.role !== UserRole.ADMIN && activeSubTab === "suppliers") {
+ if (currentUser?.role !== UserRole.ADMIN && activeSubTab === "suppliers") {
  setActiveSubTab("po");
  }
- }, [currentUser.role, activeSubTab]);
+ }, [currentUser?.role, activeSubTab]);
 
  React.useEffect(() => {
  try {
@@ -287,7 +287,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  const activeBranchId = localStorage.getItem("tp_active_branch_id");
  if (activeBranchId && activeBranchId !== "all") return activeBranchId;
  }
- return currentUser.branchAssignmentId || branches[0]?.id || "B1";
+ return currentUser?.branchAssignmentId || branches[0]?.id || "B1";
  });
 
  const handleConsolidateOrders = (
@@ -537,9 +537,9 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  }, 4000);
  };
 
- const allowedToModify =
- currentUser.role === UserRole.ADMIN ||
- currentUser.role === UserRole.MANAGER;
+  const allowedToModify =
+    currentUser?.role === UserRole.ADMIN ||
+    currentUser?.role === UserRole.MANAGER;
 
  // Supplier handlers
  const handleOpenAddSupplier = () => {
@@ -920,7 +920,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  relatedItems.forEach((it) => {
  const pendingQty = Math.max(
  0,
- it.quantityRequested - it.quantityReceived,
+ (it.quantityRequested ?? 0) - (it.quantityReceived ?? 0),
  );
  quantities[it.productId] = pendingQty;
  });
@@ -936,7 +936,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  setReceiveTermEndDate(po.termEndDate);
  } else {
  const d = new Date();
- d.setDate(d.getDate() + 30);
+ d.setDate(d.getDate() + (po.termsLength || 30));
  setReceiveTermEndDate(d.toISOString().split('T')[0]);
  }
  
@@ -993,7 +993,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  setSelectedSupplierId(
  suppliers.filter((s) => !s.isDeleted)[0]?.id || "S1",
  );
- setSelectedBranchId(currentUser.branchAssignmentId || "B1");
+ setSelectedBranchId(currentUser?.branchAssignmentId || "B1");
  setDraftItems([]);
  setShowPOModal(true);
  }}
@@ -1036,7 +1036,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  <FileText className="h-4 w-4" />
  <span>Requisitions (PO)</span>
  </button>
- {currentUser.role === UserRole.ADMIN && (
+ {currentUser?.role === UserRole.ADMIN && (
  <button
  onClick={() => {
  setActiveSubTab("suppliers");
@@ -1278,7 +1278,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  {formatCurrency(
  relatedPoItems.reduce(
  (s, it) =>
- s + it.costPrice * it.quantityRequested,
+ s + (it.costPrice ?? 0) * (it.quantityRequested ?? 0),
  0,
  )
  )}
@@ -1288,7 +1288,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  {formatCurrency(
  relatedPoItems.reduce(
  (s, it) =>
- s + it.costPrice * it.quantityRequested,
+ s + (it.costPrice ?? 0) * (it.quantityRequested ?? 0),
  0,
  ) * 0.12
  )}
@@ -1302,7 +1302,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  {formatCurrency(
  relatedPoItems.reduce(
  (s, it) =>
- s + it.costPrice * it.quantityRequested,
+ s + (it.costPrice ?? 0) * (it.quantityRequested ?? 0),
  0,
  ) * 1.12
  )}
@@ -2805,7 +2805,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  .map((item, idx) => {
  const pendingCount = Math.max(
  0,
- item.quantityRequested - item.quantityReceived,
+ (item.quantityRequested ?? 0) - (item.quantityReceived ?? 0),
  );
  return (
  <div
@@ -3539,7 +3539,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  (p) => p.id === item.productId,
  );
  const lineTotal =
- item.costPrice * item.quantityRequested;
+ (item.costPrice ?? 0) * (item.quantityRequested ?? 0);
  return (
  <tr
  key={item.id}
@@ -3619,7 +3619,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  );
  const exportingSubtotal = exportingPoItems.reduce(
  (acc, curr) =>
- acc + curr.costPrice * curr.quantityRequested,
+ acc + (curr.costPrice ?? 0) * (curr.quantityRequested ?? 0),
  0,
  );
  const exportingTaxAmount =
@@ -3751,7 +3751,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  Target Branch
  </span>
  <span className="font-bold text-sm mt-0.5 block">
- {getBranchName(selectedPoDetails.branchId)}
+ {getBranchName(selectedPoDetails.branchId || null)}
  </span>
  </div>
  <div>
@@ -3823,7 +3823,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  <td className="py-2 px-3 text-right font-bold text-primary">
  ₱
  {(
- item.costPrice * item.quantityRequested
+ (item.costPrice ?? 0) * (item.quantityRequested ?? 0)
  ).toLocaleString()}
  </td>
  </tr>
@@ -3856,7 +3856,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  .filter((item) => item.poId === selectedPoDetails.id)
  .reduce(
  (sum, item) =>
- sum + item.costPrice * item.quantityRequested,
+ sum + (item.costPrice ?? 0) * (item.quantityRequested ?? 0),
  0,
  )
  .toLocaleString()}
@@ -4021,7 +4021,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </td>
  <td className="py-2 px-3 text-center font-bold">
  <span
- className={`px-2 py-0.5 rounded-full text-[10px] ${p.stockQuantity <= p.minimumStock ? "bg-amber-500/10 text-amber-500" : "bg-green-500/10 text-green-500"}`}
+ className={`px-2 py-0.5 rounded-full text-[10px] ${p.stockQuantity <= (p.minimumStock ?? 0) ? "bg-amber-500/10 text-amber-500" : "bg-green-500/10 text-green-500"}`}
  >
  {p.stockQuantity} {p.unit || "Unit"}
  </span>

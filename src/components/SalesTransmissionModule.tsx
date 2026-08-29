@@ -181,7 +181,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
 
  // Local active branch when compiling (only admins/HQ can toggle this; branch personnel are locked)
  const [selectedBranchId] = useState(() => {
- return currentUser.branchAssignmentId || (branches && branches[0]?.id) || '';
+ return currentUser?.branchAssignmentId || (branches && branches[0]?.id) || '';
  });
 
  const [rollbackTargetSnap, setRollbackTargetSnap] = useState<{ id: string; num: number } | null>(null);
@@ -335,7 +335,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  // Search filter for Admin report list
  const [adminSearchQuery, setAdminSearchQuery] = useState('');
  const [adminBranchFilter, setAdminBranchFilter] = useState(
-   currentUser.role === UserRole.ADMIN ? 'ALL' : (currentUser.branchAssignmentId || (branches && branches[0]?.id) || '')
+   currentUser?.role === UserRole.ADMIN ? 'ALL' : (currentUser?.branchAssignmentId || (branches && branches[0]?.id) || '')
  );
  const [adminStatusFilter, setAdminStatusFilter] = useState('ALL');
 
@@ -416,7 +416,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
 
  // Elevated Authorization Check - Admins & Managers can trigger exports
  const isAuthorizedToExport = useMemo(() => {
- return currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER;
+ return currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.MANAGER;
  }, [currentUser]);
 
  // Utility to map draft compilation data to standard report structure for exports
@@ -468,7 +468,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  csv += `"Link Transmission Channel:","${report.transmissionType || 'N/A'}"\n`;
  csv += `"Authority Audit Status:","${report.status || 'Pending'}"\n`;
  csv += `"Report Export Timestamp:","${new Date().toISOString()}"\n`;
- csv += `"Operator Sign-Off:","${currentUser.fullName} (${currentUser.role})"\n\n`;
+ csv += `"Operator Sign-Off:","${currentUser?.fullName || 'SYSTEM'} (${currentUser?.role || 'ADMIN'})"\n\n`;
  
  // Summary Aggregates
  csv += `"AGGREGATE REVENUE STATISTICS"\n`;
@@ -698,7 +698,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  ...prev,
  status,
  notes: auditNotes || prev.notes,
- auditedBy: currentUser.fullName,
+ auditedBy: currentUser?.fullName || 'SYSTEM',
  auditedAt: new Date().toISOString()
  } : null);
  
@@ -709,8 +709,8 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  const filteredReports = useMemo(() => {
  return branchSalesReports.filter(report => {
  // Branch assignment or filter
- if (currentUser.role !== UserRole.ADMIN) {
- if (report.branchId !== (currentUser.branchAssignmentId || 'B1')) return false;
+ if (!currentUser || currentUser.role !== UserRole.ADMIN) {
+ if (report.branchId !== (currentUser?.branchAssignmentId || 'B1')) return false;
  } else {
  if (adminBranchFilter !== 'ALL' && report.branchId !== adminBranchFilter) return false;
  }
@@ -739,7 +739,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  }
  }, [branchSalesReports, pastedJson, importSuccess]);
 
- if (currentUser.role !== UserRole.ADMIN) {
+  if (!currentUser || currentUser.role !== UserRole.ADMIN) {
     return (
       <div className="w-full text-foreground space-y-6 animate-fade-in font-sans pb-12">
         <div className="bg-content1 border border-divider/30 rounded-2xl p-8 text-center max-w-xl mx-auto space-y-4 shadow-md mt-12">
@@ -1035,7 +1035,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  </div>
 
  {/* Action center keys */}
- {currentUser.role === UserRole.ADMIN && !hideManualImport && (
+ {currentUser?.role === UserRole.ADMIN && !hideManualImport && (
  <div className="flex items-center gap-2 sm:self-center shrink-0">
  <button
  onClick={() => {
@@ -1196,7 +1196,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
 
         {/* Central HQ Audited Sales Registry */}
         <div className="space-y-6">
- {currentUser.role === UserRole.ADMIN && rollbackSnapshots.length > 0 && (
+ {currentUser?.role === UserRole.ADMIN && rollbackSnapshots.length > 0 && (
  <div className="bg-[#1c1316] border border-rose-500/20 rounded-2xl p-6 space-y-4 text-left shadow-sm">
  <div className="space-y-0.5 border-b border-rose-500/20 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
  <div>
@@ -1289,7 +1289,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
 
  <div className="sm:col-span-3 space-y-1">
  <label className="text-[9px] font-black uppercase tracking-widest text-default-500 pl-0.5 ">Branch origin:</label>
- {currentUser.role === UserRole.ADMIN ? (
+ {currentUser?.role === UserRole.ADMIN ? (
  <select
  value={adminBranchFilter ?? ''}
  onChange={(e) => setAdminBranchFilter(e.target.value)}
@@ -1302,7 +1302,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  </select>
  ) : (
  <div className="w-full bg-content2/60 border border-divider/20 rounded-xl px-3 py-2 text-xs font-bold text-foreground">
- {branches.find(b => b.id === (currentUser.branchAssignmentId || 'B1'))?.name || 'N/A'}
+ {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
  </div>
  )}
  </div>
@@ -1401,7 +1401,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  </div>
  </div>
 
- {currentUser.role === UserRole.ADMIN && (
+ {currentUser?.role === UserRole.ADMIN && (
  <div className="bg-content1 border border-divider/30 rounded-2xl p-6 space-y-4 text-left shadow-sm">
  <div className="space-y-0.5 border-b border-divider/20 pb-3 flex justify-between items-center">
  <div>
@@ -2550,7 +2550,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  Generation Profile
  </h4>
  <div className="space-y-1">
- <p className="text-default-500">Prepared By: <strong className="text-zinc-950">{currentUser.fullName} ({currentUser.role})</strong></p>
+ <p className="text-default-500">Prepared By: <strong className="text-zinc-950">{currentUser?.fullName || 'SYSTEM'} ({currentUser?.role || 'ADMIN'})</strong></p>
  <p className="text-default-500">Status: <span className="px-2 py-0.5 bg-semibold text-[10px] rounded uppercase font-black bg-zinc-100 text-zinc-800">{printData.status}</span></p>
  <p className="text-default-500 text-[10px]">TIMESTAMP: {new Date().toLocaleString()}</p>
  </div>
@@ -2634,8 +2634,8 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  PREPARED BY OPERATOR
  </p>
  <div className="border-t border-zinc-400 pt-1.5 w-48 text-left">
- <p className="font-bold text-zinc-900">{currentUser.fullName}</p>
- <p className="text-[10px] text-default-500">{currentUser.role} Signatures</p>
+ <p className="font-bold text-zinc-900">{currentUser?.fullName || 'SYSTEM'}</p>
+ <p className="text-[10px] text-default-500">{currentUser?.role || 'ADMIN'} Signatures</p>
  </div>
  </div>
 

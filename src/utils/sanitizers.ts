@@ -44,12 +44,19 @@ export function sanitizeText(input: string | null | undefined, maxLength: number
   
   // Strip control characters except newline and tab
   const cleaned = str
-    .replace(/[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F-\u009F]/g, '')
+    .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F-\x9F]/g, '')
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/<[^>]+>/g, '')
     .trim();
 
   return cleaned.slice(0, maxLength);
+}
+
+/**
+ * Alias helper for sanitizeText
+ */
+export function sanitizeInputText(input: string | null | undefined, maxLength: number = 500): string {
+  return sanitizeText(input, maxLength);
 }
 
 /**
@@ -62,11 +69,11 @@ export function sanitizeSearch(query: string | null | undefined): string {
   // Check for malicious SQLi injection patterns
   const sqli = detectSQLi(str);
   if (!sqli.isSafe) {
-    str = str.replace(/['";\-\-#\/\*]/g, ' ');
+    str = str.replace(/['";\-#/*]/g, ' ');
   }
 
   // Remove control characters
-  return str.replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim();
+  return str.replace(/[\x00-\x1F\x7F-\x9F]/g, '').trim();
 }
 
 /**
@@ -139,7 +146,6 @@ export function sanitizePhone(input: string | null | undefined): string {
 export function sanitizeEmail(input: string | null | undefined): string {
   if (!input) return '';
   const cleaned = String(input).trim().toLowerCase();
-  // Basic email pattern check
   if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned)) {
     return cleaned.slice(0, 100);
   }
