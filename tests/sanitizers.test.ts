@@ -15,7 +15,7 @@ import {
   sanitizeEmail,
   sanitizeObject,
 } from '../src/utils/sanitizers';
-import { encryptString, decryptString } from '../src/context/DbContext';
+import { xorObfuscateString, xorDeobfuscateString, encryptString, decryptString } from '../src/context/DbContext';
 import { getClientFingerprintHash } from '../src/lib/fingerprint';
 
 describe('Positive Input Validation & Sanitization Suite', () => {
@@ -131,7 +131,7 @@ describe('Positive Input Validation & Sanitization Suite', () => {
   });
 
   describe('UTF-8 Multi-Byte Serialization & Hashing Integrity', () => {
-    it('encrypts and decrypts multi-byte non-ASCII strings without corruption', () => {
+    it('obfuscates and deobfuscates multi-byte non-ASCII strings without corruption', () => {
       const secret = 'super_secret_corporate_key_32_chars_123';
       const nonAsciiInputs = [
         'Total: ₱1,500.75 (Paid in full)',
@@ -141,11 +141,15 @@ describe('Positive Input Validation & Sanitization Suite', () => {
       ];
 
       for (const text of nonAsciiInputs) {
-        const encrypted = encryptString(text, secret);
-        expect(typeof encrypted).toBe('string');
-        expect(encrypted.length).toBeGreaterThan(0);
-        const decrypted = decryptString(encrypted, secret);
-        expect(decrypted).toBe(text);
+        const obfuscated = xorObfuscateString(text, secret);
+        expect(typeof obfuscated).toBe('string');
+        expect(obfuscated.length).toBeGreaterThan(0);
+        const deobfuscated = xorDeobfuscateString(obfuscated, secret);
+        expect(deobfuscated).toBe(text);
+
+        // Verify backwards compatible aliases
+        expect(encryptString(text, secret)).toBe(obfuscated);
+        expect(decryptString(obfuscated, secret)).toBe(text);
       }
     });
 

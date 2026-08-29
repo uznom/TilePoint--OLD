@@ -983,10 +983,13 @@ export const sanitizeAndValidateNumber = (val: any, fallback = 0): number => {
 };
 
 /**
- * Cryptographic Serialization using byte-level XOR transposition with TextEncoder/TextDecoder.
- * Ensures non-ASCII and multi-byte UTF-8 characters survive encoding and decoding without corruption.
+ * KNOWN LIMITATION & MECHANISM DISCLOSURE:
+ * This mechanism performs simple byte-level XOR masking with TextEncoder/TextDecoder and Base64 encoding.
+ * It is NOT authenticated cryptographic encryption (such as AES-256-GCM). It provides lightweight visual
+ * obfuscation for clipboard transmittal payloads, but does NOT provide confidential security against an adversary
+ * with client code access. True transmission confidentiality relies strictly on TLS/HTTPS transport security.
  */
-export const encryptString = (text: string, secretKey: string): string => {
+export const xorObfuscateString = (text: string, secretKey: string): string => {
   const textBytes = new TextEncoder().encode(text || "");
   const keyBytes = new TextEncoder().encode(secretKey || "TilePoint_Secret_Fallback");
   const keyLength = keyBytes.length || 1;
@@ -998,7 +1001,7 @@ export const encryptString = (text: string, secretKey: string): string => {
   return btoa(hexResult);
 };
 
-export const decryptString = (cipherStr: string, secretKey: string): string => {
+export const xorDeobfuscateString = (cipherStr: string, secretKey: string): string => {
   try {
     if (!cipherStr) return "";
     const hexStr = atob(cipherStr);
@@ -1011,10 +1014,14 @@ export const decryptString = (cipherStr: string, secretKey: string): string => {
     }
     return new TextDecoder().decode(decryptedBytes);
   } catch (e) {
-    console.debug("[DbContext] Decryption fallback handled:", e);
+    console.debug("[DbContext] XOR Deobfuscation fallback handled:", e);
     return "";
   }
 };
+
+// Aliases for backward compatibility with descriptive naming
+export const encryptString = xorObfuscateString;
+export const decryptString = xorDeobfuscateString;
 
 /**
  * Validation wrapper for the symmetric cryptographic secret key used for signing and decrypting

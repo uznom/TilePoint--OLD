@@ -158,7 +158,12 @@ function deterministicStringify(obj: any): string {
 }
 
 /**
- * Cryptographically seals a payload by generating a SHA-256 integrity digest.
+ * Generates a SHA-256 integrity digest for serialized backup payloads using Web Crypto API.
+ * 
+ * KNOWN MECHANISM & LIMITATION:
+ * This seal is a salted SHA-256 integrity checksum to detect inadvertent file corruption or accidental manual tampering.
+ * It is NOT an asymmetric cryptographic digital signature (e.g. RSA-PSS / Ed25519) and does not protect against an
+ * adversary who has knowledge of the static salt.
  */
 export async function generateIntegritySeal(payload: any): Promise<{ seal: string; payloadWithSeal: any }> {
  const cleanStr = deterministicStringify(payload);
