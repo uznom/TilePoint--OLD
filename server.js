@@ -15,14 +15,6 @@ import helmet from 'helmet';
 import bcrypt from 'bcryptjs';
 import rateLimit from 'express-rate-limit';
 
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit each IP to 10 login requests per window
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, error: 'Too many login attempts, please try again later.' }
-});
-
 import {
   computeCollectionHash,
   computeAllCollectionHashes,
@@ -98,19 +90,49 @@ app.use(helmet({
   hsts: useSsl ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false
 }));
 
+// Rate Limiting: General per-IP cap across all API endpoints
 const globalApiLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 300, // limit each IP to 300 requests per windowMs
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 300, // limit each IP to 300 requests per 15 minutes
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, error: 'Too many requests, please try again later.' }
+  message: { success: false, error: 'Too many requests from this IP, please try again later.' }
 });
 
 app.use('/api/', globalApiLimiter);
 
+// Rate Limiting: Tight per-IP cap on Login, PIN, and credential verification
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Max 10 attempts per IP per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many authentication attempts. Please try again after 15 minutes.' }
+});
+
 app.use(cookieParser());
-app.use(express.json({ limit: '100kb' }));
-app.use(express.urlencoded({ limit: '100kb', extended: true }));
+
+const LARGE_BODY_ROUTES = new Set([
+  '/api/db/backups',
+  '/api/mysql/snapshots',
+  '/api/sqlite/snapshots',
+  '/api/db/sync-batch',
+  '/api/mysql/sync-batch'
+]);
+
+// Default global body parser: 100kb limit for all general routes.
+// Large payload routes bypass the global parser and are parsed strictly after authentication.
+app.use((req, res, next) => {
+  if (LARGE_BODY_ROUTES.has(req.path)) {
+    return next();
+  }
+  express.json({ limit: '100kb' })(req, res, (err) => {
+    if (err) {
+      return res.status(413).json({ success: false, error: 'Payload too large. General API limit is 100kb.' });
+    }
+    express.urlencoded({ limit: '100kb', extended: true })(req, res, next);
+  });
+});
 
 // --- SECURITY & ANTI-CRAWLER SHIELD MIDDLEWARE ---
 app.use((req, res, next) => {
@@ -2120,7 +2142,7 @@ async function verifySessionAndCheckConcurrency(req) {
 }
 
 // API: Authentication - Login with Concurrency Single-Session Lock & Fingerprint Registration
-app.post('/api/auth/login', loginLimiter, async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
     const { username, password, branchId, branchName, userAgent, sessionId, fingerprint, deviceInfo, maxDurationMinutes } = req.body || {};
     if (!username || !password) {
@@ -2314,8 +2336,8 @@ app.post('/api/auth/change-password', async (req, res) => {
   }
 });
 
-// API: Server-side Manager Override Verification
-app.post('/api/auth/verify-override', async (req, res) => {
+// API: Server-side Manager Override Verification (Tight authLimiter for PIN/Password security)
+app.post('/api/auth/verify-override', authLimiter, async (req, res) => {
   try {
     const { username, password, pin, requiredRole } = req.body || {};
     if (!username || (!password && !pin)) {
@@ -3032,8 +3054,8 @@ app.get('/api/db/backups/:id', async (req, res) => {
   }
 });
 
-// API: Save heavy snapshot (Unconditional Token Required, Admin Restricted)
-app.post('/api/db/backups', express.json({ limit: '100mb' }), async (req, res) => {
+// Middleware: Authenticate Admin before parsing large backup snapshot payload
+const authenticateAdminForSnapshotUpload = (req, res, next) => {
   try {
     const user = verifyAndExtractToken(req);
     if (!user) {
@@ -3042,14 +3064,23 @@ app.post('/api/db/backups', express.json({ limit: '100mb' }), async (req, res) =
     if (user.role !== 'Admin') {
       return res.status(403).json({ success: false, error: 'Forbidden: Admin role required to create database backups.' });
     }
+    req.user = user;
+    next();
   } catch (err) {
-    return res.status(500).json({ success: false, error: 'Internal server error' });
+    return res.status(500).json({ success: false, error: err.message });
   }
+};
 
-  const { snapshot } = req.body;
-  if (!snapshot || !snapshot.id) {
-    return res.status(400).json({ success: false, error: 'Invalid snapshot payload' });
-  }
+// API: Save heavy snapshot (Authenticated Admin First, then 50mb Body Parser)
+app.post(
+  ['/api/db/backups', '/api/mysql/snapshots', '/api/sqlite/snapshots'],
+  authenticateAdminForSnapshotUpload,
+  express.json({ limit: '50mb' }),
+  async (req, res) => {
+    const { snapshot } = req.body || {};
+    if (!snapshot || !snapshot.id) {
+      return res.status(400).json({ success: false, error: 'Invalid snapshot payload' });
+    }
 
   try {
     const snapshotRecord = {
@@ -4445,13 +4476,31 @@ app.get(['/api/db/stock-transfers', '/api/mysql/stock-transfers', '/api/sqlite/s
   }
 });
 
-// API: High-Performance Offline Outbox Batch Sync Protocol
-// Processes multiple queued terminal mutations (sales, stock changes, logs) atomically
-app.post(['/api/db/sync-batch', '/api/mysql/sync-batch'], express.json({ limit: '50mb' }), async (req, res) => {
-  const { mutations, terminalId, branchId } = req.body;
-  if (!Array.isArray(mutations) || mutations.length === 0) {
-    return res.status(400).json({ success: false, error: 'Array of mutations is required' });
+// Middleware: Authenticate user before parsing large sync batch payload
+const authenticateUserForSyncBatch = (req, res, next) => {
+  try {
+    const user = verifyAndExtractToken(req);
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required for batch sync.' });
+    }
+    req.user = user;
+    next();
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
   }
+};
+
+// API: High-Performance Offline Outbox Batch Sync Protocol
+// Authenticates user first, then parses large body up to 50mb
+app.post(
+  ['/api/db/sync-batch', '/api/mysql/sync-batch'],
+  authenticateUserForSyncBatch,
+  express.json({ limit: '50mb' }),
+  async (req, res) => {
+    const { mutations, terminalId, branchId } = req.body || {};
+    if (!Array.isArray(mutations) || mutations.length === 0) {
+      return res.status(400).json({ success: false, error: 'Array of mutations is required' });
+    }
 
   const results = {
     total: mutations.length,
