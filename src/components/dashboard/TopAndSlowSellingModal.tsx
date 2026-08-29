@@ -14,7 +14,6 @@ import { HeroModal } from '../common/ui/HeroModal';
 import { HeroButton } from '../common/ui/HeroButton';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { Product, Sale, SaleItem } from '../../types/db';
-import * as XLSX from 'xlsx';
 
 export interface TopAndSlowSellingModalProps {
   isOpen: boolean;
@@ -176,7 +175,8 @@ export const TopAndSlowSellingModal: React.FC<TopAndSlowSellingModalProps> = ({
   }, [activeTab, analyticsData, searchQuery, categoryFilter]);
 
   // Export to Excel
-  const handleExportXLSX = () => {
+  const handleExportXLSX = async () => {
+    const XLSX = await import('xlsx');
     const wb = XLSX.utils.book_new();
 
     // Sheet 1: Top 20 Best Sellers

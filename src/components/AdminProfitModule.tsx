@@ -4,7 +4,9 @@ import { useDb } from "../context/DbContext";
 import { getBranchOptionLabel } from '../lib/branchUtils';
 import { saveFileToBackup } from "../lib/fileBackupHelper";
 import { downloadWindowsLauncherScript,generateTransactionCsv } from "../lib/transactionLogger";
-import { ProfitAnalytics } from "./ProfitAnalytics";
+const LazyProfitAnalytics = React.lazy(() =>
+  import("./ProfitAnalytics").then((m) => ({ default: m.ProfitAnalytics }))
+);
 import { HeroTable } from "./common/ui/HeroTable";
 import { useMultiSort } from "../hooks/useMultiSort";
 import { MultiSortBadgeBar } from "./common/ui/MultiSortBadgeBar";
@@ -735,13 +737,22 @@ export function AdminProfitModule({
 
       {/* 2. PROFIT ANALYTICS TIMELINE & GRAPH */}
       <div className="bg-content1 border border-divider/30 rounded-2xl p-2 shadow-sm">
-        <ProfitAnalytics
-          darkMode={darkMode}
-          selectedBranchId={selectedBranchId}
-          setSelectedBranchId={setSelectedBranchId}
-          getBranchName={getBranchName}
-          showToastMsg={showToastMsg}
-        />
+        <React.Suspense
+          fallback={
+            <div className="h-64 flex flex-col items-center justify-center space-y-2 text-default-400">
+              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <span className="text-xs">Loading analytics charts...</span>
+            </div>
+          }
+        >
+          <LazyProfitAnalytics
+            darkMode={darkMode}
+            selectedBranchId={selectedBranchId}
+            setSelectedBranchId={setSelectedBranchId}
+            getBranchName={getBranchName}
+            showToastMsg={showToastMsg}
+          />
+        </React.Suspense>
       </div>
 
       {/* 3. MULTI-BRANCH COMPARISON & OPERATIONAL AUDIT GRID */}

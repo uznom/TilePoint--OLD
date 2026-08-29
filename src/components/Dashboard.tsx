@@ -28,7 +28,9 @@ import { Sale } from '../types/db';
 import { isSameBranch } from '../lib/branchUtils';
 import { useMultiSort } from '../hooks/useMultiSort';
 import { MultiSortBadgeBar } from './common/ui/MultiSortBadgeBar';
-import { TopAndSlowSellingModal } from './dashboard/TopAndSlowSellingModal';
+const LazyTopAndSlowSellingModal = React.lazy(() =>
+  import('./dashboard/TopAndSlowSellingModal').then((m) => ({ default: m.TopAndSlowSellingModal }))
+);
 
 interface DashboardProps {
   darkMode?: boolean;
@@ -1466,14 +1468,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       </HeroModal>
 
       {/* Top 20 Best Selling and Top 10 Slow Selling Products Analytics Modal */}
-      <TopAndSlowSellingModal
-        isOpen={isTopSellingModalOpen}
-        onClose={() => setIsTopSellingModalOpen(false)}
-        products={products}
-        sales={sales}
-        saleItems={saleItems}
-        onNavigate={onNavigate}
-      />
+      {isTopSellingModalOpen && (
+        <React.Suspense fallback={null}>
+          <LazyTopAndSlowSellingModal
+            isOpen={isTopSellingModalOpen}
+            onClose={() => setIsTopSellingModalOpen(false)}
+            products={products}
+            sales={sales}
+            saleItems={saleItems}
+            onNavigate={onNavigate}
+          />
+        </React.Suspense>
+      )}
     </div>
   );
 };
