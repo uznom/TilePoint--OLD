@@ -90,9 +90,9 @@ Double-click the **TilePoint POS** shortcut on your desktop, or run **`start-til
    ```
    Edit `.env` to configure your MySQL connection and server URLs:
    ```env
-   # Cryptographic secret for signing offline sessions
-   VITE_SECURITY_SECRET="TilePointEnterpriseSecPass2026!"
-   SECURITY_SECRET="TilePointEnterpriseSecPass2026!"
+   # Cryptographic secret for signing offline sessions (Minimum 32 characters)
+   VITE_SECURITY_SECRET="<YOUR_STRONG_RANDOM_SECRET_AT_LEAST_32_CHARS>"
+   SECURITY_SECRET="<YOUR_STRONG_RANDOM_SECRET_AT_LEAST_32_CHARS>"
 
    # Dedicated MySQL Configuration (Optional - embedded engine used if absent)
    MYSQL_HOST="localhost"

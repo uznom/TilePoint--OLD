@@ -996,13 +996,12 @@ export const getSecuritySecretKey = (): string => {
  // 2. Must not match the insecure legacy hardcoded literal
  // 3. Must be of sufficient length (min 16 chars) to resist brute-force
  // 4. Must not be a trivial/common value
- const isValidSecret =
- envSecret &&
- envSecret.trim() !== "" &&
- envSecret !== "TilePointSecretKey" &&
- envSecret.length >= 16 &&
- !envSecret.includes("123456") &&
- !envSecret.toLowerCase().includes("placeholder");
+  const isValidSecret =
+    envSecret &&
+    envSecret.trim() !== "" &&
+    envSecret.length >= 32 &&
+    !envSecret.includes("123456") &&
+    !envSecret.toLowerCase().includes("placeholder");
 
  if (isValidSecret) {
  return envSecret.trim();
@@ -5974,23 +5973,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  let signedTransmissionId = "";
 
  if (parsed.securitySignature) {
- let decrypted = decryptString(
- parsed.securitySignature,
- getSecuritySecretKey(),
- );
-
- // Fallback to legacy key for backwards compatibility
- if (!decrypted) {
- decrypted = decryptString(
- parsed.securitySignature,
- "TilePointSecretKey",
- );
- if (decrypted) {
- console.warn(
- "[Security Alert] Ledger packet imported using legacy insecure key."
- );
- }
- }
+    const decrypted = decryptString(
+      parsed.securitySignature,
+      getSecuritySecretKey(),
+    );
 
  try {
  const sig = JSON.parse(decrypted);
@@ -10975,11 +10961,7 @@ export function unwrapInboundPayload(rawObj: any): any {
       try {
         decryptedText = decryptString(rawPayload, key);
       } catch (e) {
-        try {
-          decryptedText = decryptString(rawPayload, "TilePointSecretKey");
-        } catch (e2) {
-          decryptedText = "";
-        }
+        decryptedText = "";
       }
 
       if (decryptedText) {

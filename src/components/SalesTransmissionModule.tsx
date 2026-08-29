@@ -261,12 +261,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  try {
  sig = JSON.parse(decrypted);
  } catch (e) {
- // Fallback to legacy key for backwards compatibility
- const legacyDecrypted = decryptString(parsed.securitySignature, "TilePointSecretKey");
- sig = JSON.parse(legacyDecrypted);
- if (sig) {
- console.warn("[Security Alert] Ledger packet verified using legacy insecure key.");
- }
+ sig = null;
  }
 
  if (sig && sig.branchId === parsed.branchId) {

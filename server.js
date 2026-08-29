@@ -31,6 +31,13 @@ import {
 
 dotenv.config();
 
+// Boot-time security check: refuse to start if SECURITY_SECRET is missing or < 32 characters
+const BOOT_SECURITY_SECRET = process.env.SECURITY_SECRET;
+if (!BOOT_SECURITY_SECRET || typeof BOOT_SECURITY_SECRET !== 'string' || BOOT_SECURITY_SECRET.trim().length < 32) {
+  console.error("FATAL: SECURITY_SECRET environment variable is missing or under 32 characters. Refusing to boot.");
+  process.exit(1);
+}
+
 // Server-side boot-time configuration for local reset escape hatch
 const ALLOW_LOCAL_RESET = process.env.ALLOW_LOCAL_RESET === 'true' || process.env.ENABLE_LOCAL_RESET === 'true';
 
@@ -1577,6 +1584,25 @@ async function removeActiveSessionRecord(sessionId, userId) {
     db.tp_active_sessions = sessions;
     writeDbFile(db);
   }
+}
+
+async function invalidateAllSessionsOnBoot() {
+  if (isMysqlActive || mysqlEnforced) {
+    try {
+      await pool.query('DELETE FROM `active_sessions`');
+    } catch (err) {
+      console.warn('[Session Store] Could not clear active_sessions in MySQL on boot:', err.message);
+    }
+  }
+  try {
+    alasql('DELETE FROM `active_sessions`');
+  } catch (_) {}
+  const db = readDbFile();
+  if (db.tp_active_sessions && db.tp_active_sessions.length > 0) {
+    db.tp_active_sessions = [];
+    writeDbFile(db);
+  }
+  console.log('[Security] Rotated SECURITY_SECRET and invalidated all outstanding active sessions on boot.');
 }
 
 async function pruneExpiredSessions() {
@@ -3948,6 +3974,7 @@ initAlasqlEngine();
 
 server.listen(PORT, '0.0.0.0', async () => {
   await initDatabaseSchema();
+  await invalidateAllSessionsOnBoot();
   console.log(`========================================`);
   console.log(`   TILEPOINT SHARED DATABASE SERVER     `);
   console.log(`========================================`);

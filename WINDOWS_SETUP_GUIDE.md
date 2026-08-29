@@ -136,9 +136,9 @@ If you prefer to install and configure each component manually, follow this sequ
    ```
 3. Open `.env` in Notepad or VS Code and configure the parameters:
    ```env
-   # Cryptographic secrets for signing offline branch sessions (Minimum 16 characters)
-   VITE_SECURITY_SECRET="TilePointEnterpriseSecPass2026!"
-   SECURITY_SECRET="TilePointEnterpriseSecPass2026!"
+   # Cryptographic secrets for signing offline branch sessions (Minimum 32 characters)
+   VITE_SECURITY_SECRET="<YOUR_STRONG_RANDOM_SECRET_AT_LEAST_32_CHARS>"
+   SECURITY_SECRET="<YOUR_STRONG_RANDOM_SECRET_AT_LEAST_32_CHARS>"
 
    # Dedicated MySQL Server Configuration (Optional - embedded AlaSQL used if absent)
    MYSQL_HOST="localhost"
@@ -673,9 +673,9 @@ If you prefer to install and configure each component manually, follow this sequ
    ```
 3. Open `.env` in Notepad or VS Code and configure the parameters:
    ```env
-   # Cryptographic secrets for signing offline branch sessions (Minimum 16 characters)
-   VITE_SECURITY_SECRET="TilePointEnterpriseSecPass2026!"
-   SECURITY_SECRET="TilePointEnterpriseSecPass2026!"
+   # Cryptographic secrets for signing offline branch sessions (Minimum 32 characters)
+   VITE_SECURITY_SECRET="<YOUR_STRONG_RANDOM_SECRET_AT_LEAST_32_CHARS>"
+   SECURITY_SECRET="<YOUR_STRONG_RANDOM_SECRET_AT_LEAST_32_CHARS>"
 
    # Optional Dedicated MySQL Server Configuration
    MYSQL_HOST="localhost"
