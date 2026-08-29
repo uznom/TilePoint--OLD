@@ -9,6 +9,8 @@ import { createPortal } from "react-dom";
 import { LoginModule } from "./components/LoginModule";
 import { SetupModule } from "./components/SetupModule";
 import { DbProvider, DbSnapshot, useDb } from "./context/DbContext";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./queries/queryClient";
 import { saveFileToBackup, verifyAndUnwrapBackup } from "./lib/fileBackupHelper";
 import { User, UserRole } from "./types/db";
 
@@ -2279,8 +2281,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <DbProvider>
-      <AppContent />
-    </DbProvider>
+    <QueryClientProvider client={queryClient}>
+      <DbProvider>
+        <AppContent />
+      </DbProvider>
+    </QueryClientProvider>
   );
 }

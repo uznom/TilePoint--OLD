@@ -928,6 +928,36 @@ async function getInternalUserByUsername(username) {
   return users.find(u => (u.username || '').trim().toLowerCase() === cleanUsername) || null;
 }
 
+// Internal helper: Synchronous user lookup by ID from in-memory AlaSQL & local state
+function getInternalUserSync(userId) {
+  if (!userId) return null;
+  try {
+    const rows = alasql('SELECT * FROM `users` WHERE id = ?', [userId]);
+    if (rows && rows.length > 0) {
+      return parseRowFromMysql('users', rows[0]);
+    }
+  } catch (_) {}
+  const db = readDbFile();
+  const users = Array.isArray(db.tp_users) ? db.tp_users : [];
+  return users.find(u => u.id === userId) || null;
+}
+
+// Internal helper: Retrieve user by ID across MySQL, AlaSQL, and JSON store
+async function getInternalUserById(userId) {
+  if (!userId) return null;
+  if (isMysqlActive || mysqlEnforced) {
+    try {
+      const [rows] = await pool.query('SELECT * FROM users WHERE id = ?', [userId]);
+      if (rows.length > 0) {
+        return parseRowFromMysql('users', rows[0]);
+      }
+    } catch (err) {
+      console.warn('[User Store] MySQL query user by id error:', err.message);
+    }
+  }
+  return getInternalUserSync(userId);
+}
+
 // Helper: Read full database state from AlaSQL
 function readFullDatabaseFromAlasql() {
   const db = {};

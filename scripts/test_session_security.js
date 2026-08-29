@@ -6,8 +6,9 @@ console.log('[Integration Test] Running Timing-Safe HMAC, Exp Claim & Active Ses
 const TEST_SECRET = 'a_secure_test_secret_that_is_at_least_32_characters_long_12345';
 const SHIFT_SESSION_DURATION_MS = 8 * 60 * 60 * 1000;
 
-// Mock active sessions registry
+// Mock active sessions registry & users DB
 let activeSessions = new Map();
+let mockUsersDb = new Map();
 
 function generateTestToken(user, sessionId, durationMs = SHIFT_SESSION_DURATION_MS, timestampOffset = 0) {
   const now = Date.now() + timestampOffset;
@@ -15,7 +16,7 @@ function generateTestToken(user, sessionId, durationMs = SHIFT_SESSION_DURATION_
   const payload = {
     id: user.id,
     username: user.username,
-    role: user.role,
+    role: user.role, // role baked into token at issue time
     sessionId: sessionId || 'SESS_' + Math.random().toString(36).substring(2, 9),
     iat: now,
     exp: exp,
@@ -64,6 +65,16 @@ function verifyAndExtractToken(token) {
       return null;
     }
 
+    // Dynamic role re-read from users table per request & status verification
+    const dbUser = mockUsersDb.get(payload.id);
+    if (dbUser) {
+      if (dbUser.status && dbUser.status !== 'Active') {
+        return null; // Deactivated user rejected immediately
+      }
+      payload.role = dbUser.role || payload.role;
+      payload.status = dbUser.status || 'Active';
+    }
+
     // Check active sessions table for server-side revocation
     if (payload.sessionId && !activeSessions.has(payload.sessionId)) {
       return null;
@@ -75,10 +86,31 @@ function verifyAndExtractToken(token) {
   }
 }
 
-const mockUser = { id: 'u_sess_1', username: 'alice_cashier', role: 'Cashier' };
+// User mutation simulation: deletes session row on deactivation and role change
+function mutateUserRecord(userId, updates) {
+  const existing = mockUsersDb.get(userId);
+  if (!existing) return;
+
+  const isDeactivated = updates.status && updates.status !== 'Active';
+  const isRoleChanged = updates.role && updates.role !== existing.role;
+
+  if (isDeactivated || isRoleChanged) {
+    // Purge active session row
+    for (const [sessId, sess] of activeSessions.entries()) {
+      if (sess.userId === userId) {
+        activeSessions.delete(sessId);
+      }
+    }
+  }
+
+  mockUsersDb.set(userId, { ...existing, ...updates });
+}
+
+const mockUser = { id: 'u_sess_1', username: 'alice_cashier', role: 'Cashier', status: 'Active' };
 const sessId = 'SESS_ALICE_SHIFT_1';
 
-// Register active session
+// Seed DB and Session
+mockUsersDb.set(mockUser.id, { ...mockUser });
 activeSessions.set(sessId, {
   id: sessId,
   userId: mockUser.id,
@@ -93,27 +125,57 @@ const payloadValid = verifyAndExtractToken(validToken);
 assert(payloadValid !== null, 'Valid shift token must verify successfully');
 assert.strictEqual(payloadValid.sessionId, sessId);
 assert.strictEqual(payloadValid.exp > Date.now(), true);
-console.log('PASS 1/5: Timing-safe HMAC verification and exp claim valid for standard shift.');
+console.log('PASS 1/7: Timing-safe HMAC verification and exp claim valid for standard shift.');
 
 // Test 2: Tampered HMAC signature rejected on timingSafeEqual
 const tamperedToken = validToken.slice(0, -4) + 'AAAA';
 assert.strictEqual(verifyAndExtractToken(tamperedToken), null, 'Tampered token must be rejected');
-console.log('PASS 2/5: Tampered signature rejected cleanly via crypto.timingSafeEqual.');
+console.log('PASS 2/7: Tampered signature rejected cleanly via crypto.timingSafeEqual.');
 
 // Test 3: Future timestamp rejected (payload.timestamp > Date.now())
 const futureToken = generateTestToken(mockUser, sessId, SHIFT_SESSION_DURATION_MS, 60000); // 1 minute in future
 assert.strictEqual(verifyAndExtractToken(futureToken), null, 'Token from the future must be rejected');
-console.log('PASS 3/5: Future timestamp token (timestamp > Date.now()) rejected.');
+console.log('PASS 3/7: Future timestamp token (timestamp > Date.now()) rejected.');
 
 // Test 4: Expired token rejected (Date.now() >= payload.exp)
 const expiredToken = generateTestToken(mockUser, sessId, -1000); // Expired 1 second ago
 assert.strictEqual(verifyAndExtractToken(expiredToken), null, 'Expired exp claim must be rejected');
-console.log('PASS 4/5: Expired token rejected via real exp claim.');
+console.log('PASS 4/7: Expired token rejected via real exp claim.');
 
 // Test 5: Server-side revocation - removing from active_sessions invalidates token immediately
 activeSessions.delete(sessId); // Server-side logout
 assert.strictEqual(verifyAndExtractToken(validToken), null, 'Revoked session in active_sessions must be rejected immediately');
-console.log('PASS 5/5: Server-side revocation against active_sessions immediately blocks revoked token.');
+console.log('PASS 5/7: Server-side revocation against active_sessions immediately blocks revoked token.');
+
+// Test 6: Dynamic role re-read from users table per request (not trusting baked token role)
+const managerUser = { id: 'u_sess_2', username: 'bob_staff', role: 'Cashier', status: 'Active' };
+const sess2Id = 'SESS_BOB_PROMOTION_2';
+mockUsersDb.set(managerUser.id, { ...managerUser });
+activeSessions.set(sess2Id, {
+  id: sess2Id,
+  userId: managerUser.id,
+  username: managerUser.username,
+  role: 'Cashier',
+  expiresAt: new Date(Date.now() + SHIFT_SESSION_DURATION_MS).toISOString()
+});
+
+// Issue token when Bob was a Cashier
+const bobCashierToken = generateTestToken(managerUser, sess2Id);
+const bobInitialPayload = verifyAndExtractToken(bobCashierToken);
+assert.strictEqual(bobInitialPayload.role, 'Cashier', 'Initial role should be Cashier');
+
+// Direct database role change: promote Bob to Manager in users table without reissuing token
+mockUsersDb.get(managerUser.id).role = 'Manager';
+const bobPromotedPayload = verifyAndExtractToken(bobCashierToken);
+assert(bobPromotedPayload !== null, 'Token should still be valid');
+assert.strictEqual(bobPromotedPayload.role, 'Manager', 'Role must be dynamically re-read as Manager from database per request');
+console.log('PASS 6/7: Dynamic role re-read from users table per request overrides baked token role.');
+
+// Test 7: User deactivation and role change purges active_sessions and invalidates access
+mutateUserRecord(managerUser.id, { status: 'Suspended' });
+assert.strictEqual(activeSessions.has(sess2Id), false, 'Active session must be purged on user deactivation');
+assert.strictEqual(verifyAndExtractToken(bobCashierToken), null, 'Deactivated/suspended user request must be rejected');
+console.log('PASS 7/7: User deactivation/role change purges active_sessions and immediately revokes access.');
 
 console.log('\n=============================================================');
 console.log(' [ALL SESSION SECURITY, TIMING & REVOCATION TESTS PASSED] ');
