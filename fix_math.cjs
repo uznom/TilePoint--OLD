@@ -1,35 +1,7 @@
-/**
- * Centralized pure calculation functions for cart totals, financial metrics,
- * tax computations, and inventory valuations.
- */
+const fs = require('fs');
+let code = fs.readFileSync('src/utils/calculations.ts', 'utf8');
 
-export interface CartItemLike {
-  product: {
-    unitPrice?: number;
-    vatExempt?: boolean;
-    vatInclusive?: boolean;
-    costPrice?: number;
-  };
-  quantity: number;
-  discountPercent?: number;
-  customPriceOverride?: number;
-}
-
-export interface CartTotals {
-  subtotal: number;
-  discountTotal: number;
-  vatableSales: number;
-  vatAmount: number;
-  vatExemptSales: number;
-  grandTotal: number;
-  itemCount: number;
-  totalUnits: number;
-}
-
-/**
- * Calculates itemized cart subtotal, discount, VAT breakdown, and grand total.
- */
-export function calculateCartTotals(
+const newCalc = `export function calculateCartTotals(
   items: CartItemLike[],
   overallDiscountPercent: number = 0,
   overallDiscountAmount: number = 0,
@@ -111,45 +83,8 @@ export function calculateCartTotals(
     itemCount: items.length,
     totalUnits,
   };
-}
+}`;
 
-/**
- * Calculates profit margin percentage from selling price and cost price.
- */
-export function calculateMarginPercentage(unitPrice: number, costPrice: number): number {
-  if (unitPrice <= 0) return 0;
-  const profit = unitPrice - costPrice;
-  return Number(((profit / unitPrice) * 100).toFixed(1));
-}
+code = code.replace(/export function calculateCartTotals\([\s\S]*?return \{\s*subtotal,[\s\S]*?totalUnits,\s*\};\s*\}/m, newCalc);
 
-/**
- * Calculates markup percentage over cost price.
- */
-export function calculateMarkupPercentage(unitPrice: number, costPrice: number): number {
-  if (costPrice <= 0) return 0;
-  const profit = unitPrice - costPrice;
-  return Number(((profit / costPrice) * 100).toFixed(1));
-}
-
-/**
- * Calculates inventory stock valuation for a given product list and stock records.
- */
-export function calculateStockValuation(
-  products: Array<{ id: string; unitPrice: number; costPrice?: number }>,
-  stockQuantitiesMap: Record<string, number>
-): { totalRetailValue: number; totalCostValue: number; totalUnrealizedProfit: number } {
-  let totalRetailValue = 0;
-  let totalCostValue = 0;
-
-  products.forEach((p) => {
-    const qty = Math.max(0, stockQuantitiesMap[p.id] || 0);
-    totalRetailValue += (p.unitPrice || 0) * qty;
-    totalCostValue += (p.costPrice || p.unitPrice || 0) * qty;
-  });
-
-  return {
-    totalRetailValue,
-    totalCostValue,
-    totalUnrealizedProfit: totalRetailValue - totalCostValue,
-  };
-}
+fs.writeFileSync('src/utils/calculations.ts', code);

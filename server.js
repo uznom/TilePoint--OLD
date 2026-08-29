@@ -10,6 +10,19 @@ import mysql from 'mysql2/promise';
 import alasql from 'alasql';
 import { Server as SocketIOServer } from 'socket.io';
 import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import helmet from 'helmet';
+import bcrypt from 'bcryptjs';
+import rateLimit from 'express-rate-limit';
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 login requests per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many login attempts, please try again later.' }
+});
+
 import {
   computeCollectionHash,
   computeAllCollectionHashes,
@@ -43,38 +56,35 @@ try {
   console.warn('[Shared DB Server] SSL config detected but could not load files:', error.message);
 }
 
-// --- CORS & PREFLIGHT MIDDLEWARE ---
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  }
-  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Session-Token, X-Client-ID');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  next();
-});
+const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : (process.env.NODE_ENV === 'production' ? [] : ['*']);
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'X-Session-Token', 'X-Client-ID', 'if-none-match'],
+  credentials: true
+};
+
+app.use(cors(corsOptions));
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
 
 app.use(cookieParser());
-app.use(express.json({ limit: '100mb' }));
-app.use(express.urlencoded({ limit: '100mb', extended: true }));
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ limit: '100kb', extended: true }));
 
 // --- SECURITY & ANTI-CRAWLER SHIELD MIDDLEWARE ---
 app.use((req, res, next) => {
   res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  
-  if (useSsl) {
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-    res.setHeader('Content-Security-Policy', 'upgrade-insecure-requests');
-  }
   
   if (req.path.startsWith('/api/')) {
     return next();
@@ -94,11 +104,7 @@ if (useSsl) {
 
 // Attach Socket.io Real-time WebSocket Server with full tunnel & proxy support
 const io = new SocketIOServer(server, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    credentials: true
-  },
+  cors: corsOptions,
   transports: ['websocket', 'polling'],
   allowUpgrades: true,
   allowEIO3: true,
@@ -195,6 +201,7 @@ const pool = mysql.createPool({
 });
 
 let isMysqlActive = false;
+let mysqlEnforced = false;
 
 // Initialize AlaSQL MySQL-compatible embedded SQL Engine
 function initAlasqlEngine() {
@@ -282,10 +289,11 @@ async function checkMysqlConnection() {
       console.log('[Database] MySQL connection established successfully.');
     }
     isMysqlActive = true;
+    mysqlEnforced = true;
     return true;
   } catch (err) {
     if (isMysqlActive) {
-      console.warn(`[Database] MySQL connection lost (${err.code}). Running on AlaSQL embedded MySQL Engine.`);
+      console.warn(`[Database] MySQL connection lost (${err.code}).`);
     }
     isMysqlActive = false;
     return false;
@@ -711,7 +719,7 @@ async function readFullDatabase() {
     return { db: cachedFullDb, hash: cachedDbHash };
   }
 
-  if (isMysqlActive) {
+  if (isMysqlActive || mysqlEnforced) {
     try {
       const res = await readFullDatabaseFromMysql();
       cachedFullDb = res.db;
@@ -721,6 +729,7 @@ async function readFullDatabase() {
     } catch (err) {
       console.warn('[Database] MySQL query failed, falling back to in-memory store:', err.message);
       isMysqlActive = false;
+      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
     }
   }
 
@@ -770,6 +779,14 @@ async function saveKeyToMysql(key, value) {
 
 // Wrapper: Save key-value state to MySQL and Memory Store
 async function saveKeyToStore(key, value) {
+  if (key === 'tp_users' && Array.isArray(value)) {
+    for (const u of value) {
+      if (u.passwordHash && typeof u.passwordHash === 'string' && u.passwordHash.startsWith('$plaintext$')) {
+        u.passwordHash = await bcrypt.hash(u.passwordHash.replace('$plaintext$', ''), 10);
+      }
+    }
+  }
+
   if (key === 'tp_is_configured') {
     isConfiguredCache = (value === 'true' || value === true);
   }
@@ -786,7 +803,7 @@ async function saveKeyToStore(key, value) {
     saveKeyToAlasql(key, value);
       }
 
-  if (isMysqlActive) {
+  if (isMysqlActive || mysqlEnforced) {
     try {
       if (key === 'tp_bootstrap_init') {
         if (value && typeof value === 'object') {
@@ -802,6 +819,7 @@ async function saveKeyToStore(key, value) {
     } catch (err) {
       console.warn('[Database] MySQL write warning:', err.message);
       isMysqlActive = false;
+      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
     }
   }
 
@@ -813,7 +831,7 @@ async function saveKeyToStore(key, value) {
 async function isDatabaseConfiguredStore() {
   if (isConfiguredCache === true) return true;
 
-  if (isMysqlActive) {
+  if (isMysqlActive || mysqlEnforced) {
     try {
       const [settings] = await pool.query('SELECT setting_value FROM system_settings WHERE setting_key = ?', ['tp_is_configured']);
       if (settings.length > 0) {
@@ -832,6 +850,7 @@ async function isDatabaseConfiguredStore() {
       }
     } catch (e) {
       isMysqlActive = false;
+      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
     }
   }
 
@@ -865,7 +884,7 @@ async function isDatabaseConfiguredStore() {
 async function getSalesWithItemsLookups(filters = {}) {
   const { branchId, shiftId, cashierId, startDate, endDate, saleNumber, isDeleted = 0, limit = 100, offset = 0 } = filters;
 
-  if (isMysqlActive) {
+  if (isMysqlActive || mysqlEnforced) {
     try {
       const conditions = ['s.isDeleted = ?'];
       const params = [isDeleted ? 1 : 0];
@@ -939,6 +958,7 @@ async function getSalesWithItemsLookups(filters = {}) {
     } catch (err) {
       console.warn('[Database] MySQL getSalesWithItemsLookups failed, falling back to AlaSQL:', err.message);
       isMysqlActive = false;
+      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
     }
   }
 
@@ -980,7 +1000,7 @@ async function getInventoryAndBranchStockLookups(filters = {}) {
   const targetSku = product_sku || productSku || sku;
   const targetCat = category_id || categoryId || category;
 
-  if (isMysqlActive) {
+  if (isMysqlActive || mysqlEnforced) {
     try {
       const conditions = ['p.isDeleted = ?'];
       const params = [isDeleted ? 1 : 0];
@@ -1044,6 +1064,7 @@ async function getInventoryAndBranchStockLookups(filters = {}) {
     } catch (err) {
       console.warn('[Database] MySQL getInventoryAndBranchStockLookups failed, falling back to AlaSQL:', err.message);
       isMysqlActive = false;
+      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
     }
   }
 
@@ -1068,7 +1089,7 @@ async function getInventoryAndBranchStockLookups(filters = {}) {
 
     let branchStocks = [];
     if (branchId) {
-      branchStocks = alasql(`SELECT * FROM branch_stock WHERE branchId = '${branchId}'`) || [];
+      branchStocks = alasql(`SELECT * FROM branch_stock WHERE branchId = ?`, [branchId]) || [];
     }
     const bsMap = new Map(branchStocks.map(bs => [bs.productId, bs]));
 
@@ -1097,7 +1118,7 @@ async function getInventoryAndBranchStockLookups(filters = {}) {
 async function getInventoryMovementsLookups(filters = {}) {
   const { productId, sourceBranchId, destinationBranchId, userId, startDate, endDate, limit = 100, offset = 0 } = filters;
 
-  if (isMysqlActive) {
+  if (isMysqlActive || mysqlEnforced) {
     try {
       const conditions = ['im.isDeleted = 0'];
       const params = [];
@@ -1142,6 +1163,7 @@ async function getInventoryMovementsLookups(filters = {}) {
     } catch (err) {
       console.warn('[Database] MySQL getInventoryMovementsLookups failed, falling back to AlaSQL:', err.message);
       isMysqlActive = false;
+      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
     }
   }
 
@@ -1170,7 +1192,7 @@ async function getInventoryMovementsLookups(filters = {}) {
 async function getShiftSalesSummaryLookups(shiftId) {
   if (!shiftId) return null;
 
-  if (isMysqlActive) {
+  if (isMysqlActive || mysqlEnforced) {
     try {
       const [rows] = await pool.query(`
         SELECT 
@@ -1187,12 +1209,13 @@ async function getShiftSalesSummaryLookups(shiftId) {
     } catch (err) {
       console.warn('[Database] MySQL getShiftSalesSummaryLookups failed, falling back to AlaSQL:', err.message);
       isMysqlActive = false;
+      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
     }
   }
 
   // AlaSQL fallback
   try {
-    const sales = alasql(`SELECT * FROM sales WHERE shiftId = '${shiftId}' AND isDeleted = 0`) || [];
+    const sales = alasql(`SELECT * FROM sales WHERE shiftId = ? AND isDeleted = 0`, [shiftId]) || [];
     const summary = sales.reduce((acc, s) => {
       acc.totalSalesCount++;
       acc.totalSubtotal += Number(s.subtotal) || 0;
@@ -1215,7 +1238,12 @@ function sha256Pure(str) {
 const SESSION_IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes without activity/heartbeat
 
 function getAppSecret() {
-  return process.env.VITE_SECURITY_SECRET || process.env.SECURITY_SECRET || "tile_point_salt_retneC eliT nammE_secure_fallback";
+  const secret = process.env.SECURITY_SECRET;
+  if (!secret || secret.length < 32) {
+    console.error("FATAL: SECURITY_SECRET must be set and at least 32 characters long.");
+    process.exit(1);
+  }
+  return secret;
 }
 
 function createSaltedHashNode(password, salt, iterations = 2500) {
@@ -1226,36 +1254,41 @@ function createSaltedHashNode(password, salt, iterations = 2500) {
   return Buffer.from(hash).toString('base64').slice(0, 64);
 }
 
-function verifyPasswordHash(password, token) {
-  if (!token || typeof token !== 'string') return false;
-  if (!token.startsWith('$argon2-pbkdf2$')) {
-    return password === token;
-  }
-  try {
-    const parts = token.split('$');
-    const iterations_part = parts[2]?.split('=')[1];
-    const salt_part = parts[3]?.split('=')[1];
-    const hash_part = parts[4]?.split('=')[1];
+async function verifyPasswordHash(password, token) {
+  if (!password || !token || typeof token !== 'string') return false;
 
-    const iterations = parseInt(iterations_part, 10) || 2500;
-    
-    // Primary: Standard client format (password + "$" + salt)
-    const calculatedHash = createSaltedHashNode(password, salt_part, iterations);
-    if (calculatedHash === hash_part) return true;
-
-    // Legacy fallback: (salt + ":" + password)
-    let altHash = salt_part + ':' + password;
-    for (let i = 0; i < iterations; i++) {
-      altHash = crypto.createHash('sha256').update(altHash).digest('hex');
+  if (token.startsWith('$2a$') || token.startsWith('$2b$') || token.startsWith('$2y$')) {
+    try {
+      return await bcrypt.compare(password, token);
+    } catch (e) {
+      return false;
     }
-    const calculatedAltHash = Buffer.from(altHash).toString('base64').slice(0, 64);
-    if (calculatedAltHash === hash_part) return true;
-
-    // Direct password match fallback
-    return password === hash_part || password === token;
-  } catch (e) {
-    return false;
   }
+
+  // Support legacy naive hashes to allow users to log in, but they should be migrated on login
+  if (token.startsWith('$argon2-pbkdf2$')) {
+    try {
+      const parts = token.split('$');
+      const iterations_part = parts[2]?.split('=')[1];
+      const salt_part = parts[3]?.split('=')[1];
+      const hash_part = parts[4]?.split('=')[1];
+
+      const iterations = parseInt(iterations_part, 10) || 2500;
+      
+      const calculatedHash = createSaltedHashNode(password, salt_part, iterations);
+      if (calculatedHash === hash_part) return true;
+
+      let altHash = salt_part + ':' + password;
+      for (let i = 0; i < iterations; i++) {
+        altHash = crypto.createHash('sha256').update(altHash).digest('hex');
+      }
+      const calculatedAltHash = Buffer.from(altHash).toString('base64').slice(0, 64);
+      if (calculatedAltHash === hash_part) return true;
+    } catch (e) {
+      return false;
+    }
+  }
+  return false;
 }
 
 function generateServerSessionToken(user, sessionId) {
@@ -1269,7 +1302,7 @@ function generateServerSessionToken(user, sessionId) {
   const payloadJson = JSON.stringify(payload);
   const payloadBase64 = Buffer.from(payloadJson, 'utf8').toString('base64');
   const secret = getAppSecret();
-  const signature = sha256Pure(payloadBase64 + "." + secret);
+  const signature = crypto.createHmac('sha256', secret).update(payloadBase64).digest('base64');
   return `${payloadBase64}.${signature}`;
 }
 
@@ -1301,26 +1334,27 @@ function verifyAndExtractToken(req) {
 
     const [payloadBase64, signature] = parts;
 
-    const possibleSecrets = Array.from(new Set([
-      process.env.VITE_SECURITY_SECRET,
-      process.env.SECURITY_SECRET,
-      "tile_point_salt_retneC eliT nammE_secure_fallback"
-    ].filter(s => Boolean(s && s.trim().length >= 16))));
-
-    const signatureMatches = possibleSecrets.some(sec => {
-      const expected = sha256Pure(payloadBase64 + "." + sec);
-      return signature === expected;
-    });
-
-    if (!signatureMatches) {
+    const secret = getAppSecret();
+    const expected = crypto.createHmac('sha256', secret).update(payloadBase64).digest('base64');
+    
+    // Constant-time string comparison to prevent timing attacks
+    const sigBuffer = Buffer.from(signature, 'base64');
+    const expectedBuffer = Buffer.from(expected, 'base64');
+    
+    if (sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
       return null;
     }
 
     const payloadJson = Buffer.from(payloadBase64, 'base64').toString('utf8');
     const payload = JSON.parse(payloadJson);
 
+    // Reject tokens that are from the future
+    if (payload.timestamp > Date.now()) {
+      return null;
+    }
+
     const drift = Math.abs(Date.now() - payload.timestamp);
-    if (drift > 7 * 24 * 60 * 60 * 1000) {
+    if (drift > 24 * 60 * 60 * 1000) { // Limit to 24 hours instead of 7 days
       return null;
     }
 
@@ -1332,7 +1366,7 @@ function verifyAndExtractToken(req) {
 }
 
 async function getActiveSessionsList() {
-  if (isMysqlActive) {
+  if (isMysqlActive || mysqlEnforced) {
     try {
       const [rows] = await pool.query('SELECT * FROM `active_sessions` ORDER BY `lastActive` DESC');
       return rows.map(r => ({
@@ -1357,7 +1391,7 @@ async function saveActiveSessionRecord(session) {
   const startedAt = session.sessionStartedAt ? new Date(session.sessionStartedAt) : new Date();
   const expiresAt = session.expiresAt ? new Date(session.expiresAt) : new Date(startedAt.getTime() + maxDuration * 60 * 1000);
 
-  if (isMysqlActive) {
+  if (isMysqlActive || mysqlEnforced) {
     try {
       await upsertRecordMysql('active_sessions', {
         id: session.id,
@@ -1407,7 +1441,7 @@ async function saveActiveSessionRecord(session) {
 }
 
 async function removeActiveSessionRecord(sessionId, userId) {
-  if (isMysqlActive) {
+  if (isMysqlActive || mysqlEnforced) {
     try {
       if (sessionId) {
         await pool.query('DELETE FROM `active_sessions` WHERE `id` = ?', [sessionId]);
@@ -1437,7 +1471,7 @@ async function removeActiveSessionRecord(sessionId, userId) {
 
 async function pruneExpiredSessions() {
   const cutoff = new Date(Date.now() - SESSION_IDLE_TIMEOUT_MS);
-  if (isMysqlActive) {
+  if (isMysqlActive || mysqlEnforced) {
     try {
       await pool.query('DELETE FROM `active_sessions` WHERE `lastActive` < ? OR (`expiresAt` IS NOT NULL AND `expiresAt` < NOW())', [cutoff]);
     } catch (e) {}
@@ -1476,6 +1510,18 @@ async function verifySessionAndCheckConcurrency(req) {
   const incomingSessionId = req.headers['x-client-id'] || req.headers['x-session-id'] || payload.sessionId;
   const incomingFingerprint = req.headers['x-client-fingerprint'] || req.headers['x-fingerprint'];
   const incomingDeviceKey = req.headers['x-device-key'];
+
+  // Read full db to verify user and their role
+  const fullDb = await readFullDatabase();
+  const dbUsers = fullDb.db.tp_users || [];
+  const dbUser = dbUsers.find(u => u.id === payload.id);
+  
+  if (!dbUser || dbUser.status !== 'Active') {
+    return { valid: false, status: 403, code: 'FORBIDDEN', error: 'User account disabled or not found.' };
+  }
+
+  // Update role dynamically based on the DB to enforce RBAC changes
+  payload.role = dbUser.role;
 
   const activeSessions = await getActiveSessionsList();
   const userSession = activeSessions.find(s => s.userId === payload.id);
@@ -1560,7 +1606,7 @@ async function verifySessionAndCheckConcurrency(req) {
 }
 
 // API: Authentication - Login with Concurrency Single-Session Lock & Fingerprint Registration
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
   try {
     const { username, password, branchId, branchName, userAgent, sessionId, fingerprint, deviceInfo, maxDurationMinutes } = req.body || {};
     if (!username || !password) {
@@ -1579,7 +1625,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(403).json({ success: false, error: 'Suspended Account: Terminal credentials restricted by Administration.' });
     }
 
-    const isMatch = verifyPasswordHash(password, targetUser.passwordHash || '');
+    const isMatch = await verifyPasswordHash(password, targetUser.passwordHash || '');
     if (!isMatch) {
       return res.status(401).json({ success: false, error: 'Invalid employee ID or security password code.' });
     }
@@ -1925,6 +1971,14 @@ app.get('/api/db/events', (req, res) => {
 // API: Get full database state with ETag & Hash optimization
 app.get('/api/db', async (req, res) => {
   try {
+    const configured = await isDatabaseConfiguredStore();
+    if (configured) {
+      const user = verifyAndExtractToken(req);
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Unauthorized session.' });
+      }
+    }
+
     const rawIfNoneMatch = req.headers['if-none-match'];
     const cleanIfNoneMatch = rawIfNoneMatch ? rawIfNoneMatch.replace(/^W\//, '').replace(/^"|"$/g, '') : null;
     const clientHash = req.query.hash || cleanIfNoneMatch;
@@ -1957,6 +2011,16 @@ app.get('/api/db', async (req, res) => {
     const dbCopy = { ...db };
     delete dbCopy.tp_db_snapshots;
     delete dbCopy.tp_processed_delta_ids;
+
+    // Filter sensitive fields
+    if (Array.isArray(dbCopy.tp_users)) {
+      dbCopy.tp_users = dbCopy.tp_users.map(u => {
+        const userCopy = { ...u };
+        delete userCopy.passwordHash;
+        delete userCopy.managerPin;
+        return userCopy;
+      });
+    }
 
     res.json({
       success: true,
@@ -2156,9 +2220,19 @@ app.get('/api/db/shifts/:shiftId/summary', async (req, res) => {
 // API: Get backups/snapshots list
 app.get('/api/db/backups', async (req, res) => {
   try {
+    const configured = await isDatabaseConfiguredStore();
+    if (configured) {
+      const user = verifyAndExtractToken(req);
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Unauthorized session.' });
+      }
+      if (user.role !== 'Admin' && user.role !== 'Manager') {
+        return res.status(403).json({ success: false, error: 'Forbidden.' });
+      }
+    }
     const metadataOnly = req.query.metadataOnly === 'true';
 
-    if (isMysqlActive) {
+    if (isMysqlActive || mysqlEnforced) {
       try {
         if (metadataOnly) {
           const [rows] = await pool.query('SELECT id, name, creator, sizeBytes, timestamp FROM db_snapshots ORDER BY timestamp DESC');
@@ -2168,7 +2242,8 @@ app.get('/api/db/backups', async (req, res) => {
         return res.json({ success: true, data: rows.map(r => parseRowFromMysql('db_snapshots', r)) });
       } catch (err) {
         isMysqlActive = false;
-      }
+      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
+    }
     }
 
     const db = readDbFile();
@@ -2192,7 +2267,17 @@ app.get('/api/db/backups', async (req, res) => {
 // API: Get single full snapshot details
 app.get('/api/db/backups/:id', async (req, res) => {
   try {
-    if (isMysqlActive) {
+    const configured = await isDatabaseConfiguredStore();
+    if (configured) {
+      const user = verifyAndExtractToken(req);
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Unauthorized session.' });
+      }
+      if (user.role !== 'Admin' && user.role !== 'Manager') {
+        return res.status(403).json({ success: false, error: 'Forbidden.' });
+      }
+    }
+    if (isMysqlActive || mysqlEnforced) {
       try {
         const [rows] = await pool.query('SELECT * FROM db_snapshots WHERE id = ?', [req.params.id]);
         if (rows.length > 0) {
@@ -2200,7 +2285,8 @@ app.get('/api/db/backups/:id', async (req, res) => {
         }
       } catch (err) {
         isMysqlActive = false;
-      }
+      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
+    }
     }
 
     const db = readDbFile();
@@ -2217,18 +2303,34 @@ app.get('/api/db/backups/:id', async (req, res) => {
 
 // API: Save heavy snapshot
 app.post('/api/db/backups', express.json({ limit: '100mb' }), async (req, res) => {
+  try {
+    const configured = await isDatabaseConfiguredStore();
+    if (configured) {
+      const user = verifyAndExtractToken(req);
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Unauthorized session.' });
+      }
+      if (user.role !== 'Admin') {
+        return res.status(403).json({ success: false, error: 'Forbidden.' });
+      }
+    }
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+
   const { snapshot } = req.body;
   if (!snapshot || !snapshot.id) {
     return res.status(400).json({ success: false, error: 'Invalid snapshot payload' });
   }
 
   try {
-    if (isMysqlActive) {
+    if (isMysqlActive || mysqlEnforced) {
       try {
         await upsertRecordMysql('db_snapshots', snapshot);
       } catch (err) {
         isMysqlActive = false;
-      }
+      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
+    }
     }
 
     const db = readDbFile();
@@ -2253,12 +2355,23 @@ app.post('/api/db/backups', express.json({ limit: '100mb' }), async (req, res) =
 // API: Delete snapshot
 app.delete('/api/db/backups/:id', async (req, res) => {
   try {
-    if (isMysqlActive) {
+    const configured = await isDatabaseConfiguredStore();
+    if (configured) {
+      const user = verifyAndExtractToken(req);
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Unauthorized session.' });
+      }
+      if (user.role !== 'Admin') {
+        return res.status(403).json({ success: false, error: 'Forbidden.' });
+      }
+    }
+    if (isMysqlActive || mysqlEnforced) {
       try {
         await pool.execute('DELETE FROM db_snapshots WHERE id = ?', [req.params.id]);
       } catch (err) {
         isMysqlActive = false;
-      }
+      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
+    }
     }
 
     const db = readDbFile();
@@ -2304,7 +2417,7 @@ async function handleAtomicTransactionPackage(tx, req) {
   };
 
   // 1. Process MySQL Transaction if active
-  if (isMysqlActive) {
+  if (isMysqlActive || mysqlEnforced) {
     let conn;
     try {
       conn = await pool.getConnection();
@@ -2577,6 +2690,9 @@ app.post('/api/db/delta', async (req, res) => {
           case 'UPDATE_ROW': {
             const row = payload.row;
             if (row && tableName) {
+              if (key === 'tp_users' && row.passwordHash && typeof row.passwordHash === 'string' && row.passwordHash.startsWith('$plaintext$')) {
+                row.passwordHash = await bcrypt.hash(row.passwordHash.replace('$plaintext$', ''), 10);
+              }
               await upsertRecordMysql(tableName, row);
             }
             break;
@@ -2615,7 +2731,8 @@ app.post('/api/db/delta', async (req, res) => {
       } catch (mysqlErr) {
         console.warn('[Database] Delta MySQL processing error, relying on JSON fallback:', mysqlErr.message);
         isMysqlActive = false;
-      }
+      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
+    }
     }
 
     // Process delta in JSON File DB
@@ -2633,13 +2750,16 @@ app.post('/api/db/delta', async (req, res) => {
         case 'APPEND_ROW':
         case 'UPDATE_ROW': {
           if (row && row.id) {
+            if (key === 'tp_users' && row.passwordHash && typeof row.passwordHash === 'string' && row.passwordHash.startsWith('$plaintext$')) {
+              row.passwordHash = await bcrypt.hash(row.passwordHash.replace('$plaintext$', ''), 10);
+            }
             const idx = db[key].findIndex(r => r.id === row.id);
             if (idx >= 0) {
               db[key][idx] = { ...db[key][idx], ...row };
             } else {
               db[key].push(row);
             }
-            
+            if (tableName) upsertRecordAlasql(tableName, row);
           }
           break;
         }
@@ -2786,21 +2906,18 @@ app.post('/api/db/bulk', async (req, res) => {
 
 // API: Reset / Purge database
 app.post('/api/db/truncate', async (req, res) => {
-  const { mode, force } = req.body;
+  const { mode } = req.body;
 
-  const configured = await isDatabaseConfiguredStore();
-  if (configured && !force && process.env.NODE_ENV === 'production') {
-    const user = verifyAndExtractToken(req);
-    if (!user) {
-      return res.status(401).json({ success: false, error: 'Unauthorized session.' });
-    }
-    if (user.role !== 'Admin') {
-      return res.status(403).json({ success: false, error: 'Forbidden: Resetting database is restricted to system administrators.' });
-    }
+  const user = verifyAndExtractToken(req);
+  if (!user) {
+    return res.status(401).json({ success: false, error: 'Unauthorized session.' });
+  }
+  if (user.role !== 'Admin') {
+    return res.status(403).json({ success: false, error: 'Forbidden: Resetting database is restricted to system administrators.' });
   }
 
   try {
-    if (isMysqlActive) {
+    if (isMysqlActive || mysqlEnforced) {
       try {
         await pool.query('SET FOREIGN_KEY_CHECKS = 0');
         if (mode === 'all') {
@@ -2958,7 +3075,7 @@ app.get(['/api/db/branch-stock', '/api/mysql/branch-stock', '/api/sqlite/branch-
     const targetSku = product_sku || productSku || sku;
     const targetCat = category_id || categoryId || category;
 
-    if (isMysqlActive) {
+    if (isMysqlActive || mysqlEnforced) {
       let sql = `
         SELECT p.*, bs.id as branchStockId, bs.quantity as branchQuantity, bs.lowStockThreshold as branchLowStockThreshold, bs.sellingPriceOverride
         FROM products p
@@ -3041,7 +3158,7 @@ app.get(['/api/db/inventory', '/api/mysql/inventory'], async (req, res) => {
     const targetSku = product_sku || sku;
     const targetCategory = category_id || category;
 
-    if (isMysqlActive) {
+    if (isMysqlActive || mysqlEnforced) {
       let sql = 'SELECT * FROM inventory WHERE isDeleted = 0';
       const params = [];
 
@@ -3109,7 +3226,7 @@ app.post(['/api/db/sales', '/api/mysql/sales', '/api/sqlite/sales'], express.jso
       } catch (_) {}
     }
 
-    if (isMysqlActive) {
+    if (isMysqlActive || mysqlEnforced) {
       let conn;
       try {
         conn = await pool.getConnection();
@@ -3200,7 +3317,7 @@ app.post(['/api/db/audit-trails', '/api/mysql/audit-trails', '/api/sqlite/audit-
       createdAt: audit.createdAt || new Date().toISOString()
     };
 
-    if (isMysqlActive) {
+    if (isMysqlActive || mysqlEnforced) {
       try {
         await upsertRecordMysql('audit_logs', auditEntry);
       } catch (err) {
@@ -3219,7 +3336,7 @@ app.get(['/api/db/audit-trails', '/api/mysql/audit-trails', '/api/sqlite/audit-t
   try {
     const { branchId, module, performerId, referenceId, startDate, endDate, limit = 100 } = req.query;
 
-    if (isMysqlActive) {
+    if (isMysqlActive || mysqlEnforced) {
       let sql = 'SELECT * FROM audit_logs WHERE 1=1';
       const params = [];
 
@@ -3289,7 +3406,7 @@ app.post(['/api/db/stock-transfers', '/api/mysql/stock-transfers', '/api/sqlite/
       updatedAt: transfer.updatedAt || new Date().toISOString()
     };
 
-    if (isMysqlActive) {
+    if (isMysqlActive || mysqlEnforced) {
       let conn;
       try {
         conn = await pool.getConnection();
@@ -3343,7 +3460,7 @@ app.get(['/api/db/stock-transfers', '/api/mysql/stock-transfers', '/api/sqlite/s
   try {
     const { branchId, fromBranchId, toBranchId, status, startDate, endDate, limit = 100 } = req.query;
 
-    if (isMysqlActive) {
+    if (isMysqlActive || mysqlEnforced) {
       let sql = 'SELECT * FROM stock_transfers WHERE 1=1 AND (isDeleted IS NULL OR isDeleted = 0)';
       const params = [];
 
@@ -3409,7 +3526,7 @@ app.post(['/api/db/sync-batch', '/api/mysql/sync-batch'], express.json({ limit: 
   const db = readDbFile();
   let processedDeltaIds = db.tp_processed_delta_ids || [];
 
-  if (isMysqlActive) {
+  if (isMysqlActive || mysqlEnforced) {
     let conn;
     try {
       conn = await pool.getConnection();

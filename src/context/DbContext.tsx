@@ -15,12 +15,8 @@ useState,
 import { getBranchStockQuantity,getBranchStockRecord,isProductInBranch,isSameBranch,slugifyBranchStr } from "../lib/branchUtils";
 import {
 createSaltedHash,
-decryptCredentialPacket,
 detectSQLi,
-encryptCredentialPacket,
 formatHashToken,
-generateSessionToken,
-verifyPasswordWithToken,
 } from "../lib/crypto";
 import {
 DEFAULT_DAMAGE_REASONS,
@@ -1085,7 +1081,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  } catch (_) {}
 
    const savedToken = sessionStorage.getItem("tp_session_token") || localStorage.getItem("tp_session_token");
-  const token = savedToken || generateSessionToken(user);
+   const token = savedToken || "";
   const activeSessionId = localStorage.getItem("tp_active_session_id") || sessionStorage.getItem("tp_active_session_id") || "unknown";
   const fingerprint = getClientFingerprintHash();
   const hardwareKey = getDeviceHardwareKey();
@@ -1437,97 +1433,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
         return { success: true };
       }
     } catch (networkErr) {
-      console.warn("[Auth Bridge] Network server login unreachable, evaluating offline authentication...", networkErr);
-    }
-
-    // 4. Offline Fallback Authentication
-    if (!targetUser) {
-      await new Promise((r) => setTimeout(r, 50));
-      handleFailedLogin();
+      console.warn("[Auth Bridge] Network server login unreachable. Offline authentication is disabled for security reasons.", networkErr);
       return {
         success: false,
-        error: "Invalid employee ID or security password code.",
+        error: "Network unreachable. Offline login is disabled for security reasons."
       };
     }
-
-    if (targetUser.status !== "Active") {
-      return {
-        success: false,
-        error:
-          "Suspended Account: This terminal credentials have been restricted by Administration.",
-      };
-    }
-
-    // E2EE Packets Emulation Demonstration
-    const encryptedParcel = await encryptCredentialPacket({
-      username,
-      password,
-    });
-
-    const decryptedPayload = await decryptCredentialPacket(encryptedParcel);
-
-    // Verify password with salted PBKDF2 bcrypt hash
-    const isMatch = await verifyPasswordWithToken(
-      decryptedPayload.password,
-      targetUser.passwordHash || "",
-    );
-    if (!isMatch) {
-      handleFailedLogin();
-      return {
-        success: false,
-        error: "Invalid employee ID or security password code.",
-      };
-    }
-
-    // Success Authentication (Offline)
-    setFailedAttempts(0);
-    setLockoutUntil(0);
-    setRateLimitTimeLeft(0);
-    setCurrentUser(targetUser);
-    setIsLoggedIn(true);
-    const offlineToken = generateSessionToken(targetUser);
-    sessionStorage.setItem("tp_session_token", offlineToken);
-    localStorage.setItem("tp_session_token", offlineToken);
-    sessionStorage.setItem("tp_is_logged_in", "true");
-    sessionStorage.setItem("tp_current_user", JSON.stringify(targetUser));
-    localStorage.setItem("tp_is_logged_in", "true");
-    localStorage.setItem("tp_current_user", JSON.stringify(targetUser));
-
-    const newSessionId =
-      "SESS_" + Math.random().toString(36).substring(2, 11).toUpperCase();
-    setActiveSessionId(newSessionId);
-    localStorage.setItem("tp_active_session_id", newSessionId);
-    sessionStorage.setItem("tp_active_session_id", newSessionId);
-
-    const nowStr = new Date().toISOString();
-    const cleanSessions = activeSessions.filter(
-      (s) => s.userId !== targetUser.id,
-    );
-    const updatedSessions = [
-      ...cleanSessions,
-      {
-        id: newSessionId,
-        userId: targetUser.id,
-        username: targetUser.username,
-        fullName: targetUser.fullName,
-        role: targetUser.role,
-        branchId: targetUser.branchAssignmentId || "B1",
-        branchName: activeBranchName,
-        lastActive: nowStr,
-        userAgent: navigator.userAgent,
-      },
-    ];
-    setActiveSessions(updatedSessions);
-    saveToStorageWithDebounce("tp_active_sessions", updatedSessions, true);
-
-    addAuditLog(
-      "USER_LOGIN",
-      `Offline verified session active. User: ${targetUser.fullName} (Session: ${newSessionId})`,
-      "Users",
-      targetUser.id,
-    );
-
-    return { success: true };
   };
 
   const logBranchAccessScope = (
