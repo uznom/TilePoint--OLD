@@ -15,7 +15,7 @@ useState,
 import { getBranchStockQuantity,getBranchStockRecord,isProductInBranch,isSameBranch,slugifyBranchStr } from "../lib/branchUtils";
 import {
 detectSQLi,
-} from "../lib/crypto";
+} from "../utils/sanitizers";
 import {
 DEFAULT_DAMAGE_REASONS,
 DEFAULT_DISCOUNT_SCHEMES,

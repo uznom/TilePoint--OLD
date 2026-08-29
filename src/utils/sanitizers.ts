@@ -1,9 +1,39 @@
 /**
- * @license
- * SPDX-License-Identifier: Apache-2.0
+ * SQL INJECTION (SQLi) DETECTOR
+ * Parses string inputs for common SQL payload patterns.
  */
+export interface SQLiCheckResult {
+  isSafe: boolean;
+  blockedVector?: string;
+  reason?: string;
+}
 
-import { detectSQLi } from '../lib/crypto';
+export function detectSQLi(input: string): SQLiCheckResult {
+  const normalized = input.trim().toLowerCase();
+  
+  const rules = [
+    { pattern: /' or /i, name: "OR expression bypass attempt (' or '1'='1)" },
+    { pattern: /" or /i, name: 'Double quote OR expression bypass' },
+    { pattern: /union select/i, name: 'UNION SELECT database extraction search' },
+    { pattern: /drop table/i, name: 'DROP TABLE destructive execution command' },
+    { pattern: /delete from/i, name: 'DELETE FROM data truncation bypass' },
+    { pattern: /insert into/i, name: 'INSERT INTO credential spoofing' },
+    { pattern: /select .* from/i, name: 'Ad-hoc SELECT data extraction signature' },
+    { pattern: /--|#|\/\*/, name: 'SQL comment indicator logic short-circuit(--)' },
+  ];
+
+  for (const rule of rules) {
+    if (rule.pattern.test(normalized)) {
+      return {
+        isSafe: false,
+        blockedVector: normalized,
+        reason: rule.name
+      };
+    }
+  }
+
+  return { isSafe: true };
+}
 
 /**
  * Strips dangerous HTML tags and script injections from text inputs.

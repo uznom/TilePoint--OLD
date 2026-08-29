@@ -59,8 +59,11 @@ try {
     sslOptions = {
       key: fs.readFileSync(SSL_KEY_PATH),
       cert: fs.readFileSync(SSL_CERT_PATH),
+      minVersion: 'TLSv1.2',
     };
     useSsl = true;
+  } else {
+    console.info('[Security Notice] Standard HTTP mode active. To generate local TLS certificates, run: powershell -ExecutionPolicy Bypass -File .\\generate-certs.ps1');
   }
 } catch (error) {
   console.warn('[Shared DB Server] SSL config detected but could not load files:', error.message);
@@ -91,7 +94,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(helmet({
   contentSecurityPolicy: false,
-  crossOriginEmbedderPolicy: false
+  crossOriginEmbedderPolicy: false,
+  hsts: useSsl ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false
 }));
 
 const globalApiLimiter = rateLimit({
@@ -2084,7 +2088,7 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
     // Set secure HTTP-Only cookie that survives IP address changes
     res.cookie('tp_session', sessionToken, {
       httpOnly: true,
-      secure: false,
+      secure: useSsl || process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000
