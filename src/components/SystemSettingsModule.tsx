@@ -167,6 +167,9 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
     backupIntervalHours,
     setBackupIntervalHours,
     generateMasterForensicBackup,
+    syncAllLocalToMysql,
+    getMysqlStatus,
+    serverDegradedState,
   } = useDb();
 
   const isAuthorized =
@@ -175,6 +178,47 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
   const [forceUnlockReset, setForceUnlockReset] = useState(false);
   const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
   const [snapshotSuccessToast, setSnapshotSuccessToast] = useState<string | null>(null);
+
+  // MySQL persistence and sync states
+  const [mysqlStatus, setMysqlStatus] = useState<any>(null);
+  const [isSyncingMysql, setIsSyncingMysql] = useState(false);
+  const [mysqlSyncToast, setMysqlSyncToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchStatus = async () => {
+      try {
+        const stat = await getMysqlStatus();
+        if (isMounted) setMysqlStatus(stat);
+      } catch (_) {}
+    };
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 10000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [getMysqlStatus]);
+
+  const handleSyncToMysql = async () => {
+    setIsSyncingMysql(true);
+    setMysqlSyncToast(null);
+    try {
+      const res = await syncAllLocalToMysql();
+      if (res.success) {
+        setMysqlSyncToast(res.message || 'All local data synchronized to MySQL successfully!');
+        const updatedStat = await getMysqlStatus();
+        setMysqlStatus(updatedStat);
+      } else {
+        setMysqlSyncToast(`Sync warning: ${res.error || 'Failed to sync to MySQL'}`);
+      }
+    } catch (err: any) {
+      setMysqlSyncToast(`Sync failed: ${err.message}`);
+    } finally {
+      setIsSyncingMysql(false);
+      setTimeout(() => setMysqlSyncToast(null), 5000);
+    }
+  };
 
   const handleExportDatabaseJson = () => {
     try {
@@ -1074,10 +1118,12 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               <span className="text-[10px] font-black uppercase tracking-wider">Database Storage</span>
             </div>
             <div className="text-xs font-bold text-foreground flex items-center gap-1.5">
-              <span>MySQL Relational Engine</span>
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>{mysqlStatus?.active || !serverDegradedState?.isDegraded ? 'MySQL Relational Engine' : 'AlaSQL (Buffered Mode)'}</span>
+              <span className={`h-2 w-2 rounded-full ${mysqlStatus?.active || !serverDegradedState?.isDegraded ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
             </div>
-            <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">● Indexed &amp; Synchronized</div>
+            <div className={`text-[10px] font-bold ${mysqlStatus?.active || !serverDegradedState?.isDegraded ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+              ● {mysqlStatus?.active || !serverDegradedState?.isDegraded ? `Primary Engine (${mysqlStatus?.totalRecords || 'Synchronized'} rows)` : 'Degraded (Buffered Writes)'}
+            </div>
           </div>
         </div>
       </div>
@@ -1089,16 +1135,23 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <h4 className="text-xs font-black uppercase text-primary tracking-wider flex items-center gap-2">
-              <HardDrive className="h-4 w-4 text-primary" /> Database &amp; Backups Engine
+              <HardDrive className="h-4 w-4 text-primary" /> MySQL Database &amp; Backups Engine
             </h4>
             <p className="text-[11px] text-default-500">
-              Create instant recovery snapshots, schedule auto-backups, and access database archives
+              Direct MySQL database persistence, instant table synchronization, and recovery snapshot tools
             </p>
           </div>
           <span className="text-[9.5px] font-black uppercase px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-            Active Backups ({dbSnapshots?.length || 0})
+            {mysqlStatus?.active ? 'MySQL Active' : 'Connecting'} ({mysqlStatus?.totalTables || 29} Tables)
           </span>
         </div>
+
+        {mysqlSyncToast && (
+          <div className="p-3 rounded-xl bg-primary/10 border border-primary/30 text-primary text-xs font-bold flex items-center gap-2 animate-fade-in">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            <span>{mysqlSyncToast}</span>
+          </div>
+        )}
 
         {snapshotSuccessToast && (
           <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-2 animate-fade-in">
@@ -1106,6 +1159,36 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
             <span>{snapshotSuccessToast}</span>
           </div>
         )}
+
+        {/* MySQL Priority & Synchronization Action Card */}
+        <div className="p-4 rounded-2xl border border-primary/30 bg-primary/5 space-y-3 shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <Database className="h-4 w-4 text-primary" />
+                <span className="text-xs font-black uppercase text-foreground tracking-wider">
+                  Primary MySQL Persistence
+                </span>
+                <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                  Prioritized &amp; Active
+                </span>
+              </div>
+              <p className="text-[11px] text-default-500 mt-1">
+                Database: <span className="font-mono font-bold text-foreground">{mysqlStatus?.database || 'tilepoint_db'}</span> | Host: <span className="font-mono text-foreground">{mysqlStatus?.host || '127.0.0.1'}</span> | Total Records: <span className="font-bold text-foreground">{mysqlStatus?.totalRecords || 'Live'}</span>
+              </p>
+            </div>
+
+            <button
+              type="button"
+              disabled={isSyncingMysql}
+              onClick={handleSyncToMysql}
+              className="px-4 py-2.5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl shadow-2xs hover:opacity-90 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 shrink-0"
+            >
+              <RefreshCw className={`h-4 w-4 ${isSyncingMysql ? 'animate-spin' : ''}`} />
+              <span>{isSyncingMysql ? 'Syncing to MySQL...' : 'Sync All Data to MySQL'}</span>
+            </button>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {/* Quick Actions Card */}

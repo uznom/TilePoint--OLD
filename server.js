@@ -380,6 +380,10 @@ function markServerRecovered() {
     console.log(` Replaying ${degradedWriteQueue.length} queued degraded writes...`);
     console.log('======================================================================\n');
 
+    initDatabaseSchema().catch(err => {
+      console.warn('[MySQL Schema Init] Notice on connection recovery:', err.message);
+    });
+
     broadcastServerStatus();
 
     replayQueuedDegradedWrites().catch(err => {
@@ -448,6 +452,29 @@ async function checkMysqlConnection() {
     }
     return true;
   } catch (err) {
+    if (err && err.code === 'ER_BAD_DB_ERROR') {
+      try {
+        const tempConn = await mysql.createConnection({
+          host: process.env.MYSQL_HOST || '127.0.0.1',
+          port: Number(process.env.MYSQL_PORT || 3306),
+          user: process.env.MYSQL_USER || 'root',
+          password: process.env.MYSQL_PASSWORD || ''
+        });
+        const targetDb = process.env.MYSQL_DATABASE || 'tilepoint_db';
+        await tempConn.query(`CREATE DATABASE IF NOT EXISTS \`${targetDb}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+        await tempConn.end();
+        console.log(`[MySQL Bootstrap] Auto-created database \`${targetDb}\` successfully.`);
+        const retryConn = await pool.getConnection();
+        await retryConn.ping();
+        retryConn.release();
+        if (!isMysqlActive) {
+          markServerRecovered();
+        }
+        return true;
+      } catch (autoCreateErr) {
+        console.warn('[MySQL Bootstrap] Auto-create database notice:', autoCreateErr.message);
+      }
+    }
     if (isConnectionError(err)) {
       if (isMysqlActive) {
         markServerDegraded(`Connection check failed: ${err.message} (${err.code})`);
@@ -3732,7 +3759,8 @@ app.post('/api/db/bulk', async (req, res) => {
   }
 
   const configured = await isDatabaseConfiguredStore();
-  if (configured) {
+  const isBootstrap = Boolean(data.tp_bootstrap_init || (data.tp_is_configured && !configured));
+  if (configured && !isBootstrap) {
     const check = await verifySessionAndCheckConcurrency(req);
     if (!check.valid) {
       return res.status(check.status || 401).json({
@@ -3764,6 +3792,41 @@ app.post('/api/db/bulk', async (req, res) => {
     res.json({ success: true, count: Object.keys(data).length });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// API: Direct Full MySQL Sync Endpoint - Forces all collections to persist directly to MySQL tables
+app.post(['/api/mysql/sync-all', '/api/db/sync-all'], express.json({ limit: '50mb' }), async (req, res) => {
+  const payload = req.body?.data || req.body;
+  if (!payload || typeof payload !== 'object') {
+    return res.status(400).json({ success: false, error: 'Valid dataset object is required' });
+  }
+
+  try {
+    let totalSynced = 0;
+    const keys = Object.keys(payload);
+
+    for (const key of keys) {
+      const val = payload[key];
+      if (val === undefined || val === null) continue;
+      await saveKeyToStore(key, val);
+      totalSynced++;
+    }
+
+    const { db, hash } = await readFullDatabase();
+    emitPulseUpdate('all', hash, req.headers['x-client-id']);
+
+    res.json({
+      success: true,
+      message: 'All local data synchronized to MySQL database successfully.',
+      collectionsCount: totalSynced,
+      isMysqlActive,
+      hash,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('[MySQL Sync All Error]:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 

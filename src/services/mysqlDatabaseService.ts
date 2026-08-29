@@ -479,6 +479,36 @@ class MysqlDatabaseService {
   }
 
   /**
+   * Pushes full local database collections directly to MySQL backend tables
+   */
+  public async syncAllToMysql(data: Record<string, any>): Promise<{
+    success: boolean;
+    message?: string;
+    collectionsCount?: number;
+    isMysqlActive?: boolean;
+    error?: string;
+  }> {
+    try {
+      const res = await fetch('/api/mysql/sync-all', {
+        method: 'POST',
+        headers: this.getHeaders('application/json'),
+        body: JSON.stringify({ data })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(errData.error || `HTTP ${res.status}`);
+      }
+      return await res.json();
+    } catch (err: any) {
+      console.error('[MysqlDatabaseService] syncAllToMysql error:', err.message);
+      return {
+        success: false,
+        error: err.message
+      };
+    }
+  }
+
+  /**
    * Retrieves current MySQL database health metrics, connection pool status, and table counts.
    */
   public async getDatabaseStatus(): Promise<MysqlStatusResponse> {

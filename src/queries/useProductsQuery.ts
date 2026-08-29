@@ -11,8 +11,9 @@ export function useProductsQuery() {
         const res = await fetch('/api/db');
         if (res.ok) {
           const json = await res.json();
-          if (json && Array.isArray(json.products)) {
-            return json.products;
+          const list = json?.data?.tp_products || json?.products;
+          if (Array.isArray(list)) {
+            return list;
           }
         }
       } catch {
@@ -60,8 +61,9 @@ export function useBranchesQuery() {
         const res = await fetch('/api/db');
         if (res.ok) {
           const json = await res.json();
-          if (json && Array.isArray(json.branches)) {
-            return json.branches;
+          const list = json?.data?.tp_branches || json?.branches;
+          if (Array.isArray(list)) {
+            return list;
           }
         }
       } catch {
@@ -83,10 +85,18 @@ export function useProductMutations() {
 
   const addProduct = useMutation({
     mutationFn: async (product: Partial<Product>) => {
+      const now = Date.now();
+      const id = product.id || `P-${now}`;
+      const fullRecord = { ...product, id };
       const res = await fetch('/api/db/delta', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'CREATE', entity: 'products', record: product }),
+        body: JSON.stringify({
+          id: `delta-add-products-${id}-${now}`,
+          timestamp: new Date().toISOString(),
+          type: 'APPEND_ROW',
+          payload: { key: 'tp_products', row: fullRecord }
+        }),
       });
       return await res.json();
     },
@@ -97,10 +107,17 @@ export function useProductMutations() {
 
   const updateProduct = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Product> }) => {
+      const now = Date.now();
+      const fullRecord = { ...updates, id };
       const res = await fetch('/api/db/delta', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'UPDATE', entity: 'products', id, record: updates }),
+        body: JSON.stringify({
+          id: `delta-upd-products-${id}-${now}`,
+          timestamp: new Date().toISOString(),
+          type: 'UPDATE_ROW',
+          payload: { key: 'tp_products', row: fullRecord }
+        }),
       });
       return await res.json();
     },
@@ -111,10 +128,16 @@ export function useProductMutations() {
 
   const deleteProduct = useMutation({
     mutationFn: async (id: string) => {
+      const now = Date.now();
       const res = await fetch('/api/db/delta', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'DELETE', entity: 'products', id }),
+        body: JSON.stringify({
+          id: `delta-del-products-${id}-${now}`,
+          timestamp: new Date().toISOString(),
+          type: 'UPDATE_ROW',
+          payload: { key: 'tp_products', row: { id, isDeleted: true } }
+        }),
       });
       return await res.json();
     },
@@ -125,3 +148,4 @@ export function useProductMutations() {
 
   return { addProduct, updateProduct, deleteProduct };
 }
+

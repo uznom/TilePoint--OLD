@@ -11,11 +11,12 @@ export function useSalesQuery(branchId?: string) {
         const res = await fetch('/api/db');
         if (res.ok) {
           const json = await res.json();
-          if (json && Array.isArray(json.sales)) {
+          const list = json?.data?.tp_sales || json?.sales;
+          if (Array.isArray(list)) {
             if (branchId && branchId !== 'all') {
-              return json.sales.filter((s: Sale) => s.branchId === branchId);
+              return list.filter((s: Sale) => s.branchId === branchId);
             }
-            return json.sales;
+            return list;
           }
         }
       } catch {
@@ -44,8 +45,9 @@ export function useSaleItemsQuery() {
         const res = await fetch('/api/db');
         if (res.ok) {
           const json = await res.json();
-          if (json && Array.isArray(json.sale_items)) {
-            return json.sale_items;
+          const list = json?.data?.tp_sale_items || json?.sale_items;
+          if (Array.isArray(list)) {
+            return list;
           }
         }
       } catch {
@@ -70,11 +72,12 @@ export function useShiftsQuery(branchId?: string) {
         const res = await fetch('/api/db');
         if (res.ok) {
           const json = await res.json();
-          if (json && Array.isArray(json.shifts)) {
+          const list = json?.data?.tp_shifts || json?.shifts;
+          if (Array.isArray(list)) {
             if (branchId && branchId !== 'all') {
-              return json.shifts.filter((sh: Shift) => sh.branchId === branchId);
+              return list.filter((sh: Shift) => sh.branchId === branchId);
             }
-            return json.shifts;
+            return list;
           }
         }
       } catch {
@@ -103,8 +106,9 @@ export function useBranchSalesReportsQuery() {
         const res = await fetch('/api/db');
         if (res.ok) {
           const json = await res.json();
-          if (json && Array.isArray(json.branch_sales_reports)) {
-            return json.branch_sales_reports;
+          const list = json?.data?.tp_branch_sales_reports || json?.branch_sales_reports;
+          if (Array.isArray(list)) {
+            return list;
           }
         }
       } catch {
@@ -138,3 +142,4 @@ export function useSaleMutations() {
 
   return { createSale };
 }
+

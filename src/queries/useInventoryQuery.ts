@@ -11,11 +11,12 @@ export function useMovementsQuery(branchId?: string) {
         const res = await fetch('/api/db');
         if (res.ok) {
           const json = await res.json();
-          if (json && Array.isArray(json.movements)) {
+          const list = json?.data?.tp_movements || json?.movements;
+          if (Array.isArray(list)) {
             if (branchId && branchId !== 'all') {
-              return json.movements.filter((m: InventoryMovement) => m.sourceBranchId === branchId || m.destinationBranchId === branchId);
+              return list.filter((m: InventoryMovement) => m.sourceBranchId === branchId || m.destinationBranchId === branchId);
             }
-            return json.movements;
+            return list;
           }
         }
       } catch {
@@ -44,11 +45,12 @@ export function useDamageLogsQuery(branchId?: string) {
         const res = await fetch('/api/db');
         if (res.ok) {
           const json = await res.json();
-          if (json && Array.isArray(json.damage_logs)) {
+          const list = json?.data?.tp_damage_logs || json?.damage_logs;
+          if (Array.isArray(list)) {
             if (branchId && branchId !== 'all') {
-              return json.damage_logs.filter((d: DamageLog) => d.branchId === branchId);
+              return list.filter((d: DamageLog) => d.branchId === branchId);
             }
-            return json.damage_logs;
+            return list;
           }
         }
       } catch {
@@ -77,11 +79,12 @@ export function useDeliveriesQuery(branchId?: string) {
         const res = await fetch('/api/db');
         if (res.ok) {
           const json = await res.json();
-          if (json && Array.isArray(json.deliveries)) {
+          const list = json?.data?.tp_deliveries || json?.deliveries;
+          if (Array.isArray(list)) {
             if (branchId && branchId !== 'all') {
-              return json.deliveries.filter((d: Delivery) => d.branchId === branchId);
+              return list.filter((d: Delivery) => d.branchId === branchId);
             }
-            return json.deliveries;
+            return list;
           }
         }
       } catch {
@@ -110,8 +113,9 @@ export function useTransmittalsQuery() {
         const res = await fetch('/api/db');
         if (res.ok) {
           const json = await res.json();
-          if (json && Array.isArray(json.transmittals)) {
-            return json.transmittals;
+          const list = json?.data?.tp_transmittals || json?.transmittals;
+          if (Array.isArray(list)) {
+            return list;
           }
         }
       } catch {
@@ -136,11 +140,12 @@ export function useExpensesQuery(branchId?: string) {
         const res = await fetch('/api/db');
         if (res.ok) {
           const json = await res.json();
-          if (json && Array.isArray(json.expenses)) {
+          const list = json?.data?.tp_expenses || json?.expenses;
+          if (Array.isArray(list)) {
             if (branchId && branchId !== 'all') {
-              return json.expenses.filter((e: Expense) => e.branchId === branchId);
+              return list.filter((e: Expense) => e.branchId === branchId);
             }
-            return json.expenses;
+            return list;
           }
         }
       } catch {
@@ -169,8 +174,9 @@ export function usePurchaseOrdersQuery() {
         const res = await fetch('/api/db');
         if (res.ok) {
           const json = await res.json();
-          if (json && Array.isArray(json.purchase_orders)) {
-            return json.purchase_orders;
+          const list = json?.data?.tp_purchase_orders || json?.purchase_orders;
+          if (Array.isArray(list)) {
+            return list;
           }
         }
       } catch {
@@ -195,8 +201,9 @@ export function useMembersQuery() {
         const res = await fetch('/api/db');
         if (res.ok) {
           const json = await res.json();
-          if (json && Array.isArray(json.members)) {
-            return json.members;
+          const list = json?.data?.tp_members || json?.members;
+          if (Array.isArray(list)) {
+            return list;
           }
         }
       } catch {
@@ -235,3 +242,4 @@ export function useAuditLogsQuery() {
     },
   });
 }
+

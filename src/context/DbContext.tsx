@@ -899,6 +899,10 @@ interface DbContextType {
  clearDeadLetterOutbox: () => void;
  enqueueOutboxTransaction: (options: EnqueueOutboxOptions) => OutboxRecord;
 
+  // MySQL Persistence & Synchronization
+  syncAllLocalToMysql: () => Promise<{ success: boolean; message?: string; error?: string }>;
+  getMysqlStatus: () => Promise<any>;
+
   // Server Degraded State & Recovery
   serverDegradedState: {
     isDegraded: boolean;
@@ -4530,11 +4534,6 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  volatileCache.current[key] = dataStr;
 
  const writeToServer = async () => {
-  const authHeaders = getAuthHeaders();
-  if (!authHeaders.Authorization) {
-    console.log(`[Shared DB Client] Skipping server write for key "${key}" since user is logged out.`);
-    return;
-  }
  if (
  key === "tp_current_user" ||
  key === "tp_is_logged_in" ||
@@ -4543,6 +4542,18 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  ) {
  return; // Device-Specific Isolation: Do not write session states to the shared centralized server
  }
+
+ const authHeaders = getAuthHeaders();
+ if (!authHeaders.Authorization) {
+   console.log(`[Shared DB Client] User not logged in, enqueuing offline request for key "${key}"`);
+   if (transactionalKeys.includes(key) && deltas.length > 0) {
+     deltas.forEach((delta) => enqueueOfflineRequest(delta));
+   } else {
+     enqueueOfflineRequest({ key, value, isLegacy: true });
+   }
+   return;
+ }
+
  const isSilentWrite = key === "tp_active_sessions";
  if (!isSilentWrite) {
  setSyncStatus((prev) => {
@@ -5642,6 +5653,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
 
  // Immediately write configurations to the server bypassing debounce to prevent any loss on refresh
  const syncData = {
+ tp_bootstrap_init: "true",
  tp_users: newUsers,
  tp_branches: newBranches,
  tp_audit_logs: installLogs,
@@ -10572,6 +10584,65 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  };
  }, [filteredProducts, suppliers, sales, users, productReturns, getBranchStockStats, currentUser]);
 
+  const syncAllLocalToMysql = useCallback(async (): Promise<{ success: boolean; message?: string; error?: string }> => {
+    try {
+      const allData: Record<string, any> = {
+        tp_users: users,
+        tp_branches: branches,
+        tp_suppliers: suppliers,
+        tp_brands: brands,
+        tp_products: products,
+        tp_purchase_orders: purchaseOrders,
+        tp_po_items: poItems,
+        tp_transmittals: transmittals,
+        tp_shifts: shifts,
+        tp_sales: sales,
+        tp_sale_items: saleItems,
+        tp_movements: movements,
+        tp_audit_logs: auditLogs,
+        tp_parked_sales: parkedSales,
+        tp_stock_transfers: stockTransfers,
+        tp_branch_stock: branchStock,
+        tp_ledger_entries: ledgerEntries,
+        tp_branch_sales_reports: branchSalesReports,
+        tp_deliveries: deliveries,
+        tp_damage_logs: damageLogs,
+        atpos_v2_custom_bills: customBills,
+        atpos_v2_members_list: members,
+        atpos_v2_expenses: expenses,
+        atpos_v2_returns: productReturns,
+        atpos_v2_calendar_notes: calendarNotes,
+        atpos_v2_calendar_day_memos: dayMemos,
+        tp_product_categories: productCategories,
+        tp_unit_types: unitTypes,
+        tp_payment_methods: paymentMethodsList,
+        tp_discount_schemes: discountSchemes,
+        tp_damage_reasons: damageReasonsList,
+        tp_is_configured: isConfigured ? "true" : "false",
+        tilepoint_onboarded_setup: localStorage.getItem("tilepoint_onboarded_setup") || "true",
+      };
+
+      const res = await mysqlDatabaseService.syncAllToMysql(allData);
+      if (res.success) {
+        setServerConnected(true);
+      }
+      return res;
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  }, [
+    users, branches, suppliers, brands, products, purchaseOrders, poItems, transmittals,
+    shifts, sales, saleItems, movements, auditLogs, parkedSales, stockTransfers,
+    branchStock, ledgerEntries, branchSalesReports, deliveries, damageLogs,
+    customBills, members, expenses, productReturns, calendarNotes, dayMemos,
+    productCategories, unitTypes, paymentMethodsList, discountSchemes, damageReasonsList,
+    isConfigured
+  ]);
+
+  const getMysqlStatus = useCallback(async () => {
+    return mysqlDatabaseService.getDatabaseStatus();
+  }, []);
+
    const contextValue = useMemo(
     () => ({
       currentUser,
@@ -10806,6 +10877,8 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
       clearCompletedOutbox: () => transactionOutboxService.clearCompleted(),
       clearDeadLetterOutbox: () => transactionOutboxService.clearDeadLetters(),
       enqueueOutboxTransaction: (options: EnqueueOutboxOptions) => transactionOutboxService.enqueue(options),
+      syncAllLocalToMysql,
+      getMysqlStatus,
       serverDegradedState,
       refreshServerStatus,
     }),
@@ -10893,6 +10966,8 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
       outboxStats,
       outboxItems,
       isOutboxModalOpen,
+      syncAllLocalToMysql,
+      getMysqlStatus,
       serverDegradedState,
       refreshServerStatus,
     ]
