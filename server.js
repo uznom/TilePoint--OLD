@@ -539,29 +539,6 @@ function upsertRecordAlasql(tableName, record) {
   } catch (e) {}
 }
 
-async function checkMysqlConnection() {
-  try {
-    const conn = await pool.getConnection();
-    conn.release();
-    if (!isMysqlActive) {
-      console.log('[Database] MySQL connection established successfully.');
-    }
-    isMysqlActive = true;
-    mysqlEnforced = true;
-    return true;
-  } catch (err) {
-    if (isMysqlActive) {
-      console.warn(`[Database] MySQL connection lost (${err.code}).`);
-    }
-    isMysqlActive = false;
-    return false;
-  }
-}
-
-// Check MySQL connection on boot & periodically
-checkMysqlConnection().catch(() => {});
-setInterval(checkMysqlConnection, 30000);
-
 // --- IN-MEMORY CACHE & DEBOUNCED DISK PERSISTENCE ---
 let cachedFullDb = null;
 let cachedDbHash = null;
@@ -2671,15 +2648,12 @@ app.get('/api/db/events', (req, res) => {
   res.on('error', cleanup);
 });
 
-// API: Get full database state with ETag & Hash optimization
-app.get('/api/db', async (req, res) => {
+// API: Get full database state with ETag & Hash optimization (F-02)
+app.get(['/api/db', '/api/db/full'], async (req, res) => {
   try {
-    const configured = await isDatabaseConfiguredStore();
-    if (configured) {
-      const user = verifyAndExtractToken(req);
-      if (!user) {
-        return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
-      }
+    const user = verifyAndExtractToken(req);
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
     }
 
     const rawIfNoneMatch = req.headers['if-none-match'];
@@ -3763,19 +3737,14 @@ app.post('/api/db/bulk', async (req, res) => {
   }
 });
 
-// API: Reset / Purge database
-app.post('/api/db/truncate', async (req, res) => {
+// API: Reset / Purge database (F-01)
+app.post(['/api/db/truncate', '/api/db/reset'], async (req, res) => {
   // Step 1: Authenticate and authorize unconditionally BEFORE touching req.body (No NODE_ENV condition)
   const user = verifyAndExtractToken(req);
-
-  if (!ALLOW_LOCAL_RESET) {
-    if (!user) {
-      return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
-    }
-    if (user.role !== 'Admin' && user.role !== 'admin') {
-      return res.status(403).json({ success: false, error: 'Forbidden: Resetting database is restricted to system administrators.' });
-    }
-  } else if (user && user.role !== 'Admin' && user.role !== 'admin') {
+  if (!user) {
+    return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
+  }
+  if (user.role !== 'Admin' && user.role !== 'admin') {
     return res.status(403).json({ success: false, error: 'Forbidden: Resetting database is restricted to system administrators.' });
   }
 
@@ -4743,16 +4712,21 @@ async function enforceGlobalCompromisedPasswordReset() {
 // Initialize AlaSQL Embedded Engine
 initAlasqlEngine();
 
-server.listen(PORT, '0.0.0.0', async () => {
-  await initDatabaseSchema();
-  await invalidateAllSessionsOnBoot();
-  await enforceGlobalCompromisedPasswordReset();
-  console.log(`========================================`);
-  console.log(`   TILEPOINT SHARED DATABASE SERVER     `);
-  console.log(`========================================`);
-  console.log(`Server Port         : ${PORT}`);
-  console.log(`Security Mode       : ${useSsl ? 'HTTPS (SSL Secured)' : 'HTTP (Standard)'}`);
-  console.log(`Database Engine     : MySQL Connection Pool (Primary) with Embedded AlaSQL Buffer`);
-  console.log(`Real-Time Engine    : Socket.io (db_pulse_update) + SSE`);
-  console.log(`========================================`);
-});
+if (process.env.NODE_ENV !== 'test') {
+  server.listen(PORT, '0.0.0.0', async () => {
+    await initDatabaseSchema();
+    await invalidateAllSessionsOnBoot();
+    await enforceGlobalCompromisedPasswordReset();
+    console.log(`========================================`);
+    console.log(`   TILEPOINT SHARED DATABASE SERVER     `);
+    console.log(`========================================`);
+    console.log(`Server Port         : ${PORT}`);
+    console.log(`Security Mode       : ${useSsl ? 'HTTPS (SSL Secured)' : 'HTTP (Standard)'}`);
+    console.log(`Database Engine     : MySQL Connection Pool (Primary) with Embedded AlaSQL Buffer`);
+    console.log(`Real-Time Engine    : Socket.io (db_pulse_update) + SSE`);
+    console.log(`========================================`);
+  });
+}
+
+export { app, server };
+export default app;

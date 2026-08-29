@@ -1,0 +1,44 @@
+name: CI Security & Test Suite
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    name: Build, Lint, Security Audit & Vitest
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_ENV: test
+      SECURITY_SECRET: github_actions_ci_runner_secure_secret_key_at_least_32_chars_12345
+
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Security Audit - Grep for Hardcoded Secret Literal
+        run: node scripts/check-no-secrets.js
+
+      - name: TypeScript Type Checking (tsc --noEmit)
+        run: npx tsc --noEmit
+
+      - name: ESLint Code Quality Check
+        run: npx eslint .
+
+      - name: Run Vitest Unit & Integration Test Suites
+        run: npx vitest run
+
+      - name: Run Full Node.js Test Suite
+        run: npm test

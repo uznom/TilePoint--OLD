@@ -32,7 +32,6 @@ export function useCart(initialItems: CartItem[] = []): UseCartReturn {
   const [cart, setCart] = useState<CartItem[]>(initialItems);
   const [overallDiscountPercent, setOverallDiscountPercent] = useState<number>(0);
   const [overallDiscountAmount, setOverallDiscountAmount] = useState<number>(0);
-  const [calculationError, setCalculationError] = useState<string | null>(null);
 
   const addItem = useCallback((product: Product, qty: number = 1, maxStock?: number) => {
     let addedSuccessfully = true;
@@ -108,17 +107,17 @@ export function useCart(initialItems: CartItem[] = []): UseCartReturn {
     setCart([]);
     setOverallDiscountPercent(0);
     setOverallDiscountAmount(0);
-    setCalculationError(null);
   }, []);
 
-  const totals = useMemo(() => {
+  const { totals, calculationError } = useMemo(() => {
     try {
       const calculated = calculateCartTotals(cart, overallDiscountPercent, overallDiscountAmount);
-      setCalculationError(null);
-      return calculated;
+      return { totals: calculated, calculationError: null };
     } catch (err: any) {
-      setCalculationError(err.message || 'Cart calculation error');
-      return calculateCartTotals(cart, 0, 0);
+      return {
+        totals: calculateCartTotals(cart, 0, 0),
+        calculationError: (err?.message as string) || 'Cart calculation error'
+      };
     }
   }, [cart, overallDiscountPercent, overallDiscountAmount]);
 
