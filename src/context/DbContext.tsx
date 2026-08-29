@@ -12,6 +12,12 @@ useMemo,
 useRef,
 useState,
 } from "react";
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '../queries/queryClient';
+import { AuthProvider } from './AuthContext';
+import { SettingsProvider } from './SettingsContext';
+import { SyncProvider } from './SyncContext';
+import { CartProvider } from './CartContext';
 import { getBranchStockQuantity,getBranchStockRecord,isProductInBranch,isSameBranch,slugifyBranchStr } from "../lib/branchUtils";
 import {
 detectSQLi,
@@ -1065,7 +1071,7 @@ const mergeParkedSales = (local: any[], remote: any[], deletedSet?: Set<string>)
  return Array.from(map.values());
 };
 
-export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
+const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  children,
 }) => {
  const getAuthHeaders = (): Record<string, string> => {
@@ -10779,6 +10785,22 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     <DbContext.Provider value={contextValue}>
       {children}
     </DbContext.Provider>
+  );
+};
+
+export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <SettingsProvider>
+          <SyncProvider>
+            <CartProvider>
+              <DbProviderInternal>{children}</DbProviderInternal>
+            </CartProvider>
+          </SyncProvider>
+        </SettingsProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 };
 
