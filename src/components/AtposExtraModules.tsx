@@ -2818,8 +2818,8 @@ export default function AtposExtraModules({
  const isSelected = selectedCalendarDay === item.day;
  
  // Visual urgency coloring: orange-to-red
- let urgencyBadge = "";
- let alertIconColor = "";
+ let urgencyBadge: string;
+ let alertIconColor: string;
  if (item.isFinished) {
  urgencyBadge = "text-emerald-500 bg-emerald-500/10 border-emerald-500/25";
  alertIconColor = "text-emerald-500";
@@ -3817,7 +3817,7 @@ export default function AtposExtraModules({
 
  const exportData = salesToProcess.map((s, idx) => {
  const sDiscountType = s.discountType;
- let isPwd = false, isSenior20 = false, isSenior5 = false, isSolo = false, isAthletes = false, isRegular = false;
+ let isPwd: boolean, isSenior20: boolean, isSenior5: boolean, isSolo: boolean, isAthletes: boolean, isRegular: boolean;
 
  if (sDiscountType) {
  isPwd = activeSubTab === "bir-pwd" && sDiscountType === "PWD";
@@ -3908,12 +3908,7 @@ export default function AtposExtraModules({
  .filter((s) => !s.isDeleted)
  .map((s, idx) => {
   const sDiscountType = s.discountType;
- let isPwd = false;
- let isSenior20 = false;
- let isSenior5 = false;
- let isSolo = false;
- let isAthletes = false;
- let isRegular = false;
+  let isPwd: boolean, isSenior20: boolean, isSenior5: boolean, isSolo: boolean, isAthletes: boolean, isRegular: boolean;
 
  if (sDiscountType) {
  isPwd = activeSubTab === "bir-pwd" && sDiscountType === "PWD";

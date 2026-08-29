@@ -1342,13 +1342,13 @@ T*
 T*
 (CHAPTER 1: ERP OS SALES & ESTIMATORS) Tj
 T*
-(- Scan barcodes, search keys, and compute waste offsets \(+10% diagonal cuts\).) Tj
+(- Scan barcodes, search keys, and compute waste offsets \\(+10% diagonal cuts\\).) Tj
 T*
 () Tj
 T*
 (CHAPTER 2: GLOBAL WAREHOUSES & SIDE-BY-SIDE MATRIX) Tj
 T*
-(- The Unified Global Pools lists branch levels side-by-side \(Cebu, Bacolod, etc.\).) Tj
+(- The Unified Global Pools lists branch levels side-by-side \\(Cebu, Bacolod, etc.\\).) Tj
 T*
 () Tj
 T*

@@ -628,7 +628,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  },
  };
 
- let contentsParsed: any = {};
+ let contentsParsed: any;
  try {
  contentsParsed = JSON.parse(t.payloadJson);
  } catch (err) {

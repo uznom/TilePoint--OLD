@@ -255,7 +255,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  // 3. Security signature verification
  if (parsed.securitySignature) {
  try {
- let decrypted = decryptString(parsed.securitySignature, getSecuritySecretKey());
+ const decrypted = decryptString(parsed.securitySignature, getSecuritySecretKey());
  let sig = null;
  
  try {

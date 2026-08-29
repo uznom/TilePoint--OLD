@@ -179,7 +179,7 @@ const mergeCollections = (
         const exMs = exTime ? new Date(exTime).getTime() : 0;
         const inMs = inTime ? new Date(inTime).getTime() : 0;
 
-        let keepExisting = false;
+        let keepExisting: boolean;
         if (exVer > inVer) {
           keepExisting = true;
         } else if (inVer > exVer) {
@@ -377,7 +377,7 @@ self.onmessage = (event: MessageEvent<WorkerMessageRequest>) => {
             ? currentState
             : (Array.isArray(localStored) ? localStored : []);
 
-          let merged: any[] = [];
+          let merged: any[];
           if (isUnconfiguredOrReset) {
             merged = serverArr;
           } else if (key === "tp_parked_sales") {
@@ -450,7 +450,7 @@ self.onmessage = (event: MessageEvent<WorkerMessageRequest>) => {
 
       // 5. Configured Flag
       let isConfiguredValue: boolean | undefined;
-      let isConfiguredChanged = false;
+      const isConfiguredChanged = false;
       if (db["tp_is_configured"] !== undefined) {
         isConfiguredValue = db["tp_is_configured"] === "true" || db["tp_is_configured"] === true;
       }
@@ -503,7 +503,7 @@ self.onmessage = (event: MessageEvent<WorkerMessageRequest>) => {
           ? mergeCollections(currentState, localStored, optimisticStockMap)
           : ((Array.isArray(currentState) && currentState.length > 0) ? currentState : (Array.isArray(localStored) ? localStored : []));
 
-        let merged: any[] = [];
+        let merged: any[];
         if (key === 'tp_parked_sales') {
           merged = mergeParkedSales(localArr, serverDeltaArr, deletedParkedSaleSet);
         } else {

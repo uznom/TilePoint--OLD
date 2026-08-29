@@ -306,7 +306,7 @@ export async function verifyAndUnwrapBackup(rawText: string): Promise<any> {
  try {
  parsed = JSON.parse(rawText);
  } catch (err: any) {
- throw new Error(`Invalid JSON file format: ${err.message}`);
+ throw new Error(`Invalid JSON file format: ${err.message}`, { cause: err });
  }
 
  // If signature keys exist, perform a rigorous cryptographic verification

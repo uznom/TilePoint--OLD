@@ -32,8 +32,8 @@ export const ExpressiveTooltip: React.FC<ExpressiveTooltipProps> = ({
     const rect = containerRef.current.getBoundingClientRect();
     const offset = 10;
 
-    let top = 0;
-    let left = 0;
+    let top: number;
+    let left: number;
 
     switch (position) {
       case 'bottom':

@@ -968,7 +968,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  ? matchedProduct.stockQuantity
  : getBranchStockQuantity(cartProduct, userBranchId, branchStock, branches);
 
- let parsedQty = parseInt(val, 10);
+ const parsedQty = parseInt(val, 10);
  if (isNaN(parsedQty) || parsedQty === 0) {
  removeFromCart(productId);
  return;

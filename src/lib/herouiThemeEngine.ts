@@ -385,7 +385,7 @@ export function applyHeroUIThemeToDOM(config?: HeroUIConfig) {
   const root = document.documentElement;
 
   // 0. Color Mode Detection
-  let isDark = false;
+  let isDark: boolean;
   if (cfg.mode === 'dark') {
     root.classList.add('dark');
     isDark = true;

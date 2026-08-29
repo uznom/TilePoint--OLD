@@ -184,19 +184,19 @@ export function ProfitAnalytics({
  loss: number;
  }> = {};
 
- let limitDays = 30;
- let viewFormat: "day" | "month" = "day";
+  let limitDays: number;
+  let viewFormat: "day" | "month" = "day";
 
- if (selectedPeriod === "7d") limitDays = 7;
- else if (selectedPeriod === "15d") limitDays = 15;
- else if (selectedPeriod === "30d") limitDays = 30;
- else if (selectedPeriod === "monthly") {
- limitDays = 180; // Monthly view covering past 6 months
- viewFormat = "month";
- } else {
- limitDays = 365; // All-Time view covering past 12 months (last year + current year)
- viewFormat = "month";
- }
+  if (selectedPeriod === "7d") limitDays = 7;
+  else if (selectedPeriod === "15d") limitDays = 15;
+  else if (selectedPeriod === "30d") limitDays = 30;
+  else if (selectedPeriod === "monthly") {
+  limitDays = 180; // Monthly view covering past 6 months
+  viewFormat = "month";
+  } else {
+  limitDays = 365; // All-Time view covering past 12 months (last year + current year)
+  viewFormat = "month";
+  }
 
  // Initialize periods
  if (viewFormat === "day") {
@@ -267,12 +267,7 @@ export function ProfitAnalytics({
 
  const retDate = new Date(ret.dateTime);
  if (isNaN(retDate.getTime())) return;
- let key = "";
- if (viewFormat === "day") {
- key = retDate.toDateString();
- } else {
- key = `${retDate.getFullYear()}-${retDate.getMonth()}`;
- }
+  const key = viewFormat === "day" ? retDate.toDateString() : `${retDate.getFullYear()}-${retDate.getMonth()}`;
 
  if (periodsMap[key]) {
  periodsMap[key].revenue = Math.max(0, periodsMap[key].revenue - (Number(ret.amountRefunded) || 0));
@@ -285,12 +280,7 @@ export function ProfitAnalytics({
  if (selectedBranchId !== "all" && exp.branchId !== selectedBranchId) return;
 
  const expDate = new Date(exp.dateTime || exp.createdAt);
- let key = "";
- if (viewFormat === "day") {
- key = expDate.toDateString();
- } else {
- key = `${expDate.getFullYear()}-${expDate.getMonth()}`;
- }
+  const key = viewFormat === "day" ? expDate.toDateString() : `${expDate.getFullYear()}-${expDate.getMonth()}`;
 
  if (periodsMap[key]) {
  periodsMap[key].opex += Number(exp.amount) || 0;
@@ -315,12 +305,7 @@ export function ProfitAnalytics({
 
  insts.forEach((inst) => {
  const instDate = new Date(inst.date);
- let key = "";
- if (viewFormat === "day") {
- key = instDate.toDateString();
- } else {
- key = `${instDate.getFullYear()}-${instDate.getMonth()}`;
- }
+  const key = viewFormat === "day" ? instDate.toDateString() : `${instDate.getFullYear()}-${instDate.getMonth()}`;
 
  if (periodsMap[key]) {
  periodsMap[key].opex += inst.amount;
@@ -334,12 +319,7 @@ export function ProfitAnalytics({
  if (selectedBranchId !== "all" && log.branchId !== selectedBranchId) return;
 
  const logDate = new Date(log.reportedAt || log.createdAt || now);
- let key = "";
- if (viewFormat === "day") {
- key = logDate.toDateString();
- } else {
- key = `${logDate.getFullYear()}-${logDate.getMonth()}`;
- }
+  const key = viewFormat === "day" ? logDate.toDateString() : `${logDate.getFullYear()}-${logDate.getMonth()}`;
 
  if (periodsMap[key]) {
  const prod = productsById.get(log.productId);
@@ -356,12 +336,7 @@ export function ProfitAnalytics({
  if (!sh.closedAt) return;
 
  const shiftDate = new Date(sh.closedAt);
- let key = "";
- if (viewFormat === "day") {
- key = shiftDate.toDateString();
- } else {
- key = `${shiftDate.getFullYear()}-${shiftDate.getMonth()}`;
- }
+  const key = viewFormat === "day" ? shiftDate.toDateString() : `${shiftDate.getFullYear()}-${shiftDate.getMonth()}`;
 
  if (periodsMap[key] && sh.variance && sh.variance < 0) {
  periodsMap[key].loss += Math.abs(sh.variance);

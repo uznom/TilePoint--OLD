@@ -293,7 +293,7 @@ function AppContent() {
     (d) => d.status === "Scheduled" || d.status === "Packed" || d.status === "Out For Delivery"
   );
 
-  let showInventoryRedDot = false;
+  let showInventoryRedDot: boolean;
   try {
     const cached = localStorage.getItem("tp_batch_expirations");
     if (cached) {
@@ -913,7 +913,7 @@ function AppContent() {
     setIsUpdatingProfile(true);
 
     try {
-      let passwordUpdates: Partial<User> = {};
+      const passwordUpdates: Partial<User> = {};
       if (currentPasswordInput || newPasswordInput || confirmPasswordInput) {
         if (!currentPasswordInput || !newPasswordInput || !confirmPasswordInput) {
           setProfileModalError("To change password, please fill out all password fields.");

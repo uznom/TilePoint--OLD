@@ -2491,7 +2491,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
 
  // Set of active branch IDs for quick O(1) membership checks
 
- let updated = [...prevStock];
+ const updated = [...prevStock];
  let hasChanges = false;
 
  // Map key 'branchId_productId' to index in updated array for quick lookups
@@ -3311,7 +3311,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  const exMs = exTime ? new Date(exTime).getTime() : 0;
  const inMs = inTime ? new Date(inTime).getTime() : 0;
 
- let keepExisting = false;
+ let keepExisting: boolean;
  if (exVer > inVer) {
  keepExisting = true;
  } else if (inVer > exVer) {
@@ -4076,8 +4076,8 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  const runDatabaseMaintenance = useCallback(async () => {
  setIsMaintenanceRunning(true);
  let bytesFreed = 0;
- let itemsIndexed = 0;
- let indicesOptimized = 0;
+  let itemsIndexed: number;
+  let indicesOptimized: number;
 
  try {
  // 1. Re-index core collection index structures in memory
@@ -4335,7 +4335,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const checkAndPruneIfHighUsage = () => {
- let currentUsageBytes = 0;
+  let currentUsageBytes: number;
  try {
  currentUsageBytes = JSON.stringify(localStorage).length;
  } catch (_) {
@@ -5025,7 +5025,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  const ageLabel = ageMonths === 0 ? "all_records" : `older_than_${ageMonths}m`;
  const filename = `TilePoint_Archive_${category}_${ageLabel}_${dateStr}.json`;
 
- let itemsToPurge: any[] = [];
+  const itemsToPurge: any[] = [];
  let remainingCount = 0;
 
  if (category === "auditLogs") {
@@ -6920,7 +6920,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
       }
     } catch (e: any) {
       console.error("[Shared DB Client] Failed to truncate server-side database:", e);
-      throw new Error(`Server database truncate failed: ${e.message || e}`);
+      throw new Error(`Server database truncate failed: ${e.message || e}`, { cause: e });
     }
 
     // Mode 'all' or 'transactions'
@@ -11101,7 +11101,7 @@ export function unwrapInboundPayload(rawObj: any): any {
     const rawPayload = obj.payload;
     if (typeof rawPayload === "string") {
       const key = getSecuritySecretKey();
-      let decryptedText = "";
+      let decryptedText: string;
       try {
         decryptedText = decryptString(rawPayload, key);
       } catch (e) {

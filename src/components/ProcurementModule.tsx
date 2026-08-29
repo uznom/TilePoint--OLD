@@ -321,7 +321,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  let poCreatedCount = 0;
  const targetStatus = forcedStatus || "Pending";
 
- let updatedBillsList = [...customBills];
+ const updatedBillsList = [...customBills];
 
  Object.entries(supplierGroups).forEach(([supId, itemsInGroup]) => {
  const draftItemsInput = itemsInGroup.map((item) => {
@@ -352,7 +352,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  const notes = `Auto-Consolidated Purchase Order. Grouped brands: ${brandsInGroup || "N/A"}. Compiled via Automated Sourcing Deck.`;
 
  const poPaymentMode = paymentTerm === 0 ? "fully_paid" : "terms";
- let poTermsLength = 30;
+ let poTermsLength: number;
  if (paymentTerm === "CUSTOM") {
  const start = new Date();
  const end = new Date(payoutDueDate);
@@ -856,7 +856,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  );
 
  const poPaymentMode = paymentTerm === 0 ? "fully_paid" : "terms";
- let poTermsLength = 30;
+ let poTermsLength: number;
  if (paymentTerm === "CUSTOM") {
  const start = new Date();
  const end = new Date(payoutDueDate);

@@ -56,7 +56,7 @@ export function hsvToRgb(h: number, s: number, v: number): { r: number; g: numbe
   const c = v * s;
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
   const m = v - c;
-  let r1 = 0, g1 = 0, b1 = 0;
+  let r1: number, g1: number, b1: number;
   if (h >= 0 && h < 60) { r1 = c; g1 = x; b1 = 0; }
   else if (h >= 60 && h < 120) { r1 = x; g1 = c; b1 = 0; }
   else if (h >= 120 && h < 180) { r1 = 0; g1 = c; b1 = x; }

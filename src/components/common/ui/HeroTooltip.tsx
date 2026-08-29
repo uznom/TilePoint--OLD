@@ -72,9 +72,9 @@ export const HeroTooltip: React.FC<HeroTooltipProps> = ({
     const triggerRect = triggerRef.current.getBoundingClientRect();
 
     // Default calculations based on triggerRect
-    let top = 0;
-    let left = 0;
-    let transformOrigin = 'bottom center';
+    let top: number;
+    let left: number;
+    let transformOrigin: string;
 
     switch (placement) {
       case 'bottom':

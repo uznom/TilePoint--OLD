@@ -49,7 +49,7 @@ export function isValidBarcode(barcode: unknown): boolean {
   if (typeof barcode !== 'string') return false;
   const trimmed = barcode.trim();
   if (trimmed.length < 4 || trimmed.length > 32) return false;
-  return /^[A-Za-z0-9\-]+$/.test(trimmed);
+  return /^[A-Za-z0-9-]+$/.test(trimmed);
 }
 
 /**
@@ -70,6 +70,7 @@ export function sanitizeText(input: string | null | undefined, maxLength: number
   
   // Strip control characters except newline and tab
   const cleaned = str
+    // eslint-disable-next-line no-control-regex
     .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F-\x9F]/g, '')
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/<[^>]+>/g, '')
@@ -91,6 +92,7 @@ export function sanitizeInputText(input: string | null | undefined, maxLength: n
 export function sanitizeSearch(query: string | null | undefined): string {
   if (!query) return '';
   const str = String(query).trim();
+  // eslint-disable-next-line no-control-regex
   return str.replace(/[\x00-\x1F\x7F-\x9F]/g, '').trim();
 }
 
