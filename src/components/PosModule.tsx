@@ -275,9 +275,11 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  const updatedMembers = [...rawMembers, newM];
  setMembers(updatedMembers);
- try {
- localStorage.setItem("atpos_v2_members_list", JSON.stringify(updatedMembers));
- } catch (_) {}
+  try {
+    localStorage.setItem("atpos_v2_members_list", JSON.stringify(updatedMembers));
+  } catch (storageErr) {
+    console.warn('[POS Member Register] Failed to save member list to localStorage:', storageErr);
+  }
 
  addAuditLog(
  "MEMBER_REGISTER",
@@ -1000,82 +1002,94 @@ export const PosModule: React.FC<PosModuleProps> = ({
  }
  };
 
- const handleCancelSale = (silent: boolean | React.MouseEvent = false) => {
- const isSilent = typeof silent === "boolean" ? silent : false;
- if (cart.length === 0) {
- if (!isSilent) showToast("Active cart is already empty.");
- return;
- }
- setCart([]);
- setCustomerName("Walk-in Customer");
- setCustomerAddress("");
- setCustomerTin("");
- setBusinessStyle("");
- setCustomerNotes("");
- setDiscountValue(0);
- setDiscountType("NONE");
- setAmountTendered("");
- setChangeAmount(0);
- setErrorMessage("");
- setRecoveredSession(null);
- setShowRecoveryBanner(false);
- try {
- localStorage.removeItem("tp_active_cart");
- localStorage.removeItem("tp_active_customer_name");
- localStorage.removeItem("tp_active_customer_address");
- localStorage.removeItem("tp_active_customer_tin");
- localStorage.removeItem("tp_active_business_style");
- localStorage.removeItem("tp_active_customer_notes");
- localStorage.removeItem("tp_pos_session_checkpoint");
- localStorage.removeItem("tp_pending_delivery_draft");
- } catch (_) {}
- if (!isSilent) showToast("Active transaction basket cleared.");
- };
+  const handleCancelSale = (silent: boolean | React.MouseEvent = false) => {
+    const isSilent = typeof silent === "boolean" ? silent : false;
+    if (cart.length === 0) {
+      if (!isSilent) showToast("Active cart is already empty.");
+      return;
+    }
+    setCart([]);
+    setCustomerName("Walk-in Customer");
+    setCustomerAddress("");
+    setCustomerTin("");
+    setBusinessStyle("");
+    setCustomerNotes("");
+    setDiscountValue(0);
+    setDiscountType("NONE");
+    setAmountTendered("");
+    setChangeAmount(0);
+    setErrorMessage("");
+    setRecoveredSession(null);
+    setShowRecoveryBanner(false);
+    try {
+      localStorage.removeItem("tp_active_cart");
+      localStorage.removeItem("tp_active_customer_name");
+      localStorage.removeItem("tp_active_customer_address");
+      localStorage.removeItem("tp_active_customer_tin");
+      localStorage.removeItem("tp_active_business_style");
+      localStorage.removeItem("tp_active_customer_notes");
+      localStorage.removeItem("tp_pos_session_checkpoint");
+      localStorage.removeItem("tp_pending_delivery_draft");
+    } catch (storageErr) {
+      console.warn('[POS Clear] Failed to clear cart keys from localStorage:', storageErr);
+    }
+    if (!isSilent) showToast("Active transaction basket cleared.");
+  };
 
- const handleFocusSearch = () => {
- if (searchInputRef.current) {
+  const handleFocusSearch = () => {
+    if (searchInputRef.current) {
       searchInputRef.current.focus();
-      try { searchInputRef.current.select(); } catch (_) {}
- try {
- searchInputRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
- } catch (_) {}
- }
- };
+      try { 
+        searchInputRef.current.select(); 
+      } catch (focusErr) { 
+        console.debug('[POS Focus] Text selection error (non-fatal):', focusErr); 
+      }
+      try {
+        searchInputRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      } catch (scrollErr) {
+        console.debug('[POS Focus] Scroll to search error (non-fatal):', scrollErr);
+      }
+    }
+  };
 
- const handleViewParkedSales = () => {
- try {
- const parkedDrawer = document.getElementById("parked-sales-drawer");
- if (parkedDrawer) {
- parkedDrawer.scrollIntoView({ behavior: "smooth" });
- } else {
- showToast("No parked hold transactions in memory.");
- }
- } catch (_) {}
- };
+  const handleViewParkedSales = () => {
+    try {
+      const parkedDrawer = document.getElementById("parked-sales-drawer");
+      if (parkedDrawer) {
+        parkedDrawer.scrollIntoView({ behavior: "smooth" });
+      } else {
+        showToast("No parked hold transactions in memory.");
+      }
+    } catch (scrollErr) {
+      console.debug('[POS Parked] Scroll into view error (non-fatal):', scrollErr);
+    }
+  };
 
- const handlePaySettleSale = () => {
- if (cart.length === 0) {
- showToast("Your active cart is currently empty.");
- return;
- }
- const tenderIdx = document.getElementById("cash-tendered-field") as HTMLInputElement | null;
- const parsedTender = parseFloat(amountTendered || "0");
- const isCashValid = paymentMethod === "Cash" && !isNaN(parsedTender) && parsedTender >= grandTotal;
- const isNonCash = paymentMethod !== "Cash";
+  const handlePaySettleSale = () => {
+    if (cart.length === 0) {
+      showToast("Your active cart is currently empty.");
+      return;
+    }
+    const tenderIdx = document.getElementById("cash-tendered-field") as HTMLInputElement | null;
+    const parsedTender = parseFloat(amountTendered || "0");
+    const isCashValid = paymentMethod === "Cash" && !isNaN(parsedTender) && parsedTender >= grandTotal;
+    const isNonCash = paymentMethod !== "Cash";
 
- if (isCashValid || isNonCash) {
- clientCheckout();
- } else {
- if (paymentMethod === "Cash" && (!amountTendered || parsedTender < grandTotal)) {
- setAmountTendered(grandTotal.toString());
- }
- try {
- const checkSection = document.getElementById("checkout-action-panel");
- checkSection?.scrollIntoView({ behavior: "smooth" });
- setTimeout(() => tenderIdx?.focus(), 100);
- } catch (_) {}
- }
- };
+    if (isCashValid || isNonCash) {
+      clientCheckout();
+    } else {
+      if (paymentMethod === "Cash" && (!amountTendered || parsedTender < grandTotal)) {
+        setAmountTendered(grandTotal.toString());
+      }
+      try {
+        const checkSection = document.getElementById("checkout-action-panel");
+        checkSection?.scrollIntoView({ behavior: "smooth" });
+        setTimeout(() => tenderIdx?.focus(), 100);
+      } catch (scrollErr) {
+        console.debug('[POS Settle] Scroll into view error (non-fatal):', scrollErr);
+      }
+    }
+  };
 
  const handleReprintLastReceipt = () => {
  if (activeReceipt) {

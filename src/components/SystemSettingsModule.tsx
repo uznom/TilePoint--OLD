@@ -321,7 +321,9 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
       }
       try {
         window.dispatchEvent(new Event('tilepoint:theme-sync'));
-      } catch (_) {}
+      } catch (eventErr) {
+        console.debug('[Theme Sync] Failed to dispatch tilepoint:theme-sync event:', eventErr);
+      }
     }
 
     if (key === 'tilepoint-color-contrast') {

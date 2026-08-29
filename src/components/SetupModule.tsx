@@ -143,7 +143,9 @@ export const SetupModule: React.FC = () => {
       try {
         sessionStorage.setItem(k, v);
         localStorage.setItem(k, v);
-      } catch (_) {}
+      } catch (storageErr) {
+        console.warn('[Setup Wizard] Failed to persist setup draft key:', k, storageErr);
+      }
     });
   }, [
     step,
@@ -187,7 +189,9 @@ export const SetupModule: React.FC = () => {
       try {
         sessionStorage.removeItem(k);
         localStorage.removeItem(k);
-      } catch (_) {}
+      } catch (storageErr) {
+        console.warn('[Setup Wizard] Failed to remove setup draft key:', k, storageErr);
+      }
     });
   };
 

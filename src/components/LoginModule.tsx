@@ -239,7 +239,9 @@ export const LoginModule: React.FC = () => {
                       try {
                         localStorage.setItem('tp_is_configured', 'false');
                         localStorage.setItem('tilepoint_onboarded_setup', 'false');
-                      } catch (_) {}
+                      } catch (storageErr) {
+                        console.warn('[Login Reconfigure] Failed to update configuration flags in localStorage:', storageErr);
+                      }
                       setIsConfigured(false);
                     }}
                     className="text-xs font-semibold text-default-400 hover:text-primary transition-colors cursor-pointer"

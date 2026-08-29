@@ -2249,19 +2249,27 @@ export default function AtposExtraModules({
  if (po.paymentMode === "terms" && po.termEndDate) {
  try {
  const d = new Date(po.termEndDate);
+ if (!isNaN(d.getTime())) {
  dueDay = d.getDate();
  dueMonth = d.getMonth();
  dueYear = d.getFullYear();
- } catch (e) {}
+ }
+ } catch (dateErr) {
+ console.debug("[PO Schedule] Failed to parse termEndDate:", po.termEndDate, dateErr);
+ }
  } else if (po.date) {
  try {
  const d = new Date(po.date);
+ if (!isNaN(d.getTime())) {
  const days = po.termsLength || 30;
  d.setDate(d.getDate() + days);
  dueDay = d.getDate();
  dueMonth = d.getMonth();
  dueYear = d.getFullYear();
- } catch (e) {}
+ }
+ } catch (dateErr) {
+ console.debug("[PO Schedule] Failed to parse po.date:", po.date, dateErr);
+ }
  }
  return { sum: poSum, day: dueDay, month: dueMonth, year: dueYear };
  };

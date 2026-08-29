@@ -823,7 +823,9 @@ function AppContent() {
             localStorage.setItem("tp_active_customer_notes", "");
             showToastMsg("Active transaction automatically held in safe hold registers.");
           }
-        } catch (_) {}
+        } catch (holdErr) {
+          console.error("[Tab Transition] Failed to auto-hold active cart during tab switch:", holdErr);
+        }
       }
     }
 

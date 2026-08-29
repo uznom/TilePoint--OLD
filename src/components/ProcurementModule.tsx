@@ -2942,9 +2942,13 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  setReceiveTermsLength(days);
  try {
  const sDate = new Date(receiveTermStartDate);
+ if (!isNaN(sDate.getTime())) {
  sDate.setDate(sDate.getDate() + days);
  setReceiveTermEndDate(sDate.toISOString().split('T')[0]);
- } catch (e) {}
+ }
+ } catch (dateErr) {
+ console.debug("[Procurement] Term end date calculation error:", dateErr);
+ }
  }}
  className={`py-1.5 text-[10px] font-black rounded-lg transition border cursor-pointer text-center ${
  receiveTermsLength === days
@@ -2984,9 +2988,13 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  if (receiveTermsLength > 0) {
  try {
  const sDate = new Date(newStart);
+ if (!isNaN(sDate.getTime())) {
  sDate.setDate(sDate.getDate() + receiveTermsLength);
  setReceiveTermEndDate(sDate.toISOString().split('T')[0]);
- } catch (err) {}
+ }
+ } catch (dateErr) {
+ console.debug("[Procurement] End date calculation error on start date change:", dateErr);
+ }
  }
  }}
  className="w-full bg-content1 border border-divider/35 rounded-xl p-2 text-[11px] outline-none text-foreground focus:border-primary"

@@ -127,7 +127,10 @@ export function getClientDeviceInfo(): ClientDeviceInfo {
   let timezone = "UTC";
   try {
     timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-  } catch (_) {}
+  } catch (tzErr) {
+    // Non-fatal: Intl timezone resolution unsupported in this browser/environment; fallback to UTC
+    console.debug("[Fingerprint] TimeZone resolution fallback to UTC:", tzErr);
+  }
 
   const language = typeof navigator !== "undefined" ? navigator.language || "en-US" : "en-US";
   const platform = typeof navigator !== "undefined" ? navigator.platform || "Web" : "Web";

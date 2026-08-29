@@ -286,7 +286,10 @@ class TransactionOutboxService {
           try {
             const errJson = await res.json();
             if (errJson && errJson.error) errMsg = errJson.error;
-          } catch (_) {}
+          } catch (jsonErr) {
+            // Response is non-JSON; retain default HTTP status message
+            console.debug('[Outbox Service] Failed to parse error response JSON:', jsonErr);
+          }
 
           console.error(`[Outbox Service] Fatal error for item ${record.id} (${record.txType}): ${errMsg}. Moving to Dead-Letter Queue.`);
           record.status = 'dead_letter';

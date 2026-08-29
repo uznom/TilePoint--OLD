@@ -266,7 +266,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
           if (cleaned.length > 0) return cleaned;
         }
       }
-    } catch (_) {}
+    } catch (parseErr) {
+      console.warn('[Inventory Batches] Failed to parse cached batch expirations from localStorage:', parseErr);
+    }
     return [];
   });
 
@@ -325,7 +327,9 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
   useEffect(() => {
     try {
       localStorage.setItem("tp_batch_expirations", JSON.stringify(batches));
-    } catch (_) {}
+    } catch (storageErr) {
+      console.warn('[Inventory Batches] Failed to persist batch expirations to localStorage:', storageErr);
+    }
   }, [batches]);
 
   // Expiration Calendar view dates (default to live system date)

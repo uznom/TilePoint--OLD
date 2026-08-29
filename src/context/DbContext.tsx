@@ -111,7 +111,9 @@ const performSyncPruning = (): number => {
   const setItemSync = (k: string, val: string) => {
     try {
       window.localStorage.setItem(k, val);
-    } catch (_) {}
+    } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
   };
 
   // 1. Strip heavy 'data' payload from tp_db_snapshots in localStorage (keep metadata only)
@@ -130,7 +132,9 @@ const performSyncPruning = (): number => {
       }
     }
   } catch (_) {
-    try { window.localStorage.removeItem("tp_db_snapshots"); } catch (_) {}
+    try { window.localStorage.removeItem("tp_db_snapshots"); } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
   }
 
   // 2. Remove temporary ingestion snapshots
@@ -140,7 +144,9 @@ const performSyncPruning = (): number => {
       window.localStorage.removeItem("tp_ingestion_snapshots");
       bytesFreed += ingestStr.length;
     }
-  } catch (_) {}
+  } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
 
   // 3. Clear temporary/transient debugging keys without touching core tables
   ["tp_write_stats_prevented", "tp_batch_expirations", "tp_temp_catalog_cache"].forEach((tk) => {
@@ -150,7 +156,9 @@ const performSyncPruning = (): number => {
         bytesFreed += val.length;
         window.localStorage.removeItem(tk);
       }
-    } catch (_) {}
+    } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
   });
 
   console.log(`[System Guard] Safe cache maintenance finished. Freed approx ${bytesFreed} bytes.`);
@@ -181,7 +189,9 @@ if (typeof window !== "undefined" && window.localStorage && !(window.localStorag
      console.warn(`[System Guard] LocalStorage full after pruning. Using fallback sessionStorage & volatile memory:`, retryError);
      try {
       sessionStorage.setItem(key, value);
-     } catch (_) {}
+     } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
      if (typeof window !== "undefined") {
       (window as any).tpVolatileCache = (window as any).tpVolatileCache || {};
       (window as any).tpVolatileCache[key] = value;
@@ -266,7 +276,9 @@ if (typeof window !== "undefined" && window.localStorage && !(window.localStorag
  if (!Array.isArray(existingSnapshots)) {
  existingSnapshots = [];
  }
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  }
  const updatedSnapshots = [newSnapshot, ...existingSnapshots].slice(0, 2);
  originalSetItem.call(window.localStorage, "tp_db_snapshots", JSON.stringify(updatedSnapshots));
@@ -290,7 +302,9 @@ if (typeof window !== "undefined" && window.localStorage && !(window.localStorag
  isCashier = true;
  }
  }
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
 
  if (isCashier) {
  console.error(`[System Guard] Blocked cashier from removing database storage key "${key}".`);
@@ -305,7 +319,9 @@ if (typeof window !== "undefined" && window.localStorage && !(window.localStorag
  const snapshots = JSON.parse(snapshotsStr);
  hasSnapshot = Array.isArray(snapshots) && snapshots.length > 0;
  }
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
 
  if (!hasSnapshot && window.localStorage.getItem("tp_is_configured") === "true") {
  console.log(`[System Guard] Satisfying safety requirements: Automatically generating on-the-fly backup snapshot before removing "${key}"`);
@@ -326,7 +342,9 @@ if (typeof window !== "undefined" && window.localStorage && !(window.localStorag
  isCashier = true;
  }
  }
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
 
  if (isCashier) {
  console.error("[System Guard] Blocked cashier from clearing database storage.");
@@ -341,7 +359,9 @@ if (typeof window !== "undefined" && window.localStorage && !(window.localStorag
  const snapshots = JSON.parse(snapshotsStr);
  hasSnapshot = Array.isArray(snapshots) && snapshots.length > 0;
  }
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
 
  if (!hasSnapshot && window.localStorage.getItem("tp_is_configured") === "true") {
  console.log("[System Guard] Satisfying safety requirements: Automatically generating on-the-fly backup snapshot before clearing database storage.");
@@ -925,7 +945,9 @@ function safeParse<T>(key: string, defaultValue: T): T {
  console.error(`Error parsing localStorage key "${key}":`, error);
  try {
  localStorage.removeItem(key);
- } catch (e) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  return defaultValue;
  }
 }
@@ -1081,7 +1103,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  if (userStr) {
  try {
  user = JSON.parse(userStr);
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  }
  }
  if (!user || !user.id || !user.role) return {};
@@ -1091,7 +1115,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  sessionStorage.setItem("tp_current_user", JSON.stringify(user));
  localStorage.setItem("tp_current_user", JSON.stringify(user));
  }
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
 
    const savedToken = sessionStorage.getItem("tp_session_token") || localStorage.getItem("tp_session_token");
    const token = savedToken || "";
@@ -1186,7 +1212,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
           queuedWritesCount: data.queuedWritesCount || 0
         });
       }
-    } catch (_) {}
+    } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
   }, []);
 
   const [isConfigured, setIsConfigured] = useState<boolean>(() => {
@@ -1644,7 +1672,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
           if (errData && errData.error) {
             errMsg = `${errData.error}: ${errData.message || errMsg}`;
           }
-        } catch (_) {}
+        } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
 
         if ([401, 403, 404, 429, 502, 503, 504].includes(statusCode)) {
           console.warn(`[API Interceptor] Handled status response [${statusCode}]: ${errMsg}`);
@@ -1658,7 +1688,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
             let parsedErr: any = null;
             try {
               parsedErr = await res.clone().json();
-            } catch (_) {}
+            } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
 
             if (parsedErr?.code === 'SESSION_SUPERSEDED' || parsedErr?.superseded) {
               console.warn("[API Interceptor] 401 Concurrent Session Superseded received.");
@@ -1749,7 +1781,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  if (userStr) {
  try {
  setCurrentUser(JSON.parse(userStr));
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  }
  }
  }
@@ -1764,7 +1798,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  setCurrentUser(parsedUser);
  setIsLoggedIn(true);
  }
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  }
  } else if (e.key && e.key.startsWith("tp_") && e.newValue !== e.oldValue) {
  if (["tp_is_logged_in", "tp_current_user", "tp_active_sessions", "tp_active_session_id", "tp_offline_queue"].includes(e.key)) {
@@ -1899,7 +1935,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  const parsed = JSON.parse(stored);
  if (Array.isArray(parsed)) return new Set(parsed);
  }
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  return new Set();
  })());
 
@@ -1917,17 +1955,23 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  try {
  const arr = JSON.parse(sharedStr);
  if (Array.isArray(arr)) sharedSet = new Set(arr);
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  }
  sharedSet.add(id);
  localStorage.setItem("tp_shared_deleted_parked_ids", JSON.stringify(Array.from(sharedSet)));
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
 
  setTimeout(() => {
  deletedParkedSaleIds.current.delete(id);
  try {
  sessionStorage.setItem("tp_deleted_parked_ids", JSON.stringify(Array.from(deletedParkedSaleIds.current)));
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  }, 300000); // 5 minutes
  };
 
@@ -1950,7 +1994,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  }
  }
  };
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
 
  const handleCustomQueueUpdate = (e: any) => {
  if (e.detail?.action === "resume" && e.detail?.parkedId) {
@@ -1980,7 +2026,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  rawSetParkedSales((prev) => prev.filter((p) => p && p.id && !deletedParkedSaleIds.current.has(p.id)));
  }
  }
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  } else if (e.key === "tp_parked_sales" && e.newValue) {
  try {
  const freshParked = JSON.parse(e.newValue);
@@ -1990,7 +2038,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  return filtered;
  });
  }
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  }
  };
 
@@ -2031,7 +2081,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  
  try {
  safeLocalStorageSetItem("tp_parked_sales", JSON.stringify(next));
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  nextValue = next;
  return next;
  });
@@ -2042,7 +2094,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  const queueChannel = new BroadcastChannel("tilepoint_queue_channel");
  queueChannel.postMessage({ type: "QUEUE_SYNC", timestamp: Date.now() });
  queueChannel.close();
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  }
  };
 
@@ -2765,7 +2819,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  }
  try {
  await writeQueue.current;
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  if (!silent) {
  setSyncStatus((prev) => {
  const next = { ...prev };
@@ -2918,7 +2974,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  if (item) {
  if (volatileCache.current[k] !== item.mergedStr) {
  volatileCache.current[k] = item.mergedStr;
- try { localStorage.setItem(k, item.mergedStr); } catch (_) {}
+ try { localStorage.setItem(k, item.mergedStr); } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  }
  if (item.hasChanged && setters[k]) {
  setters[k](item.merged);
@@ -3002,7 +3060,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  Object.keys(workerRes.nonCollectionWrites).forEach((k) => {
  const valStr = workerRes.nonCollectionWrites![k];
  volatileCache.current[k] = valStr;
- try { localStorage.setItem(k, valStr); } catch (_) {}
+ try { localStorage.setItem(k, valStr); } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  });
  }
 
@@ -3039,7 +3099,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  if (item) {
  if (volatileCache.current[k] !== item.mergedStr) {
  volatileCache.current[k] = item.mergedStr;
- try { localStorage.setItem(k, item.mergedStr); } catch (_) {}
+ try { localStorage.setItem(k, item.mergedStr); } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  }
  if (item.hasChanged && setters[k]) {
  setters[k](item.merged);
@@ -3165,7 +3227,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  volatileCache.current[k] = valStr;
  try {
  localStorage.setItem(k, valStr);
- } catch (e) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  }
  });
 
@@ -3344,7 +3408,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
               volatileCache.current[key] = mergedStr;
               try {
                 localStorage.setItem(key, mergedStr);
-              } catch (e) {}
+              } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
             }
 
             // Update React state if different from current state
@@ -3750,7 +3816,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  }
 
  if (eventSource) {
- try { eventSource.close(); } catch (_) {}
+ try { eventSource.close(); } catch (sseErr) { console.debug("[SSE] EventSource close skipped:", sseErr); }
  eventSource = null;
  }
 
@@ -3791,7 +3857,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  const wasConnected = isSseConnected.current;
  isSseConnected.current = false;
  if (eventSource) {
- try { eventSource.close(); } catch (_) {}
+ try { eventSource.close(); } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  eventSource = null;
  }
 
@@ -3846,10 +3914,18 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  window.removeEventListener("online", handleWakeOrOnline);
  document.removeEventListener("visibilitychange", handleWakeOrOnline);
  if (socketClient) {
- try { socketClient.disconnect(); } catch (_) {}
+   try {
+     socketClient.disconnect();
+   } catch (sockErr) {
+     console.debug("[SocketIO] Socket disconnect skipped:", sockErr);
+   }
  }
  if (eventSource) {
- try { eventSource.close(); } catch (_) {}
+   try {
+     eventSource.close();
+   } catch (swallowedErr) {
+     console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+   }
  }
  if (reconnectTimeout) {
  clearTimeout(reconnectTimeout);
@@ -4140,7 +4216,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
      );
      try {
       sessionStorage.setItem(key, dataStr);
-     } catch (_) {}
+     } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
      volatileCache.current[key] = dataStr;
      return true;
     }
@@ -4166,7 +4244,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  }).slice(0, 50);
  try {
  localStorage.setItem("tp_audit_logs", JSON.stringify(filtered));
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  return filtered;
  });
 
@@ -4178,7 +4258,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  const filtered = sorted.slice(0, 50);
  try {
  localStorage.setItem("atpos_v2_expenses", JSON.stringify(filtered));
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  return filtered;
  });
 
@@ -4190,7 +4272,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  const filtered = sorted.slice(0, 50);
  try {
  localStorage.setItem("atpos_v2_returns", JSON.stringify(filtered));
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  return filtered;
  });
 
@@ -4199,7 +4283,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  const filtered = prev.slice(0, 30);
  try {
  localStorage.setItem("atpos_v2_custom_bills", JSON.stringify(filtered));
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  return filtered;
  });
 
@@ -4208,7 +4294,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  const filtered = prev.slice(0, 100);
  try {
  localStorage.setItem("atpos_v2_members_list", JSON.stringify(filtered));
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  return filtered;
  });
 
@@ -4225,7 +4313,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  localStorage.setItem("tp_db_snapshots", JSON.stringify(metadataOnlySnapshots));
  }
  }
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
 
  // 7. Prune heavy ingestion snapshots from localStorage
  try {
@@ -4243,7 +4333,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  localStorage.setItem("tp_ingestion_snapshots", JSON.stringify(metaIngest));
  }
  }
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  };
 
  const checkAndPruneIfHighUsage = () => {
@@ -4743,7 +4835,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
           const metaOnly = next.map(({ data: _, ...m }: any) => m);
           localStorage.setItem("tp_db_snapshots", JSON.stringify(metaOnly));
           localStorage.setItem(`tp_snap_payload_${newSnapshot.id}`, newSnapshot.data);
-        } catch (_) {}
+        } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
         return next;
       });
     }
@@ -5640,7 +5734,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  hasOpenCheckout = true;
  }
  }
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
 
  const hasPendingAllocation =
  stockTransfers.some((st) => st.status === "Pending") ||
@@ -5663,7 +5759,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  hasOpenCheckout = true;
  }
  }
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  if (hasOpenCheckout) reasons.push("open checkout list");
 
  const hasPendingAllocation =
@@ -6146,7 +6244,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  timestamp: ing.timestamp,
  }));
  localStorage.setItem("tp_ingestion_snapshots", JSON.stringify(metaIngest));
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
  return next;
  });
 
@@ -6775,14 +6875,14 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  const prod = products.find((p) => p.id === productId);
  const branchMeta = branches.find((b) => b.id === branchId);
  if (prod && branchMeta) {
- addAuditLog(
- "THRESHOLD_ADJUSTMENT",
- `Adjusted localized branch safety alarm threshold for "${prod.productName}" at branch "${branchMeta.name}" to ${threshold} units.`,
- "BranchStock",
- productId,
- );
- }
- };
+    addAuditLog(
+      "THRESHOLD_ADJUSTMENT",
+      `Adjusted localized branch safety alarm threshold for "${prod.productName}" at branch "${branchMeta.name}" to ${threshold} units.`,
+      "BranchStock",
+      productId,
+    );
+  }
+};
 
   // --- DATABASE FACTORY TRUNCATE & RE-SEED ENGINE ---
   const truncateDatabase = async (
@@ -6790,10 +6890,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
     confirmationPhrase: string = "RESET",
   ) => {
     if (currentUser && currentUser.role !== UserRole.ADMIN) {
-      console.error(
-        "Unauthorized security violation: Only system administrators are authorized to reset or truncate the database.",
-      );
-      return;
+      const authErr = new Error("Unauthorized security violation: Only system administrators are authorized to reset or truncate the database.");
+      console.error(authErr.message);
+      throw authErr;
     }
 
     // Force pre-clear backup snapshot & quiet recovery download requirements
@@ -6806,9 +6905,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
       console.error("[System Guard] Pre-truncate quiet download failed:", e);
     }
 
-    // Reset/truncate server database first
+    // Reset/truncate server database first and propagate errors to caller
     try {
-      await safeApiFetch("/api/db/truncate", {
+      const res = await safeApiFetch("/api/db/truncate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -6816,11 +6915,16 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
         },
         body: JSON.stringify({ mode, confirmation: confirmationPhrase }),
       });
-    } catch (e) {
-      console.warn(
-        "[Shared DB Client] Failed to reset server-side database. Resetting locally...",
-        e,
-      );
+      if (!res.ok) {
+        const errorJson = await res.json().catch((jsonErr) => {
+          console.debug("[DbContext] Failed to parse error JSON from truncate:", jsonErr);
+          return {};
+        });
+        throw new Error(errorJson.error || `Server database wipe failed with HTTP status ${res.status}`);
+      }
+    } catch (e: any) {
+      console.error("[Shared DB Client] Failed to truncate server-side database:", e);
+      throw new Error(`Server database truncate failed: ${e.message || e}`);
     }
 
     // Mode 'all' or 'transactions'
@@ -6845,7 +6949,6 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
     setDayMemos({});
     setActiveSessions([]);
     setSimulationModeActive(false);
-
     if (mode === "all") {
       setProducts([]);
       setSuppliers([]);
@@ -6889,20 +6992,28 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
       ];
 
       keysToRemove.forEach((k) => {
-        try { localStorage.removeItem(k); } catch (_) {}
-        try { sessionStorage.removeItem(k); } catch (_) {}
+        try { localStorage.removeItem(k); } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
+        try { sessionStorage.removeItem(k); } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
       });
 
       try {
         localStorage.setItem("tp_is_configured", "false");
         localStorage.setItem("tilepoint_onboarded_setup", "false");
-      } catch (_) {}
+      } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
 
       try {
         if (typeof indexedDB !== "undefined") {
           indexedDB.deleteDatabase("TilePointBackupDB");
         }
-      } catch (_) {}
+      } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
 
       volatileCache.current = {};
       optimisticStockCacheRef.current.clear();
@@ -8546,11 +8657,15 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  const queueChannel = new BroadcastChannel("tilepoint_queue_channel");
  queueChannel.postMessage({ type: "QUEUE_ADD", hold: newHold, timestamp: Date.now() });
  queueChannel.close();
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
 
  try {
  window.dispatchEvent(new CustomEvent("tp_queue_updated", { detail: { action: "add", hold: newHold } }));
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
 
  addAuditLog(
  "POS_PARK_SALE",
@@ -8600,16 +8715,22 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  const queueChannel = new BroadcastChannel("tilepoint_queue_channel");
  queueChannel.postMessage({ type: "QUEUE_RESUME", parkedId, timestamp: Date.now() });
  queueChannel.close();
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
 
  try {
  window.dispatchEvent(new CustomEvent("tp_queue_updated", { detail: { action: "resume", parkedId } }));
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
 
  try {
  localStorage.setItem("tp_last_resumed_hold_id", `${parkedId}_${Date.now()}`);
  window.dispatchEvent(new Event("storage"));
- } catch (_) {}
+ } catch (swallowedErr) {
+    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+  }
 
  addAuditLog(
  "POS_RESUME_PARK_SALE",

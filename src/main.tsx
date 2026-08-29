@@ -112,21 +112,31 @@ if (typeof window !== 'undefined') {
         },
         body: JSON.stringify({ mode, confirmation: 'RESET' }),
       });
-      const data = await res.json();
-      console.log('[TilePoint Reset] Server wipe response:', data);
+      if (!res.ok) {
+        const errorJson = await res.json().catch((jsonErr) => {
+          console.debug('[TilePoint Reset] Failed to parse error JSON from truncate endpoint:', jsonErr);
+          return {};
+        });
+        console.error('[TilePoint Reset] Server truncate returned non-OK status:', res.status, errorJson);
+      } else {
+        const data = await res.json();
+        console.log('[TilePoint Reset] Server wipe response:', data);
+      }
     } catch (err) {
-      console.warn('[TilePoint Reset] Server truncate warning:', err);
+      console.error('[TilePoint Reset] Server truncate network/execution failure:', err);
     }
 
-    try { localStorage.clear(); } catch (_) {}
-    try { sessionStorage.clear(); } catch (_) {}
-    try { localStorage.setItem('tp_is_configured', 'false'); } catch (_) {}
-    try { localStorage.setItem('tilepoint_onboarded_setup', 'false'); } catch (_) {}
+    try { localStorage.clear(); } catch (storageErr) { console.warn('[TilePoint Reset] localStorage clear failed:', storageErr); }
+    try { sessionStorage.clear(); } catch (storageErr) { console.warn('[TilePoint Reset] sessionStorage clear failed:', storageErr); }
+    try { localStorage.setItem('tp_is_configured', 'false'); } catch (storageErr) { console.warn('[TilePoint Reset] Set unconfigured flag failed:', storageErr); }
+    try { localStorage.setItem('tilepoint_onboarded_setup', 'false'); } catch (storageErr) { console.warn('[TilePoint Reset] Set onboarding flag failed:', storageErr); }
     try {
       if (typeof indexedDB !== 'undefined') {
         indexedDB.deleteDatabase('TilePointBackupDB');
       }
-    } catch (_) {}
+    } catch (idbErr) {
+      console.warn('[TilePoint Reset] IndexedDB deletion failed:', idbErr);
+    }
 
     console.log('[TilePoint Reset] Local and server data cleared. Rebooting...');
     window.location.href = '/';
