@@ -10,7 +10,7 @@ export default defineConfig(() => {
     resolve: {
       alias: {
         '@heroui/react': path.resolve(__dirname, 'src/components/common/ui/heroui-adapter.tsx'),
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(__dirname, 'src'),
       },
       dedupe: ['react', 'react-dom'],
     },

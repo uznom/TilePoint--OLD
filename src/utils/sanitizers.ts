@@ -1,38 +1,64 @@
 /**
- * SQL INJECTION (SQLi) DETECTOR
- * Parses string inputs for common SQL payload patterns.
+ * Input sanitization and positive schema/domain validation utilities.
+ * 
+ * Parameterized queries provide comprehensive SQL injection immunity at the database layer.
+ * These utilities provide positive input validation (e.g., verifying a SKU matches expected
+ * patterns, quantities are positive integers) and structural text sanitization.
  */
-export interface SQLiCheckResult {
-  isSafe: boolean;
-  blockedVector?: string;
-  reason?: string;
+
+/**
+ * Positive Validation: Verifies that a SKU or Product Code matches valid alphanumeric formats.
+ */
+export function isValidSku(sku: unknown): boolean {
+  if (typeof sku !== 'string') return false;
+  const trimmed = sku.trim();
+  if (trimmed.length < 1 || trimmed.length > 64) return false;
+  return /^[A-Za-z0-9\-_./# ]+$/.test(trimmed);
 }
 
-export function detectSQLi(input: string): SQLiCheckResult {
-  const normalized = input.trim().toLowerCase();
-  
-  const rules = [
-    { pattern: /' or /i, name: "OR expression bypass attempt (' or '1'='1)" },
-    { pattern: /" or /i, name: 'Double quote OR expression bypass' },
-    { pattern: /union select/i, name: 'UNION SELECT database extraction search' },
-    { pattern: /drop table/i, name: 'DROP TABLE destructive execution command' },
-    { pattern: /delete from/i, name: 'DELETE FROM data truncation bypass' },
-    { pattern: /insert into/i, name: 'INSERT INTO credential spoofing' },
-    { pattern: /select .* from/i, name: 'Ad-hoc SELECT data extraction signature' },
-    { pattern: /--|#|\/\*/, name: 'SQL comment indicator logic short-circuit(--)' },
-  ];
-
-  for (const rule of rules) {
-    if (rule.pattern.test(normalized)) {
-      return {
-        isSafe: false,
-        blockedVector: normalized,
-        reason: rule.name
-      };
-    }
+/**
+ * Positive Validation: Verifies that a value is a valid positive integer (e.g. inventory quantities).
+ */
+export function isValidPositiveInt(val: unknown, allowZero: boolean = false): boolean {
+  if (typeof val === 'number') {
+    if (!Number.isFinite(val) || !Number.isInteger(val)) return false;
+    return allowZero ? val >= 0 : val > 0;
   }
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (!/^\d+$/.test(trimmed)) return false;
+    const num = Number(trimmed);
+    return allowZero ? num >= 0 : num > 0;
+  }
+  return false;
+}
 
-  return { isSafe: true };
+/**
+ * Positive Validation: Verifies that a value is a valid finite monetary amount or decimal number.
+ */
+export function isValidPositiveNumber(val: unknown, allowZero: boolean = false): boolean {
+  const num = typeof val === 'number' ? val : typeof val === 'string' ? Number(val.trim()) : NaN;
+  if (isNaN(num) || !Number.isFinite(num)) return false;
+  return allowZero ? num >= 0 : num > 0;
+}
+
+/**
+ * Positive Validation: Verifies that a barcode is a valid numeric/alphanumeric code.
+ */
+export function isValidBarcode(barcode: unknown): boolean {
+  if (typeof barcode !== 'string') return false;
+  const trimmed = barcode.trim();
+  if (trimmed.length < 4 || trimmed.length > 32) return false;
+  return /^[A-Za-z0-9\-]+$/.test(trimmed);
+}
+
+/**
+ * Positive Validation: Verifies email format.
+ */
+export function isValidEmail(email: unknown): boolean {
+  if (typeof email !== 'string') return false;
+  const trimmed = email.trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
 }
 
 /**
@@ -60,19 +86,11 @@ export function sanitizeInputText(input: string | null | undefined, maxLength: n
 }
 
 /**
- * Sanitizes search query terms: trims, strips SQLi patterns and special characters.
+ * Sanitizes search query terms: trims whitespace and strips non-printable control characters.
  */
 export function sanitizeSearch(query: string | null | undefined): string {
   if (!query) return '';
-  let str = String(query).trim();
-  
-  // Check for malicious SQLi injection patterns
-  const sqli = detectSQLi(str);
-  if (!sqli.isSafe) {
-    str = str.replace(/['";\-#/*]/g, ' ');
-  }
-
-  // Remove control characters
+  const str = String(query).trim();
   return str.replace(/[\x00-\x1F\x7F-\x9F]/g, '').trim();
 }
 
@@ -146,7 +164,7 @@ export function sanitizePhone(input: string | null | undefined): string {
 export function sanitizeEmail(input: string | null | undefined): string {
   if (!input) return '';
   const cleaned = String(input).trim().toLowerCase();
-  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned)) {
+  if (isValidEmail(cleaned)) {
     return cleaned.slice(0, 100);
   }
   return cleaned.slice(0, 100);

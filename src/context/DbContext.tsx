@@ -20,9 +20,6 @@ import { SyncProvider } from './SyncContext';
 import { CartProvider } from './CartContext';
 import { getBranchStockQuantity,getBranchStockRecord,isProductInBranch,isSameBranch,slugifyBranchStr } from "../lib/branchUtils";
 import {
-detectSQLi,
-} from "../utils/sanitizers";
-import {
 DEFAULT_DAMAGE_REASONS,
 DEFAULT_DISCOUNT_SCHEMES,
 DEFAULT_PAYMENT_METHODS,
@@ -1337,26 +1334,18 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
   const login = async (
     username: string,
     password: string,
-  ): Promise<{ success: boolean; error?: string; sqliBlocked?: boolean }> => {
-    // Dynamic credential verification
-
-    // 1. Check for SQL Injection (SQLi)
-    const sqlCheckUser = detectSQLi(username);
-    const sqlCheckPass = detectSQLi(password);
-    if (!sqlCheckUser.isSafe || !sqlCheckPass.isSafe) {
-      const reason =
-        (!sqlCheckUser.isSafe ? sqlCheckUser.reason : sqlCheckPass.reason) ||
-        "SQLi Signature Detected";
-      addAuditLog(
-        "SECURITY_ALERT",
-        `SQL Injection attempt blocked on input username/password! Vector: ${reason}`,
-        "Users",
-        "SYSTEM",
-      );
+  ): Promise<{ success: boolean; error?: string }> => {
+    // Dynamic credential verification with positive input validation
+    if (!username || typeof username !== 'string' || !username.trim()) {
       return {
         success: false,
-        error: `SECURITY VIOLATION: SQL injection pattern detected (${reason}). Authentication halted. Attempt logged in corporate security log.`,
-        sqliBlocked: true,
+        error: 'Username is required.',
+      };
+    }
+    if (!password || typeof password !== 'string') {
+      return {
+        success: false,
+        error: 'Password is required.',
       };
     }
 
