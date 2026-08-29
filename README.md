@@ -70,9 +70,9 @@ Double-click the **TilePoint POS** shortcut on your desktop, or run **`start-til
 
 ## 🛠️ Cross-Platform Quick Start (Manual Setup)
 
-### Prerequisites
-- **Node.js** (v18.0.0 or higher recommended, LTS v20+)
-- **npm** (included with Node.js)
+### Prerequisites & Package Manager
+- **Node.js**: (v18.0.0 or higher recommended, LTS v20+)
+- **Package Manager**: **`npm`** is the standardized package manager for TilePoint. All installs, scripts, and CI workflows use `npm` (relying on `package-lock.json`).
 - *(Optional)* **MySQL Server 8.0+** on Port 3306
 
 ### Installation Steps
