@@ -877,6 +877,16 @@ interface DbContextType {
  clearCompletedOutbox: () => void;
  clearDeadLetterOutbox: () => void;
  enqueueOutboxTransaction: (options: EnqueueOutboxOptions) => OutboxRecord;
+
+  // Server Degraded State & Recovery
+  serverDegradedState: {
+    isDegraded: boolean;
+    dbEngine: string;
+    degradedSince?: string | null;
+    lastDegradedReason?: string;
+    queuedWritesCount?: number;
+  };
+  refreshServerStatus: () => Promise<void>;
 }
 
 export interface DbSnapshot {
@@ -1144,6 +1154,36 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return localStorage.getItem("tp_simulation_mode_active") === "true";
  },
  );
+
+  const [serverDegradedState, setServerDegradedState] = useState<{
+    isDegraded: boolean;
+    dbEngine: string;
+    degradedSince?: string | null;
+    lastDegradedReason?: string;
+    queuedWritesCount?: number;
+  }>({
+    isDegraded: false,
+    dbEngine: "MySQL",
+    degradedSince: null,
+    lastDegradedReason: "",
+    queuedWritesCount: 0
+  });
+
+  const refreshServerStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/server/status");
+      if (res.ok) {
+        const data = await res.json();
+        setServerDegradedState({
+          isDegraded: !!data.isDegraded,
+          dbEngine: data.dbEngine || (data.isDegraded ? "AlaSQL (Degraded)" : "MySQL"),
+          degradedSince: data.degradedSince || null,
+          lastDegradedReason: data.lastDegradedReason || "",
+          queuedWritesCount: data.queuedWritesCount || 0
+        });
+      }
+    } catch (_) {}
+  }, []);
 
   const [isConfigured, setIsConfigured] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -3700,6 +3740,17 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  handleSupersededSession(data.activeSession, data.message);
  }
  });
+
+  socketClient.on("server_status_update", (data: any) => {
+    console.warn("[Real-Time WebSocket] Received server_status_update:", data);
+    setServerDegradedState({
+      isDegraded: !!data?.isDegraded,
+      dbEngine: data?.dbEngine || (data?.isDegraded ? "AlaSQL (Degraded)" : "MySQL"),
+      degradedSince: data?.degradedSince || null,
+      lastDegradedReason: data?.lastDegradedReason || "",
+      queuedWritesCount: data?.queuedWritesCount || 0
+    });
+  });
 
  socketClient.on("disconnect", (reason) => {
  console.info("[Real-Time WebSocket] Disconnected:", reason);
@@ -10682,6 +10733,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       clearCompletedOutbox: () => transactionOutboxService.clearCompleted(),
       clearDeadLetterOutbox: () => transactionOutboxService.clearDeadLetters(),
       enqueueOutboxTransaction: (options: EnqueueOutboxOptions) => transactionOutboxService.enqueue(options),
+      serverDegradedState,
+      refreshServerStatus,
     }),
     [
       currentUser,
@@ -10767,6 +10820,8 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
       outboxStats,
       outboxItems,
       isOutboxModalOpen,
+      serverDegradedState,
+      refreshServerStatus,
     ]
   );
 

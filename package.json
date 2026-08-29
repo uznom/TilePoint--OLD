@@ -12,7 +12,8 @@
     "lint": "tsc --noEmit",
     "test:secrets": "node scripts/check-no-secrets.js",
     "test:backups": "node scripts/test_backup_endpoints.js",
-    "test": "node scripts/check-no-secrets.js && node scripts/test_backup_endpoints.js"
+    "test:degraded": "node scripts/test_degraded_recovery.js",
+    "test": "node scripts/check-no-secrets.js && node scripts/test_backup_endpoints.js && node scripts/test_degraded_recovery.js"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.2.8",

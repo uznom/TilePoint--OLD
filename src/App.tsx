@@ -243,6 +243,8 @@ function AppContent() {
     createDbSnapshot,
     restoreDbSnapshot,
     deleteDbSnapshot,
+    serverDegradedState,
+    refreshServerStatus,
     autoBackupEnabled,
     setAutoBackupEnabled,
     backupIntervalHours,
@@ -1072,6 +1074,45 @@ function AppContent() {
         }`}
       >
         <SystemLoadingOverlay />
+
+        {/* CRITICAL LOUD PERSISTENT BANNER: DEGRADED ENGINE ALERT */}
+        {serverDegradedState?.isDegraded && (
+          <div className="fixed inset-x-0 top-0 z-[70] bg-gradient-to-r from-red-700 via-amber-700 to-red-800 text-white shadow-2xl border-b-2 border-amber-400/60 p-3 px-5 flex flex-col sm:flex-row items-center justify-between gap-3 animate-in slide-in-from-top duration-300">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-black/30 rounded-xl border border-white/20 animate-pulse text-amber-300">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-extrabold text-xs sm:text-sm tracking-wide uppercase text-white flex items-center gap-2">
+                    CRITICAL SYSTEM ALERT: DEGRADED DATABASE MODE ACTIVE
+                  </h4>
+                  <span className="bg-red-950/80 text-amber-300 border border-amber-400/40 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
+                    MYSQL OFFLINE
+                  </span>
+                  {(serverDegradedState.queuedWritesCount ?? 0) > 0 && (
+                    <span className="bg-black/40 text-white text-[10px] px-2 py-0.5 rounded font-mono font-bold">
+                      {serverDegradedState.queuedWritesCount} Write(s) Queued
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] sm:text-xs text-amber-100/90 mt-0.5 font-medium leading-tight max-w-3xl">
+                  Primary MySQL database engine is disconnected. Transactions are buffered locally in temporary store and will auto-replay on reconnect.
+                  {serverDegradedState.lastDegradedReason ? ` [${serverDegradedState.lastDegradedReason}]` : ""}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => refreshServerStatus()}
+                className="flex items-center gap-1.5 bg-white text-red-900 hover:bg-amber-100 active:scale-95 transition-all text-xs font-black px-3.5 py-1.5 rounded-xl shadow-md cursor-pointer uppercase tracking-wider"
+              >
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                Retry Connection
+              </button>
+            </div>
+          </div>
+        )}
 
         {apiErrorState && (
           <div className="fixed inset-x-0 top-0 z-[60] bg-content2/95 backdrop-blur-md border-b border-divider/35 shadow-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top duration-300">

@@ -256,6 +256,184 @@ const pool = mysql.createPool({
 
 let isMysqlActive = false;
 let mysqlEnforced = true;
+let isDegradedMode = false;
+let lastDegradedReason = '';
+let degradedSince = null;
+let degradedWriteQueue = [];
+
+const CONNECTION_ERROR_CODES = new Set([
+  'ECONNREFUSED',
+  'PROTOCOL_CONNECTION_LOST',
+  'ER_CON_COUNT_ERROR',
+  'ECONNRESET',
+  'ETIMEDOUT',
+  'EPIPE',
+  'ENOTFOUND',
+  'EAI_AGAIN',
+  'ER_ACCESS_DENIED_ERROR',
+  'ER_NOT_SUPPORTED_AUTH_MODE',
+  'ER_HOST_NOT_PRIVILEGED',
+  'PROTOCOL_ENQUEUE_AFTER_FATAL_ERROR',
+  'PROTOCOL_ENQUEUE_HANDSHAKE_TWICE',
+  'PROTOCOL_PACKETS_OUT_OF_ORDER',
+  'PROTOCOL_SEQUENCE_TIMEOUT',
+  'ER_SERVER_SHUTDOWN',
+  'ER_NEW_ABORTING_CONNECTION',
+  'ER_NET_READ_ERROR',
+  'ER_NET_WRITE_ERROR',
+  'ER_NET_TIMEOUT',
+  'ER_CONNECTION_KILLED',
+  'ER_INTERNAL_ERROR'
+]);
+
+function isConnectionError(err) {
+  if (!err) return false;
+  if (err.fatal === true) return true;
+  if (err.code && (CONNECTION_ERROR_CODES.has(err.code) || String(err.code).startsWith('PROTOCOL_'))) {
+    return true;
+  }
+  const msg = String(err.message || '').toLowerCase();
+  if (
+    msg.includes('connection lost') ||
+    msg.includes('connect econnrefused') ||
+    msg.includes('closed connection') ||
+    msg.includes('socket has been ended') ||
+    msg.includes('server shutdown') ||
+    msg.includes('pool is closed') ||
+    msg.includes('cannot enqueue')
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function broadcastServerStatus() {
+  const statusPayload = {
+    isDegraded: !isMysqlActive,
+    dbEngine: isMysqlActive ? 'MySQL' : 'AlaSQL (Degraded In-Memory)',
+    degradedSince,
+    lastDegradedReason,
+    queuedWritesCount: degradedWriteQueue.length,
+    timestamp: new Date().toISOString()
+  };
+
+  io.emit('server_status_update', statusPayload);
+  notifyClients('server_status_update', statusPayload);
+}
+
+function markServerDegraded(reason) {
+  const wasActive = isMysqlActive;
+  isMysqlActive = false;
+  isDegradedMode = true;
+  lastDegradedReason = String(reason || 'MySQL connection unavailable');
+  if (!degradedSince) {
+    degradedSince = new Date().toISOString();
+  }
+
+  // LOUD error-level logging
+  console.error('\n======================================================================');
+  console.error(' [CRITICAL ERROR] PRIMARY DATABASE ENGINE IS OFFLINE (DEGRADED MODE)');
+  console.error(` Reason: ${lastDegradedReason}`);
+  console.error(` Degraded Since: ${degradedSince}`);
+  console.error(` Buffered Writes in Queue: ${degradedWriteQueue.length}`);
+  console.error(' Cash-handling reconciliation and sync are operating in buffered mode.');
+  console.error('======================================================================\n');
+
+  broadcastServerStatus();
+}
+
+function markServerRecovered() {
+  if (!isMysqlActive) {
+    isMysqlActive = true;
+    isDegradedMode = false;
+    lastDegradedReason = '';
+    degradedSince = null;
+
+    console.log('\n======================================================================');
+    console.log(' [RECOVERY] PRIMARY MYSQL DATABASE CONNECTION RESTORED');
+    console.log(` Replaying ${degradedWriteQueue.length} queued degraded writes...`);
+    console.log('======================================================================\n');
+
+    broadcastServerStatus();
+
+    replayQueuedDegradedWrites().catch(err => {
+      console.error('[Recovery Replay Error] Failed during write replay:', err);
+    });
+  }
+}
+
+function queueDegradedWrite(op) {
+  degradedWriteQueue.push({
+    ...op,
+    queuedAt: new Date().toISOString()
+  });
+  console.warn(`[Degraded Write Queued] Operation (${op.type}) on ${op.tableName || op.id || 'target'}. Total queued writes: ${degradedWriteQueue.length}`);
+  broadcastServerStatus();
+}
+
+async function replayQueuedDegradedWrites() {
+  if (degradedWriteQueue.length === 0) return;
+  console.log(`[Replay Engine] Processing ${degradedWriteQueue.length} queued writes to MySQL...`);
+
+  const queueCopy = [...degradedWriteQueue];
+  const remaining = [];
+
+  for (const op of queueCopy) {
+    try {
+      if (op.type === 'upsert') {
+        await upsertRecordMysql(op.tableName, op.record);
+      } else if (op.type === 'delete') {
+        await pool.execute(`DELETE FROM \`${op.tableName}\` WHERE id = ?`, [op.id]);
+      } else if (op.type === 'soft_delete_backup') {
+        await pool.execute('UPDATE db_snapshots SET isDeleted = 1, deletedAt = NOW() WHERE id = ?', [op.id]);
+      } else if (op.type === 'custom_query') {
+        await pool.execute(op.sql, op.params);
+      } else if (op.type === 'atomic_package') {
+        await executeAtomicPackageMysql(op.tx);
+      } else if (op.type === 'pos_sale') {
+        await executePosSaleMysql(op.sale, op.items);
+      }
+      console.log(`  -> [Replayed Write] ${op.type} on ${op.tableName || op.id || 'record'}`);
+    } catch (err) {
+      if (isConnectionError(err)) {
+        console.error('[Replay Aborted] Connection lost during write replay:', err.message);
+        remaining.push(op);
+        markServerDegraded(`Connection dropped during write replay: ${err.message}`);
+        break;
+      } else {
+        // Query error (constraint violation, duplicate, etc.): Log and do not block queue
+        console.error(`[Replay Query Error] Corrupted write skipped (${err.code}):`, err.message);
+      }
+    }
+  }
+
+  degradedWriteQueue = remaining;
+  console.log(`[Replay Engine] Queue replay complete. Remaining items in queue: ${degradedWriteQueue.length}`);
+  broadcastServerStatus();
+}
+
+async function checkMysqlConnection() {
+  try {
+    const conn = await pool.getConnection();
+    await conn.ping();
+    conn.release();
+    if (!isMysqlActive) {
+      markServerRecovered();
+    }
+    return true;
+  } catch (err) {
+    if (isConnectionError(err)) {
+      if (isMysqlActive) {
+        markServerDegraded(`Connection check failed: ${err.message} (${err.code})`);
+      }
+    }
+    return false;
+  }
+}
+
+// Check MySQL connection on boot & periodic recoverable health check every 5 seconds
+checkMysqlConnection().catch(() => {});
+setInterval(checkMysqlConnection, 5000);
 
 // Initialize AlaSQL MySQL-compatible embedded SQL Engine
 function initAlasqlEngine() {
@@ -844,9 +1022,11 @@ async function readFullDatabase() {
       isDbCacheDirty = false;
       return res;
     } catch (err) {
-      console.warn('[Database] MySQL query failed, falling back to in-memory store:', err.message);
-      isMysqlActive = false;
-      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
+      if (isConnectionError(err)) {
+        markServerDegraded(`MySQL read failed: ${err.message} (${err.code})`);
+      } else {
+        console.error('[Database Query Error] readFullDatabaseFromMysql query error:', err.message);
+      }
     }
   }
 
@@ -934,9 +1114,11 @@ async function saveKeyToStore(key, value) {
         await saveKeyToMysql(key, value);
       }
     } catch (err) {
-      console.warn('[Database] MySQL write warning:', err.message);
-      isMysqlActive = false;
-      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
+      if (isConnectionError(err)) {
+        markServerDegraded(`MySQL write error: ${err.message} (${err.code})`);
+      } else {
+        console.error('[Database Query Error] saveKeyToMysql error:', err.message);
+      }
     }
   }
 
@@ -966,8 +1148,11 @@ async function isDatabaseConfiguredStore() {
         return conf;
       }
     } catch (e) {
-      isMysqlActive = false;
-      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
+      if (isConnectionError(e)) {
+        markServerDegraded(`MySQL isConfigured query failed: ${e.message} (${e.code})`);
+      } else {
+        console.error('[Database Query Error] isDatabaseConfiguredStore query error:', e.message);
+      }
     }
   }
 
@@ -1073,9 +1258,11 @@ async function getSalesWithItemsLookups(filters = {}) {
 
       return salesList;
     } catch (err) {
-      console.warn('[Database] MySQL getSalesWithItemsLookups failed, falling back to AlaSQL:', err.message);
-      isMysqlActive = false;
-      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
+      if (isConnectionError(err)) {
+        markServerDegraded(`MySQL sales lookup connection error: ${err.message} (${err.code})`);
+      } else {
+        console.error('[Database Query Error] getSalesWithItemsLookups query error:', err.message);
+      }
     }
   }
 
@@ -1179,9 +1366,11 @@ async function getInventoryAndBranchStockLookups(filters = {}) {
         return rows.map(r => parseRowFromMysql('products', r));
       }
     } catch (err) {
-      console.warn('[Database] MySQL getInventoryAndBranchStockLookups failed, falling back to AlaSQL:', err.message);
-      isMysqlActive = false;
-      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
+      if (isConnectionError(err)) {
+        markServerDegraded(`MySQL inventory lookup connection error: ${err.message} (${err.code})`);
+      } else {
+        console.error('[Database Query Error] getInventoryAndBranchStockLookups query error:', err.message);
+      }
     }
   }
 
@@ -1278,9 +1467,11 @@ async function getInventoryMovementsLookups(filters = {}) {
       const [rows] = await pool.query(sql, params);
       return rows.map(r => parseRowFromMysql('inventory_movements', r));
     } catch (err) {
-      console.warn('[Database] MySQL getInventoryMovementsLookups failed, falling back to AlaSQL:', err.message);
-      isMysqlActive = false;
-      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
+      if (isConnectionError(err)) {
+        markServerDegraded(`MySQL inventory movements connection error: ${err.message} (${err.code})`);
+      } else {
+        console.error('[Database Query Error] getInventoryMovementsLookups query error:', err.message);
+      }
     }
   }
 
@@ -1324,9 +1515,11 @@ async function getShiftSalesSummaryLookups(shiftId) {
 
       return rows[0];
     } catch (err) {
-      console.warn('[Database] MySQL getShiftSalesSummaryLookups failed, falling back to AlaSQL:', err.message);
-      isMysqlActive = false;
-      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
+      if (isConnectionError(err)) {
+        markServerDegraded(`MySQL shift summary connection error: ${err.message} (${err.code})`);
+      } else {
+        console.error('[Database Query Error] getShiftSalesSummaryLookups query error:', err.message);
+      }
     }
   }
 
@@ -2064,14 +2257,18 @@ app.get('/api/auth/active-sessions', async (req, res) => {
   }
 });
 
-// API: Service Health Check
-app.get('/api/health', async (req, res) => {
+// API: Service Health Check & Degraded Engine Status
+app.get(['/api/health', '/api/server/status'], async (req, res) => {
   const configured = await isDatabaseConfiguredStore();
   res.json({
-    status: 'ok',
+    status: isMysqlActive ? 'ok' : 'degraded',
+    isDegraded: !isMysqlActive,
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    dbEngine: isMysqlActive ? 'MySQL' : 'AlaSQL (Embedded Relational)',
+    dbEngine: isMysqlActive ? 'MySQL' : 'AlaSQL (Degraded In-Memory)',
+    degradedSince,
+    lastDegradedReason,
+    queuedWritesCount: degradedWriteQueue.length,
     isConfigured: configured
   });
 });
@@ -2424,8 +2621,11 @@ app.get('/api/db/backups', async (req, res) => {
         const [rows] = await pool.query('SELECT * FROM db_snapshots WHERE (isDeleted = 0 OR isDeleted IS NULL) ORDER BY timestamp DESC');
         return res.json({ success: true, data: rows.map(r => parseRowFromMysql('db_snapshots', r)) });
       } catch (err) {
-        isMysqlActive = false;
-        if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
+        if (isConnectionError(err)) {
+          markServerDegraded(`Backup list MySQL connection error: ${err.message} (${err.code})`);
+        } else {
+          console.error('[Database Query Error] Backup list query error:', err.message);
+        }
       }
     }
 
@@ -2462,8 +2662,11 @@ app.get('/api/db/backups/:id', async (req, res) => {
           return res.json({ success: true, data: parseRowFromMysql('db_snapshots', rows[0]) });
         }
       } catch (err) {
-        isMysqlActive = false;
-        if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
+        if (isConnectionError(err)) {
+          markServerDegraded(`Backup detail MySQL connection error: ${err.message} (${err.code})`);
+        } else {
+          console.error('[Database Query Error] Backup detail query error:', err.message);
+        }
       }
     }
 
@@ -2509,8 +2712,12 @@ app.post('/api/db/backups', express.json({ limit: '100mb' }), async (req, res) =
       try {
         await upsertRecordMysql('db_snapshots', snapshotRecord);
       } catch (err) {
-        isMysqlActive = false;
-        if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
+        if (isConnectionError(err)) {
+          markServerDegraded(`Backup write MySQL connection error: ${err.message} (${err.code})`);
+          queueDegradedWrite({ type: 'upsert', tableName: 'db_snapshots', record: snapshotRecord });
+        } else {
+          console.error('[Database Query Error] Backup write query error:', err.message);
+        }
       }
     }
 
@@ -2550,8 +2757,12 @@ app.delete('/api/db/backups/:id', async (req, res) => {
       try {
         await pool.execute('UPDATE db_snapshots SET isDeleted = 1, deletedAt = NOW() WHERE id = ?', [req.params.id]);
       } catch (err) {
-        isMysqlActive = false;
-        if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
+        if (isConnectionError(err)) {
+          markServerDegraded(`Backup delete MySQL connection error: ${err.message} (${err.code})`);
+          queueDegradedWrite({ type: 'soft_delete_backup', id: req.params.id });
+        } else {
+          console.error('[Database Query Error] Backup delete query error:', err.message);
+        }
       }
     }
 
@@ -2607,6 +2818,86 @@ async function sweepSoftDeletedBackups() {
 // Sweep soft-deleted backups every 24 hours
 setInterval(sweepSoftDeletedBackups, 24 * 60 * 60 * 1000);
 
+// Helper: Atomic Transaction Package MySQL Executor
+async function executeAtomicPackageMysql(tx) {
+  const payload = tx.payload || {};
+  const keyMap = {
+    sales: 'tp_sales',
+    saleItems: 'tp_sale_items',
+    movements: 'tp_movements',
+    auditLogs: 'tp_audit_logs',
+    ledgerEntries: 'tp_ledger_entries',
+    expenses: 'atpos_v2_expenses',
+    stockTransfers: 'tp_stock_transfers',
+    shifts: 'tp_shifts',
+    branches: 'tp_branches',
+    members: 'tp_members',
+    customBills: 'atpos_v2_custom_bills',
+    parkedSales: 'tp_parked_sales'
+  };
+
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    for (const [propName, key] of Object.entries(keyMap)) {
+      const items = payload[propName];
+      if (Array.isArray(items) && items.length > 0) {
+        const tableName = KEY_TO_TABLE_MAP[key];
+        if (tableName) {
+          for (const item of items) {
+            if (item && item.id) {
+              await upsertRecordMysql(tableName, item, conn);
+            }
+          }
+        }
+      }
+    }
+
+    if (payload.removeParkedSaleId) {
+      await conn.execute("DELETE FROM parked_sales WHERE id = ?", [payload.removeParkedSaleId]);
+    }
+
+    if (Array.isArray(payload.branchStockUpdates) && payload.branchStockUpdates.length > 0) {
+      const bsTable = KEY_TO_TABLE_MAP['tp_branch_stock'] || 'branch_stock';
+      for (const bsUpdate of payload.branchStockUpdates) {
+        if (!bsUpdate) continue;
+        const { id, branchId, productId, quantity, version, updatedAt } = bsUpdate;
+        if (!productId || !branchId) continue;
+        const bsId = id || `${branchId}_${productId}`;
+        await upsertRecordMysql(bsTable, {
+          id: bsId,
+          branchId,
+          productId,
+          quantity: quantity !== undefined ? Number(quantity) : 0,
+          version: version || 1,
+          updatedAt: updatedAt || new Date().toISOString().slice(0, 19).replace('T', ' ')
+        }, conn);
+      }
+    }
+
+    if (Array.isArray(payload.productUpdates) && payload.productUpdates.length > 0) {
+      const prodTable = KEY_TO_TABLE_MAP['tp_products'] || 'products';
+      for (const pUpdate of payload.productUpdates) {
+        if (pUpdate && pUpdate.id) {
+          await upsertRecordMysql(prodTable, pUpdate, conn);
+        }
+      }
+    }
+
+    await conn.commit();
+    return true;
+  } catch (err) {
+    if (conn) {
+      try { await conn.rollback(); } catch (_) {}
+    }
+    throw err;
+  } finally {
+    if (conn) conn.release();
+  }
+}
+
 // Atomic Transaction Package Processor
 async function handleAtomicTransactionPackage(tx, req) {
   if (!tx || !tx.id) return { success: false, error: 'Invalid transaction package' };
@@ -2636,66 +2927,20 @@ async function handleAtomicTransactionPackage(tx, req) {
   };
 
   // 1. Process MySQL Transaction if active
-  if (isMysqlActive || mysqlEnforced) {
-    let conn;
+  if (isMysqlActive) {
     try {
-      conn = await pool.getConnection();
-      await conn.beginTransaction();
-
-      for (const [propName, key] of Object.entries(keyMap)) {
-        const items = payload[propName];
-        if (Array.isArray(items) && items.length > 0) {
-          const tableName = KEY_TO_TABLE_MAP[key];
-          if (tableName) {
-            for (const item of items) {
-              if (item && item.id) {
-                await upsertRecordMysql(tableName, item, conn);
-              }
-            }
-          }
-        }
-      }
-
-      if (payload.removeParkedSaleId) {
-        await conn.execute("DELETE FROM parked_sales WHERE id = ?", [payload.removeParkedSaleId]);
-      }
-
-      if (Array.isArray(payload.branchStockUpdates) && payload.branchStockUpdates.length > 0) {
-        const bsTable = KEY_TO_TABLE_MAP['tp_branch_stock'] || 'branch_stock';
-        for (const bsUpdate of payload.branchStockUpdates) {
-          if (!bsUpdate) continue;
-          const { id, branchId, productId, quantity, version, updatedAt } = bsUpdate;
-          if (!productId || !branchId) continue;
-          const bsId = id || `${branchId}_${productId}`;
-          await upsertRecordMysql(bsTable, {
-            id: bsId,
-            branchId,
-            productId,
-            quantity: quantity !== undefined ? Number(quantity) : 0,
-            version: version || 1,
-            updatedAt: updatedAt || new Date().toISOString().slice(0, 19).replace('T', ' ')
-          }, conn);
-        }
-      }
-
-      if (Array.isArray(payload.productUpdates) && payload.productUpdates.length > 0) {
-        const prodTable = KEY_TO_TABLE_MAP['tp_products'] || 'products';
-        for (const pUpdate of payload.productUpdates) {
-          if (pUpdate && pUpdate.id) {
-            await upsertRecordMysql(prodTable, pUpdate, conn);
-          }
-        }
-      }
-
-      await conn.commit();
+      await executeAtomicPackageMysql(tx);
     } catch (mysqlErr) {
-      if (conn) {
-        try { await conn.rollback(); } catch (_) {}
+      if (isConnectionError(mysqlErr)) {
+        markServerDegraded(`Atomic transaction MySQL connection failure: ${mysqlErr.message}`);
+        queueDegradedWrite({ type: 'atomic_package', tx });
+      } else {
+        console.error('[MySQL Transaction Query Error]:', mysqlErr.message);
       }
-      console.warn('[Database] MySQL Transaction rolled back, falling back to memory engine:', mysqlErr.message);
-    } finally {
-      if (conn) conn.release();
     }
+  } else {
+    // Degraded mode: buffer write for automatic replay on reconnect!
+    queueDegradedWrite({ type: 'atomic_package', tx });
   }
 
   // 2. Upsert records for standard array collections in AlaSQL & File Store
@@ -2895,63 +3140,77 @@ app.post('/api/db/delta', async (req, res) => {
     const key = payload.key;
     const tableName = KEY_TO_TABLE_MAP[key];
 
+async function executeDeltaMysql(delta) {
+  const payload = delta.payload || {};
+  const key = payload.key;
+  const tableName = KEY_TO_TABLE_MAP[key];
+  if (!tableName) return;
+
+  switch (delta.type) {
+    case 'APPEND_SALE':
+    case 'APPEND_SALE_ITEM':
+    case 'APPEND_MOVEMENT':
+    case 'APPEND_AUDIT_LOG':
+    case 'APPEND_LEDGER_ENTRY':
+    case 'APPEND_EXPENSE':
+    case 'APPEND_ROW':
+    case 'UPDATE_ROW': {
+      const row = payload.row;
+      if (row && tableName) {
+        if (key === 'tp_users' && row.passwordHash && typeof row.passwordHash === 'string' && row.passwordHash.startsWith('$plaintext$')) {
+          row.passwordHash = await bcrypt.hash(row.passwordHash.replace('$plaintext$', ''), 10);
+        }
+        await upsertRecordMysql(tableName, row);
+      }
+      break;
+    }
+    case 'INCREMENT_STOCK': {
+      const { id, productId, branchId, change } = payload;
+      const changeVal = Number(change) || 0;
+      if (productId) {
+        await pool.execute('UPDATE products SET stockQuantity = stockQuantity + ?, version = version + 1, updatedAt = NOW() WHERE id = ?', [changeVal, productId]);
+      }
+      if (branchId && productId) {
+        await pool.execute(`
+          INSERT INTO branch_stock (id, branchId, productId, quantity, version, updatedAt)
+          VALUES (?, ?, ?, ?, 1, NOW())
+          ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity), version = version + 1, updatedAt = NOW()
+        `, [id || `${branchId}_${productId}`, branchId, productId, changeVal]);
+      }
+      break;
+    }
+    case 'DECREMENT_STOCK': {
+      const { id, productId, branchId, change } = payload;
+      const changeVal = Number(change) || 0;
+      if (productId) {
+        await pool.execute('UPDATE products SET stockQuantity = GREATEST(0, stockQuantity - ?), version = version + 1, updatedAt = NOW() WHERE id = ?', [changeVal, productId]);
+      }
+      if (branchId && productId) {
+        await pool.execute(`
+          INSERT INTO branch_stock (id, branchId, productId, quantity, version, updatedAt)
+          VALUES (?, ?, ?, 0, 1, NOW())
+          ON DUPLICATE KEY UPDATE quantity = GREATEST(0, quantity - VALUES(quantity)), version = version + 1, updatedAt = NOW()
+        `, [id || `${branchId}_${productId}`, branchId, productId]);
+      }
+      break;
+    }
+  }
+}
+
     // Attempt MySQL execution if MySQL active
     if (isMysqlActive && tableName) {
       try {
-        switch (delta.type) {
-          case 'APPEND_SALE':
-          case 'APPEND_SALE_ITEM':
-          case 'APPEND_MOVEMENT':
-          case 'APPEND_AUDIT_LOG':
-          case 'APPEND_LEDGER_ENTRY':
-          case 'APPEND_EXPENSE':
-          case 'APPEND_ROW':
-          case 'UPDATE_ROW': {
-            const row = payload.row;
-            if (row && tableName) {
-              if (key === 'tp_users' && row.passwordHash && typeof row.passwordHash === 'string' && row.passwordHash.startsWith('$plaintext$')) {
-                row.passwordHash = await bcrypt.hash(row.passwordHash.replace('$plaintext$', ''), 10);
-              }
-              await upsertRecordMysql(tableName, row);
-            }
-            break;
-          }
-          case 'INCREMENT_STOCK': {
-            const { id, productId, branchId, change } = payload;
-            const changeVal = Number(change) || 0;
-            if (productId) {
-              await pool.execute('UPDATE products SET stockQuantity = stockQuantity + ?, version = version + 1, updatedAt = NOW() WHERE id = ?', [changeVal, productId]);
-            }
-            if (branchId && productId) {
-              await pool.execute(`
-                INSERT INTO branch_stock (id, branchId, productId, quantity, version, updatedAt)
-                VALUES (?, ?, ?, ?, 1, NOW())
-                ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity), version = version + 1, updatedAt = NOW()
-              `, [id || `${branchId}_${productId}`, branchId, productId, changeVal]);
-            }
-            break;
-          }
-          case 'DECREMENT_STOCK': {
-            const { id, productId, branchId, change } = payload;
-            const changeVal = Number(change) || 0;
-            if (productId) {
-              await pool.execute('UPDATE products SET stockQuantity = GREATEST(0, stockQuantity - ?), version = version + 1, updatedAt = NOW() WHERE id = ?', [changeVal, productId]);
-            }
-            if (branchId && productId) {
-              await pool.execute(`
-                INSERT INTO branch_stock (id, branchId, productId, quantity, version, updatedAt)
-                VALUES (?, ?, ?, 0, 1, NOW())
-                ON DUPLICATE KEY UPDATE quantity = GREATEST(0, quantity - VALUES(quantity)), version = version + 1, updatedAt = NOW()
-              `, [id || `${branchId}_${productId}`, branchId, productId]);
-            }
-            break;
-          }
-        }
+        await executeDeltaMysql(delta);
       } catch (mysqlErr) {
-        console.warn('[Database] Delta MySQL processing error, relying on JSON fallback:', mysqlErr.message);
-        isMysqlActive = false;
-      if (mysqlEnforced) throw new Error('Database connection lost. Please try again later.');
-    }
+        if (isConnectionError(mysqlErr)) {
+          markServerDegraded(`Delta MySQL connection error: ${mysqlErr.message}`);
+          queueDegradedWrite({ type: 'delta', delta });
+        } else {
+          console.error('[Database Delta Query Error]:', mysqlErr.message);
+        }
+      }
+    } else if (tableName) {
+      queueDegradedWrite({ type: 'delta', delta });
     }
 
     // Process delta in JSON File DB
@@ -3498,55 +3757,72 @@ app.post(['/api/db/sales', '/api/mysql/sales', '/api/sqlite/sales'], express.jso
       } catch (_) {}
     }
 
-    if (isMysqlActive || mysqlEnforced) {
-      let conn;
-      try {
-        conn = await pool.getConnection();
-        await conn.beginTransaction();
+async function executePosSaleMysql(sale, items = []) {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
 
-        await upsertRecordMysql('sales', sale, conn);
+    await upsertRecordMysql('sales', sale, conn);
 
-        for (const item of items) {
-          if (!item.saleId) item.saleId = sale.id;
-          await upsertRecordMysql('sale_items', item, conn);
+    for (const item of items) {
+      if (!item.saleId) item.saleId = sale.id;
+      await upsertRecordMysql('sale_items', item, conn);
 
-          if (item.productId && item.quantity) {
-            const qty = Number(item.quantity) || 0;
-            if (sale.branchId) {
-              await conn.execute(`
-                UPDATE branch_stock 
-                SET quantity = GREATEST(0, quantity - ?), version = version + 1, updatedAt = NOW()
-                WHERE branchId = ? AND productId = ?
-              `, [qty, sale.branchId, item.productId]);
-            }
-            await conn.execute(`
-              UPDATE products 
-              SET stockQuantity = GREATEST(0, stockQuantity - ?), version = version + 1, updatedAt = NOW()
-              WHERE id = ?
-            `, [qty, item.productId]);
-          }
+      if (item.productId && item.quantity) {
+        const qty = Number(item.quantity) || 0;
+        if (sale.branchId) {
+          await conn.execute(`
+            UPDATE branch_stock 
+            SET quantity = GREATEST(0, quantity - ?), version = version + 1, updatedAt = NOW()
+            WHERE branchId = ? AND productId = ?
+          `, [qty, sale.branchId, item.productId]);
         }
-
-        const auditMovement = {
-          id: 'MOV-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
-          movementType: 'SALE',
-          referenceId: sale.id,
-          branchId: sale.branchId || 'B1',
-          performedBy: sale.cashierName || sale.cashierId || 'System',
-          createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-          details: `POS Sale ${sale.saleNumber || sale.id} - ${items.length} item(s)`
-        };
-        await upsertRecordMysql('inventory_movements', auditMovement, conn);
-
-        await conn.commit();
-      } catch (err) {
-        if (conn) {
-          try { await conn.rollback(); } catch (_) {}
-        }
-        console.warn('[MySQL POS Sale Transaction Error]', err.message);
-      } finally {
-        if (conn) conn.release();
+        await conn.execute(`
+          UPDATE products 
+          SET stockQuantity = GREATEST(0, stockQuantity - ?), version = version + 1, updatedAt = NOW()
+          WHERE id = ?
+        `, [qty, item.productId]);
       }
+    }
+
+    const auditMovement = {
+      id: 'MOV-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      movementType: 'SALE',
+      referenceId: sale.id,
+      branchId: sale.branchId || 'B1',
+      performedBy: sale.cashierName || sale.cashierId || 'System',
+      createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      details: `POS Sale ${sale.saleNumber || sale.id} - ${items.length} item(s)`
+    };
+    await upsertRecordMysql('inventory_movements', auditMovement, conn);
+
+    await conn.commit();
+    return true;
+  } catch (err) {
+    if (conn) {
+      try { await conn.rollback(); } catch (_) {}
+    }
+    throw err;
+  } finally {
+    if (conn) conn.release();
+  }
+}
+
+    if (isMysqlActive) {
+      try {
+        await executePosSaleMysql(sale, items);
+      } catch (err) {
+        if (isConnectionError(err)) {
+          markServerDegraded(`POS Sale MySQL connection error: ${err.message}`);
+          queueDegradedWrite({ type: 'pos_sale', sale, items });
+        } else {
+          console.error('[MySQL POS Sale Error]:', err.message);
+        }
+      }
+    } else {
+      // Degraded mode: queue write for automatic replay on reconnect!
+      queueDegradedWrite({ type: 'pos_sale', sale, items });
     }
 
     upsertRecordAlasql('sales', sale);
