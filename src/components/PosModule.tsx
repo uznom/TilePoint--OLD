@@ -38,7 +38,6 @@ import React,{ useCallback,useEffect,useRef,useState } from "react";
 import { useDb,useDbBranchStock,useDbProducts } from "../context/DbContext";
 import { useVirtualList } from "../hooks/useVirtualList";
 import { getBranchStockQuantity,getBranchStockRecord,isProductInBranch,isSameBranch } from "../lib/branchUtils";
-import { verifyPasswordWithToken } from "../lib/crypto";
 import { saveFileToBackup } from "../lib/fileBackupHelper";
 import { Member,Product,Sale,UserRole } from "../types/db";
 import { formatCurrency } from "../utils/formatters";
@@ -1764,14 +1763,25 @@ export const PosModule: React.FC<PosModuleProps> = ({
  return;
  }
 
- // Hash PBKDF2 check
- const isMatch = await verifyPasswordWithToken(
- approverPassword,
- approver.passwordHash || "",
- );
- if (!isMatch) {
- setApprovalError("Invalid security credentials password.");
- return;
+ // Server-side credential verification
+ try {
+   const res = await fetch("/api/auth/verify-override", {
+     method: "POST",
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify({
+       username: approver.username,
+       password: approverPassword,
+       requiredRole: required
+     })
+   });
+   const data = await res.json();
+   if (!res.ok || !data.success) {
+     setApprovalError(data.error || "Invalid security credentials password.");
+     return;
+   }
+ } catch (netErr) {
+   setApprovalError("Unable to verify security credentials with server.");
+   return;
  }
 
  // Approved! Resolve pending states

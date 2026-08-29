@@ -9,11 +9,6 @@ import { createPortal } from "react-dom";
 import { LoginModule } from "./components/LoginModule";
 import { SetupModule } from "./components/SetupModule";
 import { DbProvider, DbSnapshot, useDb } from "./context/DbContext";
-import {
-  createSaltedHash,
-  formatHashToken,
-  verifyPasswordWithToken,
-} from "./lib/crypto";
 import { saveFileToBackup, verifyAndUnwrapBackup } from "./lib/fileBackupHelper";
 import { User, UserRole } from "./types/db";
 
@@ -921,13 +916,8 @@ function AppContent() {
           setIsUpdatingProfile(false);
           return;
         }
-        if (!await verifyPasswordWithToken(currentPasswordInput, currentUser?.passwordHash || "")) {
-          setProfileModalError("Verification Failed: Current password is incorrect.");
-          setIsUpdatingProfile(false);
-          return;
-        }
-        if (newPasswordInput.length < 6) {
-          setProfileModalError("Security Policy: New password must be at least 6 characters.");
+        if (newPasswordInput.length < 8) {
+          setProfileModalError("Security Policy: New password must be at least 8 characters.");
           setIsUpdatingProfile(false);
           return;
         }
@@ -936,10 +926,26 @@ function AppContent() {
           setIsUpdatingProfile(false);
           return;
         }
-        const userSalt = (editUsername || currentUser?.username || "") + "_salt_tok";
-        const hash = await createSaltedHash(newPasswordInput, userSalt, 2500);
-        const token = formatHashToken(userSalt, hash, 2500);
-        passwordUpdates.passwordHash = token;
+
+        const sessionTok = sessionStorage.getItem("tp_session_token") || localStorage.getItem("tp_session_token");
+        const changeRes = await fetch("/api/auth/change-password", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(sessionTok ? { "Authorization": `Bearer ${sessionTok}` } : {})
+          },
+          body: JSON.stringify({
+            currentPassword: currentPasswordInput,
+            newPassword: newPasswordInput
+          })
+        });
+
+        const changeData = await changeRes.json();
+        if (!changeRes.ok || !changeData.success) {
+          setProfileModalError(changeData.error || "Password update failed on server.");
+          setIsUpdatingProfile(false);
+          return;
+        }
       }
 
       if (!editFullName.trim()) {

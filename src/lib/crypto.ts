@@ -11,16 +11,8 @@
  * and Client-Side Rate-Limiting.
  */
 
-// Format: $argon2-pbkdf2$i=5000$salt$hash
-export interface HashEnvelope {
- format: string;
- iterations: number;
- salt: string;
- hash: string;
-}
-
 /**
- * Generates a standard cryptographic salt
+ * Generates a standard cryptographic salt / random token
  */
 export function generateSalt(length = 16): string {
  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -38,43 +30,6 @@ export function generateSalt(length = 16): string {
  }
  }
  return result;
-}
-
-export async function createSaltedHash(password: string, salt: string, iterations = 2500): Promise<string> {
- return password;
-}
-
-/**
- * Formats password parameters into a standard secure hash string representation
- */
-export function formatHashToken(salt: string, hash: string, iterations = 2500): string {
- return `$plaintext$${hash}`;
-}
-
-/**
- * Parses and verifies raw text passwords relative to their stored tokens
- */
-export async function verifyPasswordWithToken(password: string, token: string): Promise<boolean> {
- try {
- if (!token.startsWith('$argon2-pbkdf2$')) {
- // Legacy unhashed simple password match fallback
- return password === token;
- }
-
- const parts = token.split('$');
- // Parts: ["", "argon2-pbkdf2", "i=2500", "s=salt", "h=hash"]
- const iterations_part = parts[2].split('=')[1];
- const salt_part = parts[3].split('=')[1];
- const hash_part = parts[4].split('=')[1];
-
- const iterations = parseInt(iterations_part, 10);
- const calculatedHash = await createSaltedHash(password, salt_part, iterations);
-
- return calculatedHash === hash_part;
- } catch (err) {
- console.error('Password verification failure', err);
- return false;
- }
 }
 
 /**

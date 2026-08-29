@@ -14,9 +14,7 @@ useState,
 } from "react";
 import { getBranchStockQuantity,getBranchStockRecord,isProductInBranch,isSameBranch,slugifyBranchStr } from "../lib/branchUtils";
 import {
-createSaltedHash,
 detectSQLi,
-formatHashToken,
 } from "../lib/crypto";
 import {
 DEFAULT_DAMAGE_REASONS,
@@ -1249,39 +1247,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  return safeParse<User[]>("tp_users", []);
  });
 
- // Dynamic seed passwords initialization
- useEffect(() => {
- const initializePasswords = async () => {
- let changed = false;
- const updatedUsers = await Promise.all(
- users.map(async (u) => {
- if (!u.passwordHash) {
- changed = true;
- const defaultPassword = "password123";
- const salt = u.username + "_salt_tok";
- const hashedVal = await createSaltedHash(
- defaultPassword,
- salt,
- 2500,
- );
- const formattedToken = formatHashToken(salt, hashedVal, 2500);
- return {
- ...u,
- passwordHash: formattedToken,
- };
- }
- return u;
- }),
- );
- if (changed) {
- setUsers(updatedUsers);
- localStorage.setItem("tp_users", JSON.stringify(updatedUsers));
- }
- };
- initializePasswords();
- }, [users]);
-
- // Rate Limiting Timer Tick
+  // Rate Limiting Timer Tick
  useEffect(() => {
  if (lockoutUntil === 0) return;
  const interval = setInterval(() => {
@@ -7005,12 +6971,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
     userFields: Omit<User, "id" | "createdAt" | "updatedAt">,
   ) => {
     logBranchAccessScope("CREATE", "User", userFields.branchAssignmentId, userFields.username);
-    let passwordHash = userFields.passwordHash;
-    if (!passwordHash) {
-      const salt = (userFields.username || "user") + "_salt_tok";
-      const hashedVal = await createSaltedHash("tilepoint", salt, 2500);
-      passwordHash = formatHashToken(salt, hashedVal, 2500);
-    }
+    const passwordHash = userFields.passwordHash || "tilepoint";
 
     const newUser: User = {
       ...userFields,
@@ -7082,15 +7043,12 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
   const resetPassword = (id: string) => {
     const target = users.find((u) => u.id === id);
     if (target) {
-      const runReset = async () => {
-        const salt = target.username + "_salt_tok";
-        const hashedVal = await createSaltedHash("tilepoint", salt, 2500);
-        const formattedToken = formatHashToken(salt, hashedVal, 2500);
+      const runReset = () => {
         let updatedUser: User | null = null;
         setUsers((prev) => {
           return prev.map((u) => {
             if (u.id === id) {
-              updatedUser = { ...u, passwordHash: formattedToken, updatedAt: new Date().toISOString() };
+              updatedUser = { ...u, passwordHash: "tilepoint", mustResetPassword: true, updatedAt: new Date().toISOString() };
               return updatedUser;
             }
             return u;

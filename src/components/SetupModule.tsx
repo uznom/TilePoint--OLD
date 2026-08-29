@@ -20,7 +20,6 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 import React, { useEffect, useState } from 'react';
 import { useDb } from '../context/DbContext';
-import { createSaltedHash, formatHashToken } from '../lib/crypto';
 import { applyHeroUIThemeToDOM, getStoredHeroUIConfig, saveHeroUIConfig } from '../lib/herouiThemeEngine';
 import {
   HeroAlert,
@@ -250,13 +249,6 @@ export const SetupModule: React.FC = () => {
     setInstallProgress(25);
 
     try {
-      const salt = username.trim() + "_salt_tok";
-      const hashed = await createSaltedHash(password, salt, 2500);
-      const token = formatHashToken(salt, hashed, 2500);
-
-      setInstallProgress(60);
-      await new Promise((r) => setTimeout(r, 200));
-
       const finalBranchId = branchId.trim() || "BR-MAIN";
       setInstallProgress(85);
 
@@ -280,7 +272,7 @@ export const SetupModule: React.FC = () => {
             branchAssignmentId: finalBranchId,
             status: "Active",
             managerPin: managerPin.trim(),
-            passwordHash: token,
+            passwordHash: password,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           },
@@ -337,43 +329,38 @@ export const SetupModule: React.FC = () => {
     }
   };
 
-  const handleLaunchApp = () => {
-    const salt = username.trim() + "_salt_tok";
-    createSaltedHash(password, salt, 2500).then(async (hashed) => {
-      const token = formatHashToken(salt, hashed, 2500);
+  const handleLaunchApp = async () => {
+    await triggerSystemProcessing(
+      "Provisioning Branch & Superadmin Account...",
+      1000,
+      "db",
+      undefined,
+      "Finalizing database indexing...",
+    );
 
-      await triggerSystemProcessing(
-        "Provisioning Branch & Superadmin Account...",
-        1000,
-        "db",
-        undefined,
-        "Finalizing database indexing...",
-      );
+    const finalBranchId = branchId.trim() || "BR-MAIN";
+    localStorage.setItem("tp_is_configured", "true");
+    localStorage.setItem("tilepoint_onboarded_setup", "true");
+    localStorage.setItem("tilepoint_primary_branch_id", finalBranchId);
 
-      const finalBranchId = branchId.trim() || "BR-MAIN";
-      localStorage.setItem("tp_is_configured", "true");
-      localStorage.setItem("tilepoint_onboarded_setup", "true");
-      localStorage.setItem("tilepoint_primary_branch_id", finalBranchId);
+    clearSetupSession();
 
-      clearSetupSession();
-
-      setupSystem(
-        {
-          fullName: fullName.trim(),
-          username: username.trim().toLowerCase(),
-          email: email.trim(),
-          passwordHash: token,
-          managerPin: managerPin.trim(),
-        },
-        {
-          id: finalBranchId,
-          name: branchName.trim(),
-          address: branchAddress.trim(),
-          phone: branchPhone.trim(),
-          storeLogo: storeLogo || undefined,
-        },
-      );
-    });
+    setupSystem(
+      {
+        fullName: fullName.trim(),
+        username: username.trim().toLowerCase(),
+        email: email.trim(),
+        passwordHash: password,
+        managerPin: managerPin.trim(),
+      },
+      {
+        id: finalBranchId,
+        name: branchName.trim(),
+        address: branchAddress.trim(),
+        phone: branchPhone.trim(),
+        storeLogo: storeLogo || undefined,
+      },
+    );
   };
 
   return (

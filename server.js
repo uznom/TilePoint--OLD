@@ -1079,8 +1079,8 @@ async function saveKeyToMysql(key, value) {
 async function saveKeyToStore(key, value) {
   if (key === 'tp_users' && Array.isArray(value)) {
     for (const u of value) {
-      if (u.passwordHash && typeof u.passwordHash === 'string' && u.passwordHash.startsWith('$plaintext$')) {
-        u.passwordHash = await bcrypt.hash(u.passwordHash.replace('$plaintext$', ''), 10);
+      if (u.passwordHash && typeof u.passwordHash === 'string' && !isBcryptHash(u.passwordHash)) {
+        u.passwordHash = await bcrypt.hash(u.passwordHash, 10);
       }
     }
   }
@@ -1557,49 +1557,99 @@ function getAppSecret() {
   return secret;
 }
 
-function createSaltedHashNode(password, salt, iterations = 2500) {
-  let hash = password + '$' + salt;
-  for (let i = 0; i < iterations; i++) {
-    hash = crypto.createHash('sha256').update(hash).digest('hex');
-  }
-  return Buffer.from(hash).toString('base64').slice(0, 64);
+// Cutoff date after which unmigrated legacy accounts must go through password reset
+const LEGACY_MIGRATION_CUTOFF_DATE = new Date('2026-10-01T00:00:00.000Z');
+
+function isBcryptHash(token) {
+  if (typeof token !== 'string') return false;
+  return token.startsWith('$2a$') || token.startsWith('$2b$') || token.startsWith('$2y$');
 }
 
-async function verifyPasswordHash(password, token) {
-  if (!password || !token || typeof token !== 'string') return false;
+async function verifyAndMigratePassword(password, targetUser) {
+  if (!password || !targetUser || !targetUser.passwordHash) {
+    return { valid: false, migrated: false };
+  }
 
-  if (token.startsWith('$2a$') || token.startsWith('$2b$') || token.startsWith('$2y$')) {
+  const token = targetUser.passwordHash;
+
+  // 1. Direct Bcrypt verification for modern hashes
+  if (isBcryptHash(token)) {
     try {
-      return await bcrypt.compare(password, token);
-    } catch (e) {
-      return false;
+      const match = await bcrypt.compare(password, token);
+      return { valid: match, migrated: false };
+    } catch (_) {
+      return { valid: false, migrated: false };
     }
   }
 
-  // Support legacy naive hashes to allow users to log in, but they should be migrated on login
-  if (token.startsWith('$argon2-pbkdf2$')) {
-    try {
-      const parts = token.split('$');
-      const iterations_part = parts[2]?.split('=')[1];
-      const salt_part = parts[3]?.split('=')[1];
-      const hash_part = parts[4]?.split('=')[1];
+  // 2. Cutoff enforcement: Unmigrated accounts past cutoff date must reset password
+  if (Date.now() > LEGACY_MIGRATION_CUTOFF_DATE.getTime()) {
+    console.warn(`[Security Policy] User ${targetUser.username} attempted login with unmigrated legacy hash past cutoff date (${LEGACY_MIGRATION_CUTOFF_DATE.toISOString()}). Forcing password reset.`);
+    return { valid: false, migrated: false, cutoffExpired: true };
+  }
 
-      const iterations = parseInt(iterations_part, 10) || 2500;
-      
-      const calculatedHash = createSaltedHashNode(password, salt_part, iterations);
-      if (calculatedHash === hash_part) return true;
+  // 3. Legacy scheme verification (Single-use migration path)
+  let legacyMatch = false;
+  try {
+    const parts = token.split('$').filter(Boolean);
+    let salt = '';
+    let iterations = 2500;
+    let expectedHash = '';
 
-      let altHash = salt_part + ':' + password;
+    for (const part of parts) {
+      if (part.startsWith('i=')) iterations = parseInt(part.slice(2), 10) || 2500;
+      else if (part.startsWith('s=')) salt = part.slice(2);
+      else if (part.startsWith('h=')) expectedHash = part.slice(2);
+    }
+
+    if (salt && expectedHash) {
+      let hash = password + '$' + salt;
       for (let i = 0; i < iterations; i++) {
-        altHash = crypto.createHash('sha256').update(altHash).digest('hex');
+        hash = crypto.createHash('sha256').update(hash).digest('hex');
       }
-      const calculatedAltHash = Buffer.from(altHash).toString('base64').slice(0, 64);
-      if (calculatedAltHash === hash_part) return true;
-    } catch (e) {
-      return false;
+      const calculatedHash = Buffer.from(hash).toString('base64').slice(0, 64);
+      if (calculatedHash === expectedHash) {
+        legacyMatch = true;
+      }
     }
+  } catch (_) {}
+
+  if (!legacyMatch) {
+    return { valid: false, migrated: false };
   }
-  return false;
+
+  // 4. Migrate on next successful login: immediately rehash with bcrypt and store
+  const newBcryptHash = await bcrypt.hash(password, 10);
+  const updatedUser = {
+    ...targetUser,
+    passwordHash: newBcryptHash,
+    mustResetPassword: 0,
+    updatedAt: new Date().toISOString()
+  };
+
+  if (isMysqlActive) {
+    try {
+      await upsertRecordMysql('users', updatedUser);
+    } catch (err) {
+      if (isConnectionError(err)) {
+        markServerDegraded(`Password migration MySQL error: ${err.message}`);
+        queueDegradedWrite({ type: 'upsert', tableName: 'users', record: updatedUser });
+      }
+    }
+  } else {
+    queueDegradedWrite({ type: 'upsert', tableName: 'users', record: updatedUser });
+  }
+
+  upsertRecordAlasql('users', updatedUser);
+  const db = readDbFile();
+  if (Array.isArray(db.tp_users)) {
+    db.tp_users = db.tp_users.map(u => u.id === updatedUser.id ? updatedUser : u);
+    writeDbFile(db);
+  }
+  invalidateDbCache();
+
+  console.log(`[Auth Migration] User ${targetUser.username}'s legacy credentials successfully migrated to bcrypt.`);
+  return { valid: true, migrated: true, newHash: newBcryptHash };
 }
 
 function generateServerSessionToken(user, sessionId) {
@@ -1953,8 +2003,15 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       return res.status(403).json({ success: false, error: 'Suspended Account: Terminal credentials restricted by Administration.' });
     }
 
-    const isMatch = await verifyPasswordHash(password, targetUser.passwordHash || '');
-    if (!isMatch) {
+    const authCheck = await verifyAndMigratePassword(password, targetUser);
+    if (!authCheck.valid) {
+      if (authCheck.cutoffExpired) {
+        return res.status(403).json({
+          success: false,
+          mustResetPassword: true,
+          error: 'Legacy credentials expired past the security cutoff date. You must reset your password.'
+        });
+      }
       return res.status(401).json({ success: false, error: 'Invalid employee ID or security password code.' });
     }
 
@@ -2118,6 +2175,45 @@ app.post('/api/auth/change-password', async (req, res) => {
     invalidateDbCache();
     console.log(`[Security] User ${targetUser.username} successfully updated their compromised password.`);
     return res.json({ success: true, message: 'Password successfully updated.' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Server-side Manager Override Verification
+app.post('/api/auth/verify-override', async (req, res) => {
+  try {
+    const { username, password, pin, requiredRole } = req.body || {};
+    if (!username || (!password && !pin)) {
+      return res.status(400).json({ success: false, error: 'Username and credentials are required.' });
+    }
+
+    const approver = await getInternalUserByUsername(username);
+    if (!approver || approver.status !== 'Active') {
+      return res.status(403).json({ success: false, error: 'Approver terminal credentials have been restricted.' });
+    }
+
+    const roleLower = (approver.role || '').toLowerCase();
+    const reqRoleLower = (requiredRole || 'manager').toLowerCase();
+    const isAuthorized = roleLower === 'admin' || (reqRoleLower === 'manager' && (roleLower === 'manager' || roleLower === 'admin'));
+    if (!isAuthorized) {
+      return res.status(403).json({ success: false, error: `Authorization Refused: ${approver.fullName} has role ${approver.role}, but at least role ${requiredRole || 'Manager'} is required.` });
+    }
+
+    if (pin && approver.managerPin) {
+      if (pin.trim() === approver.managerPin.trim()) {
+        return res.json({ success: true, approver: { id: approver.id, fullName: approver.fullName, role: approver.role } });
+      }
+    }
+
+    if (password) {
+      const authCheck = await verifyAndMigratePassword(password, approver);
+      if (authCheck.valid) {
+        return res.json({ success: true, approver: { id: approver.id, fullName: approver.fullName, role: approver.role } });
+      }
+    }
+
+    return res.status(401).json({ success: false, error: 'Invalid security credentials password.' });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
   }
@@ -3224,8 +3320,8 @@ async function executeDeltaMysql(delta) {
     case 'UPDATE_ROW': {
       const row = payload.row;
       if (row && tableName) {
-        if (key === 'tp_users' && row.passwordHash && typeof row.passwordHash === 'string' && row.passwordHash.startsWith('$plaintext$')) {
-          row.passwordHash = await bcrypt.hash(row.passwordHash.replace('$plaintext$', ''), 10);
+        if (key === 'tp_users' && row.passwordHash && typeof row.passwordHash === 'string' && !isBcryptHash(row.passwordHash)) {
+          row.passwordHash = await bcrypt.hash(row.passwordHash, 10);
         }
         await upsertRecordMysql(tableName, row);
       }
@@ -3295,8 +3391,8 @@ async function executeDeltaMysql(delta) {
         case 'APPEND_ROW':
         case 'UPDATE_ROW': {
           if (row && row.id) {
-            if (key === 'tp_users' && row.passwordHash && typeof row.passwordHash === 'string' && row.passwordHash.startsWith('$plaintext$')) {
-              row.passwordHash = await bcrypt.hash(row.passwordHash.replace('$plaintext$', ''), 10);
+            if (key === 'tp_users' && row.passwordHash && typeof row.passwordHash === 'string' && !isBcryptHash(row.passwordHash)) {
+              row.passwordHash = await bcrypt.hash(row.passwordHash, 10);
             }
             const idx = db[key].findIndex(r => r.id === row.id);
             if (idx >= 0) {
