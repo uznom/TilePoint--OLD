@@ -31,6 +31,9 @@ import {
 
 dotenv.config();
 
+// Server-side boot-time configuration for local reset escape hatch
+const ALLOW_LOCAL_RESET = process.env.ALLOW_LOCAL_RESET === 'true' || process.env.ENABLE_LOCAL_RESET === 'true';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -679,6 +682,63 @@ async function upsertBatchMysql(tableName, records, chunkSize = 50, executor = p
   }
 }
 
+// --- SERVER-SIDE FIELD DENYLIST & SERIALIZER SANITIZATION ---
+const SENSITIVE_FIELD_DENYLIST = Object.freeze(['passwordHash', 'managerPin']);
+
+/**
+ * Strips denylisted sensitive fields (such as passwordHash and managerPin)
+ * at the serializer level so they can never leave the process on any route.
+ */
+function stripSensitiveFields(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) {
+    return obj.map(item => stripSensitiveFields(item));
+  }
+  const clean = { ...obj };
+  for (const field of SENSITIVE_FIELD_DENYLIST) {
+    delete clean[field];
+  }
+  return clean;
+}
+
+function sanitizeDatabaseFields(db) {
+  if (!db || typeof db !== 'object') return db;
+  for (const key of Object.keys(db)) {
+    if (Array.isArray(db[key])) {
+      db[key] = db[key].map(item => stripSensitiveFields(item));
+    }
+  }
+  return db;
+}
+
+// Internal helper: Retrieve user with credentials for authentication verification only (never sent across API)
+async function getInternalUserByUsername(username) {
+  const cleanUsername = (username || '').trim().toLowerCase();
+  if (!cleanUsername) return null;
+
+  if (isMysqlActive || mysqlEnforced) {
+    try {
+      const [rows] = await pool.query('SELECT * FROM users WHERE LOWER(username) = ?', [cleanUsername]);
+      if (rows.length > 0) {
+        return parseRowFromMysql('users', rows[0]);
+      }
+    } catch (err) {
+      console.warn('[User Store] MySQL query user error:', err.message);
+    }
+  }
+
+  try {
+    const rows = alasql('SELECT * FROM `users` WHERE LOWER(username) = ?', [cleanUsername]) || [];
+    if (rows.length > 0) {
+      return parseRowFromMysql('users', rows[0]);
+    }
+  } catch (e) {}
+
+  const db = readDbFile();
+  const users = Array.isArray(db.tp_users) ? db.tp_users : [];
+  return users.find(u => (u.username || '').trim().toLowerCase() === cleanUsername) || null;
+}
+
 // Helper: Read full database state from AlaSQL
 function readFullDatabaseFromAlasql() {
   const db = {};
@@ -709,6 +769,9 @@ function readFullDatabaseFromAlasql() {
     db.tp_is_configured = 'true';
     db.tilepoint_onboarded_setup = 'true';
   }
+
+  // Strip denylisted fields at serializer so sensitive credentials can never leave the process
+  sanitizeDatabaseFields(db);
 
   const hash = computeDatabaseHash(db);
   return { db, hash };
@@ -752,6 +815,9 @@ async function readFullDatabaseFromMysql() {
     db.tp_is_configured = 'true';
     db.tilepoint_onboarded_setup = 'true';
   }
+
+  // Strip denylisted fields at serializer so sensitive credentials can never leave the process
+  sanitizeDatabaseFields(db);
 
   const hash = computeDatabaseHash(db);
   return { db, hash };
@@ -1657,9 +1723,7 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Username and password are required.' });
     }
 
-    const fullDb = await readFullDatabase();
-    const users = fullDb.db.tp_users || [];
-    const targetUser = users.find(u => (u.username || '').trim().toLowerCase() === username.trim().toLowerCase());
+    const targetUser = await getInternalUserByUsername(username);
 
     if (!targetUser) {
       return res.status(401).json({ success: false, error: 'Invalid employee ID or security password code.' });
@@ -2019,7 +2083,7 @@ app.get('/api/db', async (req, res) => {
     if (configured) {
       const user = verifyAndExtractToken(req);
       if (!user) {
-        return res.status(401).json({ success: false, error: 'Unauthorized session.' });
+        return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
       }
     }
 
@@ -2056,16 +2120,6 @@ app.get('/api/db', async (req, res) => {
     delete dbCopy.tp_db_snapshots;
     delete dbCopy.tp_processed_delta_ids;
 
-    // Filter sensitive fields
-    if (Array.isArray(dbCopy.tp_users)) {
-      dbCopy.tp_users = dbCopy.tp_users.map(u => {
-        const userCopy = { ...u };
-        delete userCopy.passwordHash;
-        delete userCopy.managerPin;
-        return userCopy;
-      });
-    }
-
     res.json({
       success: true,
       unchanged: false,
@@ -2082,6 +2136,14 @@ app.get('/api/db', async (req, res) => {
 // Efficiently returns only changed rows across collections since client watermark
 app.get(['/api/sync/delta', '/api/db/delta-sync'], async (req, res) => {
   try {
+    const configured = await isDatabaseConfiguredStore();
+    if (configured) {
+      const user = verifyAndExtractToken(req);
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
+      }
+    }
+
     const sinceTimestamp = req.query.since || req.query.sinceTimestamp;
     const clientHash = req.query.hash || req.query.globalHash;
     const branchId = req.query.branchId;
@@ -2129,6 +2191,14 @@ app.get(['/api/sync/delta', '/api/db/delta-sync'], async (req, res) => {
 // Accepts a dictionary of { clientHashes: { tp_products: '...', ... } } and returns ONLY desynchronized collections
 app.post('/api/sync/delta/query', async (req, res) => {
   try {
+    const configured = await isDatabaseConfiguredStore();
+    if (configured) {
+      const user = verifyAndExtractToken(req);
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
+      }
+    }
+
     const { since, clientHashes = {}, branchId, globalHash } = req.body || {};
 
     if (globalHash && cachedDbHash && globalHash === cachedDbHash && !isDbCacheDirty) {
@@ -2170,6 +2240,14 @@ app.post('/api/sync/delta/query', async (req, res) => {
 // API: Get Current Table Watermarks & Collection Checksums
 app.get('/api/sync/watermarks', async (req, res) => {
   try {
+    const configured = await isDatabaseConfiguredStore();
+    if (configured) {
+      const user = verifyAndExtractToken(req);
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
+      }
+    }
+
     const { db, hash } = await readFullDatabase();
     const collectionHashes = computeAllCollectionHashes(db);
 
@@ -2188,6 +2266,14 @@ app.get('/api/sync/watermarks', async (req, res) => {
 // API: Fast Single Collection Sync (Targeted Fetch)
 app.get('/api/sync/collection/:key', async (req, res) => {
   try {
+    const configured = await isDatabaseConfiguredStore();
+    if (configured) {
+      const user = verifyAndExtractToken(req);
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
+      }
+    }
+
     const key = req.params.key;
     const clientHash = req.query.hash;
 
@@ -2221,6 +2307,14 @@ app.get('/api/sync/collection/:key', async (req, res) => {
 // API: Indexed Sales Lookup
 app.get('/api/db/sales/lookup', async (req, res) => {
   try {
+    const configured = await isDatabaseConfiguredStore();
+    if (configured) {
+      const user = verifyAndExtractToken(req);
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
+      }
+    }
+
     const sales = await getSalesWithItemsLookups(req.query);
     res.json({ success: true, count: sales.length, data: sales });
   } catch (err) {
@@ -2231,6 +2325,14 @@ app.get('/api/db/sales/lookup', async (req, res) => {
 // API: Indexed Inventory & Branch Stock Lookup
 app.get('/api/db/inventory/lookup', async (req, res) => {
   try {
+    const configured = await isDatabaseConfiguredStore();
+    if (configured) {
+      const user = verifyAndExtractToken(req);
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
+      }
+    }
+
     const products = await getInventoryAndBranchStockLookups(req.query);
     res.json({ success: true, count: products.length, data: products });
   } catch (err) {
@@ -2241,6 +2343,14 @@ app.get('/api/db/inventory/lookup', async (req, res) => {
 // API: Indexed Inventory Movements Lookup
 app.get('/api/db/inventory-movements/lookup', async (req, res) => {
   try {
+    const configured = await isDatabaseConfiguredStore();
+    if (configured) {
+      const user = verifyAndExtractToken(req);
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
+      }
+    }
+
     const movements = await getInventoryMovementsLookups(req.query);
     res.json({ success: true, count: movements.length, data: movements });
   } catch (err) {
@@ -2251,6 +2361,14 @@ app.get('/api/db/inventory-movements/lookup', async (req, res) => {
 // API: Indexed Shift Sales Summary Lookup
 app.get('/api/db/shifts/:shiftId/summary', async (req, res) => {
   try {
+    const configured = await isDatabaseConfiguredStore();
+    if (configured) {
+      const user = verifyAndExtractToken(req);
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
+      }
+    }
+
     const summary = await getShiftSalesSummaryLookups(req.params.shiftId);
     if (!summary) {
       return res.status(404).json({ success: false, error: 'Shift sales summary not found' });
@@ -2950,17 +3068,68 @@ app.post('/api/db/bulk', async (req, res) => {
 
 // API: Reset / Purge database
 app.post('/api/db/truncate', async (req, res) => {
-  const { mode } = req.body;
-
+  // Step 1: Authenticate and authorize unconditionally BEFORE touching req.body (No NODE_ENV condition)
   const user = verifyAndExtractToken(req);
-  if (!user) {
-    return res.status(401).json({ success: false, error: 'Unauthorized session.' });
-  }
-  if (user.role !== 'Admin') {
+
+  if (!ALLOW_LOCAL_RESET) {
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
+    }
+    if (user.role !== 'Admin' && user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Forbidden: Resetting database is restricted to system administrators.' });
+    }
+  } else if (user && user.role !== 'Admin' && user.role !== 'admin') {
     return res.status(403).json({ success: false, error: 'Forbidden: Resetting database is restricted to system administrators.' });
   }
 
+  // Step 2: Validate request body and require typed confirmation phrase (force is completely deleted/ignored)
+  const { mode = 'all', confirmation } = req.body || {};
+
+  if (!confirmation || typeof confirmation !== 'string' || confirmation.trim().toUpperCase() !== 'RESET') {
+    return res.status(400).json({
+      success: false,
+      error: 'Destructive action confirmation required: Typed confirmation phrase "RESET" must be provided in request body.'
+    });
+  }
+
+  if (mode !== 'all' && mode !== 'transactions') {
+    return res.status(400).json({ success: false, error: 'Invalid mode. Mode must be "all" or "transactions".' });
+  }
+
+  // Step 3: Determine actor and log to audit_logs BEFORE the first TRUNCATE
+  const actor = user || {
+    id: 'LOCAL_BOOT_BYPASS',
+    username: 'LOCAL_RESET_ESCAPE_HATCH',
+    role: 'Admin',
+    branchId: 'HQ'
+  };
+
+  const auditEntry = {
+    id: 'AUD-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+    actionCode: 'DATABASE_TRUNCATE',
+    description: `Database truncate (${mode}) executed by ${actor.username || actor.name || actor.id} [${actor.role}]`,
+    module: 'SYSTEM_SETTINGS',
+    userId: actor.id || 'Admin',
+    userName: actor.username || actor.name || actor.fullName || 'Administrator',
+    username: actor.username || actor.name || actor.fullName || 'Administrator',
+    referenceId: `TRUNCATE_${mode.toUpperCase()}_${Date.now()}`,
+    branchId: actor.branchId || '',
+    timestamp: new Date().toISOString(),
+    createdAt: new Date().toISOString()
+  };
+
   try {
+    // Record to audit_logs in MySQL and AlaSQL before any TRUNCATE operations
+    if (isMysqlActive || mysqlEnforced) {
+      try {
+        await upsertRecordMysql('audit_logs', auditEntry);
+      } catch (err) {
+        console.warn('[MySQL Audit Warning Before Truncate]:', err.message);
+      }
+    }
+    upsertRecordAlasql('audit_logs', auditEntry);
+
+    // Step 4: Execute database truncation (preserving audit_logs so the pre-truncate audit trail is permanent)
     if (isMysqlActive || mysqlEnforced) {
       try {
         await pool.query('SET FOREIGN_KEY_CHECKS = 0');
@@ -2970,7 +3139,7 @@ app.post('/api/db/truncate', async (req, res) => {
             'branch_stock', 'shifts', 'sales', 'sale_items', 'purchase_orders',
             'purchase_order_items', 'stock_transfers', 'stock_transfer_items',
             'stock_movements', 'inventory_movements', 'deliveries', 'damage_logs',
-            'ledger_entries', 'audit_logs', 'custom_corporate_bills', 'custom_bills',
+            'ledger_entries', 'custom_corporate_bills', 'custom_bills',
             'transmittals', 'members', 'expenses', 'product_returns', 'branch_sales_reports',
             'active_sessions', 'db_snapshots', 'parked_sales', 'system_settings',
             'delta_logs', 'receipt_history', 'offline_mutations', 'processed_delta_ids'
@@ -2985,7 +3154,7 @@ app.post('/api/db/truncate', async (req, res) => {
         } else if (mode === 'transactions') {
           const transactionTables = [
             'purchase_orders', 'purchase_order_items', 'transmittals', 'shifts',
-            'sales', 'sale_items', 'stock_movements', 'inventory_movements', 'audit_logs',
+            'sales', 'sale_items', 'stock_movements', 'inventory_movements',
             'stock_transfers', 'stock_transfer_items', 'ledger_entries',
             'branch_sales_reports', 'deliveries', 'damage_logs', 'expenses',
             'product_returns', 'parked_sales', 'custom_bills', 'custom_corporate_bills'
@@ -3004,13 +3173,13 @@ app.post('/api/db/truncate', async (req, res) => {
       }
     }
 
-    // Always clear in AlaSQL and File DB as well
+    // Always clear in AlaSQL and File DB as well (preserving audit_logs)
     const allAlasqlTables = [
       'branches', 'users', 'suppliers', 'brands', 'products', 'inventory',
       'branch_stock', 'shifts', 'sales', 'sale_items', 'purchase_orders',
       'purchase_order_items', 'stock_transfers', 'stock_transfer_items',
       'stock_movements', 'inventory_movements', 'deliveries', 'damage_logs',
-      'ledger_entries', 'audit_logs', 'custom_corporate_bills', 'custom_bills',
+      'ledger_entries', 'custom_corporate_bills', 'custom_bills',
       'transmittals', 'members', 'expenses', 'product_returns', 'branch_sales_reports',
       'active_sessions', 'db_snapshots', 'parked_sales', 'system_settings',
       'delta_logs', 'receipt_history', 'offline_mutations', 'processed_delta_ids'
@@ -3028,11 +3197,13 @@ app.post('/api/db/truncate', async (req, res) => {
 
       isDbCacheDirty = true;
       cachedDbHash = null;
-      writeDbFile(getEmptyDatabaseStructure());
+      const emptyDb = getEmptyDatabaseStructure();
+      emptyDb.tp_audit_logs = [auditEntry];
+      writeDbFile(emptyDb);
     } else if (mode === 'transactions') {
       const transactionTables = [
         'purchase_orders', 'purchase_order_items', 'transmittals', 'shifts',
-        'sales', 'sale_items', 'stock_movements', 'inventory_movements', 'audit_logs',
+        'sales', 'sale_items', 'stock_movements', 'inventory_movements',
         'stock_transfers', 'stock_transfer_items', 'ledger_entries',
         'branch_sales_reports', 'deliveries', 'damage_logs', 'expenses',
         'product_returns', 'parked_sales', 'custom_bills', 'custom_corporate_bills'
@@ -3052,7 +3223,7 @@ app.post('/api/db/truncate', async (req, res) => {
     const { hash } = await readFullDatabase();
     emitPulseUpdate('truncate', hash, req.headers['x-client-id']);
 
-    res.json({ success: true, mode });
+    res.json({ success: true, mode, actor: actor.username || actor.id });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

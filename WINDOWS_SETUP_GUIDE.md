@@ -333,15 +333,15 @@ If you need to perform a complete system reset, flush all data, or return TilePo
 3. Confirm the security prompt. The system will reset `tp_is_configured` to `false` and automatically redirect to the **Setup & Installer Wizard**.
 
 #### Method B: Command Line API Truncate Call
-Execute this fetch command to reset the database to a clean slate state:
+Execute this fetch command to reset the database to a clean slate state (requires Admin Authorization token or boot with `ALLOW_LOCAL_RESET=true`):
 ```cmd
-node -e "fetch('http://127.0.0.1:3000/api/db/truncate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'all' }) }).then(r => r.json()).then(console.log);"
+node -e "fetch('http://127.0.0.1:3000/api/db/truncate', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer <ADMIN_TOKEN>' }, body: JSON.stringify({ mode: 'all', confirmation: 'RESET' }) }).then(r => r.json()).then(console.log);"
 ```
 
 #### Method C: Reset Transactions Only (Preserve Store Setup & Users)
-To clear sales, shifts, purchase orders, and audit logs while preserving store setup, branches, and user accounts:
+To clear sales, shifts, and purchase orders while preserving store setup, branches, and user accounts:
 ```cmd
-node -e "fetch('http://127.0.0.1:3000/api/db/truncate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'transactions' }) }).then(r => r.json()).then(console.log);"
+node -e "fetch('http://127.0.0.1:3000/api/db/truncate', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer <ADMIN_TOKEN>' }, body: JSON.stringify({ mode: 'transactions', confirmation: 'RESET' }) }).then(r => r.json()).then(console.log);"
 ```
 
 ---
@@ -557,7 +557,7 @@ If you prefer using Nginx for Windows as an enterprise reverse proxy instead of 
 | **Rebuild Client Bundle** | `npm run build` | Project Root Directory |
 | **Import MySQL Schema** | `mysql -u root -p tilepoint_db < schema.sql` | CMD / Terminal |
 | **Migrate Data to MySQL** | `node scripts/migrateJsonToMysql.js` | Project Root Directory |
-| **Reset Database (Clean Slate)** | `node -e "fetch('http://127.0.0.1:3000/api/db/truncate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'all' }) }).then(r=>r.json()).then(console.log);"` | CMD / PowerShell |
+| **Reset Database (Clean Slate)** | `node -e "fetch('http://127.0.0.1:3000/api/db/truncate', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer <TOKEN>' }, body: JSON.stringify({ mode: 'all', confirmation: 'RESET' }) }).then(r=>r.json()).then(console.log);"` | CMD / PowerShell |
 | **Check Port 3000 Usage** | `netstat -ano \| findstr :3000` | CMD / PowerShell |
 | **Kill Process on Port 3000**| `taskkill /PID <PID> /F` | CMD (Run as Admin) |
 | **Check Local IP Address** | `ipconfig` | CMD / PowerShell |
@@ -920,15 +920,15 @@ If you need to perform a complete system reset, flush all data, or return TilePo
 3. Confirm the security prompt. The system will reset `tp_is_configured` to `false` and automatically redirect to the **Setup & Installer Wizard**.
 
 #### Method B: Command Line API Truncate Call
-Execute this curl / fetch command to reset the database to a clean slate state:
+Execute this curl / fetch command to reset the database to a clean slate state (requires Admin Authorization token or boot with `ALLOW_LOCAL_RESET=true`):
 ```cmd
-node -e "fetch('http://127.0.0.1:3000/api/db/truncate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'all' }) }).then(r => r.json()).then(console.log);"
+node -e "fetch('http://127.0.0.1:3000/api/db/truncate', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer <ADMIN_TOKEN>' }, body: JSON.stringify({ mode: 'all', confirmation: 'RESET' }) }).then(r => r.json()).then(console.log);"
 ```
 
 #### Method C: Reset Transactions Only (Preserve Store Setup & Users)
-To clear sales, shifts, purchase orders, and audit logs while preserving store setup, branches, and user accounts:
+To clear sales, shifts, and purchase orders while preserving store setup, branches, and user accounts:
 ```cmd
-node -e "fetch('http://127.0.0.1:3000/api/db/truncate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'transactions' }) }).then(r => r.json()).then(console.log);"
+node -e "fetch('http://127.0.0.1:3000/api/db/truncate', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer <ADMIN_TOKEN>' }, body: JSON.stringify({ mode: 'transactions', confirmation: 'RESET' }) }).then(r => r.json()).then(console.log);"
 ```
 
 ---
@@ -1513,7 +1513,7 @@ Chromium (Chrome / Edge) enforces strict security rules for Service Workers. Ser
 | **Verify Code & Types** | `npm run lint` | Project Root Directory |
 | **Rebuild Client Bundle** | `npm run build` | Project Root Directory |
 | **Migrate Data to MySQL** | `node scripts/migrateJsonToMysql.js` | Project Root Directory |
-| **Reset Database (Clean Slate)** | `node -e "fetch('http://127.0.0.1:3000/api/db/truncate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'all' }) }).then(r=>r.json()).then(console.log);"` | CMD / PowerShell |
+| **Reset Database (Clean Slate)** | `node -e "fetch('http://127.0.0.1:3000/api/db/truncate', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer <TOKEN>' }, body: JSON.stringify({ mode: 'all', confirmation: 'RESET' }) }).then(r=>r.json()).then(console.log);"` | CMD / PowerShell |
 | **Check Port 3000 Usage** | `netstat -ano \| findstr :3000` | CMD / PowerShell |
 | **Kill Process on Port 3000**| `taskkill /PID <PID> /F` | CMD (Run as Admin) |
 | **Check Local IP Address** | `ipconfig` | CMD / PowerShell |

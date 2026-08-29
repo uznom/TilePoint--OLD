@@ -105,14 +105,14 @@ if (typeof window !== 'undefined') {
   (window as any).resetDB = async function (mode = 'all') {
     console.log(`[TilePoint Reset] Initiating database reset (mode: ${mode})...`);
     try {
-      const token = localStorage.getItem('token') || '';
+      const token = localStorage.getItem('token') || localStorage.getItem('tp_token') || '';
       const res = await fetch('/api/db/truncate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ mode, force: true }),
+        body: JSON.stringify({ mode, confirmation: 'RESET' }),
       });
       const data = await res.json();
       console.log('[TilePoint Reset] Server wipe response:', data);

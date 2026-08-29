@@ -712,7 +712,7 @@ interface DbContextType {
  referenceNo: string;
  remarks: string;
  }) => void;
- truncateDatabase: (mode: "all" | "transactions") => void;
+  truncateDatabase: (mode: "all" | "transactions", confirmationPhrase?: string) => Promise<void> | void;
 
  // Actions - Branch Sales Reports Transmission
  branchSalesReports: BranchSalesReport[];
@@ -6773,7 +6773,10 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
  };
 
   // --- DATABASE FACTORY TRUNCATE & RE-SEED ENGINE ---
-  const truncateDatabase = async (mode: "all" | "transactions") => {
+  const truncateDatabase = async (
+    mode: "all" | "transactions",
+    confirmationPhrase: string = "RESET",
+  ) => {
     if (currentUser && currentUser.role !== UserRole.ADMIN) {
       console.error(
         "Unauthorized security violation: Only system administrators are authorized to reset or truncate the database.",
@@ -6799,7 +6802,7 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({
           "Content-Type": "application/json",
           ...getAuthHeaders(),
         },
-        body: JSON.stringify({ mode }),
+        body: JSON.stringify({ mode, confirmation: confirmationPhrase }),
       });
     } catch (e) {
       console.warn(
