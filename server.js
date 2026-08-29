@@ -643,7 +643,7 @@ const KEY_TO_TABLE_MAP = {
 // Allowed schema columns per table for safe SQL generation
 const TABLE_COLUMNS = {
   branches: ['id', 'name', 'manager', 'address', 'phone', 'monthlySales', 'staffCount', 'activeCashiers', 'isDeleted', 'isDistributionBranch', 'storeLogo', 'branchCode', 'localIp', 'gatewayRules', 'receiptFacebook', 'receiptPromoText', 'receiptQrBase64', 'receiptThankYou', 'tin', 'logoSize', 'openingTime', 'closingTime', 'operatingDays', 'createdAt', 'updatedAt'],
-  users: ['id', 'avatarInitials', 'fullName', 'username', 'email', 'role', 'branchAssignmentId', 'status', 'managerPin', 'passwordHash', 'profilePicture', 'isNew', 'createdAt', 'updatedAt'],
+  users: ['id', 'avatarInitials', 'fullName', 'username', 'email', 'role', 'branchAssignmentId', 'status', 'managerPin', 'passwordHash', 'profilePicture', 'isNew', 'mustResetPassword', 'createdAt', 'updatedAt'],
   suppliers: ['id', 'name', 'contactPerson', 'email', 'phone', 'address', 'isDeleted', 'createdAt', 'updatedAt'],
   brands: ['id', 'name', 'supplierId', 'description', 'isDeleted', 'createdAt'],
   products: ['id', 'productCode', 'productName', 'category', 'brand', 'sku', 'product_sku', 'category_id', 'barcode', 'unit', 'costPrice', 'sellingPrice', 'stockQuantity', 'lowStockThreshold', 'designName', 'size', 'supplierId', 'origin', 'image', 'boxQuantity', 'coveragePerBox', 'minimumStock', 'qrCode', 'createdBy', 'updatedBy', 'version', 'markupPercent', 'taxType', 'hasExpiration', 'expirationDate', 'isDeleted', 'createdAt', 'updatedAt'],
@@ -715,7 +715,8 @@ async function initDatabaseSchema() {
       "CREATE INDEX `idx_products_sku` ON `products` (`sku`)",
       "CREATE INDEX `idx_products_category` ON `products` (`category`)",
       "CREATE INDEX `idx_products_sku_category` ON `products` (`sku`, `category`)",
-      "CREATE INDEX `idx_products_sku_cat_id` ON `products` (`product_sku`, `category_id`)"
+      "CREATE INDEX `idx_products_sku_cat_id` ON `products` (`product_sku`, `category_id`)",
+      "ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `mustResetPassword` TINYINT(1) NOT NULL DEFAULT 1"
     ];
 
     for (const q of explicitIndexQueries) {
@@ -2044,6 +2045,7 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       token: sessionToken,
       sessionId: verifiedSessionId,
       user: safeUser,
+      mustResetPassword: Boolean(targetUser.mustResetPassword),
       session: sessionRecord,
       sessionStartedAt,
       expiresAt,
@@ -2053,6 +2055,71 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
   } catch (err) {
     console.error('[Auth API] Login error:', err);
     return res.status(500).json({ success: false, error: 'Internal server authentication error: ' + err.message });
+  }
+});
+
+// API: Force/Change Password Reset Endpoint
+app.post('/api/auth/change-password', async (req, res) => {
+  try {
+    const userPayload = verifyAndExtractToken(req);
+    if (!userPayload || !userPayload.id) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Authentication token required.' });
+    }
+
+    const { currentPassword, newPassword } = req.body || {};
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
+      return res.status(400).json({ success: false, error: 'New password must be at least 8 characters long.' });
+    }
+
+    const fullDb = await readFullDatabase();
+    const users = fullDb.db.tp_users || [];
+    const targetUser = users.find(u => u.id === userPayload.id);
+
+    if (!targetUser) {
+      return res.status(404).json({ success: false, error: 'User account not found.' });
+    }
+
+    // Verify current password if user does NOT currently have mustResetPassword flag set
+    if (!targetUser.mustResetPassword && currentPassword) {
+      const isMatch = await verifyPasswordHash(currentPassword, targetUser.passwordHash || '');
+      if (!isMatch) {
+        return res.status(401).json({ success: false, error: 'Current password code is incorrect.' });
+      }
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    const updatedUser = {
+      ...targetUser,
+      passwordHash: newHash,
+      mustResetPassword: 0,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (isMysqlActive) {
+      try {
+        await upsertRecordMysql('users', updatedUser);
+      } catch (err) {
+        if (isConnectionError(err)) {
+          markServerDegraded(`Password change MySQL error: ${err.message}`);
+          queueDegradedWrite({ type: 'upsert', tableName: 'users', record: updatedUser });
+        }
+      }
+    } else {
+      queueDegradedWrite({ type: 'upsert', tableName: 'users', record: updatedUser });
+    }
+
+    upsertRecordAlasql('users', updatedUser);
+    const db = readDbFile();
+    if (Array.isArray(db.tp_users)) {
+      db.tp_users = db.tp_users.map(u => u.id === updatedUser.id ? updatedUser : u);
+      writeDbFile(db);
+    }
+
+    invalidateDbCache();
+    console.log(`[Security] User ${targetUser.username} successfully updated their compromised password.`);
+    return res.json({ success: true, message: 'Password successfully updated.' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -4276,12 +4343,36 @@ if (process.env.NODE_ENV === 'production') {
   }
 }
 
+// Force password reset across all user accounts due to historical compromise
+async function enforceGlobalCompromisedPasswordReset() {
+  try {
+    if (isMysqlActive || mysqlEnforced) {
+      try {
+        await pool.query('UPDATE users SET mustResetPassword = 1');
+      } catch (e) {}
+    }
+    try {
+      alasql('UPDATE users SET mustResetPassword = true');
+    } catch (e) {}
+    const db = readDbFile();
+    if (Array.isArray(db.tp_users)) {
+      db.tp_users = db.tp_users.map(u => ({ ...u, mustResetPassword: true }));
+      writeDbFile(db);
+    }
+    invalidateDbCache();
+    console.log('[Security] Forced password reset flag marked active across all user accounts.');
+  } catch (err) {
+    console.warn('[Security] Password reset notice:', err.message);
+  }
+}
+
 // Initialize AlaSQL Embedded Engine
 initAlasqlEngine();
 
 server.listen(PORT, '0.0.0.0', async () => {
   await initDatabaseSchema();
   await invalidateAllSessionsOnBoot();
+  await enforceGlobalCompromisedPasswordReset();
   console.log(`========================================`);
   console.log(`   TILEPOINT SHARED DATABASE SERVER     `);
   console.log(`========================================`);

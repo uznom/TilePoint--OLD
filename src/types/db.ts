@@ -37,6 +37,7 @@ export interface User {
  passwordHash?: string; // PBKDF2 secure token
  profilePicture?: string; // Base64 or URI asset pointer
  isNew?: boolean;
+ mustResetPassword?: boolean;
  createdAt: string;
  updatedAt: string;
 }

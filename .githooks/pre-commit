@@ -1,0 +1,5 @@
+#!/bin/sh
+# TilePoint Pre-Commit Security Hook
+# Rejects any *.db* or *.zip files staged for commit
+
+node scripts/pre-commit-check.js || exit 1

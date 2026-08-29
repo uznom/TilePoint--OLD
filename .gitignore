@@ -20,10 +20,10 @@ cert.pem
 .vscode/
 .idea/
 
-# Local & SQLite Runtime Database Files
-*.db
-*.db-shm
-*.db-wal
+# Local & SQLite Runtime Database Files and Archives
+*.db*
+*.zip
 db.json
 server-db.json
+
 
