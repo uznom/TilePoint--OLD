@@ -5,11 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "node server.js",
-    "build": "vite build",
+    "build": "node scripts/check-no-secrets.js && vite build",
     "start": "node server.js",
     "preview": "vite preview",
     "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test:secrets": "node scripts/check-no-secrets.js",
+    "test": "node scripts/check-no-secrets.js"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.2.8",
