@@ -79,10 +79,6 @@ export interface EnqueueOutboxOptions {
   maxRetries?: number;
 }
 
-const STORAGE_KEY = 'tp_transaction_outbox';
-const LEGACY_TX_KEY = 'tp_transaction_sync_queue';
-const LEGACY_OFFLINE_KEY = 'tp_offline_queue';
-const MAX_COMPLETED_RETENTION = 50;
 
 class TransactionOutboxService {
   private items: OutboxRecord[] = [];
@@ -95,8 +91,7 @@ class TransactionOutboxService {
 
   constructor() {
     this.loadFromStorage();
-    this.setupNetworkListeners();
-  }
+      }
 
   public get isReady(): boolean {
     return this.isInitialized;
@@ -114,7 +109,7 @@ class TransactionOutboxService {
     this.isInitialized = true;
 
     // Trigger initial queue drain if pending items exist
-    if (this.hasPendingItems()) {
+    if (this.items.length > 0) {
       this.scheduleFlush(200);
     }
   }
@@ -122,111 +117,10 @@ class TransactionOutboxService {
   /**
    * Loads outbox items from localStorage and migrates any legacy queues
    */
-  private loadFromStorage() {
-    if (typeof window === 'undefined') return;
+  private loadFromStorage() { this.items = []; }
 
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        this.items = JSON.parse(stored);
-      } else {
-        // Migrate legacy queues if present
-        const legacyTx = localStorage.getItem(LEGACY_TX_KEY);
-        const legacyOffline = localStorage.getItem(LEGACY_OFFLINE_KEY);
-        const legacyItems = legacyTx ? JSON.parse(legacyTx) : (legacyOffline ? JSON.parse(legacyOffline) : []);
+  private saveToStorage() { }
 
-        if (Array.isArray(legacyItems) && legacyItems.length > 0) {
-          this.items = legacyItems.map((item, idx) => ({
-            id: item.id || `migrated-tx-${Date.now()}-${idx}`,
-            queueId: item.queueId || `obx-migrated-${Date.now()}-${idx}`,
-            type: item.type || 'ATOMIC_TRANSACTION',
-            txType: item.txType || 'GENERIC_TRANSACTION',
-            endpoint: item.type === 'ATOMIC_TRANSACTION' ? '/api/db/transaction' : (item.type ? '/api/db/delta' : '/api/db'),
-            method: 'POST',
-            payload: item.payload || (item.key ? { key: item.key, value: item.value } : item),
-            createdAt: item.timestamp || Date.now(),
-            updatedAt: Date.now(),
-            status: (item.status === 'failed' ? 'failed' : 'pending') as OutboxStatus,
-            retryCount: item.retries || 0,
-            maxRetries: 15,
-            priority: 2,
-            version: 1
-          }));
-          this.saveToStorage();
-        }
-      }
-    } catch (err) {
-      console.warn('[Outbox Service] Failed to parse stored outbox, initializing empty:', err);
-      this.items = [];
-    }
-  }
-
-  /**
-   * Persists outbox items to localStorage and trims completed logs
-   */
-  private saveToStorage() {
-    if (typeof window === 'undefined') return;
-
-    try {
-      // Keep completed items capped to prevent memory bloat
-      const completedItems = this.items.filter(i => i.status === 'completed');
-      if (completedItems.length > MAX_COMPLETED_RETENTION) {
-        const excess = completedItems.length - MAX_COMPLETED_RETENTION;
-        let pruned = 0;
-        this.items = this.items.filter(i => {
-          if (i.status === 'completed' && pruned < excess) {
-            pruned++;
-            return false;
-          }
-          return true;
-        });
-      }
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.items));
-
-      // Keep legacy keys in sync for backward compatibility
-      const activeQueue = this.items.filter(i => i.status === 'pending' || i.status === 'failed' || i.status === 'processing');
-      localStorage.setItem(LEGACY_TX_KEY, JSON.stringify(activeQueue));
-      localStorage.setItem(LEGACY_OFFLINE_KEY, JSON.stringify(activeQueue));
-    } catch (err) {
-      console.warn('[Outbox Service] Failed to persist outbox to localStorage:', err);
-    }
-  }
-
-  /**
-   * Sets up online/offline event listeners and fallback polling sweep
-   */
-  private setupNetworkListeners() {
-    if (typeof window === 'undefined') return;
-
-    window.addEventListener('online', () => {
-      console.log('[Outbox Service] Network connection restored (online event). Triggering immediate outbox flush...');
-      this.scheduleFlush(100);
-    });
-
-    window.addEventListener('offline', () => {
-      console.warn('[Outbox Service] Network connection dropped (offline event). Outbox will hold writes locally.');
-      this.notifySubscribers();
-    });
-
-    // Periodic sweep timer: checks every 12 seconds if pending records need flushing
-    setInterval(() => {
-      if (this.hasPendingItems() && !this.isProcessing && (typeof navigator === 'undefined' || navigator.onLine)) {
-        this.flush();
-      }
-    }, 12000);
-  }
-
-  /**
-   * Checks if there are pending or retriable failed items in outbox
-   */
-  public hasPendingItems(): boolean {
-    return this.items.some(i => i.status === 'pending' || i.status === 'failed');
-  }
-
-  /**
-   * Enqueues a transactional mutation into the Outbox
-   */
   public enqueue(options: EnqueueOutboxOptions): OutboxRecord {
     const now = Date.now();
     const id = options.id || `tx-${now}-${Math.floor(Math.random() * 10000)}`;

@@ -56,12 +56,18 @@ try {
   console.warn('[Shared DB Server] SSL config detected but could not load files:', error.message);
 }
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : (process.env.NODE_ENV === 'production' ? [] : ['*']);
+const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [];
 
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+    
+    // Allow localhost, local network IPs, and AI Studio run.app domains dynamically
+    const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+    const isRunApp = /\.run\.app$/.test(origin);
+    const isLocalNetwork = /^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(origin);
+    
+    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin) || isLocalhost || isRunApp || isLocalNetwork) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -77,6 +83,16 @@ app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false
 }));
+
+const globalApiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 300, // limit each IP to 300 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many requests, please try again later.' }
+});
+
+app.use('/api/', globalApiLimiter);
 
 app.use(cookieParser());
 app.use(express.json({ limit: '100kb' }));
@@ -113,6 +129,34 @@ const io = new SocketIOServer(server, {
   connectTimeout: 45000,
   maxHttpBufferSize: 1e8,
   path: '/socket.io/'
+});
+
+// WebSocket Authentication Middleware
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+  if (!token) {
+    return next(new Error('Authentication error: Token missing'));
+  }
+
+  // Very basic token presence check to prevent unauthenticated broadcasts.
+  // In a robust implementation, this should query the DB to validate session validity.
+  // We'll verify the token exists in the active_sessions table if the DB is online.
+  if (!isMysqlActive && !mysqlEnforced) {
+    return next();
+  }
+
+  pool.query('SELECT id, role, userId FROM `active_sessions` WHERE `token` = ? AND (`expiresAt` IS NULL OR `expiresAt` > NOW())', [token])
+    .then(([rows]) => {
+      if (rows.length === 0) {
+        return next(new Error('Authentication error: Invalid or expired token'));
+      }
+      socket.user = rows[0];
+      next();
+    })
+    .catch(err => {
+      console.warn('[WebSocket] Auth query failed:', err.message);
+      next(new Error('Authentication error: Database error'));
+    });
 });
 
 io.on('connection', (socket) => {
@@ -201,7 +245,7 @@ const pool = mysql.createPool({
 });
 
 let isMysqlActive = false;
-let mysqlEnforced = false;
+let mysqlEnforced = true;
 
 // Initialize AlaSQL MySQL-compatible embedded SQL Engine
 function initAlasqlEngine() {
@@ -328,7 +372,7 @@ function invalidateDbCache() {
   isDbCacheDirty = true;
 }
 
-function scheduleDebouncedDbFileWrite() {
+function scheduleDebouncedDbFileWrite() { return; /* disabled */
   if (writeDbTimer) clearTimeout(writeDbTimer);
   writeDbTimer = setTimeout(() => {
     try {
@@ -343,7 +387,7 @@ function scheduleDebouncedDbFileWrite() {
 }
 
 // JSON File Store Read/Write
-function readDbFile() {
+function readDbFile() { return {}; /* disabled */
   if (cachedFullDb && !isDbCacheDirty) {
     return cachedFullDb;
   }
