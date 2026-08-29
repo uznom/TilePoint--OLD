@@ -18,6 +18,7 @@ export interface UseCartReturn {
   setPriceOverride: (productId: string, customPrice: number) => void;
   clearCart: () => void;
   totals: CartTotals;
+  calculationError: string | null;
   overallDiscountPercent: number;
   setOverallDiscountPercent: (pct: number) => void;
   overallDiscountAmount: number;
@@ -31,6 +32,7 @@ export function useCart(initialItems: CartItem[] = []): UseCartReturn {
   const [cart, setCart] = useState<CartItem[]>(initialItems);
   const [overallDiscountPercent, setOverallDiscountPercent] = useState<number>(0);
   const [overallDiscountAmount, setOverallDiscountAmount] = useState<number>(0);
+  const [calculationError, setCalculationError] = useState<string | null>(null);
 
   const addItem = useCallback((product: Product, qty: number = 1, maxStock?: number) => {
     let addedSuccessfully = true;
@@ -49,13 +51,14 @@ export function useCart(initialItems: CartItem[] = []): UseCartReturn {
         const next = [...prev];
         next[idx] = { ...next[idx], quantity: targetQty };
         return next;
-      } else {
-        if (maxStock !== undefined && qty > maxStock) {
-          addedSuccessfully = false;
-          return prev;
-        }
-        return [...prev, { product, quantity: qty }];
       }
+
+      if (maxStock !== undefined && qty > maxStock) {
+        addedSuccessfully = false;
+        return prev;
+      }
+
+      return [...prev, { product, quantity: qty }];
     });
 
     return addedSuccessfully;
@@ -66,21 +69,18 @@ export function useCart(initialItems: CartItem[] = []): UseCartReturn {
   }, []);
 
   const updateQuantity = useCallback((productId: string, newQty: number, maxStock?: number) => {
-    if (newQty <= 0) {
-      removeItem(productId);
-      return;
-    }
-
     setCart((prev) =>
-      prev.map((item) => {
-        if (item.product.id === productId) {
-          const validQty = maxStock !== undefined ? Math.min(newQty, maxStock) : newQty;
-          return { ...item, quantity: validQty };
-        }
-        return item;
-      })
+      prev
+        .map((item) => {
+          if (item.product.id === productId) {
+            const clampedQty = maxStock !== undefined ? Math.min(newQty, maxStock) : newQty;
+            return { ...item, quantity: Math.max(0, clampedQty) };
+          }
+          return item;
+        })
+        .filter((item) => item.quantity > 0)
     );
-  }, [removeItem]);
+  }, []);
 
   const setDiscount = useCallback((productId: string, discountPercent: number) => {
     setCart((prev) =>
@@ -108,10 +108,18 @@ export function useCart(initialItems: CartItem[] = []): UseCartReturn {
     setCart([]);
     setOverallDiscountPercent(0);
     setOverallDiscountAmount(0);
+    setCalculationError(null);
   }, []);
 
   const totals = useMemo(() => {
-    return calculateCartTotals(cart, overallDiscountPercent, overallDiscountAmount);
+    try {
+      const calculated = calculateCartTotals(cart, overallDiscountPercent, overallDiscountAmount);
+      setCalculationError(null);
+      return calculated;
+    } catch (err: any) {
+      setCalculationError(err.message || 'Cart calculation error');
+      return calculateCartTotals(cart, 0, 0);
+    }
   }, [cart, overallDiscountPercent, overallDiscountAmount]);
 
   return {
@@ -123,6 +131,7 @@ export function useCart(initialItems: CartItem[] = []): UseCartReturn {
     setPriceOverride,
     clearCart,
     totals,
+    calculationError,
     overallDiscountPercent,
     setOverallDiscountPercent,
     overallDiscountAmount,
