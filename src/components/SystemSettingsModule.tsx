@@ -160,7 +160,6 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
     paymentMethodsList,
     discountSchemes,
     damageReasonsList,
-    dbSnapshots,
     createDbSnapshot,
     autoBackupEnabled,
     setAutoBackupEnabled,
