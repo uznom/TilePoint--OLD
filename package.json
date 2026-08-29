@@ -15,7 +15,8 @@
     "test:degraded": "node scripts/test_degraded_recovery.js",
     "test:precommit": "node scripts/pre-commit-check.js",
     "test:passwords": "node scripts/test_password_migration.js",
-    "test": "node scripts/check-no-secrets.js && node scripts/test_backup_endpoints.js && node scripts/test_degraded_recovery.js && node scripts/pre-commit-check.js && node scripts/test_password_migration.js"
+    "test:sessions": "node scripts/test_session_security.js",
+    "test": "node scripts/check-no-secrets.js && node scripts/test_backup_endpoints.js && node scripts/test_degraded_recovery.js && node scripts/pre-commit-check.js && node scripts/test_password_migration.js && node scripts/test_session_security.js"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.2.8",

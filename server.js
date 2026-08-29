@@ -1656,13 +1656,22 @@ async function verifyAndMigratePassword(password, targetUser) {
   return { valid: true, migrated: true, newHash: newBcryptHash };
 }
 
-function generateServerSessionToken(user, sessionId) {
+// Shift-length session window (8 hours default standard shift)
+const SHIFT_SESSION_DURATION_MS = 8 * 60 * 60 * 1000;
+const DEFAULT_SESSION_MAX_DURATION_MINUTES = 480;
+
+function generateServerSessionToken(user, sessionId, durationMs = SHIFT_SESSION_DURATION_MS) {
+  const now = Date.now();
+  const exp = now + durationMs;
+  const sessId = sessionId || ("SESS_" + Math.random().toString(36).substring(2, 11).toUpperCase());
   const payload = {
     id: user.id,
     username: user.username || user.fullName || "User",
     role: user.role,
-    sessionId: sessionId || ("SESS_" + Math.random().toString(36).substring(2, 11).toUpperCase()),
-    timestamp: Date.now()
+    sessionId: sessId,
+    iat: now,
+    exp: exp,
+    timestamp: now
   };
   const payloadJson = JSON.stringify(payload);
   const payloadBase64 = Buffer.from(payloadJson, 'utf8').toString('base64');
@@ -1671,23 +1680,63 @@ function generateServerSessionToken(user, sessionId) {
   return `${payloadBase64}.${signature}`;
 }
 
+function isSessionRevoked(sessionId, userId) {
+  if (!sessionId && !userId) return false;
+
+  // 1. Fast in-memory check via AlaSQL
+  try {
+    const rows = alasql('SELECT id, userId, expiresAt FROM active_sessions WHERE id = ? OR userId = ?', [sessionId, userId]);
+    if (rows && rows.length > 0) {
+      const row = rows[0];
+      if (row.expiresAt && new Date(row.expiresAt).getTime() <= Date.now()) {
+        return true; // Expired
+      }
+      return false; // Active and valid
+    }
+  } catch (_) {}
+
+  // 2. Fallback check in JSON DB active sessions store
+  try {
+    const db = readDbFile();
+    const sessions = Array.isArray(db.tp_active_sessions) ? db.tp_active_sessions : [];
+    if (sessions.length > 0) {
+      const found = sessions.find(s => s.id === sessionId || (userId && s.userId === userId));
+      if (!found) {
+        return true; // Session was logged out or revoked on server
+      }
+      if (found.expiresAt && new Date(found.expiresAt).getTime() <= Date.now()) {
+        return true; // Expired
+      }
+      return false; // Active and valid
+    }
+  } catch (_) {}
+
+  return false;
+}
+
 function verifyAndExtractToken(req) {
-  const authHeader = req.headers['authorization'];
-  let token = req.headers['x-session-token'];
+  let token = null;
 
-  if (!token && authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.substring(7);
+  if (typeof req === 'string') {
+    token = req;
+  } else if (req && typeof req === 'object') {
+    const authHeader = req.headers && req.headers['authorization'];
+    token = req.headers && req.headers['x-session-token'];
+
+    if (!token && authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+
+    if (!token && req.cookies && req.cookies.tp_session) {
+      token = req.cookies.tp_session;
+    }
+
+    if (!token && req.cookies && req.cookies.tilepoint_session) {
+      token = req.cookies.tilepoint_session;
+    }
   }
 
-  if (!token && req.cookies && req.cookies.tp_session) {
-    token = req.cookies.tp_session;
-  }
-
-  if (!token && req.cookies && req.cookies.tilepoint_session) {
-    token = req.cookies.tilepoint_session;
-  }
-
-  if (!token) {
+  if (!token || typeof token !== 'string') {
     return null;
   }
 
@@ -1698,28 +1747,44 @@ function verifyAndExtractToken(req) {
     }
 
     const [payloadBase64, signature] = parts;
-
     const secret = getAppSecret();
-    const expected = crypto.createHmac('sha256', secret).update(payloadBase64).digest('base64');
+    const expectedSig = crypto.createHmac('sha256', secret).update(payloadBase64).digest('base64');
     
-    // Constant-time string comparison to prevent timing attacks
+    // Constant-time comparison on equal-length buffers to prevent timing attacks
     const sigBuffer = Buffer.from(signature, 'base64');
-    const expectedBuffer = Buffer.from(expected, 'base64');
+    const expectedBuffer = Buffer.from(expectedSig, 'base64');
     
-    if (sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
+    if (sigBuffer.length === 0 || sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
       return null;
     }
 
     const payloadJson = Buffer.from(payloadBase64, 'base64').toString('utf8');
     const payload = JSON.parse(payloadJson);
+    const now = Date.now();
 
-    // Reject tokens that are from the future
-    if (payload.timestamp > Date.now()) {
+    // Reject tokens that claim future issuance / timestamps
+    if (typeof payload.timestamp === 'number' && payload.timestamp > now) {
+      return null;
+    }
+    if (typeof payload.iat === 'number' && payload.iat > now) {
       return null;
     }
 
-    const drift = Math.abs(Date.now() - payload.timestamp);
-    if (drift > 24 * 60 * 60 * 1000) { // Limit to 24 hours instead of 7 days
+    // Enforce real exp claim (or shift window for legacy tokens)
+    if (typeof payload.exp === 'number') {
+      if (now >= payload.exp) {
+        return null; // Expired claim
+      }
+    } else if (typeof payload.timestamp === 'number') {
+      if (now - payload.timestamp > SHIFT_SESSION_DURATION_MS) {
+        return null; // Expired shift window
+      }
+    } else {
+      return null;
+    }
+
+    // Check token against active_sessions registry for server-side revocation
+    if (payload.sessionId && isSessionRevoked(payload.sessionId, payload.id)) {
       return null;
     }
 
@@ -1747,8 +1812,6 @@ async function getActiveSessionsList() {
   return Array.isArray(sessions) ? sessions : (typeof sessions === 'string' ? JSON.parse(sessions) : []);
 }
 
-const DEFAULT_SESSION_MAX_DURATION_MINUTES = 480; // 8 hours default standard shift
-
 async function saveActiveSessionRecord(session) {
   if (!session || !session.id || !session.userId) return;
 
@@ -1756,28 +1819,40 @@ async function saveActiveSessionRecord(session) {
   const startedAt = session.sessionStartedAt ? new Date(session.sessionStartedAt) : new Date();
   const expiresAt = session.expiresAt ? new Date(session.expiresAt) : new Date(startedAt.getTime() + maxDuration * 60 * 1000);
 
+  const sessionRow = {
+    id: session.id,
+    userId: session.userId,
+    username: session.username || '',
+    fullName: session.fullName || '',
+    role: session.role || 'Cashier',
+    branchId: session.branchId || 'B1',
+    branchName: session.branchName || 'Main Branch',
+    lastActive: session.lastActive ? new Date(session.lastActive).toISOString() : new Date().toISOString(),
+    userAgent: session.userAgent || '',
+    fingerprint: session.fingerprint || '',
+    deviceInfo: typeof session.deviceInfo === 'object' ? JSON.stringify(session.deviceInfo) : (session.deviceInfo || ''),
+    sessionStartedAt: startedAt.toISOString(),
+    expiresAt: expiresAt.toISOString(),
+    maxDurationMinutes: maxDuration
+  };
+
   if (isMysqlActive || mysqlEnforced) {
     try {
       await upsertRecordMysql('active_sessions', {
-        id: session.id,
-        userId: session.userId,
-        username: session.username || '',
-        fullName: session.fullName || '',
-        role: session.role || 'Cashier',
-        branchId: session.branchId || 'B1',
-        branchName: session.branchName || 'Main Branch',
-        lastActive: session.lastActive ? new Date(session.lastActive) : new Date(),
-        userAgent: session.userAgent || '',
-        fingerprint: session.fingerprint || '',
-        deviceInfo: typeof session.deviceInfo === 'object' ? JSON.stringify(session.deviceInfo) : (session.deviceInfo || ''),
+        ...sessionRow,
+        lastActive: new Date(sessionRow.lastActive),
         sessionStartedAt: startedAt,
-        expiresAt: expiresAt,
-        maxDurationMinutes: maxDuration
+        expiresAt: expiresAt
       });
     } catch (e) {
       console.warn('[Session Store] MySQL active session save warning:', e.message);
     }
   }
+
+  try {
+    alasql('DELETE FROM active_sessions WHERE id = ? OR userId = ?', [session.id, session.userId]);
+    upsertRecordAlasql('active_sessions', sessionRow);
+  } catch (_) {}
 
   const db = readDbFile();
   let sessions = db.tp_active_sessions || [];
@@ -1787,19 +1862,12 @@ async function saveActiveSessionRecord(session) {
   if (!Array.isArray(sessions)) sessions = [];
 
   const existingIdx = sessions.findIndex(s => s.id === session.id);
-  const normalizedSession = {
-    ...session,
-    sessionStartedAt: startedAt.toISOString(),
-    expiresAt: expiresAt.toISOString(),
-    maxDurationMinutes: maxDuration
-  };
-
   if (existingIdx >= 0) {
-    sessions[existingIdx] = { ...sessions[existingIdx], ...normalizedSession };
+    sessions[existingIdx] = { ...sessions[existingIdx], ...sessionRow };
   } else {
     // Keep single active session per userId in registry (supersede old sessions for this user)
     sessions = sessions.filter(s => s.userId !== session.userId);
-    sessions.push(normalizedSession);
+    sessions.push(sessionRow);
   }
   db.tp_active_sessions = sessions;
   writeDbFile(db);
@@ -1817,6 +1885,14 @@ async function removeActiveSessionRecord(sessionId, userId) {
       console.warn('[Session Store] MySQL active session delete warning:', e.message);
     }
   }
+
+  try {
+    if (sessionId) {
+      alasql('DELETE FROM active_sessions WHERE id = ?', [sessionId]);
+    } else if (userId) {
+      alasql('DELETE FROM active_sessions WHERE userId = ?', [userId]);
+    }
+  } catch (_) {}
 
   const db = readDbFile();
   let sessions = db.tp_active_sessions || [];
@@ -2218,6 +2294,59 @@ app.post('/api/auth/verify-override', async (req, res) => {
     }
 
     return res.status(401).json({ success: false, error: 'Invalid security credentials password.' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Authentication - Refresh Active Session Token & Shift Window
+app.post('/api/auth/refresh', async (req, res) => {
+  try {
+    const userPayload = verifyAndExtractToken(req);
+    if (!userPayload || !userPayload.id) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Active session required for token refresh.' });
+    }
+
+    const fullDb = await readFullDatabase();
+    const users = fullDb.db.tp_users || [];
+    const targetUser = users.find(u => u.id === userPayload.id);
+
+    if (!targetUser || targetUser.status !== 'Active') {
+      return res.status(403).json({ success: false, error: 'User account disabled or not found.' });
+    }
+
+    const activeSessions = await getActiveSessionsList();
+    const sessionRecord = activeSessions.find(s => s.id === userPayload.sessionId || s.userId === userPayload.id);
+
+    if (!sessionRecord) {
+      return res.status(401).json({ success: false, error: 'Session has been revoked or expired on server.' });
+    }
+
+    const now = Date.now();
+    const refreshedToken = generateServerSessionToken(targetUser, sessionRecord.id, SHIFT_SESSION_DURATION_MS);
+    sessionRecord.lastActive = new Date(now).toISOString();
+    sessionRecord.expiresAt = new Date(now + SHIFT_SESSION_DURATION_MS).toISOString();
+
+    await saveActiveSessionRecord(sessionRecord);
+
+    res.cookie('tp_session', refreshedToken, {
+      httpOnly: true,
+      secure: useSsl || process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: SHIFT_SESSION_DURATION_MS
+    });
+
+    const safeUser = { ...targetUser };
+    delete safeUser.passwordHash;
+    delete safeUser.managerPin;
+
+    return res.json({
+      success: true,
+      token: refreshedToken,
+      expiresAt: sessionRecord.expiresAt,
+      user: safeUser
+    });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
   }
