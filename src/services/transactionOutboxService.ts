@@ -275,6 +275,15 @@ class TransactionOutboxService {
           record.lastError = undefined;
           successCount++;
           console.log(`[Outbox Service] Successfully synced transaction ${record.id} (${record.txType})`);
+
+          // Automatically prune older completed records to keep memory lean
+          const completedList = this.items.filter(i => i.status === 'completed');
+          if (completedList.length > 50) {
+            const excess = completedList.slice(0, completedList.length - 50);
+            const excessIds = new Set(excess.map(r => r.queueId));
+            this.items = this.items.filter(i => !excessIds.has(i.queueId));
+          }
+
           this.saveToStorage();
           this.notifySubscribers();
 

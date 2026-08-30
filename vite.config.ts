@@ -36,7 +36,20 @@ export default defineConfig(() => {
       },
     },
     optimizeDeps: {
-      include: ['react-router-dom', 'xlsx', 'papaparse']
+      include: [
+        'react',
+        'react-dom',
+        'react-router-dom',
+        'recharts',
+        'lucide-react',
+        'xlsx',
+        'papaparse',
+        'motion',
+        'motion/react',
+        'zod',
+        'socket.io-client',
+        '@tanstack/react-query'
+      ]
     },
     build: {
       rollupOptions: {

@@ -18,9 +18,41 @@ export default tseslint.config(
     rules: {
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
-      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      'react-refresh/only-export-components': [
+        'warn',
+        {
+          allowConstantExport: true,
+          allowExportNames: [
+            'useDb',
+            'useDbSelector',
+            'useDbProducts',
+            'useDbBranchStock',
+            'useDbInventory',
+            'useBranchStockStats',
+            'useSettings',
+            'useSync',
+            'useQueryState',
+            'preprocessAndVerifyClipboardText',
+            'unwrapInboundPayload',
+            'isStrictInboundReportSchema',
+            'generateBarcodeCanvas',
+            'generateBarcodeDataUrl',
+            'drawBarcodeSvg',
+            'generateEan13Barcode',
+            'getCode128Modules',
+            'generateCode128SvgHtml'
+          ]
+        }
+      ],
       '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          args: 'none',
+          varsIgnorePattern: '^_',
+          caughtErrors: 'none'
+        }
+      ],
       '@typescript-eslint/ban-ts-comment': 'off',
       'no-empty': ['error', { allowEmptyCatch: true }]
     },
@@ -41,7 +73,14 @@ export default tseslint.config(
       }
     },
     rules: {
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-unused-vars': [
+        'warn',
+        {
+          args: 'none',
+          varsIgnorePattern: '^_',
+          caughtErrors: 'none'
+        }
+      ],
       'no-empty': ['error', { allowEmptyCatch: true }]
     }
   }

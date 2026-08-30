@@ -214,13 +214,13 @@ class MysqlDatabaseService {
           headers: this.getHeaders()
         });
         if (!fbRes.ok) {
-          throw new Error(`HTTP ${fbRes.status}`);
+          throw new Error(`HTTP ${fbRes.status}`, { cause: err });
         }
         const fbJson = await fbRes.json();
         const validatedFallback = safeParseApiArray(BranchStockRecordSchema, fbJson.data || []) as unknown as BranchStockRecord[];
         return { success: fbJson.success || false, count: validatedFallback.length, data: validatedFallback };
       } catch (fbErr: any) {
-        return { success: false, count: 0, data: [], error: err.message };
+        return { success: false, count: 0, data: [], error: fbErr?.message || err?.message || 'Lookup failed' };
       }
     }
   }

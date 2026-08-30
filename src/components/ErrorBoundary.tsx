@@ -25,6 +25,26 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
  console.error(' [TilePoint ErrorBoundary] Caught a runtime rendering exception:', error, errorInfo);
+ 
+ // If it's a dynamic chunk loading error or Vite 504 Outdated Optimize Dep, auto-reload once to fetch fresh bundle
+ const errorMsg = error?.message || '';
+ const isChunkLoadFailed =
+   errorMsg.includes('Failed to fetch dynamically imported module') ||
+   errorMsg.includes('Importing a module script failed') ||
+   errorMsg.includes('Outdated Optimize Dep') ||
+   errorMsg.includes('504');
+
+ if (isChunkLoadFailed) {
+   const retryKey = 'tp_chunk_auto_reload_last';
+   const lastRetry = sessionStorage.getItem(retryKey);
+   const now = Date.now();
+   if (!lastRetry || now - parseInt(lastRetry, 10) > 10000) {
+     sessionStorage.setItem(retryKey, String(now));
+     window.location.reload();
+     return;
+   }
+ }
+
  this.setState({ error, errorInfo });
  }
 

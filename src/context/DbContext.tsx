@@ -120,7 +120,7 @@ const performSyncPruning = (): number => {
       const snapshots = JSON.parse(snapshotsStr);
       if (Array.isArray(snapshots) && snapshots.length > 0) {
         const metaOnly = snapshots.map((s: any) => {
-          const { data, ...meta } = s;
+          const { data: _data, ...meta } = s;
           return meta;
         }).slice(0, 2);
         const newStr = JSON.stringify(metaOnly);
@@ -4335,7 +4335,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  const snapshots = JSON.parse(cachedSnapshotsStr);
  if (Array.isArray(snapshots)) {
  const metadataOnlySnapshots = snapshots.map((snap: any) => {
- const { data, ...meta } = snap;
+ const { data: _data, ...meta } = snap;
  return meta;
  }).slice(0, 5);
  localStorage.setItem("tp_db_snapshots", JSON.stringify(metadataOnlySnapshots));

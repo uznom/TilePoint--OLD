@@ -4,9 +4,16 @@ import { useDb } from "../context/DbContext";
 import { getBranchOptionLabel } from '../lib/branchUtils';
 import { saveFileToBackup } from "../lib/fileBackupHelper";
 import { downloadWindowsLauncherScript,generateTransactionCsv } from "../lib/transactionLogger";
-const LazyProfitAnalytics = React.lazy(() =>
-  import("./ProfitAnalytics").then((m) => ({ default: m.ProfitAnalytics }))
-);
+const LazyProfitAnalytics = React.lazy(async () => {
+  try {
+    const m = await import("./ProfitAnalytics");
+    return { default: m.ProfitAnalytics };
+  } catch (err) {
+    await new Promise((r) => setTimeout(r, 400));
+    const m = await import("./ProfitAnalytics");
+    return { default: m.ProfitAnalytics };
+  }
+});
 import { HeroTable } from "./common/ui/HeroTable";
 import { HeroButton } from "./common/ui/HeroButton";
 import { HeaderBar } from "./common/HeaderBar";

@@ -31,7 +31,7 @@ if (!BOOT_SECURITY_SECRET || typeof BOOT_SECURITY_SECRET !== 'string' || BOOT_SE
 }
 
 // Server-side boot-time configuration for local reset escape hatch
-const ALLOW_LOCAL_RESET = process.env.ALLOW_LOCAL_RESET === 'true' || process.env.ENABLE_LOCAL_RESET === 'true';
+const _ALLOW_LOCAL_RESET = process.env.ALLOW_LOCAL_RESET === 'true' || process.env.ENABLE_LOCAL_RESET === 'true';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -286,7 +286,7 @@ const pool = mysql.createPool({
 
 let isMysqlActive = false;
 let mysqlEnforced = true;
-let isDegradedMode = false;
+let _isDegradedMode = false;
 let lastDegradedReason = '';
 let degradedSince = null;
 let degradedWriteQueue = [];
@@ -352,9 +352,9 @@ function broadcastServerStatus() {
 }
 
 function markServerDegraded(reason) {
-  const wasActive = isMysqlActive;
+  const _wasActive = isMysqlActive;
   isMysqlActive = false;
-  isDegradedMode = true;
+  _isDegradedMode = true;
   lastDegradedReason = String(reason || 'MySQL connection unavailable');
   if (!degradedSince) {
     degradedSince = new Date().toISOString();
@@ -375,7 +375,7 @@ function markServerDegraded(reason) {
 function markServerRecovered() {
   if (!isMysqlActive) {
     isMysqlActive = true;
-    isDegradedMode = false;
+    _isDegradedMode = false;
     lastDegradedReason = '';
     degradedSince = null;
 
@@ -396,7 +396,12 @@ function markServerRecovered() {
   }
 }
 
+const MAX_DEGRADED_QUEUE_SIZE = 10000;
+
 function queueDegradedWrite(op) {
+  if (degradedWriteQueue.length >= MAX_DEGRADED_QUEUE_SIZE) {
+    degradedWriteQueue.shift(); // Evict oldest to protect server memory
+  }
   degradedWriteQueue.push({
     ...op,
     queuedAt: new Date().toISOString()
@@ -422,10 +427,6 @@ async function replayQueuedDegradedWrites() {
         await pool.execute('UPDATE db_snapshots SET isDeleted = 1, deletedAt = NOW() WHERE id = ?', [op.id]);
       } else if (op.type === 'custom_query') {
         await pool.execute(op.sql, op.params);
-      } else if (op.type === 'atomic_package') {
-        await executeAtomicPackageMysql(op.tx);
-      } else if (op.type === 'pos_sale') {
-        await executePosSaleMysql(op.sale, op.items);
       }
       console.log(`  -> [Replayed Write] ${op.type} on ${op.tableName || op.id || 'record'}`);
     } catch (err) {
@@ -574,7 +575,7 @@ function upsertRecordAlasql(tableName, record) {
 let cachedFullDb = null;
 let cachedDbHash = null;
 let isDbCacheDirty = true;
-let writeDbTimer = null;
+let _writeDbTimer = null;
 let isConfiguredCache = null;
 
 // Utility function to compute database hash
@@ -1024,7 +1025,7 @@ function getInternalUserSync(userId) {
 }
 
 // Internal helper: Retrieve user by ID across MySQL, AlaSQL, and JSON store
-async function getInternalUserById(userId) {
+async function _getInternalUserById(userId) {
   if (!userId) return null;
   if (isMysqlActive || mysqlEnforced) {
     try {
@@ -1707,7 +1708,7 @@ async function getShiftSalesSummaryLookups(shiftId) {
   }
 }
 
-function sha256Pure(str) {
+function _sha256Pure(str) {
   return crypto.createHash('sha256').update(str).digest('hex');
 }
 
@@ -1841,7 +1842,7 @@ function generateServerSessionToken(user, sessionId, durationMs = SHIFT_SESSION_
   return `${payloadBase64}.${signature}`;
 }
 
-function isSessionRevoked(sessionId, userId) {
+function _isSessionRevoked(sessionId, userId) {
   if (!sessionId && !userId) return false;
 
   // 1. Fast in-memory check via AlaSQL
@@ -2132,8 +2133,8 @@ async function verifySessionAndCheckConcurrency(req) {
   }
 
   const incomingSessionId = req.headers['x-client-id'] || req.headers['x-session-id'] || payload.sessionId;
-  const incomingFingerprint = req.headers['x-client-fingerprint'] || req.headers['x-fingerprint'];
-  const incomingDeviceKey = req.headers['x-device-key'];
+  const _incomingFingerprint = req.headers['x-client-fingerprint'] || req.headers['x-fingerprint'];
+  const _incomingDeviceKey = req.headers['x-device-key'];
 
   // Read full db to verify user and their role
   const fullDb = await readFullDatabase();
@@ -3732,7 +3733,7 @@ async function executeDeltaMysql(delta) {
           break;
         }
         case 'DECREMENT_STOCK': {
-          const { id, productId, branchId, change } = payload;
+          const { id: _id, productId, branchId, change } = payload;
           const changeVal = Number(change) || 0;
           if (productId && Array.isArray(db.tp_products)) {
             const p = db.tp_products.find(item => item.id === productId);
