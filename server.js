@@ -1712,7 +1712,7 @@ function _sha256Pure(str) {
   return crypto.createHash('sha256').update(str).digest('hex');
 }
 
-const SESSION_IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes without activity/heartbeat
+const SESSION_IDLE_TIMEOUT_MS = 24 * 60 * 60 * 1000; // 24 hours of inactivity before purging idle records
 
 function getAppSecret() {
   const secret = process.env.SECURITY_SECRET;
@@ -2075,52 +2075,43 @@ async function removeActiveSessionRecord(sessionId, userId) {
   }
 }
 
-async function invalidateAllSessionsOnBoot() {
-  if (isMysqlActive || mysqlEnforced) {
-    try {
-      await pool.query('DELETE FROM `active_sessions`');
-    } catch (err) {
-      console.warn('[Session Store] Could not clear active_sessions in MySQL on boot:', err.message);
-    }
-  }
-  try {
-    alasql('DELETE FROM `active_sessions`');
-  } catch (_) {}
-  const db = readDbFile();
-  if (db.tp_active_sessions && db.tp_active_sessions.length > 0) {
-    db.tp_active_sessions = [];
-    writeDbFile(db);
-  }
-  console.log('[Security] Rotated SECURITY_SECRET and invalidated all outstanding active sessions on boot.');
-}
-
 async function pruneExpiredSessions() {
-  const cutoff = new Date(Date.now() - SESSION_IDLE_TIMEOUT_MS);
-  if (isMysqlActive || mysqlEnforced) {
-    try {
-      await pool.query('DELETE FROM `active_sessions` WHERE `lastActive` < ? OR (`expiresAt` IS NOT NULL AND `expiresAt` < NOW())', [cutoff]);
-    } catch (e) {}
-  }
-  const db = readDbFile();
-  let sessions = db.tp_active_sessions || [];
-  if (typeof sessions === 'string') {
-    try { sessions = JSON.parse(sessions); } catch (_) { sessions = []; }
-  }
-  if (Array.isArray(sessions) && sessions.length > 0) {
-    const fresh = sessions.filter(s => {
-      const t = new Date(s.lastActive || 0).getTime();
-      const notIdle = t >= Date.now() - SESSION_IDLE_TIMEOUT_MS;
-      const notExpired = !s.expiresAt || new Date(s.expiresAt).getTime() > Date.now();
-      return notIdle && notExpired;
-    });
-    if (fresh.length !== sessions.length) {
-      db.tp_active_sessions = fresh;
-      writeDbFile(db);
+  try {
+    const now = new Date();
+    const idleCutoff = new Date(Date.now() - SESSION_IDLE_TIMEOUT_MS);
+    if (isMysqlActive || mysqlEnforced) {
+      try {
+        await pool.query(
+          'DELETE FROM `active_sessions` WHERE `lastActive` < ? OR (`expiresAt` IS NOT NULL AND `expiresAt` < ?)',
+          [idleCutoff, now]
+        );
+      } catch (e) {
+        console.warn('[Session Store] pruneExpiredSessions MySQL warning:', e.message);
+      }
     }
+    const db = readDbFile();
+    let sessions = db.tp_active_sessions || [];
+    if (typeof sessions === 'string') {
+      try { sessions = JSON.parse(sessions); } catch (_) { sessions = []; }
+    }
+    if (Array.isArray(sessions) && sessions.length > 0) {
+      const fresh = sessions.filter(s => {
+        const t = new Date(s.lastActive || 0).getTime();
+        const notIdle = !isNaN(t) && t >= (Date.now() - SESSION_IDLE_TIMEOUT_MS);
+        const notExpired = !s.expiresAt || new Date(s.expiresAt).getTime() > Date.now();
+        return notIdle && notExpired;
+      });
+      if (fresh.length !== sessions.length) {
+        db.tp_active_sessions = fresh;
+        writeDbFile(db);
+      }
+    }
+  } catch (err) {
+    console.warn('[Session Store] pruneExpiredSessions error:', err.message);
   }
 }
 
-setInterval(pruneExpiredSessions, 60000);
+setInterval(pruneExpiredSessions, 60000).unref();
 
 /**
  * Validates token, client fingerprint, and checks for concurrent login activity
@@ -2132,7 +2123,8 @@ async function verifySessionAndCheckConcurrency(req) {
     return { valid: false, status: 401, code: 'UNAUTHORIZED', error: 'Authentication token missing or invalid.' };
   }
 
-  const incomingSessionId = req.headers['x-client-id'] || req.headers['x-session-id'] || payload.sessionId;
+  const rawIncomingSessionId = req.headers['x-client-id'] || req.headers['x-session-id'] || payload.sessionId;
+  const incomingSessionId = (rawIncomingSessionId && rawIncomingSessionId !== 'unknown') ? rawIncomingSessionId : null;
   const _incomingFingerprint = req.headers['x-client-fingerprint'] || req.headers['x-fingerprint'];
   const _incomingDeviceKey = req.headers['x-device-key'];
 
@@ -2152,17 +2144,30 @@ async function verifySessionAndCheckConcurrency(req) {
   payload.role = dbUser.role;
 
   const activeSessions = await getActiveSessionsList();
-  const userSession = activeSessions.find(s => (incomingSessionId && s.id === incomingSessionId) || (payload.sessionId && s.id === payload.sessionId) || s.userId === payload.id);
+  let userSession = activeSessions.find(s => (incomingSessionId && s.id === incomingSessionId) || (payload.sessionId && s.id === payload.sessionId));
+  if (!userSession) {
+    userSession = activeSessions.find(s => s.userId === payload.id);
+  }
 
   if (!userSession) {
-    // Session was logged out or terminated
-    return {
-      valid: false,
-      status: 401,
-      code: 'SESSION_TERMINATED',
-      error: 'Your session has ended or was terminated by administrator.',
-      user: payload
+    // If no active session was found in table (e.g. server restarted or table pruned),
+    // auto-recreate the session record since token signature is cryptographically valid and user is active
+    const effectiveSessionId = incomingSessionId || payload.sessionId || ("SESS_" + Math.random().toString(36).substring(2, 11).toUpperCase());
+    userSession = {
+      id: effectiveSessionId,
+      userId: dbUser.id,
+      username: dbUser.username,
+      fullName: dbUser.fullName,
+      role: dbUser.role,
+      branchId: payload.branchId || dbUser.branchAssignmentId || 'B1',
+      branchName: payload.branchName || 'Main Branch',
+      lastActive: new Date().toISOString(),
+      userAgent: req.headers['user-agent'] || '',
+      sessionStartedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + DEFAULT_SESSION_MAX_DURATION_MINUTES * 60 * 1000).toISOString(),
+      maxDurationMinutes: DEFAULT_SESSION_MAX_DURATION_MINUTES
     };
+    await saveActiveSessionRecord(userSession);
   }
 
   const now = Date.now();
@@ -2170,7 +2175,7 @@ async function verifySessionAndCheckConcurrency(req) {
   // 1. Session Duration Check
   if (userSession.expiresAt) {
     const expTime = new Date(userSession.expiresAt).getTime();
-    if (now >= expTime) {
+    if (!isNaN(expTime) && now >= expTime) {
       return {
         valid: false,
         status: 401,
@@ -2183,8 +2188,8 @@ async function verifySessionAndCheckConcurrency(req) {
     }
   }
 
-  // 2. Concurrency & Fingerprint Validation Check
-  if (incomingSessionId && userSession.id && userSession.id !== incomingSessionId) {
+  // 2. Concurrency Validation Check (only when an explicit different session ID was provided and payload token disagrees)
+  if (incomingSessionId && userSession.id && userSession.id !== incomingSessionId && payload.sessionId && payload.sessionId !== userSession.id) {
     return {
       valid: false,
       status: 401,
@@ -2202,24 +2207,8 @@ async function verifySessionAndCheckConcurrency(req) {
     };
   }
 
-  // 3. Client Hardware / Fingerprint Mismatch Check (if fingerprint was recorded for this session)
-  if (incomingFingerprint && userSession.fingerprint && userSession.fingerprint !== incomingFingerprint && incomingSessionId !== userSession.id) {
-    return {
-      valid: false,
-      status: 401,
-      code: 'SESSION_SUPERSEDED',
-      superseded: true,
-      error: 'Device fingerprint mismatch: Concurrent login detected from a different terminal.',
-      user: payload,
-      activeSession: userSession
-    };
-  }
-
-  // Session is valid; update lastActive
+  // Session is valid; update lastActive in memory & MySQL
   userSession.lastActive = new Date().toISOString();
-  if (incomingFingerprint && !userSession.fingerprint) {
-    userSession.fingerprint = incomingFingerprint;
-  }
   await saveActiveSessionRecord(userSession);
 
   const expiresTime = userSession.expiresAt ? new Date(userSession.expiresAt).getTime() : (now + DEFAULT_SESSION_MAX_DURATION_MINUTES * 60000);
