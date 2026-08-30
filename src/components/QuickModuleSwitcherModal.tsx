@@ -166,10 +166,10 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
-      item.name.toLowerCase().includes(q) ||
-      item.category.toLowerCase().includes(q) ||
-      item.shortcut.toLowerCase().includes(q) ||
-      (item.description && item.description.toLowerCase().includes(q))
+      (item.name || '').toLowerCase().includes(q) ||
+      (item.category || '').toLowerCase().includes(q) ||
+      (item.shortcut || '').toLowerCase().includes(q) ||
+      (item.description ? item.description.toLowerCase().includes(q) : false)
     );
   });
 

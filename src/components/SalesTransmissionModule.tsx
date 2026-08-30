@@ -722,9 +722,9 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  if (adminSearchQuery.trim()) {
  const query = adminSearchQuery.toLowerCase();
  return (
- report.branchName.toLowerCase().includes(query) ||
- report.reportingDate.includes(query) ||
- report.id.toLowerCase().includes(query)
+ (report.branchName || '').toLowerCase().includes(query) ||
+ (report.reportingDate || '').includes(query) ||
+ (report.id || '').toLowerCase().includes(query)
  );
  }
  return true;

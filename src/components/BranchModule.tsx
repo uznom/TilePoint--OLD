@@ -354,10 +354,10 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
       if (!personnelSearch) return true;
       const term = personnelSearch.toLowerCase();
       return (
-        u.fullName.toLowerCase().includes(term) ||
-        u.role.toLowerCase().includes(term) ||
-        u.email.toLowerCase().includes(term) ||
-        u.username.toLowerCase().includes(term)
+        (u.fullName || '').toLowerCase().includes(term) ||
+        (u.role || '').toLowerCase().includes(term) ||
+        (u.email || '').toLowerCase().includes(term) ||
+        (u.username || '').toLowerCase().includes(term)
       );
     });
 
@@ -484,13 +484,13 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
     const trimmedCustomId = customBranchId.trim();
     if (trimmedCustomId) {
       if (!isEditMode) {
-        const exists = branches.some(b => b.id.toLowerCase() === trimmedCustomId.toLowerCase());
+        const exists = branches.some(b => (b?.id || '').toLowerCase() === trimmedCustomId.toLowerCase());
         if (exists) {
           showToast(`Validation Error: A branch with ID "${trimmedCustomId}" already exists.`);
           return;
         }
-      } else if (trimmedCustomId.toLowerCase() !== editingId.toLowerCase()) {
-        const exists = branches.some(b => b.id.toLowerCase() === trimmedCustomId.toLowerCase());
+      } else if (trimmedCustomId.toLowerCase() !== (editingId || '').toLowerCase()) {
+        const exists = branches.some(b => (b?.id || '').toLowerCase() === trimmedCustomId.toLowerCase());
         if (exists) {
           showToast(`Validation Error: A branch with ID "${trimmedCustomId}" already exists.`);
           return;

@@ -1394,7 +1394,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
 
     // Find user in db for branch info & offline fallback
     const targetUser = users.find(
-      (u) => u.username.trim().toLowerCase() === username.trim().toLowerCase(),
+      (u) => (u.username || '').trim().toLowerCase() === (username || '').trim().toLowerCase(),
     );
 
     const activeBranchName =
@@ -5834,7 +5834,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  const next = [...prev];
  report.users!.forEach((emp) => {
  const existingIdx = next.findIndex(
- (u) => u.id === emp.id || u.username.toLowerCase() === emp.username.toLowerCase()
+ (u) => u.id === emp.id || (u.username || '').toLowerCase() === (emp.username || '').toLowerCase()
  );
  if (existingIdx !== -1) {
  next[existingIdx] = {
@@ -6303,7 +6303,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  inboundUsers.forEach((emp: any) => {
  if (!emp || typeof emp !== 'object' || !emp.username) return;
  const existingIdx = next.findIndex(
- (u) => u.id === emp.id || u.username.toLowerCase() === String(emp.username).toLowerCase()
+ (u) => u.id === emp.id || (u.username || '').toLowerCase() === String(emp.username || '').toLowerCase()
  );
  if (existingIdx !== -1) {
  next[existingIdx] = {

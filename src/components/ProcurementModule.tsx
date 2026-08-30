@@ -1821,10 +1821,9 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  if (!procurementProductSearch.trim()) return true;
  const term = procurementProductSearch.toLowerCase();
  return (
- p.productName.toLowerCase().includes(term) ||
- (p.brand &&
- p.brand.toLowerCase().includes(term)) ||
- (p.sku && p.sku.toLowerCase().includes(term))
+ (p.productName || '').toLowerCase().includes(term) ||
+ (p.brand || '').toLowerCase().includes(term) ||
+ (p.sku || '').toLowerCase().includes(term)
  );
  });
 

@@ -135,10 +135,10 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
     const q = searchQuery.trim().toLowerCase();
     if (!q) return [];
     return staffBranchProducts.filter(p =>
-      p.productName.toLowerCase().includes(q) ||
-      p.sku.toLowerCase().includes(q) ||
-      p.barcode?.toLowerCase().includes(q) ||
-      p.category?.toLowerCase().includes(q)
+      (p.productName || '').toLowerCase().includes(q) ||
+      (p.sku || '').toLowerCase().includes(q) ||
+      (p.barcode || '').toLowerCase().includes(q) ||
+      (p.category || '').toLowerCase().includes(q)
     );
   }, [searchQuery, staffBranchProducts]);
 

@@ -745,7 +745,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                                   referrerPolicy="no-referrer"
                                 />
                               ) : (
-                                <span>{u.avatarInitials || u.fullName.slice(0, 2).toUpperCase()}</span>
+                                <span>{u.avatarInitials || (u.fullName ? u.fullName.slice(0, 2).toUpperCase() : '??')}</span>
                               )}
                             </div>
                             <span
@@ -1029,7 +1029,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                               {u.profilePicture ? (
                                 <img src={u.profilePicture} alt={u.fullName} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                               ) : (
-                                u.avatarInitials || u.fullName.slice(0, 2).toUpperCase()
+                                u.avatarInitials || (u.fullName ? u.fullName.slice(0, 2).toUpperCase() : '??')
                               )}
                             </div>
                             <div>
@@ -1287,7 +1287,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2.5">
                             <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary text-xs font-black flex items-center justify-center shrink-0">
-                              {session.fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                              {(session.fullName || '').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '??'}
                             </div>
                             <div>
                               <span className="font-bold text-foreground block">{session.fullName}</span>
