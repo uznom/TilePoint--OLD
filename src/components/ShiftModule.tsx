@@ -251,7 +251,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
  : 'text-red-500'
  }`}>
  <span>Variance / Deviation:</span>
- <span>{variance >= 0 ? '+' : ''}{formatCurrency(variance)}</span>
+ <span>{formatCurrency(variance, { signDisplay: 'exceptZero' })}</span>
  </div>
  );
  })()}

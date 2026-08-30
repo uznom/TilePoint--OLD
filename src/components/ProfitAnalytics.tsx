@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useDb } from "../context/DbContext";
+import { formatCurrency } from "../utils/formatters";
 import {
  ResponsiveContainer,
  AreaChart,
@@ -505,7 +506,7 @@ export function ProfitAnalytics({
  <div>
  <span className="text-[10px] font-extrabold uppercase tracking-widest text-default-500 dark:text-default-700">Timeframe Revenue</span>
  <div className="text-xl font-black text-emerald-500 mt-1 ">
- ₱{totals.revenue.toLocaleString()}
+ {formatCurrency(totals.revenue)}
  </div>
  
  </div>
@@ -519,7 +520,7 @@ export function ProfitAnalytics({
  <div>
  <span className="text-[10px] font-extrabold uppercase tracking-widest text-default-500 dark:text-default-700">Total COGS Cost</span>
  <div className="text-xl font-black text-amber-500 mt-1 ">
- ₱{totals.cogs.toLocaleString()}
+ {formatCurrency(totals.cogs)}
  </div>
  
  </div>
@@ -533,7 +534,7 @@ export function ProfitAnalytics({
  <div>
  <span className="text-[10px] font-extrabold uppercase tracking-widest text-default-500 dark:text-default-700">OpEx & Losses</span>
  <div className="text-xl font-black text-rose-500 mt-1 ">
- ₱{totals.expenses.toLocaleString()}
+ {formatCurrency(totals.expenses)}
  </div>
  
  </div>
@@ -551,7 +552,7 @@ export function ProfitAnalytics({
  <div className={`text-xl font-black mt-1 ${
  totals.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"
  }`}>
- ₱{totals.netProfit.toLocaleString()}
+ {formatCurrency(totals.netProfit)}
  </div>
  <div className="flex items-center gap-1 mt-0.5">
  <Percent className="h-3 w-3 text-default-500 dark:text-default-700" />
@@ -615,7 +616,7 @@ export function ProfitAnalytics({
  fontSize={10} 
  tickLine={false}
  axisLine={false}
- tickFormatter={(val) => `₱${(val / 1000).toFixed(0)}k`}
+ tickFormatter={(val) => formatCurrency(val, { compact: true })}
  fontFamily="'Plus Jakarta Sans', ui-sans-serif, sans-serif"
  />
  <Tooltip
@@ -636,7 +637,7 @@ export function ProfitAnalytics({
  itemStyle={{
  color: darkMode ? "#D4D4D8" : "#3F3F46"
  }}
- formatter={(value: any) => [`₱${value.toLocaleString()}`, ""]}
+ formatter={(value: any) => [formatCurrency(value), ""]}
  />
  <Legend 
  verticalAlign="top" 
@@ -690,7 +691,7 @@ export function ProfitAnalytics({
  fontSize={10} 
  tickLine={false}
  axisLine={false}
- tickFormatter={(val) => `₱${(val / 1000).toFixed(0)}k`}
+ tickFormatter={(val) => formatCurrency(val, { compact: true })}
  fontFamily="'Plus Jakarta Sans', ui-sans-serif, sans-serif"
  />
  <Tooltip
@@ -711,7 +712,7 @@ export function ProfitAnalytics({
  itemStyle={{
  color: darkMode ? "#D4D4D8" : "#3F3F46"
  }}
- formatter={(value: any) => [`₱${value.toLocaleString()}`, ""]}
+ formatter={(value: any) => [formatCurrency(value), ""]}
  />
  <Legend 
  verticalAlign="top" 
