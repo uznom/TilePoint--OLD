@@ -4840,10 +4840,12 @@ app.get('/manifest.json', (req, res) => {
   return res.status(404).json({ error: 'Manifest not found' });
 });
 
-// Vite middleware setup or production static files
-if (process.env.NODE_ENV === 'production') {
+// Vite middleware setup or compiled production static files
+const distPath = path.join(__dirname, 'dist');
+const isProduction = process.env.NODE_ENV === 'production' || (!process.env.FORCE_DEV && fs.existsSync(path.join(distPath, 'index.html')));
+
+if (isProduction) {
   console.log('[Shared DB Server] Serving compiled production static files from dist/...');
-  const distPath = path.join(__dirname, 'dist');
   app.use(express.static(distPath));
   
   app.get('*', (req, res) => {
