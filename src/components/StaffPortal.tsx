@@ -1306,13 +1306,13 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
 // Global feedback micro-toast engine
 let toastTimer: any = null;
 let toastSetterCallback: ((msg: string) => void) | null = null;
-export function showToast(message: string) {
+function showToast(message: string) {
   if (toastSetterCallback) {
     toastSetterCallback(message);
   }
 }
 
-export function ToastContainerComponent() {
+function ToastContainerComponent() {
   const [toastText, setToastText] = useState('');
 
   useEffect(() => {

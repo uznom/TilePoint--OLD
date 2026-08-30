@@ -420,7 +420,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
       console.error("Payload compilation error", e);
       return "";
     }
-  }, [isReconciled, currentBranchMeta, reportingDate, stats, currentUser, reconciliationInfo]);
+  }, [isReconciled, currentBranchMeta, reportingDate, stats, currentUser, reconciliationInfo, saleItems]);
 
   return (
     <div className="space-y-6 text-default-500">

@@ -38,7 +38,7 @@ import { ToastNotification } from './ToastNotification';
 import { HeaderBar } from './common/HeaderBar';
 import { HeroButton } from './common/ui/HeroButton';
 
-export function validateAndMapInboundReport(rawParsed: any): { errors: string[]; mapped?: any } {
+function validateAndMapInboundReport(rawParsed: any): { errors: string[]; mapped?: any } {
   const errors: string[] = [];
 
   if (!rawParsed || typeof rawParsed !== 'object') {
@@ -618,7 +618,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
   heatmap: heatmapData,
   boa: localBOALogs
   };
-  }, [sales, saleItems, currentBranchMeta, reportingDate, expenses, deliveries, purchaseOrders, products, auditLogs]);
+  }, [sales, saleItems, currentBranchMeta, reportingDate, expenses, deliveries, purchaseOrders, products, auditLogs, branches]);
 
  // Upload or handle file inclusion
  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -729,7 +729,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  }
  return true;
  });
- }, [branchSalesReports, adminBranchFilter, adminStatusFilter, adminSearchQuery]);
+  }, [branchSalesReports, adminBranchFilter, adminStatusFilter, adminSearchQuery, currentUser]);
 
  // Immutable registry list of previously processed payload IDs from localStorage
  const usedNoncesList = useMemo(() => {
@@ -739,7 +739,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  } catch (_) {
  return [];
  }
- }, [branchSalesReports, pastedJson, importSuccess]);
+  }, []);
 
   if (!currentUser || currentUser.role !== UserRole.ADMIN) {
     return (

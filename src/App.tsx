@@ -112,7 +112,7 @@ const ADMIN_MANAGER_CASHIER = [
 const ADMIN_ONLY = [UserRole.ADMIN];
 
 // Definitive Directory Hierarchical Categories and Sub-items with RBAC configuration
-export const sidebarCategoryTree = [
+const sidebarCategoryTree = [
   {
     id: "sale",
     name: "Sale",
@@ -222,7 +222,7 @@ export const sidebarCategoryTree = [
 ];
 
 // Centralized flat list of all submodules derived from sidebarCategoryTree
-export const allSubModules = sidebarCategoryTree.flatMap((category) => category.subItems);
+const allSubModules = sidebarCategoryTree.flatMap((category) => category.subItems);
 
 function AppContent() {
   const {
@@ -325,12 +325,12 @@ function AppContent() {
   const [selectedBranchId, setSelectedBranchId] = useState<string>("all");
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const showToastMsg = (msg: string, _type?: "success" | "info" | "error") => {
+  const showToastMsg = useCallback((msg: string, _type?: "success" | "info" | "error") => {
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage(null);
     }, 3500);
-  };
+  }, []);
 
   // Dynamic automatic routing on login/identity-switch to ensure Cashier goes to pos, Admin/Manager goes to dashboard
   const prevUserIdRef = useRef<string | null>(null);
@@ -368,7 +368,7 @@ function AppContent() {
     } else {
       prevUserIdRef.current = null;
     }
-  }, [isLoggedIn, currentUser?.id, currentUser?.role, isRouteValid, setActiveTab]);
+  }, [isLoggedIn, currentUser, isRouteValid, setActiveTab]);
 
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(() => {
     return localStorage.getItem("tilepoint_sidebar_expanded") !== "false";
@@ -761,7 +761,7 @@ function AppContent() {
     }
   }, [currentUser, showAccountSettingsModal]);
 
-  const handleSmoothTabChange = (nextTab: string) => {
+  const handleSmoothTabChange = useCallback((nextTab: string) => {
     cleanupProgressTimers();
     setIsTabChanging(true);
     setPercentProgress(15);
@@ -801,9 +801,9 @@ function AppContent() {
       }, 90);
       progressTimeoutRef.current = null;
     }, 110);
-  };
+  }, [cleanupProgressTimers, setActiveTab]);
 
-  const handleChangeTab = (tabId: string) => {
+  const handleChangeTab = useCallback((tabId: string) => {
     if (tabId === activeTab) return;
     const targetItem = allSubModules.find((sub) => sub.id === tabId);
     if (targetItem && currentUser && targetItem.roles && !targetItem.roles.includes(currentUser.role)) {
@@ -832,7 +832,7 @@ function AppContent() {
     }
 
     handleSmoothTabChange(tabId);
-  };
+  }, [activeTab, currentUser, holdSale, showToastMsg, handleSmoothTabChange]);
 
   useEffect(() => {
     const handleStorageFailure = (e: any) => {
@@ -841,7 +841,7 @@ function AppContent() {
     };
     window.addEventListener("tp_storage_failure", handleStorageFailure);
     return () => window.removeEventListener("tp_storage_failure", handleStorageFailure);
-  }, []);
+  }, [showToastMsg]);
 
   const [showImmersiveControls, setShowImmersiveControls] = useState(true);
   useEffect(() => {
@@ -905,7 +905,7 @@ function AppContent() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentUser?.role, activeTab]);
+  }, [currentUser, activeTab, isSidebarHidden, handleChangeTab, showToastMsg]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();

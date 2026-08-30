@@ -171,9 +171,9 @@ export const ModalContent: React.FC<{ children?: React.ReactNode | ((onClose: ()
 ModalContent.displayName = 'ModalContent';
 
 export const Modal = HeroModal;
-export const ModalHeader = HeroModal.Header;
-export const ModalBody = HeroModal.Body;
-export const ModalFooter = HeroModal.Footer;
+export const ModalHeader: React.FC<React.HTMLAttributes<HTMLDivElement>> = (props) => <HeroModal.Header {...props} />;
+export const ModalBody: React.FC<React.HTMLAttributes<HTMLDivElement>> = (props) => <HeroModal.Body {...props} />;
+export const ModalFooter: React.FC<React.HTMLAttributes<HTMLDivElement>> = (props) => <HeroModal.Footer {...props} />;
 
 export function useDisclosure(defaultIsOpen = false) {
   const [isOpen, setIsOpen] = React.useState(defaultIsOpen);

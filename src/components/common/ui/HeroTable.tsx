@@ -190,10 +190,10 @@ HeroTable.Cell = ({ children, align = 'start', className = '', ...props }) => {
 };
 
 export const Table = HeroTable;
-export const TableHeader = HeroTable.Header;
-export const TableColumn = HeroTable.Column;
-export const TableBody = HeroTable.Body;
-export const TableRow = HeroTable.Row;
-export const TableCell = HeroTable.Cell;
+export const TableHeader: React.FC<React.HTMLAttributes<HTMLTableSectionElement>> = (props) => <HeroTable.Header {...props} />;
+export const TableColumn: React.FC<HeroTableColumnProps> = (props) => <HeroTable.Column {...props} />;
+export const TableBody: React.FC<React.HTMLAttributes<HTMLTableSectionElement>> = (props) => <HeroTable.Body {...props} />;
+export const TableRow: React.FC<React.HTMLAttributes<HTMLTableRowElement> & { isSelected?: boolean; isHoverable?: boolean }> = (props) => <HeroTable.Row {...props} />;
+export const TableCell: React.FC<HeroTableCellProps> = (props) => <HeroTable.Cell {...props} />;
 
 export default HeroTable;

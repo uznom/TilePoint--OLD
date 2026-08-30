@@ -48,7 +48,6 @@ export function ProfitAnalytics({
  shifts,
  branches,
  expenses,
- customBills,
  purchaseOrders,
  productReturns,
  } = useDb();
@@ -359,7 +358,7 @@ export function ProfitAnalytics({
  Margin: parseFloat(marginPercent.toFixed(1)),
  };
  });
- }, [sales, saleItemsBySaleId, productsById, expensesList, damageLogs, shifts, selectedBranchId, selectedPeriod, branchLandingModifiers, customBills, purchaseOrders]);
+ }, [sales, saleItemsBySaleId, productsById, expensesList, damageLogs, shifts, selectedBranchId, selectedPeriod, branchLandingModifiers, purchaseOrders, productReturns]);
 
  // Aggregate Totals for the current timeframe
  const totals = useMemo(() => {

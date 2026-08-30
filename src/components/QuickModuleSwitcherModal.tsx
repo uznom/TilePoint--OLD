@@ -41,7 +41,7 @@ interface QuickModuleSwitcherModalProps {
   onSelectTab: (tabId: string) => void;
 }
 
-export const MODULE_SHORTCUT_MAP: ShortcutModuleItem[] = [
+const MODULE_SHORTCUT_MAP: ShortcutModuleItem[] = [
   {
     id: "dashboard",
     name: "Branch Dashboard",
@@ -134,7 +134,7 @@ export const MODULE_SHORTCUT_MAP: ShortcutModuleItem[] = [
   },
 ];
 
-export const POS_HOTKEYS = [
+const POS_HOTKEYS = [
   { key: "Ctrl + 2", description: "Quickly open ERP POS Checkout Register" },
   { key: "F1", description: "Hold / Park current active shopping cart" },
   { key: "F2", description: "Open Senior Citizen / Custom Discount dialog" },

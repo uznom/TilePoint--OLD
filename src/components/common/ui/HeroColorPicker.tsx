@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Pipette, Check, Copy, Sparkles, ChevronDown } from 'lucide-react';
 
 // Helper color conversion functions
-export function hexToRgb(hex: string): { r: number; g: number; b: number; a: number } {
+function hexToRgb(hex: string): { r: number; g: number; b: number; a: number } {
   let clean = hex.trim().replace(/^#/, '');
   if (clean.length === 3) {
     clean = clean.split('').map((c) => c + c).join('') + 'FF';
@@ -18,7 +18,7 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number; a: num
   return { r, g, b, a };
 }
 
-export function rgbToHex(r: number, g: number, b: number, a: number = 1): string {
+function rgbToHex(r: number, g: number, b: number, a: number = 1): string {
   const clamp = (n: number) => Math.max(0, Math.min(255, Math.round(n)));
   const rH = clamp(r).toString(16).padStart(2, '0');
   const gH = clamp(g).toString(16).padStart(2, '0');
@@ -30,7 +30,7 @@ export function rgbToHex(r: number, g: number, b: number, a: number = 1): string
   return `#${rH}${gH}${bH}`.toUpperCase();
 }
 
-export function rgbToHsv(r: number, g: number, b: number): { h: number; s: number; v: number } {
+function rgbToHsv(r: number, g: number, b: number): { h: number; s: number; v: number } {
   r /= 255;
   g /= 255;
   b /= 255;
@@ -50,7 +50,7 @@ export function rgbToHsv(r: number, g: number, b: number): { h: number; s: numbe
   return { h, s, v };
 }
 
-export function hsvToRgb(h: number, s: number, v: number): { r: number; g: number; b: number } {
+function hsvToRgb(h: number, s: number, v: number): { r: number; g: number; b: number } {
   s /= 100;
   v /= 100;
   const c = v * s;

@@ -66,12 +66,12 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, _d
  const term = searchQuery.toLowerCase().trim();
  if (!term) return true;
 
- const nameMatch = p.productName.toLowerCase().includes(term);
- const codeMatch = p.productCode?.toLowerCase().includes(term) || false;
- const catMatch = p.category?.toLowerCase().includes(term) || false;
+ const nameMatch = (p.productName || '').toLowerCase().includes(term);
+ const codeMatch = (p.productCode || '').toLowerCase().includes(term);
+ const catMatch = (p.category || '').toLowerCase().includes(term);
  return nameMatch || codeMatch || catMatch;
  });
- }, [products, searchQuery]);
+ }, [products, searchQuery, userBranchId, branchStock, branches]);
 
  // Size shortcuts helper
  const sizeShortcuts = [

@@ -28,10 +28,10 @@ export const HeroPopover: React.FC<HeroPopoverProps> = ({
   const isControlled = isOpen !== undefined;
   const show = isControlled ? isOpen : internalOpen;
 
-  const setOpen = (val: boolean) => {
+  const setOpen = React.useCallback((val: boolean) => {
     if (!isControlled) setInternalOpen(val);
     onOpenChange?.(val);
-  };
+  }, [isControlled, onOpenChange]);
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
@@ -43,7 +43,7 @@ export const HeroPopover: React.FC<HeroPopoverProps> = ({
       document.addEventListener('mousedown', handleOutsideClick);
     }
     return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [show]);
+  }, [show, setOpen]);
 
   const getPositionClasses = () => {
     switch (placement) {

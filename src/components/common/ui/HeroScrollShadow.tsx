@@ -32,7 +32,7 @@ export const HeroScrollShadow = React.forwardRef<HTMLDivElement, HeroScrollShado
     const [hasLeftShadow, setHasLeftShadow] = useState(false);
     const [hasRightShadow, setHasRightShadow] = useState(false);
 
-    const handleScroll = () => {
+    const handleScroll = React.useCallback(() => {
       const el = containerRef.current;
       if (!el) return;
 
@@ -51,7 +51,7 @@ export const HeroScrollShadow = React.forwardRef<HTMLDivElement, HeroScrollShado
         setHasLeftShadow(scrollLeft > offset);
         setHasRightShadow(scrollLeft + clientWidth < scrollWidth - offset);
       }
-    };
+    }, [orientation, offset, containerRef]);
 
     useEffect(() => {
       handleScroll();
@@ -65,7 +65,7 @@ export const HeroScrollShadow = React.forwardRef<HTMLDivElement, HeroScrollShado
         el.removeEventListener('scroll', handleScroll);
         window.removeEventListener('resize', handleScroll);
       };
-    }, [orientation, offset]);
+    }, [handleScroll, containerRef]);
 
     return (
       <div className="relative overflow-hidden">

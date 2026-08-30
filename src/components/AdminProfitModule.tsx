@@ -59,7 +59,6 @@ export function AdminProfitModule({
  addAuditLog,
  customBills,
  purchaseOrders,
- productReturns,
  } = useDb();
 
  // Localized tab inside the accounting console
@@ -370,7 +369,7 @@ export function AdminProfitModule({
  activeShifts,
  voidedSales,
  };
- }, [sales, saleItems, products, damageLogs, shifts, branchLandingModifiers, selectedBranchId, expenses, customBills, purchaseOrders, productReturns]);
+ }, [sales, saleItems, products, damageLogs, shifts, branchLandingModifiers, selectedBranchId, expenses, customBills, purchaseOrders]);
 
  const opexByCategory = useMemo(() => {
  const categories: Record<string, number> = {
@@ -482,7 +481,7 @@ export function AdminProfitModule({
         margin: branchMargin,
       };
     });
-  }, [branches, sales, saleItems, products, branchLandingModifiers, purchaseOrders, expenses, damageLogs, shifts]);
+  }, [branches, sales, saleItems, products, branchLandingModifiers, purchaseOrders, expenses, customBills, damageLogs, shifts]);
 
   const consolidatedSummary = useMemo(() => {
     const gross = branchLeaderboard.reduce((acc, b) => acc + b.gross, 0);

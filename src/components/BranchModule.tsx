@@ -262,7 +262,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
         }
       }
     }
-  }, [branches, currentUser?.branchAssignmentId]);
+  }, [activeBranchesForReceipt, inlineBranchId, currentUser?.branchAssignmentId, primaryBranchId]);
 
   useEffect(() => {
     const selectedBranch = branches.find(b => b.id === inlineBranchId);
@@ -365,7 +365,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
       return sortPersonnelData(list);
     }
     return list;
-  }, [users, personnelSearch, personnelSortDescriptors, sortPersonnelData, branches]);
+  }, [users, personnelSearch, personnelSortDescriptors, sortPersonnelData]);
 
  const toggleBranchUsers = (branchId: string) => {
  setExpandedBranchUsers(prev => ({

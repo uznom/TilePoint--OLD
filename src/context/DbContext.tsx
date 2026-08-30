@@ -1102,40 +1102,85 @@ const mergeParkedSales = (local: any[], remote: any[], deletedSet?: Set<string>)
 };
 
 const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
- children,
+  children,
 }) => {
- const getAuthHeaders = (): Record<string, string> => {
- let user = currentUser;
- if (!user) {
- const userStr = sessionStorage.getItem("tp_current_user") || localStorage.getItem("tp_current_user");
- if (userStr) {
- try {
- user = JSON.parse(userStr);
- } catch (swallowedErr) {
-    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
-  }
- }
- }
- if (!user || !user.id || !user.role) return {};
+  // Load initial local data or populate with seed data from sessionStorage to isolate sessions
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    if (typeof window === "undefined") return null;
+    let cached = sessionStorage.getItem("tp_current_user");
+    if (!cached) {
+      cached = localStorage.getItem("tp_current_user");
+    }
+    if (!cached) return null; // Mandatory null state if session is missing to trigger login redirect
+    try {
+      return JSON.parse(cached);
+    } catch (e) {
+      return null;
+    }
+  });
 
- try {
- if (!sessionStorage.getItem("tp_current_user") && !localStorage.getItem("tp_current_user")) {
- sessionStorage.setItem("tp_current_user", JSON.stringify(user));
- localStorage.setItem("tp_current_user", JSON.stringify(user));
- }
- } catch (swallowedErr) {
-    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
-  }
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    let cached = sessionStorage.getItem("tp_is_logged_in");
+    if (!cached) {
+      cached = localStorage.getItem("tp_is_logged_in");
+    }
+    return cached === "true";
+  });
+
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return (
+      localStorage.getItem("tp_active_session_id") ||
+      sessionStorage.getItem("tp_active_session_id") ||
+      null
+    );
+  });
+
+  const [sessionRemainingSeconds, setSessionRemainingSeconds] = useState<number>(() => {
+    if (typeof window === "undefined") return 14400;
+    const saved = sessionStorage.getItem("tp_session_remaining_seconds");
+    return saved ? parseInt(saved, 10) : 14400;
+  });
+
+  const [apiErrorState, setApiErrorState] = useState<{
+    statusCode: number;
+    message: string;
+    retryAfter?: number;
+  } | null>(null);
+
+  const getAuthHeaders = useCallback((): Record<string, string> => {
+    let user = currentUser;
+    if (!user) {
+      const userStr = sessionStorage.getItem("tp_current_user") || localStorage.getItem("tp_current_user");
+      if (userStr) {
+        try {
+          user = JSON.parse(userStr);
+        } catch (swallowedErr) {
+          console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+        }
+      }
+    }
+    if (!user || !user.id || !user.role) return {};
+
+    try {
+      if (!sessionStorage.getItem("tp_current_user") && !localStorage.getItem("tp_current_user")) {
+        sessionStorage.setItem("tp_current_user", JSON.stringify(user));
+        localStorage.setItem("tp_current_user", JSON.stringify(user));
+      }
+    } catch (swallowedErr) {
+      console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+    }
 
     const savedToken = sessionStorage.getItem("tp_session_token") || localStorage.getItem("tp_session_token");
     const token = savedToken && savedToken !== "undefined" && savedToken !== "null" ? savedToken.trim() : "";
-    const activeSessionId = localStorage.getItem("tp_active_session_id") || sessionStorage.getItem("tp_active_session_id") || "unknown";
+    const activeSessionIdVal = activeSessionId || localStorage.getItem("tp_active_session_id") || sessionStorage.getItem("tp_active_session_id") || "unknown";
     const fingerprint = getClientFingerprintHash();
     const hardwareKey = getDeviceHardwareKey();
     const clientSummary = getClientDeviceSummary();
     const headers: Record<string, string> = {
-      "X-Client-ID": activeSessionId,
-      "X-Session-ID": activeSessionId,
+      "X-Client-ID": activeSessionIdVal,
+      "X-Session-ID": activeSessionIdVal,
       "X-Client-Fingerprint": fingerprint,
       "X-Device-Key": hardwareKey,
       "X-Client-Info": clientSummary,
@@ -1145,7 +1190,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
       headers["X-Session-Token"] = token;
     }
     return headers;
-  };
+  }, [currentUser, activeSessionId]);
 
  const [isHydrating, setIsHydrating] = useState<boolean>(true);
  const [isSystemHydrating, setIsSystemHydrating] = useState<boolean>(true);
@@ -1257,42 +1302,13 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
     };
   }, []);
 
- // Load initial local data or populate with seed data from sessionStorage to isolate sessions
- const [currentUser, setCurrentUser] = useState<User | null>(() => {
- if (typeof window === "undefined") return null;
- let cached = sessionStorage.getItem("tp_current_user");
- if (!cached) {
- cached = localStorage.getItem("tp_current_user");
- }
- if (!cached) return null; // Mandatory null state if session is missing to trigger login redirect
- try {
- return JSON.parse(cached);
- } catch (e) {
- return null;
- }
- });
-
- const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
- if (typeof window === "undefined") return false;
- let cached = sessionStorage.getItem("tp_is_logged_in");
- if (!cached) {
- cached = localStorage.getItem("tp_is_logged_in");
- }
- return cached === "true";
- });
-
- const [failedAttempts, setFailedAttempts] = useState<number>(0);
+  const [failedAttempts, setFailedAttempts] = useState<number>(0);
  const [lockoutUntil, setLockoutUntil] = useState<number>(0);
  const [rateLimitTimeLeft, setRateLimitTimeLeft] = useState<number>(0);
  const [serverConnected, setServerConnected] = useState<boolean>(false);
  const [outboxStats, setOutboxStats] = useState<OutboxStats>(() => transactionOutboxService.getStats());
  const [outboxItems, setOutboxItems] = useState<OutboxRecord[]>(() => transactionOutboxService.getItems());
  const [isOutboxModalOpen, setIsOutboxModalOpen] = useState<boolean>(false);
- const [apiErrorState, setApiErrorState] = useState<{
- statusCode: number;
- message: string;
- retryAfter?: number;
- } | null>(null);
 
  const updateCurrentUser = (updates: Partial<User>) => {
  setCurrentUser((prev) => {
@@ -1303,7 +1319,6 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  };
 
  const [users, setUsers] = useState<User[]>(() => {
- // Clear out any old versions of cached users with incompatible password structures
  if (localStorage.getItem("tp_hash_version_v3") !== "true") {
  localStorage.removeItem("tp_users");
  localStorage.setItem("tp_hash_version_v3", "true");
@@ -1311,8 +1326,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  return safeParse<User[]>("tp_users", []);
  });
 
-  // Rate Limiting Timer Tick
- useEffect(() => {
+  useEffect(() => {
  if (lockoutUntil === 0) return;
  const interval = setInterval(() => {
  const now = Date.now();
@@ -1330,7 +1344,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  const nextAttempts = failedAttempts + 1;
  setFailedAttempts(nextAttempts);
  if (nextAttempts >= 20) {
- const lockDuration = 5 * 1000; // 5 sec lockout
+ const lockDuration = 5 * 1000;
  const until = Date.now() + lockDuration;
  setLockoutUntil(until);
  setRateLimitTimeLeft(5);
@@ -1368,7 +1382,6 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
     username: string,
     password: string,
   ): Promise<{ success: boolean; error?: string }> => {
-    // Dynamic credential verification with positive input validation
     if (!username || typeof username !== 'string' || !username.trim()) {
       return {
         success: false,
@@ -1382,7 +1395,6 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
       };
     }
 
-    // 2. Check for Rate Limiting Lockout
     const now = Date.now();
     if (now < lockoutUntil) {
       const left = Math.ceil((lockoutUntil - now) / 1000);
@@ -1392,7 +1404,6 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
       };
     }
 
-    // Find user in db for branch info & offline fallback
     const targetUser = users.find(
       (u) => (u.username || '').trim().toLowerCase() === (username || '').trim().toLowerCase(),
     );
@@ -1404,7 +1415,6 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
 
     const existingSessionId = localStorage.getItem("tp_active_session_id") || undefined;
 
-    // 3. Authenticate via Server API (Enforces Single-Session Lock & Sets Secure HTTP-Only Cookie)
     try {
       const clientFingerprint = getClientFingerprintHash();
       const clientHardwareKey = getDeviceHardwareKey();
@@ -1432,7 +1442,6 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
       const authData = await serverAuthRes.json();
 
       if (!serverAuthRes.ok || !authData.success) {
-        // Concurrency Restriction: "whoever logged in the account first gets it"
         if (serverAuthRes.status === 409 || authData.isLocked) {
           return {
             success: false,
@@ -1447,7 +1456,6 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
           };
         }
       } else if (authData.success && authData.user) {
-        // Success Server-Side Authentication
         const authedUser = authData.user;
         setFailedAttempts(0);
         setLockoutUntil(0);
@@ -1491,7 +1499,6 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
           authedUser.id,
         );
 
-        // Auto-flush and synchronize local collections and offline queue to MySQL
         setTimeout(() => {
           syncAllLocalToMysql().catch((syncErr) => {
             console.debug("[Auth Bridge] Background sync to MySQL notice:", syncErr);
@@ -1565,16 +1572,14 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
     const targetB = item?.currentBranchId || item?.branchId;
     logBranchAccessScope("READ", "InventoryAccessCheck", targetB, item?.id || item?.productId);
     if (!currentUser) return false;
-    // Admins and Managers have unrestricted access to all branch stock data
     if (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER) return true;
     
-    // Check if the currentBranchId (or fallback branchId) matches the user's branchAssignmentId
     if (!targetB) return true;
     
     return targetB === currentUser.branchAssignmentId;
   };
 
- const logout = () => {
+ const logout = useCallback(() => {
  setIsLoggedIn(false);
  setCurrentUser(null);
  sessionStorage.setItem("tp_is_logged_in", "false");
@@ -1593,7 +1598,6 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  sessionStorage.removeItem("tp_offline_queue");
  setOfflineQueue([]);
 
- // Inform server to release session lock and clear cookie
  fetch("/api/auth/logout", {
  method: "POST",
  headers: { "Content-Type": "application/json" },
@@ -1601,7 +1605,6 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  body: JSON.stringify({ sessionId: activeSessionId, userId: currentUser?.id })
  }).catch(() => {});
 
- // Remove our session from activeSessions list so other client notices immediately
  if (activeSessionId) {
  setActiveSessions((prev) => prev.filter((s) => s.id !== activeSessionId));
  }
@@ -1616,7 +1619,8 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  }
  setCurrentUser(null);
  setActiveSessionId(null);
- };
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [activeSessionId, currentUser]);
 
  const clearServerErrorState = () => {
  setApiErrorState(null);
@@ -1634,154 +1638,154 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  );
  };
 
- const safeApiFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
- if (apiErrorState?.statusCode === 429 && apiErrorState.retryAfter && apiErrorState.retryAfter > 0) {
- const msg = `Rate limiting active. Please wait ${apiErrorState.retryAfter}s before retrying.`;
- console.warn(`[System Guard] Blocked API fetch due to active 429 cooldown: ${input}`);
- throw new Error(msg);
- }
-
- const authHeaders = getAuthHeaders();
-  const mergedInit = { ...init };
-  if (mergedInit.credentials === undefined) {
-    mergedInit.credentials = "include";
-  }
-  if (Object.keys(authHeaders).length > 0) {
-    if (!mergedInit.headers) {
-      mergedInit.headers = authHeaders;
-    } else if (mergedInit.headers instanceof Headers) {
-      Object.entries(authHeaders).forEach(([key, val]) => {
-        (mergedInit.headers as Headers).set(key, val);
-      });
-    } else if (Array.isArray(mergedInit.headers)) {
-      const headersArr = [...mergedInit.headers];
-      Object.entries(authHeaders).forEach(([key, val]) => {
-        if (!headersArr.some(([k]) => k.toLowerCase() === key.toLowerCase())) {
-          headersArr.push([key, val]);
-        }
-      });
-      mergedInit.headers = headersArr;
-    } else {
-      mergedInit.headers = {
-        ...authHeaders,
-        ...mergedInit.headers,
-      };
+  const safeApiFetch = useCallback(async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    if (apiErrorState?.statusCode === 429 && apiErrorState.retryAfter && apiErrorState.retryAfter > 0) {
+      const msg = `Rate limiting active. Please wait ${apiErrorState.retryAfter}s before retrying.`;
+      console.warn(`[System Guard] Blocked API fetch due to active 429 cooldown: ${input}`);
+      throw new Error(msg);
     }
-  }
 
-  let retries = 0;
-  const maxRetries = 3;
-
-  while (true) {
-    const controller = new AbortController();
-    const fetchTimeout = setTimeout(() => controller.abort(), 10000);
-    try {
-      const signal = mergedInit.signal || controller.signal;
-      const res = await fetch(input, { ...mergedInit, signal });
-      clearTimeout(fetchTimeout);
-
-      const remainingSecHeader = res.headers.get("x-session-remaining-seconds");
-      if (remainingSecHeader) {
-        const secVal = parseInt(remainingSecHeader, 10);
-        if (secVal > 0) {
-          setSessionRemainingSeconds(secVal);
-        }
+    const authHeaders = getAuthHeaders();
+    const mergedInit = { ...init };
+    if (mergedInit.credentials === undefined) {
+      mergedInit.credentials = "include";
+    }
+    if (Object.keys(authHeaders).length > 0) {
+      if (!mergedInit.headers) {
+        mergedInit.headers = authHeaders;
+      } else if (mergedInit.headers instanceof Headers) {
+        Object.entries(authHeaders).forEach(([key, val]) => {
+          (mergedInit.headers as Headers).set(key, val);
+        });
+      } else if (Array.isArray(mergedInit.headers)) {
+        const headersArr = [...mergedInit.headers];
+        Object.entries(authHeaders).forEach(([key, val]) => {
+          if (!headersArr.some(([k]) => k.toLowerCase() === key.toLowerCase())) {
+            headersArr.push([key, val]);
+          }
+        });
+        mergedInit.headers = headersArr;
+      } else {
+        mergedInit.headers = {
+          ...authHeaders,
+          ...mergedInit.headers,
+        };
       }
+    }
 
-      if (!res.ok) {
-        const statusCode = res.status;
+    let retries = 0;
+    const maxRetries = 3;
 
-        // Auto-retry transient 502/503/504 server startup issues
-        if ((statusCode === 502 || statusCode === 503 || statusCode === 504) && retries < maxRetries) {
+    while (true) {
+      const controller = new AbortController();
+      const fetchTimeout = setTimeout(() => controller.abort(), 10000);
+      try {
+        const signal = mergedInit.signal || controller.signal;
+        const res = await fetch(input, { ...mergedInit, signal });
+        clearTimeout(fetchTimeout);
+
+        const remainingSecHeader = res.headers.get("x-session-remaining-seconds");
+        if (remainingSecHeader) {
+          const secVal = parseInt(remainingSecHeader, 10);
+          if (secVal > 0) {
+            setSessionRemainingSeconds(secVal);
+          }
+        }
+
+        if (!res.ok) {
+          const statusCode = res.status;
+
+          if ((statusCode === 502 || statusCode === 503 || statusCode === 504) && retries < maxRetries) {
+            retries++;
+            await new Promise((r) => setTimeout(r, 300 * Math.pow(2, retries)));
+            continue;
+          }
+
+          let errMsg = `Server returned HTTP Status Code ${statusCode}`;
+          try {
+            const errData = await res.clone().json();
+            if (errData && errData.error) {
+              errMsg = `${errData.error}: ${errData.message || errMsg}`;
+            }
+          } catch (swallowedErr) {
+            console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+          }
+
+          if ([401, 403, 404, 429, 502, 503, 504].includes(statusCode)) {
+            console.warn(`[API Interceptor] Handled status response [${statusCode}]: ${errMsg}`);
+          } else {
+            console.error(`[API Interceptor] Detected error response [${statusCode}]: ${errMsg}`);
+          }
+
+          if (statusCode === 401) {
+            const userStr = sessionStorage.getItem("tp_current_user") || localStorage.getItem("tp_current_user");
+            if (userStr) {
+              let parsedErr: any = null;
+              try {
+                parsedErr = await res.clone().json();
+              } catch (swallowedErr) {
+                console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
+              }
+
+              if (parsedErr?.code === 'SESSION_SUPERSEDED' || parsedErr?.superseded) {
+                console.warn("[API Interceptor] 401 Concurrent Session Superseded received.");
+                handleSupersededSession(parsedErr.activeSession, parsedErr.error);
+              } else if (parsedErr?.code === 'SESSION_EXPIRED' || parsedErr?.expired) {
+                console.warn("[API Interceptor] 401 Session Duration Expired received.");
+                handleExpiredSession(parsedErr.error);
+              } else {
+                console.warn("[API Interceptor] 401 Unauthorized received. Clearing session.");
+                logout();
+                setApiErrorState({
+                  statusCode: 401,
+                  message: parsedErr?.error || "Your session has expired. Please sign in again to verify your corporate identity.",
+                });
+              }
+            }
+          } else if (statusCode === 403) {
+            let parsedErr: any = null;
+            try {
+              parsedErr = await res.clone().json();
+            } catch (_) {}
+            if (parsedErr?.error?.includes('disabled') || parsedErr?.error?.includes('not found') || parsedErr?.code === 'USER_DISABLED' || parsedErr?.code === 'USER_NOT_FOUND') {
+              console.warn("[API Interceptor] 403 User deactivated or missing. Clearing session.");
+              logout();
+            }
+            console.warn("[API Interceptor] 403 Forbidden received. Restricting workspace access.");
+            setApiErrorState({
+              statusCode: 403,
+              message: parsedErr?.error || "Access Denied: You do not have the required clearances or security credentials to perform this system action.",
+            });
+          } else if (statusCode === 429) {
+            console.warn("[API Interceptor] 429 Too Many Requests received. Initiating protective security cool-down.");
+            setApiErrorState({
+              statusCode: 429,
+              message: "Rate Limit Exceeded: Excessive validation requests detected. Protective cooling-down is active.",
+              retryAfter: 15,
+            });
+          }
+
+          return res;
+        }
+
+        if (apiErrorState && apiErrorState.statusCode !== 429 && apiErrorState.statusCode !== 401) {
+          setApiErrorState(null);
+        }
+
+        return res;
+      } catch (err: any) {
+        if (retries < maxRetries) {
           retries++;
           await new Promise((r) => setTimeout(r, 300 * Math.pow(2, retries)));
           continue;
         }
-
-        let errMsg = `Server returned HTTP Status Code ${statusCode}`;
-        try {
-          const errData = await res.clone().json();
-          if (errData && errData.error) {
-            errMsg = `${errData.error}: ${errData.message || errMsg}`;
-          }
-        } catch (swallowedErr) {
-    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
-  }
-
-        if ([401, 403, 404, 429, 502, 503, 504].includes(statusCode)) {
-          console.warn(`[API Interceptor] Handled status response [${statusCode}]: ${errMsg}`);
-        } else {
-          console.error(`[API Interceptor] Detected error response [${statusCode}]: ${errMsg}`);
-        }
-
-        if (statusCode === 401) {
-          const userStr = sessionStorage.getItem("tp_current_user") || localStorage.getItem("tp_current_user");
-          if (userStr) {
-            let parsedErr: any = null;
-            try {
-              parsedErr = await res.clone().json();
-            } catch (swallowedErr) {
-    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
-  }
-
-            if (parsedErr?.code === 'SESSION_SUPERSEDED' || parsedErr?.superseded) {
-              console.warn("[API Interceptor] 401 Concurrent Session Superseded received.");
-              handleSupersededSession(parsedErr.activeSession, parsedErr.error);
-            } else if (parsedErr?.code === 'SESSION_EXPIRED' || parsedErr?.expired) {
-              console.warn("[API Interceptor] 401 Session Duration Expired received.");
-              handleExpiredSession(parsedErr.error);
-            } else {
-              console.warn("[API Interceptor] 401 Unauthorized received. Clearing session.");
-              logout();
-              setApiErrorState({
-                statusCode: 401,
-                message: parsedErr?.error || "Your session has expired. Please sign in again to verify your corporate identity.",
-              });
-            }
-          }
-        } else if (statusCode === 403) {
-          let parsedErr: any = null;
-          try {
-            parsedErr = await res.clone().json();
-          } catch (_) {}
-          if (parsedErr?.error?.includes('disabled') || parsedErr?.error?.includes('not found') || parsedErr?.code === 'USER_DISABLED' || parsedErr?.code === 'USER_NOT_FOUND') {
-            console.warn("[API Interceptor] 403 User deactivated or missing. Clearing session.");
-            logout();
-          }
-          console.warn("[API Interceptor] 403 Forbidden received. Restricting workspace access.");
-          setApiErrorState({
-            statusCode: 403,
-            message: parsedErr?.error || "Access Denied: You do not have the required clearances or security credentials to perform this system action.",
-          });
-        } else if (statusCode === 429) {
-          console.warn("[API Interceptor] 429 Too Many Requests received. Initiating protective security cool-down.");
-          setApiErrorState({
-            statusCode: 429,
-            message: "Rate Limit Exceeded: Excessive validation requests detected. Protective cooling-down is active.",
-            retryAfter: 15,
-          });
-        }
-
-        return res;
+        console.warn(`[API Interceptor] Connection network failure targeting: ${input}`, err);
+        setServerConnected(false);
+        throw err;
       }
-
-      if (apiErrorState && apiErrorState.statusCode !== 429 && apiErrorState.statusCode !== 401) {
-        setApiErrorState(null);
-      }
-
-      return res;
-    } catch (err: any) {
-      if (retries < maxRetries) {
-        retries++;
-        await new Promise((r) => setTimeout(r, 300 * Math.pow(2, retries)));
-        continue;
-      }
-      console.warn(`[API Interceptor] Connection network failure targeting: ${input}`, err);
-      setServerConnected(false);
-      throw err;
     }
-  }
- };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiErrorState, getAuthHeaders, logout]);
 
  useEffect(() => {
  if (apiErrorState?.statusCode === 429 && apiErrorState.retryAfter && apiErrorState.retryAfter > 0) {
@@ -1805,7 +1809,6 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  }
  }, [apiErrorState]);
 
- // Multi-tab state synchronization
  useEffect(() => {
  const handleStorageChange = (e: StorageEvent) => {
  if (e.key === "tp_is_logged_in") {
@@ -1850,9 +1853,10 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  syncFromSharedServer(true);
  }
  };
- window.addEventListener("storage", handleStorageChange);
- return () => window.removeEventListener("storage", handleStorageChange);
- }, [isLoggedIn, currentUser]);
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, currentUser]);
 
  const [branches, setBranches] = useState<Branch[]>(() => {
  return safeParse<Branch[]>("tp_branches", SEED_BRANCHES);
@@ -1947,7 +1951,6 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  return safeParse<AuditLog[]>("tp_audit_logs", SEED_AUDIT_LOGS);
  });
 
- // Hold / park transactions - standard in cashiers POS
  const [parkedSales, rawSetParkedSales] = useState<
  {
  id: string;
@@ -2012,7 +2015,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  } catch (swallowedErr) {
     console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
   }
- }, 300000); // 5 minutes
+ }, 300000);
  };
 
  useEffect(() => {
@@ -2087,19 +2090,18 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  window.addEventListener("storage", handleStorageChange);
  window.addEventListener("tp_queue_updated", handleCustomQueueUpdate);
 
- return () => {
- if (queueChannel) queueChannel.close();
- window.removeEventListener("storage", handleStorageChange);
- window.removeEventListener("tp_queue_updated", handleCustomQueueUpdate);
- };
- }, []);
+    return () => {
+      if (queueChannel) queueChannel.close();
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("tp_queue_updated", handleCustomQueueUpdate);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
- const setParkedSales = (updater: any) => {
- let nextValue: any;
+ const setParkedSales = useCallback((updater: any) => {
  rawSetParkedSales((prev) => {
  let next = typeof updater === "function" ? updater(prev) : updater;
  
- // If we are NOT syncing from the server, detect any deletions from local state changes
  if (!isSyncingFromServer.current && Array.isArray(prev) && Array.isArray(next)) {
  const nextIds = new Set(next.map(item => item?.id).filter(Boolean));
  prev.forEach(item => {
@@ -2109,12 +2111,10 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  });
  }
 
- // Protect local un-synced hold sales from being wiped out by server-side pull
  if (isSyncingFromServer.current && Array.isArray(next)) {
  next = mergeParkedSales(prev, next, deletedParkedSaleIds.current);
  }
  
- // Always filter out deleted parked sales to prevent race-condition merge-backs
  if (Array.isArray(next)) {
  next = next.filter(item => item && item.id && !deletedParkedSaleIds.current.has(item.id));
  }
@@ -2124,37 +2124,26 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  } catch (swallowedErr) {
     console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
   }
- nextValue = next;
+ 
  return next;
  });
+ }, []);
 
- if (!isSyncingFromServer.current && nextValue !== undefined) {
- saveToStorageWithDebounce("tp_parked_sales", nextValue, true);
- try {
- const queueChannel = new BroadcastChannel("tilepoint_queue_channel");
- queueChannel.postMessage({ type: "QUEUE_SYNC", timestamp: Date.now() });
- queueChannel.close();
- } catch (swallowedErr) {
-    console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
-  }
- }
- };
+  const [syncStatus, setSyncStatus] = useState<Record<string, "Live" | "Syncing">>({});
 
- const [syncStatus, setSyncStatus] = useState<Record<string, "Live" | "Syncing">>({});
-
- useEffect(() => {
- setSyncStatus((prev) => {
- const next = { ...prev };
- let updated = false;
- branches.forEach((branch) => {
- if (!next[branch.id]) {
- next[branch.id] = "Live";
- updated = true;
- }
- });
- return updated ? next : prev;
- });
- }, [branches]);
+  useEffect(() => {
+    setSyncStatus((prev) => {
+      const next = { ...prev };
+      let updated = false;
+      branches.forEach((branch) => {
+        if (!next[branch.id]) {
+          next[branch.id] = "Live";
+          updated = true;
+        }
+      });
+      return updated ? next : prev;
+    });
+  }, [branches]);
 
  const [stockTransfers, setStockTransfers] = useState<StockTransfer[]>(() => {
  return safeParse<StockTransfer[]>("tp_stock_transfers", []);
@@ -2188,16 +2177,13 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  return safeParse<DamageLog[]>("tp_damage_logs", []);
  });
 
- // CRITICAL ALIGNMENT ARCHITECTURE: Linked state provider variable for Custom Recurring Corporate Liabilities
  const [customBills, setCustomBills] = useState<CustomCorporateBill[]>(() => {
  return safeParse<CustomCorporateBill[]>("atpos_v2_custom_bills", []);
  });
 
- // SYSTEM INTEGRATION: Linked state provider variables for members, expenses, and product returns
  const [members, setMembers] = useState<Member[]>(() => {
  return safeParse<Member[]>("atpos_v2_members_list", []);
  });
-
 
   const [expenses, setExpenses] = useState<Expense[]>(() => {
  return safeParse<Expense[]>("atpos_v2_expenses", []);
@@ -2261,7 +2247,6 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  return safeParse<Record<string, string>>("atpos_v2_calendar_day_memos", {});
  });
 
- // Dynamic Business Parameters & Catalogs State
  const [productCategories, setProductCategories] = useState<ProductCategory[]>(() => {
    return safeParse<ProductCategory[]>("tp_product_categories", DEFAULT_PRODUCT_CATEGORIES);
  });
@@ -2285,21 +2270,6 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  const [activeSessions, setActiveSessions] = useState<ActiveSession[]>(() => {
  return safeParse<ActiveSession[]>("tp_active_sessions", []);
  });
-
-   const [activeSessionId, setActiveSessionId] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    return (
-      localStorage.getItem("tp_active_session_id") ||
-      sessionStorage.getItem("tp_active_session_id") ||
-      null
-    );
-  });
-
-  const [sessionRemainingSeconds, setSessionRemainingSeconds] = useState<number>(() => {
-    if (typeof window === "undefined") return 14400;
-    const saved = sessionStorage.getItem("tp_session_remaining_seconds");
-    return saved ? parseInt(saved, 10) : 14400;
-  });
 
   const [sessionExpiresAt, setSessionExpiresAt] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
@@ -2381,7 +2351,8 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
       console.warn("[Session Duration] Failed to extend session:", err);
       return false;
     }
-  }, [currentUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser, getAuthHeaders]);
 
   // Session Duration Countdown Timer (1s interval)
   useEffect(() => {
@@ -2401,7 +2372,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [isLoggedIn, currentUser?.id, handleExpiredSession]);
+  }, [isLoggedIn, currentUser, handleExpiredSession]);
 
  // Derived Active Branch
  const activeBranch = useMemo(() => {
@@ -2485,7 +2456,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  pingServer();
 
  return () => clearInterval(heartbeatInterval);
- }, [isLoggedIn, currentUser?.id, activeSessionId, branches]);
+ }, [isLoggedIn, currentUser, activeSessionId, branches, getAuthHeaders]);
 
  // Watch activeSessions for incoming concurrent boot triggers from the server sync
  useEffect(() => {
@@ -2516,7 +2487,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  console.log("[Concurrent Monitor] Multi-device login detected on account (non-boot):", currentUser.fullName);
  }
  }
- }, [activeSessions, isLoggedIn, currentUser?.id, activeSessionId]);
+ }, [activeSessions, isLoggedIn, currentUser, activeSessionId]);
 
  // Self-heal and sync missing/zero branch stock entries for products with positive total stock (migrated/imported POS data)
  useEffect(() => {
@@ -2793,7 +2764,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  setOfflineQueue(items.filter((i) => i.status === 'pending' || i.status === 'processing' || i.status === 'failed'));
  });
  return () => unsubscribe();
- }, []);
+ }, [safeApiFetch, getAuthHeaders]);
 
  const enqueueTransaction = (txPkg: any) => {
  const priority = (txPkg.txType === "POS_CHECKOUT" || txPkg.txType === "POS_VOID_SALE") ? 1 : 2;
@@ -2847,7 +2818,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
 
  const activeSyncPromise = useRef<Promise<void> | null>(null);
 
- const syncFromSharedServer = (silent = false): Promise<void> => {
+ const syncFromSharedServer = useCallback((silent = false): Promise<void> => {
  if (activeSyncPromise.current) {
  return activeSyncPromise.current;
  }
@@ -3548,7 +3519,6 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
          setIsConfigured(true);
        }
      }
- }
  } else {
  // Shared server db is empty (first-time launch of the server!)
  // Bootstrap server with local client-side state only if local state actually has users
@@ -3565,9 +3535,10 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
    await forceSyncAllToServer();
  }
  }
+ }
+ }
+ }
  setServerConnected(true);
- }
- }
  } catch (error) {
  console.warn(
  "[Shared DB Client] Server offline/unreachable. Operating in local fallback mode.",
@@ -3603,13 +3574,14 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  });
 
  return activeSyncPromise.current;
- };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser, users, branches, suppliers, brands, products, purchaseOrders, poItems, transmittals, shifts, sales, saleItems, movements, auditLogs, parkedSales, stockTransfers, branchStock, ledgerEntries, branchSalesReports, deliveries, damageLogs, customBills, members, expenses, productReturns, calendarNotes, dayMemos, isConfigured, activeSessions, isLoggedIn, activeSessionId]);
 
  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
  const currentSyncDelay = useRef<number>(3000);
  const isSseConnected = useRef<boolean>(false);
 
- const scheduleNextSync = (delayMs: number) => {
+ const scheduleNextSync = useCallback((delayMs: number) => {
  if (syncTimeoutRef.current) {
  clearTimeout(syncTimeoutRef.current);
  }
@@ -3649,7 +3621,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  }
  scheduleNextSync(currentSyncDelay.current);
  }, delayMs);
- };
+ }, [currentUser?.role, syncFromSharedServer, processOfflineQueue]);
 
  // Synchronize on mount and poll periodically with exponential backoff & jitter
  useEffect(() => {
@@ -3726,7 +3698,8 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  clearTimeout(syncTimeoutRef.current);
  }
  };
- }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [scheduleNextSync, syncFromSharedServer]);
 
  // Listen to browser network online event to trigger immediate recovery & flush queue
  useEffect(() => {
@@ -3739,7 +3712,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  };
  window.addEventListener("online", handleOnline);
  return () => window.removeEventListener("online", handleOnline);
- }, []);
+ }, [scheduleNextSync]);
 
  // Real-time server push listener (Socket.io WebSocket + SSE fallback) for instant synchronization across all staff & cashier devices
  useEffect(() => {
@@ -3959,6 +3932,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  clearTimeout(reconnectTimeout);
  }
  };
+ // eslint-disable-next-line react-hooks/exhaustive-deps
  }, []);
 
  // Persist auto backup settings
@@ -4102,6 +4076,9 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  branchSalesReports,
  deliveries,
  customBills,
+ members,
+ expenses,
+ productReturns
  ]);
 
  // Daily Index Re-indexing and Garbage Collection Sweep Function
@@ -5241,153 +5218,187 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  return results;
  };
 
- // Write changes to cache - now debounced to eliminate LocalStorage / Database I/O strain in high-volume POS environments!
- useEffect(() => {
- if (isConfigured) {
- saveToStorageWithDebounce("tp_is_configured", "true", true);
- }
- }, [isConfigured]);
+  // Write changes to cache - now debounced to eliminate LocalStorage / Database I/O strain in high-volume POS environments!
+  useEffect(() => {
+    if (isConfigured) {
+      saveToStorageWithDebounce("tp_is_configured", "true", true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConfigured]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_current_user", currentUser);
- }, [currentUser]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_current_user", currentUser);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_users", users);
- }, [users]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_users", users);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [users]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_active_sessions", activeSessions, true);
- }, [activeSessions]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_active_sessions", activeSessions, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSessions]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_branches", branches);
- }, [branches]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_branches", branches);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branches]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_suppliers", suppliers);
- }, [suppliers]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_suppliers", suppliers);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suppliers]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_brands", brands);
- }, [brands]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_brands", brands);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brands]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_products", products, true);
- }, [products]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_products", products, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_purchase_orders", purchaseOrders);
- }, [purchaseOrders]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_purchase_orders", purchaseOrders);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [purchaseOrders]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_po_items", poItems);
- }, [poItems]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_po_items", poItems);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [poItems]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_transmittals", transmittals);
- }, [transmittals]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_transmittals", transmittals);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transmittals]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_shifts", shifts, true);
- }, [shifts]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_shifts", shifts, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shifts]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_sales", sales, true);
- }, [sales]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_sales", sales, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sales]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_sale_items", saleItems, true);
- }, [saleItems]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_sale_items", saleItems, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saleItems]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_movements", movements, true);
- }, [movements]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_movements", movements, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [movements]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_audit_logs", auditLogs, true);
- }, [auditLogs]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_audit_logs", auditLogs, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auditLogs]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_parked_sales", parkedSales, true);
- }, [parkedSales]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_parked_sales", parkedSales, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parkedSales]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_stock_transfers", stockTransfers);
- }, [stockTransfers]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_stock_transfers", stockTransfers);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stockTransfers]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_branch_stock", branchStock, true);
- }, [branchStock]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_branch_stock", branchStock, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchStock]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_ledger_entries", ledgerEntries, true);
- }, [ledgerEntries]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_ledger_entries", ledgerEntries, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ledgerEntries]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_branch_sales_reports", branchSalesReports);
- }, [branchSalesReports]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_branch_sales_reports", branchSalesReports);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchSalesReports]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_deliveries", deliveries, true);
- }, [deliveries]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_deliveries", deliveries, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deliveries]);
 
- useEffect(() => {
- saveToStorageWithDebounce("tp_damage_logs", damageLogs);
- }, [damageLogs]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_damage_logs", damageLogs);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [damageLogs]);
 
- // WRITER LINK FOR MULTI-CYCLE CORPORATE LIABILITIES
- useEffect(() => {
- saveToStorageWithDebounce("atpos_v2_custom_bills", customBills);
- }, [customBills]);
+  // WRITER LINK FOR MULTI-CYCLE CORPORATE LIABILITIES
+  useEffect(() => {
+    saveToStorageWithDebounce("atpos_v2_custom_bills", customBills);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customBills]);
 
- // WRITER LINK FOR MEMBERS LIST
- useEffect(() => {
- saveToStorageWithDebounce("atpos_v2_members_list", members);
- }, [members]);
+  // WRITER LINK FOR MEMBERS LIST
+  useEffect(() => {
+    saveToStorageWithDebounce("atpos_v2_members_list", members);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [members]);
 
- // WRITER LINK FOR EXPENSES
- useEffect(() => {
- saveToStorageWithDebounce("atpos_v2_expenses", expenses);
- }, [expenses]);
+  // WRITER LINK FOR EXPENSES
+  useEffect(() => {
+    saveToStorageWithDebounce("atpos_v2_expenses", expenses);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expenses]);
 
- // WRITER LINK FOR PRODUCT RETURNS
- useEffect(() => {
- saveToStorageWithDebounce("atpos_v2_returns", productReturns);
- }, [productReturns]);
+  // WRITER LINK FOR PRODUCT RETURNS
+  useEffect(() => {
+    saveToStorageWithDebounce("atpos_v2_returns", productReturns);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productReturns]);
 
- // WRITER LINK FOR CALENDAR MEMOS & NOTES
- useEffect(() => {
- saveToStorageWithDebounce("atpos_v2_calendar_notes", calendarNotes);
- }, [calendarNotes]);
+  // WRITER LINK FOR CALENDAR MEMOS & NOTES
+  useEffect(() => {
+    saveToStorageWithDebounce("atpos_v2_calendar_notes", calendarNotes);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calendarNotes]);
 
- useEffect(() => {
- saveToStorageWithDebounce("atpos_v2_calendar_day_memos", dayMemos);
- }, [dayMemos]);
+  useEffect(() => {
+    saveToStorageWithDebounce("atpos_v2_calendar_day_memos", dayMemos);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dayMemos]);
 
- // WRITER LINKS FOR DYNAMIC BUSINESS CONFIGURATIONS
- useEffect(() => {
-   saveToStorageWithDebounce("tp_product_categories", productCategories);
- }, [productCategories]);
+  // WRITER LINKS FOR DYNAMIC BUSINESS CONFIGURATIONS
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_product_categories", productCategories);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productCategories]);
 
- useEffect(() => {
-   saveToStorageWithDebounce("tp_unit_types", unitTypes);
- }, [unitTypes]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_unit_types", unitTypes);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unitTypes]);
 
- useEffect(() => {
-   saveToStorageWithDebounce("tp_payment_methods", paymentMethodsList);
- }, [paymentMethodsList]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_payment_methods", paymentMethodsList);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentMethodsList]);
 
- useEffect(() => {
-   saveToStorageWithDebounce("tp_discount_schemes", discountSchemes);
- }, [discountSchemes]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_discount_schemes", discountSchemes);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [discountSchemes]);
 
- useEffect(() => {
-   saveToStorageWithDebounce("tp_damage_reasons", damageReasonsList);
- }, [damageReasonsList]);
+  useEffect(() => {
+    saveToStorageWithDebounce("tp_damage_reasons", damageReasonsList);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [damageReasonsList]);
 
  // General Audit Log function
- const addAuditLog = (
+ const addAuditLog = useCallback((
  action: string,
  description: string,
  tableAffected: string,
@@ -5405,8 +5416,8 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  recordId,
  changePayload,
  };
- setAuditLogs((prev) => [newLog, ...prev]);
- };
+    setAuditLogs((prev) => [newLog, ...prev]);
+  }, [currentUser?.id, currentUser?.username]);
 
  // Log manual adjustments or stock updates
  const logManualAdjustment = (
@@ -8784,7 +8795,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  record: targetRecord,
  };
  },
- [parkedSales, currentUser?.fullName, addAuditLog],
+ [parkedSales, currentUser?.fullName, addAuditLog, setParkedSales],
  );
 
  const getBranchStockQuantityContext = useCallback((productId: string, targetBranchId?: string): number => {
@@ -8888,7 +8899,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
       statsCache.set(key, calculatedStats);
       return calculatedStats;
     };
-  }, [products, branchStock, branches, movements, ledgerEntries, currentUser?.branchAssignmentId]);
+  }, [products, branchStock, branches, currentUser?.branchAssignmentId]);
 
   const getBranchStockStats = useCallback((selectedBranchId?: string): BranchStockStats => {
     return branchStockStatsSelector(selectedBranchId);
@@ -10910,6 +10921,7 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
       serverDegradedState,
       refreshServerStatus,
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       currentUser,
       lockoutUntil,

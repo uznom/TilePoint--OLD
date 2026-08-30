@@ -43,7 +43,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
  return [...shifts]
  .filter(s => s.status === 'CLOSED' && s.branchId === currentUser?.branchAssignmentId)
  .sort((a, b) => new Date(b.closedAt || 0).getTime() - new Date(a.closedAt || 0).getTime())[0] || null;
- }, [shifts, currentUser?.branchAssignmentId]);
+ }, [shifts, currentUser]);
 
  const [startCashInput, setStartCashInput] = useState('5000');
  const [closingCashInput, setClosingCashInput] = useState('');

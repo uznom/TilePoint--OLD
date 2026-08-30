@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { calculateCartTotals, toCentavos, toPesos, calculateMarginPercentage, calculateMarkupPercentage, calculateStockValuation } from '../src/utils/calculations.ts';
+import { calculateCartTotals, calculateMarginPercentage, calculateMarkupPercentage, calculateStockValuation } from '../src/utils/calculations.ts';
 
 console.log('[Unit Test] Running Cart Financial Calculations & VAT Integrity Suite...\n');
 

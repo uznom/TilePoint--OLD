@@ -127,7 +127,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
     if (initialSubTab && (initialSubTab as InventorySubTab) !== activeSubTab) {
       setActiveSubTab(initialSubTab as InventorySubTab);
     }
-  }, [initialSubTab]);
+  }, [initialSubTab, activeSubTab]);
 
   const [isFetching, setIsFetching] = useState(false);
   const [expandedProductIds, setExpandedProductIds] = useState<Record<string, boolean>>({});
@@ -137,13 +137,13 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
   const isAdminUser = currentUser?.role === 'Admin';
   const hasActiveShift = !!(activeShift || (shifts && shifts.some((s: any) => s.userId === currentUser?.id && s.status === 'Open')));
 
-  const changeActiveSubTab = (tab: InventorySubTab | string) => {
+  const changeActiveSubTab = React.useCallback((tab: InventorySubTab | string) => {
     const target = tab as InventorySubTab;
     setActiveSubTab(target);
     if (onSubTabChange) {
       onSubTabChange(target);
     }
-  };
+  }, [onSubTabChange]);
 
   const handleBranchSelect = (bId: string) => {
     setSelectedViewBranchId(bId);
@@ -234,7 +234,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
     return () => {
       window.removeEventListener("tp-search-product", handleSearchEvent);
     };
-  }, [products, activeBranchId, branchStock, branches, currentUser]);
+  }, [products, activeBranchId, branchStock, branches, currentUser, changeActiveSubTab, setSelectedViewBranchId]);
 
   // Dynamic status evaluator based on current system date
   const computeLiveBatchStatus = (expiryDateStr: string): "Good" | "Expiring Soon" | "Expired" => {
@@ -321,7 +321,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
         };
       });
     });
-  }, [branchProducts]);
+  }, [branchProducts, products]);
 
   // Sync batch changes to local storage so Notification Center reads them dynamically
   useEffect(() => {
@@ -634,14 +634,14 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
  const [toastMessage, setToastMessage] = useState<string | null>(null);
  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
  const [confirmDeleteName, setConfirmDeleteName] = useState<string>('');
- const getDefaultBranchId = (): string => {
-   if (currentUser?.branchAssignmentId && branches.some((b: Branch) => b.id === currentUser.branchAssignmentId && !b.isDeleted)) {
-     return currentUser.branchAssignmentId;
-   }
-   const activeB = branches.find((b: Branch) => !b.isDeleted);
-   if (activeB) return activeB.id;
-   return branches[0]?.id || branches[0]?.branchCode || 'main';
- };
+  const getDefaultBranchId = React.useCallback((): string => {
+    if (currentUser?.branchAssignmentId && branches.some((b: Branch) => b.id === currentUser.branchAssignmentId && !b.isDeleted)) {
+      return currentUser.branchAssignmentId;
+    }
+    const activeB = branches.find((b: Branch) => !b.isDeleted);
+    if (activeB) return activeB.id;
+    return branches[0]?.id || branches[0]?.branchCode || 'main';
+  }, [currentUser?.branchAssignmentId, branches]);
 
  const [targetBranchId, setTargetBranchId] = useState<string>(() => getDefaultBranchId());
  const [importTargetBranchId, setImportTargetBranchId] = useState<string>(() => getDefaultBranchId());
@@ -656,7 +656,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
        setImportTargetBranchId(activeDefaultId);
      }
    }
- }, [branches, currentUser]);
+  }, [branches, currentUser, getDefaultBranchId, importTargetBranchId, targetBranchId]);
  const [rawImportText, setRawImportText] = useState('');
  const [preflightReport, setPreflightReport] = useState<PreflightReport | null>(null);
  const [isAnalyzingPreflight, setIsAnalyzingPreflight] = useState(false);
@@ -986,7 +986,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
       criticalStockCount: criticalStock,
       outOfStockCount: outOfStock
     };
-  }, [branchProducts, branchStock, branches, activeBranchId, selectedViewBranchId]);
+  }, [branchProducts, branchStock, branches, selectedViewBranchId]);
 
  // Movemet logs filtering logic
  const filteredMovements = movements.filter((m: InventoryMovement) => {
@@ -1039,7 +1039,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
 
  return matchBranch && matchSearch && matchStatus && matchDate;
  });
- }, [batches, activeBranchId, products, term, statusFilter, calendarSelectedDay]);
+  }, [batches, activeBranchId, products, term, statusFilter, calendarSelectedDay, branches]);
 
  const handleOpenAdd = () => {
  setProductCode(`TL-PR-${Date.now().toString().slice(-4)}`);

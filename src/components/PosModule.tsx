@@ -175,7 +175,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
     } else if (branches && branches.length > 0 && !activePosBranchId) {
       setActivePosBranchId(branches[0].id);
     }
-  }, [currentUser?.branchAssignmentId, branches]);
+  }, [currentUser?.branchAssignmentId, branches, activePosBranchId]);
 
   const products = React.useMemo(() => {
     return rawProducts.map((p) => {
@@ -198,17 +198,17 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
   const members = branchFilteredMembers;
 
- const getBranchPrice = (p: Product) => {
-  if (!p) return 0;
-  const branchStockItem = getBranchStockRecord(p, activePosBranchId || currentUser?.branchAssignmentId || (branches && branches[0]?.id) || "", branchStock, branches);
-  const price = branchStockItem &&
-  branchStockItem.sellingPriceOverride !== undefined &&
-  branchStockItem.sellingPriceOverride !== null &&
-  branchStockItem.sellingPriceOverride > 0
-  ? branchStockItem.sellingPriceOverride
-  : (p.sellingPrice || 0);
-  return Number(price) || 0;
- };
+  const getBranchPrice = React.useCallback((p: Product) => {
+    if (!p) return 0;
+    const branchStockItem = getBranchStockRecord(p, activePosBranchId || currentUser?.branchAssignmentId || (branches && branches[0]?.id) || "", branchStock, branches);
+    const price = branchStockItem &&
+    branchStockItem.sellingPriceOverride !== undefined &&
+    branchStockItem.sellingPriceOverride !== null &&
+    branchStockItem.sellingPriceOverride > 0
+    ? branchStockItem.sellingPriceOverride
+    : (p.sellingPrice || 0);
+    return Number(price) || 0;
+  }, [activePosBranchId, currentUser?.branchAssignmentId, branches, branchStock]);
 
  // Active cashier shift states
  const [startCashInput, setStartCashInput] = useState("5000");
@@ -660,7 +660,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
     } catch (err) {
       console.warn("[POS Recovery Task] Session hydration warning:", err);
     }
-  }, []);
+  }, [addAuditLog]);
 
  // If check out and to be delivered, auto-fill the phone number of the registered member from the database
  useEffect(() => {
@@ -756,7 +756,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  }
  }
  prevParkedSalesRef.current = parkedSales;
- }, [parkedSales]);
+ }, [parkedSales, activePosBranchId, branches]);
 
   useEffect(() => {
     if (syncStatus?.sseConnected) return;
@@ -927,8 +927,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
  };
 
  window.addEventListener("keydown", handleKeyDown);
- return () => window.removeEventListener("keydown", handleKeyDown);
- }, [cart, customerName, amountTendered, grandTotal, paymentMethod, activeReceipt, activeShift, sales]);
+ return () => { window.removeEventListener("keydown", handleKeyDown); };
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [cart, customerName, amountTendered, grandTotal, paymentMethod, activeReceipt, activeShift, sales, showEscConfirmModal, showCustomerModal, showDiscountModal, showShiftModal, showCloseShiftModal, showReceiptModal, showFulfillmentModal, showTileCalculatorModal, showAddMemberModal, showLoyaltyConfigModal, isCheckingOut]);
 
  // Cart operations
  const addToCart = (product: Product) => {
