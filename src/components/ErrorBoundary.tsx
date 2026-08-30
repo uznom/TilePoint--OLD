@@ -68,7 +68,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
  return (
  <div className="min-h-screen bg-[#0B0F13] text-[#F8FAFC] flex items-center justify-center p-6 font-sans">
  <div className="w-full max-w-xl rounded-2xl bg-[#131A22] border border-red-500/25 p-8 shadow-2xl space-y-6 relative overflow-hidden">
- <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-red-500 via-amber-500 to-red-500 animate-pulse" />
+ <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-red-500 via-amber-500 to-red-500" />
  
  <div className="flex items-center gap-4">
  <div className="p-3 bg-red-500/10 text-red-400 rounded-2xl border border-red-500/20 shrink-0">

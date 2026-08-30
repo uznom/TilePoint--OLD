@@ -1165,7 +1165,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  <div className="space-y-6 animate-fade-in text-foreground">
  <div className="bg-content1 p-8 rounded-2xl border border-divider/30 text-center max-w-lg mx-auto my-12 space-y-4 shadow-xl">
  <div className="mx-auto h-16 w-16 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center border border-amber-500/20">
- <Send className="h-7 w-7 text-amber-500 animate-pulse" />
+ <Send className="h-7 w-7 text-amber-500" />
  </div>
  <div>
  <h4 className="text-base font-black text-foreground uppercase tracking-wider">

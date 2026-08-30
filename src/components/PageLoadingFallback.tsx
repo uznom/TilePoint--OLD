@@ -186,7 +186,7 @@ export const PageLoadingFallback: React.FC<PageLoadingFallbackProps> = ({
         <div className="space-y-1.5 pt-1">
           <div className="flex justify-between items-center text-[11px] font-semibold text-default-600">
             <span className="flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-primary animate-pulse" />
+              <Sparkles className="w-3 h-3 text-primary" />
               {loadingStage}
             </span>
             <span className="tabular-nums font-mono text-primary">{progressPercent}%</span>

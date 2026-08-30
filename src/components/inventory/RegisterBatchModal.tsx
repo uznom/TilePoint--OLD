@@ -67,7 +67,7 @@ export const RegisterBatchModal: React.FC<RegisterBatchModalProps> = ({
       >
         <div className="flex justify-between items-center border-b border-divider pb-3">
           <h3 className="text-sm font-black text-primary uppercase tracking-wider flex items-center gap-2">
-            <Clock className="h-5 w-5 text-danger animate-pulse" />
+            <Clock className="h-5 w-5 text-danger" />
             <span>Register Chemical Stock Batch</span>
           </h3>
           <button 

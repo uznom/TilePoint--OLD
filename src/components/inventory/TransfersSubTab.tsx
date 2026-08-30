@@ -243,7 +243,7 @@ export const TransfersSubTab: React.FC<TransfersSubTabProps> = ({
                           : t.status === 'Dispatched'
                           ? 'bg-sky-500/10 text-sky-500 border-sky-500/20'
                           : t.status === 'Pending'
-                          ? 'bg-warning/10 text-warning border-warning/20 animate-pulse'
+                          ? 'bg-warning/10 text-warning border-warning/20'
                           : 'bg-danger/10 text-danger border-danger/20'
                       }`}>
                         {t.status}

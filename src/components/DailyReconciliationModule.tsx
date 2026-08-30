@@ -650,7 +650,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
           <div className="p-6 rounded-2xl bg-content1 border border-divider/10 text-center space-y-4">
             <div className="mx-auto h-12 w-12 rounded-full flex items-center justify-center bg-content1">
               {isReconciled ? (
-                <ShieldCheck className="h-7 w-7 text-emerald-400 animate-pulse" />
+                <ShieldCheck className="h-7 w-7 text-emerald-400" />
               ) : (
                 <AlertCircle className="h-7 w-7 text-amber-500" />
               )}

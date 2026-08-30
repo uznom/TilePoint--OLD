@@ -61,11 +61,11 @@ export const SystemLoadingOverlay: React.FC = () => {
   const getIcon = () => {
     switch (systemProcessingType) {
       case 'db':
-        return <Database className="h-6 w-6 text-primary animate-pulse" />;
+        return <Database className="h-6 w-6 text-primary animate-spin-slow" />;
       case 'verification':
         return <ShieldCheck className="h-6 w-6 text-amber-500 animate-bounce" />;
       case 'progress':
-        return <Sparkles className="h-6 w-6 text-primary animate-pulse" />;
+        return <Sparkles className="h-6 w-6 text-primary" />;
       default:
         return <Loader2 className="h-6 w-6 text-primary animate-spin" />;
     }
@@ -153,7 +153,7 @@ export const SystemLoadingOverlay: React.FC = () => {
               return (
                 <div key={idx} className="flex items-start gap-2 text-[11.5px] transition-all duration-300">
  <span className={` text-[10px] mt-0.5 leading-none shrink-0 ${
- isDone ? 'text-primary font-black' : isActive ? 'text-primary animate-pulse ' : 'text-default-500/50'
+ isDone ? 'text-primary font-black' : isActive ? 'text-primary font-bold' : 'text-default-500/50'
                   }`}>
                     {isDone ? '✓' : isActive ? '→' : '◦'}
                   </span>

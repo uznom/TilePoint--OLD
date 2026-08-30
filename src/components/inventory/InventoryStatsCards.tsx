@@ -69,7 +69,7 @@ export const InventoryStatsCards: React.FC<InventoryStatsCardsProps> = ({
       >
         <div className={`p-3 rounded-2xl ${
           stats.lowStockCount > 0 
-            ? 'bg-amber-500/15 text-amber-500 animate-pulse' 
+            ? 'bg-amber-500/15 text-amber-500' 
             : 'bg-default-100 text-default-500'
         }`}>
           <AlertTriangle className="h-5 w-5" />

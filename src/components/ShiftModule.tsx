@@ -270,16 +270,16 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
  ) : (
  /* If shift is CLOSED */
  <div className="bg-content1 border border-divider rounded-2xl shadow-sm text-foreground text-center max-w-md mx-auto p-6 sm:p-8 space-y-5">
- <div className="p-3.5 bg-primary/10 text-primary border border-divider/15 rounded-full w-fit mx-auto cursor-pointer animate-pulse">
- <Lock className="h-6 w-6" />
- </div>
+            <div className="p-3.5 bg-primary/10 text-primary border border-divider/15 rounded-full w-fit mx-auto">
+              <Lock className="h-6 w-6" />
+            </div>
 
- <div>
- <h3 className="text-sm font-black text-primary uppercase tracking-wider">Register Shift is Lock / CLOSED</h3>
- <p className="text-xs text-default-500 mt-1.5 leading-relaxed">
- Active registers must have an initial starting cashier drawer fund declared before processing checkouts.
- </p>
- </div>
+            <div>
+              <h3 className="text-sm font-black text-primary uppercase tracking-wider">Cash Register Closed</h3>
+              <p className="text-xs text-default-500 mt-1.5 leading-relaxed">
+                Declare an initial starting drawer fund before processing checkouts.
+              </p>
+            </div>
 
  <form onSubmit={handleOpenLocalShift} className="space-y-4 text-xs text-left">
  {previouslyClosedShift && (
@@ -446,7 +446,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
   <td className="py-2.5 px-3 text-center">
   <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest border ${
   s.status === 'OPEN'
-  ? 'bg-secondary-50 text-secondary-700 border-secondary/20 animate-pulse'
+  ? 'bg-secondary-50 text-secondary-700 border-secondary/20'
   : 'bg-default-100 text-default-500 border-transparent'
   }`}>
   {s.status}

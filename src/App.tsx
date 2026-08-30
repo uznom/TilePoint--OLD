@@ -1089,7 +1089,7 @@ function AppContent() {
         {serverDegradedState?.isDegraded && (
           <div className="fixed inset-x-0 top-0 z-[70] bg-gradient-to-r from-red-700 via-amber-700 to-red-800 text-white shadow-2xl border-b-2 border-amber-400/60 p-3 px-5 flex flex-col sm:flex-row items-center justify-between gap-3 animate-in slide-in-from-top duration-300">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-black/30 rounded-xl border border-white/20 animate-pulse text-amber-300">
+              <div className="p-2 bg-black/30 rounded-xl border border-white/20 text-amber-300">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div className="text-left">
@@ -1135,7 +1135,7 @@ function AppContent() {
                 }`}
               >
                 {apiErrorState.statusCode === 429 ? (
-                  <Clock className="w-5 h-5 animate-pulse" />
+                  <Clock className="w-5 h-5" />
                 ) : (
                   <AlertTriangle className="w-5 h-5" />
                 )}
@@ -1207,7 +1207,7 @@ function AppContent() {
               className="fixed left-0 top-1/2 -translate-y-1/2 z-[45] p-2 bg-primary text-primary-foreground rounded-r-2xl border-y border-r border-divider/35 shadow-2xl hover:bg-primary/95 hover:scale-110 active:scale-95 transition-all cursor-pointer flex items-center justify-center group"
               title="Restore Navigation Sidebar"
             >
-              <ChevronRight className="h-5 w-5 animate-pulse group-hover:translate-x-0.5 transition-transform" />
+              <ChevronRight className="h-5 w-5 group-hover:translate-x-0.5 transition-transform" />
             </button>
           )}
 
@@ -1482,7 +1482,7 @@ function AppContent() {
             <div className="relative w-full max-w-sm rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4 text-left font-sans">
               <div className="flex items-center gap-3 border-b border-divider/15 pb-3">
                 <div className="p-2.5 rounded-2xl bg-rose-500/10 text-rose-500">
-                  <Power className="h-5 w-5 animate-pulse" />
+                  <Power className="h-5 w-5" />
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-foreground uppercase tracking-wider">Confirm Sign Out</h3>
@@ -1526,7 +1526,7 @@ function AppContent() {
             <div className="relative w-full max-w-sm rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4 text-left font-sans">
               <div className="flex items-center gap-3 border-b border-divider/15 pb-3">
                 <div className="p-2.5 rounded-2xl bg-amber-500/10 text-amber-500">
-                  <AlertTriangle className="h-5 w-5 animate-pulse" />
+                  <AlertTriangle className="h-5 w-5" />
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-foreground uppercase tracking-wider">Unsaved Checkout Warning</h3>
@@ -1579,7 +1579,7 @@ function AppContent() {
                   <div>
                     <h3 className="text-base font-black uppercase tracking-wider text-foreground flex items-center gap-2">
                       Database Core Management
-                      <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${dbSyncStatus === "syncing" ? "bg-amber-500/20 text-amber-500 animate-pulse" : "bg-emerald-500/10 text-emerald-400"}`}>
+                      <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${dbSyncStatus === "syncing" ? "bg-amber-500/20 text-amber-500" : "bg-emerald-500/10 text-emerald-400"}`}>
                         {dbSyncStatus === "syncing" ? "● Sync active" : "● Connected"}
                       </span>
                     </h3>
@@ -1736,7 +1736,7 @@ function AppContent() {
                           }}
                           className="px-3.5 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                         >
-                          <Zap className="h-3.5 w-3.5 text-primary animate-pulse" />
+                          <Zap className="h-3.5 w-3.5 text-primary" />
                           {isMaintenanceRunning ? "Optimizing..." : "Run Sweep Now"}
                         </button>
                       </div>
@@ -2087,7 +2087,7 @@ function AppContent() {
 
                 <div className="pt-2">
                   {profileModalError ? (
-                    <p className="text-[9.5px] font-bold text-rose-500 px-1 animate-pulse leading-normal">
+                    <p className="text-[9.5px] font-bold text-rose-500 px-1 leading-normal">
                       {profileModalError}
                     </p>
                   ) : (

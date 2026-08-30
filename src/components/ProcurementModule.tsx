@@ -1095,7 +1095,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  }`}
  >
  <Settings2
- className={`h-4 w-4 ${poCart.length > 0 ? "text-emerald-500 animate-pulse" : "text-default-500"}`}
+ className={`h-4 w-4 ${poCart.length > 0 ? "text-emerald-500" : "text-default-500"}`}
  />
  <span>
  Consolidation Desk &amp; Queue{" "}
@@ -2158,7 +2158,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  Highly Recommended
  </div>
  <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500 w-10 h-10 flex items-center justify-center">
- <FileText className="h-5 w-5 animate-pulse" />
+ <FileText className="h-5 w-5" />
  </div>
  <div>
  <h4 className="font-bold text-xs text-foreground">

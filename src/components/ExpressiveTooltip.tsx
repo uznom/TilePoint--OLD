@@ -156,7 +156,7 @@ export const ExpressiveTooltip: React.FC<ExpressiveTooltipProps> = ({
                   {/* Header Title if provided */}
                   {title && (
                     <div className="font-sans text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 text-primary">
-                      <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary" />
                       {title}
                     </div>
                   )}

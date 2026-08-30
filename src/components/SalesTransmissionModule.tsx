@@ -745,7 +745,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
     return (
       <div className="w-full text-foreground space-y-6 animate-fade-in font-sans pb-12">
         <div className="bg-content1 border border-divider/30 rounded-2xl p-8 text-center max-w-xl mx-auto space-y-4 shadow-md mt-12">
-          <ShieldAlert className="h-12 w-12 text-amber-500 mx-auto animate-pulse" />
+          <ShieldAlert className="h-12 w-12 text-amber-500 mx-auto" />
           <h2 className="text-base font-black uppercase tracking-wider text-white">HQ Sales Audit Restricted</h2>
           <p className="text-xs text-default-500 leading-relaxed">
             Access to the Headquarters Sales Transmission Registry is restricted to Central HQ Administrators. Branch Managers can view and execute daily transmissions directly from the <strong className="text-amber-500">Daily Sales Reconciliation</strong> workspace.
@@ -976,7 +976,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                     >
                       <div className="space-y-1">
                         <div className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                           <span>Snapshot #{rollbackSnapshots.length - i}</span>
  <span className="text-[9px] text-default-500 font-normal">({snap.id.substring(0, 8)})</span>
                         </div>

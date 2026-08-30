@@ -460,7 +460,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
       {!hasActiveShift && getSelectedProducts().length > 0 && (
         <div className="bg-content1 border border-divider p-3.5 rounded-large flex flex-wrap items-center justify-between gap-3 shadow-md animate-fade-in mb-3">
           <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+            <div className="h-2 w-2 rounded-full bg-primary" />
             <span className="text-xs font-black text-foreground">
               {getSelectedProducts().length} {getSelectedProducts().length === 1 ? 'item' : 'items'} selected for bulk actions
             </span>
@@ -714,7 +714,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                       isSelected={isSelected}
                       className={`${
                         p.id === highlightedProductId
-                          ? 'animate-pulse ring-2 ring-danger/80 bg-danger/5'
+                          ? 'ring-2 ring-danger/80 bg-danger/5'
                           : ''
                       } ${isExpanded ? 'bg-primary/5 hover:bg-primary/10' : ''}`}
                       onClick={() => toggleProductExpand(p.id)}
@@ -811,13 +811,13 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                               if (diffDays < 0) {
                                 return (
                                   <span className="text-[10px] text-danger font-extrabold bg-danger/10 px-1.5 py-0.5 rounded border border-danger/20 font-sans flex items-center gap-1">
-                                    <Clock className="h-3 w-3 shrink-0 text-danger animate-pulse" /> Expired ({p.expirationDate})
+                                    <Clock className="h-3 w-3 shrink-0 text-danger" /> Expired ({p.expirationDate})
                                   </span>
                                 );
                               } else if (diffDays <= 30) {
                                 return (
                                   <span className="text-[10px] text-warning font-extrabold bg-warning/10 px-1.5 py-0.5 rounded border border-warning/20 font-sans flex items-center gap-1">
-                                    <Clock className="h-3 w-3 shrink-0 text-warning animate-pulse" /> Expiring Soon ({p.expirationDate})
+                                    <Clock className="h-3 w-3 shrink-0 text-warning" /> Expiring Soon ({p.expirationDate})
                                   </span>
                                 );
                               } else {
@@ -830,7 +830,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                             } else {
                               return (
                                 <span className="text-[10px] text-warning font-extrabold bg-warning/10 px-1.5 py-0.5 rounded border border-warning/20 font-sans flex items-center gap-1">
-                                  <Clock className="h-3 w-3 shrink-0 text-warning animate-pulse" /> Expiry Tracked
+                                  <Clock className="h-3 w-3 shrink-0 text-warning" /> Expiry Tracked
                                 </span>
                               );
                             }
@@ -899,7 +899,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                           variant="flat"
                           color={statusChipColor}
                           className={`font-black text-[9px] uppercase tracking-wider ${
-                            statusChipColor === 'danger' ? 'animate-pulse' : ''
+                            statusChipColor === 'danger' ? '' : ''
                           }`}
                         >
                           {statusLabel}

@@ -121,7 +121,7 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
         <div className="p-5 md:p-6 border-b border-divider flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-content1">
           <div className="flex items-center gap-3">
             <div className="p-3 rounded-medium bg-danger/10 text-danger shrink-0 border border-danger/20">
-              <ShieldAlert className="h-6 w-6 animate-pulse" />
+              <ShieldAlert className="h-6 w-6" />
             </div>
             <div>
               <h2 className="text-lg font-black tracking-tight text-foreground uppercase font-sans">

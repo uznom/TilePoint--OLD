@@ -120,7 +120,7 @@ export const HoldToConfirmButton: React.FC<HoldToConfirmButtonProps> = ({
  <span className="relative z-10 flex items-center justify-center gap-2">
  {isHolding ? (
  <>
- <ShieldAlert className="h-4 w-4 animate-pulse shrink-0" />
+ <ShieldAlert className="h-4 w-4 shrink-0" />
  <span>HOLD TO CONFIRM ({secondsLeft}s)</span>
  </>
  ) : (

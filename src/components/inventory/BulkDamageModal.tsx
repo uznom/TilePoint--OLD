@@ -58,7 +58,7 @@ export const BulkDamageModal: React.FC<BulkDamageModalProps> = React.memo(({
         {/* Header */}
         <div className="flex justify-between items-center border-b border-divider pb-3">
           <h3 className="text-sm font-black text-danger uppercase tracking-wider flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-danger animate-pulse" />
+            <AlertTriangle className="h-5 w-5 text-danger" />
             <span>Register Bulk Damages & Log Breakages</span>
           </h3>
           <button 

@@ -172,15 +172,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
           let categoryBadge: React.ReactNode = null;
           if (cat.id === "sale" && showSaleAlert) {
             categoryBadge = (
-              <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse ml-auto" />
+              <span className="h-2 w-2 rounded-full bg-amber-500 ml-auto" />
             );
           } else if (cat.id === "deliveries" && showDeliveriesAlert) {
             categoryBadge = (
-              <span className="h-2 w-2 rounded-full bg-sky-500 animate-pulse ml-auto" />
+              <span className="h-2 w-2 rounded-full bg-sky-500 ml-auto" />
             );
           } else if (cat.id === "inventory" && showTransfersAlert) {
             categoryBadge = (
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse ml-auto" />
+              <span className="h-2 w-2 rounded-full bg-emerald-500 ml-auto" />
             );
           }
 

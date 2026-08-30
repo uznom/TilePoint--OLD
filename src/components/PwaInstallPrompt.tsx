@@ -185,7 +185,7 @@ export const PwaInstallPrompt: React.FC = () => {
  style={{
  backgroundColor: 'rgba(var(--heroui-primary-rgb, 0, 111, 238), 0.12)'
  }}
- className="p-3 rounded-2xl flex items-center justify-center text-[var(--heroui-primary)] animate-pulse"
+ className="p-3 rounded-2xl flex items-center justify-center text-[var(--heroui-primary)]"
  >
  <Download className="h-5 w-5" />
  </div>

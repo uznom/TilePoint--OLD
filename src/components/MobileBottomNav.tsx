@@ -120,7 +120,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               )}
 
               {item.badgeDot && (
-                <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-background animate-pulse" />
+                <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-background" />
               )}
             </div>
 

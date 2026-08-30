@@ -753,7 +753,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  {reconciliationStats && (
  <div className="bg-content1 border border-divider/30 rounded-2xl p-3 px-4 text-xs shadow-xs flex flex-wrap items-center justify-between gap-3 font-sans">
  <div className="flex items-center gap-2.5">
- <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+ <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 shrink-0" />
  <div>
  <span className="font-extrabold text-foreground uppercase tracking-wide">
  Delivery Reconciliation & Multi-Session Sync Active
@@ -1024,7 +1024,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  d.status === 'Delivered'
  ? 'bg-emerald-550/10 border-emerald-500/20 text-emerald-400'
  : d.status === 'Out For Delivery'
- ? 'bg-purple-550/10 border-purple-500/20 text-purple-400 animate-pulse'
+ ? 'bg-purple-550/10 border-purple-500/20 text-purple-400'
  : d.status === 'Scheduled'
  ? 'bg-primary/10 border-primary/20 text-primary'
  : d.status === 'Packed'

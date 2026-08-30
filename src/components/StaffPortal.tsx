@@ -449,7 +449,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
         <HeroCard variant="flat" className="p-3 bg-content1/80 border border-divider/20 rounded-2xl flex items-center justify-between text-left text-xs">
           <div className="space-y-0.5">
             <div className="font-extrabold text-foreground flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
               <Smartphone className="h-3.5 w-3.5 text-primary" />
               <span>Scanning Hub Connected</span>
             </div>
@@ -635,7 +635,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
 
               {cameraError && (
                 <div className="absolute inset-0 z-30 bg-background/95 flex flex-col justify-center items-center text-center p-4 text-xs space-y-3 text-default-700">
-                  <AlertTriangle className="h-8 w-8 text-warning animate-pulse" />
+                  <AlertTriangle className="h-8 w-8 text-warning" />
                   <p className="font-extrabold max-w-[260px] text-foreground leading-normal">{cameraError}</p>
                   <HeroButton
                     size="sm"
@@ -667,7 +667,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
 
         {/* FEEDBACK STATUS BAR */}
         {scanMessage && (
-          <HeroCard variant="flat" className="bg-primary/10 border border-primary/30 p-3 rounded-2xl text-center text-primary text-xs font-black uppercase tracking-wider animate-pulse flex items-center justify-center gap-2">
+          <HeroCard variant="flat" className="bg-primary/10 border border-primary/30 p-3 rounded-2xl text-center text-primary text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2">
             <CheckCircle className="h-4 w-4" />
             <span>{scanMessage}</span>
           </HeroCard>
@@ -814,7 +814,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
           </HeroCard>
         ) : (
           <HeroCard variant="flat" className="bg-content1/60 border border-divider/20 rounded-2xl p-8 text-center text-default-500 border-dashed space-y-3">
-            <QrCode className="h-10 w-10 text-primary/40 mx-auto animate-pulse" />
+            <QrCode className="h-10 w-10 text-primary/40 mx-auto" />
             <div>
               <h4 className="text-xs font-bold text-foreground">No Product Selected</h4>
               <p className="text-[11px] text-default-500 mt-1 max-w-[240px] mx-auto leading-normal">
@@ -1108,7 +1108,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
             {/* CART LIST OR PLACEHOLDER */}
             {staffCart.length === 0 ? (
               <div className="py-12 text-center text-default-500 space-y-3">
-                <ShoppingCart className="h-10 w-10 text-primary/30 mx-auto animate-pulse" />
+                <ShoppingCart className="h-10 w-10 text-primary/30 mx-auto" />
                 <div>
                   <h4 className="text-xs font-bold text-foreground">Staged cart is empty</h4>
                   <p className="text-[11px] text-default-500 mt-1 font-medium leading-normal">
@@ -1273,7 +1273,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
       {isTransmitting && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex flex-col items-center justify-center z-[1000] p-6 text-center animate-fade-in select-none">
           <HeroCard variant="bordered" className="bg-content1 border border-primary/40 p-8 rounded-2xl max-w-sm w-full space-y-4 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-emerald-500 to-primary animate-pulse" />
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-emerald-500 to-primary" />
             <div className="flex justify-center">
               <Loader2 className="h-10 w-10 text-primary animate-spin" />
             </div>

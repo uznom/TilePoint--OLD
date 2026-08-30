@@ -1118,7 +1118,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
             </div>
             <div className="text-xs font-bold text-foreground flex items-center gap-1.5">
               <span>{mysqlStatus?.active || !serverDegradedState?.isDegraded ? 'MySQL Relational Engine' : 'AlaSQL (Buffered Mode)'}</span>
-              <span className={`h-2 w-2 rounded-full ${mysqlStatus?.active || !serverDegradedState?.isDegraded ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+              <span className={`h-2 w-2 rounded-full ${mysqlStatus?.active || !serverDegradedState?.isDegraded ? 'bg-emerald-500' : 'bg-amber-500'}`} />
             </div>
             <div className={`text-[10px] font-bold ${mysqlStatus?.active || !serverDegradedState?.isDegraded ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
               ● {mysqlStatus?.active || !serverDegradedState?.isDegraded ? `Primary Engine (${mysqlStatus?.totalRecords || 'Synchronized'} rows)` : 'Degraded (Buffered Writes)'}

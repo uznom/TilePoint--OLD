@@ -500,7 +500,7 @@ export function PrivacyAccessibilityHub({
  <div className="max-w-4xl mx-auto bg-content1 border border-divider rounded-large shadow-small text-foreground border-amber-500/10 bg-content1/95 backdrop-blur-xl shadow-[0_-12px_44px_rgba(0,0,0,0.25)] flex flex-col md:flex-row items-start md:items-center justify-between gap-5 p-5 sm:p-6 rounded-2xl">
  <div className="flex gap-4 items-start max-w-2xl">
  <div className="p-3 bg-amber-500/10 text-amber-500 rounded-2xl shrink-0 mt-0.5 border border-amber-500/20">
- <Cookie className="h-6 w-6 animate-pulse" />
+ <Cookie className="h-6 w-6" />
  </div>
  <div className="space-y-1">
  <h4 className="text-sm font-black uppercase tracking-wider text-primary flex items-center gap-2">
@@ -977,7 +977,7 @@ export function PrivacyAccessibilityHub({
  {/* INTERACTIVE ONBOARDING SETUP ASSISTANT */}
  <div className="p-4 rounded-xl border border-primary/25 bg-primary/5 space-y-2.5">
  <span className="text-[10px] font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
- <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+ <Sparkles className="h-3.5 w-3.5" />
  Interactive Setup Wizard
  </span>
  <p className="text-[10.5px] text-default-500 leading-relaxed font-sans">
@@ -1101,7 +1101,7 @@ export function PrivacyAccessibilityHub({
  <div className="relative h-20 w-20 shrink-0 flex items-center justify-center bg-background/30 rounded-2xl border border-divider/10 overflow-hidden shadow-inner self-center sm:self-start md:self-center">
  <div className="absolute -top-6 -left-6 h-20 w-20 rounded-full border border-amber-500/15 bg-amber-500/5" />
  <div className="absolute -bottom-4 -right-4 h-16 w-16 rounded-full border border-amber-500/10 bg-amber-500/5" />
- <div className="absolute h-14 w-14 rounded-full border border-amber-500/20 bg-amber-500/5 animate-pulse" />
+ <div className="absolute h-14 w-14 rounded-full border border-amber-500/20 bg-amber-500/5" />
  <div className="relative z-10 h-10 w-10 rounded-xl bg-[#0b0f19] border border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.15)] flex items-center justify-center text-xs text-amber-400 font-black">
  <span>EM</span>
  </div>
@@ -1151,7 +1151,7 @@ export function PrivacyAccessibilityHub({
  <div className="relative h-20 w-20 shrink-0 flex items-center justify-center bg-background/30 rounded-2xl border border-divider/10 overflow-hidden shadow-inner self-center sm:self-start md:self-center">
  <div className="absolute -top-6 -left-6 h-20 w-20 rounded-full border border-primary/15 bg-primary/5" />
  <div className="absolute -bottom-4 -right-4 h-16 w-16 rounded-full border border-primary/10 bg-primary/5" />
- <div className="absolute h-14 w-14 rounded-full border border-primary/20 bg-primary/5 animate-pulse" />
+ <div className="absolute h-14 w-14 rounded-full border border-primary/20 bg-primary/5" />
  <div className="relative z-10 h-10 w-10 rounded-xl bg-[#0b0f19] border border-primary/40 shadow-[0_0_12px_rgba(28,100,242,0.15)] flex items-center justify-center text-xs text-primary font-black">
  <span>&gt;_</span>
  </div>
@@ -1507,7 +1507,7 @@ startxref
  <div className="relative">
  <div className={`h-9 w-9 rounded-full flex items-center justify-center ${
  db.dbSyncStatus === 'idle' ? 'bg-emerald-500/10 text-emerald-400' :
- db.dbSyncStatus === 'queued' ? 'bg-amber-500/10 text-amber-400 animate-pulse' :
+ db.dbSyncStatus === 'queued' ? 'bg-amber-500/10 text-amber-400' :
  'bg-primary/10 text-primary animate-spin'
  }`}>
  <RefreshCw className={`h-4.5 w-4.5 animate-spin-slow`} />
@@ -1658,7 +1658,7 @@ startxref
  Network Connectivity
  </div>
  <div className="text-xs font-bold text-foreground flex items-center gap-1.5 mt-0.5">
- <span className={`h-2 w-2 rounded-full ${swStatus.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+ <span className={`h-2 w-2 rounded-full ${swStatus.isOnline ? 'bg-emerald-500' : 'bg-amber-500'}`} />
  {swStatus.isOnline ? 'Online (Real-Time Sync)' : 'Offline (Cache Mode)'}
  </div>
  </div>
@@ -2123,7 +2123,7 @@ startxref
  onClick={() => {
  setDeleteConfirm(prev => ({ ...prev, [snap.id]: 2 }));
  }}
- className="px-2 py-1 text-[8px] font-black uppercase tracking-wider bg-amber-500 text-black hover:bg-amber-600 rounded-md transition-all cursor-pointer animate-pulse shrink-0"
+ className="px-2 py-1 text-[8px] font-black uppercase tracking-wider bg-amber-500 text-black hover:bg-amber-600 rounded-md transition-all cursor-pointer shrink-0"
  title="Confirm deletion (Stage 1 of 3)"
  >
  Confirm 1/3
@@ -2143,7 +2143,7 @@ startxref
  return updated;
  });
  }}
- className="px-2 py-1 text-[8px] font-black uppercase tracking-wider bg-rose-600 text-white hover:bg-rose-700 rounded-md transition-all cursor-pointer animate-bounce shrink-0"
+ className="px-2 py-1 text-[8px] font-black uppercase tracking-wider bg-rose-600 text-white hover:bg-rose-700 rounded-md transition-all cursor-pointer shrink-0"
  title="Final Confirmation (Stage 2 of 3 - Delete!)"
  >
  Confirm 2/3 (Delete)
@@ -2439,7 +2439,7 @@ startxref
  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-2">
  <div className="p-2 bg-zinc-900/50 rounded-lg border border-zinc-800 space-y-1">
  <span className="text-[8.5px] font-bold uppercase text-emerald-400 flex items-center gap-1">
- <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+ <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
  Uneditable Cryptographic Seals
  </span>
  <p className="text-[8px] text-zinc-400 leading-normal">
@@ -2448,7 +2448,7 @@ startxref
  </div>
  <div className="p-2 bg-zinc-900/50 rounded-lg border border-zinc-800 space-y-1">
  <span className="text-[8.5px] font-bold uppercase text-emerald-400 flex items-center gap-1">
- <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+ <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
  Undeletable Direct Recovery
  </span>
  <p className="text-[8px] text-zinc-400 leading-normal">
@@ -2488,7 +2488,7 @@ startxref
  <div className="flex items-center justify-between p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[9.5px] font-bold text-emerald-400 uppercase tracking-wide">
  <span>Compliance Status:</span>
  <span className="flex items-center gap-1">
- <span className="h-1.5 w-1.5 bg-emerald-400 rounded-full animate-ping" />
+ <span className="h-1.5 w-1.5 bg-emerald-400 rounded-full" />
  Immutable Sales Archives Locked
  </span>
  </div>
@@ -3257,7 +3257,7 @@ startxref
  >
  <span className="pr-4">{faq.q}</span>
  {isOpen ? (
- <ChevronUp className="h-4 w-4 shrink-0 text-primary animate-pulse" />
+ <ChevronUp className="h-4 w-4 shrink-0 text-primary" />
  ) : (
  <ChevronDown className="h-4 w-4 shrink-0 text-zinc-500 hover:text-primary" />
  )}

@@ -822,7 +822,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                   {hasExpiration && (
                     <div className="space-y-2 relative pl-0 md:col-span-3 bg-warning/5 p-4 rounded-large border border-warning/20 animate-fade-in flex flex-col gap-2.5">
                       <div className="flex items-center gap-2 text-warning">
-                        <Clock className="h-4 w-4 text-warning animate-pulse" />
+                        <Clock className="h-4 w-4 text-warning" />
                         <span className="text-xs font-black uppercase tracking-wider">Specify Product Expiration Date</span>
                       </div>
                       <p className="text-[11px] text-default-500 leading-relaxed pl-0.5">

@@ -1812,7 +1812,7 @@ export default function AtposExtraModules({
 
         {filteredExpenses.length === 0 ? (
           <div className="bg-content1 border border-divider/15 p-5 rounded-2xl text-center space-y-4 py-12">
-            <Archive className="h-10 w-10 text-primary/30 mx-auto animate-pulse" />
+            <Archive className="h-10 w-10 text-primary/30 mx-auto" />
             <div>
               <h3 className="font-bold text-sm text-foreground">
                 No Disbursement Registry Records Found
@@ -2824,10 +2824,10 @@ export default function AtposExtraModules({
  urgencyBadge = "text-emerald-500 bg-emerald-500/10 border-emerald-500/25";
  alertIconColor = "text-emerald-500";
  } else if (item.diffDays < 0) {
- urgencyBadge = "text-rose-500 bg-rose-500/15 border-rose-500/30 animate-pulse font-black";
+ urgencyBadge = "text-rose-500 bg-rose-500/15 border-rose-500/30 font-black";
  alertIconColor = "text-rose-500";
  } else if (item.diffDays === 0) {
- urgencyBadge = "text-red-400 bg-red-950/40 border border-red-500/30 animate-pulse font-black";
+ urgencyBadge = "text-red-400 bg-red-950/40 border border-red-500/30 font-black";
  alertIconColor = "text-red-400";
  } else if (item.diffDays <= 3) {
  urgencyBadge = "text-orange-500 bg-orange-950/45 border border-orange-500/25 font-extrabold";
@@ -2917,7 +2917,7 @@ export default function AtposExtraModules({
  })
  ) : (
  <div className="text-center py-10 space-y-2 border border-dashed border-divider/15 rounded-xl">
- <Info className="h-5 w-5 text-default-500 mx-auto animate-pulse" />
+ <Info className="h-5 w-5 text-default-400 mx-auto" />
  <p className="text-xs text-default-500 font-bold">No Payables Found</p>
  <p className="text-[9.5px] text-default-500 max-w-[150px] mx-auto">
  No records match search query or status filter in this period.
@@ -3107,7 +3107,7 @@ export default function AtposExtraModules({
  </div>
  {hasMemo && (
  <span className="flex items-center gap-0.5" title={`${memoCount} memo(s)`}>
- <FileText className="h-3 w-3 text-amber-500 animate-pulse" />
+ <FileText className="h-3 w-3 text-amber-500" />
  {memoCount > 1 && (
  <span className="text-[8px] font-black bg-amber-500 text-black px-1 rounded-full scale-90">
  {memoCount}
@@ -3387,7 +3387,7 @@ export default function AtposExtraModules({
  <div className="border-t border-divider/15 pt-3 mt-4 space-y-3 text-left">
  <div className="flex justify-between items-center">
  <span className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-1.5 font-sans">
- <FileText className="h-3.5 w-3.5 text-amber-500 animate-pulse" />
+ <FileText className="h-3.5 w-3.5 text-amber-500" />
  <span>Daily Calendar Memos</span>
  </span>
  <span className="text-[8px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider">
@@ -3504,7 +3504,7 @@ export default function AtposExtraModules({
  </div>
  ) : (
  <div className="text-center py-12 space-y-2">
- <Info className="h-8 w-8 text-default-500 mx-auto animate-pulse" />
+ <Info className="h-8 w-8 text-default-400 mx-auto" />
  <p className="text-xs text-default-500 italic">
  No Date Selected
  </p>

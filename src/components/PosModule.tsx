@@ -2486,7 +2486,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  onClick={() => setShowShiftModal(true)}
  className="py-1.5 px-3.5 bg-amber-500/10 dark:bg-amber-500/15 hover:bg-amber-500 hover:text-white dark:hover:text-black border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-wider rounded-full transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
  >
- <LockKeyhole className="h-3 w-3 animate-pulse" />
+ <LockKeyhole className="h-3 w-3" />
  <span>Open Shift</span>
  </button>
  )}
@@ -2544,7 +2544,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
           </div>
         </div>
       )}
- {/* MOBILE ONLY TAB SWITCHER */}
  <div className="flex lg:hidden bg-content1 border border-divider/15 p-1 rounded-2xl w-full gap-1 flex-shrink-0">
  <button
  onClick={() => setMobilePosTab("basket")}
@@ -2575,9 +2574,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </button>
  </div>
 
- {/* MAIN GRID FRAMEWORK: ATTACHED DIRECTLY TO VIEWPORT */}
  <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 animate-fade-in text-foreground items-stretch flex-1 min-h-0 lg:h-full overflow-y-auto lg:overflow-hidden">
- {/* LEFT COLUMN: HOLD QUEUE */}
  <div
  className={`lg:col-span-4 bg-content1 p-3.5 sm:p-4 rounded-2xl sm:rounded-2xl border border-divider/20 shadow-sm space-y-4 text-left self-stretch flex flex-col h-full overflow-hidden min-h-0 ${
  mobilePosTab === "queue" ? "block" : "hidden lg:flex"
@@ -2587,8 +2584,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <h3 className="text-xs font-black text-primary uppercase tracking-widest flex items-center justify-between gap-1.5 w-full">
  <div className="flex items-center gap-1.5">
  <span className="relative flex h-2 w-2">
- <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
- <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+ <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500"></span>
  </span>
  <span>
  Yard Staff Transactions HOLD Queue ({branchParkedSales.length})
@@ -2681,16 +2677,14 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  ) : (
  <div className="py-10 px-4 text-center text-xs text-default-500 font-bold border border-dashed border-divider/20 rounded-2xl bg-content1 flex flex-col items-center justify-center gap-2 min-h-[180px] h-full">
- <History className="h-5 w-5 text-default-500" />
- <span className="animate-pulse text-default-500 leading-relaxed">
- Staged Lobby Clear: Waiting for floor staff to upload
- material hold queues from customer devices.
+ <History className="h-5 w-5 text-default-400" />
+ <span className="text-default-400 font-medium">
+ No staged or parked orders in queue.
  </span>
  </div>
  )}
  </div>
 
- {/* Keyboard Shortcuts & Interactive Speed-Dials */}
  <div className="border-t border-divider/15 pt-3 mt-auto flex-shrink-0 space-y-2.5">
  <button
  type="button"
@@ -2698,8 +2692,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
  className="flex items-center justify-between w-full hover:bg-content3/15 p-1.5 rounded-xl transition-all cursor-pointer text-left"
  >
  <span className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-1.5 font-sans">
- <Keyboard className="h-3.5 w-3.5 text-primary animate-pulse" />
- <span>POS Checkout Speed-Dials</span>
+ <Keyboard className="h-3.5 w-3.5 text-primary" />
+ <span>Checkout Hotkeys</span>
  </span>
  <div className="flex items-center gap-2">
  <span className="text-[9px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-black uppercase tracking-wider ">
@@ -2757,14 +2751,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  </div>
 
- {/* RIGHT COLUMN: ACTIVE ORDER LIST */}
  <div
  className={`lg:col-span-8 text-left h-full flex flex-col overflow-hidden min-h-0 ${
  mobilePosTab === "basket" ? "block" : "hidden lg:flex"
  }`}
  >
  <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-2xl border border-divider/35 bg-content1 shadow-sm flex flex-col h-full overflow-hidden min-h-0">
- {/* Header Metadata block */}
  <div className="flex-shrink-0 space-y-2.5">
  <div className="border-b border-divider/15 pb-2">
  <div className="flex flex-wrap items-center justify-between gap-2 pl-1 mb-1">
@@ -2818,7 +2810,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  </div>
 
- {/* Barcode scan input search bar */}
  {!products.some((p) => !p.isDeleted) ? (
  <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl text-left font-sans shadow-inner">
  <div className="flex items-center gap-2 text-amber-500 font-extrabold text-xs uppercase tracking-wider mb-1">
@@ -2950,7 +2941,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  )}
  </div>
 
- {/* DYNAMIC INDEPENDENT OVERFLOW SCROLL TRACK */}
  <div className="flex-1 h-0 overflow-auto my-3 pr-1 space-y-1.5 border border-divider/10 rounded-2xl p-2.5 bg-background/20 scrollbar-thin"><div className="min-w-[550px] w-full pb-1">
  <AnimatePresence initial={false}>
  {cart.map((item, idx) => (
@@ -3145,7 +3135,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  </div>
 
- {/* Fixed operational footer calculation layer */}
  <div className="flex-shrink-0 border-t border-divider/20 pt-3 grid grid-cols-1 xl:grid-cols-12 gap-5">
  <div className="xl:col-span-5 xl:space-y-1 pt-0.5">
  <div className="flex justify-between text-xs font-bold text-default-500">
@@ -3512,7 +3501,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <div className="flex flex-col md:flex-row md:items-center md:justify-between border-b border-divider/20 pb-4 gap-4">
  <div>
  <h3 className="text-sm font-black text-rose-500 flex items-center gap-2 uppercase tracking-widest pl-1 ">
- <LockKeyhole className="h-5 w-5 animate-pulse text-rose-500" />
+ <LockKeyhole className="h-5 w-5 text-rose-500" />
  <span>Corporate Daily Sales Ledger & Void Terminal</span>
  </h3>
  </div>
@@ -3635,7 +3624,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  {/* Payment Filter */}
  <div className="flex flex-col gap-1.5">
  <span className="text-[10px] text-default-500 font-black uppercase tracking-wider flex items-center gap-1.5">
- <span className="h-2 w-2 bg-primary rounded-full animate-pulse" />
+ <span className="h-2 w-2 bg-primary rounded-full" />
  <span>Payment Method</span>
  </span>
  <select
@@ -3810,7 +3799,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </table>
  </div>
 
- {/* Pagination Controls bar */}
  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-content1 border-t border-divider/20 text-xs font-sans">
  <span className="font-semibold text-default-500 ">
  Showing{" "}
@@ -3878,7 +3866,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  )}
 
- {/* MODAL 1: Cashier Shift Opener */}
  <AnimatePresence>
  {showShiftModal && (
  <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
@@ -4002,7 +3989,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  )}
  </AnimatePresence>
 
- {/* MODAL: Close Drawer Shift */}
  <AnimatePresence>
  {showCloseShiftModal && activeShift && (
  <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
@@ -4162,7 +4148,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  )}
  </AnimatePresence>
 
- {/* MODAL: Discount Selection */}
  <AnimatePresence>
  {showDiscountModal && (
  <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
@@ -4365,7 +4350,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  )}
  </AnimatePresence>
 
- {/* MODAL: Paper Receipt slip */}
  <AnimatePresence>
  {showReceiptModal && activeReceipt && (
  <div className="fixed inset-0 overflow-y-auto flex items-start justify-center z-50 p-4 md:items-center">
@@ -4386,7 +4370,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  >
  <div className="flex flex-col items-center justify-center mb-4 text-center">
  <div className="p-2 rounded-full bg-secondary-50 border border-secondary/20 text-secondary-700 mb-2 text-center">
- <CheckCircle className="h-6 w-6 animate-bounce text-secondary" />
+ <CheckCircle className="h-6 w-6 text-secondary" />
  </div>
  <h3 className="text-base font-bold text-foreground">
  Checkout Succeeded
@@ -4396,7 +4380,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </p>
  </div>
 
-  {/* Receipt View Switcher Tabs */}
   <div className="flex bg-content1 p-1 rounded-xl border border-divider/30 mb-3 bir-report-no-print text-center gap-1">
     <button
       type="button"
@@ -4437,7 +4420,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
     )}
   </div>
 
-  {/* Receipt Content Container */}
   <div className={`space-y-3 my-2 select-text text-left max-h-[50vh] overflow-y-auto bir-receipt-container scrollbar-thin p-1 ${receiptFontClass}`}>
     {receiptViewMode === "unified" && (
       <>
@@ -4466,7 +4448,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
     )}
   </div>
 
-  {/* Refactored Action Buttons */}
   <div className="flex flex-col sm:flex-row gap-2 mt-4 flex-shrink-0 bir-report-no-print">
     <button
       type="button"
@@ -4540,7 +4521,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  )}
  </AnimatePresence>
 
- {/* MODAL: Customer Profile Assignment */}
  <AnimatePresence>
  {showCustomerModal && (
  <div className="fixed inset-0 flex items-center justify-center z-50 p-4 text-left">
@@ -4640,7 +4620,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  />
  </div>
 
- {/* Searchable member selection */}
  <div className="space-y-1.5 pt-1">
    <label className="text-[9px] font-black text-default-500 uppercase tracking-widest pl-1 block">
      Search Registered Corporate Members
@@ -4727,7 +4706,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  )}
  </AnimatePresence>
 
- {/* MODAL 4: Dynamic Security Override Verification */}
  <AnimatePresence>
  {pendingApproval && (
  <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
@@ -4826,7 +4804,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
 
  {approvalError && (
- <div className="text-[10px] font-extrabold text-red-500 px-2 animate-pulse">
+ <div className="text-[10px] font-extrabold text-red-500 px-2">
  {approvalError}
  </div>
  )}
@@ -4851,7 +4829,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  )}
  </AnimatePresence>
 
- {/* MODAL 5: Single Item Price Override dialog */}
  <AnimatePresence>
  {overrideModalOpen &&
  overrideItemIndex !== null &&
@@ -4937,7 +4914,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  )}
  </AnimatePresence>
 
- {/* MODAL 6: Checkout Fulfillment Assignment & Delivery Scheduling Form */}
  <AnimatePresence>
  {showFulfillmentModal && pendingSaleForFulfillment && (
  <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
@@ -4968,7 +4944,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  </div>
 
- {/* Customer Payment & Change summary for dispatched fulfillment */}
  <div className="bg-content1 p-3 rounded-2xl border border-divider/20 space-y-1.5 text-xs ">
  <div className="flex justify-between items-center text-default-500">
  <span>Total Bill: <strong className="text-foreground">{formatCurrency(pendingSaleForFulfillment?.grandTotal)}</strong></span>
@@ -5212,7 +5187,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  )}
  </AnimatePresence>
 
- {/* MODAL 6: Security PIN verification passcode modal */}
  <AnimatePresence>
  {pinModalOpen && pinAction && pinTargetSale && (
  <div className="fixed inset-0 flex items-center justify-center z-[80] p-4 font-sans">
@@ -5238,7 +5212,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  >
  <div className="flex justify-between items-center border-b border-divider/20 pb-2.5">
  <h3 className="text-sm font-black text-amber-500 flex items-center gap-1.5 uppercase tracking-widest">
- <LockKeyhole className="h-4 w-4 animate-pulse text-amber-500" />
+ <LockKeyhole className="h-4 w-4 text-amber-500" />
  <span>{pinAction} Verification</span>
  </h3>
  <button
@@ -5300,7 +5274,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
 
  {securityPinError ? (
- <p className="text-[9.5px] font-extrabold text-red-500 px-1 animate-pulse text-center">
+ <p className="text-[9.5px] font-extrabold text-red-500 px-1 text-center">
  {securityPinError}
  </p>
  ) : (
@@ -5375,7 +5349,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  )}
  </AnimatePresence>
 
- {/* MODAL 10: Selected Sale Transaction Details */}
  {selectedSaleDetail && (
  <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in text-left">
  <div
@@ -5478,7 +5451,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <tr>
  <td
  colSpan={4}
- className="py-4 text-center text-default-500 italic font-sans animate-pulse"
+ className="py-4 text-center text-default-400 italic font-sans"
  >
  No products registered in this invoice record.
  </td>
@@ -5556,7 +5529,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  triggerReprintWithPin(s);
  }}
  className="px-3.5 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-full text-[10px] uppercase font-black tracking-widest transition-all cursor-pointer shadow-sm active:scale-95"
- title="Reprint Receipt Slip"
  >
  Reprint Slip
  </button>
@@ -5573,7 +5545,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  )}
 
- {/* MODAL: Tile Coverage Estimator Calculator */}
  <AnimatePresence>
  {showTileCalculatorModal && (
  <div className="fixed inset-0 flex items-center justify-center z-50 p-4 font-sans text-foreground">
@@ -5594,7 +5565,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  >
  <div className="flex justify-between items-center border-b border-divider/20 pb-3.5 mb-4 shrink-0 text-left">
  <h3 className="text-base font-black text-primary flex items-center gap-2">
- <Calculator className="h-5 w-5 text-primary animate-pulse" />
+ <Calculator className="h-5 w-5 text-primary" />
  <span>Tile Coverage & Area Estimator Calculator</span>
  </h3>
  <button

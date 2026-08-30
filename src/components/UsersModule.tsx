@@ -791,7 +791,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                           startContent={
                             <span
                               className={`h-1.5 w-1.5 rounded-full ${
-                                isUserActive ? 'bg-success animate-pulse' : 'bg-danger'
+                                isUserActive ? 'bg-success' : 'bg-danger'
                               }`}
                             />
                           }

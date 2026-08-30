@@ -409,7 +409,7 @@ export const OnboardingSetupWizard: React.FC<OnboardingSetupWizardProps> = ({ on
           <div className="space-y-6 animate-fade-in text-foreground py-2">
             <div className="space-y-3 text-center">
               <div className="h-14 w-14 bg-primary rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-primary/25/15">
-                <Sparkles className="h-7 w-7 text-white animate-pulse" />
+                <Sparkles className="h-7 w-7 text-white" />
               </div>
               <div className="space-y-1.5">
  <span className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 px-3 py-1.5 rounded-full">

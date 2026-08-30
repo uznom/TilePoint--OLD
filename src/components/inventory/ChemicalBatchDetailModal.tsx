@@ -67,7 +67,7 @@ export const ChemicalBatchDetailModal: React.FC<ChemicalBatchDetailModalProps> =
               </span>
               <span className={`px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wide border ${
                 liveStatus === "Expired"
-                  ? "bg-danger/10 text-danger border-danger/20 font-black animate-pulse"
+                  ? "bg-danger/10 text-danger border-danger/20 font-black"
                   : liveStatus === "Expiring Soon"
                   ? "bg-warning/10 text-warning border-warning/20"
                   : "bg-success/10 text-success border-success/20"

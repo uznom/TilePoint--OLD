@@ -23,7 +23,7 @@ export const PreflightReportCard: React.FC<PreflightReportCardProps> = ({
 }) => {
   if (isAnalyzing) {
     return (
-      <div className="p-6 bg-content1 border border-divider/30 rounded-2xl text-center space-y-3 animate-pulse font-sans">
+      <div className="p-6 bg-content1 border border-divider/30 rounded-2xl text-center space-y-3 font-sans">
         <RefreshCw className="h-8 w-8 text-primary animate-spin mx-auto" />
         <h4 className="text-xs font-black uppercase text-primary tracking-wider">
           Running Pre-Flight Schema & Branch Compatibility Inspection...

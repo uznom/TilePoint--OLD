@@ -540,15 +540,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               {greeting}, {displayName}
             </h1>
             <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 uppercase tracking-wide">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               Live Terminal
             </span>
           </div>
           <p className="text-xs sm:text-sm text-default-500 mt-1 flex items-center gap-1.5">
             <Store className="h-3.5 w-3.5 text-primary" />
             <span>{currentBranch ? currentBranch.name : 'TilePoint Central Enterprise'}</span>
-            <span>•</span>
-            <span className="text-default-400">Enterprise Operations & Real-Time Intelligence</span>
           </p>
         </div>
 
@@ -1177,7 +1175,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                       del.status === 'Delivered'
                         ? 'bg-emerald-500/10 text-emerald-500'
                         : del.status === 'Out For Delivery'
-                        ? 'bg-sky-500/10 text-sky-500 animate-pulse'
+                        ? 'bg-sky-500/10 text-sky-500'
                         : 'bg-amber-500/10 text-amber-500'
                     }`}
                   >
