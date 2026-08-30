@@ -75,6 +75,26 @@ export const BranchStockSchema = z.object({
   isDeleted: z.boolean().default(false)
 });
 
+export const BranchStockRecordSchema = z.object({
+  id: z.string(),
+  productName: z.string().default('Unnamed Product'),
+  productCode: z.string().default(''),
+  sku: z.string().nullable().optional(),
+  product_sku: z.string().nullable().optional(),
+  category_id: z.string().nullable().optional(),
+  barcode: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
+  brand: z.string().nullable().optional(),
+  unitOfMeasure: z.string().nullable().optional(),
+  stockQuantity: z.number().default(0),
+  branchStockId: z.string().nullable().optional(),
+  branchQuantity: z.number().default(0),
+  branchLowStockThreshold: z.number().nullable().optional(),
+  sellingPriceOverride: z.number().nullable().optional(),
+  costPrice: z.number().nullable().optional(),
+  sellingPrice: z.number().nullable().optional()
+}).passthrough();
+
 export const SaleItemSchema = z.object({
   id: z.string(),
   saleId: z.string().default(''),
@@ -111,14 +131,37 @@ export const SaleSchema = z.object({
 
 export const AuditLogSchema = z.object({
   id: z.string(),
-  timestamp: z.string().default(() => new Date().toISOString()),
-  userId: z.string().default(''),
-  userName: z.string().default(''),
-  action: z.string().default(''),
-  module: z.string().default('System'),
-  details: z.string().default(''),
-  branchId: z.string().optional(),
-  ipAddress: z.string().optional()
+  timestamp: z.string().nullable().optional().default(() => new Date().toISOString()),
+  createdAt: z.string().nullable().optional(),
+  userId: z.string().nullable().optional().default(''),
+  userName: z.string().nullable().optional().default(''),
+  username: z.string().nullable().optional().default(''),
+  action: z.string().nullable().optional().default(''),
+  actionCode: z.string().nullable().optional(),
+  module: z.string().nullable().optional().default('System'),
+  details: z.any().optional().default(''),
+  description: z.string().nullable().optional(),
+  referenceId: z.string().nullable().optional(),
+  branchId: z.string().nullable().optional(),
+  ipAddress: z.string().nullable().optional()
+}).transform((data) => {
+  const ts = data.timestamp || data.createdAt || new Date().toISOString();
+  const act = data.action || data.actionCode || 'GENERAL_AUDIT';
+  const usr = data.userName || data.username || 'System User';
+  const det = typeof data.details === 'object' && data.details !== null
+    ? JSON.stringify(data.details)
+    : (data.details || data.description || '');
+  return {
+    ...data,
+    timestamp: ts,
+    createdAt: data.createdAt || ts,
+    action: act,
+    actionCode: data.actionCode || act,
+    userName: usr,
+    username: data.username || usr,
+    details: det,
+    description: data.description || det
+  };
 });
 
 export const DbSnapshotSchema = z.object({

@@ -7,7 +7,7 @@
  * and stock transfers directly via MySQL endpoints.
  */
 
-import { BranchStockSchema, AuditLogSchema, safeParseApiArray } from '../types/schemas';
+import { BranchStockRecordSchema, AuditLogSchema, safeParseApiArray } from '../types/schemas';
 
 export interface BranchStockRecord {
   id: string;
@@ -168,7 +168,7 @@ class MysqlDatabaseService {
       const targetBranch = branchId || this.activeBranchId;
       const targetSku = options.product_sku || options.sku || '';
       const targetCat = options.category_id || options.category || '';
-      const cacheKey = `${targetBranch}:${options.productId || ''}:${targetSku}:${options.barcode || ''}:${targetCat}:${options.search || ''}:${options.limit || 200}:${options.offset || 0}`;
+      const cacheKey = `${targetBranch}:${options.productId || ''}:${targetSku}:${options.barcode || ''}:${targetCat}:${options.search || ''}:${options.limit !== undefined ? options.limit : 200}:${options.offset !== undefined ? options.offset : 0}`;
 
       if (!options.bypassCache) {
         const cached = this.stockCache.get(cacheKey);
@@ -186,18 +186,19 @@ class MysqlDatabaseService {
       if (options.search) params.set('search', options.search);
       if (options.category_id) params.set('category_id', options.category_id);
       if (options.category) params.set('category', options.category);
-      if (options.limit) params.set('limit', options.limit.toString());
-      if (options.offset) params.set('offset', options.offset.toString());
+      if (options.limit !== undefined) params.set('limit', options.limit.toString());
+      if (options.offset !== undefined) params.set('offset', options.offset.toString());
 
       const res = await fetch(`/api/db/branch-stock?${params.toString()}`, {
         headers: this.getHeaders()
       });
       if (!res.ok) {
-        throw new Error(`HTTP error ${res.status}`);
+        const errJson = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(errJson.error || `HTTP ${res.status}`);
       }
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
-        const validatedData = safeParseApiArray(BranchStockSchema, json.data) as unknown as BranchStockRecord[];
+        const validatedData = safeParseApiArray(BranchStockRecordSchema, json.data) as unknown as BranchStockRecord[];
         this.stockCache.set(cacheKey, { data: validatedData, count: json.count || validatedData.length, timestamp: Date.now() });
         return { ...json, data: validatedData, count: validatedData.length };
       }
@@ -212,8 +213,11 @@ class MysqlDatabaseService {
         const fbRes = await fetch(`/api/db/inventory/lookup?${fallbackParams.toString()}`, {
           headers: this.getHeaders()
         });
+        if (!fbRes.ok) {
+          throw new Error(`HTTP ${fbRes.status}`);
+        }
         const fbJson = await fbRes.json();
-        const validatedFallback = safeParseApiArray(BranchStockSchema, fbJson.data || []) as unknown as BranchStockRecord[];
+        const validatedFallback = safeParseApiArray(BranchStockRecordSchema, fbJson.data || []) as unknown as BranchStockRecord[];
         return { success: fbJson.success || false, count: validatedFallback.length, data: validatedFallback };
       } catch (fbErr: any) {
         return { success: false, count: 0, data: [], error: err.message };
@@ -243,14 +247,15 @@ class MysqlDatabaseService {
       if (options.category) params.set('category', options.category);
       if (options.branchId) params.set('branchId', options.branchId);
       if (options.search) params.set('search', options.search);
-      if (options.limit) params.set('limit', options.limit.toString());
-      if (options.offset) params.set('offset', options.offset.toString());
+      if (options.limit !== undefined) params.set('limit', options.limit.toString());
+      if (options.offset !== undefined) params.set('offset', options.offset.toString());
 
       const res = await fetch(`/api/db/inventory?${params.toString()}`, {
         headers: this.getHeaders()
       });
       if (!res.ok) {
-        throw new Error(`HTTP error ${res.status}`);
+        const errJson = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(errJson.error || `HTTP ${res.status}`);
       }
       return await res.json();
     } catch (err: any) {
@@ -321,7 +326,8 @@ class MysqlDatabaseService {
       });
 
       if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
+        const errJson = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(errJson.error || `HTTP ${res.status}`);
       }
 
       return await res.json();
@@ -355,12 +361,15 @@ class MysqlDatabaseService {
       if (filters.startDate) params.set('startDate', filters.startDate);
       if (filters.endDate) params.set('endDate', filters.endDate);
       if (filters.entityType) params.set('entityType', filters.entityType);
-      if (filters.limit) params.set('limit', filters.limit.toString());
+      if (filters.limit !== undefined) params.set('limit', filters.limit.toString());
 
       const res = await fetch(`/api/db/audit-trails?${params.toString()}`, {
         headers: this.getHeaders()
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(errJson.error || `HTTP ${res.status}`);
+      }
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         const validated = safeParseApiArray(AuditLogSchema, json.data);
@@ -394,12 +403,15 @@ class MysqlDatabaseService {
       if (filters.status) params.set('status', filters.status);
       if (filters.startDate) params.set('startDate', filters.startDate);
       if (filters.endDate) params.set('endDate', filters.endDate);
-      if (filters.limit) params.set('limit', filters.limit.toString());
+      if (filters.limit !== undefined) params.set('limit', filters.limit.toString());
 
       const res = await fetch(`/api/db/stock-transfers?${params.toString()}`, {
         headers: this.getHeaders()
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(errJson.error || `HTTP ${res.status}`);
+      }
       return await res.json();
     } catch (err: any) {
       return { success: false, count: 0, data: [], error: err.message };
@@ -422,6 +434,7 @@ class MysqlDatabaseService {
         const errJson = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
         throw new Error(errJson.error || `HTTP ${res.status}`);
       }
+      this.clearStockCache();
       return await res.json();
     } catch (err: any) {
       console.error('[MysqlDatabaseService] saveStockTransfer failed:', err.message);
@@ -516,7 +529,10 @@ class MysqlDatabaseService {
       const res = await fetch('/api/db/mysql-status', {
         headers: this.getHeaders()
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(errJson.error || `HTTP ${res.status}`);
+      }
       return await res.json();
     } catch (err: any) {
       return {

@@ -117,7 +117,9 @@ const LARGE_BODY_ROUTES = new Set([
   '/api/mysql/snapshots',
   '/api/sqlite/snapshots',
   '/api/db/sync-batch',
-  '/api/mysql/sync-batch'
+  '/api/mysql/sync-batch',
+  '/api/mysql/sync-all',
+  '/api/db/sync-all'
 ]);
 
 // Default global body parser: 100kb limit for all general routes.
