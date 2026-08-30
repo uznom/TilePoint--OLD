@@ -1127,22 +1127,25 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
     console.debug("[DbContext] Non-fatal swallowed error handled with fallback:", swallowedErr);
   }
 
-   const savedToken = sessionStorage.getItem("tp_session_token") || localStorage.getItem("tp_session_token");
-   const token = savedToken || "";
-  const activeSessionId = localStorage.getItem("tp_active_session_id") || sessionStorage.getItem("tp_active_session_id") || "unknown";
-  const fingerprint = getClientFingerprintHash();
-  const hardwareKey = getDeviceHardwareKey();
-  const clientSummary = getClientDeviceSummary();
-  return {
-    "Authorization": `Bearer ${token}`,
-    "X-Session-Token": token,
-    "X-Client-ID": activeSessionId,
-    "X-Session-ID": activeSessionId,
-    "X-Client-Fingerprint": fingerprint,
-    "X-Device-Key": hardwareKey,
-    "X-Client-Info": clientSummary,
+    const savedToken = sessionStorage.getItem("tp_session_token") || localStorage.getItem("tp_session_token");
+    const token = savedToken && savedToken !== "undefined" && savedToken !== "null" ? savedToken.trim() : "";
+    const activeSessionId = localStorage.getItem("tp_active_session_id") || sessionStorage.getItem("tp_active_session_id") || "unknown";
+    const fingerprint = getClientFingerprintHash();
+    const hardwareKey = getDeviceHardwareKey();
+    const clientSummary = getClientDeviceSummary();
+    const headers: Record<string, string> = {
+      "X-Client-ID": activeSessionId,
+      "X-Session-ID": activeSessionId,
+      "X-Client-Fingerprint": fingerprint,
+      "X-Device-Key": hardwareKey,
+      "X-Client-Info": clientSummary,
+    };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+      headers["X-Session-Token"] = token;
+    }
+    return headers;
   };
- };
 
  const [isHydrating, setIsHydrating] = useState<boolean>(true);
  const [isSystemHydrating, setIsSystemHydrating] = useState<boolean>(true);
@@ -1468,6 +1471,16 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
           "Users",
           authedUser.id,
         );
+
+        // Auto-flush and synchronize local collections and offline queue to MySQL
+        setTimeout(() => {
+          syncAllLocalToMysql().catch((syncErr) => {
+            console.debug("[Auth Bridge] Background sync to MySQL notice:", syncErr);
+          });
+          transactionOutboxService.flush().catch((flushErr) => {
+            console.debug("[Auth Bridge] Background outbox flush notice:", flushErr);
+          });
+        }, 300);
 
         return { success: true };
       }

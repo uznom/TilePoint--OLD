@@ -672,6 +672,45 @@ const KEY_TO_TABLE_MAP = {
   'tp_db_snapshots': 'db_snapshots',
 };
 
+// Topological dependency order for foreign-key-safe batch inserts
+const DB_COLLECTION_PRIORITY_ORDER = Object.freeze([
+  'tp_branches',
+  'tp_suppliers',
+  'tp_brands',
+  'tp_users',
+  'tp_products',
+  'tp_inventory',
+  'tp_branch_stock',
+  'tp_shifts',
+  'tp_sales',
+  'tp_sale_items',
+  'tp_purchase_orders',
+  'tp_po_items',
+  'tp_stock_transfers',
+  'tp_stock_transfer_items',
+  'tp_movements',
+  'tp_inventory_movements',
+  'tp_deliveries',
+  'tp_damage_logs',
+  'tp_ledger_entries',
+  'tp_audit_logs',
+  'tp_custom_corporate_bills',
+  'atpos_v2_custom_bills',
+  'tp_transmittals',
+  'tp_members',
+  'atpos_v2_members_list',
+  'tp_expenses',
+  'atpos_v2_expenses',
+  'tp_product_returns',
+  'atpos_v2_returns',
+  'tp_branch_sales_reports',
+  'tp_product_categories',
+  'tp_unit_types',
+  'tp_payment_methods',
+  'tp_discount_schemes',
+  'tp_damage_reasons'
+]);
+
 // Allowed schema columns per table for safe SQL generation
 const TABLE_COLUMNS = {
   branches: ['id', 'name', 'manager', 'address', 'phone', 'monthlySales', 'staffCount', 'activeCashiers', 'isDeleted', 'isDistributionBranch', 'storeLogo', 'branchCode', 'localIp', 'gatewayRules', 'receiptFacebook', 'receiptPromoText', 'receiptQrBase64', 'receiptThankYou', 'tin', 'logoSize', 'openingTime', 'closingTime', 'operatingDays', 'createdAt', 'updatedAt'],
@@ -748,7 +787,11 @@ async function initDatabaseSchema() {
       "CREATE INDEX `idx_products_category` ON `products` (`category`)",
       "CREATE INDEX `idx_products_sku_category` ON `products` (`sku`, `category`)",
       "CREATE INDEX `idx_products_sku_cat_id` ON `products` (`product_sku`, `category_id`)",
-      "ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `mustResetPassword` TINYINT(1) NOT NULL DEFAULT 1"
+      "ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `mustResetPassword` TINYINT(1) NOT NULL DEFAULT 1",
+      "ALTER TABLE `sales` MODIFY COLUMN `shiftId` VARCHAR(64) NULL",
+      "ALTER TABLE `sales` MODIFY COLUMN `cashierId` VARCHAR(64) NULL",
+      "ALTER TABLE `sales` MODIFY COLUMN `cashierName` VARCHAR(191) NULL",
+      "ALTER TABLE `purchase_orders` MODIFY COLUMN `supplierId` VARCHAR(64) NULL"
     ];
 
     for (const q of explicitIndexQueries) {
@@ -1191,25 +1234,28 @@ async function saveKeyToStore(key, value) {
 
 // Wrapper: Check if database is configured
 async function isDatabaseConfiguredStore() {
-  if (isConfiguredCache === true) return true;
-
   if (isMysqlActive || mysqlEnforced) {
     try {
+      const [users] = await pool.query('SELECT COUNT(*) as count FROM users');
+      const hasUsers = users && users[0] && users[0].count > 0;
+      if (!hasUsers) {
+        isConfiguredCache = false;
+        return false;
+      }
+
+      if (isConfiguredCache === true) return true;
+
       const [settings] = await pool.query('SELECT setting_value FROM system_settings WHERE setting_key = ?', ['tp_is_configured']);
       if (settings.length > 0) {
         const val = settings[0].setting_value;
         const conf = val === 'true' || val === true || val === '"true"';
         if (conf) {
           isConfiguredCache = true;
-          return conf;
+          return true;
         }
       }
-      const [users] = await pool.query('SELECT COUNT(*) as count FROM users');
-      const conf = users[0].count > 0;
-      if (conf) {
-        isConfiguredCache = true;
-        return conf;
-      }
+      isConfiguredCache = true;
+      return true;
     } catch (e) {
       if (isConnectionError(e)) {
         markServerDegraded(`MySQL isConfigured query failed: ${e.message} (${e.code})`);
@@ -1221,20 +1267,14 @@ async function isDatabaseConfiguredStore() {
 
   // Fallback to AlaSQL embedded store check
   try {
-    const settings = alasql('SELECT setting_value FROM `system_settings` WHERE `setting_key` = ?', ['tp_is_configured']);
-    if (settings && settings.length > 0) {
-      const val = settings[0].setting_value;
-      const conf = val === 'true' || val === true || val === '"true"';
-      if (conf) {
-        isConfiguredCache = true;
-        return true;
-      }
-    }
     const users = alasql('SELECT COUNT(*) as count FROM `users`');
-    if (users && users[0] && users[0].count > 0) {
-      isConfiguredCache = true;
-      return true;
+    const hasUsers = users && users[0] && users[0].count > 0;
+    if (!hasUsers) {
+      isConfiguredCache = false;
+      return false;
     }
+    isConfiguredCache = true;
+    return true;
   } catch (e) {}
 
   return false;
@@ -3780,7 +3820,17 @@ app.post('/api/db/bulk', async (req, res) => {
   }
 
   try {
-    for (const key of Object.keys(data)) {
+    if (isMysqlActive || mysqlEnforced) {
+      try { await pool.query('SET FOREIGN_KEY_CHECKS = 0'); } catch (_) {}
+    }
+
+    const keys = Object.keys(data);
+    const sortedKeys = [
+      ...DB_COLLECTION_PRIORITY_ORDER.filter(k => keys.includes(k)),
+      ...keys.filter(k => !DB_COLLECTION_PRIORITY_ORDER.includes(k))
+    ];
+
+    for (const key of sortedKeys) {
       // Guard against accidental wipes of users if configured
       if (configured && key === 'tp_users' && Array.isArray(data[key]) && data[key].length === 0) {
         continue;
@@ -3794,6 +3844,10 @@ app.post('/api/db/bulk', async (req, res) => {
     res.json({ success: true, count: Object.keys(data).length });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
+  } finally {
+    if (isMysqlActive || mysqlEnforced) {
+      try { await pool.query('SET FOREIGN_KEY_CHECKS = 1'); } catch (_) {}
+    }
   }
 });
 
@@ -3805,17 +3859,25 @@ app.post(['/api/mysql/sync-all', '/api/db/sync-all'], express.json({ limit: '50m
   }
 
   try {
+    if (isMysqlActive || mysqlEnforced) {
+      try { await pool.query('SET FOREIGN_KEY_CHECKS = 0'); } catch (_) {}
+    }
+
     let totalSynced = 0;
     const keys = Object.keys(payload);
+    const sortedKeys = [
+      ...DB_COLLECTION_PRIORITY_ORDER.filter(k => keys.includes(k)),
+      ...keys.filter(k => !DB_COLLECTION_PRIORITY_ORDER.includes(k))
+    ];
 
-    for (const key of keys) {
+    for (const key of sortedKeys) {
       const val = payload[key];
       if (val === undefined || val === null) continue;
       await saveKeyToStore(key, val);
       totalSynced++;
     }
 
-    const { db, hash } = await readFullDatabase();
+    const { hash } = await readFullDatabase();
     emitPulseUpdate('all', hash, req.headers['x-client-id']);
 
     res.json({
@@ -3829,6 +3891,10 @@ app.post(['/api/mysql/sync-all', '/api/db/sync-all'], express.json({ limit: '50m
   } catch (err) {
     console.error('[MySQL Sync All Error]:', err);
     res.status(500).json({ success: false, error: err.message });
+  } finally {
+    if (isMysqlActive || mysqlEnforced) {
+      try { await pool.query('SET FOREIGN_KEY_CHECKS = 1'); } catch (_) {}
+    }
   }
 });
 
