@@ -38,6 +38,9 @@ import { ToastNotification } from './ToastNotification';
 
 import { formatTin } from '../utils/formatters';
 import { HeroTable } from './common/ui/HeroTable';
+import { HeroButton } from './common/ui/HeroButton';
+import { HeroChip } from './common/ui/HeroChip';
+import { HeaderBar } from './common/HeaderBar';
 import { useMultiSort } from '../hooks/useMultiSort';
 import { MultiSortBadgeBar } from './common/ui/MultiSortBadgeBar';
 import { User } from '../types/db';
@@ -599,96 +602,99 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  setConfirmDeleteName(branchName);
  };
 
- const proceedWithDelete = () => {
- if (confirmDeleteId) {
- deleteBranch(confirmDeleteId);
- showToast(`Archived and soft-deleted branch '${confirmDeleteName}'.`);
- setConfirmDeleteId(null);
- }
- };
+  const proceedWithDelete = () => {
+    if (confirmDeleteId) {
+      deleteBranch(confirmDeleteId);
+      showToast(`Archived and soft-deleted branch '${confirmDeleteName}'.`);
+      setConfirmDeleteId(null);
+    }
+  };
 
- return (
- <div className="space-y-6 animate-fade-in text-foreground pb-20 md:pb-16">
-  {/* Action Header */}
-  <div className="flex justify-between items-center bg-content1/95 backdrop-blur-md p-4 md:p-5 rounded-2xl border border-divider/20 sticky top-0 z-20 shadow-sm">
-    <div>
-      <h3 className="text-sm font-black tracking-wider text-primary uppercase font-sans">Store Chains & Branches</h3>
-      <p className="text-xs text-default-500 mt-0.5">Manage physical locations, regional hubs, employee rosters, and hardware gateway bindings.</p>
-    </div>
-
-    {isUserAdmin && (
-      <button
-        onClick={handleOpenAdd}
-        className="bg-primary text-primary-foreground font-extrabold px-4 py-2.5 rounded-xl shadow-md shadow-primary/20 hover:bg-primary/90 active:scale-95 flex items-center gap-2 cursor-pointer transition-all text-xs shrink-0"
-      >
-        <Plus className="h-4 w-4" />
-        <span>Launch Branch</span>
-      </button>
-    )}
-  </div>
-
-  {/* Grid display of branches */}
-  <div className="space-y-4">
-  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
- {visibleBranches
- .slice((branchPage - 1) * branchPageSize, branchPage * branchPageSize)
- .map((b) => {
- const branchEmployees = users.filter(u => u.branchAssignmentId === b.id);
-  const isExpanded = !!expandedBranchUsers[b.id];
   return (
-    <div
-      key={b.id}
-      className="bg-content1 border border-divider/30 rounded-2xl shadow-sm hover:shadow-md hover:border-primary/40 text-foreground transition-all duration-200 relative overflow-hidden flex flex-col justify-between p-5 space-y-4"
-    >
-      {/* Top outline band */}
-      <div className="flex items-start justify-between border-b border-divider/15 pb-3">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className="h-10 w-10 rounded-xl border border-divider/20 overflow-hidden bg-content2 flex items-center justify-center shrink-0">
-            {b.storeLogo ? (
-              <img src={b.storeLogo} alt="Logo" className="h-full w-full object-contain" referrerPolicy="no-referrer" />
-            ) : (
-              <Building2 className="h-5 w-5 text-primary" />
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <h4 className="text-sm font-extrabold tracking-tight text-foreground leading-tight truncate">
-                {b.name}
-              </h4>
-              {b.id === primaryBranchId && (
-                <span className="text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/20">
-                  Main HQ
-                </span>
-              )}
-              {(b.id === primaryBranchId || b.isDistributionBranch) && (
-                <span className="text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                  Hub
-                </span>
-              )}
-            </div>
-            <p className="text-[10px] text-default-500 font-mono font-bold mt-0.5">ID: {b.id}</p>
-          </div>
-        </div>
+    <div className="space-y-6 animate-fade-in text-foreground pb-20 md:pb-16">
+      {/* Action Header */}
+      <HeaderBar
+        title="Store Chains & Branches"
+        subtitle="Manage physical locations, regional hubs, employee rosters, and hardware gateway bindings."
+        icon={Building2}
+        badge={{ text: `${branches.length} Outlets`, variant: 'primary' }}
+        actions={
+          isUserAdmin ? (
+            <HeroButton
+              onClick={handleOpenAdd}
+              color="primary"
+              variant="solid"
+              size="md"
+              startContent={<Plus className="h-4 w-4" />}
+            >
+              Launch Branch
+            </HeroButton>
+          ) : undefined
+        }
+      />
 
-        {isUserAdmin && (
-          <div className="flex items-center gap-1 shrink-0 ml-2">
-            <button
-              onClick={() => handleOpenEdit(b)}
-              className="p-1.5 rounded-lg hover:bg-content2 text-primary cursor-pointer transition-colors"
-              title="Edit Details"
-            >
-              <Edit2 className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => triggerDelete(b.id, b.name)}
-              className="p-1.5 rounded-lg hover:bg-rose-500/10 text-default-400 hover:text-rose-500 cursor-pointer transition-colors"
-              title="Archive Outlet"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-      </div>
+      {/* Grid display of branches */}
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {visibleBranches
+            .slice((branchPage - 1) * branchPageSize, branchPage * branchPageSize)
+            .map((b) => {
+              const branchEmployees = users.filter((u) => u.branchAssignmentId === b.id);
+              const isExpanded = !!expandedBranchUsers[b.id];
+              return (
+                <div
+                  key={b.id}
+                  className="bg-content1 border border-divider/30 rounded-2xl shadow-sm hover:shadow-md hover:border-primary/40 text-foreground transition-all duration-200 relative overflow-hidden flex flex-col justify-between p-5 space-y-4"
+                >
+                  {/* Top outline band */}
+                  <div className="flex items-start justify-between border-b border-divider/15 pb-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="h-10 w-10 rounded-xl border border-divider/20 overflow-hidden bg-content2 flex items-center justify-center shrink-0">
+                        {b.storeLogo ? (
+                          <img src={b.storeLogo} alt="Logo" className="h-full w-full object-contain" referrerPolicy="no-referrer" />
+                        ) : (
+                          <Building2 className="h-5 w-5 text-primary" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="text-sm font-extrabold tracking-tight text-foreground leading-tight truncate">
+                            {b.name}
+                          </h4>
+                          {b.id === primaryBranchId && (
+                            <HeroChip variant="warning" size="sm">
+                              Main HQ
+                            </HeroChip>
+                          )}
+                          {(b.id === primaryBranchId || b.isDistributionBranch) && (
+                            <HeroChip variant="success" size="sm">
+                              Hub
+                            </HeroChip>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-default-500 font-mono font-bold mt-0.5">ID: {b.id}</p>
+                      </div>
+                    </div>
+
+                    {isUserAdmin && (
+                      <div className="flex items-center gap-1 shrink-0 ml-2">
+                        <button
+                          onClick={() => handleOpenEdit(b)}
+                          className="p-1.5 rounded-lg hover:bg-content2 text-primary cursor-pointer transition-colors"
+                          title="Edit Details"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => triggerDelete(b.id, b.name)}
+                          className="p-1.5 rounded-lg hover:bg-rose-500/10 text-default-400 hover:text-rose-500 cursor-pointer transition-colors"
+                          title="Archive Outlet"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
 
       {/* Address and Contacts details layout */}
       <div className="space-y-2.5 text-xs">

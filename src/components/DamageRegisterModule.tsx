@@ -19,6 +19,8 @@ import { getBranchOptionLabel,isProductInBranch } from '../lib/branchUtils';
 import { DamageActionTaken,DamageCategory,UserRole } from '../types/db';
 import { ConfirmationModal } from './ConfirmationModal';
 import { TablePagination,useResponsivePageSize } from './TablePagination';
+import { HeaderBar } from './common/HeaderBar';
+import { HeroButton } from './common/ui/HeroButton';
 
 interface DamageRegisterModuleProps {
  darkMode: boolean;
@@ -182,31 +184,28 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <div className="space-y-6 w-full animate-fade-in text-foreground p-2" id="tilepoint-damage-logs-panel">
  
  {/* Dynamic Upper Header Card */}
- <div className="relative rounded-2xl overflow-hidden bg-content3 border border-divider/30 px-6 py-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
- <div className="absolute top-0 right-0 p-12 bg-rose-500/5 rounded-full blur-2xl pointer-events-none" />
- <div className="space-y-1 relative z-10">
- <div className="inline-flex items-center gap-1 text-[10px] uppercase font-black tracking-wider text-rose-500 bg-rose-500/10 px-2.5 py-1 rounded-full border border-rose-500/20">
- <AlertTriangle className="h-3 w-3" /> Materials Breakage Registry
- </div>
- <h2 className="text-xl md:text-2xl font-black text-foreground uppercase tracking-tight">Broken & BOA Damage Register</h2>
- </div>
- <div className="flex relative z-10 shrink-0">
- <button
- type="button"
- onClick={() => {
- // Pre-select first product if empty
- if (!selectedProductId && products.length > 0) {
- setSelectedProductId(products[0].id);
- }
- setShowAddForm(!showAddForm);
- }}
- className="flex items-center gap-2 px-5 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-md hover:shadow-lg active:scale-95 cursor-pointer"
- >
- {showAddForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
- <span>{showAddForm ? 'Cancel Entry' : 'Log New Incident'}</span>
- </button>
- </div>
- </div>
+ <HeaderBar
+    title="Broken & BOA Damage Register"
+    subtitle="Track, log, and audit tile breakage casualties, broken-on-arrival (BOA) incidents, and inventory write-offs."
+    icon={AlertTriangle}
+    badge={{ text: `${filteredLogs.length} Incident Logs`, variant: 'accent' }}
+    actions={
+      <HeroButton
+        onClick={() => {
+          if (!selectedProductId && products.length > 0) {
+            setSelectedProductId(products[0].id);
+          }
+          setShowAddForm(!showAddForm);
+        }}
+        color="danger"
+        variant="solid"
+        size="md"
+        startContent={showAddForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+      >
+        {showAddForm ? 'Cancel Entry' : 'Log New Incident'}
+      </HeroButton>
+    }
+  />
 
  {/* Overview Analytics Bento Box */}
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

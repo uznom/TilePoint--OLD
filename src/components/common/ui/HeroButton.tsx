@@ -37,7 +37,9 @@ export interface HeroButtonProps
   onPress?: (e: any) => void;
   loadingText?: string;
   startIcon?: React.ReactNode;
+  startContent?: React.ReactNode;
   endIcon?: React.ReactNode;
+  endContent?: React.ReactNode;
   icon?: React.ReactNode;
   fullWidth?: boolean;
   isIconOnly?: boolean;
@@ -57,7 +59,9 @@ export const HeroButton: React.FC<HeroButtonProps> = ({
   onPress,
   loadingText,
   startIcon,
+  startContent,
   endIcon,
+  endContent,
   icon,
   fullWidth = false,
   isIconOnly = false,
@@ -70,7 +74,8 @@ export const HeroButton: React.FC<HeroButtonProps> = ({
   ...props
 }) => {
   const effectiveDisabled = disabled || isDisabled || isLoading;
-  const effectiveStartIcon = startIcon || icon;
+  const effectiveStartIcon = startContent || startIcon || icon;
+  const effectiveEndIcon = endContent || endIcon;
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (effectiveDisabled) {
@@ -241,7 +246,7 @@ export const HeroButton: React.FC<HeroButtonProps> = ({
         <>
           {effectiveStartIcon && <span className="shrink-0">{effectiveStartIcon}</span>}
           {children && <span>{children}</span>}
-          {endIcon && <span className="shrink-0">{endIcon}</span>}
+          {effectiveEndIcon && <span className="shrink-0">{effectiveEndIcon}</span>}
         </>
       )}
     </button>

@@ -9,8 +9,10 @@ import { useDb, useDbProducts } from "../context/DbContext";
 import { formatCurrency } from "../utils/formatters";
 import { generateEan13Barcode } from "../utils/barcodeGenerator";
 import { PurchaseOrder, UserRole } from "../types/db";
-import { useResponsivePageSize, TablePagination } from "./TablePagination";
+import { TablePagination, useResponsivePageSize } from "./TablePagination";
 import { ToastNotification } from "./ToastNotification";
+import { HeaderBar } from "./common/HeaderBar";
+import { HeroButton } from "./common/ui/HeroButton";
 import {
  FileText,
  Truck,
@@ -969,56 +971,66 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  };
 
  return (
- <div className="space-y-6 animate-fade-in text-foreground">
- {/* Top action trigger bar */}
- <div className="flex justify-between items-center bg-content1/95 backdrop-blur-md p-4 rounded-xl border border-divider/20 sticky top-0 z-20 shadow-md">
- <div>
- <h3 className="text-xs font-black tracking-widest text-primary uppercase ">
- {activeSubTab === "po"
- ? "Supply Logistics Ledger"
- : activeSubTab === "suppliers"
- ? "Supplier Registry Management"
- : activeSubTab === "brands"
- ? "Manufacturer Brands Directory"
- : "Automated PO Consolidation Desk"}
- </h3>
- 
- </div>
-
- {allowedToModify && (
- <div>
- {activeSubTab === "po" || activeSubTab === "consolidation" ? (
- <button
- onClick={() => {
- setSelectedSupplierId(
- suppliers.filter((s) => !s.isDeleted)[0]?.id || "S1",
- );
- setSelectedBranchId(currentUser?.branchAssignmentId || "B1");
- setDraftItems([]);
- setShowPOModal(true);
- }}
- className="bg-primary text-primary-foreground font-black px-4 py-2 rounded-xl flex items-center gap-2 cursor-pointer shadow-sm hover:scale-[1.02] transition-transform text-xs shrink-0 uppercase tracking-wider"
- >
- <Plus className="h-4 w-4" /> Requisition PO
- </button>
- ) : activeSubTab === "suppliers" ? (
- <button
- onClick={handleOpenAddSupplier}
- className="bg-primary text-primary-foreground font-black px-4 py-2 rounded-xl flex items-center gap-2 cursor-pointer shadow-sm hover:scale-[1.02] transition-transform text-xs shrink-0 uppercase tracking-wider"
- >
- <Plus className="h-4 w-4" /> Register Supplier
- </button>
- ) : (
- <button
- onClick={handleOpenAddBrand}
- className="bg-primary text-primary-foreground font-black px-4 py-2 rounded-xl flex items-center gap-2 cursor-pointer shadow-sm hover:scale-[1.02] transition-transform text-xs shrink-0 uppercase tracking-wider"
- >
- <Plus className="h-4 w-4" /> Register Sourced Brand
- </button>
- )}
- </div>
- )}
- </div>
+  <div className="space-y-6 animate-fade-in text-foreground">
+  <HeaderBar
+    title={
+      activeSubTab === "po"
+        ? "Supply Logistics & Requisitions"
+        : activeSubTab === "suppliers"
+        ? "Supplier Registry Management"
+        : activeSubTab === "brands"
+        ? "Manufacturer Brands Directory"
+        : "Automated PO Consolidation Desk"
+    }
+    subtitle="Manage purchase order requisitions, enterprise suppliers, manufacturer brands, and incoming cargo logistics."
+    icon={activeSubTab === "suppliers" ? Building2 : activeSubTab === "brands" ? Tag : Truck}
+    badge={{
+      text: `${purchaseOrders.length} Orders • ${suppliers.filter((s) => !s.isDeleted).length} Suppliers`,
+      variant: 'primary'
+    }}
+    actions={
+      allowedToModify ? (
+        activeSubTab === "po" || activeSubTab === "consolidation" ? (
+          <HeroButton
+            onClick={() => {
+              setSelectedSupplierId(
+                suppliers.filter((s) => !s.isDeleted)[0]?.id || "S1",
+              );
+              setSelectedBranchId(currentUser?.branchAssignmentId || "B1");
+              setDraftItems([]);
+              setShowPOModal(true);
+            }}
+            color="primary"
+            variant="solid"
+            size="md"
+            startContent={<Plus className="h-4 w-4" />}
+          >
+            Requisition PO
+          </HeroButton>
+        ) : activeSubTab === "suppliers" ? (
+          <HeroButton
+            onClick={handleOpenAddSupplier}
+            color="primary"
+            variant="solid"
+            size="md"
+            startContent={<Plus className="h-4 w-4" />}
+          >
+            Register Supplier
+          </HeroButton>
+        ) : (
+          <HeroButton
+            onClick={handleOpenAddBrand}
+            color="primary"
+            variant="solid"
+            size="md"
+            startContent={<Plus className="h-4 w-4" />}
+          >
+            Register Sourced Brand
+          </HeroButton>
+        )
+      ) : undefined
+    }
+  />
 
  {/* Submodule Level Navigation Tabs */}
  <div className="flex flex-wrap gap-1.5 md:gap-2 border border-divider/20 items-center sticky top-0 bg-background/95 backdrop-blur-md z-30 p-2 rounded-xl shadow-sm mb-4">

@@ -32,6 +32,8 @@ import { useReceiptFontSize } from './ReceiptFontSizeControl';
 import { useResponsivePageSize } from './TablePagination';
 import { ToastNotification } from './ToastNotification';
 import { HeroTable } from './common/ui/HeroTable';
+import { HeroButton } from './common/ui/HeroButton';
+import { HeaderBar } from './common/HeaderBar';
 import { useMultiSort } from '../hooks/useMultiSort';
 import { MultiSortBadgeBar } from './common/ui/MultiSortBadgeBar';
 import { Delivery } from '../types/db';
@@ -682,70 +684,64 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
         </div>
       </div>
 
- <div className="text-center text-[7px] text-default-500 pt-1 border-t border-dashed border-gray-300">
+      <div className="text-center text-[7px] text-default-500 pt-1 border-t border-dashed border-divider">
         Official Delivery Receipt Docket • TilePoint Enterprise ERP System • [{copyType}]
       </div>
     </div>
   );
 
+  return (
+    <div className="p-6 space-y-6 text-left h-full overflow-y-auto">
+      {/* HEADER SECTION */}
+      <HeaderBar
+        title="Cargo Deliveries & Freight Scheduling"
+        subtitle="Dispatch, route, track, and log customer bulk shipments on tile transport trucks."
+        icon={Truck}
+        badge={{ text: `${deliveries.length} Shipments`, variant: 'primary' }}
+        actions={
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <HeroButton
+              onClick={() => runDeliveriesReconciliationCheck(false)}
+              color="default"
+              variant="bordered"
+              size="md"
+              startContent={<RefreshCw className="h-3.5 w-3.5 text-primary animate-spin-slow" />}
+            >
+              Reconcile & Sync
+            </HeroButton>
 
- return (
- <div className="p-6 space-y-6 text-left h-full overflow-y-auto">
- 
- {/* HEADER SECTION */}
- <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-divider/20 gap-4">
- <div>
- <h2 className="text-xl font-black text-primary uppercase tracking-wider flex items-center gap-2">
- <Truck className="h-6 w-6 text-primary animate-pulse" />
- <span>Cargo Deliveries & Freight Scheduling</span>
- </h2>
- <p className="text-xs text-default-500 font-medium mt-1">
- Dispatch, route, track, and log customer bulk shipments on tile transport trucks.
- </p>
- </div>
+            <HeroButton
+              onClick={() => setShowSchedulePosModal(true)}
+              color="primary"
+              variant="solid"
+              size="md"
+              startContent={<Plus className="h-4 w-4" />}
+            >
+              Schedule Delivery
+            </HeroButton>
 
- <div className="flex flex-wrap items-center gap-2.5 shrink-0">
- <button
- type="button"
- onClick={() => runDeliveriesReconciliationCheck(false)}
- className="px-3.5 py-2 rounded-2xl bg-content1 border border-divider/30 hover:bg-default-100 text-foreground text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
- title="Reconcile delivery statuses & sync unscheduled store deliveries across active sessions"
- >
- <RefreshCw className="h-3.5 w-3.5 text-primary animate-spin-slow" />
- <span>Reconcile & Sync Deliveries</span>
- </button>
-
- <button
- type="button"
- onClick={() => setShowSchedulePosModal(true)}
- className="px-4 py-2 rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
- >
- <Plus className="h-4 w-4" />
- <span>Schedule POS Delivery</span>
- </button>
-
- {/* Branch scope controller for system admin */}
- {currentUser?.role === UserRole.ADMIN && (
- <div className="flex items-center gap-2 bg-content1 border border-divider/30 p-2 rounded-2xl shadow-sm pl-4 pr-3 shrink-0">
- <span className="text-[10px] font-black uppercase text-primary tracking-widest ">
- Outlet Scope:
- </span>
- <select
- value={selectedBranchId ?? ''}
- onChange={e => setSelectedBranchId(e.target.value)}
- className="text-xs bg-background text-foreground font-black uppercase tracking-wide border-0 border-b border-divider/40 focus:border-primary focus:outline-none py-1 px-2.5 rounded-lg cursor-pointer"
- >
- <option value="ALL">ALL OUTLETS DIRECTORY</option>
- {branches.map(b => (
- <option key={b.id} value={b.id}>
- {b.name.toUpperCase()}
- </option>
- ))}
- </select>
- </div>
- )}
- </div>
- </div>
+            {currentUser?.role === UserRole.ADMIN && (
+              <div className="flex items-center gap-2 bg-content2/60 border border-divider/30 p-1.5 rounded-xl shadow-sm pl-3 pr-2 shrink-0">
+                <span className="text-[10px] font-black uppercase text-primary tracking-widest">
+                  Scope:
+                </span>
+                <select
+                  value={selectedBranchId ?? ''}
+                  onChange={(e) => setSelectedBranchId(e.target.value)}
+                  className="text-xs bg-background text-foreground font-black uppercase tracking-wide border-0 focus:outline-none py-1 px-2 rounded-lg cursor-pointer"
+                >
+                  <option value="ALL">ALL OUTLETS</option>
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        }
+      />
 
  {/* TOAST PANEL BAR */}
  <ToastNotification

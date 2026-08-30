@@ -2422,9 +2422,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
   const renderCutSeparator = (label: string) => (
     <div key={label} className="bir-receipt-cut-separator relative flex my-3 py-1.5 items-center justify-center text-center">
       <div className="absolute inset-0 flex items-center" aria-hidden="true">
-        <div className="w-full border-t-2 border-dashed border-gray-400 dark:border-zinc-600 print:border-black" />
+        <div className="w-full border-t-2 border-dashed border-divider/60 print:border-black" />
       </div>
-      <div className="relative flex items-center gap-1.5 bg-gray-100 dark:bg-zinc-800 print:bg-white px-3 py-1 rounded-full border border-gray-300 dark:border-divider print:border-black shadow-xs font-mono text-[8.5px] font-black uppercase text-gray-700 dark:text-gray-300 print:text-black">
+      <div className="relative flex items-center gap-1.5 bg-content2 text-foreground print:bg-white px-3 py-1 rounded-full border border-divider/40 print:border-black shadow-xs font-mono text-[8.5px] font-black uppercase print:text-black">
         <Scissors className="h-3 w-3 text-amber-500 print:text-black shrink-0" />
         <span>AUTO-CUT • {label}</span>
       </div>

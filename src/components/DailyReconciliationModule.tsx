@@ -28,6 +28,7 @@ import { encryptString,getSecuritySecretKey,useDb } from "../context/DbContext";
 import { saveFileToBackup } from "../lib/fileBackupHelper";
 import { UserRole } from "../types/db";
 import { ToastNotification } from "./ToastNotification";
+import { HeaderBar } from "./common/HeaderBar";
 
 interface DailyReconciliationModuleProps {
   darkMode?: boolean;
@@ -431,54 +432,50 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
       />
 
       {/* Header Banner */}
-      <div className="p-6 rounded-2xl bg-content1 border border-divider/15 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-black text-foreground uppercase tracking-wider mt-1.5">
-            Daily Sales Reconciliation Desk
-          </h2>
-          
-        </div>
-
-        {/* Date & Branch Selectors */}
-        <div className="flex flex-col sm:flex-row items-stretch gap-3 self-start md:self-auto shrink-0">
-          {currentUser?.role === UserRole.ADMIN && (
-            <div className="space-y-1">
- <label className="text-[9px] font-bold text-default-500 uppercase tracking-widest block ">
-                Selected Branch
-              </label>
-              <div className="relative">
+      <HeaderBar
+        title="Daily Sales Reconciliation Desk"
+        subtitle="Review, audit, certify, and compile secure end-of-day sales packets for corporate synchronization."
+        icon={Receipt}
+        badge={{
+          text: isReconciled ? "Certified & Verified" : "Pending Audit",
+          variant: isReconciled ? "secondary" : "accent"
+        }}
+        actions={
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 self-start md:self-auto shrink-0">
+            {currentUser?.role === UserRole.ADMIN && (
+              <div className="flex items-center gap-2 bg-content2/60 border border-divider/30 p-1.5 rounded-xl shadow-sm pl-3 pr-2 shrink-0">
+                <span className="text-[10px] font-black uppercase text-primary tracking-widest">
+                  Branch:
+                </span>
                 <select
                   value={selectedBranchId ?? ''}
                   onChange={(e) => setSelectedBranchId(e.target.value)}
-                  className="w-full sm:w-44 px-3.5 py-2.5 bg-content1 border border-divider/20 rounded-xl text-xs font-bold uppercase tracking-wider text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer pr-8 bg-white dark:bg-[#131A22] text-[#101828] dark:text-[#F8FAFC]"
+                  className="text-xs bg-background text-foreground font-black uppercase tracking-wide border-0 focus:outline-none py-1 px-2 rounded-lg cursor-pointer"
                 >
                   {(branches || []).map((b) => (
-                    <option key={b.id} value={b.id} className="bg-white dark:bg-[#131A22] text-[#101828] dark:text-[#F8FAFC] font-sans font-medium">
-                      {b.name}
+                    <option key={b.id} value={b.id}>
+                      {b.name.toUpperCase()}
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-default-500 pointer-events-none" />
               </div>
-            </div>
-          )}
+            )}
 
-          <div className="space-y-1">
- <label className="text-[9px] font-bold text-default-500 uppercase tracking-widest block ">
-              Accounting Date
-            </label>
-            <div className="relative">
+            <div className="flex items-center gap-2 bg-content2/60 border border-divider/30 p-1.5 rounded-xl shadow-sm pl-3 pr-2 shrink-0">
+              <span className="text-[10px] font-black uppercase text-default-500 tracking-widest">
+                Date:
+              </span>
               <input
                 type="date"
                 value={reportingDate ?? ''}
                 onChange={(e) => setReportingDate(e.target.value)}
                 max={new Date().toISOString().split("T")[0]}
-                className="w-full sm:w-44 px-3.5 py-2.5 bg-content1 border border-divider/20 rounded-xl text-xs font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                className="text-xs bg-background text-foreground font-black tracking-wide border-0 focus:outline-none py-1 px-2 rounded-lg cursor-pointer"
               />
             </div>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* Main KPI Dashboard Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">

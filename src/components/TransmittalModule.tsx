@@ -12,6 +12,7 @@ import { saveFileToBackup, verifyAndUnwrapBackup } from "../lib/fileBackupHelper
 import { Transmittal, TransmittalDocType, UserRole } from "../types/db";
 import { useResponsivePageSize, TablePagination } from "./TablePagination";
 import { HeroButton } from "./common/ui";
+import { HeaderBar } from "./common/HeaderBar";
 import { ToastNotification } from "./ToastNotification";
 import {
  Send,
@@ -1199,50 +1200,46 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  }
 
  return (
- <div className="space-y-6 animate-fade-in text-foreground">
- {/* Search Header and actions */}
- <div className="flex justify-between items-center bg-content1/95 backdrop-blur-md p-4 rounded-xl border border-divider/20 sticky top-0 z-20 shadow-md">
- <div>
- <h3 className="text-xs font-black tracking-widest text-primary uppercase ">
- Inter-Branch Digital Transmittals
- </h3>
- <p className="text-xs text-default-500/80 mt-0.5">
- Approved ledger transfers
- </p>
- </div>
+  <div className="space-y-6 animate-fade-in text-foreground">
+  <HeaderBar
+    title="Inter-Branch Digital Transmittals"
+    subtitle="Securely compile, export, dispatch, and import verifiable data packets and inventory ledgers across regional hubs."
+    icon={Send}
+    badge={{ text: `${transmittals.length} Transmittals`, variant: 'primary' }}
+    actions={
+      <div className="flex gap-2">
+        <HeroButton
+          variant="secondary"
+          size="sm"
+          onClick={handleOpenImport}
+          startIcon={<Upload className="h-4 w-4" />}
+          className="rounded-full"
+        >
+          Import Slip
+        </HeroButton>
 
- <div className="flex gap-2">
- <HeroButton
- variant="secondary"
- size="sm"
- onClick={handleOpenImport}
- startIcon={<Upload className="h-4 w-4" />}
- className="rounded-full"
- >
- Import Slip
- </HeroButton>
-
- <HeroButton
- variant="primary"
- size="sm"
- onClick={() => {
- setToBranchId(
- branches.find((b) => b.id !== (currentUser?.branchAssignmentId || "B1"))
- ?.id || "B2",
- );
- setSelectedDocType("Full Branch State Snapshot");
- setShowModal(true);
- setTimeout(() => {
- compileBranchData("Full Branch State Snapshot");
- }, 50);
- }}
- startIcon={<Plus className="h-4 w-4" />}
- className="rounded-full shadow-sm"
- >
- Dispatch Packet
- </HeroButton>
- </div>
- </div>
+        <HeroButton
+          variant="primary"
+          size="sm"
+          onClick={() => {
+            setToBranchId(
+              branches.find((b) => b.id !== (currentUser?.branchAssignmentId || "B1"))
+                ?.id || "B2",
+            );
+            setSelectedDocType("Full Branch State Snapshot");
+            setShowModal(true);
+            setTimeout(() => {
+              compileBranchData("Full Branch State Snapshot");
+            }, 50);
+          }}
+          startIcon={<Plus className="h-4 w-4" />}
+          className="rounded-full shadow-sm"
+        >
+          Dispatch Packet
+        </HeroButton>
+      </div>
+    }
+  />
 
  {/* Main Ledger grid */}
  <div className="bg-content1 border border-divider rounded-large shadow-small text-foreground shadow-sm overflow-x-auto p-0">

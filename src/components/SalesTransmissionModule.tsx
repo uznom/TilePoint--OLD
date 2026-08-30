@@ -35,6 +35,8 @@ import { BranchSalesReport,Sale,UserRole } from '../types/db';
 import { ActionButton } from './ActionButton';
 import { ConfirmationModal } from './ConfirmationModal';
 import { ToastNotification } from './ToastNotification';
+import { HeaderBar } from './common/HeaderBar';
+import { HeroButton } from './common/ui/HeroButton';
 
 export function validateAndMapInboundReport(rawParsed: any): { errors: string[]; mapped?: any } {
   const errors: string[] = [];
@@ -1014,44 +1016,30 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  />
 
  {/* Header Panel */}
- <div className="bg-content1 border border-divider/30 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 card-glow shadow-md">
- <div className="space-y-1 text-left">
- <div className="flex items-center gap-2">
- <span className="p-2 bg-primary/10 rounded-xl text-primary border border-primary/20">
- <Send className="h-5 w-5" />
- </span>
- <div>
- <h2 className="text-base font-black uppercase tracking-wider text-primary font-sans leading-none">
- Sales Reports Transmission Portal
- </h2>
- <p className="text-[10px] text-default-500 font-bold uppercase tracking-widest mt-1">
- Inter-Branch Accounting & Validation Vault
- </p>
- </div>
- </div>
- <p className="text-xs text-default-500 max-w-xl leading-relaxed pl-1 pt-1">
- Centralized HQ ledger for auditing, cryptographically verifying, and tracking daily sales transmissions across all branch locations. Store personnel perform daily cash drawer balancing directly in the Daily Reconciliation workspace.
- </p>
- </div>
-
- {/* Action center keys */}
- {currentUser?.role === UserRole.ADMIN && !hideManualImport && (
- <div className="flex items-center gap-2 sm:self-center shrink-0">
- <button
- onClick={() => {
- setPastedJson('');
- setImportError(null);
- setImportSuccess(false);
- setShowJsonImport(true);
- }}
- className="px-4 py-2 border border-primary/30 bg-primary/10 hover:bg-primary/15 text-primary rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95"
- >
- <Upload className="h-4 w-4" />
- <span>Import manual sales JSON</span>
- </button>
- </div>
- )}
- </div>
+  <HeaderBar
+    title="Sales Reports Transmission Portal"
+    subtitle="Centralized HQ ledger for auditing, cryptographically verifying, and tracking daily sales transmissions across all branch locations."
+    icon={Send}
+    badge={{ text: `${branchSalesReports.length} Reports Filed`, variant: 'primary' }}
+    actions={
+      currentUser?.role === UserRole.ADMIN && !hideManualImport ? (
+        <HeroButton
+          onClick={() => {
+            setPastedJson('');
+            setImportError(null);
+            setImportSuccess(false);
+            setShowJsonImport(true);
+          }}
+          color="primary"
+          variant="flat"
+          size="md"
+          startContent={<Upload className="h-4 w-4" />}
+        >
+          Import Sales JSON
+        </HeroButton>
+      ) : undefined
+    }
+  />
 
  {/* HQ Central Network Sync & Audited Transmission Overview */}
       <div className="space-y-6">

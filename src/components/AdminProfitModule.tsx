@@ -8,6 +8,8 @@ const LazyProfitAnalytics = React.lazy(() =>
   import("./ProfitAnalytics").then((m) => ({ default: m.ProfitAnalytics }))
 );
 import { HeroTable } from "./common/ui/HeroTable";
+import { HeroButton } from "./common/ui/HeroButton";
+import { HeaderBar } from "./common/HeaderBar";
 import { useMultiSort } from "../hooks/useMultiSort";
 import { MultiSortBadgeBar } from "./common/ui/MultiSortBadgeBar";
 
@@ -529,52 +531,44 @@ export function AdminProfitModule({
   return (
     <div className="space-y-6 pb-12">
       {/* HEADER WITH TITLE, BRANCH SELECTOR AND EXPORT ACTION */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-content1 border border-divider/40 rounded-2xl p-4 sm:p-5 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
-            <TrendingUp className="h-6 w-6" />
-          </div>
-          <div>
-            <h2 className="text-lg font-black tracking-tight text-foreground">
-              Profit & Loss Executive Ledger
-            </h2>
-            <p className="text-xs text-default-500 font-medium">
-              Consolidated Gross vs Net Margins, Automated COGS, Operational Overhead & Branch Leaderboards
-            </p>
-          </div>
-        </div>
+      <HeaderBar
+        title="Profit & Loss Executive Ledger"
+        subtitle="Consolidated Gross vs Net Margins, Automated COGS, Operational Overhead & Branch Leaderboards"
+        icon={TrendingUp}
+        badge={{ text: "Executive Audit", variant: "primary" }}
+        actions={
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Branch Filter Selector */}
+            <div className="flex items-center gap-1.5 bg-content2 border border-divider/50 rounded-xl px-3 py-1.5 shadow-sm">
+              <Building className="h-3.5 w-3.5 text-default-500" />
+              <select
+                value={selectedBranchId}
+                onChange={(e) => setSelectedBranchId(e.target.value)}
+                className="bg-transparent text-xs font-semibold text-foreground focus:outline-none cursor-pointer"
+              >
+                <option value="all">Consolidated (All Branches)</option>
+                {branches.filter((b) => !b.isDeleted).map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Branch Filter Selector */}
-          <div className="flex items-center gap-1.5 bg-content2 border border-divider/50 rounded-xl px-3 py-1.5">
-            <Building className="h-3.5 w-3.5 text-default-500" />
-            <select
-              value={selectedBranchId}
-              onChange={(e) => setSelectedBranchId(e.target.value)}
-              className="bg-transparent text-xs font-semibold text-foreground focus:outline-none cursor-pointer"
+            <HeroButton
+              onClick={() => {
+                handleExportPLCsv(opexByCategory);
+              }}
+              color="success"
+              variant="solid"
+              size="md"
+              startContent={<Download className="h-3.5 w-3.5" />}
             >
-              <option value="all">Consolidated (All Branches)</option>
-              {branches.filter((b) => !b.isDeleted).map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+              Export P&L Statement
+            </HeroButton>
           </div>
-
-          <button
-            onClick={() => {
-              handleExportPLCsv(opexByCategory);
-            
-            }}
-            className="flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-sm cursor-pointer shrink-0"
-            title="Download formatted P&L CSV statement"
-          >
-            <Download className="h-3.5 w-3.5" />
-            <span>Export P&L Statement</span>
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* 1. FINANCIAL MODEL CARDS & REVENUE ALLOCATION */}
       <div className="bg-content1 border border-divider/30 rounded-2xl p-5 sm:p-6 shadow-sm space-y-6">
