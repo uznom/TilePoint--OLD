@@ -136,7 +136,7 @@ describe('Positive Input Validation & Sanitization Suite', () => {
       const nonAsciiInputs = [
         'Total: ₱1,500.75 (Paid in full)',
         'Cashier: Juan Dela Cruz Niño ño',
-        'Products: タイル, Ceramic Slab, 🚀 Express Cart',
+        'Products: タイル, Ceramic Slab, Express Cart',
         'Special characters: €100, ¥5000, £250, ©2026',
       ];
 

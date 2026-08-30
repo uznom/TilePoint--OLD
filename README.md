@@ -4,38 +4,38 @@ TilePoint is an enterprise-grade Point-of-Sale (POS), Multi-Branch Inventory Man
 
 ---
 
-## 🌟 Key Capabilities
+## Key Capabilities
 
-### 🛒 High-Throughput Sales & Cashier POS
+### High-Throughput Sales & Cashier POS
 - **Rapid Item Lookup & Barcode Scanning**: Instant SKU and barcode searching with hardware barcode scanner wedge support and mobile camera scanner integration (`getUserMedia`).
 - **Flexible Pricing & Stock Checks**: Live inventory verification per branch prevents over-selling and negative inventory states during checkout.
 - **Payment Methods & Cash Drawer Control**: Support for Cash, Card, Bank Transfer, Cheque, and Store Credit with automatic cash drawer kick triggers (RJ11/RJ12).
 - **Staff Approval Overrides**: Secure role-based authorization for discounts, voided items, price adjustments, and tax exemptions.
 - **Receipt Printing**: Native 58mm and 80mm ESC/POS thermal printing with 100% solid black vector styling for crisp physical receipts.
 
-### 📦 Inventory Ledger, Batches & Auditing
+### Inventory Ledger, Batches & Auditing
 - **Double-Entry Stock Ledger**: Immutable transaction logging for every sale, purchase receiving, manual adjustment, damage write-off, and inter-branch transfer.
 - **Batch & Lot Tracking**: Manage lot numbers, shade codes, calibration variations, and batch expiration dates.
 - **Stock Alert Diagnostics**: Real-time notifications for Low Stock Warnings, Critical Stock Levels, and Out-of-Stock items with zero lag.
 - **Excel Stock Cards**: One-click multi-sheet `.xlsx` export for comprehensive stock cards, item histories, and audit records.
 
-### 📊 Business Intelligence & Sales Analytics
+### Business Intelligence & Sales Analytics
 - **Top 20 Best & Top 10 Slow Selling Analytics**: Dedicated analytics dashboard reporting best sellers by volume and revenue alongside slow-moving inventory with tied-up capital calculations.
 - **Shift Reconciliation**: Cashier shift logging with opening cash, payment breakdown, cash drops, and variance tracking.
 - **Expense & Margin Tracking**: Categorized store expense logging with real-time gross and net profit margin calculations.
 
-### 📋 Sourcing, Procurement & Transmittals
+### Sourcing, Procurement & Transmittals
 - **Supplier & Brand Directory**: Central supplier registries with contact information, payment terms, and lead times.
 - **Purchase Order Workflows**: Multi-stage procurement flow from requisition drafts and manager approvals to goods receipt and stock ledgering.
 - **Inter-Branch Transmittals**: Store-to-store stock transfers with dispatch confirmations, gate passes, and destination receiving verification.
 
-### 🏢 Multi-Branch Management
+### Multi-Branch Management
 - **Branch Scope Filtering**: Seamlessly toggle between central headquarters (HQ) and individual branch outlets with automated data isolation.
 - **Regional Analytics**: Comparative performance metrics across branches, cashiers, and product lines.
 
 ---
 
-## 🏗️ Architecture & Tech Stack
+## Architecture & Tech Stack
 
 - **Frontend**: React 19, TypeScript, Vite 6, Tailwind CSS v4, Motion (`motion/react`), Recharts, Lucide Icons.
 - **Backend Server**: Node.js & Express.js with native HTTPS/TLS termination and anti-crawler security middleware.
@@ -46,7 +46,7 @@ TilePoint is an enterprise-grade Point-of-Sale (POS), Multi-Branch Inventory Man
 
 ---
 
-## 🚀 Quick Start for Windows (1-Click Automated Setup)
+## Quick Start for Windows (1-Click Automated Setup)
 
 TilePoint provides automated deployment batch scripts for Windows 10 and 11:
 
@@ -68,7 +68,7 @@ Double-click the **TilePoint POS** shortcut on your desktop, or run **`start-til
 
 ---
 
-## 🛠️ Cross-Platform Quick Start (Manual Setup)
+## Cross-Platform Quick Start (Manual Setup)
 
 ### Prerequisites & Package Manager
 - **Node.js**: (v18.0.0 or higher recommended, LTS v20+)
@@ -125,7 +125,7 @@ Double-click the **TilePoint POS** shortcut on your desktop, or run **`start-til
 
 ---
 
-## 🖨️ Hardware Integration
+## Hardware Integration
 
 - **Thermal Receipt Printers (58mm / 80mm)**: Standard ESC/POS printers supported via system print dialog. Ensure "Background graphics" is enabled and "Headers/Footers" is disabled in browser print settings.
 - **Barcode Scanners (1D / 2D)**: USB and Bluetooth handheld scanners operating in HID Keyboard Wedge mode work out-of-the-box.
@@ -134,7 +134,7 @@ Double-click the **TilePoint POS** shortcut on your desktop, or run **`start-til
 
 ---
 
-## 💼 User Roles & Access Hierarchy
+## User Roles & Access Hierarchy
 
 - **Administrators**: Full system permissions, database backup/restore, branch and store configuration, tax and currency settings, financial ledgers, and user management.
 - **Managers**: Procurement creation and approval, stock reconciliations, price overrides, and shift oversight.
@@ -142,7 +142,7 @@ Double-click the **TilePoint POS** shortcut on your desktop, or run **`start-til
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 For full deployment instructions, firewall rules, static IP setup, SSL CA configuration, and troubleshooting:
 - See **`WINDOWS_SETUP_GUIDE.md`** for comprehensive Windows server deployment instructions.

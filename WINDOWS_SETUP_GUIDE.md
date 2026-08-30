@@ -4,7 +4,7 @@ This document provides a comprehensive, step-by-step guide for installing, confi
 
 ---
 
-## 📖 Table of Contents
+## Table of Contents
 1. [System Overview & Architecture](#-1-system-overview--architecture)
 2. [Prerequisites & System Requirements](#-2-prerequisites--system-requirements)
 3. [Option 1: 1-Click Automated Installation (Recommended)](#-3-option-1-1-click-automated-installation-recommended)
@@ -37,7 +37,7 @@ This document provides a comprehensive, step-by-step guide for installing, confi
 
 ---
 
-## 🏗️ 1. System Overview & Architecture
+## 1. System Overview & Architecture
 
 TilePoint operates as a resilient, enterprise full-stack POS and ERP platform designed for hardware, tile retail, and multi-branch chain stores:
 
@@ -52,7 +52,7 @@ TilePoint operates as a resilient, enterprise full-stack POS and ERP platform de
 
 ---
 
-## 💻 2. Prerequisites & System Requirements
+## 2. Prerequisites & System Requirements
 
 Before deploying TilePoint, ensure your Windows machine meets these minimum requirements:
 
@@ -65,7 +65,7 @@ Before deploying TilePoint, ensure your Windows machine meets these minimum requ
 
 ---
 
-## 🚀 3. Option 1: 1-Click Automated Installation (Recommended)
+## 3. Option 1: 1-Click Automated Installation (Recommended)
 
 TilePoint includes a fully automated installer batch file (**`setup-tilepoint.bat`**) that handles all dependencies, environment setup, local IP detection, certificate generation, firewall rules, asset compilation, desktop shortcut creation, and background server startup in one click.
 
@@ -74,20 +74,20 @@ TilePoint includes a fully automated installer batch file (**`setup-tilepoint.ba
 2. Right-click **`setup-tilepoint.bat`** and select **Run as Administrator**.
 3. If prompted by Windows User Account Control (UAC), click **Yes**.
 4. The automated script will perform these actions sequentially:
-   - ✅ Verify and auto-install Git and Node.js LTS via `winget` or direct download if missing.
-   - ✅ Execute `npm install` for project dependencies.
-   - ✅ Detect your primary local IPv4 address (excluding WSL, Docker, and VirtualBox interfaces).
-   - ✅ Create `.env` from `.env.example` with auto-generated security secrets and local IP binding.
-   - ✅ Download `mkcert.exe` and generate trusted SSL certificates (`key.pem`, `cert.pem`) for `localhost`, `127.0.0.1`, and your local IP in the Windows Certificate Trust Store.
-   - ✅ Add Inbound Firewall Rules in Windows Defender for TCP Ports 3000 (POS Server) and 3306 (MySQL Server).
-   - ✅ Compile static production client assets (`npm run build`).
-   - ✅ Create a Windows Desktop shortcut (**TilePoint POS**) for quick access.
-   - ✅ Install and launch the server under PM2 process manager as `tilepoint-hq-server`.
-   - ✅ Launch your default web browser to `https://<YOUR_LOCAL_IP>:3000` with launch choices for Chrome, Edge, and Firefox.
+   - [x] Verify and auto-install Git and Node.js LTS via `winget` or direct download if missing.
+   - [x] Execute `npm install` for project dependencies.
+   - [x] Detect your primary local IPv4 address (excluding WSL, Docker, and VirtualBox interfaces).
+   - [x] Create `.env` from `.env.example` with auto-generated security secrets and local IP binding.
+   - [x] Download `mkcert.exe` and generate trusted SSL certificates (`key.pem`, `cert.pem`) for `localhost`, `127.0.0.1`, and your local IP in the Windows Certificate Trust Store.
+   - [x] Add Inbound Firewall Rules in Windows Defender for TCP Ports 3000 (POS Server) and 3306 (MySQL Server).
+   - [x] Compile static production client assets (`npm run build`).
+   - [x] Create a Windows Desktop shortcut (**TilePoint POS**) for quick access.
+   - [x] Install and launch the server under PM2 process manager as `tilepoint-hq-server`.
+   - [x] Launch your default web browser to `https://<YOUR_LOCAL_IP>:3000` with launch choices for Chrome, Edge, and Firefox.
 
 ---
 
-## 🛠️ 4. Option 2: Step-by-Step Manual Installation Guide
+## 4. Option 2: Step-by-Step Manual Installation Guide
 
 If you prefer to install and configure each component manually, follow this sequential step-by-step guide.
 
@@ -293,9 +293,9 @@ TilePoint includes a standalone **`start-tilepoint.bat`** script that allows cas
 
 ---
 
-## 💾 5. Database Architecture, Schema & Migration
+## 5. Database Architecture, Schema & Migration
 
-### 🗄️ 5.1 Dual-Engine Architecture: MySQL 8.0+ & Embedded AlaSQL
+### 5.1 Dual-Engine Architecture: MySQL 8.0+ & Embedded AlaSQL
 
 TilePoint operates with an enterprise dual-engine persistence layer:
 1. **Primary Enterprise Engine (MySQL 8.0+)**: Connects over TCP 3306 using connection pooling (`mysql2/promise`). Supports concurrent branch synchronization, high-volume transactions, and foreign key integrity.
@@ -303,7 +303,7 @@ TilePoint operates with an enterprise dual-engine persistence layer:
 
 ---
 
-### 📐 5.2 MySQL schema.sql Structure & High-Performance Composite Indexes
+### 5.2 MySQL schema.sql Structure & High-Performance Composite Indexes
 
 The database schema (`schema.sql`) contains 28 production-grade tables with:
 - Strict UTF-8 collation (`utf8mb4_unicode_ci`).
@@ -323,7 +323,7 @@ The database schema (`schema.sql`) contains 28 production-grade tables with:
 
 ---
 
-### 🔄 5.3 Wiping Database & Returning to Setup Wizard Installer
+### 5.3 Wiping Database & Returning to Setup Wizard Installer
 
 If you need to perform a complete system reset, flush all data, or return TilePoint to its fresh **Setup Wizard (Installer)** state:
 
@@ -346,7 +346,7 @@ node -e "fetch('http://127.0.0.1:3000/api/db/truncate', { method: 'POST', header
 
 ---
 
-### 🔀 5.4 Migrating Data between JSON Snapshots and MySQL
+### 5.4 Migrating Data between JSON Snapshots and MySQL
 
 TilePoint includes an automated migration utility (`scripts/migrateJsonToMysql.js`) to migrate offline JSON snapshots into live MySQL database tables:
 
@@ -359,9 +359,9 @@ TilePoint includes an automated migration utility (`scripts/migrateJsonToMysql.j
 
 ---
 
-## 🖨️ 6. Hardware Setup: Thermal Printers, Barcode Scanners & Cash Drawers
+## 6. Hardware Setup: Thermal Printers, Barcode Scanners & Cash Drawers
 
-### 🧾 Thermal Receipt Printer Configuration (58mm / 80mm ESC/POS)
+### Thermal Receipt Printer Configuration (58mm / 80mm ESC/POS)
 TilePoint includes dedicated thermal print layouts engineered for crisp, solid-black thermal output without grey tone washouts:
 1. **Windows Printer Driver**:
    - Install the official ESC/POS driver for your 58mm or 80mm thermal receipt printer (e.g. Xprinter, Epson TM-T88, POS-80, Rongta).
@@ -374,18 +374,18 @@ TilePoint includes dedicated thermal print layouts engineered for crisp, solid-b
      - **Background Graphics**: **Check** (ensures solid black line dividers render).
      - **Scale**: Set to **Default** (100%).
 
-### 🔫 Barcode Scanner Configuration (1D / 2D QR)
+### Barcode Scanner Configuration (1D / 2D QR)
 - **USB / Bluetooth Wireless Scanners**: Any standard plug-and-play barcode scanner operating in **HID Keyboard Wedge mode** works automatically with zero driver installation.
 - In POS Billing: Simply scan any barcode or SKU; the fast product search immediately identifies and adds the item to the billing basket.
 - **Mobile Camera Scanning**: When accessing via smartphone or tablet over HTTPS, tap the camera icon in the search bar to scan physical barcodes using your device camera (`getUserMedia`).
 
-### 💵 Cash Drawer Kick Trigger (RJ11 / RJ12)
+### Cash Drawer Kick Trigger (RJ11 / RJ12)
 - Connect the RJ11 cable from the bottom of your cash drawer into the **DK (Drawer Kick) Port** on the back of your thermal receipt printer.
 - In Windows Printer Properties -> **Device Settings**, set **Cash Drawer** to **Open Before Printing** or **Open After Printing**.
 
 ---
 
-## 📱 7. Connecting Mobile Cashier Terminals & Staff Devices
+## 7. Connecting Mobile Cashier Terminals & Staff Devices
 
 Once the server is running on your Windows host PC, staff tablets and mobile phones can connect:
 
@@ -402,7 +402,7 @@ Once the server is running on your Windows host PC, staff tablets and mobile pho
 
 ---
 
-## 🔒 8. Preventing Disconnections: Static IP & Router DHCP Setup
+## 8. Preventing Disconnections: Static IP & Router DHCP Setup
 
 ### The Problem: DHCP IP Address Rotation
 Wi-Fi routers dynamically change IP addresses whenever devices reconnect or the router restarts. If your Windows host PC changes IP from `192.168.1.38` to `192.168.1.45`, cashier tablets will lose connection.
@@ -439,7 +439,7 @@ Wi-Fi routers dynamically change IP addresses whenever devices reconnect or the 
 
 ---
 
-## 🔐 9. Achieving Trusted HTTPS (Zero Security Warnings)
+## 9. Achieving Trusted HTTPS (Zero Security Warnings)
 
 ### Method A: Local Trusted CA with mkcert
 
@@ -476,7 +476,7 @@ This assigns your local Windows server a globally trusted, official domain name 
 
 ---
 
-## 🌐 10. Enterprise Nginx Reverse Proxy Setup (Optional)
+## 10. Enterprise Nginx Reverse Proxy Setup (Optional)
 
 If you prefer using Nginx for Windows as an enterprise reverse proxy instead of Express directly terminating SSL:
 
@@ -496,7 +496,7 @@ If you prefer using Nginx for Windows as an enterprise reverse proxy instead of 
 
 ---
 
-## ❓ 11. Comprehensive Step-by-Step Troubleshooting Guide
+## 11. Comprehensive Step-by-Step Troubleshooting Guide
 
 ### Troubleshooting EADDRINUSE (Port 3000 or 3306 Busy)
 1. Find the process occupying Port 3000:
@@ -542,7 +542,7 @@ If you prefer using Nginx for Windows as an enterprise reverse proxy instead of 
 
 ---
 
-## 🛠️ 12. Useful Operational Commands Reference
+## 12. Useful Operational Commands Reference
 
 | Operation | Command | Execution Context |
 | :--- | :--- | :--- |

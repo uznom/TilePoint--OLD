@@ -4,7 +4,7 @@ Welcome! This document outlines the core architectural patterns, styling standar
 
 ---
 
-## 🚀 1. Architecture Overview
+## 1. Architecture Overview
 
 AT-POS is a full-stack corporate management system built with **React (TypeScript)**, **Vite**, and **Tailwind CSS**. It operates as a desktop-optimized browser-integrated workspace designed to support high-throughput, low-latency tile retailing operations.
 
@@ -19,7 +19,7 @@ AT-POS is a full-stack corporate management system built with **React (TypeScrip
 
 ---
 
-## 🎨 2. Visual Styling & Design System
+## 2. Visual Styling & Design System
 
 The application utilizes an elegant, eye-safe **Material Design 3 (M3)** custom token system defined in `src/index.css`.
 
@@ -31,7 +31,7 @@ The application utilizes an elegant, eye-safe **Material Design 3 (M3)** custom 
 
 ---
 
-## 🔒 3. Data Flow & Security Standards
+## 3. Data Flow & Security Standards
 
 * **Admin Authorization checks**: Access to the HQ Sales manual JSON import flow and critical rollback snapshot restorations is strictly fenced behind `currentUser.role === UserRole.ADMIN`.
 * **Disaster Recovery (Rollback Snapshots)**: The local database maintains a rolling queue of the 5 most recent snapshots (`rollbackSnapshots`). Any manual JSON import or database state transition spawns a recovery snapshot, allowing instant rollback in case of accidental duplicate uploads.
@@ -39,7 +39,7 @@ The application utilizes an elegant, eye-safe **Material Design 3 (M3)** custom 
 
 ---
 
-## 🛠️ 4. React & TypeScript Coding Standards
+## 4. React & TypeScript Coding Standards
 
 * **React 18+ Features**: Use functional components, explicit props interfaces, and modern hooks. Avoid legacy class-based architectures.
 * **Clean Effects**: Never include arrays, objects, or functions in a `useEffect` dependency array unless they are strictly stabilized outside the component or heavily memoized. Prefer using primitive values (strings, numbers, booleans) to avoid infinite loop cycles.
