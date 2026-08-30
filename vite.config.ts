@@ -15,6 +15,14 @@ export default defineConfig(() => {
       dedupe: ['react', 'react-dom'],
     },
     server: {
+      host: '0.0.0.0', // Allows binding across all network interfaces
+      port: 3000,
+      allowedHosts: [
+        'tp.01102004.dpdns.org',
+        '.dpdns.org', // Allows all subdomains under dpdns.org (optional)
+        'localhost',
+        '127.0.0.1'
+      ],
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       hmr: process.env.DISABLE_HMR !== 'true',
       // Ignore database files and temporary files to prevent server/Vite reloads during checkout writes
