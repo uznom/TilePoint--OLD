@@ -279,7 +279,9 @@ const pool = mysql.createPool({
   connectTimeout: 5000,
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
-  namedPlaceholders: true
+  namedPlaceholders: true,
+  timezone: '+00:00',
+  dateStrings: true
 });
 
 let isMysqlActive = false;
@@ -590,49 +592,25 @@ function computeDatabaseHash(dbObj) {
 
 function invalidateDbCache() {
   isDbCacheDirty = true;
+  cachedFullDb = null;
+  cachedDbHash = null;
 }
 
-function scheduleDebouncedDbFileWrite() { return; /* disabled */
-  if (writeDbTimer) clearTimeout(writeDbTimer);
-  writeDbTimer = setTimeout(() => {
-    try {
-      const db = cachedFullDb || readDbFile();
-      fs.writeFile(DB_FILE_PATH, JSON.stringify(db), 'utf8', (err) => {
-        if (err) console.error('[File DB] Async write warning:', err.message);
-      });
-    } catch (e) {
-      console.error('[File DB] Debounced write error:', e.message);
-    }
-  }, 1000);
-}
+function scheduleDebouncedDbFileWrite() { return; /* disabled */ }
 
 // JSON File Store Read/Write
-function readDbFile() { return {}; /* disabled */
-  if (cachedFullDb && !isDbCacheDirty) {
-    return cachedFullDb;
-  }
-  try {
-    if (fs.existsSync(DB_FILE_PATH)) {
-      const data = fs.readFileSync(DB_FILE_PATH, 'utf8');
-      const parsed = JSON.parse(data);
-      cachedFullDb = parsed;
-      cachedDbHash = computeDatabaseHash(parsed);
-      isDbCacheDirty = false;
-      return parsed;
-    }
-  } catch (e) {
-    console.error('[File DB] Read error:', e.message);
-  }
-  return {};
-}
+function readDbFile() { return {}; /* disabled */ }
 
 function writeDbFile(data) {
-  if (data && typeof data === 'object') {
-    cachedFullDb = data;
-    cachedDbHash = computeDatabaseHash(data);
-    isDbCacheDirty = false;
+  if (!isMysqlActive) {
+    if (data && typeof data === 'object') {
+      cachedFullDb = data;
+      cachedDbHash = computeDatabaseHash(data);
+      isDbCacheDirty = false;
+    }
+  } else {
+    invalidateDbCache();
   }
-  scheduleDebouncedDbFileWrite();
 }
 
 // Map JSON collection keys to MySQL tables
@@ -770,6 +748,27 @@ async function initDatabaseSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS \`active_sessions\` (
+        \`id\` VARCHAR(191) NOT NULL,
+        \`userId\` VARCHAR(191) NOT NULL,
+        \`username\` VARCHAR(191) NULL,
+        \`fullName\` VARCHAR(191) NULL,
+        \`role\` VARCHAR(64) NULL,
+        \`branchId\` VARCHAR(191) NULL,
+        \`branchName\` VARCHAR(191) NULL,
+        \`lastActive\` DATETIME NULL,
+        \`userAgent\` TEXT NULL,
+        \`fingerprint\` VARCHAR(191) NULL,
+        \`deviceInfo\` TEXT NULL,
+        \`sessionStartedAt\` DATETIME NULL,
+        \`expiresAt\` DATETIME NULL,
+        \`maxDurationMinutes\` INT NULL DEFAULT 480,
+        PRIMARY KEY (\`id\`),
+        KEY \`idx_sessions_userId\` (\`userId\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
     // Explicitly guarantee indexes on product_sku and category_id in inventory and products tables
     const explicitIndexQueries = [
       "ALTER TABLE `inventory` ADD COLUMN IF NOT EXISTS `product_sku` VARCHAR(128) NULL",
@@ -791,7 +790,12 @@ async function initDatabaseSchema() {
       "ALTER TABLE `sales` MODIFY COLUMN `shiftId` VARCHAR(64) NULL",
       "ALTER TABLE `sales` MODIFY COLUMN `cashierId` VARCHAR(64) NULL",
       "ALTER TABLE `sales` MODIFY COLUMN `cashierName` VARCHAR(191) NULL",
-      "ALTER TABLE `purchase_orders` MODIFY COLUMN `supplierId` VARCHAR(64) NULL"
+      "ALTER TABLE `purchase_orders` MODIFY COLUMN `supplierId` VARCHAR(64) NULL",
+      "ALTER TABLE `active_sessions` MODIFY COLUMN `branchId` VARCHAR(191) NULL",
+      "ALTER TABLE `active_sessions` MODIFY COLUMN `branchName` VARCHAR(191) NULL",
+      "ALTER TABLE `active_sessions` MODIFY COLUMN `username` VARCHAR(191) NULL",
+      "ALTER TABLE `active_sessions` MODIFY COLUMN `fullName` VARCHAR(191) NULL",
+      "ALTER TABLE `active_sessions` MODIFY COLUMN `role` VARCHAR(64) NULL"
     ];
 
     for (const q of explicitIndexQueries) {
@@ -856,8 +860,11 @@ async function upsertRecordMysql(tableName, record, executor = pool) {
     const val = record[k];
     if (val === null || val === undefined) return null;
     if (typeof val === 'boolean') return val ? 1 : 0;
+    if (val instanceof Date) {
+      return val.toISOString().slice(0, 19).replace('T', ' ');
+    }
     if (typeof val === 'object') return JSON.stringify(val);
-    if (typeof val === 'string' && (k.endsWith('At') || k.endsWith('Date') || k === 'timestamp' || k === 'dateTime')) {
+    if (typeof val === 'string' && (k.endsWith('At') || k.endsWith('Date') || k === 'timestamp' || k === 'dateTime' || k === 'lastActive')) {
       const d = new Date(val);
       if (!isNaN(d.getTime())) {
         return d.toISOString().slice(0, 19).replace('T', ' ');
@@ -915,9 +922,11 @@ async function upsertBatchMysql(tableName, records, chunkSize = 50, executor = p
           values.push(null);
         } else if (typeof val === 'boolean') {
           values.push(val ? 1 : 0);
+        } else if (val instanceof Date) {
+          values.push(val.toISOString().slice(0, 19).replace('T', ' '));
         } else if (typeof val === 'object') {
           values.push(JSON.stringify(val));
-        } else if (typeof val === 'string' && (k.endsWith('At') || k.endsWith('Date') || k === 'timestamp' || k === 'dateTime')) {
+        } else if (typeof val === 'string' && (k.endsWith('At') || k.endsWith('Date') || k === 'timestamp' || k === 'dateTime' || k === 'lastActive')) {
           const d = new Date(val);
           if (!isNaN(d.getTime())) {
             values.push(d.toISOString().slice(0, 19).replace('T', ' '));
@@ -1935,11 +1944,6 @@ function verifyAndExtractToken(req) {
       return null;
     }
 
-    // Check token against active_sessions registry for server-side revocation
-    if (payload.sessionId && isSessionRevoked(payload.sessionId, payload.id)) {
-      return null;
-    }
-
     payload._token = token;
     return payload;
   } catch (err) {
@@ -1953,7 +1957,15 @@ async function getActiveSessionsList() {
       const [rows] = await pool.query('SELECT * FROM `active_sessions` ORDER BY `lastActive` DESC');
       return rows.map(r => ({
         ...r,
-        lastActive: r.lastActive instanceof Date ? r.lastActive.toISOString() : (r.lastActive || new Date().toISOString())
+        lastActive: r.lastActive instanceof Date 
+          ? r.lastActive.toISOString() 
+          : (typeof r.lastActive === 'string' ? (r.lastActive.includes('T') ? r.lastActive : r.lastActive.replace(' ', 'T') + 'Z') : new Date().toISOString()),
+        sessionStartedAt: r.sessionStartedAt instanceof Date 
+          ? r.sessionStartedAt.toISOString() 
+          : (typeof r.sessionStartedAt === 'string' ? (r.sessionStartedAt.includes('T') ? r.sessionStartedAt : r.sessionStartedAt.replace(' ', 'T') + 'Z') : undefined),
+        expiresAt: r.expiresAt instanceof Date 
+          ? r.expiresAt.toISOString() 
+          : (typeof r.expiresAt === 'string' ? (r.expiresAt.includes('T') ? r.expiresAt : r.expiresAt.replace(' ', 'T') + 'Z') : undefined)
       }));
     } catch (err) {
       console.warn('[Session Store] MySQL active sessions query warning:', err.message);
@@ -2126,17 +2138,20 @@ async function verifySessionAndCheckConcurrency(req) {
   // Read full db to verify user and their role
   const fullDb = await readFullDatabase();
   const dbUsers = fullDb.db.tp_users || [];
-  const dbUser = dbUsers.find(u => u.id === payload.id);
+  const dbUser = dbUsers.find(u => u.id === payload.id || (payload.username && u.username === payload.username));
   
-  if (!dbUser || dbUser.status !== 'Active') {
-    return { valid: false, status: 403, code: 'FORBIDDEN', error: 'User account disabled or not found.' };
+  if (!dbUser) {
+    return { valid: false, status: 401, code: 'USER_NOT_FOUND', error: 'User account not found or session invalid. Please log in again.' };
+  }
+  if (dbUser.status !== 'Active') {
+    return { valid: false, status: 403, code: 'FORBIDDEN', error: 'User account has been disabled or suspended.' };
   }
 
   // Update role dynamically based on the DB to enforce RBAC changes
   payload.role = dbUser.role;
 
   const activeSessions = await getActiveSessionsList();
-  const userSession = activeSessions.find(s => s.userId === payload.id);
+  const userSession = activeSessions.find(s => (incomingSessionId && s.id === incomingSessionId) || (payload.sessionId && s.id === payload.sessionId) || s.userId === payload.id);
 
   if (!userSession) {
     // Session was logged out or terminated
@@ -2461,10 +2476,13 @@ app.post('/api/auth/refresh', async (req, res) => {
 
     const fullDb = await readFullDatabase();
     const users = fullDb.db.tp_users || [];
-    const targetUser = users.find(u => u.id === userPayload.id);
+    const targetUser = users.find(u => u.id === userPayload.id || (userPayload.username && u.username === userPayload.username));
 
-    if (!targetUser || targetUser.status !== 'Active') {
-      return res.status(403).json({ success: false, error: 'User account disabled or not found.' });
+    if (!targetUser) {
+      return res.status(401).json({ success: false, code: 'USER_NOT_FOUND', error: 'User account not found on server.' });
+    }
+    if (targetUser.status !== 'Active') {
+      return res.status(403).json({ success: false, code: 'FORBIDDEN', error: 'User account has been disabled or suspended.' });
     }
 
     const activeSessions = await getActiveSessionsList();

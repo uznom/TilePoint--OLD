@@ -1231,12 +1231,31 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
   const [isConfigured, setIsConfigured] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     const cached = localStorage.getItem("tp_is_configured");
-    const cachedUsers = safeParse<User[]>("tp_users", []);
-    if (!cachedUsers || cachedUsers.length === 0) {
-      return false;
-    }
     return cached === "true";
   });
+
+  // Early Server Configuration & Health Discovery on initial app boot
+  useEffect(() => {
+    let isMounted = true;
+    fetch("/api/health")
+      .then((res) => res.json())
+      .then((data) => {
+        if (isMounted && data && typeof data.isConfigured === "boolean") {
+          setIsConfigured(data.isConfigured);
+          localStorage.setItem("tp_is_configured", String(data.isConfigured));
+          if (data.isConfigured) {
+            localStorage.setItem("tilepoint_onboarded_setup", "true");
+          }
+          setServerConnected(data.status === "ok" || !data.isDegraded);
+        }
+      })
+      .catch((err) => {
+        console.warn("[DbContext] Server health check notice:", err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
  // Load initial local data or populate with seed data from sessionStorage to isolate sessions
  const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -1721,10 +1740,18 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
             }
           }
         } else if (statusCode === 403) {
+          let parsedErr: any = null;
+          try {
+            parsedErr = await res.clone().json();
+          } catch (_) {}
+          if (parsedErr?.error?.includes('disabled') || parsedErr?.error?.includes('not found') || parsedErr?.code === 'USER_DISABLED' || parsedErr?.code === 'USER_NOT_FOUND') {
+            console.warn("[API Interceptor] 403 User deactivated or missing. Clearing session.");
+            logout();
+          }
           console.warn("[API Interceptor] 403 Forbidden received. Restricting workspace access.");
           setApiErrorState({
             statusCode: 403,
-            message: "Access Denied: You do not have the required clearances or security credentials to perform this system action.",
+            message: parsedErr?.error || "Access Denied: You do not have the required clearances or security credentials to perform this system action.",
           });
         } else if (statusCode === 429) {
           console.warn("[API Interceptor] 429 Too Many Requests received. Initiating protective security cool-down.");
@@ -2401,17 +2428,17 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  if (!isLoggedIn || !currentUser || !activeSessionId) return;
 
  const pingServer = () => {
- fetch("/api/auth/heartbeat", {
- method: "POST",
- headers: { "Content-Type": "application/json" },
- credentials: "include",
- body: JSON.stringify({
- sessionId: activeSessionId,
- branchId: currentUser.branchAssignmentId || "B1",
- branchName: branches.find((b) => b.id === currentUser.branchAssignmentId)?.name || branches[0]?.name || "Main Branch"
- })
- }).catch(() => {});
- };
+    fetch("/api/auth/heartbeat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      credentials: "include",
+      body: JSON.stringify({
+        sessionId: activeSessionId,
+        branchId: currentUser.branchAssignmentId || "B1",
+        branchName: branches.find((b) => b.id === currentUser.branchAssignmentId)?.name || branches[0]?.name || "Main Branch"
+      })
+    }).catch(() => {});
+  };
 
  const heartbeatInterval = setInterval(() => {
  pingServer();
@@ -3138,28 +3165,21 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  if (workerRes.activeSessionsChanged && workerRes.updatedSessions) {
  setActiveSessions(workerRes.updatedSessions);
  }
- if (workerRes.isConfiguredValue !== undefined || (workerRes.collections?.tp_users?.merged && workerRes.collections.tp_users.merged.length > 0)) {
-      const serverConfigured = workerRes.isConfiguredValue === true;
-      const hasServerUsers = Array.isArray(workerRes.collections?.tp_users?.merged) && workerRes.collections.tp_users.merged.length > 0;
-
-      if (serverConfigured || hasServerUsers) {
-        localStorage.setItem("tp_is_configured", "true");
-        localStorage.setItem("tilepoint_onboarded_setup", "true");
-        setIsConfigured(true);
-      } else {
-        const hasLocalUsers = (() => {
-          try {
-            const u = JSON.parse(localStorage.getItem("tp_users") || "[]");
-            return Array.isArray(u) && u.length > 0;
-          } catch (_) { return false; }
-        })();
-        if (!hasLocalUsers) {
-          localStorage.setItem("tp_is_configured", "false");
-          localStorage.setItem("tilepoint_onboarded_setup", "false");
-          setIsConfigured(false);
-        }
-      }
-    }
+ if (workerRes.isConfiguredValue !== undefined) {
+       if (workerRes.isConfiguredValue === true) {
+         localStorage.setItem("tp_is_configured", "true");
+         localStorage.setItem("tilepoint_onboarded_setup", "true");
+         setIsConfigured(true);
+       } else {
+         localStorage.setItem("tp_is_configured", "false");
+         localStorage.setItem("tilepoint_onboarded_setup", "false");
+         setIsConfigured(false);
+       }
+     } else if (Array.isArray(workerRes.collections?.tp_users?.merged) && workerRes.collections.tp_users.merged.length > 0) {
+       localStorage.setItem("tp_is_configured", "true");
+       localStorage.setItem("tilepoint_onboarded_setup", "true");
+       setIsConfigured(true);
+     }
  }
  } catch (workerErr) {
  console.warn('[Shared DB Client] Web worker sync processing error, using fallback:', workerErr);
@@ -3508,31 +3528,26 @@ const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
  }
  updateIfChanged(activeSessions, updatedSessions, setActiveSessions);
  }
-
- if (db["tp_is_configured"] !== undefined || (db["tp_users"] && (Array.isArray(db["tp_users"]) ? db["tp_users"].length > 0 : true))) {
-      const serverConfigured = db["tp_is_configured"] === "true" || db["tp_is_configured"] === true;
-      const rawUsers = db["tp_users"];
-      const serverUsersArr = Array.isArray(rawUsers) ? rawUsers : (typeof rawUsers === 'string' ? safeParse(rawUsers, []) : []);
-      const hasServerUsers = serverUsersArr.length > 0;
-
-      if (serverConfigured || hasServerUsers) {
-        localStorage.setItem("tp_is_configured", "true");
-        localStorage.setItem("tilepoint_onboarded_setup", "true");
-        setIsConfigured(true);
-      } else {
-        const hasLocalUsers = (() => {
-          try {
-            const u = JSON.parse(localStorage.getItem("tp_users") || "[]");
-            return Array.isArray(u) && u.length > 0;
-          } catch (_) { return false; }
-        })();
-        if (!hasLocalUsers) {
-          localStorage.setItem("tp_is_configured", "false");
-          localStorage.setItem("tilepoint_onboarded_setup", "false");
-          setIsConfigured(false);
-        }
-      }
-    }
+  if (db["tp_is_configured"] !== undefined) {
+       const serverConfigured = db["tp_is_configured"] === "true" || db["tp_is_configured"] === true;
+       if (serverConfigured) {
+         localStorage.setItem("tp_is_configured", "true");
+         localStorage.setItem("tilepoint_onboarded_setup", "true");
+         setIsConfigured(true);
+       } else {
+         localStorage.setItem("tp_is_configured", "false");
+         localStorage.setItem("tilepoint_onboarded_setup", "false");
+         setIsConfigured(false);
+       }
+     } else if (db["tp_users"] && (Array.isArray(db["tp_users"]) ? db["tp_users"].length > 0 : true)) {
+       const rawUsers = db["tp_users"];
+       const serverUsersArr = Array.isArray(rawUsers) ? rawUsers : (typeof rawUsers === 'string' ? safeParse(rawUsers, []) : []);
+       if (serverUsersArr.length > 0) {
+         localStorage.setItem("tp_is_configured", "true");
+         localStorage.setItem("tilepoint_onboarded_setup", "true");
+         setIsConfigured(true);
+       }
+     }
  }
  } else {
  // Shared server db is empty (first-time launch of the server!)

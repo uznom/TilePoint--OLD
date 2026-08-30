@@ -280,14 +280,27 @@ class TransactionOutboxService {
 
           // Tiny delay between sequential network operations
           await new Promise(r => setTimeout(r, 60));
-        } else if (res && (res.status === 401 || res.status === 403 || res.status === 400 || res.status === 422)) {
-          // Fatal client error: Bad Request or Auth Expired -> Move to dead-letter queue
+        } else if (res && (res.status === 401 || res.status === 403)) {
+          // Authentication expired or invalid: retain items as pending and pause flush until re-authenticated
+          let errMsg = `Authentication required (HTTP ${res.status})`;
+          try {
+            const errJson = await res.json();
+            if (errJson && errJson.error) errMsg = errJson.error;
+          } catch (_) {}
+
+          console.warn(`[Outbox Service] Authentication paused for item ${record.id}: ${errMsg}. Waiting for active session.`);
+          record.lastError = errMsg;
+          record.updatedAt = Date.now();
+          this.saveToStorage();
+          this.notifySubscribers();
+          break; // Stop processing remaining queue items until active session is restored
+        } else if (res && (res.status === 400 || res.status === 422)) {
+          // Fatal schema validation error: Move to dead-letter queue
           let errMsg = `HTTP ${res.status}`;
           try {
             const errJson = await res.json();
             if (errJson && errJson.error) errMsg = errJson.error;
           } catch (jsonErr) {
-            // Response is non-JSON; retain default HTTP status message
             console.debug('[Outbox Service] Failed to parse error response JSON:', jsonErr);
           }
 

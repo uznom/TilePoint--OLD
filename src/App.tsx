@@ -1009,7 +1009,7 @@ function AppContent() {
     );
   }
 
-  if (!isConfigured || !users || users.length === 0) {
+  if (!isConfigured) {
     return <SetupModule />;
   }
 
