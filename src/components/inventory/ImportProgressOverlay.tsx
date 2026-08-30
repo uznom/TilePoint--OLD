@@ -62,7 +62,7 @@ export const ImportProgressOverlay: React.FC<ImportProgressOverlayProps> = ({
           <div className="flex justify-between items-center text-[10px] text-default-500/80 pt-1">
             <span>{importTotalRecords > 0 ? `${importTotalRecords.toLocaleString()} Total Items` : 'Stream Processing'}</span>
             <span className="text-rose-500 dark:text-rose-400 font-black uppercase tracking-wider flex items-center gap-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-ping" />
+              <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
               LOCKED UNTIL FINISHED
             </span>
           </div>

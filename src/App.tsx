@@ -2227,10 +2227,7 @@ function AppContent() {
             onClick={() => setIsOutboxModalOpen(true)}
             className="fixed bottom-20 right-4 sm:right-6 md:bottom-6 z-40 flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl bg-card border border-amber-500/40 text-foreground shadow-2xl hover:scale-105 transition-all cursor-pointer group"
           >
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
-            </span>
+            <span className="h-2.5 w-2.5 rounded-full bg-amber-500 shrink-0" />
             <span className="text-xs font-bold">
               Outbox: {outboxStats.pending + outboxStats.failed}
             </span>

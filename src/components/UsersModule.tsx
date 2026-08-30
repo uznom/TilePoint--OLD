@@ -492,13 +492,15 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
         </div>
 
         {(isUserAdmin || currentUser?.role === UserRole.MANAGER) && subTab === 'employees' && (
-          <button
-            type="button"
+          <HeroButton
             onClick={handleOpenAdd}
-            className="w-full sm:w-auto px-4 py-2.5 bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20 rounded-xl flex items-center justify-center gap-2 cursor-pointer text-xs shrink-0 hover:bg-primary/90 transition-all active:scale-95"
+            variant="solid"
+            color="primary"
+            startContent={<UserPlus className="h-4 w-4" />}
+            className="w-full sm:w-auto font-bold text-xs shrink-0 rounded-xl"
           >
-            <UserPlus className="h-4 w-4" /> <span>Enlist Employee</span>
-          </button>
+            Enlist Employee
+          </HeroButton>
         )}
       </div>
 
@@ -529,11 +531,10 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                 : 'border-transparent text-default-500 hover:text-foreground'
             }`}
           >
-            <div className="relative">
+            <div className="relative flex items-center gap-2">
               <Activity className="h-4 w-4" />
-              <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 bg-emerald-500 rounded-full animate-ping" />
+              <span>Active Terminals</span>
             </div>
-            <span>Active Terminals</span>
             <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black">
               {allowedActiveSessions.length}
             </span>
@@ -1271,10 +1272,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                       >
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
-                            <span className="relative flex h-2 w-2 shrink-0">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                            </span>
+                            <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
                             {isCurrent ? (
                               <span className="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
                                 This Terminal
@@ -1366,10 +1364,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                         {/* Live Header Status */}
                         <div className="flex items-center justify-between border-b border-divider/20 pb-3">
                           <div className="flex items-center gap-2">
-                            <span className="relative flex h-2.5 w-2.5">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                            </span>
+                            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shrink-0" />
                             <span className="text-[10px] font-black tracking-widest text-emerald-600 dark:text-emerald-400 uppercase">Live Session</span>
                           </div>
                           {isCurrent ? (
