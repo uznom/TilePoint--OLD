@@ -30,6 +30,8 @@ export * from './HeroAccordion';
 export * from './HeroTabs';
 export * from './HeroPagination';
 export * from './HeroScrollShadow';
+export * from './MultiSortBadgeBar';
+
 
 // Feedback & Overlays
 export * from './HeroModal';

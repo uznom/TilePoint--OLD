@@ -90,13 +90,26 @@ app.use(helmet({
   hsts: useSsl ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false
 }));
 
-// Rate Limiting: General per-IP cap across all API endpoints
+// Rate Limiting: General per-IP cap across all API endpoints (with high ceiling for real-time POS operations)
 const globalApiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // limit each IP to 300 requests per 15 minutes
+  max: 5000, // Generous limit for high-frequency POS polling and multi-terminal operations
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, error: 'Too many requests from this IP, please try again later.' }
+  message: { success: false, error: 'Too many requests from this IP, please try again later.' },
+  skip: (req) => {
+    const p = req.path || req.url || '';
+    return (
+      p.includes('/api/auth/heartbeat') ||
+      p.includes('/api/auth/session') ||
+      p.includes('/api/auth/me') ||
+      p.includes('/api/health') ||
+      p.includes('/api/server/status') ||
+      p.includes('/api/db') ||
+      p.includes('/api/mysql') ||
+      p.includes('/api/sync')
+    );
+  }
 });
 
 app.use('/api/', globalApiLimiter);
