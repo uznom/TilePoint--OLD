@@ -705,17 +705,17 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
 
         <div className="flex items-start gap-2 text-default-500 leading-normal">
           <MapPin className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
-          <span className="truncate">{b.address || 'Declared address pending.'}</span>
+          <span className="truncate">{b.address || 'Address pending'}</span>
         </div>
 
         <div className="flex items-center gap-2 text-default-500 leading-normal">
           <Phone className="h-4 w-4 shrink-0 text-secondary" />
-          <span>Phone Ref: <strong className="text-foreground">{b.phone || 'None declared.'}</strong></span>
+          <span>Phone: <strong className="text-foreground">{b.phone || '—'}</strong></span>
         </div>
 
         <div className="flex items-center gap-2 text-default-500 leading-normal">
           <CreditCard className="h-4 w-4 shrink-0 text-primary" />
-          <span>TIN: <strong className="text-foreground">{formatTin(b.tin) || 'None declared.'}</strong></span>
+          <span>TIN: <strong className="text-foreground">{formatTin(b.tin) || '—'}</strong></span>
         </div>
       </div>
 
@@ -748,9 +748,6 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
             <div className="flex justify-between">
               <span className="text-default-400 font-bold">GATEWAY:</span>
               <span className="text-secondary font-black uppercase">{b.gatewayRules || 'ALLOW-LOCAL-ONLY'}</span>
-            </div>
-            <div className="mt-2 text-[9px] text-default-500 font-sans leading-relaxed border-t border-divider/10 pt-1.5">
-              <strong>Help Desk:</strong> IP Binding locks cashier terminal syncs to the branch's local subnet IP. Gateway (ALLOW-LOCAL-ONLY) restricts database operations to physical local endpoints for hardware security.
             </div>
           </div>
         )}

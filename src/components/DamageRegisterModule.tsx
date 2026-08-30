@@ -285,7 +285,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  
  {/* Left Column: Product Selection Search deck */}
  <div className="space-y-3 bg-content1 p-4 rounded-xl border border-divider/20">
- <label className="block text-[10px] uppercase font-black text-rose-500 tracking-wider">1. Search & Choose Product SKU</label>
+ <label className="block text-[10px] uppercase font-bold text-rose-500 tracking-wider">Product Selection</label>
  
  <div className="relative">
  <Search className="absolute left-3 top-2.5 h-4 w-4 text-default-500" />
@@ -415,18 +415,18 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  </div>
 
  <div>
- <label className="block text-[10px] uppercase font-black text-zinc-400 tracking-wider mb-1.5">Breakage Incident Cause (Category)</label>
- <select
- value={category ?? ''}
- onChange={(e) => setCategory(e.target.value as DamageCategory)}
- className="w-full p-2.5 text-xs font-semibold rounded-lg border border-default-200/40 bg-background focus:outline-none focus:ring-1 focus:ring-rose-500"
- >
- <option value="Warehouse Breakage">Warehouse Drop / Forklift Clash</option>
- <option value="BOA">BOA (Broken On Arrival from Supplier)</option>
- <option value="Showroom Casualty">Showroom Display Chipped</option>
- <option value="Delivery Transit">Transport Transit Fractures</option>
- </select>
- </div>
+  <label className="block text-[10px] uppercase font-bold text-default-500 tracking-wider mb-1.5">Incident Cause</label>
+  <select
+  value={category ?? ''}
+  onChange={(e) => setCategory(e.target.value as DamageCategory)}
+  className="w-full p-2.5 text-xs font-semibold rounded-lg border border-default-200/40 bg-background focus:outline-none focus:ring-1 focus:ring-rose-500"
+  >
+  <option value="Warehouse Breakage">Warehouse Drop / Forklift Clash</option>
+  <option value="BOA">BOA (Broken On Arrival from Supplier)</option>
+  <option value="Showroom Casualty">Showroom Display Chipped</option>
+  <option value="Delivery Transit">Transport Transit Fractures</option>
+  </select>
+  </div>
 
  </div>
 
@@ -435,29 +435,29 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  
  <div className="space-y-4">
  <div>
- <label className="block text-[10px] uppercase font-black text-zinc-400 tracking-wider mb-1.5">Action & Disposal Treatment</label>
- <select
- value={actionTaken ?? ''}
- onChange={(e) => setActionTaken(e.target.value as DamageActionTaken)}
- className="w-full p-2.5 text-xs font-semibold rounded-lg border border-default-200/40 bg-background focus:outline-none focus:ring-1 focus:ring-rose-500"
- >
- <option value="Disposed / Scrapped">Shattered - Disposed & Scrapped</option>
- <option value="Saved for Mosaic">Saved for Low-Cost Mosaic Sales</option>
- <option value="Claimed from Supplier / Insurance Code">Pending Supplier Cargo Claim / BOA Reimbursement</option>
- <option value="Returned for Credit">Returned to Supplier Warehouse for Credit Note</option>
- </select>
- </div>
+  <label className="block text-[10px] uppercase font-bold text-default-500 tracking-wider mb-1.5">Action Taken</label>
+  <select
+  value={actionTaken ?? ''}
+  onChange={(e) => setActionTaken(e.target.value as DamageActionTaken)}
+  className="w-full p-2.5 text-xs font-semibold rounded-lg border border-default-200/40 bg-background focus:outline-none focus:ring-1 focus:ring-rose-500"
+  >
+  <option value="Disposed / Scrapped">Shattered - Disposed & Scrapped</option>
+  <option value="Saved for Mosaic">Saved for Low-Cost Mosaic Sales</option>
+  <option value="Claimed from Supplier / Insurance Code">Pending Supplier Cargo Claim / BOA Reimbursement</option>
+  <option value="Returned for Credit">Returned to Supplier Warehouse for Credit Note</option>
+  </select>
+  </div>
 
- <div>
- <label className="block text-[10px] uppercase font-black text-zinc-400 tracking-wider mb-1.5">Incident Description & Audit Notes</label>
- <textarea
- placeholder="Input specific observations (e.g., 'Box arrived completely crushed on transit truck #3', 'Chipped corner discovered upon showroom sample rotation')..."
- value={notes ?? ''}
- onChange={(e) => setNotes(e.target.value)}
- rows={3}
- className="w-full p-2.5 text-xs font-medium rounded-lg border border-default-200/40 bg-background focus:outline-none focus:ring-1 focus:ring-rose-500 placeholder:text-zinc-500"
- />
- </div>
+  <div>
+  <label className="block text-[10px] uppercase font-bold text-default-500 tracking-wider mb-1.5">Audit Notes</label>
+  <textarea
+  placeholder="Add optional observations or details..."
+  value={notes ?? ''}
+  onChange={(e) => setNotes(e.target.value)}
+  rows={3}
+  className="w-full p-2.5 text-xs font-medium rounded-lg border border-default-200/40 bg-background focus:outline-none focus:ring-1 focus:ring-rose-500 placeholder:text-default-400"
+  />
+  </div>
  </div>
 
  <div className="pt-2">
@@ -479,47 +479,47 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  {/* Main Filterable History List and Sidebar Summary */}
  <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
  
- {/* Left Side: Filter Panels */}
- <div className="space-y-4 bg-content1 border border-divider/20 p-5 rounded-2xl h-fit">
- <div className="flex items-center gap-2 border-b border-divider/30 pb-2 mb-3">
- <Sliders className="h-4 w-4 text-primary" />
- <h3 className="text-xs font-black uppercase text-foreground">Audit Filter Panel</h3>
- </div>
+  {/* Left Side: Filter Panels */}
+  <div className="space-y-4 bg-content1 border border-divider/20 p-5 rounded-2xl h-fit">
+    <div className="flex items-center gap-2 border-b border-divider/30 pb-2 mb-3">
+      <Sliders className="h-4 w-4 text-primary" />
+      <h3 className="text-xs font-black uppercase text-foreground">Filters</h3>
+    </div>
 
- {/* Text Filter */}
- <div className="space-y-1.5">
- <label className="text-[10px] uppercase font-black text-zinc-400 tracking-wider">Search Keywords</label>
- <div className="relative">
- <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-zinc-500" />
- <input
- type="text"
- placeholder="Product, SKU, notes..."
- value={searchTerm ?? ''}
- onChange={(e) => setSearchTerm(e.target.value)}
- className="w-full pl-8 pr-3 py-1.5 text-xs font-medium rounded-lg border border-default-200/40 bg-background focus:outline-none focus:ring-1 focus:ring-rose-500"
- />
- </div>
- </div>
+    {/* Text Filter */}
+    <div className="space-y-1.5">
+      <label className="text-[10px] uppercase font-bold text-default-500 tracking-wider">Search</label>
+      <div className="relative">
+        <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-default-500" />
+        <input
+          type="text"
+          placeholder="Product, SKU, notes..."
+          value={searchTerm ?? ''}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-8 pr-3 py-1.5 text-xs font-medium rounded-lg border border-default-200/40 bg-background focus:outline-none focus:ring-1 focus:ring-rose-500"
+        />
+      </div>
+    </div>
 
- {/* Category Filter */}
- <div className="space-y-1.5">
- <label className="text-[10px] uppercase font-black text-zinc-400 tracking-wider mb-1">Incident Category</label>
- <select
- value={categoryFilter ?? ''}
- onChange={(e) => setCategoryFilter(e.target.value)}
- className="w-full p-2 text-xs font-semibold rounded-lg border border-default-200/40 bg-background focus:outline-none"
- >
- <option value="All">All Breakage Causes</option>
- <option value="Warehouse Breakage">Warehouse Drop / Forklift</option>
- <option value="BOA">BOA (Broken on Arrival)</option>
- <option value="Showroom Casualty">Showroom Casualty</option>
- <option value="Delivery Transit">Delivery Transit</option>
- </select>
- </div>
+    {/* Category Filter */}
+    <div className="space-y-1.5">
+      <label className="text-[10px] uppercase font-bold text-default-500 tracking-wider mb-1">Category</label>
+      <select
+        value={categoryFilter ?? ''}
+        onChange={(e) => setCategoryFilter(e.target.value)}
+        className="w-full p-2 text-xs font-semibold rounded-lg border border-default-200/40 bg-background focus:outline-none"
+      >
+        <option value="All">All Causes</option>
+        <option value="Warehouse Breakage">Warehouse Drop / Forklift</option>
+        <option value="BOA">BOA (Broken on Arrival)</option>
+        <option value="Showroom Casualty">Showroom Casualty</option>
+        <option value="Delivery Transit">Delivery Transit</option>
+      </select>
+    </div>
 
- {/* Branch Filter */}
- <div className="space-y-1.5">
- <label className="text-[10px] uppercase font-black text-zinc-400 tracking-wider mb-1">Branch Store Location</label>
+    {/* Branch Filter */}
+    <div className="space-y-1.5">
+      <label className="text-[10px] uppercase font-bold text-default-500 tracking-wider mb-1">Branch</label>
   {currentUser?.role === 'Admin' ? (
   <select
   value={branchFilter ?? ''}

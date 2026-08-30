@@ -1241,83 +1241,77 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  </div>
  )}
 
- <div className="bg-content1 border border-divider/30 rounded-2xl p-6 space-y-5 text-left shadow-sm">
- <div className="space-y-0.5 border-b border-divider/20 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
- <div>
- <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-1.5">
- <FileText className="h-4 w-4 text-emerald-400" />
- Headquarters Sales Audit registry
- </h3>
- 
- </div>
+  <div className="bg-content1 border border-divider/30 rounded-2xl p-6 space-y-5 text-left shadow-sm">
+  <div className="border-b border-divider/20 pb-3 flex items-center justify-between">
+  <div>
+  <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-1.5">
+  <FileText className="h-4 w-4 text-emerald-400" />
+  Headquarters Sales Audit Registry
+  </h3>
+  </div>
+  </div>
 
- {/* Status tally badge */}
- <div className="px-3 py-1 rounded-full text-[10px] tracking-widest bg-content2 text-amber-500 font-extrabold uppercase shrink-0 self-start sm:self-center border border-divider/25">
- TOTAL: {branchSalesReports.length} Reports
- </div>
- </div>
+  {/* SEARCH AND FILTERS */}
+  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 bg-content2/60 p-4 rounded-2xl border border-divider/15">
+  <div className="sm:col-span-6 space-y-1">
+  <label className="text-[10px] font-bold uppercase tracking-wider text-default-500 pl-0.5">Search</label>
+  <div className="relative">
+  <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-default-500">
+  <Search className="h-3.5 w-3.5" />
+  </span>
+  <input
+  type="text"
+  value={adminSearchQuery ?? ''}
+  onChange={(e) => setAdminSearchQuery(e.target.value)}
+  placeholder="Search branch, date, or report ID..."
+  className="w-full bg-content1 border border-divider/40 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-primary text-foreground"
+  />
+  </div>
+  </div>
 
- {/* SEARCH AND FILTERS */}
- <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 bg-content2/60 p-4 rounded-2xl border border-divider/15">
- <div className="sm:col-span-6 space-y-1">
- <label className="text-[9px] font-black uppercase tracking-widest text-default-500 pl-0.5 ">Filter text query:</label>
- <div className="relative">
- <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-default-500">
- <Search className="h-3.5 w-3.5" />
- </span>
- <input
- type="text"
- value={adminSearchQuery ?? ''}
- onChange={(e) => setAdminSearchQuery(e.target.value)}
- placeholder="Search query (Branch, Date, Report ID)..."
- className="w-full bg-content1 border border-divider/40 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-primary text-foreground"
- />
- </div>
- </div>
+  <div className="sm:col-span-3 space-y-1">
+  <label className="text-[10px] font-bold uppercase tracking-wider text-default-500 pl-0.5">Branch</label>
+  {currentUser?.role === UserRole.ADMIN ? (
+  <select
+  value={adminBranchFilter ?? ''}
+  onChange={(e) => setAdminBranchFilter(e.target.value)}
+  className="w-full bg-content1 border border-divider/40 rounded-xl px-2.5 py-2 text-xs focus:outline-none focus:border-primary text-foreground"
+  >
+  <option value="ALL">All Branches</option>
+  {branches.map(b => (
+  <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
+  ))}
+  </select>
+  ) : (
+  <div className="w-full bg-content2/60 border border-divider/20 rounded-xl px-3 py-2 text-xs font-bold text-foreground">
+  {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
+  </div>
+  )}
+  </div>
 
- <div className="sm:col-span-3 space-y-1">
- <label className="text-[9px] font-black uppercase tracking-widest text-default-500 pl-0.5 ">Branch origin:</label>
- {currentUser?.role === UserRole.ADMIN ? (
- <select
- value={adminBranchFilter ?? ''}
- onChange={(e) => setAdminBranchFilter(e.target.value)}
- className="w-full bg-content1 border border-divider/40 rounded-xl px-2.5 py-2 text-xs focus:outline-none focus:border-primary text-foreground"
- >
- <option value="ALL">All Branches</option>
- {branches.map(b => (
- <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
- ))}
- </select>
- ) : (
- <div className="w-full bg-content2/60 border border-divider/20 rounded-xl px-3 py-2 text-xs font-bold text-foreground">
- {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
- </div>
- )}
- </div>
+  <div className="sm:col-span-3 space-y-1">
+  <label className="text-[10px] font-bold uppercase tracking-wider text-default-500 pl-0.5">Status</label>
+  <select
+  value={adminStatusFilter ?? ''}
+  onChange={(e) => setAdminStatusFilter(e.target.value)}
+  className="w-full bg-content1 border border-divider/40 rounded-xl px-2.5 py-2 text-xs focus:outline-none focus:border-primary text-foreground"
+  >
+  <option value="ALL">All States</option>
+  <option value="Pending Audit">Pending Audit</option>
+  <option value="Verified">Verified</option>
+  </select>
+  </div>
+  </div>
 
- <div className="sm:col-span-3 space-y-1">
- <label className="text-[9px] font-black uppercase tracking-widest text-default-500 pl-0.5 ">Audit state:</label>
- <select
- value={adminStatusFilter ?? ''}
- onChange={(e) => setAdminStatusFilter(e.target.value)}
- className="w-full bg-content1 border border-divider/40 rounded-xl px-2.5 py-2 text-xs focus:outline-none focus:border-primary text-foreground"
- >
- <option value="ALL">All States</option>
- <option value="Pending Audit">Pending Audit</option>
- <option value="Verified">Verified</option>
- </select>
- </div>
- </div>
-
- {/* CENTRAL REGISTRY TABLE */}
- <div className="border border-divider/20 rounded-2xl overflow-hidden bg-background">
- <table className="w-full border-collapse text-left text-xs">
- <thead className="bg-content1 text-[9px] uppercase tracking-widest text-default-500 dark:text-default-500 border-b border-divider/15">
- <tr>
- <th className="py-3 px-4">REPORT MATRIX ID</th>
- <th className="py-3 px-3">BRANCH ORIGIN</th>
- <th className="py-3 px-3">DATE</th>
- <th className="py-3 px-3 text-center">RECEIPTS</th>
+  {/* CENTRAL REGISTRY TABLE */}
+  <div className="border border-divider/20 rounded-2xl overflow-hidden bg-background">
+  <table className="w-full border-collapse text-left text-xs">
+  <thead className="bg-content1 text-[10px] uppercase tracking-wider font-bold text-default-500 border-b border-divider/15">
+  <tr>
+  <th className="py-3 px-4">Report ID</th>
+  <th className="py-3 px-3">Branch</th>
+  <th className="py-3 px-3">Date</th>
+  <th className="py-3 px-3 text-center">Receipts</th>
  <th className="py-3 px-3 text-right">TOTAL grand</th>
  <th className="py-3 px-3 text-center">LINK CHANNEL</th>
  <th className="py-3 px-4 text-center">STATUS</th>

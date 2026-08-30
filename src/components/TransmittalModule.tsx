@@ -772,8 +772,8 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  {/* 1. Stocks Ledger Block */}
  {stocks.length > 0 && (
  <div className="p-3.5 rounded-2xl bg-content1/30 border border-divider/15 space-y-2 print:border-zinc-400 print:bg-transparent">
- <p className="font-black uppercase text-[10px] text-primary border-b border-divider/20 pb-1.5 tracking-wider flex justify-between items-center print:text-black print:border-black">
- <span>I. Branch Stock Catalog Ledger</span>
+ <p className="font-bold uppercase text-[10px] text-primary border-b border-divider/20 pb-1.5 tracking-wider flex justify-between items-center print:text-black print:border-black">
+ <span>Branch Stock Catalog</span>
  <span className=" font-bold text-[9px] bg-default-100 text-default-500 px-1.5 py-0.2 rounded print:text-black">
  {stocks.length} items
  </span>
@@ -820,8 +820,8 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  {/* 2. Detailed Cashier Sales Invoices Block */}
  {salesList.length > 0 && (
  <div className="p-3.5 rounded-2xl bg-content1/30 border border-divider/15 space-y-3 print:border-zinc-400 print:bg-transparent">
- <p className="font-black uppercase text-[10px] text-primary border-b border-divider/20 pb-1.5 tracking-wider flex justify-between items-center print:text-black print:border-black">
- <span>II. Cashier Transactions History Ledger</span>
+ <p className="font-bold uppercase text-[10px] text-primary border-b border-divider/20 pb-1.5 tracking-wider flex justify-between items-center print:text-black print:border-black">
+ <span>Cashier Transactions Ledger</span>
  <span className=" font-bold text-[9px] bg-default-100 text-default-500 px-1.5 py-0.2 rounded print:text-black">
  {salesList.length} sales
  </span>
@@ -916,8 +916,8 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  {/* 3. Operational Expenses Block */}
  {expensesList.length > 0 && (
  <div className="p-3.5 rounded-2xl bg-content1/30 border border-divider/15 space-y-2 print:border-zinc-400 print:bg-transparent">
- <p className="font-black uppercase text-[10px] text-primary border-b border-divider/20 pb-1.5 tracking-wider flex justify-between items-center print:text-black print:border-black">
- <span>III. Branch Expenses &amp; Cash Disbursements</span>
+ <p className="font-bold uppercase text-[10px] text-primary border-b border-divider/20 pb-1.5 tracking-wider flex justify-between items-center print:text-black print:border-black">
+ <span>Branch Expenses Ledger</span>
  <span className=" font-bold text-[9px] bg-default-100 text-default-500 px-1.5 py-0.2 rounded print:text-black">
  ₱
  {expensesList
@@ -969,8 +969,8 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  {/* 4. Cashier Shift Audits Block */}
  {shiftsList.length > 0 && (
  <div className="p-3.5 rounded-2xl bg-content1/30 border border-divider/15 space-y-2 print:border-zinc-400 print:bg-transparent">
- <p className="font-black uppercase text-[10px] text-primary border-b border-divider/20 pb-1.5 tracking-wider flex justify-between items-center print:text-black print:border-black">
- <span>V. Cashier Shift &amp; Register Drawer Audits</span>
+ <p className="font-bold uppercase text-[10px] text-primary border-b border-divider/20 pb-1.5 tracking-wider flex justify-between items-center print:text-black print:border-black">
+ <span>Drawer Audit Logs</span>
  <span className=" font-bold text-[9px] bg-default-100 text-default-500 px-1.5 py-0.2 rounded print:text-black">
  {shiftsList.length} shifts
  </span>
@@ -1039,9 +1039,9 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  if (Array.isArray(items)) {
  return (
  <div className="space-y-1.5 mt-2">
- <p className="font-extrabold uppercase text-[9px] border-b border-black dark:border-divider/25 pb-0.5 tracking-wider">
- Itemized Stock Allocations:
- </p>
+  <p className="font-bold uppercase text-[10px] border-b border-divider/20 pb-0.5 tracking-wider text-default-600">
+  Stock Allocations
+  </p>
  <table className="w-full text-left text-[10px] border-collapse print:text-black">
  <thead>
  <tr className="border-b border-black text-[9px] font-bold text-default-500 print:text-black">
@@ -1084,9 +1084,9 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  if (Array.isArray(salesList)) {
  return (
  <div className="space-y-2 mt-2">
- <p className="font-extrabold uppercase text-[9px] border-b border-black dark:border-divider/25 pb-0.5 tracking-wider">
- Registered Sales Handover:
- </p>
+  <p className="font-bold uppercase text-[10px] border-b border-divider/20 pb-0.5 tracking-wider text-default-600">
+  Sales Handover Ledger
+  </p>
  <table className="w-full text-left text-[10px] border-collapse print:text-black">
  <thead>
  <tr className="border-b border-black text-[9px] font-bold text-default-500 print:text-black">
@@ -1171,29 +1171,13 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  <h4 className="text-base font-black text-foreground uppercase tracking-wider">
  Transmittals Restricted
  </h4>
- <p className="text-[10px] text-default-500 font-bold uppercase tracking-widest mt-1">
- LOGISTICS PRIVILEGE LOCK
- </p>
  </div>
  <p className="text-xs text-default-500 leading-relaxed">
- Inter-Branch Digital Transmittals are restricted for{" "}
- <strong className="font-bold text-foreground">
- {currentBranch ? currentBranch.name : "your branch"}
- </strong>
- . Under standard distribution parameters, only the{" "}
- <strong className="font-black text-amber-500">
- Main HQ Branch
- </strong>{" "}
- or dynamically designated{" "}
- <strong className="text-emerald-500 font-bold">
- Distribution Hubs
- </strong>{" "}
- are authorized to dispatch or import digital transmittals.
- </p>
- <div className="pt-2 text-[10px] font-bold text-default-500 ">
- Instruct the System Administrator to designate this location as a
- Distribution Hub in Branch settings.
- </div>
+  Digital transmittals are restricted to Main HQ or designated Distribution Hubs for <strong>{currentBranch ? currentBranch.name : "this branch"}</strong>.
+  </p>
+  <div className="pt-1 text-[11px] font-medium text-default-400">
+  Contact a System Administrator to enable Distribution Hub access for this location.
+  </div>
  </div>
  </div>
  );

@@ -482,46 +482,46 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
         {/* Total Revenue */}
         <div className="p-5 rounded-2xl bg-content1 border border-divider/10 flex flex-col justify-between">
           <div>
- <span className="text-[9px] font-bold text-default-500 block uppercase tracking-wider">
-              1. Gross Sales Revenue
+            <span className="text-[10px] font-bold text-default-500 block uppercase tracking-wider">
+              Gross Revenue
             </span>
             <span className="text-2xl font-black text-foreground mt-1 block">
               ₱{stats.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
- <div className="flex items-center gap-2 mt-4 text-[10px] text-default-500 border-t border-divider/15 pt-2 ">
+          <div className="flex items-center gap-2 mt-4 text-[10px] text-default-500 border-t border-divider/15 pt-2">
             <Receipt className="h-3.5 w-3.5 text-default-500" />
-            <span>{stats.count} Non-Voided Invoices</span>
+            <span>{stats.count} Invoices</span>
           </div>
         </div>
 
         {/* Cost of Goods Sold (COGS) */}
         <div className="p-5 rounded-2xl bg-content1 border border-divider/10 flex flex-col justify-between">
           <div>
- <span className="text-[9px] font-bold text-default-500 block uppercase tracking-wider">
-              2. Cost of Goods (COGS)
+            <span className="text-[10px] font-bold text-default-500 block uppercase tracking-wider">
+              Cost of Goods (COGS)
             </span>
             <span className="text-2xl font-black text-amber-500 mt-1 block">
               ₱{stats.cogs.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
- <div className="flex items-center gap-2 mt-4 text-[10px] text-default-500 border-t border-divider/15 pt-2 ">
+          <div className="flex items-center gap-2 mt-4 text-[10px] text-default-500 border-t border-divider/15 pt-2">
             <Coins className="h-3.5 w-3.5 text-amber-500" />
-            <span>Avg. Margin: {stats.revenue > 0 ? ((1 - stats.cogs / stats.revenue) * 100).toFixed(1) : "0.0"}%</span>
+            <span>Margin: {stats.revenue > 0 ? ((1 - stats.cogs / stats.revenue) * 100).toFixed(1) : "0.0"}%</span>
           </div>
         </div>
 
         {/* Gross Profit */}
         <div className="p-5 rounded-2xl bg-content1 border border-divider/10 flex flex-col justify-between">
           <div>
- <span className="text-[9px] font-bold text-default-500 block uppercase tracking-wider">
-              3. Gross Profit Margin
+            <span className="text-[10px] font-bold text-default-500 block uppercase tracking-wider">
+              Gross Profit
             </span>
             <span className="text-2xl font-black text-emerald-400 mt-1 block">
               ₱{stats.grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
- <div className="flex items-center gap-2 mt-4 text-[10px] text-default-500 border-t border-divider/15 pt-2 ">
+          <div className="flex items-center gap-2 mt-4 text-[10px] text-default-500 border-t border-divider/15 pt-2">
             <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
             <span>{stats.revenue > 0 ? ((stats.grossProfit / stats.revenue) * 100).toFixed(1) : "0.0"}% of Revenue</span>
           </div>
@@ -530,16 +530,16 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
         {/* Operational Expenses */}
         <div className="p-5 rounded-2xl bg-content1 border border-divider/10 flex flex-col justify-between">
           <div>
- <span className="text-[9px] font-bold text-default-500 block uppercase tracking-wider">
-              4. Local Store Expenses
+            <span className="text-[10px] font-bold text-default-500 block uppercase tracking-wider">
+              Operating Expenses
             </span>
             <span className="text-2xl font-black text-rose-400 mt-1 block">
               ₱{stats.totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
- <div className="flex items-center gap-2 mt-4 text-[10px] text-default-500 border-t border-divider/15 pt-2 ">
+          <div className="flex items-center gap-2 mt-4 text-[10px] text-default-500 border-t border-divider/15 pt-2">
             <TrendingDown className="h-3.5 w-3.5 text-rose-400" />
-            <span>{stats.expenses.length} Expense Logs</span>
+            <span>{stats.expenses.length} Expense Records</span>
           </div>
         </div>
 
@@ -550,8 +550,8 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
             : "bg-rose-500/5 border-rose-500/20"
         }`}>
           <div>
- <span className="text-[9px] font-black text-foreground block uppercase tracking-wider">
-              5. Final Net Profit / Loss
+            <span className="text-[10px] font-black text-foreground block uppercase tracking-wider">
+              Net Profit / Loss
             </span>
             <span className={`text-2xl font-black mt-1 block ${
               stats.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"
@@ -700,9 +700,9 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                   className="h-4 w-4 rounded bg-content1 border-divider/30 text-primary focus:ring-0 mt-0.5 cursor-pointer"
                 />
                 <div>
-                  <span className="text-xs font-bold text-foreground block">Gross sales reconciled</span>
+                  <span className="text-xs font-bold text-foreground block">Gross sales match X-Report</span>
                   <span className="text-[10px] text-default-500 leading-relaxed mt-0.5 block">
-                    Verify that local {stats.count} invoices match daily cashier X-Report readings.
+                    {stats.count} invoices match daily cashier readings.
                   </span>
                 </div>
               </label>
@@ -716,9 +716,9 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                   className="h-4 w-4 rounded bg-content1 border-divider/30 text-primary focus:ring-0 mt-0.5 cursor-pointer"
                 />
                 <div>
-                  <span className="text-xs font-bold text-foreground block">Expenses audited</span>
+                  <span className="text-xs font-bold text-foreground block">Expenses documented</span>
                   <span className="text-[10px] text-default-500 leading-relaxed mt-0.5 block">
-                    Confirm all local operational expense logs of ₱{stats.totalExpenses.toLocaleString()} are backed by physical receipts.
+                    ₱{stats.totalExpenses.toLocaleString()} backed by physical receipts.
                   </span>
                 </div>
               </label>
@@ -734,7 +734,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                 <div>
                   <span className="text-xs font-bold text-foreground block">Inventory COGS verified</span>
                   <span className="text-[10px] text-default-500 leading-relaxed mt-0.5 block">
-                    Confirm the calculated COGS of ₱{stats.cogs.toLocaleString()} aligns with stock dispatches.
+                    ₱{stats.cogs.toLocaleString()} COGS aligns with dispatches.
                   </span>
                 </div>
               </label>

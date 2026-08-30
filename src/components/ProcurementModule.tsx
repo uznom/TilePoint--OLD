@@ -1200,49 +1200,20 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </button>
  </div>
 
- {/* Context Explanatory Banners */}
- {poFilterTab === "pending" && (
- <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl flex items-start gap-3 text-xs animate-fade-in">
- <FileText className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
- <div>
- <h4 className="font-bold text-amber-600 dark:text-amber-500 text-xs uppercase tracking-wider">
- Pending &amp; Draft Requisitions pipeline
- </h4>
- </div>
- </div>
- )}
-
- {poFilterTab === "outsourcing" && (
- <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl flex items-start gap-3 text-xs animate-fade-in">
- <Truck className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
- <div>
- <h4 className="font-bold text-emerald-600 dark:text-emerald-500 text-xs uppercase tracking-wider">
- Enterprise Supplier Outsourcing Deck
- </h4>
- </div>
- </div>
- )}
-
  <div className="bg-content1 border border-divider rounded-large shadow-small text-foreground shadow-sm p-0 overflow-hidden">
  <div className="overflow-auto scrollbar-thin scrollbar-thumb-divider h-[58vh] md:h-[64vh] lg:h-[68vh] min-h-[380px]">
  <table className="w-full text-left border-collapse table-auto text-xs min-w-[1000px] font-sans">
  <thead>
- <tr className="border-b border-divider/20 bg-background/30 text-[9px] uppercase font-black text-default-500 tracking-wider">
- <th className="py-3 px-4 w-28">Ref Invoice</th>
- <th className="py-3 px-4">timestamp settled</th>
- <th className="py-3 px-4">Client Profile</th>
+ <tr className="border-b border-divider/20 bg-background/30 text-[10px] uppercase font-bold text-default-500 tracking-wider">
+ <th className="py-3 px-4 w-28">PO Number</th>
+ <th className="py-3 px-4">Date</th>
+ <th className="py-3 px-4">Supplier</th>
  <th className="py-3 px-4 text-right">Subtotal</th>
  <th className="py-3 px-4 text-right">VAT (12%)</th>
- <th className="py-3 px-4 text-right">Discount Given</th>
- <th className="py-3 px-4 text-right">
- Grand Total Paid
- </th>
- <th className="py-3 px-4 text-center">
- Settlement Status
- </th>
- <th className="py-3 px-4 text-center w-48">
- Audit Controls
- </th>
+ <th className="py-3 px-4 text-right">Discount</th>
+ <th className="py-3 px-4 text-right">Total Paid</th>
+ <th className="py-3 px-4 text-center">Status</th>
+ <th className="py-3 px-4 text-center w-48">Actions</th>
  </tr>
  </thead>
  <tbody className="divide-y divide-divider/10 text-[11px] text-default-700">
