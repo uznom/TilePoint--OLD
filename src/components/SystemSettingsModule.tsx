@@ -503,7 +503,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               System Settings &amp; Configuration
             </h3>
             <p className="text-[11px] text-default-500 font-medium">
-              Global system parameters, visual appearance, accessibility &amp; enterprise business rules
+              Manage appearance, accessibility, store preferences, and data options.
             </p>
           </div>
         </div>
@@ -521,7 +521,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               type="button"
               onClick={handleResetToDefaults}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-divider/30 hover:bg-primary/10 text-default-600 hover:text-primary text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
-              title="Reset accessibility &amp; visual preferences to default"
+              title="Reset display and accessibility preferences to defaults"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Reset Defaults</span>
@@ -529,7 +529,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
           ) : (
             <div className="flex items-center gap-1 text-[10px] uppercase font-black tracking-wider text-amber-500 bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20">
               <Lock className="h-3.5 w-3.5" />
-              <span>RBAC Protected</span>
+              <span>View Only</span>
             </div>
           )}
 
@@ -546,7 +546,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
         </div>
       </div>
 
-      {/* DYNAMIC BUSINESS RULES & MASTER CATALOGS */}
+      {/* STORE OPTIONS & CATALOGS */}
       <div className="p-5 rounded-2xl border border-primary/30 bg-primary/5 space-y-4 shadow-2xs">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
@@ -556,14 +556,14 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h4 className="text-xs font-black uppercase text-foreground tracking-wider">
-                  Dynamic Master Catalogs &amp; Business Rules
+                  Store Options &amp; Catalogs
                 </h4>
                 <span className="text-[9px] uppercase font-black px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                  Active Engine
+                  Active
                 </span>
               </div>
               <p className="text-[11px] text-default-500 font-medium mt-0.5">
-                Configure product categories, units of measure, custom payment methods, discount schemes, and damage causes.
+                Manage product categories, measurement units, payment methods, discounts, and damage causes.
               </p>
             </div>
           </div>
@@ -576,7 +576,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
             className="px-4 py-2.5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl shadow-md hover:opacity-90 active:scale-95 transition-all cursor-pointer shrink-0 flex items-center gap-2"
           >
             <Sliders className="h-4 w-4" />
-            <span>Open Entity Config</span>
+            <span>Manage Options</span>
           </button>
         </div>
 
@@ -595,7 +595,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               <span className="text-[10px] font-black">{productCategories.length}</span>
             </div>
             <div className="text-[11px] font-bold text-foreground">Categories</div>
-            <div className="text-[9px] text-default-400">Custom taxonomy</div>
+            <div className="text-[9px] text-default-400">Product groups</div>
           </button>
 
           <button
@@ -611,7 +611,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               <span className="text-[10px] font-black">{unitTypes.length}</span>
             </div>
             <div className="text-[11px] font-bold text-foreground">Units of Measure</div>
-            <div className="text-[9px] text-default-400">Pcs, Kgs, Liters...</div>
+            <div className="text-[9px] text-default-400">Pcs, Boxes, Sqm...</div>
           </button>
 
           <button
@@ -627,7 +627,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               <span className="text-[10px] font-black">{paymentMethodsList.length}</span>
             </div>
             <div className="text-[11px] font-bold text-foreground">Payment Methods</div>
-            <div className="text-[9px] text-default-400">Cash, GCash, Cards...</div>
+            <div className="text-[9px] text-default-400">Cash, Cards, GCash...</div>
           </button>
 
           <button
@@ -643,7 +643,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               <span className="text-[10px] font-black">{discountSchemes.length}</span>
             </div>
             <div className="text-[11px] font-bold text-foreground">Discounts</div>
-            <div className="text-[9px] text-default-400">Senior, PWD, VIP...</div>
+            <div className="text-[9px] text-default-400">Senior, PWD, Promo...</div>
           </button>
 
           <button
@@ -659,7 +659,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               <span className="text-[10px] font-black">{damageReasonsList.length}</span>
             </div>
             <div className="text-[11px] font-bold text-foreground">Damage Causes</div>
-            <div className="text-[9px] text-default-400">Breakage, Expiry...</div>
+            <div className="text-[9px] text-default-400">Breakage, Defects...</div>
           </button>
         </div>
       </div>
@@ -678,9 +678,9 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
         <div className="p-4 bg-amber-500/10 border border-amber-500/25 text-amber-500 rounded-2xl flex items-start gap-3">
           <Shield className="h-5 w-5 shrink-0 mt-0.5" />
           <div>
-            <p className="text-xs font-black uppercase tracking-wider">Restricted View-Only Mode</p>
+            <p className="text-xs font-black uppercase tracking-wider">View Only Mode</p>
             <p className="text-xs text-foreground font-medium leading-relaxed mt-0.5">
-              You are viewing system settings under role-based access control (RBAC). Global enterprise parameters and reset triggers require Administrator credentials.
+              Administrator privileges are required to change company settings or perform data resets.
             </p>
           </div>
         </div>
@@ -690,10 +690,10 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
       <div className="space-y-4">
         <div>
           <h4 className="text-xs font-black uppercase text-primary tracking-wider">
-            Appearance &amp; Theme Engine
+            Appearance &amp; Theme
           </h4>
           <p className="text-[11px] text-default-500">
-            Select color mode and visual theme presets for the workspace
+            Choose theme colors, dark mode, and visual effects
           </p>
         </div>
 
@@ -786,7 +786,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               >
                 <div className="flex items-center gap-2.5">
                   <Sliders className={`h-4 w-4 ${followSystemTheme ? 'text-primary' : 'text-default-500'}`} />
-                  <span className="text-xs font-bold font-sans">System Auto</span>
+                  <span className="text-xs font-bold font-sans">Follow System</span>
                 </div>
                 {followSystemTheme && <Check className="h-4 w-4 text-primary" />}
               </button>
@@ -798,38 +798,38 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <SettingToggleCard
             icon={Square}
-            title="Disable UI Blurs"
-            subtitle="Solid opaque backgrounds for modals and cards"
+            title="Reduce Transparency"
+            subtitle="Use solid backgrounds instead of blur effects"
             active={disableUiBlurs}
             onClick={() => updateSetting('tilepoint-disable-ui-blurs', !disableUiBlurs)}
-            activeLabel="OFF"
-            inactiveLabel="ON"
+            activeLabel="ENABLED"
+            inactiveLabel="DISABLED"
           />
 
           <SettingToggleCard
             icon={Droplets}
-            title="Disable Ambient Gradients"
-            subtitle="Disables decorative background glow spheres"
+            title="Disable Background Glow"
+            subtitle="Turn off ambient background lighting effects"
             active={disableBackdropBlurs}
             onClick={() => updateSetting('tilepoint-disable-backdrop-blurs', !disableBackdropBlurs)}
-            activeLabel="OFF"
-            inactiveLabel="ON"
+            activeLabel="ENABLED"
+            inactiveLabel="DISABLED"
           />
 
           <SettingToggleCard
             icon={Sparkles}
-            title="Disable UI Animations"
-            subtitle="Instant zero-duration state transitions"
+            title="Disable Animations"
+            subtitle="Turn off transition and motion effects"
             active={disableAnimations}
             onClick={() => updateSetting('tilepoint-disable-animations', !disableAnimations)}
-            activeLabel="OFF"
-            inactiveLabel="ON"
+            activeLabel="ENABLED"
+            inactiveLabel="DISABLED"
           />
 
           <SettingToggleCard
             icon={Download}
-            title="Hide PWA Install Banner"
-            subtitle="Suppresses home screen installation prompt"
+            title="Hide Install Prompt"
+            subtitle="Don't show the app install banner"
             active={disableInstallPrompt}
             onClick={() => updateSetting('tilepoint-disable-install-prompt', !disableInstallPrompt)}
             activeLabel="HIDDEN"
@@ -839,11 +839,11 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
           <SettingToggleCard
             icon={Clock}
             title="Disable Idle Screensaver"
-            subtitle="Prevents idle timer screen overlay"
+            subtitle="Keep screen active without showing the idle clock"
             active={disableIdleClock}
             onClick={() => updateSetting('tilepoint-disable-idle-clock', !disableIdleClock)}
-            activeLabel="OFF"
-            inactiveLabel="ON"
+            activeLabel="ENABLED"
+            inactiveLabel="DISABLED"
           />
         </div>
       </div>
@@ -854,10 +854,10 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
       <div className="space-y-4">
         <div>
           <h4 className="text-xs font-black uppercase text-primary tracking-wider">
-            Accessibility &amp; Typography
+            Accessibility &amp; Text
           </h4>
           <p className="text-[11px] text-default-500">
-            Font scaling, contrast adjustment, and legibility preferences
+            Adjust text size, contrast, and font readability
           </p>
         </div>
 
@@ -866,21 +866,21 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
           <div className="flex justify-between items-center">
             <div>
               <label className="text-[10px] font-black uppercase tracking-wider text-default-500 block">
-                Font Size Multiplier
+                Text Size
               </label>
               <span className="text-[10px] text-default-400">Scale all text, forms, tables, and buttons across TilePoint</span>
             </div>
             <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-              Active: {textSize === 'small' ? '0.88x (14px)' : textSize === 'large' ? '1.125x (18px)' : textSize === 'xlarge' ? '1.25x (20px)' : '1.0x (16px)'}
+              Active: {textSize === 'small' ? 'Small (14px)' : textSize === 'large' ? 'Large (18px)' : textSize === 'xlarge' ? 'X-Large (20px)' : 'Normal (16px)'}
             </span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             {[
-              { id: 'small', name: 'Small', ratio: '0.88x (14px)', desc: 'Ultra Compact' },
-              { id: 'normal', name: 'Normal', ratio: '1.0x (16px)', desc: 'Standard POS' },
-              { id: 'large', name: 'Large', ratio: '1.125x (18px)', desc: 'Enlarged' },
-              { id: 'xlarge', name: 'X-Large', ratio: '1.25x (20px)', desc: 'Max Readability' },
+              { id: 'small', name: 'Small', ratio: '0.88x (14px)', desc: 'Compact layout' },
+              { id: 'normal', name: 'Normal', ratio: '1.0x (16px)', desc: 'Standard size' },
+              { id: 'large', name: 'Large', ratio: '1.125x (18px)', desc: 'Larger text' },
+              { id: 'xlarge', name: 'X-Large', ratio: '1.25x (20px)', desc: 'Maximum size' },
             ].map((sz) => (
               <button
                 key={sz.id}
@@ -904,7 +904,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
         {/* COLOR CONTRAST SELECTION */}
         <div className="p-4 border border-divider/20 rounded-2xl space-y-3 bg-content1 shadow-2xs">
           <label className="text-[10px] font-black uppercase tracking-wider text-default-500 block">
-            System Color Contrast
+            Color Contrast
           </label>
           <div className="grid grid-cols-3 gap-2 p-1.5 rounded-xl bg-content2">
             {(['small', 'medium', 'high'] as const).map((level) => (
@@ -929,15 +929,15 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
           <SettingToggleCard
             icon={CaseSensitive}
             title="Dyslexic Font"
-            subtitle="Enhanced letter shape distinction"
+            subtitle="Specialized letter shapes for easier reading"
             active={dyslexicFont}
             onClick={() => updateSetting('tilepoint-dyslexic-font', !dyslexicFont)}
           />
 
           <SettingToggleCard
             icon={Layers}
-            title="Maximum Contrast"
-            subtitle="Extreme text contrast levels"
+            title="High Contrast Text"
+            subtitle="Increases contrast between text and backgrounds"
             active={maximizeTextContrast}
             onClick={() => updateSetting('tilepoint-maximize-text-contrast', !maximizeTextContrast)}
           />
@@ -945,7 +945,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
           <SettingToggleCard
             icon={Keyboard}
             title="Focus Outlines"
-            subtitle="High-visibility keyboard focus rings"
+            subtitle="Shows clear borders around focused buttons and fields"
             active={enhancedOutlines}
             onClick={() => updateSetting('tilepoint-enhanced-outlines', !enhancedOutlines)}
           />
@@ -961,10 +961,10 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <h4 className="text-xs font-black uppercase text-primary tracking-wider">
-                  Enterprise Profile &amp; Business Rules
+                  Company Profile &amp; POS Settings
                 </h4>
                 <p className="text-[11px] text-default-500">
-                  Company branding, tax rate, currency, and terminal receipt parameters
+                  Set store name, tax rate, currency, and receipt preferences
                 </p>
               </div>
 
@@ -982,21 +982,21 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               {/* Enterprise Name */}
               <div className="flex flex-col gap-1.5 border border-divider/20 bg-content1 p-4 rounded-2xl">
                 <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
-                  Enterprise Name
+                  Store / Business Name
                 </label>
                 <input
                   type="text"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   className="bg-content2 border border-divider/40 rounded-xl text-xs font-bold p-2.5 w-full text-foreground outline-none focus:border-primary font-sans"
-                  placeholder="e.g. TilePoint Enterprise"
+                  placeholder="e.g. TilePoint Store"
                 />
               </div>
 
               {/* Tax Rate */}
               <div className="flex flex-col gap-1.5 border border-divider/20 bg-content1 p-4 rounded-2xl">
                 <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
-                  Standard VAT Tax Rate (%)
+                  VAT Tax Rate (%)
                 </label>
                 <input
                   type="number"
@@ -1029,7 +1029,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               {/* Manager Safety PIN */}
               <div className="flex flex-col gap-1.5 border border-divider/20 bg-content1 p-4 rounded-2xl">
                 <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
-                  Manager Safety PIN (4-Digits)
+                  Manager Approval PIN (4 Digits)
                 </label>
                 <input
                   type="password"
@@ -1045,7 +1045,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               <div className="flex flex-col gap-1.5 border border-divider/20 bg-content1 p-4 rounded-2xl sm:col-span-2">
                 <div className="flex justify-between items-center">
                   <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
-                    Receipt Print Logo Height
+                    Receipt Logo Size
                   </label>
                   <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md">
                     {logoSize}px
@@ -1076,14 +1076,14 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <h4 className="text-xs font-black uppercase text-primary tracking-wider flex items-center gap-2">
-              <Info className="h-4 w-4" /> System &amp; Engine Health
+              <Info className="h-4 w-4" /> System Information
             </h4>
             <p className="text-[11px] text-default-500">
-              Release specifications and active database cache status
+              Software version, active branch, and database status
             </p>
           </div>
           <span className="text-[9.5px] font-black uppercase px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
-            v2.4.0-PROD
+            v2.4.0
           </span>
         </div>
 
@@ -1092,21 +1092,21 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
           <div className="p-4 rounded-2xl border border-divider/20 bg-content1 space-y-1">
             <div className="flex items-center gap-2 text-default-500">
               <Cpu className="h-4 w-4 text-primary" />
-              <span className="text-[10px] font-black uppercase tracking-wider">Application Build</span>
+              <span className="text-[10px] font-black uppercase tracking-wider">Application</span>
             </div>
-            <div className="text-xs font-bold text-foreground">TilePoint ERP v2.4.0</div>
-            <div className="text-[10px] text-default-400">High-Density Enterprise POS &amp; Inventory</div>
+            <div className="text-xs font-bold text-foreground">TilePoint POS v2.4.0</div>
+            <div className="text-[10px] text-default-400">POS &amp; Inventory System</div>
           </div>
 
           {/* Branch & Company */}
           <div className="p-4 rounded-2xl border border-divider/20 bg-content1 space-y-1">
             <div className="flex items-center gap-2 text-default-500">
               <Building2 className="h-4 w-4 text-emerald-500" />
-              <span className="text-[10px] font-black uppercase tracking-wider">Current Enterprise</span>
+              <span className="text-[10px] font-black uppercase tracking-wider">Current Store</span>
             </div>
-            <div className="text-xs font-bold text-foreground">{companyName || 'Main Enterprise'}</div>
+            <div className="text-xs font-bold text-foreground">{companyName || 'Main Store'}</div>
             <div className="text-[10px] text-default-400">
-              Active Node: {branches.find((b) => b.id === currentUser?.branchAssignmentId)?.name || branches[0]?.name || 'Central'}
+              Active Branch: {branches.find((b) => b.id === currentUser?.branchAssignmentId)?.name || branches[0]?.name || 'Central'}
             </div>
           </div>
 
@@ -1117,11 +1117,11 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               <span className="text-[10px] font-black uppercase tracking-wider">Database Storage</span>
             </div>
             <div className="text-xs font-bold text-foreground flex items-center gap-1.5">
-              <span>{mysqlStatus?.active || !serverDegradedState?.isDegraded ? 'MySQL Relational Engine' : 'AlaSQL (Buffered Mode)'}</span>
+              <span>{mysqlStatus?.active || !serverDegradedState?.isDegraded ? 'Online Database' : 'Offline Local Cache'}</span>
               <span className={`h-2 w-2 rounded-full ${mysqlStatus?.active || !serverDegradedState?.isDegraded ? 'bg-emerald-500' : 'bg-amber-500'}`} />
             </div>
             <div className={`text-[10px] font-bold ${mysqlStatus?.active || !serverDegradedState?.isDegraded ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
-              ● {mysqlStatus?.active || !serverDegradedState?.isDegraded ? `Primary Engine (${mysqlStatus?.totalRecords || 'Synchronized'} rows)` : 'Degraded (Buffered Writes)'}
+              ● {mysqlStatus?.active || !serverDegradedState?.isDegraded ? `Connected (${mysqlStatus?.totalRecords || 'Synced'} records)` : 'Buffered mode (Local writes)'}
             </div>
           </div>
         </div>
@@ -1134,14 +1134,14 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <h4 className="text-xs font-black uppercase text-primary tracking-wider flex items-center gap-2">
-              <HardDrive className="h-4 w-4 text-primary" /> MySQL Database &amp; Backups Engine
+              <HardDrive className="h-4 w-4 text-primary" /> Database &amp; Backups
             </h4>
             <p className="text-[11px] text-default-500">
-              Direct MySQL database persistence, instant table synchronization, and recovery snapshot tools
+              Synchronize data with the database and manage backup files
             </p>
           </div>
           <span className="text-[9.5px] font-black uppercase px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-            {mysqlStatus?.active ? 'MySQL Active' : 'Connecting'} ({mysqlStatus?.totalTables || 29} Tables)
+            {mysqlStatus?.active ? 'Connected' : 'Connecting'} ({mysqlStatus?.totalTables || 29} Tables)
           </span>
         </div>
 
@@ -1166,14 +1166,14 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               <div className="flex items-center gap-2">
                 <Database className="h-4 w-4 text-primary" />
                 <span className="text-xs font-black uppercase text-foreground tracking-wider">
-                  Primary MySQL Persistence
+                  Database Connection
                 </span>
                 <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                  Prioritized &amp; Active
+                  Connected &amp; Active
                 </span>
               </div>
               <p className="text-[11px] text-default-500 mt-1">
-                Database: <span className="font-mono font-bold text-foreground">{mysqlStatus?.database || 'tilepoint_db'}</span> | Host: <span className="font-mono text-foreground">{mysqlStatus?.host || '127.0.0.1'}</span> | Total Records: <span className="font-bold text-foreground">{mysqlStatus?.totalRecords || 'Live'}</span>
+                Database: <span className="font-mono font-bold text-foreground">{mysqlStatus?.database || 'tilepoint_db'}</span> | Host: <span className="font-mono text-foreground">{mysqlStatus?.host || '127.0.0.1'}</span> | Records: <span className="font-bold text-foreground">{mysqlStatus?.totalRecords || 'Live'}</span>
               </p>
             </div>
 
@@ -1184,7 +1184,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               className="px-4 py-2.5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl shadow-2xs hover:opacity-90 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 shrink-0"
             >
               <RefreshCw className={`h-4 w-4 ${isSyncingMysql ? 'animate-spin' : ''}`} />
-              <span>{isSyncingMysql ? 'Syncing to MySQL...' : 'Sync All Data to MySQL'}</span>
+              <span>{isSyncingMysql ? 'Syncing Data...' : 'Sync All Data Now'}</span>
             </button>
           </div>
         </div>
@@ -1194,9 +1194,9 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
           <div className="p-4 rounded-2xl border border-divider/20 bg-content1 space-y-3 shadow-2xs">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black uppercase tracking-wider text-default-500">
-                Snapshot &amp; Export Tools
+                Backup &amp; Export
               </span>
-              <span className="text-[9px] text-default-400 font-medium">JSON Format</span>
+              <span className="text-[9px] text-default-400 font-medium">JSON File</span>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2">
@@ -1207,13 +1207,13 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
                   setIsCreatingSnapshot(true);
                   try {
                     await createDbSnapshot(
-                      `Manual Settings Snapshot - ${new Date().toLocaleTimeString()}`
+                      `Manual Backup - ${new Date().toLocaleTimeString()}`
                     );
                     handleExportDatabaseJson();
-                    setSnapshotSuccessToast('Snapshot created and database backup downloaded successfully.');
+                    setSnapshotSuccessToast('Backup snapshot created and downloaded successfully.');
                     setTimeout(() => setSnapshotSuccessToast(null), 4500);
                   } catch (e: any) {
-                    alert('Failed to generate snapshot: ' + (e?.message || 'Unknown error'));
+                    alert('Failed to create backup: ' + (e?.message || 'Unknown error'));
                   } finally {
                     setIsCreatingSnapshot(false);
                   }
@@ -1225,20 +1225,20 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
                 ) : (
                   <Download className="h-4 w-4" />
                 )}
-                <span>{isCreatingSnapshot ? 'Creating...' : 'Instant Snapshot'}</span>
+                <span>{isCreatingSnapshot ? 'Creating...' : 'Create Snapshot'}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => {
                   handleExportDatabaseJson();
-                  setSnapshotSuccessToast('Full database JSON exported.');
+                  setSnapshotSuccessToast('Database backup downloaded.');
                   setTimeout(() => setSnapshotSuccessToast(null), 3000);
                 }}
                 className="px-3.5 py-2.5 bg-content2 hover:bg-content3 text-foreground font-black text-xs uppercase tracking-wider rounded-xl border border-divider/30 transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <FolderArchive className="h-4 w-4" />
-                <span>Export JSON</span>
+                <span>Download JSON</span>
               </button>
             </div>
           </div>
@@ -1247,7 +1247,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
           <div className="p-4 rounded-2xl border border-divider/20 bg-content1 space-y-3 shadow-2xs">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black uppercase tracking-wider text-default-500">
-                Automated Background Backup
+                Automatic Backups
               </span>
               <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${autoBackupEnabled ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-default-100 text-default-500'}`}>
                 {autoBackupEnabled ? 'Enabled' : 'Disabled'}
@@ -1289,10 +1289,10 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
             </div>
             <div>
               <div className="text-xs font-black uppercase tracking-wider text-foreground">
-                Database &amp; Backups Center
+                Backup &amp; History Center
               </div>
               <p className="text-[11px] text-default-500 font-medium">
-                View detailed snapshot history, restore previous checkpoints, or inspect table records.
+                View snapshot history, restore previous checkpoints, or inspect table records.
               </p>
             </div>
           </div>
@@ -1319,10 +1319,10 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
           <div className="space-y-4">
             <div>
               <h4 className="text-xs font-black uppercase text-rose-500 tracking-wider flex items-center gap-2">
-                <ShieldAlert className="h-4 w-4" /> Data Purge &amp; Factory Reset
+                <ShieldAlert className="h-4 w-4" /> Data Reset &amp; System Restore
               </h4>
               <p className="text-[11px] text-default-500 mt-0.5">
-                Reset inventory counts, purge transactions, or perform factory initialization.
+                Reset inventory quantities, clear transaction data, or restore factory defaults.
               </p>
             </div>
 
@@ -1331,10 +1331,10 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               <Shield className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
               <div>
                 <strong className="text-amber-500 uppercase tracking-wider block text-[10px]">
-                  Audit &amp; Retention Safeguard
+                  Important Safeguard
                 </strong>
                 <p className="text-[11px] mt-0.5">
-                  Ensure all daily shift reports and financial logs are exported in the Database &amp; Backups panel before initiating database truncations.
+                  Always download a database backup before performing any reset. Reset actions cannot be undone.
                 </p>
               </div>
             </div>
@@ -1343,7 +1343,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               {isRowClearingBlocked() && !forceUnlockReset ? (
                 <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl text-left space-y-2">
                   <span className="text-[10px] font-black uppercase text-amber-500 tracking-wider block">
-                    Clearing Guard Active
+                    Safety Lock Active
                   </span>
                   <p className="text-xs text-foreground font-medium">
                     Reset operations are currently locked because: <strong className="text-amber-500">{getRowClearingBlockedReason()}</strong>.
@@ -1386,10 +1386,10 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-wider text-rose-500">
-                      Authorization Key {forceUnlockReset && <span className="text-amber-500">(Bypassed)</span>}
+                      Authorization Confirmation {forceUnlockReset && <span className="text-amber-500">(Bypassed)</span>}
                     </label>
                     <p className="text-xs text-default-500 mt-0.5">
-                      Type <span className="font-black text-rose-500 select-all">RESET</span> to authorize action buttons:
+                      Type <span className="font-black text-rose-500 select-all">RESET</span> to unlock reset buttons:
                     </p>
                   </div>
                   <input
@@ -1407,7 +1407,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
                 <div className="border border-divider/20 bg-content1 p-4 rounded-2xl flex flex-col justify-between space-y-3">
                   <div>
                     <span className="text-[10px] font-black text-amber-500 uppercase block">Level 1</span>
-                    <h5 className="font-bold text-xs text-foreground mt-0.5">Reset Stock Quantities</h5>
+                    <h5 className="font-bold text-xs text-foreground mt-0.5">Reset Stock Levels</h5>
                     <p className="text-[10px] text-default-400 mt-1">Clears transactions &amp; sets inventory counts to 0</p>
                   </div>
                   <HoldToConfirmButton
@@ -1427,8 +1427,8 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
                 <div className="border border-divider/20 bg-content1 p-4 rounded-2xl flex flex-col justify-between space-y-3">
                   <div>
                     <span className="text-[10px] font-black text-rose-500 uppercase block">Level 2</span>
-                    <h5 className="font-bold text-xs text-foreground mt-0.5">Full Database Purge</h5>
-                    <p className="text-[10px] text-default-400 mt-1">Purges all catalog products and records</p>
+                    <h5 className="font-bold text-xs text-foreground mt-0.5">Clear All Records</h5>
+                    <p className="text-[10px] text-default-400 mt-1">Deletes all catalog products and sales records</p>
                   </div>
                   <HoldToConfirmButton
                     disabled={resetConfirmation !== 'RESET' || (isRowClearingBlocked() && !forceUnlockReset)}
@@ -1443,7 +1443,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
                     }}
                     variant="rose"
                   >
-                    Hold to Truncate
+                    Hold to Clear All
                   </HoldToConfirmButton>
                 </div>
 
@@ -1451,8 +1451,8 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
                 <div className="border border-divider/20 bg-content1 p-4 rounded-2xl flex flex-col justify-between space-y-3">
                   <div>
                     <span className="text-[10px] font-black text-purple-500 uppercase block">Level 3</span>
-                    <h5 className="font-bold text-xs text-foreground mt-0.5">Factory Initialization</h5>
-                    <p className="text-[10px] text-default-400 mt-1">Wipes all data &amp; restarts setup wizard from 0</p>
+                    <h5 className="font-bold text-xs text-foreground mt-0.5">Factory Reset</h5>
+                    <p className="text-[10px] text-default-400 mt-1">Clears all data and restarts the setup wizard</p>
                   </div>
                   <HoldToConfirmButton
                     disabled={resetConfirmation !== 'RESET'}
@@ -1467,7 +1467,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
                       localStorage.setItem('tp_is_configured', 'false');
                       localStorage.setItem('tilepoint_onboarded_setup', 'false');
                       setResetConfirmation('');
-                      alert('System data reset completely. Rebooting to setup wizard...');
+                      alert('System reset to factory state. Rebooting...');
                       window.location.href = '/';
                     }}
                     variant="rose"

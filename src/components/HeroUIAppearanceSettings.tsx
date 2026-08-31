@@ -160,11 +160,11 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
               <Sparkles className="h-4 w-4" />
             </span>
             <h3 className="text-sm font-black uppercase tracking-wider text-foreground">
-              HeroUI v3 Appearance & Theme Customizer
+              Theme &amp; Colors
             </h3>
           </div>
           <p className="text-xs text-default-500 mt-1">
-            Configure system appearance, high-contrast surfaces, and base color palettes.
+            Customize theme mode, accent colors, and readability preferences.
           </p>
         </div>
 
@@ -179,7 +179,7 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
             type="button"
             onClick={handleResetAll}
             className="px-3 py-1.5 rounded-xl border border-divider/30 text-xs font-bold text-default-600 hover:text-foreground hover:bg-content2 transition-colors flex items-center gap-1.5 cursor-pointer"
-            title="Reset theme to HeroUI v3 defaults"
+            title="Reset theme to default colors"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             <span>Reset Defaults</span>
@@ -190,8 +190,8 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
       {/* Navigation Sub-Tabs: Appearance, Base Palette */}
       <div className="flex flex-wrap items-center gap-1.5 p-1 bg-content1 border border-divider/20 rounded-xl">
         {[
-          { id: 'appearance', label: 'Appearance', icon: Eye },
-          { id: 'base', label: 'Base Palette', icon: Palette },
+          { id: 'appearance', label: 'Color Mode & Contrast', icon: Eye },
+          { id: 'base', label: 'Color Palette', icon: Palette },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeSection === tab.id;
@@ -224,10 +224,10 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
               <div>
                 <h4 className="text-xs font-black uppercase text-primary tracking-wider flex items-center gap-1.5">
                   <Sun className="h-4 w-4" />
-                  <span>Color Mode (Light / Dark)</span>
+                  <span>Color Mode</span>
                 </h4>
                 <p className="text-[11px] text-default-500 mt-0.5">
-                  Choose between high-contrast light mode or dark mode surfaces.
+                  Choose between light mode or dark mode surfaces.
                 </p>
               </div>
               <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
@@ -251,7 +251,7 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
                   </div>
                   <div>
                     <span className="text-xs font-bold text-foreground block">Light Mode</span>
-                    <span className="text-[10.5px] text-default-500">Pure, high-readability daytime canvas</span>
+                    <span className="text-[10.5px] text-default-500">Clean daytime surface</span>
                   </div>
                 </div>
                 {!isDark && <Check className="h-4 w-4 text-primary" />}
@@ -272,7 +272,7 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
                   </div>
                   <div>
                     <span className="text-xs font-bold text-foreground block">Dark Mode</span>
-                    <span className="text-[10.5px] text-default-500">Eye-safe, deep twilight contrast</span>
+                    <span className="text-[10.5px] text-default-500">Deep dark theme surface</span>
                   </div>
                 </div>
                 {isDark && <Check className="h-4 w-4 text-primary" />}
@@ -290,7 +290,7 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
                 <div>
                   <div className="flex items-center gap-2">
                     <h4 className="text-xs font-black uppercase text-foreground tracking-wider">
-                      Dark Mode Text Readability & Contrast Guard
+                      Automatic Text Contrast
                     </h4>
                     <span
                       className={`text-[9.5px] font-black uppercase px-2 py-0.5 rounded-full border ${
@@ -305,7 +305,7 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
                     </span>
                   </div>
                   <p className="text-[11px] text-default-500 mt-0.5">
-                    Automatically detects when a dark theme or low-contrast seed color is selected and adjusts text foregrounds and accents for crisp, eye-safe legibility.
+                    Automatically adjusts text and button colors so they are always easy to read.
                   </p>
                 </div>
               </div>
@@ -320,8 +320,8 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
                     handleUpdateConfig(
                       { autoContrastText: val },
                       val
-                        ? "Enabled dark mode text auto-contrast guard"
-                        : "Disabled auto-contrast (raw colors will be used)"
+                        ? "Enabled text auto-contrast guard"
+                        : "Disabled auto-contrast"
                     )
                   }
                 />
@@ -347,16 +347,16 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
                     <span>
                       {contrastReport.isAdjusted
                         ? 'Auto-Contrast Shift Active'
-                        : 'Natural Contrast Meets Standards'}
+                        : 'Contrast Meets Readability Standards'}
                     </span>
                     <span className="text-[10px] font-mono opacity-75">
-                      Surface: {contrastReport.effectiveContrastOnDark}:1 • Button Text: {contrastReport.textContrastOnPrimary}:1
+                      Surface: {contrastReport.effectiveContrastOnDark}:1 • Text: {contrastReport.textContrastOnPrimary}:1
                     </span>
                   </div>
                   <p className="text-[11px] text-default-500">
                     {contrastReport.isAdjusted
-                      ? `The base color ${config.baseColor} has low contrast on dark backgrounds (${contrastReport.rawContrastOnDark}:1). The engine automatically shifted accent text and highlights to ${contrastReport.effectiveColor} (${contrastReport.effectiveContrastOnDark}:1) to prevent unreadable dark-on-dark text.`
-                      : `The selected theme palette provides strong contrast (${contrastReport.effectiveContrastOnDark}:1) against dark surfaces, ensuring clear text legibility.`}
+                      ? `Accent text and highlights were automatically lightened to ${contrastReport.effectiveColor} (${contrastReport.effectiveContrastOnDark}:1) to ensure high readability on dark surfaces.`
+                      : `The selected theme palette provides clear contrast (${contrastReport.effectiveContrastOnDark}:1) against dark surfaces.`}
                   </p>
                 </div>
               </div>
@@ -366,35 +366,35 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
             <div className="pt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-divider/15">
               <div>
                 <label className="text-[10.5px] font-bold text-foreground block">
-                  WCAG Accessibility Target Standard
+                  Contrast Standard
                 </label>
                 <span className="text-[10px] text-default-500">
-                  Choose the minimum contrast ratio threshold enforced by the auto-adjust engine.
+                  Minimum contrast ratio enforced for text.
                 </span>
               </div>
 
               <div className="flex items-center gap-1.5 p-1 bg-content2/60 rounded-xl border border-divider/20 self-start sm:self-auto">
                 <button
                   type="button"
-                  onClick={() => handleUpdateConfig({ contrastTarget: 'aa' }, 'Set target to WCAG AA (4.5:1)')}
+                  onClick={() => handleUpdateConfig({ contrastTarget: 'aa' }, 'Set target to Standard (4.5:1)')}
                   className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
                     (config.contrastTarget || 'aa') === 'aa'
                       ? 'bg-primary text-primary-foreground shadow-xs'
                       : 'text-default-500 hover:text-foreground'
                   }`}
                 >
-                  WCAG AA (4.5:1 Standard)
+                  Standard (4.5:1)
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleUpdateConfig({ contrastTarget: 'aaa' }, 'Set target to WCAG AAA (7.0:1)')}
+                  onClick={() => handleUpdateConfig({ contrastTarget: 'aaa' }, 'Set target to Enhanced (7.0:1)')}
                   className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
                     config.contrastTarget === 'aaa'
                       ? 'bg-primary text-primary-foreground shadow-xs'
                       : 'text-default-500 hover:text-foreground'
                   }`}
                 >
-                  WCAG AAA (7.0:1 Enhanced)
+                  High Contrast (7.0:1)
                 </button>
               </div>
             </div>
@@ -402,17 +402,17 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
             {/* Live Readability Verification Strip */}
             <div className="pt-2">
               <label className="text-[10px] font-black uppercase tracking-wider text-default-500 block mb-2">
-                Live Text Contrast Matrix on Active Surface ({isDark ? 'Dark #18181B' : 'Light #FFFFFF'})
+                Live Contrast Preview ({isDark ? 'Dark Surface' : 'Light Surface'})
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 {/* Surface Heading */}
                 <div className="p-3 rounded-xl bg-content2 border border-divider/30 flex flex-col justify-between">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-bold text-default-400">Heading & Body Text</span>
+                    <span className="text-[10px] font-bold text-default-400">Heading &amp; Body</span>
                     <span className="text-[9px] font-mono font-bold text-emerald-500">14.2:1</span>
                   </div>
                   <p className="text-xs font-bold text-foreground">
-                    Crystal Clear Text
+                    Clear Text
                   </p>
                   <span className="text-[10px] text-default-500 mt-0.5">
                     Muted subtitle label
@@ -455,7 +455,7 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
                 {/* Accent Highlight */}
                 <div className="p-3 rounded-xl bg-content2 border border-divider/30 flex flex-col justify-between">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-bold text-default-400">Accent Highlight</span>
+                    <span className="text-[10px] font-bold text-default-400">Accent Color</span>
                     <span className="text-[9px] font-mono font-bold text-primary">
                       {contrastReport.effectiveContrastOnDark}:1
                     </span>
@@ -467,7 +467,7 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
                     </span>
                   </div>
                   <span className="text-[10px] text-default-500 mt-0.5">
-                    {contrastReport.isAdjusted ? 'Auto-shifted for readability' : 'Raw seed color pass'}
+                    {contrastReport.isAdjusted ? 'Adjusted for dark mode' : 'Standard color'}
                   </span>
                 </div>
               </div>
@@ -487,10 +487,10 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
               <div>
                 <h4 className="text-xs font-black uppercase text-primary tracking-wider flex items-center gap-1.5">
                   <Palette className="h-4 w-4" />
-                  <span>Base Color Preset Palettes</span>
+                  <span>Color Presets</span>
                 </h4>
                 <p className="text-[11px] text-default-500 mt-0.5">
-                  Select a standardized HeroUI v3 brand base palette.
+                  Select a primary brand color preset.
                 </p>
               </div>
               <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
@@ -530,16 +530,16 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
             </div>
           </div>
 
-          {/* HeroUI v3 Interactive Color Picker */}
+          {/* Color Picker */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="text-xs font-black uppercase text-primary tracking-wider flex items-center gap-1.5">
                   <Sliders className="h-4 w-4" />
-                  <span>HeroUI v3 Full Spectrum Color Picker</span>
+                  <span>Custom Color Picker</span>
                 </h4>
                 <p className="text-[11px] text-default-500 mt-0.5">
-                  2D Saturation-Value area, Hue & Alpha spectrum sliders, format converter, and contrast verification.
+                  Choose a custom brand color using the spectrum picker or enter a hex code.
                 </p>
               </div>
               <span
@@ -572,10 +572,10 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
                 <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <div className="space-y-0.5">
                   <span className="font-bold text-foreground block">
-                    Dark Color Auto-Adjusted for Dark Mode Readability
+                    Color Adjusted for Dark Mode
                   </span>
                   <p className="text-[11px] text-default-500">
-                    Seed color <span className="font-mono font-bold text-foreground">{config.baseColor}</span> would have been too dark on dark mode surfaces ({contrastReport.rawContrastOnDark}:1). The engine automatically shifted accent text and active states to <span className="font-mono font-bold text-primary">{contrastReport.effectiveColor}</span> ({contrastReport.effectiveContrastOnDark}:1) to guarantee high-contrast legibility.
+                    Selected color was lightened to <span className="font-mono font-bold text-primary">{contrastReport.effectiveColor}</span> ({contrastReport.effectiveContrastOnDark}:1) to ensure clear readability on dark mode surfaces.
                   </p>
                 </div>
               </div>
@@ -584,7 +584,7 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
             {/* Quick Test Dark/Low-Contrast Swatches */}
             <div className="pt-1">
               <label className="text-[10px] font-black uppercase tracking-wider text-default-500 block mb-1.5">
-                Test Deep / Dark Seed Tones (Observing Automatic Legibility Shift)
+                Dark Tones Preview
               </label>
               <div className="flex flex-wrap gap-2">
                 {[
@@ -600,7 +600,7 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
                     onClick={() => {
                       handleUpdateConfig(
                         { baseColor: darkTone.hex, baseColorName: darkTone.name },
-                        `Tested ${darkTone.name} (Auto-adjusted for dark mode)`
+                        `Selected ${darkTone.name}`
                       );
                     }}
                     className="px-2.5 py-1.5 rounded-lg border border-divider/25 bg-background hover:bg-content2 text-left flex items-center gap-2 text-xs transition-all cursor-pointer"
@@ -618,7 +618,7 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
             {/* Live 50-900 Tonal Swatch Ramp */}
             <div className="pt-2">
               <label className="text-[10px] font-black uppercase tracking-wider text-default-500 block mb-1.5">
-                Generated HeroUI v3 50–900 Tonal Shade Ramp ({effectivePrimary})
+                Color Shades (50–900)
               </label>
               <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5">
                 {[50, 100, 200, 300, 400, 500, 600, 700, 800, 900].map((step) => {
@@ -645,14 +645,14 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
       )}
 
       {/* ========================================================================= */}
-      {/* LIVE HEROUI V3 INTERACTIVE PREVIEW SANDBOX */}
+      {/* LIVE COMPONENT PREVIEW */}
       {/* ========================================================================= */}
       <div className="p-5 rounded-2xl border border-divider/20 bg-content1 space-y-4">
         <div className="flex items-center justify-between border-b border-divider/15 pb-2.5">
           <div className="flex items-center gap-2">
             <Eye className="h-4 w-4 text-primary" />
             <h4 className="text-xs font-black uppercase tracking-wider text-foreground">
-              Live HeroUI v3 Interactive Component Sandbox
+              Live Component Preview
             </h4>
           </div>
           <span className="text-[10px] font-mono font-bold text-default-400">
@@ -663,7 +663,7 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
         {/* Buttons Row */}
         <div className="space-y-2">
           <label className="text-[10px] font-black uppercase tracking-wider text-default-500 block">
-            Button Variants (Solid, Bordered, Flat, Faded, Light, Ghost)
+            Button Styles
           </label>
           <div className="flex flex-wrap gap-2.5">
             <button
@@ -707,11 +707,11 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
           <div className="space-y-1">
             <label className="text-[10.5px] font-bold text-default-600 block">
-              Sample Form Input ({config.formVariant})
+              Sample Text Input
             </label>
             <input
               type="text"
-              defaultValue="TilePoint Corporate"
+              defaultValue="TilePoint Store"
               className={`w-full text-xs text-foreground focus:outline-none transition-all ${
                 config.formVariant === 'bordered'
                   ? 'px-3 py-2 bg-background border border-divider/40 focus:border-primary rounded-xl'
@@ -726,7 +726,7 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
 
           <div className="space-y-1">
             <label className="text-[10.5px] font-bold text-default-600 block">
-              Select Dropdown Control
+              Sample Dropdown
             </label>
             <select
               defaultValue="B1"
@@ -740,7 +740,7 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
                   : 'px-3 py-2 bg-background border border-divider/20 focus:border-primary rounded-xl'
               }`}
             >
-              <option value="B1">Main Corporate Branch (B1)</option>
+              <option value="B1">Main Branch (B1)</option>
               <option value="B2">North Warehouse (B2)</option>
               <option value="B3">South Terminal (B3)</option>
             </select>
@@ -748,7 +748,7 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
 
           <div className="space-y-1">
             <label className="text-[10.5px] font-bold text-default-600 block">
-              Status Chips & Badges
+              Badges &amp; Status Chips
             </label>
             <div className="flex items-center gap-1.5 pt-1.5 flex-wrap">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">

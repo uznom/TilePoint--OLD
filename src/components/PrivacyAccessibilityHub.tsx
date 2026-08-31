@@ -557,241 +557,250 @@ export function PrivacyAccessibilityHub({
  </button>
  )}
 
- {/* INTERACTIVE HUB MODAL */}
- {isOpen && typeof document !== 'undefined' && createPortal(
- <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
- <div 
- className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity animate-fade-in" 
- onClick={() => setIsOpen(false)} 
- />
- 
- <div className="relative w-full max-w-[95vw] md:max-w-7xl h-[90vh] md:h-[740px] md:max-h-[85vh] flex flex-col bg-content1 border border-divider rounded-large shadow-small text-foreground rounded-2xl p-0 overflow-hidden border-divider/40 shadow-2xl animate-scale-up z-10">
- {/* Header banner */}
- <div className="p-5 border-b border-divider/20 flex justify-between items-center bg-background shrink-0">
- <div className="flex items-center gap-3">
- <div className="h-10 w-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20 shrink-0">
- <Sliders className="h-5 w-5" />
- </div>
- <div>
- <h3 className="text-sm font-black uppercase tracking-wider text-primary">
- System Settings & Configuration
- </h3>
- <p className="text-[10px] text-default-500 font-medium mt-0.5 ">
- MANAGE SYSTEM INTERACTIVE CONTROLS, APPEARANCE, & BACKUPS
- </p>
- </div>
- </div>
- <button
- onClick={() => setIsOpen(false)}
- className="p-2 text-default-500 hover:text-primary hover:bg-primary/10 rounded-xl transition-all cursor-pointer shrink-0"
- >
- <X className="h-5 w-5" />
- </button>
- </div>
+  {/* INTERACTIVE HUB MODAL */}
+  {isOpen && typeof document !== 'undefined' && createPortal(
+  <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+  <div 
+  className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity animate-fade-in" 
+  onClick={() => setIsOpen(false)} 
+  />
+  
+  <div className="relative w-full max-w-[95vw] md:max-w-7xl h-[90vh] md:h-[740px] md:max-h-[85vh] flex flex-col bg-content1 border border-divider rounded-large shadow-small text-foreground rounded-2xl p-0 overflow-hidden border-divider/40 shadow-2xl animate-scale-up z-10">
+  {/* Header banner */}
+  <div className="p-5 border-b border-divider/20 flex justify-between items-center bg-background shrink-0">
+  <div className="flex items-center gap-3">
+  <div className="h-10 w-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20 shrink-0">
+  <Sliders className="h-5 w-5" />
+  </div>
+  <div>
+  <h3 className="text-sm font-black uppercase tracking-wider text-primary">
+  Settings & Accessibility
+  </h3>
+  <p className="text-[10px] text-default-500 font-medium mt-0.5 ">
+  Manage display preferences, accessibility options, and system info.
+  </p>
+  </div>
+  </div>
+  <button
+  onClick={() => setIsOpen(false)}
+  className="p-2 text-default-500 hover:text-primary hover:bg-primary/10 rounded-xl transition-all cursor-pointer shrink-0"
+  >
+  <X className="h-5 w-5" />
+  </button>
+  </div>
 
- {/* Sidebar navigation tabs inside Dialog */}
- <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-content1/30">
- {/* Tab options side-rack */}
- <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-divider/15 p-4 flex md:flex-col gap-2 shrink-0 select-none overflow-x-auto md:overflow-x-visible">
- <button
- onClick={() => setActiveTab('appearance')}
- className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
- activeTab === 'appearance'
- ? 'bg-primary text-primary-foreground font-black shadow-md'
- : 'hover:bg-primary/10 text-default-500'
- }`}
- >
- <Palette className="h-4 w-4" />
- <span>Appearance</span>
- </button>
- <button
- onClick={() => setActiveTab('features')}
- className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
- activeTab === 'features'
- ? 'bg-primary text-primary-foreground font-black shadow-md'
- : 'hover:bg-primary/10 text-default-500'
- }`}
- >
- <Shield className="h-4 w-4" />
- <span>Permissions & Access</span>
- </button>
- <button
- onClick={() => setActiveTab('about')}
- className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
- activeTab === 'about'
- ? 'bg-primary text-primary-foreground font-black shadow-md'
- : 'hover:bg-primary/10 text-default-500'
- }`}
- >
- <Info className="h-4 w-4" />
- <span>About</span>
- </button>
- <button
- onClick={() => setActiveTab('accessibility')}
- className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
- activeTab === 'accessibility'
- ? 'bg-primary text-primary-foreground font-black shadow-md'
- : 'hover:bg-primary/10 text-default-500'
- }`}
- >
- <Sliders className="h-4 w-4" />
- <span>Accessibility</span>
- </button>
- {(db.currentUser?.role === UserRole.ADMIN || db.currentUser?.role === UserRole.MANAGER) && (
- <button
- onClick={() => setActiveTab('backups')}
- className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
- activeTab === 'backups'
- ? 'bg-primary text-primary-foreground font-black shadow-md'
- : 'hover:bg-primary/10 text-default-500'
- }`}
- id="database_and_backups_tab_btn"
- >
- <Database className="h-4 w-4" />
- <span>Database & Backups</span>
- </button>
- )}
- </div>
+  {/* Sidebar navigation tabs inside Dialog */}
+  <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-content1/30">
+  {/* Tab options side-rack */}
+  <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-divider/15 p-4 flex md:flex-col gap-2 shrink-0 select-none overflow-x-auto md:overflow-x-visible">
+  <button
+  onClick={() => setActiveTab('appearance')}
+  className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
+  activeTab === 'appearance'
+  ? 'bg-primary text-primary-foreground font-black shadow-md'
+  : 'hover:bg-primary/10 text-default-500'
+  }`}
+  >
+  <Palette className="h-4 w-4" />
+  <span>Appearance</span>
+  </button>
+  <button
+  onClick={() => setActiveTab('features')}
+  className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
+  activeTab === 'features'
+  ? 'bg-primary text-primary-foreground font-black shadow-md'
+  : 'hover:bg-primary/10 text-default-500'
+  }`}
+  >
+  <Shield className="h-4 w-4" />
+  <span>Permissions & Access</span>
+  </button>
+  <button
+  onClick={() => setActiveTab('about')}
+  className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
+  activeTab === 'about'
+  ? 'bg-primary text-primary-foreground font-black shadow-md'
+  : 'hover:bg-primary/10 text-default-500'
+  }`}
+  >
+  <Info className="h-4 w-4" />
+  <span>About</span>
+  </button>
+  <button
+  onClick={() => setActiveTab('accessibility')}
+  className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
+  activeTab === 'accessibility'
+  ? 'bg-primary text-primary-foreground font-black shadow-md'
+  : 'hover:bg-primary/10 text-default-500'
+  }`}
+  >
+  <Sliders className="h-4 w-4" />
+  <span>Accessibility</span>
+  </button>
+  {(db.currentUser?.role === UserRole.ADMIN || db.currentUser?.role === UserRole.MANAGER) && (
+  <button
+  onClick={() => setActiveTab('backups')}
+  className={`flex-1 md:flex-none flex items-center gap-2.5 px-3.5 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
+  activeTab === 'backups'
+  ? 'bg-primary text-primary-foreground font-black shadow-md'
+  : 'hover:bg-primary/10 text-default-500'
+  }`}
+  id="database_and_backups_tab_btn"
+  >
+  <Database className="h-4 w-4" />
+  <span>Database & Backups</span>
+  </button>
+  )}
+  </div>
 
- {/* Dynamic scrollable core form content */}
- <div className="flex-1 p-5 md:p-6 overflow-y-auto">
- {/* TAB A: ACCESSIBILITY OPTIONS */}
- {activeTab === 'accessibility' && (
- <div className="space-y-5 animate-fade-in font-sans">
- <div>
- <h4 className="text-xs font-black uppercase text-primary tracking-wider ">
- Visual & Nav Assist Settings
- </h4>
- </div>
+  {/* Dynamic scrollable core form content */}
+  <div className="flex-1 p-5 md:p-6 overflow-y-auto">
+  {/* TAB A: ACCESSIBILITY OPTIONS */}
+  {activeTab === 'accessibility' && (
+  <div className="space-y-5 animate-fade-in font-sans">
+  <div>
+  <h4 className="text-xs font-black uppercase text-primary tracking-wider ">
+  Visual & Navigation Preferences
+  </h4>
+  </div>
 
- <div className="h-px bg-default-100" />
+  <div className="h-px bg-default-100" />
 
- {/* FONT SCALING REGION */}
- <div className="space-y-2">
- <label className="text-[10px] font-black uppercase tracking-wider text-default-500 block">
- Font Size Multiplier scale
- </label>
- <div className="grid grid-cols-3 gap-2.5">
- {[
- { id: 'small', name: 'Small (0.88x)', class: 'font-normal' },
- { id: 'normal', name: 'Normal (1.0x)', class: 'font-normal' },
- { id: 'large', name: 'Large (1.12x)', class: 'font-medium' }
- ].map((sz) => (
- <button
- key={sz.id}
- type="button"
- onClick={() => setTextSize(sz.id as any)}
- className={`p-3 rounded-xl border flex flex-col justify-center items-center gap-1.5 transition-all cursor-pointer ${
- textSize === sz.id
- ? 'bg-primary/10 border-primary text-primary'
- : 'bg-background border-divider/20 hover:bg-primary/5 text-default-500'
- }`}
- >
- <Type className="h-4 w-4" />
- <span className="text-[10.5px] font-bold text-center font-sans">{sz.name}</span>
- </button>
- ))}
- </div>
- </div>
+  {/* FONT SCALING REGION */}
+  <div className="space-y-2">
+  <label className="text-[10px] font-black uppercase tracking-wider text-default-500 block">
+  Text Size
+  </label>
+  <div className="grid grid-cols-3 gap-2.5">
+  {[
+  { id: 'small', name: 'Small (0.88x)', class: 'font-normal' },
+  { id: 'normal', name: 'Normal (1.0x)', class: 'font-normal' },
+  { id: 'large', name: 'Large (1.12x)', class: 'font-medium' }
+  ].map((sz) => (
+  <button
+  key={sz.id}
+  type="button"
+  onClick={() => setTextSize(sz.id as any)}
+  className={`p-3 rounded-xl border flex flex-col justify-center items-center gap-1.5 transition-all cursor-pointer ${
+  textSize === sz.id
+  ? 'bg-primary/10 border-primary text-primary'
+  : 'bg-background border-divider/20 hover:bg-primary/5 text-default-500'
+  }`}
+  >
+  <Type className="h-4 w-4" />
+  <span className="text-[10.5px] font-bold text-center font-sans">{sz.name}</span>
+  </button>
+  ))}
+  </div>
+  </div>
 
- <div className="h-px bg-default-100" />
+  <div className="h-px bg-default-100" />
 
- {/* TOGGLES GRID */}
- <div className="space-y-3.5">
- {/* DYSLEXIC FRIENDLY toggle */}
- <button
- type="button"
- onClick={() => setDyslexicFont(!dyslexicFont)}
- className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
- dyslexicFont
- ? 'bg-primary/15 border-primary text-foreground'
- : 'bg-background border-divider/15 hover:bg-primary/5'
- }`}
- >
- <div className={`p-2 rounded-lg shrink-0 ${dyslexicFont ? 'bg-primary text-primary-foreground' : 'bg-content2 text-default-500'}`}>
- <CaseSensitive className="h-4.5 w-4.5" />
- </div>
- <div className="space-y-0.5">
- <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
- <span>Dyslexic-Friendly Typography</span>
- {dyslexicFont && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
- </div>
- </div>
- </button>
+  {/* TOGGLES GRID */}
+  <div className="space-y-3.5">
+  {/* DYSLEXIC FRIENDLY toggle */}
+  <button
+  type="button"
+  onClick={() => setDyslexicFont(!dyslexicFont)}
+  className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
+  dyslexicFont
+  ? 'bg-primary/15 border-primary text-foreground'
+  : 'bg-background border-divider/15 hover:bg-primary/5'
+  }`}
+  >
+  <div className={`p-2 rounded-lg shrink-0 ${dyslexicFont ? 'bg-primary text-primary-foreground' : 'bg-content2 text-default-500'}`}>
+  <CaseSensitive className="h-4.5 w-4.5" />
+  </div>
+  <div className="space-y-0.5">
+  <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
+  <span>Dyslexic-Friendly Font</span>
+  {dyslexicFont && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+  </div>
+  <p className="text-[10.5px] text-default-500 opacity-80">
+    Specialized letter shapes for easier reading
+  </p>
+  </div>
+  </button>
 
- {/* COLOR CONTRAST LEVEL CARD */}
- <div className="w-full p-4 rounded-xl border border-divider/15 bg-background space-y-3.5">
- <div className="flex items-start gap-3.5">
- <div className="p-2 rounded-lg shrink-0 bg-content2 text-default-500">
- <Sliders className="h-4.5 w-4.5" />
- </div>
- <div className="space-y-0.5">
- <div className="text-[11.5px] font-extrabold font-sans text-foreground">
- Color Contrast Levels
- </div>
- </div>
- </div>
+  {/* COLOR CONTRAST LEVEL CARD */}
+  <div className="w-full p-4 rounded-xl border border-divider/15 bg-background space-y-3.5">
+  <div className="flex items-start gap-3.5">
+  <div className="p-2 rounded-lg shrink-0 bg-content2 text-default-500">
+  <Sliders className="h-4.5 w-4.5" />
+  </div>
+  <div className="space-y-0.5">
+  <div className="text-[11.5px] font-extrabold font-sans text-foreground">
+  Color Contrast
+  </div>
+  </div>
+  </div>
 
- {/* HeroUI Segmented chips */}
- <div className="grid grid-cols-3 gap-1.5 p-1 rounded-lg bg-content2">
- {(['small', 'medium', 'high'] as const).map((level) => (
- <button
- key={level}
- type="button"
- onClick={() => setColorContrast(level as any)}
- className={`py-1.5 px-2 rounded-md text-[10.5px] font-bold capitalize transition-all cursor-pointer ${
- (colorContrast === level || (level === 'small' && (colorContrast as string) === 'default'))
- ? 'bg-primary text-primary-foreground shadow-sm'
- : 'text-default-500 hover:bg-foreground/5'
- }`}
- >
- {level} Contrast
- </button>
- ))}
- </div>
- </div>
+  {/* HeroUI Segmented chips */}
+  <div className="grid grid-cols-3 gap-1.5 p-1 rounded-lg bg-content2">
+  {(['small', 'medium', 'high'] as const).map((level) => (
+  <button
+  key={level}
+  type="button"
+  onClick={() => setColorContrast(level as any)}
+  className={`py-1.5 px-2 rounded-md text-[10.5px] font-bold capitalize transition-all cursor-pointer ${
+  (colorContrast === level || (level === 'small' && (colorContrast as string) === 'default'))
+  ? 'bg-primary text-primary-foreground shadow-sm'
+  : 'text-default-500 hover:bg-foreground/5'
+  }`}
+  >
+  {level === 'small' ? 'Standard' : level === 'medium' ? 'Enhanced' : 'High Contrast'}
+  </button>
+  ))}
+  </div>
+  </div>
 
- {/* MAXIMIZE TEXT CONTRAST Toggle */}
- <button
- type="button"
- onClick={() => setMaximizeTextContrast(!maximizeTextContrast)}
- className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
- maximizeTextContrast
- ? 'bg-primary/15 border-primary text-foreground'
- : 'bg-background border-divider/15 hover:bg-primary/5'
- }`}
- >
- <div className={`p-2 rounded-lg shrink-0 ${maximizeTextContrast ? 'bg-primary text-primary-foreground' : 'bg-content2 text-default-500'}`}>
- <Layers className="h-4.5 w-4.5" />
- </div>
- <div className="space-y-0.5">
- <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
- <span>Maximize Text Contrast</span>
- {maximizeTextContrast && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
- </div>
- </div>
- </button>
+  {/* MAXIMIZE TEXT CONTRAST Toggle */}
+  <button
+  type="button"
+  onClick={() => setMaximizeTextContrast(!maximizeTextContrast)}
+  className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
+  maximizeTextContrast
+  ? 'bg-primary/15 border-primary text-foreground'
+  : 'bg-background border-divider/15 hover:bg-primary/5'
+  }`}
+  >
+  <div className={`p-2 rounded-lg shrink-0 ${maximizeTextContrast ? 'bg-primary text-primary-foreground' : 'bg-content2 text-default-500'}`}>
+  <Layers className="h-4.5 w-4.5" />
+  </div>
+  <div className="space-y-0.5">
+  <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
+  <span>High Contrast Text</span>
+  {maximizeTextContrast && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+  </div>
+  <p className="text-[10.5px] text-default-500 opacity-80">
+    Increases contrast between text and background surfaces
+  </p>
+  </div>
+  </button>
 
- {/* KEYBOARD OUTLINES toggle */}
- <button
- type="button"
- onClick={() => setEnhancedOutlines(!enhancedOutlines)}
- className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
- enhancedOutlines
- ? 'bg-primary/15 border-primary text-foreground'
- : 'bg-background border-divider/15 hover:bg-primary/5'
- }`}
- >
- <div className={`p-2 rounded-lg shrink-0 ${enhancedOutlines ? 'bg-primary text-primary-foreground' : 'bg-content2 text-default-500'}`}>
- <Keyboard className="h-4.5 w-4.5" />
- </div>
- <div className="space-y-0.5">
- <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
- <span>A11y Highlight Keyboard Outlines</span>
- {enhancedOutlines && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
- </div>
- </div>
- </button>
+  {/* KEYBOARD OUTLINES toggle */}
+  <button
+  type="button"
+  onClick={() => setEnhancedOutlines(!enhancedOutlines)}
+  className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
+  enhancedOutlines
+  ? 'bg-primary/15 border-primary text-foreground'
+  : 'bg-background border-divider/15 hover:bg-primary/5'
+  }`}
+  >
+  <div className={`p-2 rounded-lg shrink-0 ${enhancedOutlines ? 'bg-primary text-primary-foreground' : 'bg-content2 text-default-500'}`}>
+  <Keyboard className="h-4.5 w-4.5" />
+  </div>
+  <div className="space-y-0.5">
+  <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
+  <span>Focus Outlines</span>
+  {enhancedOutlines && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+  </div>
+  <p className="text-[10.5px] text-default-500 opacity-80">
+    Shows clear borders around focused buttons and interactive elements
+  </p>
+  </div>
+  </button>
 
         {/* DISABLE UI BLURS toggle */}
         <button
@@ -808,11 +817,11 @@ export function PrivacyAccessibilityHub({
           </div>
           <div className="space-y-0.5">
             <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
-              <span>Turn Off UI & Glass Blurs</span>
+              <span>Reduce Transparency</span>
               {disableUiBlurs && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
             </div>
             <p className="text-[10.5px] text-default-500 opacity-80">
-              Renders solid opaque cards, panels, and dialogs without glass diffusion
+              Uses solid opaque backgrounds for cards, modals, and dialogs
             </p>
           </div>
         </button>
@@ -832,60 +841,66 @@ export function PrivacyAccessibilityHub({
           </div>
           <div className="space-y-0.5">
             <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
-              <span>Turn Off Backdrop & Ambient Gradients</span>
+              <span>Disable Background Glow</span>
               {disableBackdropBlurs && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
             </div>
             <p className="text-[10.5px] text-default-500 opacity-80">
-              Disables dynamic background gradient mesh and ambient aura spheres
+              Turns off ambient background lighting and gradient aura effects
             </p>
           </div>
         </button>
 
- {/* DISABLE ANIMATIONS toggle */}
- <button
- type="button"
- onClick={() => setDisableAnimations(!disableAnimations)}
- className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
- disableAnimations
- ? 'bg-primary/15 border-primary text-foreground'
- : 'bg-background border-divider/15 hover:bg-primary/5'
- }`}
- >
- <div className={`p-2 rounded-lg shrink-0 ${disableAnimations ? 'bg-primary text-primary-foreground' : 'bg-content2 text-default-500'}`}>
- <Sparkles className="h-4.5 w-4.5" />
- </div>
- <div className="space-y-0.5">
- <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
- <span>Remove Animations & Effects</span>
- {disableAnimations && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
- </div>
- </div>
- </button>
+  {/* DISABLE ANIMATIONS toggle */}
+  <button
+  type="button"
+  onClick={() => setDisableAnimations(!disableAnimations)}
+  className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
+  disableAnimations
+  ? 'bg-primary/15 border-primary text-foreground'
+  : 'bg-background border-divider/15 hover:bg-primary/5'
+  }`}
+  >
+  <div className={`p-2 rounded-lg shrink-0 ${disableAnimations ? 'bg-primary text-primary-foreground' : 'bg-content2 text-default-500'}`}>
+  <Sparkles className="h-4.5 w-4.5" />
+  </div>
+  <div className="space-y-0.5">
+  <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
+  <span>Disable Animations</span>
+  {disableAnimations && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+  </div>
+  <p className="text-[10.5px] text-default-500 opacity-80">
+    Turns off motion effects and transition animations
+  </p>
+  </div>
+  </button>
 
- {/* LOW PERFORMANCE MODE / THERMAL MITIGATION toggle */}
- <button
- type="button"
- onClick={() => db.setLowPerformanceMode(!db.lowPerformanceMode)}
- className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
- db.lowPerformanceMode
- ? 'bg-primary/15 border-primary text-foreground'
- : 'bg-background border-divider/15 hover:bg-primary/5'
- }`}
- >
- <div className={`p-2 rounded-lg shrink-0 ${db.lowPerformanceMode ? 'bg-primary text-primary-foreground' : 'bg-content2 text-default-500'}`}>
- <Cpu className="h-4.5 w-4.5" />
- </div>
- <div className="space-y-0.5">
- <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
- <span>Mobile Battery & Thermal Saver</span>
- {db.lowPerformanceMode && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
- </div>
- </div>
- </button>
- </div>
+  {/* LOW PERFORMANCE MODE / THERMAL MITIGATION toggle */}
+  <button
+  type="button"
+  onClick={() => db.setLowPerformanceMode(!db.lowPerformanceMode)}
+  className={`w-full p-4 rounded-xl border flex items-start gap-3.5 transition-all text-left cursor-pointer ${
+  db.lowPerformanceMode
+  ? 'bg-primary/15 border-primary text-foreground'
+  : 'bg-background border-divider/15 hover:bg-primary/5'
+  }`}
+  >
+  <div className={`p-2 rounded-lg shrink-0 ${db.lowPerformanceMode ? 'bg-primary text-primary-foreground' : 'bg-content2 text-default-500'}`}>
+  <Cpu className="h-4.5 w-4.5" />
+  </div>
+  <div className="space-y-0.5">
+  <div className="text-[11.5px] font-extrabold flex items-center gap-1.5 font-sans">
+  <span>Battery & Performance Saver</span>
+  {db.lowPerformanceMode && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+  </div>
+  <p className="text-[10.5px] text-default-500 opacity-80">
+    Reduces graphical load to save battery on mobile devices
+  </p>
+  </div>
+  </button>
+  </div>
 
- </div>
- )}
+  </div>
+  )}
 
  {/* TAB: APPEARANCE HEROUI V3 CUSTOMIZER */}
       {activeTab === "appearance" && (

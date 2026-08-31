@@ -389,14 +389,14 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-black uppercase tracking-tight text-foreground">
-                  Dynamic Business Rules & Catalogs
+                  Store Options & Catalogs
                 </h2>
                 <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                  Live Engine
+                  Active
                 </span>
               </div>
               <p className="text-xs text-default-500 font-medium">
-                Manage product categories, measurement units, payment channels, and tax/discount schemes dynamically
+                Manage product categories, measurement units, payment methods, discounts, and damage causes.
               </p>
             </div>
           </div>
@@ -444,7 +444,7 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
             }`}
           >
             <Ruler className="h-4 w-4 shrink-0" />
-            <span>Measurement Units</span>
+            <span>Units of Measure</span>
             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-default-100 text-default-600 shrink-0">
               {unitTypes.length}
             </span>
@@ -476,7 +476,7 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
             }`}
           >
             <Percent className="h-4 w-4 shrink-0" />
-            <span>Discounts & VAT Schemes</span>
+            <span>Discount Schemes</span>
             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-default-100 text-default-600 shrink-0">
               {discountSchemes.length}
             </span>
@@ -492,7 +492,7 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
             }`}
           >
             <AlertTriangle className="h-4 w-4 shrink-0" />
-            <span>Damage Classifications</span>
+            <span>Damage Causes</span>
             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-default-100 text-default-600 shrink-0">
               {damageReasonsList.length}
             </span>
@@ -507,10 +507,10 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-wide text-foreground">
-                    Tile & Material Product Categories
+                    Product Categories
                   </h3>
                   <p className="text-xs text-default-500">
-                    Categories populate inventory filters, branch catalog tabs, and batch registry classification.
+                    Group your inventory items and organize POS catalog tabs.
                   </p>
                 </div>
                 {isAuthorized && (
@@ -527,7 +527,7 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                     className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl hover:opacity-90 transition-all shadow-sm shrink-0"
                   >
                     <Plus className="h-4 w-4" />
-                    <span>{showCatForm ? 'Close Form' : 'Add New Category'}</span>
+                    <span>{showCatForm ? 'Close Form' : 'Add Category'}</span>
                   </button>
                 )}
               </div>
@@ -581,16 +581,16 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
-                        Badge Accent Color
+                        Badge Color
                       </label>
                       <div className="flex items-center gap-2">
                         <input
                           type="color"
                           value={catColor}
                           onChange={(e) => setCatColor(e.target.value)}
-                          className="h-8 w-12 rounded-lg cursor-pointer bg-transparent border-0"
+                          className="h-8 w-8 rounded-lg cursor-pointer bg-transparent border-0"
                         />
-                        <span className="text-xs font-mono font-bold text-default-600">{catColor}</span>
+                        <span className="text-xs font-mono text-default-500 font-bold">{catColor}</span>
                       </div>
                     </div>
                   </div>
@@ -622,19 +622,20 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <span
-                          className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md font-mono"
+                          className="text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded-md border"
                           style={{
-                            backgroundColor: `${c.color || '#006FEE'}20`,
+                            backgroundColor: `${c.color || '#006FEE'}15`,
                             color: c.color || '#006FEE',
-                            border: `1px solid ${c.color || '#006FEE'}40`,
+                            borderColor: `${c.color || '#006FEE'}30`,
                           }}
                         >
-                          {c.code || 'CAT'}
+                          {c.code || c.name.slice(0, 4).toUpperCase()}
                         </span>
-                        {c.isDefault && (
-                          <span className="text-[8.5px] uppercase font-bold text-default-400">
-                            Built-in
-                          </span>
+                        {c.color && (
+                          <span
+                            className="h-3 w-3 rounded-full border border-black/10"
+                            style={{ backgroundColor: c.color }}
+                          />
                         )}
                       </div>
                       <h4 className="text-xs font-black text-foreground">{c.name}</h4>
@@ -653,18 +654,20 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                         >
                           <Edit2 className="h-3.5 w-3.5" />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (confirm(`Are you sure you want to remove the category "${c.name}"?`)) {
-                              deleteProductCategory(c.id);
-                            }
-                          }}
-                          className="p-1.5 rounded-lg text-default-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
-                          title="Delete Category"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        {!c.isDefault && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm(`Are you sure you want to delete category "${c.name}"?`)) {
+                                deleteProductCategory(c.id);
+                              }
+                            }}
+                            className="p-1.5 rounded-lg text-default-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                            title="Delete Category"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -679,10 +682,10 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-wide text-foreground">
-                    Units of Measurement & Conversions
+                    Units of Measure
                   </h3>
                   <p className="text-xs text-default-500">
-                    Defines carton, piece, square meter, linear meter, and sack standards for product cataloging.
+                    Define standard measurement units for inventory and sales.
                   </p>
                 </div>
                 {isAuthorized && (
@@ -699,7 +702,7 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                     className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl hover:opacity-90 transition-all shadow-sm shrink-0"
                   >
                     <Plus className="h-4 w-4" />
-                    <span>{showUnitForm ? 'Close Form' : 'Add Unit Type'}</span>
+                    <span>{showUnitForm ? 'Close Form' : 'Add Unit'}</span>
                   </button>
                 )}
               </div>
@@ -711,7 +714,7 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                   className="p-5 rounded-2xl bg-content2/60 border border-primary/30 space-y-4 animate-fade-in text-left"
                 >
                   <h4 className="text-xs font-black uppercase tracking-wider text-primary">
-                    {editingUnit ? `Edit Unit: ${editingUnit.name}` : 'Create New Unit'}
+                    {editingUnit ? `Edit Unit: ${editingUnit.name}` : 'Create Unit of Measure'}
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="sm:col-span-2 space-y-1">
@@ -723,13 +726,13 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                         required
                         value={unitName}
                         onChange={(e) => setUnitName(e.target.value)}
-                        placeholder="e.g. Kilogram (kg)"
+                        placeholder="e.g. Kilograms"
                         className="w-full bg-content1 border border-divider/30 px-3.5 py-2 rounded-xl text-xs font-bold text-foreground focus:outline-none focus:border-primary"
                       />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
-                        Short Abbreviation *
+                        Abbreviation *
                       </label>
                       <input
                         type="text"
@@ -742,7 +745,7 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                     </div>
                     <div className="sm:col-span-2 space-y-1">
                       <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
-                        Unit Description
+                        Description / Notes
                       </label>
                       <input
                         type="text"
@@ -841,10 +844,10 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-wide text-foreground">
-                    Settlement Channels & Digital Payment Methods
+                    Payment Methods
                   </h3>
                   <p className="text-xs text-default-500">
-                    Configure cash, e-wallets, bank wires, POS terminals, and customer credit lines shown at checkout.
+                    Configure cash, e-wallets, cards, and bank payment options shown at checkout.
                   </p>
                 </div>
                 {isAuthorized && (
@@ -865,7 +868,7 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                     className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl hover:opacity-90 transition-all shadow-sm shrink-0"
                   >
                     <Plus className="h-4 w-4" />
-                    <span>{showPmForm ? 'Close Form' : 'Add Payment Channel'}</span>
+                    <span>{showPmForm ? 'Close Form' : 'Add Payment Method'}</span>
                   </button>
                 )}
               </div>
@@ -877,7 +880,7 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                   className="p-5 rounded-2xl bg-content2/60 border border-primary/30 space-y-4 animate-fade-in text-left"
                 >
                   <h4 className="text-xs font-black uppercase tracking-wider text-primary">
-                    {editingPayment ? `Edit Payment Channel: ${editingPayment.name}` : 'Configure New Payment Channel'}
+                    {editingPayment ? `Edit Payment Method: ${editingPayment.name}` : 'Configure New Payment Method'}
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-1">
@@ -905,8 +908,8 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                         <option value="Cash">Cash Drawer</option>
                         <option value="E-Wallet">E-Wallet (GCash, Maya)</option>
                         <option value="Card">Card / POS Terminal</option>
-                        <option value="Bank">Bank Wire / InstaPay</option>
-                        <option value="Credit">Member Revolving Credit</option>
+                        <option value="Bank">Bank Transfer / InstaPay</option>
+                        <option value="Credit">Customer Credit</option>
                         <option value="Other">Check / Other</option>
                       </select>
                     </div>
@@ -942,7 +945,7 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                         type="text"
                         value={pmAccountName}
                         onChange={(e) => setPmAccountName(e.target.value)}
-                        placeholder="TilePoint Trading Inc."
+                        placeholder="TilePoint Store"
                         className="w-full bg-content1 border border-divider/30 px-3.5 py-2 rounded-xl text-xs font-bold text-foreground focus:outline-none focus:border-primary"
                       />
                     </div>
@@ -954,19 +957,19 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                         type="text"
                         value={pmRefLabel}
                         onChange={(e) => setPmRefLabel(e.target.value)}
-                        placeholder="13-Digit GCash Reference No."
+                        placeholder="Reference / Transaction No."
                         className="w-full bg-content1 border border-divider/30 px-3.5 py-2 rounded-xl text-xs font-bold text-foreground focus:outline-none focus:border-primary"
                       />
                     </div>
                     <div className="sm:col-span-2 space-y-1">
                       <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
-                        Cashier Settlement Instructions
+                        Cashier Instructions
                       </label>
                       <input
                         type="text"
                         value={pmInstructions}
                         onChange={(e) => setPmInstructions(e.target.value)}
-                        placeholder="Scan counter QR standee and verify transaction SMS"
+                        placeholder="Scan counter QR and verify transaction SMS"
                         className="w-full bg-content1 border border-divider/30 px-3.5 py-2 rounded-xl text-xs font-bold text-foreground focus:outline-none focus:border-primary"
                       />
                     </div>
@@ -979,7 +982,7 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                         className="h-4 w-4 rounded accent-primary cursor-pointer"
                       />
                       <label htmlFor="require-ref-check" className="text-xs font-bold text-foreground cursor-pointer">
-                        Require Reference No. on Tender
+                        Require Reference No. on Checkout
                       </label>
                     </div>
                   </div>
@@ -995,7 +998,7 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                       type="submit"
                       className="px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-primary text-primary-foreground hover:opacity-90 shadow-sm"
                     >
-                      {editingPayment ? 'Update Payment Channel' : 'Save Payment Channel'}
+                      {editingPayment ? 'Update Payment Method' : 'Save Payment Method'}
                     </button>
                   </div>
                 </form>
@@ -1083,10 +1086,10 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-wide text-foreground">
-                    Tax Exemption & Cardholder Discount Schemes
+                    Discount Schemes
                   </h3>
                   <p className="text-xs text-default-500">
-                    Defines Senior Citizen (RA 9994), PWD (RA 10754), Contractor tiers, and bulk wholesale discount rules.
+                    Configure Senior Citizen, PWD, Contractor, and wholesale discount rules.
                   </p>
                 </div>
                 {isAuthorized && (
@@ -1165,7 +1168,7 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
-                        Minimum Cart Spend (PHP)
+                        Minimum Spend (PHP)
                       </label>
                       <input
                         type="number"
@@ -1177,13 +1180,13 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                     </div>
                     <div className="sm:col-span-2 space-y-1">
                       <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
-                        Description / Legal Reference
+                        Description / Notes
                       </label>
                       <input
                         type="text"
                         value={discDesc}
                         onChange={(e) => setDiscDesc(e.target.value)}
-                        placeholder="Philippine Republic Act statutory tax exemption"
+                        placeholder="Senior Citizen or PWD statutory discount"
                         className="w-full bg-content1 border border-divider/30 px-3.5 py-2 rounded-xl text-xs font-bold text-foreground focus:outline-none focus:border-primary"
                       />
                     </div>
@@ -1197,7 +1200,7 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                           className="h-4 w-4 rounded accent-primary cursor-pointer"
                         />
                         <label htmlFor="vat-exempt-check" className="text-xs font-bold text-foreground cursor-pointer">
-                          12% VAT Exemption (Philippine RA 9994/10754)
+                          VAT Exemption
                         </label>
                       </div>
                       <div className="flex items-center gap-2">
@@ -1333,10 +1336,10 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-wide text-foreground">
-                    Breakage & Shrinkage Incident Classifications
+                    Damage Reasons
                   </h3>
                   <p className="text-xs text-default-500">
-                    Standardized cause tracking for broken tiles, warehouse casualties, and supplier returns.
+                    Standardized causes and actions for reporting broken or damaged stock.
                   </p>
                 </div>
                 {isAuthorized && (
@@ -1354,7 +1357,7 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                     className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl hover:opacity-90 transition-all shadow-sm shrink-0"
                   >
                     <Plus className="h-4 w-4" />
-                    <span>{showDmgForm ? 'Close Form' : 'Add Incident Cause'}</span>
+                    <span>{showDmgForm ? 'Close Form' : 'Add Damage Reason'}</span>
                   </button>
                 )}
               </div>
@@ -1366,19 +1369,19 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                   className="p-5 rounded-2xl bg-content2/60 border border-primary/30 space-y-4 animate-fade-in text-left"
                 >
                   <h4 className="text-xs font-black uppercase tracking-wider text-primary">
-                    {editingDamage ? `Edit Cause: ${editingDamage.name}` : 'Create Incident Cause'}
+                    {editingDamage ? `Edit Reason: ${editingDamage.name}` : 'Create Damage Reason'}
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="sm:col-span-2 space-y-1">
                       <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
-                        Incident Reason Name *
+                        Reason Name *
                       </label>
                       <input
                         type="text"
                         required
                         value={dmgName}
                         onChange={(e) => setDmgName(e.target.value)}
-                        placeholder="e.g. Forklift Pallet Collapse"
+                        placeholder="e.g. Broken in Transit"
                         className="w-full bg-content1 border border-divider/30 px-3.5 py-2 rounded-xl text-xs font-bold text-foreground focus:outline-none focus:border-primary"
                       />
                     </div>
@@ -1390,13 +1393,13 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                         type="text"
                         value={dmgCode}
                         onChange={(e) => setDmgCode(e.target.value)}
-                        placeholder="FORKLIFT_COLLAPSE"
+                        placeholder="TRANSIT_DAMAGE"
                         className="w-full bg-content1 border border-divider/30 px-3.5 py-2 rounded-xl text-xs font-bold uppercase text-foreground focus:outline-none focus:border-primary"
                       />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
-                        Broad Category
+                        Category
                       </label>
                       <select
                         value={dmgCategory}
@@ -1411,7 +1414,7 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
-                        Default Action / Disposition
+                        Default Action
                       </label>
                       <select
                         value={dmgAction}
@@ -1432,7 +1435,7 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                         type="text"
                         value={dmgDesc}
                         onChange={(e) => setDmgDesc(e.target.value)}
-                        placeholder="Impact fractures during unboxing"
+                        placeholder="Impact fractures during handling"
                         className="w-full bg-content1 border border-divider/30 px-3.5 py-2 rounded-xl text-xs font-bold text-foreground focus:outline-none focus:border-primary"
                       />
                     </div>
