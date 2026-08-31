@@ -1,9 +1,9 @@
+import { AlertTriangle, Check } from 'lucide-react';
 import React from 'react';
-import { createPortal } from 'react-dom';
-import { AlertTriangle, X, Check } from 'lucide-react';
-import { Branch, Product, BranchStock } from '../../types/db';
 import { getBranchOptionLabel } from '../../lib/branchUtils';
+import { Branch, BranchStock, Product } from '../../types/db';
 import { HeroButton } from '../common/ui/HeroButton';
+import { HeroModal } from '../common/ui/HeroModal';
 import { HeroSelect } from '../common/ui/HeroSelect';
 
 interface BulkDamageModalProps {
@@ -43,142 +43,139 @@ export const BulkDamageModal: React.FC<BulkDamageModalProps> = React.memo(({
   bulkDamageQuantities,
   setBulkDamageQuantities,
 }) => {
-  if (!isOpen) return null;
+  return (
+    <HeroModal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="2xl"
+    >
+      <form onSubmit={onSubmit} className="flex flex-col h-full overflow-hidden">
+        <HeroModal.Header className="pb-3.5">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2.5 rounded-2xl bg-danger/10 text-danger border border-danger/20 shrink-0">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-black text-foreground uppercase tracking-wider">
+                Register Bulk Damages & Log Breakages
+              </h3>
+              <p className="text-[10.5px] text-default-500 font-medium">Batch incident reporting & stock write-off</p>
+            </div>
+          </div>
+        </HeroModal.Header>
 
-  const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
-      {/* Full-Screen Uniform Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
-        onClick={onClose} 
-      />
-      <form
-        onSubmit={onSubmit}
-        className="relative w-full max-w-2xl rounded-large border border-divider p-6 z-20 shadow-2xl bg-content1 text-foreground text-left space-y-4 max-h-[90vh] overflow-y-auto animate-scale-up"
-      >
-        {/* Header */}
-        <div className="flex justify-between items-center border-b border-divider pb-3">
-          <h3 className="text-sm font-black text-danger uppercase tracking-wider flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-danger" />
-            <span>Register Bulk Damages & Log Breakages</span>
-          </h3>
-          <button 
-            type="button" 
-            onClick={onClose} 
-            className="text-default-400 hover:text-foreground cursor-pointer p-1 rounded-medium hover:bg-default-100 transition-colors"
-            aria-label="Close modal"
-          >
-            <X className="h-4.5 w-4.5" />
-          </button>
-        </div>
+        <HeroModal.Body className="py-4 space-y-4 text-left">
+          {/* Config Fields Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <HeroSelect
+                label="Reporting Branch"
+                isRequired
+                value={bulkDamageBranchId}
+                onValueChange={val => setBulkDamageBranchId(val)}
+                radius="md"
+                items={branches.filter(b => !b.isDeleted).map(b => ({
+                  key: b.id,
+                  value: b.id,
+                  label: getBranchOptionLabel(b),
+                }))}
+              />
+            </div>
 
-        {/* Config Fields Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="space-y-1">
-            <HeroSelect
-              label="Reporting Branch"
-              isRequired
-              value={bulkDamageBranchId}
-              onValueChange={val => setBulkDamageBranchId(val)}
-              radius="md"
-              items={branches.filter(b => !b.isDeleted).map(b => ({
-                key: b.id,
-                value: b.id,
-                label: getBranchOptionLabel(b),
-              }))}
-            />
+            <div className="space-y-1">
+              <HeroSelect
+                label="Damage Category"
+                value={bulkDamageCategory}
+                onValueChange={val => setBulkDamageCategory(val)}
+                radius="md"
+                items={[
+                  { key: 'Warehouse Breakage', value: 'Warehouse Breakage', label: 'Warehouse Drop / Forklift Clash' },
+                  { key: 'BOA', value: 'BOA', label: 'BOA (Broken On Arrival)' },
+                  { key: 'Showroom Casualty', value: 'Showroom Casualty', label: 'Showroom Display Chipped' },
+                  { key: 'Delivery Transit', value: 'Delivery Transit', label: 'Transport Transit Fractures' },
+                ]}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <HeroSelect
+                label="Action / Treatment Taken"
+                value={bulkDamageAction}
+                onValueChange={val => setBulkDamageAction(val)}
+                radius="md"
+                items={[
+                  { key: 'Disposed / Scrapped', value: 'Disposed / Scrapped', label: 'Shattered - Disposed & Scrapped' },
+                  { key: 'Saved for Mosaic', value: 'Saved for Mosaic', label: 'Saved for Mosaic Sales' },
+                  { key: 'Claimed from Supplier / Insurance Code', value: 'Claimed from Supplier / Insurance Code', label: 'Supplier BOA Reimbursement' },
+                  { key: 'Returned for Credit', value: 'Returned for Credit', label: 'Returned for Credit Note' },
+                ]}
+              />
+            </div>
           </div>
 
-          <div className="space-y-1">
-            <HeroSelect
-              label="Damage Category"
-              value={bulkDamageCategory}
-              onValueChange={val => setBulkDamageCategory(val)}
-              radius="md"
-              items={[
-                { key: 'Warehouse Breakage', value: 'Warehouse Breakage', label: 'Warehouse Drop / Forklift Clash' },
-                { key: 'BOA', value: 'BOA', label: 'BOA (Broken On Arrival from Supplier)' },
-                { key: 'Showroom Casualty', value: 'Showroom Casualty', label: 'Showroom Display Chipped' },
-                { key: 'Delivery Transit', value: 'Delivery Transit', label: 'Transport Transit Fractures' },
-              ]}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <HeroSelect
-              label="Action / Treatment Taken"
-              value={bulkDamageAction}
-              onValueChange={val => setBulkDamageAction(val)}
-              radius="md"
-              items={[
-                { key: 'Disposed / Scrapped', value: 'Disposed / Scrapped', label: 'Shattered - Disposed & Scrapped' },
-                { key: 'Saved for Mosaic', value: 'Saved for Mosaic', label: 'Saved for Low-Cost Mosaic Sales' },
-                { key: 'Claimed from Supplier / Insurance Code', value: 'Claimed from Supplier / Insurance Code', label: 'Pending Supplier Cargo Claim / BOA Reimbursement' },
-                { key: 'Returned for Credit', value: 'Returned for Credit', label: 'Returned to Supplier Warehouse for Credit Note' },
-              ]}
-            />
-          </div>
-        </div>
-
-        {/* Selected Products Quantities list */}
-        <div className="space-y-2">
-          <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">Damaged Quantities per Tile Code</label>
-          <div className="bg-content2 border border-divider rounded-medium max-h-[240px] overflow-y-auto divide-y divide-divider scrollbar-thin">
-            {selectedProducts.map((pItem) => {
-              const branchStockVal = branchStock.find(bs => bs.productId === pItem.id && bs.branchId === bulkDamageBranchId)?.quantity ?? 0;
-              return (
-                <div key={pItem.id} className="p-3 flex items-center justify-between gap-4 text-xs">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-extrabold truncate text-foreground">{pItem.productName}</div>
-                    <div className="text-[10px] text-default-500 mt-0.5">
-                      SKU: {pItem.sku} • Stock in Branch: <span className="font-bold text-primary">{branchStockVal} boxes</span>
+          {/* Selected Products Quantities list */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-primary uppercase tracking-widest pl-1 block">
+              Damaged Quantities per Product
+            </label>
+            <div className="bg-content2/50 border border-divider/30 rounded-2xl max-h-[220px] overflow-y-auto divide-y divide-divider/20 scrollbar-thin">
+              {selectedProducts.map((pItem) => {
+                const branchStockVal = branchStock.find(bs => bs.productId === pItem.id && bs.branchId === bulkDamageBranchId)?.quantity ?? 0;
+                return (
+                  <div key={pItem.id} className="p-3 flex items-center justify-between gap-4 text-xs">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-extrabold truncate text-foreground">{pItem.productName}</div>
+                      <div className="text-[10px] text-default-500 mt-0.5 font-medium">
+                        SKU: {pItem.sku} • Stock in Branch: <span className="font-bold text-primary">{branchStockVal}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[10px] font-bold text-default-500 uppercase">Damaged Count:</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={9999}
+                        required
+                        value={bulkDamageQuantities[pItem.id] ?? 1}
+                        onChange={e => {
+                          const val = Math.max(1, parseInt(e.target.value) || 1);
+                          setBulkDamageQuantities(prev => ({
+                            ...prev,
+                            [pItem.id]: val
+                          }));
+                        }}
+                        className="w-20 bg-background border border-divider/50 rounded-xl text-center p-1.5 font-bold text-xs focus:border-primary focus:outline-none"
+                      />
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[10px] font-bold text-default-500 uppercase">Damaged Boxes:</span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={9999}
-                      required
-                      value={bulkDamageQuantities[pItem.id] ?? 1}
-                      onChange={e => {
-                        const val = Math.max(1, parseInt(e.target.value) || 1);
-                        setBulkDamageQuantities(prev => ({
-                          ...prev,
-                          [pItem.id]: val
-                        }));
-                      }}
-                      className="w-16 bg-content1 border border-divider rounded-medium text-center p-1 font-bold text-xs focus:border-primary focus:outline-none"
-                    />
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
 
-        {/* Incident description */}
-        <div className="space-y-1">
-          <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">Incident Description & Audit Remarks</label>
-          <textarea
-            required
-            rows={2}
-            value={bulkDamageNotes}
-            onChange={e => setBulkDamageNotes(e.target.value)}
-            placeholder="Describe the incident causing the stock breakages or suppliers delivery issue..."
-            className="w-full bg-content2 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-sans"
-          />
-        </div>
+          {/* Incident description */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-black text-primary uppercase tracking-widest pl-1 block">
+              Incident Description & Audit Remarks
+            </label>
+            <textarea
+              required
+              rows={2}
+              value={bulkDamageNotes}
+              onChange={e => setBulkDamageNotes(e.target.value)}
+              placeholder="Describe the incident causing the stock breakages or supplier delivery issue..."
+              className="w-full bg-background border border-divider/50 focus:border-primary px-3.5 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-sans"
+            />
+          </div>
+        </HeroModal.Body>
 
-        {/* Submit / Cancel Actions */}
-        <div className="flex justify-end gap-2 border-t border-divider pt-4">
+        <HeroModal.Footer className="justify-end gap-2 pt-3 pb-4">
           <HeroButton
             type="button"
             onClick={onClose}
-            variant="light"
+            variant="flat"
             size="sm"
-            className="font-bold text-default-600"
+            className="font-bold text-xs"
           >
             Cancel
           </HeroButton>
@@ -187,18 +184,17 @@ export const BulkDamageModal: React.FC<BulkDamageModalProps> = React.memo(({
             color="danger"
             variant="solid"
             size="sm"
-            className="font-black uppercase tracking-wider"
+            className="font-bold uppercase tracking-wider"
             startIcon={<Check className="h-4 w-4" />}
           >
             Register Bulk Damages
           </HeroButton>
-        </div>
+        </HeroModal.Footer>
       </form>
-    </div>
+    </HeroModal>
   );
-
-  if (typeof document === 'undefined') return null;
-  return createPortal(modalContent, document.body);
 });
 
 BulkDamageModal.displayName = 'BulkDamageModal';
+
+export default BulkDamageModal;

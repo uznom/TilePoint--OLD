@@ -1,149 +1,168 @@
-import React, { useState, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
-import { User, UserRole } from "../types/db";
-import { motion, AnimatePresence } from "motion/react";
-import {
-  Search,
-  Command,
-  X,
-  Sparkles,
-  Keyboard,
-  Check,
-  ShieldAlert,
-  LayoutDashboard,
-  ShoppingCart,
-  Layers,
-  FileText,
-  Truck,
-  Building2,
-  DollarSign,
-  Calculator,
-  LockKeyhole,
-  BookOpen,
-} from "lucide-react";
-import { HeroChip } from "./common/ui/HeroChip";
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-export interface ShortcutModuleItem {
-  id: string;
-  name: string;
-  category: string;
-  shortcut: string;
-  icon: React.ElementType;
-  roles: UserRole[];
-  description?: string;
-}
+import {
+  Check,
+  Command,
+  HelpCircle,
+  History,
+  Keyboard,
+  Layers,
+  Search,
+  ShieldAlert,
+  Sparkles,
+  User,
+  Users,
+} from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { UserRole } from "../types/db";
+import { HeroChip } from "./common/ui/HeroChip";
+import { HeroModal } from "./common/ui/HeroModal";
 
 interface QuickModuleSwitcherModalProps {
   isOpen: boolean;
   onClose: () => void;
-  currentUser: User;
+  currentUser: {
+    role: UserRole;
+    name?: string;
+  };
   activeTab: string;
   onSelectTab: (tabId: string) => void;
 }
 
-const MODULE_SHORTCUT_MAP: ShortcutModuleItem[] = [
+interface ModuleShortcut {
+  id: string;
+  name: string;
+  category: string;
+  icon: any;
+  shortcut: string;
+  roles: UserRole[];
+  description?: string;
+}
+
+const MODULE_SHORTCUT_MAP: ModuleShortcut[] = [
   {
     id: "dashboard",
-    name: "Branch Dashboard",
-    category: "Analytics & BI",
+    name: "Executive Dashboard & Intelligence",
+    category: "Analytics",
+    icon: Layers,
     shortcut: "Ctrl + 1",
-    icon: LayoutDashboard,
     roles: [UserRole.ADMIN, UserRole.MANAGER],
-    description: "Overview of real-time sales performance, stock alerts & KPIs",
+    description: "Live branch KPI metrics, gross revenue, and transaction velocity",
   },
   {
     id: "pos",
     name: "ERP OS Checkout Mode (POS)",
-    category: "Cashier & Sales",
+    category: "Cashier",
+    icon: Command,
     shortcut: "Ctrl + 2",
-    icon: ShoppingCart,
     roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
-    description: "High-speed tile sales register, hold sales & receipt printer",
+    description: "Rapid barcode scanning, cashiering, customer receipts, and tender settlement",
   },
   {
-    id: "inventory-stocks",
-    name: "Catalog Stock Ledger",
-    category: "Inventory",
-    shortcut: "Ctrl + 3",
+    id: "inventory",
+    name: "Inventory Stocks & Warehouse Ledgers",
+    category: "Logistics",
     icon: Layers,
-    roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
-    description: "Product inventory search, batch stock levels & price lookup",
+    shortcut: "Ctrl + 3",
+    roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF],
+    description: "Catalog stock management, bin movements, and inter-branch inventory transfers",
   },
   {
-    id: "procurement-po",
+    id: "procurement",
     name: "Procurement & Purchase Orders",
-    category: "Supplier",
+    category: "Supply Chain",
+    icon: Layers,
     shortcut: "Ctrl + 4",
-    icon: Building2,
     roles: [UserRole.ADMIN, UserRole.MANAGER],
-    description: "Create and dispatch purchase orders to tile manufacturers",
+    description: "Purchase order formulation, vendor invoices, and incoming goods receipts",
   },
   {
-    id: "reconciliation-transmission",
-    name: "Reconciliation & Transmission",
-    category: "BIR & Compliance",
+    id: "transmittal",
+    name: "Reconciliation & Central Transmission",
+    category: "Audit & BIR",
+    icon: History,
     shortcut: "Ctrl + 5",
-    icon: FileText,
     roles: [UserRole.ADMIN, UserRole.MANAGER],
-    description: "BIR daily sales transmittals, X/Z reading audit logs & ledgers",
+    description: "BIR daily gross ledgers, official audit sales records, and cloud backup exports",
   },
   {
     id: "shift",
-    name: "Shift Drawer & Cash Register",
-    category: "Cashier & Sales",
+    name: "Shift Drawer & Cash Balancing",
+    category: "Cashier",
+    icon: History,
     shortcut: "Ctrl + 6",
-    icon: LockKeyhole,
     roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER],
-    description: "Open/close shift drawer, log cash floats & till reconciliation",
+    description: "Cashier drawer float declarations, X/Z settlement reports, and physical bill counts",
   },
   {
-    id: "deliveries-panel",
-    name: "Cargo Delivery Center",
+    id: "deliveries",
+    name: "Cargo Dispatch & Deliveries Center",
     category: "Logistics",
+    icon: Layers,
     shortcut: "Ctrl + 7",
-    icon: Truck,
-    roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
-    description: "Truck delivery scheduling, waybills, driver assignment & status",
+    roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF],
+    description: "Truck route scheduling, site dispatch handovers, and recipient delivery slips",
   },
   {
     id: "calculator",
-    name: "Tile Coverage Calculator",
+    name: "Tile Coverage Estimator",
     category: "Tools",
+    icon: Layers,
     shortcut: "Ctrl + 8",
-    icon: Calculator,
     roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
-    description: "Square meter to tile box estimator & wastage allowance calculator",
+    description: "Square meter to tile box count estimator with custom wastage margin allowance",
   },
   {
     id: "profit-analytics",
-    name: "P&L Accounting Desk",
-    category: "Analytics & BI",
+    name: "P&L Accounting & Profit Analytics",
+    category: "Finance",
+    icon: Layers,
     shortcut: "Ctrl + 9",
-    icon: DollarSign,
-    roles: [UserRole.ADMIN, UserRole.MANAGER],
-    description: "Profit & loss statements, expense ledgers & margin tracking",
+    roles: [UserRole.ADMIN],
+    description: "Margin diagnostics, net gross margin breakdown, and profitability ledgers",
   },
   {
-    id: "tutorials",
-    name: "Operational Walkthrough",
-    category: "System",
+    id: "users",
+    name: "Staff Identity & Access Management",
+    category: "Administration",
+    icon: Users,
+    shortcut: "Alt + U",
+    roles: [UserRole.ADMIN],
+    description: "Employee role assignments, credentials management, and branch security PIN resets",
+  },
+  {
+    id: "tutorial",
+    name: "Interactive Guided Walkthroughs",
+    category: "Help",
+    icon: HelpCircle,
     shortcut: "Ctrl + 0",
-    icon: BookOpen,
-    roles: [UserRole.ADMIN, UserRole.MANAGER],
-    description: "Step-by-step cashier handbook & system workflow guide",
+    roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+    description: "System orientation guides, cashiering standards, and step-by-step documentation",
+  },
+  {
+    id: "staff-portal",
+    name: "Staff Workspace & Knowledge Hub",
+    category: "Support",
+    icon: User,
+    shortcut: "Alt + S",
+    roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+    description: "Company directory, shift guidelines, and internal employee reference documentation",
   },
 ];
 
 const POS_HOTKEYS = [
+  { key: "Ctrl + K", description: "Open Quick Switcher & Command Palette" },
+  { key: "Ctrl + B", description: "Toggle Main Left Navigation Sidebar" },
   { key: "Ctrl + 2", description: "Quickly open ERP POS Checkout Register" },
-  { key: "F1", description: "Hold / Park current active shopping cart" },
-  { key: "F2", description: "Open Senior Citizen / Custom Discount dialog" },
+  { key: "F1", description: "Focus Rapid Barcode Laser SKU Scan Field" },
+  { key: "F2", description: "Select & Assign Customer Profile / Account" },
+  { key: "F4", description: "Apply Discount Card / Voucher Reduction" },
   { key: "F7", description: "Focus Cash Tendered & Complete Checkout" },
-  { key: "F8", description: "Reprint latest transaction receipt" },
-  { key: "F9 / F10", description: "Open / Close shift cash float drawer" },
-  { key: "Esc", description: "Clear current cart or cancel active modal" },
-  { key: "Ctrl + /", description: "Toggle this Keyboard Shortcut Command Palette" },
-  { key: "Ctrl + K", description: "Open Quick Module Switcher Search" },
+  { key: "F8", description: "Reprint Last Official Customer Receipt" },
+  { key: "F9 / F10", description: "Open or Close Active Shift Register Drawer" },
 ];
 
 export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> = ({
@@ -158,7 +177,6 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
   const [activeTabMode, setActiveTabMode] = useState<"switcher" | "hotkeys">("switcher");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Filter modules based on user role and search query
   const filteredModules = MODULE_SHORTCUT_MAP.filter((item) => {
     const isAuthorized = item.roles.includes(currentUser.role);
     if (!isAuthorized) return false;
@@ -166,9 +184,9 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
-      (item.name || '').toLowerCase().includes(q) ||
-      (item.category || '').toLowerCase().includes(q) ||
-      (item.shortcut || '').toLowerCase().includes(q) ||
+      (item.name || "").toLowerCase().includes(q) ||
+      (item.category || "").toLowerCase().includes(q) ||
+      (item.shortcut || "").toLowerCase().includes(q) ||
       (item.description ? item.description.toLowerCase().includes(q) : false)
     );
   });
@@ -183,7 +201,6 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
     }
   }, [isOpen]);
 
-  // Handle keyboard navigation inside the command palette modal
   useEffect(() => {
     if (!isOpen) return;
 
@@ -206,9 +223,6 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
           onSelectTab(filteredModules[selectedIndex].id);
           onClose();
         }
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
       }
     };
 
@@ -216,229 +230,200 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, filteredModules, selectedIndex, onSelectTab, onClose]);
 
-  if (!isOpen) return null;
-
-  const modalContent = (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
-        {/* Full-Screen Uniform Backdrop */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          onClick={onClose}
-          className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md"
-        />
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: -10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: -10 }}
-          transition={{ duration: 0.15 }}
-          className="relative w-full max-w-2xl bg-content1 border border-divider/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] text-foreground z-10 transition-all duration-300"
-        >
-          {/* Header & Search Bar */}
-          <div className="p-4 border-b border-divider/20 bg-content1/80 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-wider">
-                <Command className="h-4 w-4" />
-                <span>TilePoint Quick Module Switcher</span>
-              </div>
-
-              {/* Mode Tabs */}
-              <div className="flex items-center gap-1 bg-content2 p-1 rounded-xl border border-divider/20 text-[10px] font-bold">
-                <button
-                  onClick={() => setActiveTabMode("switcher")}
-                  className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
-                    activeTabMode === "switcher"
-                      ? "bg-primary text-primary-foreground font-extrabold shadow-sm"
-                      : "text-default-500 hover:text-foreground"
-                  }`}
-                >
-                  Modules
-                </button>
-                <button
-                  onClick={() => setActiveTabMode("hotkeys")}
-                  className={`px-3 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
-                    activeTabMode === "hotkeys"
-                      ? "bg-primary text-primary-foreground font-extrabold shadow-sm"
-                      : "text-default-500 hover:text-foreground"
-                  }`}
-                >
-                  <Keyboard className="h-3 w-3" />
-                  <span>Cashier Hotkeys</span>
-                </button>
-              </div>
-
-              <button
-                onClick={onClose}
-                className="p-1.5 rounded-full hover:bg-default-100 text-default-500 transition-colors cursor-pointer"
-                title="Close (Esc)"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {activeTabMode === "switcher" && (
-              <div className="relative flex items-center">
-                <Search className="absolute left-3.5 h-4 w-4 text-default-500 pointer-events-none" />
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={searchQuery ?? ''}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setSelectedIndex(0);
-                  }}
-                  placeholder="Type to filter modules or shortcut key (e.g. 'pos', 'inventory', 'Ctrl+2')..."
-                  className="w-full pl-10 pr-4 py-2.5 bg-background rounded-2xl border border-divider/40 text-xs font-semibold placeholder:text-default-500/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                />
-              </div>
-            )}
+  return (
+    <HeroModal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="2xl"
+      zIndex={99999}
+      className="max-h-[85vh]"
+    >
+      <HeroModal.Header className="flex flex-col gap-3 p-4 bg-content1/80 border-b border-divider/20">
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-wider">
+            <Command className="h-4 w-4" />
+            <span>TilePoint Quick Module Switcher</span>
           </div>
 
-          {/* Body Content */}
-          <div className="p-3 overflow-y-auto flex-1 divide-y divide-divider/10 scrollbar-thin">
-            {activeTabMode === "switcher" ? (
-              filteredModules.length === 0 ? (
-                <div className="p-8 text-center text-default-500 text-xs font-medium space-y-2">
-                  <ShieldAlert className="h-8 w-8 mx-auto text-amber-500 opacity-80" />
-                  <p>No matching modules found for "{searchQuery}".</p>
-                  <p className="text-[10px] text-default-500/70">
-                    Try searching for "POS", "Inventory", "Dashboard", or "Calculator".
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {filteredModules.map((item, idx) => {
-                    const ItemIcon = item.icon;
-                    const isActive = activeTab === item.id;
-                    const isSelected = selectedIndex === idx;
+          <div className="flex items-center gap-1 bg-content2 p-1 rounded-xl border border-divider/20 text-[10px] font-bold">
+            <button
+              type="button"
+              onClick={() => setActiveTabMode("switcher")}
+              className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
+                activeTabMode === "switcher"
+                  ? "bg-primary text-primary-foreground font-extrabold shadow-sm"
+                  : "text-default-500 hover:text-foreground"
+              }`}
+            >
+              Modules
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTabMode("hotkeys")}
+              className={`px-3 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeTabMode === "hotkeys"
+                  ? "bg-primary text-primary-foreground font-extrabold shadow-sm"
+                  : "text-default-500 hover:text-foreground"
+              }`}
+            >
+              <Keyboard className="h-3 w-3" />
+              <span>Cashier Hotkeys</span>
+            </button>
+          </div>
+        </div>
 
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => {
-                          onSelectTab(item.id);
-                          onClose();
-                        }}
-                        onMouseEnter={() => setSelectedIndex(idx)}
-                        className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all cursor-pointer text-left border ${
+        {activeTabMode === "switcher" && (
+          <div className="relative flex items-center w-full">
+            <Search className="absolute left-3.5 h-4 w-4 text-default-400 pointer-events-none" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={searchQuery ?? ""}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setSelectedIndex(0);
+              }}
+              placeholder="Type to filter modules or shortcut key (e.g. 'pos', 'inventory', 'Ctrl+2')..."
+              className="w-full pl-10 pr-4 py-2 bg-background rounded-xl border border-divider/40 text-xs font-semibold placeholder:text-default-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-foreground"
+            />
+          </div>
+        )}
+      </HeroModal.Header>
+
+      <HeroModal.Body className="p-3 overflow-y-auto divide-y divide-divider/10 scrollbar-thin">
+        {activeTabMode === "switcher" ? (
+          filteredModules.length === 0 ? (
+            <div className="p-8 text-center text-default-500 text-xs font-medium space-y-2">
+              <ShieldAlert className="h-8 w-8 mx-auto text-warning opacity-80" />
+              <p>No matching modules found for "{searchQuery}".</p>
+              <p className="text-[10px] text-default-400">
+                Try searching for "POS", "Inventory", "Dashboard", or "Calculator".
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {filteredModules.map((item, idx) => {
+                const ItemIcon = item.icon;
+                const isActive = activeTab === item.id;
+                const isSelected = selectedIndex === idx;
+
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      onSelectTab(item.id);
+                      onClose();
+                    }}
+                    onMouseEnter={() => setSelectedIndex(idx)}
+                    className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all cursor-pointer text-left border ${
+                      isSelected
+                        ? "bg-primary/10 border-primary/40 text-primary shadow-sm"
+                        : "bg-transparent border-transparent hover:bg-content2 text-foreground"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
+                      <div
+                        className={`p-2 rounded-xl shrink-0 ${
                           isSelected
-                            ? "bg-primary/10 border-primary/40 text-primary shadow-sm"
-                            : "bg-transparent border-transparent hover:bg-content1 text-foreground"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-content2 text-default-500"
                         }`}
                       >
-                        <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
-                          <div
-                            className={`p-2 rounded-xl shrink-0 ${
-                              isSelected
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-content2 text-default-500"
-                            }`}
-                          >
-                            <ItemIcon className="h-4 w-4" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-black truncate">
-                                {item.name}
-                              </span>
-                              {isActive && (
-                                <HeroChip variant="primary" size="sm" startContent={<Check className="h-2.5 w-2.5" />}>
-                                  Active
-                                </HeroChip>
-                              )}
-                            </div>
-                            <p className="text-[10px] text-default-500 truncate mt-0.5">
-                              {item.description}
-                            </p>
-                          </div>
+                        <ItemIcon className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black truncate">
+                            {item.name}
+                          </span>
+                          {isActive && (
+                            <HeroChip variant="primary" size="sm" startContent={<Check className="h-2.5 w-2.5" />}>
+                              Active
+                            </HeroChip>
+                          )}
                         </div>
-
-                        <div className="flex items-center gap-2 shrink-0">
-                          <HeroChip variant="neutral" size="sm">
-                            {item.category}
-                          </HeroChip>
-                          <HeroChip variant="primary" size="sm" className="font-mono shadow-xs">
-                            {item.shortcut}
-                          </HeroChip>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )
-            ) : (
-              /* Cashier Hotkeys Reference Sheet */
-              <div className="p-2 space-y-3">
-                <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20 text-xs space-y-1">
-                  <div className="font-black text-primary flex items-center gap-2">
-                    <Sparkles className="h-4 w-4" />
-                    <span>Global Cashier Keyboard Efficiency Guide</span>
-                  </div>
-                  <p className="text-[11px] text-default-500 leading-relaxed">
-                    Use these direct keyboard shortcuts anywhere in the TilePoint ERP system to switch modules instantly without touching the mouse!
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {POS_HOTKEYS.map((hk, i) => (
-                    <div
-                      key={i}
-                      className="p-2.5 rounded-xl bg-content1 border border-divider/20 flex items-center justify-between text-xs"
-                    >
-                      <span className="text-[11px] text-foreground font-semibold">
-                        {hk.description}
-                      </span>
-                      <kbd className="px-2 py-0.5 rounded-lg bg-content3 font-black text-[10px] text-primary border border-divider/40 shadow-xs shrink-0 ml-2">
-                        {hk.key}
-                      </kbd>
+                        <p className="text-[10.5px] text-default-500 truncate mt-0.5 font-medium">
+                          {item.description}
+                        </p>
+                      </div>
                     </div>
-                  ))}
-                </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <HeroChip variant="neutral" size="sm">
+                        {item.category}
+                      </HeroChip>
+                      <HeroChip variant="primary" size="sm" className="font-mono shadow-xs">
+                        {item.shortcut}
+                      </HeroChip>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )
+        ) : (
+          <div className="p-2 space-y-3">
+            <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20 text-xs space-y-1">
+              <div className="font-black text-primary flex items-center gap-2">
+                <Sparkles className="h-4 w-4" />
+                <span>Global Cashier Keyboard Efficiency Guide</span>
               </div>
-            )}
-          </div>
-
-          {/* Footer Navigation Hints */}
-          <div className="p-3 bg-content1 border-t border-divider/15 flex items-center justify-between text-[10px] font-medium text-default-500">
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 rounded bg-background border border-divider/30 font-bold">
-                  ↑
-                </kbd>
-                <kbd className="px-1.5 py-0.5 rounded bg-background border border-divider/30 font-bold">
-                  ↓
-                </kbd>
-                <span>Navigate</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 rounded bg-background border border-divider/30 font-bold">
-                  Enter
-                </kbd>
-                <span>Select Module</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 rounded bg-background border border-divider/30 font-bold">
-                  Esc
-                </kbd>
-                <span>Close</span>
-              </span>
+              <p className="text-[11px] text-default-500 leading-relaxed">
+                Use these direct keyboard shortcuts anywhere in the TilePoint ERP system to switch modules instantly without touching the mouse!
+              </p>
             </div>
 
-            <div className="hidden sm:block text-primary font-bold">
-              Press <kbd className="px-1.5 py-0.5 rounded bg-primary/15 border border-primary/30">Ctrl + 1..0</kbd> to jump directly
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {POS_HOTKEYS.map((hk, i) => (
+                <div
+                  key={i}
+                  className="p-2.5 rounded-xl bg-content2/60 border border-divider/20 flex items-center justify-between text-xs"
+                >
+                  <span className="text-[11px] text-foreground font-semibold">
+                    {hk.description}
+                  </span>
+                  <kbd className="px-2 py-0.5 rounded-lg bg-content3 font-black text-[10px] text-primary border border-divider/40 shadow-xs shrink-0 ml-2">
+                    {hk.key}
+                  </kbd>
+                </div>
+              ))}
             </div>
           </div>
-        </motion.div>
-      </div>
-    </AnimatePresence>
+        )}
+      </HeroModal.Body>
+
+      <HeroModal.Footer className="p-3 border-t border-divider/15 justify-between text-[10px] font-medium text-default-500">
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 rounded bg-background border border-divider/30 font-bold">
+              ↑
+            </kbd>
+            <kbd className="px-1.5 py-0.5 rounded bg-background border border-divider/30 font-bold">
+              ↓
+            </kbd>
+            <span>Navigate</span>
+          </span>
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 rounded bg-background border border-divider/30 font-bold">
+              Enter
+            </kbd>
+            <span>Select Module</span>
+          </span>
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 rounded bg-background border border-divider/30 font-bold">
+              Esc
+            </kbd>
+            <span>Close</span>
+          </span>
+        </div>
+
+        <div className="hidden sm:block text-primary font-bold">
+          Press <kbd className="px-1.5 py-0.5 rounded bg-primary/15 border border-primary/30">Ctrl + 1..0</kbd> to jump directly
+        </div>
+      </HeroModal.Footer>
+    </HeroModal>
   );
-
-  if (typeof document === 'undefined') return null;
-  return createPortal(modalContent, document.body);
 };
 
 export default QuickModuleSwitcherModal;

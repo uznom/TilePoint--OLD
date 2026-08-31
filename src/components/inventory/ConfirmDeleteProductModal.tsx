@@ -1,7 +1,7 @@
 import React from 'react';
-import { createPortal } from 'react-dom';
 import { AlertTriangle } from 'lucide-react';
 import { HeroButton } from '../common/ui/HeroButton';
+import { HeroModal } from '../common/ui/HeroModal';
 import { HoldToConfirmButton } from '../HoldToConfirmButton';
 
 interface ConfirmDeleteProductModalProps {
@@ -21,62 +21,64 @@ export const ConfirmDeleteProductModal: React.FC<ConfirmDeleteProductModalProps>
   blockedReason,
   onConfirm,
 }) => {
-  if (!isOpen) return null;
-
-  const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
-      {/* Full-Screen Uniform Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
-        onClick={onClose} 
-      />
-      <div className="relative w-full max-w-sm rounded-large border border-divider p-6 z-20 shadow-2xl bg-content1 text-foreground text-center space-y-4">
-        <div className="text-left space-y-2">
-          <h3 className="text-base font-black text-primary uppercase tracking-wide flex items-center gap-2">
-            <AlertTriangle className="text-danger h-5 w-5" /> 
-            <span>Archive Product safe-listing?</span>
-          </h3>
-          {isBlocked ? (
-            <div className="bg-warning/15 border border-warning/30 p-3 rounded-medium text-left space-y-1 mt-2">
-              <span className="text-[10px] font-black uppercase text-warning tracking-wider block">Archiving Blocked</span>
-              <p className="text-[10.5px] text-default-500 leading-normal font-sans">
-                Row-clearing and product archiving are disabled because the register has: <strong className="text-warning font-black">{blockedReason}</strong>.
-              </p>
-            </div>
-          ) : (
-            <p className="text-xs text-default-500 leading-relaxed">
-              Confirm soft-deletion of <strong className="text-foreground font-black">{productName}</strong>? All warehouse catalog configurations and stats metrics will adjust.
-            </p>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-2 border-t border-divider pt-4">
-          <div className="flex justify-end items-center gap-2">
-            <HeroButton
-              type="button"
-              variant="flat"
-              size="sm"
-              onClick={onClose}
-              className="font-bold text-xs uppercase tracking-wider"
-            >
-              Cancel
-            </HeroButton>
-            {!isBlocked && (
-              <div className="w-48">
-                <HoldToConfirmButton
-                  onConfirm={onConfirm}
-                  variant="rose"
-                >
-                  Hold 3s to Archive
-                </HoldToConfirmButton>
-              </div>
-            )}
+  return (
+    <HeroModal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="sm"
+    >
+      <HeroModal.Header className="pb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-danger/10 text-danger shrink-0 border border-danger/20">
+            <AlertTriangle className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-sm sm:text-base font-black text-foreground uppercase tracking-wide">
+              Archive Product Safe-listing
+            </h3>
+            <p className="text-[10.5px] text-default-500 font-medium">Inventory catalog adjustment</p>
           </div>
         </div>
-      </div>
-    </div>
-  );
+      </HeroModal.Header>
 
-  if (typeof document === 'undefined') return null;
-  return createPortal(modalContent, document.body);
+      <HeroModal.Body className="py-4 space-y-3 text-left">
+        {isBlocked ? (
+          <div className="bg-warning/15 border border-warning/30 p-3.5 rounded-2xl text-left space-y-1">
+            <span className="text-[10px] font-black uppercase text-warning tracking-wider block">Archiving Blocked</span>
+            <p className="text-[11px] text-default-500 leading-normal font-sans">
+              Row-clearing and product archiving are disabled because the register has: <strong className="text-warning font-black">{blockedReason}</strong>.
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs text-default-500 leading-relaxed font-normal">
+            Confirm soft-deletion of <strong className="text-foreground font-black">{productName}</strong>? All warehouse catalog configurations and stats metrics will adjust.
+          </p>
+        )}
+      </HeroModal.Body>
+
+      <HeroModal.Footer className="justify-end items-center gap-2 pt-3 pb-4">
+        <HeroButton
+          type="button"
+          variant="flat"
+          size="sm"
+          onClick={onClose}
+          className="font-bold text-xs"
+        >
+          Cancel
+        </HeroButton>
+        {!isBlocked && (
+          <div className="w-48">
+            <HoldToConfirmButton
+              onConfirm={onConfirm}
+              variant="rose"
+            >
+              Hold 3s to Archive
+            </HoldToConfirmButton>
+          </div>
+        )}
+      </HeroModal.Footer>
+    </HeroModal>
+  );
 };
+
+export default ConfirmDeleteProductModal;

@@ -16,8 +16,9 @@ Trash2,
 X
 } from 'lucide-react';
 import React,{ useState } from 'react';
-import { createPortal } from 'react-dom';
 import { HeroSelect } from './common/ui/HeroSelect';
+import { HeroModal } from './common/ui/HeroModal';
+import { HeroButton } from './common/ui/HeroButton';
 import { useDb } from '../context/DbContext';
 import {
 CustomPaymentMethod,
@@ -371,44 +372,35 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
     setShowDmgForm(true);
   };
 
-  if (!isOpen) return null;
-
-  const modalContent = (
-    <div className="fixed inset-0 z-[100050] flex items-center justify-center p-4 animate-fade-in font-sans">
-      {/* Full-Screen Uniform Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md" 
-        onClick={onClose}
-      />
-      <div className="relative w-full max-w-5xl max-h-[92vh] flex flex-col bg-content1 border border-divider/30 rounded-2xl shadow-2xl overflow-hidden text-foreground z-10">
-        {/* Header */}
-        <div className="px-6 py-5 border-b border-divider/20 flex items-center justify-between bg-content2/50 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-primary/10 text-primary border border-primary/20">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-black uppercase text-foreground">
-                  Store Options & Catalogs
-                </h2>
-                <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                  Active
-                </span>
-              </div>
-              <p className="text-xs text-default-500 font-medium">
-                Manage product categories, measurement units, payment methods, discounts, and damage causes.
-              </p>
-            </div>
+  return (
+    <HeroModal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="5xl"
+      zIndex={100050}
+      className="max-h-[92vh]"
+    >
+      {/* Header */}
+      <HeroModal.Header className="px-6 py-5 border-b border-divider/20 flex items-center justify-between bg-content1 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-2xl bg-primary/10 text-primary border border-primary/20 shrink-0">
+            <Sparkles className="h-5 w-5" />
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-xl text-default-400 hover:text-foreground hover:bg-default-100 transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-black uppercase text-foreground">
+                Store Options & Catalogs
+              </h2>
+              <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                Active
+              </span>
+            </div>
+            <p className="text-xs text-default-500 font-medium mt-0.5">
+              Manage product categories, measurement units, payment methods, discounts, and damage causes.
+            </p>
+          </div>
         </div>
+      </HeroModal.Header>
 
         {/* Tab Navigation */}
         <div
@@ -1514,22 +1506,21 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-divider/20 bg-content2/40 flex justify-between items-center shrink-0">
+        <HeroModal.Footer className="px-6 py-4 border-t border-divider/20 bg-content1 flex justify-between items-center shrink-0">
           <div className="text-[11px] text-default-500 font-medium">
             Changes synchronize to all connected POS registers, branch devices, and inventory ledgers.
           </div>
-          <button
+          <HeroButton
             type="button"
+            color="primary"
+            variant="solid"
+            size="sm"
             onClick={onClose}
-            className="px-5 py-2 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl hover:opacity-90 transition-all shadow-sm cursor-pointer"
+            className="font-bold text-xs uppercase tracking-wider"
           >
             Close Manager
-          </button>
-        </div>
-      </div>
-    </div>
+          </HeroButton>
+        </HeroModal.Footer>
+    </HeroModal>
   );
-
-  if (typeof document === 'undefined') return null;
-  return createPortal(modalContent, document.body);
 };

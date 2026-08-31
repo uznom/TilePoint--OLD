@@ -1,10 +1,10 @@
+import { Barcode, Printer } from 'lucide-react';
 import React from 'react';
-import { createPortal } from 'react-dom';
-import { Barcode, X, Printer } from 'lucide-react';
 import { Product } from '../../types/db';
 import { StyledBarcode } from '../../utils/barcodeGenerator';
-import { HeroTooltip } from '../common/ui/HeroTooltip';
 import { HeroButton } from '../common/ui/HeroButton';
+import { HeroModal } from '../common/ui/HeroModal';
+import { HeroTooltip } from '../common/ui/HeroTooltip';
 
 interface BarcodeModalProps {
   isOpen: boolean;
@@ -28,31 +28,29 @@ export const BarcodeModal: React.FC<BarcodeModalProps> = React.memo(({
   const isTile = (product.category || '').toLowerCase().includes('tile');
   const unit = product.unit || 'pcs';
 
-  const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
-      {/* Full-Screen Uniform Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md" 
-        onClick={onClose} 
-      />
-      <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-large border border-divider p-6 z-20 shadow-2xl bg-content1 text-foreground text-center space-y-5">
-        
-        <div className="flex justify-between items-center border-b border-divider pb-3 text-left">
-          <h3 className="text-sm font-black text-primary uppercase tracking-wide flex items-center gap-2">
-            <Barcode className="h-5 w-5 text-primary" /> Barcode Terminal Label
-          </h3>
-          <button 
-            type="button" 
-            onClick={onClose} 
-            className="text-default-400 hover:text-foreground cursor-pointer p-1 rounded-medium hover:bg-default-100 transition-colors"
-            aria-label="Close modal"
-          >
-            <X className="h-4.5 w-4.5" />
-          </button>
+  return (
+    <HeroModal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="md"
+    >
+      <HeroModal.Header className="pb-3.5">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2.5 rounded-2xl bg-primary/10 text-primary border border-primary/20 shrink-0">
+            <Barcode className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-sm sm:text-base font-black text-foreground uppercase tracking-wider">
+              Barcode Terminal Label
+            </h3>
+            <p className="text-[10.5px] text-default-500 font-medium">Scannable SKU & EAN-13 generator</p>
+          </div>
         </div>
+      </HeroModal.Header>
 
+      <HeroModal.Body className="py-4 space-y-4 text-left">
         {/* Product specifications context summary */}
-        <div className="text-left bg-content2 p-4 rounded-medium border border-divider space-y-3">
+        <div className="bg-content2/50 p-4 rounded-2xl border border-divider/30 space-y-3">
           <div>
             <div className="text-[9px] text-primary font-black uppercase tracking-wider">
               {product.category}
@@ -60,15 +58,15 @@ export const BarcodeModal: React.FC<BarcodeModalProps> = React.memo(({
             <strong className="text-sm text-foreground block font-extrabold leading-tight mt-0.5">
               {product.productName}
             </strong>
-            <p className="text-[10px] text-default-500 mt-1">
-              Brand: <span className="font-semibold text-default-700 dark:text-default-300">{product.brand || 'TilePoint'}</span> • Design: <span className="font-semibold text-default-700 dark:text-default-300">{product.designName || 'N/A'}</span>
+            <p className="text-[10.5px] text-default-500 mt-1 font-medium">
+              Brand: <span className="font-semibold text-foreground">{product.brand || 'TilePoint'}</span> • Design: <span className="font-semibold text-foreground">{product.designName || 'N/A'}</span>
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 border-t border-divider pt-2.5 text-[10px] text-default-600">
+          <div className="grid grid-cols-2 gap-2 border-t border-divider/20 pt-2.5 text-[10px] text-default-500">
             <HeroTooltip content="Click to copy SKU to clipboard" placement="top">
               <div 
-                className="bg-content1 p-2 rounded-medium border border-divider hover:border-primary/50 transition-colors cursor-pointer group select-none"
+                className="bg-content1 p-2 rounded-xl border border-divider/40 hover:border-primary/50 transition-colors cursor-pointer group select-none"
                 onClick={() => {
                   navigator.clipboard.writeText(product.sku);
                   showToast(`SKU ${product.sku} copied to clipboard!`);
@@ -82,14 +80,14 @@ export const BarcodeModal: React.FC<BarcodeModalProps> = React.memo(({
               </div>
             </HeroTooltip>
 
-            <div className="bg-content1 p-2 rounded-medium border border-divider">
+            <div className="bg-content1 p-2 rounded-xl border border-divider/40">
               <span className="block text-[8px] uppercase tracking-wider text-default-400 font-extrabold font-sans mb-0.5">Dimension (Size)</span>
               <span className="font-bold text-foreground text-[11px] block truncate">{product.size || 'N/A'}</span>
             </div>
 
             <HeroTooltip content="Click to copy Product Code to clipboard" placement="top">
               <div 
-                className="bg-content1 p-2 rounded-medium border border-divider hover:border-primary/50 transition-colors cursor-pointer group select-none"
+                className="bg-content1 p-2 rounded-xl border border-divider/40 hover:border-primary/50 transition-colors cursor-pointer group select-none"
                 onClick={() => {
                   navigator.clipboard.writeText(product.productCode);
                   showToast(`Product Code ${product.productCode} copied to clipboard!`);
@@ -103,7 +101,7 @@ export const BarcodeModal: React.FC<BarcodeModalProps> = React.memo(({
               </div>
             </HeroTooltip>
 
-            <div className="bg-content1 p-2 rounded-medium border border-divider">
+            <div className="bg-content1 p-2 rounded-xl border border-divider/40">
               <span className="block text-[8px] uppercase tracking-wider text-default-400 font-extrabold font-sans mb-0.5">
                 {isTile ? 'Box Quantity' : 'Packaging Factor'}
               </span>
@@ -115,62 +113,61 @@ export const BarcodeModal: React.FC<BarcodeModalProps> = React.memo(({
         </div>
 
         {/* Visual barcode layout */}
-        <div className="flex flex-col items-center justify-center space-y-1.5 py-1">
-          <span className="text-[10px] font-black uppercase tracking-widest text-default-500 flex items-center gap-1">
-            <Barcode className="h-3.5 w-3.5 text-primary" /> Barcode label
+        <div className="flex flex-col items-center justify-center space-y-2 py-2 bg-content1 rounded-2xl border border-divider/20 p-4">
+          <span className="text-[10px] font-black uppercase tracking-widest text-default-500 flex items-center gap-1.5">
+            <Barcode className="h-3.5 w-3.5 text-primary" /> Barcode Scannable Preview
           </span>
           <StyledBarcode code={product.barcode} />
         </div>
 
-        {/* Print action buttons */}
-        <div className="flex flex-col gap-2 pt-2.5">
+        <div className="text-[10px] text-default-500 font-medium text-center leading-normal bg-content2/40 p-2.5 rounded-xl border border-divider/20">
+          Compatible with Zebra, Brother, TSC, and standard thermal barcode printers.
+        </div>
+      </HeroModal.Body>
+
+      <HeroModal.Footer className="justify-between gap-2 pt-3 pb-4">
+        <HeroButton
+          type="button"
+          onClick={() => {
+            navigator.clipboard.writeText(product.barcode);
+            showToast(`Barcode ${product.barcode} copied to clipboard!`);
+          }}
+          variant="flat"
+          color="default"
+          size="sm"
+          className="font-bold text-xs"
+        >
+          Copy Barcode Raw
+        </HeroButton>
+
+        <div className="flex items-center gap-2">
+          <HeroButton
+            type="button"
+            onClick={onClose}
+            variant="flat"
+            size="sm"
+            className="font-bold text-xs"
+          >
+            Close
+          </HeroButton>
           <HeroButton
             type="button"
             onClick={onSimulatePrint}
             isLoading={printingCode}
             color="primary"
             variant="solid"
+            size="sm"
             startIcon={!printingCode ? <Printer className="h-4 w-4 shrink-0" /> : undefined}
-            className="w-full text-xs font-black uppercase tracking-wider"
+            className="text-xs font-black uppercase tracking-wider"
           >
-            {printingCode ? 'Smart Spooling...' : 'Print Scannable Label'}
-          </HeroButton>
-
-          <HeroButton
-            type="button"
-            onClick={() => {
-              navigator.clipboard.writeText(product.barcode);
-              showToast(`Barcode ${product.barcode} copied to clipboard!`);
-            }}
-            variant="bordered"
-            color="default"
-            size="sm"
-            className="w-full text-[10px] font-black uppercase tracking-wider"
-          >
-            Copy Barcode Raw
-          </HeroButton>
-
-          <div className="text-[9px] text-default-500 font-medium leading-normal bg-content2 p-2 rounded-medium border border-divider mt-1">
-            Compatible with Zebra, Brother, & standard web spoolers.
-          </div>
-
-          <HeroButton
-            type="button"
-            onClick={onClose}
-            variant="light"
-            size="sm"
-            className="w-full text-xs font-bold text-default-600 hover:text-foreground mt-1"
-          >
-            Close View
+            {printingCode ? 'Spooling...' : 'Print Scannable Label'}
           </HeroButton>
         </div>
-
-      </div>
-    </div>
+      </HeroModal.Footer>
+    </HeroModal>
   );
-
-  if (typeof document === 'undefined') return null;
-  return createPortal(modalContent, document.body);
 });
 
 BarcodeModal.displayName = 'BarcodeModal';
+
+export default BarcodeModal;

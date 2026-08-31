@@ -101,7 +101,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
     shifts,
     createStockTransfer,
     productCategories,
-    poCart,
+    poCart = [],
     syncPoCart,
     isResourceLocked,
     pessimisticLocks,
@@ -917,7 +917,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
       showToast('No items in the current view to queue.');
       return;
     }
-    const updated = [...poCart];
+    const updated = [...(poCart || [])];
     let countAdded = 0;
 
     modalFilteredAlertItems.forEach((item: any) => {

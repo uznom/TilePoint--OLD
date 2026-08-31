@@ -1,9 +1,9 @@
+import { Clock } from 'lucide-react';
 import React from 'react';
-import { createPortal } from 'react-dom';
-import { Clock, X } from 'lucide-react';
-import { Branch, Product, User } from '../../types/db';
 import { getBranchOptionLabel } from '../../lib/branchUtils';
+import { Branch, Product, User } from '../../types/db';
 import { HeroButton } from '../common/ui/HeroButton';
+import { HeroModal } from '../common/ui/HeroModal';
 import { HeroSelect } from '../common/ui/HeroSelect';
 
 interface RegisterBatchModalProps {
@@ -53,35 +53,28 @@ export const RegisterBatchModal: React.FC<RegisterBatchModalProps> = ({
   batchFormRemarks,
   setBatchFormRemarks,
 }) => {
-  if (!isOpen) return null;
+  return (
+    <HeroModal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="lg"
+    >
+      <form onSubmit={onSubmit} className="flex flex-col h-full overflow-hidden">
+        <HeroModal.Header className="pb-3.5">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2.5 rounded-2xl bg-danger/10 text-danger border border-danger/20 shrink-0">
+              <Clock className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-black text-foreground uppercase tracking-wider">
+                Register Chemical Stock Batch
+              </h3>
+              <p className="text-[10.5px] text-default-500 font-medium">Batch lifecycle and shelf-life tracking</p>
+            </div>
+          </div>
+        </HeroModal.Header>
 
-  const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
-      {/* Full-Screen Uniform Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
-        onClick={onClose} 
-      />
-      <form
-        onSubmit={onSubmit}
-        className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-large border border-divider p-6 z-30 shadow-2xl bg-content1 text-foreground text-left space-y-4"
-      >
-        <div className="flex justify-between items-center border-b border-divider pb-3">
-          <h3 className="text-sm font-black text-primary uppercase tracking-wider flex items-center gap-2">
-            <Clock className="h-5 w-5 text-danger" />
-            <span>Register Chemical Stock Batch</span>
-          </h3>
-          <button 
-            type="button" 
-            onClick={onClose} 
-            className="text-default-400 hover:text-foreground cursor-pointer p-1.5 rounded-medium hover:bg-default-100 transition-colors"
-            aria-label="Close"
-          >
-            <X className="h-4.5 w-4.5" />
-          </button>
-        </div>
-
-        <div className="space-y-3 text-xs">
+        <HeroModal.Body className="py-4 space-y-4 text-xs text-left">
           {/* Product Selection */}
           <div className="space-y-1">
             <HeroSelect
@@ -109,7 +102,7 @@ export const RegisterBatchModal: React.FC<RegisterBatchModalProps> = ({
               const selectedProductObj = products.find(p => p.id === batchFormProductId);
               if (selectedProductObj && !selectedProductObj.hasExpiration) {
                 return (
-                  <div className="bg-warning/10 border border-warning/20 text-warning p-2.5 rounded-medium text-[10.5px] leading-relaxed mt-1">
+                  <div className="bg-warning/10 border border-warning/20 text-warning p-3 rounded-2xl text-[11px] leading-relaxed mt-1 font-medium">
                     <strong>Note:</strong> This product is configured as <strong>not having an expiration date</strong> in the catalog. If you are tracking a chemical material, consider editing the product details to enable "Expiry Tracked" status.
                   </div>
                 );
@@ -119,51 +112,59 @@ export const RegisterBatchModal: React.FC<RegisterBatchModalProps> = ({
           </div>
 
           {/* Batch Number & Quantity */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="font-extrabold text-default-500 uppercase tracking-wider text-[10px]">Batch / Lot #</label>
+              <label className="font-extrabold text-default-500 uppercase tracking-wider text-[10px]">
+                Batch / Lot #
+              </label>
               <input
                 type="text"
                 required
                 placeholder="Batch / Lot number"
                 value={batchFormNo ?? ''}
                 onChange={e => setBatchFormNo(e.target.value)}
-                className="w-full bg-content2 border border-divider focus:border-primary px-3 py-2 text-xs focus:outline-none rounded-medium font-bold text-foreground"
+                className="w-full bg-background border border-divider/50 focus:border-primary px-3.5 py-2 text-xs focus:outline-none rounded-xl font-bold text-foreground"
               />
             </div>
             <div className="space-y-1">
-              <label className="font-extrabold text-default-500 uppercase tracking-wider text-[10px]">Qty (Bags/Units)</label>
+              <label className="font-extrabold text-default-500 uppercase tracking-wider text-[10px]">
+                Qty (Bags/Units)
+              </label>
               <input
                 type="number"
                 required
                 min={1}
                 value={batchFormQty ?? ''}
                 onChange={e => setBatchFormQty(parseInt(e.target.value) || 0)}
-                className="w-full bg-content2 border border-divider focus:border-primary px-3 py-2 text-xs focus:outline-none rounded-medium font-bold text-foreground"
+                className="w-full bg-background border border-divider/50 focus:border-primary px-3.5 py-2 text-xs focus:outline-none rounded-xl font-bold text-foreground"
               />
             </div>
           </div>
 
           {/* Mfg Date & Expiry Date */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="font-extrabold text-default-500 uppercase tracking-wider text-[10px]">Manufacture Date</label>
+              <label className="font-extrabold text-default-500 uppercase tracking-wider text-[10px]">
+                Manufacture Date
+              </label>
               <input
                 type="date"
                 required
                 value={batchFormMfgDate ?? ''}
                 onChange={e => setBatchFormMfgDate(e.target.value)}
-                className="w-full bg-content2 border border-divider focus:border-primary px-3 py-2 text-xs focus:outline-none rounded-medium font-bold text-foreground cursor-pointer"
+                className="w-full bg-background border border-divider/50 focus:border-primary px-3.5 py-2 text-xs focus:outline-none rounded-xl font-bold text-foreground cursor-pointer"
               />
             </div>
             <div className="space-y-1">
-              <label className="font-extrabold text-default-500 uppercase tracking-wider text-[10px]">Expiry Date</label>
+              <label className="font-extrabold text-default-500 uppercase tracking-wider text-[10px]">
+                Expiry Date
+              </label>
               <input
                 type="date"
                 required
                 value={batchFormExpDate ?? ''}
                 onChange={e => setBatchFormExpDate(e.target.value)}
-                className="w-full bg-content2 border border-divider focus:border-primary px-3 py-2 text-xs focus:outline-none rounded-medium font-bold text-foreground cursor-pointer"
+                className="w-full bg-background border border-divider/50 focus:border-primary px-3.5 py-2 text-xs focus:outline-none rounded-xl font-bold text-foreground cursor-pointer"
               />
             </div>
           </div>
@@ -185,8 +186,10 @@ export const RegisterBatchModal: React.FC<RegisterBatchModalProps> = ({
               />
             ) : (
               <div className="space-y-1">
-                <label className="font-extrabold text-default-500 uppercase tracking-wider text-[10px]">Branch Allocation</label>
-                <div className="w-full bg-content2 border border-divider px-3 py-2 text-xs rounded-medium font-bold text-default-500">
+                <label className="font-extrabold text-default-500 uppercase tracking-wider text-[10px]">
+                  Branch Allocation
+                </label>
+                <div className="w-full bg-content2 border border-divider px-3.5 py-2 text-xs rounded-xl font-bold text-default-500">
                   {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
                 </div>
               </div>
@@ -195,24 +198,26 @@ export const RegisterBatchModal: React.FC<RegisterBatchModalProps> = ({
 
           {/* Remarks */}
           <div className="space-y-1">
-            <label className="font-extrabold text-default-500 uppercase tracking-wider text-[10px]">Storage Notes / Remarks</label>
+            <label className="font-extrabold text-default-500 uppercase tracking-wider text-[10px]">
+              Storage Notes / Remarks
+            </label>
             <textarea
               rows={2}
               placeholder="Storage specifications, quality checks..."
               value={batchFormRemarks ?? ''}
               onChange={e => setBatchFormRemarks(e.target.value)}
-              className="w-full bg-content2 border border-divider focus:border-primary px-3 py-2 text-xs focus:outline-none rounded-medium font-medium text-foreground"
+              className="w-full bg-background border border-divider/50 focus:border-primary px-3.5 py-2 text-xs focus:outline-none rounded-xl font-medium text-foreground"
             />
           </div>
-        </div>
+        </HeroModal.Body>
 
-        <div className="pt-4 flex justify-end gap-2 border-t border-divider">
+        <HeroModal.Footer className="justify-end gap-2 pt-3 pb-4">
           <HeroButton
             type="button"
             variant="flat"
             size="sm"
             onClick={onClose}
-            className="font-bold text-xs uppercase tracking-wider"
+            className="font-bold text-xs"
           >
             Cancel
           </HeroButton>
@@ -225,11 +230,10 @@ export const RegisterBatchModal: React.FC<RegisterBatchModalProps> = ({
           >
             Log Batch Entry
           </HeroButton>
-        </div>
+        </HeroModal.Footer>
       </form>
-    </div>
+    </HeroModal>
   );
-
-  if (typeof document === 'undefined') return null;
-  return createPortal(modalContent, document.body);
 };
+
+export default RegisterBatchModal;

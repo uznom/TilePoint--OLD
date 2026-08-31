@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { 
   Building2, 
   Check, 
@@ -14,12 +13,12 @@ import {
   RefreshCw, 
   Sliders, 
   Sparkles, 
-  X 
 } from 'lucide-react';
 import { Branch, Supplier, User, UserRole } from '../../types/db';
 import { useDb } from '../../context/DbContext';
 import { getBranchOptionLabel } from '../../lib/branchUtils';
 import { HeroButton, HeroCheckbox, HeroSelect } from '../common/ui';
+import { HeroModal } from '../common/ui/HeroModal';
 
 interface AddEditProductModalProps {
   isOpen: boolean;
@@ -196,37 +195,31 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
     { id: 3, label: 'Pricing & Logistics', icon: DollarSign, desc: 'Cost, retail markup & stock' },
   ];
 
-  const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
-      {/* Full-Screen Uniform Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
-        onClick={onClose} 
-      />
-      <form
-        onSubmit={onSubmit}
-        className="relative w-full max-w-4xl rounded-large border border-divider p-6 z-20 shadow-2xl bg-content1 text-foreground flex flex-col gap-5 text-left overflow-y-auto max-h-[90vh]"
-      >
+  return (
+    <HeroModal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="4xl"
+    >
+      <form onSubmit={onSubmit} className="flex flex-col h-full overflow-hidden">
         {/* Modal Title Header */}
-        <div className="flex items-center justify-between border-b border-divider pb-4">
-          <div>
-            <h3 className="text-base font-black text-primary uppercase tracking-wider flex items-center gap-2">
+        <HeroModal.Header className="pb-4 border-b border-divider">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-2xl bg-primary/10 text-primary border border-primary/20 shrink-0">
               <Layers className="h-5 w-5" />
-              <span>{isEditMode ? 'Modify Product Specifications' : 'Register New Hardware Inventory Unit'}</span>
-            </h3>
-            <p className="text-[11px] text-default-500 font-medium mt-0.5">
-              {isEditMode ? 'Update catalog attributes, pricing structures, and inventory parameters' : 'Step-by-step product onboarding wizard'}
-            </p>
+            </div>
+            <div>
+              <h3 className="text-base font-black text-foreground uppercase tracking-wider">
+                {isEditMode ? 'Modify Product Specifications' : 'Register New Hardware Inventory Unit'}
+              </h3>
+              <p className="text-[11px] text-default-500 font-medium mt-0.5">
+                {isEditMode ? 'Update catalog attributes, pricing structures, and inventory parameters' : 'Step-by-step product onboarding wizard'}
+              </p>
+            </div>
           </div>
-          <button 
-            type="button" 
-            onClick={onClose} 
-            className="text-default-400 hover:text-foreground cursor-pointer p-1.5 rounded-medium hover:bg-default-100 transition-colors"
-            aria-label="Close modal"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+        </HeroModal.Header>
+
+        <HeroModal.Body className="p-6 space-y-5 overflow-y-auto">
 
         {/* Multi-Step Wizard Progress Header */}
         <div className="grid grid-cols-3 gap-2 bg-content2/50 p-1.5 rounded-large border border-divider">
@@ -844,7 +837,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                         </div>
                         <div className="bg-content1 p-3 rounded-medium border border-warning/20 text-[11px] text-default-500 flex flex-col justify-center gap-0.5">
                           <div className="font-bold text-warning flex items-center gap-1">
-                            <span></span> Active Expiry Flagging
+                            <span>●</span> Active Expiry Flagging
                           </div>
                           <div className="text-[10px] leading-relaxed text-default-400">
                             Items with active expirations are automatically tracked and marked on sales invoices, stock transfer forms, and listed in the central Expiry Calendar.
@@ -869,68 +862,67 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
             </div>
           )}
         </div>
+      </HeroModal.Body>
 
-        {/* Wizard Command Footer */}
-        <div className="flex items-center justify-between border-t border-divider pt-4 mt-2">
-          <div className="flex items-center gap-2">
+      <HeroModal.Footer className="justify-between items-center gap-3 p-4 px-6 border-t border-divider bg-content1">
+        <div className="flex items-center gap-3">
+          <HeroButton
+            type="button"
+            variant="flat"
+            size="sm"
+            onClick={onClose}
+            className="font-bold text-xs"
+          >
+            Cancel
+          </HeroButton>
+          <span className="text-[10px] text-default-400 font-bold hidden sm:inline">
+            Step {currentStep} of 3
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {currentStep > 1 && (
             <HeroButton
               type="button"
               variant="flat"
               size="sm"
-              onClick={onClose}
-              className="font-bold text-xs uppercase tracking-wider"
+              onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
+              className="font-bold text-xs"
+              startIcon={<ChevronLeft className="h-3.5 w-3.5" />}
             >
-              Cancel
+              Previous Step
             </HeroButton>
-            <span className="text-[10px] text-default-400 font-bold hidden sm:inline">
-              Step {currentStep} of 3
-            </span>
-          </div>
+          )}
 
-          <div className="flex items-center gap-2">
-            {currentStep > 1 && (
-              <HeroButton
-                type="button"
-                variant="flat"
-                size="sm"
-                onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
-                className="font-bold text-xs uppercase tracking-wider"
-                startIcon={<ChevronLeft className="h-3.5 w-3.5" />}
-              >
-                Previous Step
-              </HeroButton>
-            )}
-
-            {currentStep < 3 ? (
-              <HeroButton
-                type="button"
-                color="primary"
-                variant="solid"
-                size="sm"
-                onClick={handleNextStep}
-                className="font-bold text-xs uppercase tracking-wider"
-                endIcon={<ChevronRight className="h-3.5 w-3.5" />}
-              >
-                Next Step
-              </HeroButton>
-            ) : (
-              <HeroButton
-                type="submit"
-                color="primary"
-                variant="solid"
-                size="sm"
-                className="font-bold text-xs uppercase tracking-wider shadow-md shadow-primary/20"
-                startIcon={<Sparkles className="h-3.5 w-3.5" />}
-              >
-                {isEditMode ? 'Save Specifications' : 'Validate & Save Product'}
-              </HeroButton>
-            )}
-          </div>
+          {currentStep < 3 ? (
+            <HeroButton
+              type="button"
+              color="primary"
+              variant="solid"
+              size="sm"
+              onClick={handleNextStep}
+              className="font-bold text-xs uppercase tracking-wider"
+              endIcon={<ChevronRight className="h-3.5 w-3.5" />}
+            >
+              Next Step
+            </HeroButton>
+          ) : (
+            <HeroButton
+              type="submit"
+              color="primary"
+              variant="solid"
+              size="sm"
+              className="font-bold text-xs uppercase tracking-wider shadow-md shadow-primary/20"
+              startIcon={<Sparkles className="h-3.5 w-3.5" />}
+            >
+              {isEditMode ? 'Save Specifications' : 'Validate & Save Product'}
+            </HeroButton>
+          )}
         </div>
-      </form>
-    </div>
-  );
-
-  if (typeof document === 'undefined') return null;
-  return createPortal(modalContent, document.body);
+      </HeroModal.Footer>
+    </form>
+  </HeroModal>
+);
 };
+
+export default AddEditProductModal;

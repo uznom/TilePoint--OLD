@@ -9,7 +9,7 @@ import { motion } from 'motion/react';
 import { useDb } from '../context/DbContext';
 import { User, UserRole, UserStatus } from '../types/db';
 import { useResponsivePageSize, TablePagination } from './TablePagination';
-import { HeroChip, HeroButton, HeroSelect } from './common/ui';
+import { HeroChip, HeroButton, HeroSelect, HeroModal } from './common/ui';
 import { HeroDropdownSelect } from './common/ui/HeroDropdown';
 import { HeroTable } from './common/ui/HeroTable';
 import { ToastNotification } from './ToastNotification';
@@ -1521,140 +1521,137 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
       )}
 
       {/* MODAL: Add / Edit User profile form */}
-      {showModal && (
-        <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm" onClick={() => setShowModal(false)} />
-          <form
-            onSubmit={handleSubmit}
-            className="relative w-full max-w-md rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl space-y-4 bg-content1 text-foreground"
-          >
-            <div className="flex justify-between items-center border-b border-divider/20 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                  <Users className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-foreground">
-                    {isEditMode ? 'Modify Employee Profile' : 'Enlist New Corporate Employee'}
-                  </h3>
-                  <p className="text-[10.5px] text-default-500">Configure credentials, station branch, and security parameters</p>
-                </div>
+      <HeroModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        size="md"
+        zIndex={50}
+      >
+        <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
+          <HeroModal.Header className="pb-3.5 border-b border-divider/20">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2.5 rounded-2xl bg-primary/10 text-primary border border-primary/20 shrink-0">
+                <Users className="h-5 w-5" />
               </div>
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="text-default-400 hover:text-foreground cursor-pointer p-1.5 rounded-full hover:bg-default-100"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div>
+                <h3 className="text-sm sm:text-base font-black text-foreground">
+                  {isEditMode ? 'Modify Employee Profile' : 'Enlist New Corporate Employee'}
+                </h3>
+                <p className="text-[10.5px] text-default-500 font-medium">Configure credentials, station branch, and security parameters</p>
+              </div>
+            </div>
+          </HeroModal.Header>
+
+          <HeroModal.Body className="py-4 space-y-3.5 text-left">
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-primary uppercase tracking-wider">Full Display Name</label>
+              <input
+                type="text"
+                required
+                value={fullName ?? ''}
+                onChange={e => setFullName(e.target.value)}
+                placeholder="e.g. Maria Santos"
+                className="w-full bg-background border border-divider/40 focus:border-primary px-3.5 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-semibold"
+              />
             </div>
 
-            <div className="space-y-3.5">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-primary uppercase tracking-wider">Full Display Name</label>
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-primary uppercase tracking-wider">Terminal Username Handle</label>
+              <input
+                type="text"
+                required
+                value={username ?? ''}
+                onChange={e => setUsername(e.target.value)}
+                placeholder="e.g. msantos"
+                className="w-full bg-background border border-divider/40 focus:border-primary px-3.5 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-semibold"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-primary uppercase tracking-wider">Corporate Email Address</label>
+              <input
+                type="email"
+                required
+                value={email ?? ''}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="e.g. msantos@tilepoint.corp"
+                className="w-full bg-background border border-divider/40 focus:border-primary px-3.5 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-semibold"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <HeroSelect
+                label="Operational Role Designation"
+                value={role ?? ''}
+                onValueChange={val => setRole(val as UserRole)}
+                radius="md"
+                items={[
+                  ...(isUserAdmin ? [
+                    { key: UserRole.ADMIN, value: UserRole.ADMIN, label: 'Admin - Full Corporate Enterprise Access' },
+                    { key: UserRole.MANAGER, value: UserRole.MANAGER, label: 'Manager - Branch Station Supervisor' },
+                  ] : []),
+                  { key: UserRole.CASHIER, value: UserRole.CASHIER, label: 'Cashier - POS Sales & Till Cash Register' },
+                  { key: UserRole.STAFF, value: UserRole.STAFF, label: 'Staff - Logistics & Warehouse Checker' },
+                ]}
+              />
+            </div>
+
+            {(role === UserRole.ADMIN || role === UserRole.MANAGER) && (
+              <div className="space-y-1 bg-amber-500/5 p-3 rounded-xl border border-amber-500/20">
+                <label className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                  <KeyRound className="h-3 w-3" /> Security Authorization PIN Code
+                </label>
                 <input
                   type="text"
-                  required
-                  value={fullName ?? ''}
-                  onChange={e => setFullName(e.target.value)}
-                  placeholder="e.g. Maria Santos"
-                  className="w-full bg-background border border-divider/40 focus:border-primary px-3.5 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-semibold"
+                  maxLength={6}
+                  value={managerPin ?? ''}
+                  onChange={e => setManagerPin(e.target.value.replace(/\D/g, ''))}
+                  placeholder="Enter 4 to 6 digit PIN (e.g. 4321)"
+                  className="w-full bg-background border border-amber-500/40 focus:border-amber-500 px-3.5 py-2 text-xs text-foreground font-mono font-bold focus:outline-none transition-colors rounded-xl"
                 />
+                <span className="text-[9.5px] text-default-400 block pt-0.5">
+                  Used to authorize cashier voids, high-value discounts, and stock reconciliations.
+                </span>
               </div>
+            )}
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-primary uppercase tracking-wider">Terminal Username Handle</label>
-                <input
-                  type="text"
-                  required
-                  value={username ?? ''}
-                  onChange={e => setUsername(e.target.value)}
-                  placeholder="e.g. msantos"
-                  className="w-full bg-background border border-divider/40 focus:border-primary px-3.5 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-semibold"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-primary uppercase tracking-wider">Corporate Email Address</label>
-                <input
-                  type="email"
-                  required
-                  value={email ?? ''}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="e.g. msantos@tilepoint.corp"
-                  className="w-full bg-background border border-divider/40 focus:border-primary px-3.5 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-semibold"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <HeroSelect
-                  label="Operational Role Designation"
-                  value={role ?? ''}
-                  onValueChange={val => setRole(val as UserRole)}
-                  radius="md"
-                  items={[
-                    ...(isUserAdmin ? [
-                      { key: UserRole.ADMIN, value: UserRole.ADMIN, label: 'Admin - Full Corporate Enterprise Access' },
-                      { key: UserRole.MANAGER, value: UserRole.MANAGER, label: 'Manager - Branch Station Supervisor' },
-                    ] : []),
-                    { key: UserRole.CASHIER, value: UserRole.CASHIER, label: 'Cashier - POS Sales & Till Cash Register' },
-                    { key: UserRole.STAFF, value: UserRole.STAFF, label: 'Staff - Logistics & Warehouse Checker' },
-                  ]}
-                />
-              </div>
-
-              {(role === UserRole.ADMIN || role === UserRole.MANAGER) && (
-                <div className="space-y-1 bg-amber-500/5 p-3 rounded-xl border border-amber-500/20">
-                  <label className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1">
-                    <KeyRound className="h-3 w-3" /> Security Authorization PIN Code
-                  </label>
-                  <input
-                    type="text"
-                    maxLength={6}
-                    value={managerPin ?? ''}
-                    onChange={e => setManagerPin(e.target.value.replace(/\D/g, ''))}
-                    placeholder="Enter 4 to 6 digit PIN (e.g. 4321)"
-                    className="w-full bg-background border border-amber-500/40 focus:border-amber-500 px-3.5 py-2 text-xs text-foreground font-mono font-bold focus:outline-none transition-colors rounded-xl"
-                  />
-                  <span className="text-[9.5px] text-default-400 block pt-0.5">
-                    Used to authorize cashier voids, high-value discounts, and stock reconciliations.
-                  </span>
-                </div>
-              )}
-
-              <div className="space-y-1">
-                <HeroSelect
-                  label="Branch Station Assignment"
-                  value={branchAssignmentId ?? ''}
-                  onValueChange={val => setBranchAssignmentId(val)}
-                  radius="md"
-                  items={branches.filter(b => isUserAdmin || b.id === userBranchId).map(b => ({
-                    key: b.id,
-                    value: b.id,
-                    label: getBranchOptionLabel(b),
-                  }))}
-                />
-              </div>
+            <div className="space-y-1">
+              <HeroSelect
+                label="Branch Station Assignment"
+                value={branchAssignmentId ?? ''}
+                onValueChange={val => setBranchAssignmentId(val)}
+                radius="md"
+                items={branches.filter(b => isUserAdmin || b.id === userBranchId).map(b => ({
+                  key: b.id,
+                  value: b.id,
+                  label: getBranchOptionLabel(b),
+                }))}
+              />
             </div>
+          </HeroModal.Body>
 
-            <div className="flex justify-end gap-2 border-t border-divider/20 pt-4">
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-xs font-bold rounded-xl cursor-pointer hover:bg-default-100 text-default-500 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20 rounded-xl px-5 py-2 text-xs cursor-pointer hover:bg-primary/90 transition-all active:scale-95"
-              >
-                {isEditMode ? 'Save Changes' : 'Register Employee'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+          <HeroModal.Footer className="justify-end gap-2 pt-3 pb-4 border-t border-divider/20">
+            <HeroButton
+              type="button"
+              variant="flat"
+              size="sm"
+              onClick={() => setShowModal(false)}
+              className="font-bold text-xs"
+            >
+              Cancel
+            </HeroButton>
+            <HeroButton
+              type="submit"
+              color="primary"
+              variant="solid"
+              size="sm"
+              className="font-bold text-xs uppercase tracking-wider"
+            >
+              {isEditMode ? 'Save Changes' : 'Register Employee'}
+            </HeroButton>
+          </HeroModal.Footer>
+        </form>
+      </HeroModal>
 
       {/* Inline non-blocking success toast alert bar */}
       <ToastNotification

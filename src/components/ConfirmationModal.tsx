@@ -1,9 +1,8 @@
-import { AlertTriangle,CheckCircle2,Info,ShieldAlert,X } from 'lucide-react';
-import { AnimatePresence,motion } from 'motion/react';
+import { AlertTriangle, CheckCircle2, Info, ShieldAlert } from 'lucide-react';
 import React from 'react';
-import { createPortal } from 'react-dom';
 import { HeroButton } from './common/ui/HeroButton';
 import { HeroChip } from './common/ui/HeroChip';
+import { HeroModal } from './common/ui/HeroModal';
 
 export type AlertType = 'danger' | 'warning' | 'info' | 'success';
 
@@ -30,121 +29,98 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   onConfirm,
   onCancel,
 }) => {
-  if (!isOpen) return null;
-
   const getAlertStyle = () => {
     switch (alertType) {
       case 'danger':
         return {
-          icon: <ShieldAlert className="h-6 w-6 text-rose-500 shrink-0" />,
+          icon: <ShieldAlert className="h-5 w-5 text-danger shrink-0" />,
           chipVariant: 'danger' as const,
           btnVariant: 'danger' as const,
-          border: 'border-rose-500/30',
+          border: 'border-danger/30',
         };
       case 'warning':
         return {
-          icon: <AlertTriangle className="h-6 w-6 text-amber-400 shrink-0" />,
+          icon: <AlertTriangle className="h-5 w-5 text-warning shrink-0" />,
           chipVariant: 'warning' as const,
           btnVariant: 'primary' as const,
-          border: 'border-amber-500/30',
+          border: 'border-warning/30',
         };
       case 'success':
         return {
-          icon: <CheckCircle2 className="h-6 w-6 text-emerald-400 shrink-0" />,
+          icon: <CheckCircle2 className="h-5 w-5 text-success shrink-0" />,
           chipVariant: 'success' as const,
           btnVariant: 'success' as const,
-          border: 'border-emerald-500/30',
+          border: 'border-success/30',
         };
       case 'info':
       default:
         return {
-          icon: <Info className="h-6 w-6 text-sky-400 shrink-0" />,
+          icon: <Info className="h-5 w-5 text-primary shrink-0" />,
           chipVariant: 'info' as const,
           btnVariant: 'primary' as const,
-          border: 'border-sky-500/30',
+          border: 'border-primary/30',
         };
     }
   };
 
   const style = getAlertStyle();
 
-  const modalContent = (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-        {/* Full-Screen Uniform Backdrop */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          onClick={!isSubmitting ? onCancel : undefined}
-          className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md"
-        />
+  return (
+    <HeroModal
+      isOpen={isOpen}
+      onClose={onCancel}
+      size="sm"
+      isDismissable={!isSubmitting}
+      className={`border ${style.border}`}
+      zIndex={9999}
+    >
+      <HeroModal.Header className="pb-3">
+        <div className="flex items-center gap-3 w-full">
+          <div className="p-2.5 rounded-2xl border border-divider/30 bg-content2/60 shrink-0">
+            {style.icon}
+          </div>
+          <div className="space-y-1 min-w-0 flex-1">
+            <HeroChip variant={style.chipVariant} size="sm">
+              {alertType.toUpperCase()} ALERT
+            </HeroChip>
+            <h3 className="text-sm sm:text-base font-extrabold text-foreground leading-snug truncate">
+              {title}
+            </h3>
+          </div>
+        </div>
+      </HeroModal.Header>
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          className={`relative w-full max-w-md bg-content1 border ${style.border} rounded-2xl p-6 shadow-2xl text-foreground font-sans overflow-hidden transition-all duration-300 z-10`}
+      <HeroModal.Body className="py-4">
+        <div className="text-xs text-default-500 leading-relaxed font-normal">
+          {typeof message === 'string' ? <p>{message}</p> : message}
+        </div>
+      </HeroModal.Body>
+
+      <HeroModal.Footer className="pt-3 pb-4">
+        <HeroButton
+          type="button"
+          variant="flat"
+          size="sm"
+          onClick={onCancel}
+          disabled={isSubmitting}
+          className="font-semibold"
         >
-          {/* Top header & badge */}
-          <div className="flex items-start justify-between gap-3 mb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl border border-divider/20 bg-content2/40">
-                {style.icon}
-              </div>
-              <div className="space-y-1">
-                <HeroChip variant={style.chipVariant} size="sm">
-                  {alertType.toUpperCase()} ALERT
-                </HeroChip>
-                <h3 className="text-base font-extrabold text-foreground mt-1 leading-snug">
-                  {title}
-                </h3>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={onCancel}
-              className="p-1.5 text-default-500 hover:text-foreground hover:bg-default-100 rounded-lg transition cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          {/* Body message */}
-          <div className="text-xs text-default-500 leading-relaxed my-3 font-normal">
-            {typeof message === 'string' ? <p>{message}</p> : message}
-          </div>
-
-          {/* Footer action buttons */}
-          <div className="flex items-center justify-end gap-2.5 mt-6 pt-4 border-t border-divider/30">
-            <HeroButton
-              type="button"
-              variant="flat"
-              size="md"
-              onClick={onCancel}
-              disabled={isSubmitting}
-            >
-              {cancelText}
-            </HeroButton>
-            <HeroButton
-              type="button"
-              variant={style.btnVariant}
-              size="md"
-              onClick={onConfirm}
-              isLoading={isSubmitting}
-              loadingText="Processing..."
-            >
-              {confirmText}
-            </HeroButton>
-          </div>
-        </motion.div>
-      </div>
-    </AnimatePresence>
+          {cancelText}
+        </HeroButton>
+        <HeroButton
+          type="button"
+          variant={style.btnVariant}
+          size="sm"
+          onClick={onConfirm}
+          isLoading={isSubmitting}
+          loadingText="Processing..."
+          className="font-bold uppercase tracking-wider"
+        >
+          {confirmText}
+        </HeroButton>
+      </HeroModal.Footer>
+    </HeroModal>
   );
-
-  if (typeof document === 'undefined') return null;
-  return createPortal(modalContent, document.body);
 };
 
 export default ConfirmationModal;

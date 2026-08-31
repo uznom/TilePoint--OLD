@@ -219,17 +219,16 @@ export const TopAndSlowSellingModal: React.FC<TopAndSlowSellingModalProps> = ({
     <HeroModal
       isOpen={isOpen}
       onClose={onClose}
-      size="4xl"
-      className="p-0 overflow-hidden"
+      size="5xl"
     >
       {/* Header */}
-      <div className="p-5 md:p-6 border-b border-divider bg-content1 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <HeroModal.Header className="p-5 md:p-6 border-b border-divider bg-content1 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-primary/10 text-primary shrink-0 border border-primary/20">
+          <div className="p-3 rounded-2xl bg-primary/10 text-primary shrink-0 border border-primary/20">
             <Trophy className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="text-lg font-black text-foreground uppercase font-sans">
+            <h2 className="text-base sm:text-lg font-black text-foreground uppercase font-sans">
               Product Sales Velocity & Movement Analytics
             </h2>
             <p className="text-xs text-default-500 font-medium mt-0.5">
@@ -250,7 +249,7 @@ export const TopAndSlowSellingModal: React.FC<TopAndSlowSellingModalProps> = ({
             Export XLSX
           </HeroButton>
         </div>
-      </div>
+      </HeroModal.Header>
 
       {/* Tabs & Filters */}
       <div className="px-5 pt-4 pb-3 border-b border-divider bg-content2/40 flex flex-wrap items-center justify-between gap-3">
@@ -452,8 +451,8 @@ export const TopAndSlowSellingModal: React.FC<TopAndSlowSellingModalProps> = ({
       </div>
 
       {/* Footer */}
-      <div className="p-4 px-6 border-t border-divider bg-content1 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-        <div className="text-default-500">
+      <HeroModal.Footer className="p-4 px-6 border-t border-divider bg-content1 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+        <div className="text-default-500 font-medium">
           Showing <strong className="text-foreground font-extrabold">{activeItems.length}</strong> product record(s)
         </div>
         <HeroButton
@@ -464,7 +463,7 @@ export const TopAndSlowSellingModal: React.FC<TopAndSlowSellingModalProps> = ({
         >
           Close Analytics
         </HeroButton>
-      </div>
+      </HeroModal.Footer>
     </HeroModal>
   );
 };

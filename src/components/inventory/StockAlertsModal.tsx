@@ -1,23 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { 
   ShieldAlert, 
   FileSpreadsheet, 
   Plus, 
-  X, 
   AlertCircle, 
   AlertTriangle, 
   Search, 
-  Sliders, 
-  Eye, 
-  Check 
+  X
 } from 'lucide-react';
 import { Branch, Product } from '../../types/db';
 import { getBranchOptionLabel } from '../../lib/branchUtils';
 import { HeroButton } from '../common/ui/HeroButton';
 import { HeroDropdownSelect } from '../common/ui/HeroDropdown';
 import { HeroTooltip } from '../common/ui/HeroTooltip';
-import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import { HeroModal } from '../common/ui/HeroModal';
 
 export interface AlertProductItem {
   product: Product;
@@ -39,7 +35,7 @@ interface StockAlertsModalProps {
     criticalStockCount: number;
     outOfStockCount: number;
   };
-  poCart: Array<{ productId: string }>;
+  poCart?: Array<{ productId: string }>;
   onQueueRestock: (productId: string) => void;
   onBulkQueueAlerts: () => void;
   onOpenAdjust: (product: Product) => void;
@@ -57,7 +53,7 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
   products,
   alertProductsList,
   stats,
-  poCart,
+  poCart = [],
   onQueueRestock,
   onBulkQueueAlerts,
   onOpenAdjust,
@@ -66,7 +62,6 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
   showToast,
   initialFilter = 'ALL',
 }) => {
-  useBodyScrollLock(isOpen);
   const [filter, setFilter] = useState<'ALL' | 'OUT_OF_STOCK' | 'CRITICAL' | 'LOW'>(initialFilter);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
@@ -104,79 +99,62 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
     });
   }, [alertProductsList, filter, category, search]);
 
-  if (!isOpen) return null;
-
   const categories = Array.from(new Set(products.map(p => p.category)));
 
-  const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 animate-fade-in font-sans">
-      {/* Full-Screen Uniform Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
-        onClick={onClose} 
-      />
-      
-      <div className="relative w-full max-w-5xl max-h-[92vh] flex flex-col rounded-3xl border border-divider shadow-2xl bg-content1 text-foreground overflow-hidden z-30 font-sans">
-        
-        {/* Modal Header */}
-        <div className="p-5 md:p-6 border-b border-divider flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-content1">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-danger/10 text-danger shrink-0 border border-danger/20">
-              <ShieldAlert className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground">
-                Stock Alert Diagnostics & Action Hub
-              </h2>
-              <span className="text-xs font-medium text-primary block mt-0.5">
-                Scope: {selectedViewBranchId === 'consolidated' ? 'HQ Consolidated (All Branches)' : getBranchOptionLabel(branches.find(b => b.id === selectedViewBranchId))}
-              </span>
-            </div>
+  return (
+    <HeroModal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="5xl"
+    >
+      {/* Modal Header */}
+      <HeroModal.Header className="p-5 md:p-6 border-b border-divider flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-content1">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-2xl bg-danger/10 text-danger shrink-0 border border-danger/20">
+            <ShieldAlert className="h-5 w-5" />
           </div>
-
-          <div className="flex items-center gap-2 self-end sm:self-center">
-            <HeroButton
-              onClick={async () => {
-                const branchLabel = selectedViewBranchId === 'consolidated' 
-                  ? 'Consolidated' 
-                  : (branches.find(b => b.id === selectedViewBranchId)?.name || selectedViewBranchId);
-                await exportStockAlertsToXLSX(filteredItems, branchLabel);
-                showToast(`Exported ${filteredItems.length} stock alert items to Excel (.XLSX)!`);
-              }}
-              disabled={filteredItems.length === 0}
-              color="secondary"
-              variant="flat"
-              size="sm"
-              radius="full"
-              className="font-semibold"
-              startIcon={<FileSpreadsheet className="h-4 w-4" />}
-            >
-              Export XLSX
-            </HeroButton>
-
-            <HeroButton
-              onClick={onBulkQueueAlerts}
-              disabled={filteredItems.length === 0}
-              color="success"
-              variant="solid"
-              size="sm"
-              radius="full"
-              className="font-semibold"
-              startIcon={<Plus className="h-4 w-4" />}
-            >
-              Queue All to PO ({filteredItems.length})
-            </HeroButton>
-            
-            <button 
-              type="button" 
-              onClick={onClose} 
-              className="w-8 h-8 rounded-full bg-default-100 hover:bg-default-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-default-400 hover:text-foreground transition-all flex items-center justify-center cursor-pointer active:scale-95 ml-1"
-              aria-label="Close modal"
-            >
-              <X className="h-4 w-4" />
-            </button>
+          <div>
+            <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground">
+              Stock Alert Diagnostics & Action Hub
+            </h2>
+            <span className="text-xs font-medium text-primary block mt-0.5">
+              Scope: {selectedViewBranchId === 'consolidated' ? 'HQ Consolidated (All Branches)' : getBranchOptionLabel(branches.find(b => b.id === selectedViewBranchId))}
+            </span>
           </div>
         </div>
+
+        <div className="flex items-center gap-2 self-end sm:self-center">
+          <HeroButton
+            onClick={async () => {
+              const branchLabel = selectedViewBranchId === 'consolidated' 
+                ? 'Consolidated' 
+                : (branches.find(b => b.id === selectedViewBranchId)?.name || selectedViewBranchId);
+              await exportStockAlertsToXLSX(filteredItems, branchLabel);
+              showToast(`Exported ${filteredItems.length} stock alert items to Excel (.XLSX)!`);
+            }}
+            disabled={filteredItems.length === 0}
+            color="secondary"
+            variant="flat"
+            size="sm"
+            className="font-semibold text-xs"
+            startIcon={<FileSpreadsheet className="h-4 w-4" />}
+          >
+            Export XLSX
+          </HeroButton>
+
+          <HeroButton
+            onClick={onBulkQueueAlerts}
+            disabled={filteredItems.length === 0}
+            color="success"
+            variant="solid"
+            size="sm"
+            className="font-semibold text-xs"
+            startIcon={<Plus className="h-4 w-4" />}
+          >
+            Queue All to PO ({filteredItems.length})
+          </HeroButton>
+        </div>
+      </HeroModal.Header>
 
         {/* Modal Filter Tabs Bar */}
         <div className="px-5 pt-3 pb-3 border-b border-divider dark:border-white/10 bg-default-50/50 dark:bg-zinc-900/50 flex flex-wrap items-center justify-between gap-3 font-sans">
@@ -305,7 +283,7 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
                 </thead>
                 <tbody className="divide-y divide-divider font-sans">
                   {filteredItems.map(({ product, qty, threshold, alertType, deficit }) => {
-                    const isPoInCart = poCart.some(c => c.productId === product.id);
+                    const isPoInCart = (poCart || []).some(c => c?.productId === product.id);
 
                     return (
                       <tr key={product.id} className="hover:bg-content2/40 transition-colors">
@@ -454,8 +432,8 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 px-6 border-t border-divider bg-content1 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-4 text-default-500">
+        <HeroModal.Footer className="p-4 px-6 border-t border-divider bg-content1 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-4 text-default-500 font-medium">
             <span>
               Showing <strong className="text-foreground font-extrabold">{filteredItems.length}</strong> alert item(s)
             </span>
@@ -469,14 +447,11 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
           >
             Close Diagnostics
           </HeroButton>
-        </div>
-
-      </div>
-    </div>
+        </HeroModal.Footer>
+    </HeroModal>
   );
-
-  if (typeof document === 'undefined') return null;
-  return createPortal(modalContent, document.body);
 });
 
 StockAlertsModal.displayName = 'StockAlertsModal';
+
+export default StockAlertsModal;

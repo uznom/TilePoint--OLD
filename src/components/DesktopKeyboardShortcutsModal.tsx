@@ -4,17 +4,16 @@
  */
 
 import {
-Command,
-Keyboard,
-Layers,
-ShoppingCart,
-Sparkles,
-X
+  Command,
+  Keyboard,
+  Layers,
+  ShoppingCart,
+  Sparkles,
 } from "lucide-react";
-import { AnimatePresence,motion } from "motion/react";
 import React from "react";
-import { createPortal } from "react-dom";
 import { UserRole } from "../types/db";
+import { HeroButton } from "./common/ui/HeroButton";
+import { HeroModal } from "./common/ui/HeroModal";
 
 interface DesktopKeyboardShortcutsModalProps {
   isOpen: boolean;
@@ -37,7 +36,6 @@ export const DesktopKeyboardShortcutsModal: React.FC<DesktopKeyboardShortcutsMod
   onClose,
   userRole: _userRole
 }) => {
-
   const categories: ShortcutCategory[] = [
     {
       title: "Global & Navigation",
@@ -122,125 +120,97 @@ export const DesktopKeyboardShortcutsModal: React.FC<DesktopKeyboardShortcutsMod
     }
   ];
 
-  if (!isOpen) return null;
-
-  const modalContent = (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
-        {/* Full-Screen Uniform Backdrop */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          onClick={onClose}
-          className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md"
-        />
-
-        {/* Modal Container */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          transition={{ type: "spring", stiffness: 450, damping: 32 }}
-          className="relative w-full max-w-3xl bg-background/98 backdrop-blur-2xl border border-divider/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] z-10"
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-5 border-b border-divider/25 bg-content1/50">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20 text-primary">
-                <Keyboard className="h-6 w-6" />
-              </div>
-              <div>
-                <h2 className="text-base font-black tracking-wide text-foreground uppercase font-sans flex items-center gap-2">
-                  Desktop Keyboard Shortcuts
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25 font-bold uppercase tracking-widest">
-                    Pro Productivity
-                  </span>
-                </h2>
-                <p className="text-xs text-default-500 mt-0.5">
-                  High-speed key combinations built for cashiers, managers, and inventory clerks.
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 rounded-xl text-default-400 hover:text-foreground hover:bg-content2 transition-all cursor-pointer"
-              title="Close (Esc)"
-            >
-              <X className="h-5 w-5" />
-            </button>
+  return (
+    <HeroModal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="3xl"
+      zIndex={10000}
+    >
+      <HeroModal.Header className="pb-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20 text-primary shrink-0">
+            <Keyboard className="h-5 w-5" />
           </div>
+          <div>
+            <h2 className="text-base font-black tracking-wide text-foreground uppercase font-sans flex items-center gap-2">
+              Desktop Keyboard Shortcuts
+              <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25 font-bold uppercase tracking-widest">
+                Pro Productivity
+              </span>
+            </h2>
+            <p className="text-xs text-default-500 mt-0.5 font-medium">
+              High-speed key combinations built for cashiers, managers, and inventory clerks.
+            </p>
+          </div>
+        </div>
+      </HeroModal.Header>
 
-          {/* Content Body */}
-          <div className="p-6 overflow-y-auto space-y-6 scrollbar-thin scrollbar-thumb-divider/30">
-            {categories.map((cat) => {
-              const Icon = cat.icon;
-              return (
-                <div key={cat.title} className="space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-foreground">
-                    <Icon className="h-4 w-4 text-primary" />
-                    <span>{cat.title}</span>
-                  </div>
+      <HeroModal.Body className="p-6 space-y-6 scrollbar-thin">
+        {categories.map((cat) => {
+          const Icon = cat.icon;
+          return (
+            <div key={cat.title} className="space-y-3">
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-foreground">
+                <Icon className="h-4 w-4 text-primary" />
+                <span>{cat.title}</span>
+              </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                    {cat.items.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between p-3 rounded-2xl bg-content1/70 hover:bg-content1 border border-divider/20 transition-all text-xs"
-                      >
-                        <div className="min-w-0 pr-3">
-                          <span className="font-semibold text-foreground truncate block">
-                            {item.description}
-                          </span>
-                          {item.badge && (
-                            <span className="text-[9px] font-bold text-primary tracking-wider uppercase mt-0.5 inline-block">
-                              {item.badge}
-                            </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {cat.items.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-3 rounded-2xl bg-content2/50 hover:bg-content2 border border-divider/20 transition-all text-xs"
+                  >
+                    <div className="min-w-0 pr-3">
+                      <span className="font-semibold text-foreground truncate block">
+                        {item.description}
+                      </span>
+                      {item.badge && (
+                        <span className="text-[9px] font-bold text-primary tracking-wider uppercase mt-0.5 inline-block">
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      {item.keys.map((k, kIdx) => (
+                        <React.Fragment key={kIdx}>
+                          <kbd className="px-2 py-1 bg-background text-foreground border border-divider/40 rounded-lg text-[11px] font-mono font-bold shadow-2xs">
+                            {k}
+                          </kbd>
+                          {kIdx < item.keys.length - 1 && (
+                            <span className="text-default-400 text-[10px]">+</span>
                           )}
-                        </div>
-
-                        <div className="flex items-center gap-1 shrink-0">
-                          {item.keys.map((k, kIdx) => (
-                            <React.Fragment key={kIdx}>
-                              <kbd className="px-2 py-1 bg-background/90 text-foreground border border-divider/35 rounded-lg text-[11px] font-mono font-bold shadow-2xs">
-                                {k}
-                              </kbd>
-                              {kIdx < item.keys.length - 1 && (
-                                <span className="text-default-400 text-[10px]">+</span>
-                              )}
-                            </React.Fragment>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+                        </React.Fragment>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-between px-6 py-4 border-t border-divider/20 bg-content1/40 text-xs text-default-500">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-amber-500" />
-              <span>Press <kbd className="px-1.5 py-0.5 bg-background border border-divider/30 rounded font-mono font-bold text-[10px]">?</kbd> anywhere to toggle this guide</span>
+                ))}
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-1.5 bg-primary text-primary-foreground font-bold rounded-xl text-xs hover:bg-primary/90 active:scale-95 transition-all cursor-pointer"
-            >
-              Got it
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    </AnimatePresence>
-  );
+          );
+        })}
+      </HeroModal.Body>
 
-  if (typeof document === 'undefined') return null;
-  return createPortal(modalContent, document.body);
+      <HeroModal.Footer className="justify-between px-6 py-4 text-xs text-default-500">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-warning" />
+          <span>Press <kbd className="px-1.5 py-0.5 bg-background border border-divider/30 rounded font-mono font-bold text-[10px]">?</kbd> anywhere to toggle this guide</span>
+        </div>
+        <HeroButton
+          type="button"
+          variant="solid"
+          color="primary"
+          size="sm"
+          onClick={onClose}
+          className="font-bold text-xs"
+        >
+          Got it
+        </HeroButton>
+      </HeroModal.Footer>
+    </HeroModal>
+  );
 };
+
+export default DesktopKeyboardShortcutsModal;

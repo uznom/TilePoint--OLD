@@ -1,10 +1,9 @@
 import React from 'react';
-import { createPortal } from 'react-dom';
-import { Check, X, Building2 } from 'lucide-react';
+import { Check, Building2 } from 'lucide-react';
 import { Branch } from '../../types/db';
 import { getBranchOptionLabel } from '../../lib/branchUtils';
 import { HeroButton, HeroCheckbox, HeroSelect } from '../common/ui';
-import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import { HeroModal } from '../common/ui/HeroModal';
 
 interface BranchConfigsModalProps {
   isOpen: boolean;
@@ -23,37 +22,29 @@ export const BranchConfigsModal: React.FC<BranchConfigsModalProps> = ({
   branches,
   onFinalizeImport,
 }) => {
-  useBodyScrollLock(isOpen);
-  if (!isOpen) return null;
-
-  const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in text-foreground font-sans">
-      {/* Full-Screen Uniform Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
-        onClick={onClose} 
-      />
-      <div className="relative bg-content1 border border-divider rounded-large p-6 shadow-2xl space-y-6 w-full max-w-4xl text-left max-h-[90vh] overflow-y-auto z-10">
-        <div className="flex justify-between items-center border-b border-divider pb-4">
+  return (
+    <HeroModal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="4xl"
+    >
+      <HeroModal.Header className="pb-4 border-b border-divider">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-2xl bg-warning/10 text-warning shrink-0 border border-warning/20">
+            <Building2 className="w-5 h-5" />
+          </div>
           <div>
-            <h3 className="text-base font-black text-warning uppercase tracking-wider flex items-center gap-2">
-              <span className="p-1.5 rounded-medium bg-warning/10 text-warning"><Building2 className="w-4 h-4" /></span>
-              <span>Branch Outposts Detected in CSV</span>
+            <h3 className="text-base font-black text-foreground uppercase tracking-wider">
+              Branch Outposts Detected in CSV
             </h3>
-            <p className="text-xs text-default-500 font-medium mt-1 font-sans">
+            <p className="text-xs text-default-500 font-medium mt-0.5">
               The imported dataset references location(s) not currently registered in TilePoint. Please map each to an existing branch or create a new branch profile:
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="text-default-400 hover:text-foreground p-1.5 rounded-medium hover:bg-default-100 transition-colors cursor-pointer"
-            aria-label="Close modal"
-          >
-            <X className="h-5 w-5" />
-          </button>
         </div>
+      </HeroModal.Header>
 
-        <div className="space-y-5">
+      <HeroModal.Body className="p-6 space-y-5">
           {pendingBranches.map((pb, idx) => (
             <div key={idx} className="p-5 rounded-medium bg-content2/40 border border-divider space-y-4 font-sans shadow-sm">
               <div className="pb-3 border-b border-divider flex flex-wrap justify-between items-center gap-2">
@@ -246,34 +237,30 @@ export const BranchConfigsModal: React.FC<BranchConfigsModalProps> = ({
               )}
             </div>
           ))}
-        </div>
+      </HeroModal.Body>
 
-        <div className="flex justify-end gap-2 border-t border-divider pt-4">
-          <HeroButton
-            type="button"
-            variant="flat"
-            size="sm"
-            onClick={onClose}
-            className="font-bold text-xs uppercase tracking-wider"
-          >
-            Discard Import
-          </HeroButton>
-          <HeroButton
-            type="button"
-            color="primary"
-            variant="solid"
-            size="sm"
-            onClick={onFinalizeImport}
-            className="font-bold text-xs uppercase tracking-wider"
-            startIcon={<Check className="h-4 w-4" />}
-          >
-            Instantiate Outlets & Commit Products
-          </HeroButton>
-        </div>
-      </div>
-    </div>
+      <HeroModal.Footer className="justify-end gap-2 p-4 px-6 border-t border-divider bg-content1">
+        <HeroButton
+          type="button"
+          variant="flat"
+          size="sm"
+          onClick={onClose}
+          className="font-bold text-xs"
+        >
+          Discard Import
+        </HeroButton>
+        <HeroButton
+          type="button"
+          color="primary"
+          variant="solid"
+          size="sm"
+          onClick={onFinalizeImport}
+          className="font-bold text-xs uppercase tracking-wider"
+          startIcon={<Check className="h-4 w-4" />}
+        >
+          Instantiate Outlets & Commit Products
+        </HeroButton>
+      </HeroModal.Footer>
+    </HeroModal>
   );
-
-  if (typeof document === 'undefined') return null;
-  return createPortal(modalContent, document.body);
 };

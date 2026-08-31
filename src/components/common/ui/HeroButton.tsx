@@ -24,7 +24,7 @@ export type HeroButtonColor =
   | 'danger';
 
 export type HeroButtonSize = 'sm' | 'md' | 'lg';
-export type HeroButtonRadius = 'none' | 'sm' | 'md' | 'lg' | 'full';
+export type HeroButtonRadius = 'none' | 'sm' | 'md' | 'lg' | 'xl' | 'full';
 
 export interface HeroButtonProps
   extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'value'> {
@@ -194,6 +194,8 @@ export const HeroButton: React.FC<HeroButtonProps> = ({
         return 'rounded-small';
       case 'md':
         return 'rounded-medium';
+      case 'xl':
+        return 'rounded-2xl';
       case 'full':
         return 'rounded-full';
       case 'lg':

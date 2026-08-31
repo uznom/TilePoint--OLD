@@ -57,6 +57,8 @@ import { SystemLoadingOverlay } from "./components/SystemLoadingOverlay";
 import { ToastNotification } from "./components/ToastNotification";
 import { HeroSpinner } from "./components/common/ui/HeroSpinner";
 import { HeroDropdownSelect } from "./components/common/ui/HeroDropdown";
+import { HeroModal } from "./components/common/ui/HeroModal";
+import { HeroButton } from "./components/common/ui/HeroButton";
 import { PATH_TO_TAB, useRouteSyncManager } from "./hooks";
 import { isSameBranch } from "./lib/branchUtils";
 
@@ -1486,130 +1488,138 @@ function AppContent() {
         />
 
         {/* LOGOUT CONFIRMATION MODAL */}
-        {showLogoutConfirmModal && typeof document !== 'undefined' && createPortal(
-          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 animate-fade-in font-sans">
-            <div 
-              className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
-              onClick={() => setShowLogoutConfirmModal(false)} 
-            />
-            <div className="relative w-full max-w-sm rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4 text-left font-sans">
-              <div className="flex items-center gap-3 border-b border-divider/15 pb-3">
-                <div className="p-2.5 rounded-2xl bg-rose-500/10 text-rose-500">
-                  <Power className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-foreground uppercase tracking-wider">Confirm Sign Out</h3>
-                  <p className="text-[10px] text-zinc-400 font-bold">TILEPOINT SESSION CONTROL</p>
-                </div>
+        <HeroModal
+          isOpen={showLogoutConfirmModal}
+          onClose={() => setShowLogoutConfirmModal(false)}
+          size="sm"
+          zIndex={99999}
+        >
+          <HeroModal.Header className="pb-3 border-b border-divider/20">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-2xl bg-danger/10 text-danger shrink-0 border border-danger/20">
+                <Power className="h-5 w-5" />
               </div>
-              <p className="text-xs text-zinc-300 font-medium leading-relaxed">
-                Are you sure you want to log out of TilePoint terminal? Any unsaved active checkout carts will be lost.
-              </p>
-              <div className="flex gap-3 pt-2 font-sans">
-                <button
-                  type="button"
-                  onClick={() => setShowLogoutConfirmModal(false)}
-                  className="flex-1 py-2.5 rounded-full bg-background hover:bg-default-100 text-foreground font-extrabold text-xs uppercase tracking-wide border border-divider/10 cursor-pointer active:scale-95 transition-all text-center"
-                >
-                  No, Keep Active
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowLogoutConfirmModal(false);
-                    logout();
-                  }}
-                  className="flex-1 py-2.5 rounded-full bg-rose-500 hover:bg-rose-400 text-black font-extrabold text-xs uppercase tracking-wide cursor-pointer active:scale-95 transition-all text-center shadow-lg shadow-rose-500/10"
-                >
-                  Yes, Sign Out
-                </button>
+              <div>
+                <h3 className="text-sm font-black text-foreground uppercase tracking-wider">Confirm Sign Out</h3>
+                <p className="text-[10px] text-default-500 font-bold uppercase tracking-wider">Session Termination Guard</p>
               </div>
             </div>
-          </div>,
-          document.body
-        )}
+          </HeroModal.Header>
+
+          <HeroModal.Body className="py-4">
+            <p className="text-xs text-default-500 font-medium leading-relaxed">
+              Are you sure you want to log out of TilePoint terminal? Any unsaved active checkout carts will be lost.
+            </p>
+          </HeroModal.Body>
+
+          <HeroModal.Footer className="justify-end gap-2.5 pt-3 pb-4 border-t border-divider/20">
+            <HeroButton
+              type="button"
+              variant="flat"
+              size="sm"
+              onClick={() => setShowLogoutConfirmModal(false)}
+              className="font-bold text-xs"
+            >
+              No, Keep Active
+            </HeroButton>
+            <HeroButton
+              type="button"
+              variant="solid"
+              color="danger"
+              size="sm"
+              onClick={() => {
+                setShowLogoutConfirmModal(false);
+                logout();
+              }}
+              className="font-black text-xs uppercase tracking-wider"
+            >
+              Yes, Sign Out
+            </HeroButton>
+          </HeroModal.Footer>
+        </HeroModal>
 
         {/* UNSAVED CART MODAL */}
-        {showUnsavedCartModal && typeof document !== 'undefined' && createPortal(
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-fade-in font-sans">
-            <div 
-              className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
-              onClick={() => { setShowUnsavedCartModal(false); setPendingUnsavedCartTargetTab(null); }} 
-            />
-            <div className="relative w-full max-w-sm rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4 text-left font-sans">
-              <div className="flex items-center gap-3 border-b border-divider/15 pb-3">
-                <div className="p-2.5 rounded-2xl bg-amber-500/10 text-amber-500">
-                  <AlertTriangle className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-foreground uppercase tracking-wider">Unsaved Checkout Warning</h3>
-                  <p className="text-[10px] text-amber-500 font-bold uppercase tracking-wider">Active Transaction Guard</p>
-                </div>
+        <HeroModal
+          isOpen={showUnsavedCartModal}
+          onClose={() => { setShowUnsavedCartModal(false); setPendingUnsavedCartTargetTab(null); }}
+          size="sm"
+          zIndex={60}
+        >
+          <HeroModal.Header className="pb-3 border-b border-divider/20">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-2xl bg-warning/10 text-warning shrink-0 border border-warning/20">
+                <AlertTriangle className="h-5 w-5" />
               </div>
-              <p className="text-xs text-zinc-300 font-medium leading-relaxed">
-                Are you sure you want to leave this site? Changes you made may not be saved.
-                <br /><br />
-                Leaving the ERP OS terminal now will disrupt the current active customer checkout session and clear the basket.
-              </p>
-              <div className="flex gap-3 pt-2 font-sans">
-                <button
-                  type="button"
-                  onClick={() => { setShowUnsavedCartModal(false); setPendingUnsavedCartTargetTab(null); }}
-                  className="flex-1 py-2.5 rounded-full bg-background hover:bg-default-100 text-foreground font-extrabold text-xs uppercase tracking-wide border border-divider/10 cursor-pointer active:scale-95 transition-all text-center"
-                >
-                  Cancel, Keep Basket
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowUnsavedCartModal(false);
-                    if (pendingUnsavedCartTargetTab) handleSmoothTabChange(pendingUnsavedCartTargetTab);
-                    setPendingUnsavedCartTargetTab(null);
-                  }}
-                  className="flex-1 py-2.5 rounded-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs uppercase tracking-wide cursor-pointer active:scale-95 transition-all text-center shadow-lg shadow-amber-500/10"
-                >
-                  Yes, Leave Mode
-                </button>
+              <div>
+                <h3 className="text-sm font-black text-foreground uppercase tracking-wider">Unsaved Checkout Warning</h3>
+                <p className="text-[10px] text-warning font-bold uppercase tracking-wider">Active Transaction Guard</p>
               </div>
             </div>
-          </div>,
-          document.body
-        )}
+          </HeroModal.Header>
+
+          <HeroModal.Body className="py-4 space-y-2">
+            <p className="text-xs text-default-500 font-medium leading-relaxed">
+              Are you sure you want to leave this site? Changes you made may not be saved.
+            </p>
+            <p className="text-xs text-default-500 font-medium leading-relaxed">
+              Leaving the ERP OS terminal now will disrupt the current active customer checkout session and clear the basket.
+            </p>
+          </HeroModal.Body>
+
+          <HeroModal.Footer className="justify-end gap-2.5 pt-3 pb-4 border-t border-divider/20">
+            <HeroButton
+              type="button"
+              variant="flat"
+              size="sm"
+              onClick={() => { setShowUnsavedCartModal(false); setPendingUnsavedCartTargetTab(null); }}
+              className="font-bold text-xs"
+            >
+              Cancel, Keep Basket
+            </HeroButton>
+            <HeroButton
+              type="button"
+              variant="solid"
+              color="warning"
+              size="sm"
+              onClick={() => {
+                setShowUnsavedCartModal(false);
+                if (pendingUnsavedCartTargetTab) handleSmoothTabChange(pendingUnsavedCartTargetTab);
+                setPendingUnsavedCartTargetTab(null);
+              }}
+              className="font-black text-xs uppercase tracking-wider text-black"
+            >
+              Yes, Leave Mode
+            </HeroButton>
+          </HeroModal.Footer>
+        </HeroModal>
 
         {/* DATABASE BACKUP & MAINTENANCE MODAL */}
-        {showBackupModal && typeof document !== 'undefined' && createPortal(
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-fade-in font-sans">
-            <div 
-              className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
-              onClick={() => { setShowBackupModal(false); setBackupSuccessMsg(null); setBackupErrorMsg(null); setManualSnapshotName(""); }} 
-            />
-            <div className="relative w-full max-w-2xl rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground flex flex-col max-h-[90vh] text-left">
-              <div className="flex justify-between items-center border-b border-divider/15 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-2xl">
-                    <Database className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black uppercase tracking-wider text-foreground flex items-center gap-2">
-                      Database Core Management
-                      <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${dbSyncStatus === "syncing" ? "bg-amber-500/20 text-amber-500" : "bg-emerald-500/10 text-emerald-400"}`}>
-                        {dbSyncStatus === "syncing" ? "● Sync active" : "● Connected"}
-                      </span>
-                    </h3>
-                    <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">
-                      Disaster Recovery & Automated Backup Engine
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => { setShowBackupModal(false); setBackupSuccessMsg(null); setBackupErrorMsg(null); setManualSnapshotName(""); }}
-                  className="text-default-500 hover:text-rose-500 cursor-pointer p-1.5 rounded-full hover:bg-default-100 transition-colors"
-                  title="Close Database Panel"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+        <HeroModal
+          isOpen={showBackupModal}
+          onClose={() => { setShowBackupModal(false); setBackupSuccessMsg(null); setBackupErrorMsg(null); setManualSnapshotName(""); }}
+          size="2xl"
+          zIndex={60}
+        >
+          <HeroModal.Header className="pb-4 border-b border-divider/15">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-success/10 text-success rounded-2xl">
+                <Database className="h-5 w-5" />
               </div>
+              <div>
+                <h3 className="text-base font-black uppercase tracking-wider text-foreground flex items-center gap-2">
+                  Database Core Management
+                  <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${dbSyncStatus === "syncing" ? "bg-warning/20 text-warning" : "bg-success/10 text-success"}`}>
+                    {dbSyncStatus === "syncing" ? "● Sync active" : "● Connected"}
+                  </span>
+                </h3>
+                <p className="text-[10px] text-default-500 uppercase tracking-widest font-bold">
+                  Disaster Recovery & Automated Backup Engine
+                </p>
+              </div>
+            </div>
+          </HeroModal.Header>
+
+          <HeroModal.Body className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
 
               <div className="flex border-b border-divider/10 my-4 p-1 bg-content1/50 rounded-xl">
                 <button
@@ -1947,267 +1957,264 @@ function AppContent() {
                 )}
               </div>
 
-              <div className="pt-4 mt-4 border-t border-divider/15 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => { setShowBackupModal(false); setBackupSuccessMsg(null); setBackupErrorMsg(null); setManualSnapshotName(""); }}
-                  className="px-5 py-2.5 bg-background hover:bg-default-100 text-foreground font-extrabold text-xs uppercase tracking-wide border border-divider/10 rounded-full cursor-pointer transition-all"
-                >
-                  Done
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
+          </HeroModal.Body>
+
+          <HeroModal.Footer className="justify-end gap-2.5 pt-3 pb-4 border-t border-divider/15">
+            <HeroButton
+              type="button"
+              variant="solid"
+              color="primary"
+              size="sm"
+              onClick={() => { setShowBackupModal(false); setBackupSuccessMsg(null); setBackupErrorMsg(null); setManualSnapshotName(""); }}
+              className="font-bold text-xs uppercase tracking-wider"
+            >
+              Done
+            </HeroButton>
+          </HeroModal.Footer>
+        </HeroModal>
 
         {/* ACCOUNT PROFILE & SECURITY CREDENTIALS MODAL */}
-        {showAccountSettingsModal && typeof document !== 'undefined' && createPortal(
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-fade-in font-sans">
-            <div
-              className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity"
-              onClick={() => {
-                setCurrentPasswordInput("");
-                setNewPasswordInput("");
-                setConfirmPasswordInput("");
-                setProfileModalError("");
-                setShowAccountSettingsModal(false);
-              }}
-            />
-            <div className="relative w-full max-w-md rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-5 text-left max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center border-b border-divider/15 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-amber-500/10 text-amber-500 rounded-2xl">
-                    <LockKeyhole className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black uppercase tracking-wider text-foreground">
-                      Account Profile & Security
-                    </h3>
-                    <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">
-                      Personal Credentials & Security Vault
-                    </p>
-                  </div>
+        <HeroModal
+          isOpen={showAccountSettingsModal}
+          onClose={() => {
+            setCurrentPasswordInput("");
+            setNewPasswordInput("");
+            setConfirmPasswordInput("");
+            setProfileModalError("");
+            setShowAccountSettingsModal(false);
+          }}
+          size="md"
+          zIndex={60}
+        >
+          <form onSubmit={handleSaveProfile} className="flex flex-col h-full overflow-hidden">
+            <HeroModal.Header className="pb-4 border-b border-divider/15">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-warning/10 text-warning rounded-2xl">
+                  <LockKeyhole className="h-5 w-5" />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCurrentPasswordInput("");
-                    setNewPasswordInput("");
-                    setConfirmPasswordInput("");
-                    setProfileModalError("");
-                    setShowAccountSettingsModal(false);
-                  }}
-                  className="text-default-500 hover:text-rose-500 cursor-pointer p-1.5 rounded-full hover:bg-default-100 transition-colors"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+                <div>
+                  <h3 className="text-base font-black uppercase tracking-wider text-foreground">
+                    Account Profile & Security
+                  </h3>
+                  <p className="text-[10px] text-default-500 uppercase tracking-widest font-bold">
+                    Personal Credentials & Security Vault
+                  </p>
+                </div>
               </div>
+            </HeroModal.Header>
 
-              <form onSubmit={handleSaveProfile} className="space-y-4">
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">
-                      Full Name
-                    </label>
+            <HeroModal.Body className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold text-default-500 uppercase tracking-widest pl-1">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editFullName}
+                    onChange={(e) => setEditFullName(e.target.value)}
+                    placeholder="e.g. John Doe"
+                    className="w-full bg-background border border-divider/50 px-3.5 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-xl font-bold"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold text-default-500 uppercase tracking-widest pl-1">
+                    Username
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-2 text-default-400 text-xs select-none">@</span>
                     <input
                       type="text"
                       required
-                      value={editFullName}
-                      onChange={(e) => setEditFullName(e.target.value)}
-                      placeholder="e.g. John Doe"
-                      className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500 transition-colors rounded-lg font-bold"
+                      value={editUsername}
+                      onChange={(e) => setEditUsername(e.target.value)}
+                      placeholder="Username"
+                      className="w-full bg-background border border-divider/50 pl-7 pr-3.5 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-xl font-medium"
                     />
                   </div>
+                </div>
+              </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">
-                      Username
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2 text-zinc-500 text-xs select-none">@</span>
-                      <input
-                        type="text"
-                        required
-                        value={editUsername}
-                        onChange={(e) => setEditUsername(e.target.value)}
-                        placeholder="Username"
-                        className="w-full bg-background border-b-2 border-divider pl-7 pr-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500 transition-colors rounded-lg"
-                      />
-                    </div>
-                  </div>
+              <div className="space-y-3 pt-2 border-t border-divider/15">
+                <div className="text-[11px] font-black text-warning uppercase tracking-wider flex items-center gap-1 pl-1">
+                  <span>Update Security Password (Optional)</span>
                 </div>
 
-                <div className="space-y-3 pt-1 border-t border-divider/15">
-                  <div className="text-[10.5px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1 pl-1">
-                    <span>Update Security Password (Optional)</span>
-                  </div>
-
-                  <div className="space-y-1 relative">
-                    <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">
-                      Current Password
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showCurrentPassword ? "text" : "password"}
-                        value={currentPasswordInput}
-                        onChange={(e) => setCurrentPasswordInput(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500 transition-colors rounded-lg pr-9"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                        className="absolute right-2.5 top-2 text-zinc-400 hover:text-foreground cursor-pointer"
-                      >
-                        {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1 relative">
-                    <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">
-                      New Password (Min 6 Characters)
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showNewPassword ? "text" : "password"}
-                        value={newPasswordInput}
-                        onChange={(e) => setNewPasswordInput(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500 transition-colors rounded-lg pr-9"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        className="absolute right-2.5 top-2 text-zinc-400 hover:text-foreground cursor-pointer"
-                      >
-                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest pl-1">
-                      Confirm New Password
-                    </label>
+                <div className="space-y-1 relative">
+                  <label className="text-[10px] font-extrabold text-default-500 uppercase tracking-widest pl-1">
+                    Current Password
+                  </label>
+                  <div className="relative">
                     <input
-                      type="password"
-                      value={confirmPasswordInput}
-                      onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                      type={showCurrentPassword ? "text" : "password"}
+                      value={currentPasswordInput}
+                      onChange={(e) => setCurrentPasswordInput(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500 transition-colors rounded-lg"
+                      className="w-full bg-background border border-divider/50 px-3.5 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-xl pr-9 font-medium"
                     />
-                  </div>
-                </div>
-
-                <div className="pt-2">
-                  {profileModalError ? (
-                    <p className="text-[9.5px] font-bold text-rose-500 px-1 leading-normal">
-                      {profileModalError}
-                    </p>
-                  ) : (
-                    <p className="text-[9px] text-zinc-400 px-1 leading-normal font-medium flex items-center gap-1">
-                      <span>Your account security credentials will be encrypted and updated securely.</span>
-                    </p>
-                  )}
-                </div>
-
-                {(currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.MANAGER) && (
-                  <div className="pt-2 border-t border-divider/15">
                     <button
                       type="button"
-                      onClick={() => {
-                        setShowAccountSettingsModal(false);
-                        setShowSystemSettingsModal(true);
-                      }}
-                      className="w-full flex items-center justify-between px-3.5 py-2.5 bg-default-100/70 hover:bg-default-200 border border-divider/30 rounded-xl text-xs font-bold text-foreground transition-all cursor-pointer group"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      className="absolute right-2.5 top-2 text-default-400 hover:text-foreground cursor-pointer"
                     >
-                      <div className="flex items-center gap-2">
-                        <Settings className="h-4 w-4 text-primary" />
-                        <span>System Settings & Config</span>
-                      </div>
-                      <span className="text-[10px] text-default-400 group-hover:text-foreground">Configure &rarr;</span>
+                      {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                )}
+                </div>
 
-                <div className="flex justify-end gap-3 pt-3 border-t border-divider/15 font-sans">
+                <div className="space-y-1 relative">
+                  <label className="text-[10px] font-extrabold text-default-500 uppercase tracking-widest pl-1">
+                    New Password (Min 6 Characters)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      value={newPasswordInput}
+                      onChange={(e) => setNewPasswordInput(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full bg-background border border-divider/50 px-3.5 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-xl pr-9 font-medium"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-2.5 top-2 text-default-400 hover:text-foreground cursor-pointer"
+                    >
+                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold text-default-500 uppercase tracking-widest pl-1">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPasswordInput}
+                    onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-background border border-divider/50 px-3.5 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-xl font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-1">
+                {profileModalError ? (
+                  <p className="text-[10px] font-bold text-danger px-1 leading-normal">
+                    {profileModalError}
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-default-500 px-1 leading-normal font-medium">
+                    Your account security credentials will be encrypted and updated securely.
+                  </p>
+                )}
+              </div>
+
+              {(currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.MANAGER) && (
+                <div className="pt-2 border-t border-divider/15">
                   <button
                     type="button"
                     onClick={() => {
-                      setCurrentPasswordInput("");
-                      setNewPasswordInput("");
-                      setConfirmPasswordInput("");
-                      setProfileModalError("");
                       setShowAccountSettingsModal(false);
+                      setShowSystemSettingsModal(true);
                     }}
-                    className="px-4 py-2 bg-default-100 hover:bg-default-100 rounded-full text-zinc-300 font-extrabold text-[10px] uppercase tracking-wider transition-all cursor-pointer text-center"
+                    className="w-full flex items-center justify-between px-3.5 py-2.5 bg-content2/60 hover:bg-content2 border border-divider/30 rounded-xl text-xs font-bold text-foreground transition-all cursor-pointer group"
                   >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isUpdatingProfile}
-                    className="px-5 py-2 rounded-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[10px] uppercase tracking-wider transition-all cursor-pointer shadow-md disabled:brightness-50"
-                  >
-                    {isUpdatingProfile ? "Saving Hashed Token..." : "Update Password"}
+                    <div className="flex items-center gap-2">
+                      <Settings className="h-4 w-4 text-primary" />
+                      <span>System Settings & Config</span>
+                    </div>
+                    <span className="text-[10px] text-default-400 group-hover:text-foreground">Configure &rarr;</span>
                   </button>
                 </div>
-              </form>
-            </div>
-          </div>,
-          document.body
-        )}
+              )}
+            </HeroModal.Body>
+
+            <HeroModal.Footer className="justify-end gap-2.5 pt-3 pb-4 border-t border-divider/15">
+              <HeroButton
+                type="button"
+                variant="flat"
+                size="sm"
+                onClick={() => {
+                  setCurrentPasswordInput("");
+                  setNewPasswordInput("");
+                  setConfirmPasswordInput("");
+                  setProfileModalError("");
+                  setShowAccountSettingsModal(false);
+                }}
+                className="font-bold text-xs"
+              >
+                Cancel
+              </HeroButton>
+              <HeroButton
+                type="submit"
+                variant="solid"
+                color="warning"
+                size="sm"
+                isLoading={isUpdatingProfile}
+                loadingText="Updating..."
+                className="font-bold text-xs uppercase tracking-wider text-black"
+              >
+                Update Password
+              </HeroButton>
+            </HeroModal.Footer>
+          </form>
+        </HeroModal>
 
         {/* SYSTEM SETTINGS MODAL */}
-        {showSystemSettingsModal && typeof document !== 'undefined' && createPortal(
-          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 animate-fade-in font-sans">
-            <div 
-              className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-md transition-opacity" 
-              onClick={() => setShowSystemSettingsModal(false)} 
+        <HeroModal
+          isOpen={showSystemSettingsModal}
+          onClose={() => setShowSystemSettingsModal(false)}
+          size="4xl"
+          zIndex={99999}
+          className="max-h-[92vh]"
+        >
+          <div className="p-4 sm:p-6">
+            <SystemSettingsModule
+              darkMode={darkMode}
+              setDarkMode={handleToggleDarkMode}
+              followSystemTheme={followSystemTheme}
+              setFollowSystemTheme={setFollowSystemTheme}
+              isModal={true}
+              onClose={() => setShowSystemSettingsModal(false)}
             />
-            <div className="relative w-full max-w-4xl rounded-2xl border border-divider/30 p-4 sm:p-6 z-20 shadow-2xl bg-content1 text-foreground max-h-[92vh] overflow-y-auto custom-scrollbar text-left">
-              <SystemSettingsModule
-                darkMode={darkMode}
-                setDarkMode={handleToggleDarkMode}
-                followSystemTheme={followSystemTheme}
-                setFollowSystemTheme={setFollowSystemTheme}
-                isModal={true}
-                onClose={() => setShowSystemSettingsModal(false)}
-              />
-            </div>
-          </div>,
-          document.body
-        )}
+          </div>
+        </HeroModal>
 
         {/* SESSION SUPERSEDED & DURATION EXPIRY MODAL */}
-        {sessionSupersededNotice && typeof document !== 'undefined' && createPortal(
-          <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4 animate-fade-in font-sans">
-            <div className="fixed inset-0 bg-black/75 backdrop-blur-md" onClick={clearSessionNotice} />
-            <div className="relative w-full max-w-md rounded-3xl border border-rose-500/30 p-6 z-20 shadow-2xl bg-content1 text-foreground text-center space-y-4">
-              <div className="mx-auto w-14 h-14 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-500">
-                <AlertTriangle className="h-7 w-7" />
-              </div>
-              <div className="space-y-1.5">
-                <h3 className="text-lg font-black text-foreground">Single Active Terminal Security Alert</h3>
-                <p className="text-xs text-default-600 leading-relaxed font-medium text-left bg-content2/60 p-3.5 rounded-2xl border border-divider/25">
-                  {sessionSupersededNotice}
-                </p>
-              </div>
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={clearSessionNotice}
-                  className="w-full py-2.5 px-4 bg-primary text-primary-foreground font-bold text-xs rounded-xl shadow-md hover:opacity-90 cursor-pointer transition-all"
-                >
-                  Acknowledge & Sign In
-                </button>
-              </div>
+        <HeroModal
+          isOpen={!!sessionSupersededNotice}
+          onClose={clearSessionNotice}
+          size="sm"
+          zIndex={999999}
+          className="border border-danger/30 text-center"
+        >
+          <HeroModal.Body className="p-6 space-y-4 text-center">
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-danger/15 border border-danger/30 flex items-center justify-center text-danger">
+              <AlertTriangle className="h-7 w-7" />
             </div>
-          </div>,
-          document.body
-        )}
+            <div className="space-y-1.5">
+              <h3 className="text-base font-black text-foreground">Single Active Terminal Security Alert</h3>
+              <p className="text-xs text-default-600 leading-relaxed font-medium text-left bg-content2/60 p-3.5 rounded-2xl border border-divider/25">
+                {sessionSupersededNotice}
+              </p>
+            </div>
+            <div className="pt-2">
+              <HeroButton
+                type="button"
+                color="primary"
+                variant="solid"
+                size="md"
+                onClick={clearSessionNotice}
+                className="w-full font-bold text-xs"
+              >
+                Acknowledge & Sign In
+              </HeroButton>
+            </div>
+          </HeroModal.Body>
+        </HeroModal>
 
         {/* FLOATING TOAST NOTIFICATION */}
         <ToastNotification
