@@ -7,7 +7,6 @@ import {
 AlertCircle,
 Calculator,
 Calendar,
-CheckCircle,
 ChevronDown,
 ChevronUp,
 Download,
@@ -15,14 +14,11 @@ FileText,
 History,
 Keyboard,
 Loader2,
-Lock,
 LockKeyhole,
-Printer,
 RefreshCw,
 RotateCcw,
 Scissors,
 Search,
-ShieldAlert,
 ShieldCheck,
 ShoppingBag,
 ShoppingCart,
@@ -41,13 +37,19 @@ import { getBranchStockQuantity,getBranchStockRecord,isProductInBranch,isSameBra
 import { saveFileToBackup } from "../lib/fileBackupHelper";
 import { Member,Product,Sale,UserRole } from "../types/db";
 import { formatCurrency } from "../utils/formatters";
-import { CalculatorModule } from "./CalculatorModule";
 import { ToastNotification } from "./ToastNotification";
 import { useReceiptFontSize } from "./ReceiptFontSizeControl";
 import { HeroDropdownSelect } from "./common/ui/HeroDropdown";
 import { HeroButton } from "./common/ui/HeroButton";
 import { HeroChip } from "./common/ui/HeroChip";
 import { formatTin } from '../utils/formatters';
+import { PosAddMemberModal } from "./pos/modals/PosAddMemberModal";
+import { PosCustomerModal } from "./pos/modals/PosCustomerModal";
+import { PosDiscountModal } from "./pos/modals/PosDiscountModal";
+import { PosShiftModal } from "./pos/modals/PosShiftModal";
+import { PosCloseShiftModal } from "./pos/modals/PosCloseShiftModal";
+import { PosReceiptModal } from "./pos/modals/PosReceiptModal";
+import { PosTileCalculatorModal } from "./pos/modals/PosTileCalculatorModal";
 
 interface PosModuleProps {
   darkMode: boolean;
@@ -480,7 +482,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  return members.find((m) => m.fullName.trim().toLowerCase() === nameTrimmed) || null;
  }, [activeReceipt, members]);
 
- const [receiptViewMode, setReceiptViewMode] = useState<"unified" | "official" | "delivery">("unified");
 
  const activeReceiptDelivery = React.useMemo(() => {
  if (!activeReceipt) return null;
@@ -3860,865 +3861,82 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  )}
 
- <AnimatePresence>
- {showShiftModal && (
- <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
- <motion.div
- initial={{ opacity: 0 }}
- animate={{ opacity: 1 }}
- exit={{ opacity: 0 }}
- transition={{ duration: 0.25 }}
- className="absolute inset-0 bg-black/50 backdrop-blur-sm"
- onClick={() => {
- setShowShiftModal(false);
- setHasDismissedShiftPrompt(true);
- }}
- />
- <motion.div
- initial={{ opacity: 0, scale: 0.95, y: 15 }}
- animate={{ opacity: 1, scale: 1, y: 0 }}
- exit={{ opacity: 0, scale: 0.95, y: 15 }}
- transition={{ type: "spring", duration: 0.4 }}
- className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4"
- >
- <div className="flex items-start gap-3 mb-1">
- <div className="p-2 rounded-2xl bg-primary/10 text-primary shrink-0">
- <Lock className="h-5 w-5" />
- </div>
- <div className="text-left">
- <h3 className="text-base font-bold text-primary">
- Cashier Terminal Shift Required
- </h3>
- <p className="text-xs text-default-500 mt-0.5 font-medium leading-relaxed">
- Please register an active cashier starting drawer fund to
- accept ERP OS payments.
- </p>
- </div>
- </div>
+  {/* Cashier Shift Opening Modal */}
+  <PosShiftModal
+    isOpen={showShiftModal}
+    onClose={() => {
+      setShowShiftModal(false);
+      setHasDismissedShiftPrompt(true);
+    }}
+    previouslyClosedShift={previouslyClosedShift}
+    startCashInput={startCashInput}
+    setStartCashInput={setStartCashInput}
+    onOpenShiftSubmit={handleOpenShiftSubmit}
+    showToast={showToast}
+  />
 
- <form
- onSubmit={handleOpenShiftSubmit}
- className="space-y-4 text-left"
- >
- {previouslyClosedShift && (
- <div className="p-3 bg-content1 border border-divider/30 rounded-2xl space-y-1.5 text-[11px] leading-normal">
- <div className="flex justify-between items-center text-amber-600 dark:text-amber-500 font-bold">
- <span>Previous Close Balance:</span>
- <span className=" font-black text-xs text-foreground">
- ₱
- {(Number(previouslyClosedShift?.cashCount) || 0).toLocaleString(
- undefined,
- { minimumFractionDigits: 2 },
- )}
- </span>
- </div>
- <p className="text-[9.5px] text-default-500/80">
- Closed by{" "}
- <strong className="text-default-500 font-semibold">
- {previouslyClosedShift.cashierName}
- </strong>{" "}
- on{" "}
- {new Date(
- previouslyClosedShift.closedAt || "",
- ).toLocaleDateString("en-US", {
- month: "short",
- day: "numeric",
- hour: "2-digit",
- minute: "2-digit",
- })}
- .
- </p>
- <button
- type="button"
- onClick={() => {
- setStartCashInput(
- (Number(previouslyClosedShift?.cashCount) || 0).toString(),
- );
- showToast(
- `Loaded previous shift balance of ₱${(Number(previouslyClosedShift?.cashCount) || 0).toFixed(2)}`,
- );
- }}
- className="w-full py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl font-bold transition-all text-center text-[10px]"
- >
- Use Previous Shift Balance
- </button>
- </div>
- )}
+  {/* Cashier Shift Closing Modal */}
+  <PosCloseShiftModal
+    isOpen={showCloseShiftModal && !!activeShift}
+    onClose={() => setShowCloseShiftModal(false)}
+    activeShift={activeShift}
+    shiftStats={activeShift ? getShiftReportStats(activeShift) : null}
+    closeShiftCashInput={closeShiftCashInput}
+    setCloseShiftCashInput={setCloseShiftCashInput}
+    onCloseShiftSubmit={handleCloseShiftSubmit}
+  />
 
- <div className="space-y-2 relative pr-0 pl-0">
-    <div className="flex justify-between items-center pl-1">
-      <label className="text-[10px] font-bold uppercase tracking-widest text-primary block">
-        Opening Change Float (PHP)
-      </label>
-      <span className="text-[9px] text-default-500 font-medium">Standard Retail Float</span>
-    </div>
-    <input
-      type="number"
-      step="any"
-      required
-      placeholder="e.g. 1000.00"
-      value={startCashInput ?? ''}
-      onChange={(e) => setStartCashInput(e.target.value)}
-      className="w-full bg-background border-b-2 border-divider px-3 py-2.5 text-base text-foreground focus:outline-none focus:border-primary transition-colors text-center font-black rounded-lg"
-    />
-    <div className="grid grid-cols-4 gap-1.5 pt-1">
-      {[500, 1000, 2000, 3000].map((amt) => (
-        <button
-          key={amt}
-          type="button"
-          onClick={() => setStartCashInput(amt.toString())}
-          className={`py-1.5 text-[11px] font-bold rounded-lg border transition-all ${
-            startCashInput === amt.toString()
-              ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-              : 'bg-content2 hover:bg-content3 border-divider/40 text-foreground'
-          }`}
-        >
-          ₱{amt.toLocaleString()}
-        </button>
-      ))}
-    </div>
-  </div>
+  {/* Item Discount & Tax Exemption Modal */}
+  <PosDiscountModal
+    isOpen={showDiscountModal}
+    onClose={() => setShowDiscountModal(false)}
+    cart={cart}
+    getBranchPrice={getBranchPrice}
+    selectedDiscountItemIndex={selectedDiscountItemIndex}
+    setSelectedDiscountItemIndex={setSelectedDiscountItemIndex}
+    discountType={discountType}
+    discountInput={discountInput}
+    setDiscountInput={setDiscountInput}
+    discountSchemes={discountSchemes}
+    applyCustomDiscount={applyCustomDiscount}
+  />
 
- <div className="flex gap-2 border-t border-divider/15 pt-4">
- <button
- type="button"
- onClick={() => {
- setShowShiftModal(false);
- setHasDismissedShiftPrompt(true);
- }}
- className="flex-1 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors text-center"
- >
- Cancel
- </button>
- <button
- type="submit"
- className="flex-1 bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20 rounded-xl px-4 py-2 text-xs shadow-sm cursor-pointer text-center hover:bg-primary/90 transition-colors"
- >
- Open Terminal Shift
- </button>
- </div>
- </form>
- </motion.div>
- </div>
- )}
- </AnimatePresence>
+  {/* Official POS Receipt Print Modal */}
+  <PosReceiptModal
+    isOpen={showReceiptModal && !!activeReceipt}
+    onClose={() => setShowReceiptModal(false)}
+    activeReceipt={activeReceipt}
+    activeReceiptDelivery={activeReceiptDelivery}
+    receiptFontClass={receiptFontClass}
+    renderPosSalesReceipt={renderPosSalesReceipt}
+    renderPosDeliveryReceiptCopy={renderPosDeliveryReceiptCopy}
+    renderCutSeparator={renderCutSeparator}
+    addAuditLog={addAuditLog}
+    showToast={showToast}
+  />
 
- <AnimatePresence>
- {showCloseShiftModal && activeShift && (
- <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
- <motion.div
- initial={{ opacity: 0 }}
- animate={{ opacity: 1 }}
- exit={{ opacity: 0 }}
- transition={{ duration: 0.25 }}
- className="absolute inset-0 bg-black/50 backdrop-blur-sm"
- onClick={() => setShowCloseShiftModal(false)}
- />
- <motion.div
- initial={{ opacity: 0, scale: 0.95, y: 15 }}
- animate={{ opacity: 1, scale: 1, y: 0 }}
- exit={{ opacity: 0, scale: 0.95, y: 15 }}
- transition={{ type: "spring", duration: 0.4 }}
- className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4"
- >
- <div className="flex items-start gap-3 mb-1">
- <div className="p-2 rounded-2xl bg-rose-500/10 text-rose-400 shrink-0">
- <LockKeyhole className="h-5 w-5" />
- </div>
- <div className="text-left">
- <h3 className="text-base font-bold text-rose-400">
- Close Cashier Drawer Shift
- </h3>
- <p className="text-xs text-default-500 mt-0.5 font-medium leading-relaxed">
- Verify and count the physical cash in the register drawer to
- close shift.
- </p>
- </div>
- </div>
-
- {activeShift &&
- (() => {
- const stats = getShiftReportStats(activeShift);
- const expectedCash = activeShift.startCash + stats.cashSalesTotal;
- const enteredCash = parseFloat(closeShiftCashInput) || 0;
- const variance =
- closeShiftCashInput === "" ? 0 : enteredCash - expectedCash;
-
- return (
- <form
- onSubmit={handleCloseShiftSubmit}
- className="space-y-4 text-left"
- >
- <div className="bg-content1 border border-divider/30 p-3.5 rounded-2xl space-y-2.5 text-xs">
- <div className="flex justify-between border-b border-divider/15 pb-2">
- <span className="text-default-500">Active Cashier:</span>
- <span className="font-bold text-foreground">
- {activeShift.cashierName}
- </span>
- </div>
- <div className="flex justify-between">
- <span className="text-default-500">Starting Cash:</span>
- <span className=" font-bold text-foreground">
- ₱
- {(Number(activeShift?.startCash) || 0).toLocaleString(undefined, {
- minimumFractionDigits: 2,
- })}
- </span>
- </div>
- <div className="flex justify-between">
- <span className="text-default-500">
- Cash Sales Added:
- </span>
- <span className=" font-bold text-foreground">
- ₱
- {(Number(stats?.cashSalesTotal) || 0).toLocaleString(undefined, {
- minimumFractionDigits: 2,
- })}
- </span>
- </div>
- {stats && stats.netTotal > stats.cashSalesTotal && (
- <div className="flex justify-between text-[11px] text-default-500/80">
- <span>Non-Cash Payments (Card/GCash/Credit):</span>
- <span className=" font-bold">
- ₱
- {(Number(stats.netTotal - stats.cashSalesTotal) || 0).toLocaleString(undefined, {
- minimumFractionDigits: 2,
- })}
- </span>
- </div>
- )}
- <div className="flex justify-between border-t border-dashed border-divider/25 pt-2 text-sm font-bold">
- <span className="text-primary">
- Expected Drawer Cash:
- </span>
- <span className=" text-primary">
- ₱
- {(Number(expectedCash) || 0).toLocaleString(undefined, {
- minimumFractionDigits: 2,
- })}
- </span>
- </div>
- </div>
-
- <div className="space-y-1 relative pr-0 pl-0">
- <label className="text-[10px] font-bold uppercase tracking-widest text-primary block pl-1">
- Physical Cash Counted (PHP)
- </label>
- <input
- type="number"
- step="any"
- required
- value={closeShiftCashInput ?? ''}
- onChange={(e) =>
- setCloseShiftCashInput(e.target.value)
- }
- placeholder="Enter counted physical cash..."
- className="w-full bg-background border-b-2 border-divider px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary transition-colors text-center font-black rounded-lg"
- />
- </div>
-
- {closeShiftCashInput !== "" && (
- <div className="p-3 bg-content1 border border-divider/30 rounded-2xl flex justify-between items-center">
- <span className="text-xs text-default-500 font-bold uppercase">
- Variance:
- </span>
- <span
- className={` font-black text-sm ${
- variance === 0
- ? "text-default-500"
- : variance > 0
- ? "text-emerald-600 dark:text-emerald-400"
- : "text-rose-600 dark:text-rose-400"
- }`}
- >
- {variance > 0 ? "+" : ""}₱
- {(Number(variance) || 0).toLocaleString(undefined, {
- minimumFractionDigits: 2,
- })}
- </span>
- </div>
- )}
-
- <div className="flex gap-2 border-t border-divider/15 pt-4">
- <button
- type="button"
- onClick={() => setShowCloseShiftModal(false)}
- className="flex-1 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors text-center"
- >
- Cancel
- </button>
- <button
- type="submit"
- className="flex-1 bg-rose-500 hover:bg-rose-600 text-white py-2 text-xs font-black uppercase rounded-full shadow-sm cursor-pointer text-center"
- >
- Close Out & Close Shift
- </button>
- </div>
- </form>
- );
- })()}
- </motion.div>
- </div>
- )}
- </AnimatePresence>
-
- <AnimatePresence>
- {showDiscountModal && (
- <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
- <motion.div
- initial={{ opacity: 0 }}
- animate={{ opacity: 1 }}
- exit={{ opacity: 0 }}
- transition={{ duration: 0.25 }}
- className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm"
- onClick={() => setShowDiscountModal(false)}
- />
- <motion.div
- initial={{ opacity: 0, scale: 0.95, y: 15 }}
- animate={{ opacity: 1, scale: 1, y: 0 }}
- exit={{ opacity: 0, scale: 0.95, y: 15 }}
- transition={{ type: "spring", duration: 0.4 }}
- className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4 text-left"
- >
- <h3 className="text-base font-extrabold text-primary flex items-center gap-2">
- <Sparkles className="h-5 w-5 text-primary" /> Select
- Item Discount & Exemptions
- </h3>
-
- <div className="bg-background p-3.5 rounded-2xl border border-divider/20 space-y-1.5">
- <label className="text-xs font-bold text-primary uppercase tracking-wider block">
- Target Item for Discount
- </label>
- <HeroDropdownSelect
- items={[
- { key: 'ALL', label: `Apply to ALL Items in Cart (${cart.length} item${cart.length === 1 ? '' : 's'})` },
- ...cart.map((it, i) => {
- const baseP = getBranchPrice(it.product);
- const p = it.overridePrice !== undefined ? it.overridePrice : baseP;
- return {
- key: String(i),
- label: `Item #${i + 1}: ${it.product.productName} (${formatCurrency(p)}/unit x ${it.quantity})`,
- };
- }),
- ]}
- selectedKey={selectedDiscountItemIndex === null ? 'ALL' : String(selectedDiscountItemIndex)}
- onSelectionChange={(val) => {
- setSelectedDiscountItemIndex(val === 'ALL' ? null : parseInt(val, 10));
- }}
- size="sm"
- variant="pill"
- />
- </div>
-
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
- <button
- type="button"
- onClick={() => applyCustomDiscount("NONE")}
- className={`p-3.5 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
- discountType === "NONE"
- ? "border-primary bg-primary/10"
- : "border-divider/20 bg-background hover:bg-default-100"
- }`}
- >
- <div className="font-bold text-sm">No Discount</div>
- <div className="text-xs text-default-500 mt-1 font-medium">
- Standard cashier list pricing applies.
- </div>
- </button>
-
- <button
- type="button"
- onClick={() => applyCustomDiscount("SENIOR")}
- className={`p-3.5 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
- discountType === "SENIOR"
- ? "border-primary bg-primary/10"
- : "border-divider/20 bg-background hover:bg-default-100"
- }`}
- >
- <div className="font-bold text-sm text-primary flex items-center gap-1">
- Senior Citizen
- </div>
- <div className="text-xs text-default-500 mt-1 font-medium">
- 20% Off base + 12% VAT exemption (Philippine RA 9994).
- </div>
- </button>
-
- <button
- type="button"
- onClick={() => applyCustomDiscount("PWD")}
- className={`p-3.5 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
- discountType === "PWD"
- ? "border-primary bg-primary/10"
- : "border-divider/20 bg-background hover:bg-default-100"
- }`}
- >
- <div className="font-bold text-sm text-primary flex items-center gap-1">
- PWD Resident
- </div>
- <div className="text-xs text-default-500 mt-1 font-medium">
- 20% Off base + 12% VAT exemption (Philippine RA 10754).
- </div>
- </button>
-
- <button
- type="button"
- onClick={() => applyCustomDiscount("CONTRACT")}
- className={`p-3.5 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
- discountType === "CONTRACT"
- ? "border-primary bg-primary/10"
- : "border-divider/20 bg-background hover:bg-default-100"
- }`}
- >
- <div className="font-bold text-sm text-primary">
- Contractor Alliance
- </div>
- <div className="text-xs text-default-500 mt-1 font-medium">
- Flat 10% Trade Allied partner discount.
- </div>
- </button>
-                {discountSchemes && discountSchemes.filter(d => d.isActive !== false && d.id !== "disc-senior" && d.id !== "disc-pwd" && d.id !== "disc-contract").map(scheme => (
-                  <button
-                    key={scheme.id}
-                    type="button"
-                    onClick={() => {
-                      if (scheme.discountType === "percentage") {
-                        applyCustomDiscount("PERCENT", String(scheme.ratePercent || 0));
-                      } else {
-                        applyCustomDiscount("FLAT", String(scheme.flatAmount || 0));
-                      }
-                    }}
-                    className="p-3.5 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between border-divider/20 bg-background hover:bg-default-100"
-                  >
-                    <div className="font-bold text-sm text-primary flex items-center justify-between">
-                      <span>{scheme.name}</span>
-                      <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-black">
-                        {scheme.discountType === "percentage" ? `${scheme.ratePercent}% OFF` : `₱${scheme.flatAmount} OFF`}
-                      </span>
-                    </div>
-                    <div className="text-xs text-default-500 mt-1 font-medium">
-                      {scheme.description || `${scheme.name} promotional pricing rule.`}
-                    </div>
-                  </button>
-                ))}
-              </div>
-
- <div className="border-t border-divider/20 pt-4 space-y-4">
- <h4 className="text-xs font-extrabold text-primary uppercase tracking-wider pl-1 font-sans">
- Or Apply Custom Values (Flat / Rate)
- </h4>
-
- <div className="flex gap-3">
- <div className="flex-1 relative pl-0">
- <label className="text-xs font-bold tracking-wider text-default-500 mb-1 block pl-1">
- Discount Amount/Value
- </label>
- <input
- type="number"
- value={discountInput ?? ''}
- onChange={(e) => setDiscountInput(e.target.value)}
- placeholder={
- discountType === "PERCENT"
- ? "e.g. 15 for 15%"
- : "e.g. 100 for ₱100"
- }
- className="w-full bg-background border-b-2 border-divider px-3.5 py-2.5 text-sm font-bold text-foreground focus:outline-none focus:border-primary rounded-lg transition-colors"
- />
- </div>
-
- <div className="flex flex-col justify-end gap-1.5 shrink-0">
- <div className="flex gap-2">
- <button
- type="button"
- onClick={() =>
- applyCustomDiscount("FLAT", discountInput)
- }
- className="px-4 py-2.5 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 text-xs font-bold rounded-lg cursor-pointer transition-colors"
- >
- Apply Flat (₱)
- </button>
- <button
- type="button"
- onClick={() =>
- applyCustomDiscount("PERCENT", discountInput)
- }
- className="px-4 py-2.5 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 text-xs font-bold rounded-lg cursor-pointer transition-colors"
- >
- Apply Percent (%)
- </button>
- </div>
- </div>
- </div>
- </div>
-
- <div className="flex justify-end gap-2 border-t border-divider/20 pt-4 flex-shrink-0">
- <button
- type="button"
- onClick={() => setShowDiscountModal(false)}
- className="px-5 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors text-center"
- >
- Close Panel
- </button>
- </div>
- </motion.div>
- </div>
- )}
- </AnimatePresence>
-
- <AnimatePresence>
- {showReceiptModal && activeReceipt && (
- <div className="fixed inset-0 overflow-y-auto flex items-start justify-center z-50 p-4 md:items-center">
- <motion.div
- initial={{ opacity: 0 }}
- animate={{ opacity: 1 }}
- exit={{ opacity: 0 }}
- transition={{ duration: 0.25 }}
- className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
- onClick={() => setShowReceiptModal(false)}
- />
- <motion.div
- initial={{ opacity: 0, scale: 0.9, y: 30 }}
- animate={{ opacity: 1, scale: 1, y: 0 }}
- exit={{ opacity: 0, scale: 0.9, y: 30 }}
- transition={{ type: "spring", stiffness: 350, damping: 25 }}
- className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl border border-divider/30 p-5 z-20 shadow-2xl bg-content1 text-foreground flex flex-col justify-between shrink-0"
- >
- <div className="flex flex-col items-center justify-center mb-4 text-center">
- <div className="p-2 rounded-full bg-secondary-50 border border-secondary/20 text-secondary-700 mb-2 text-center">
- <CheckCircle className="h-6 w-6 text-secondary" />
- </div>
- <h3 className="text-base font-bold text-foreground">
- Checkout Succeeded
- </h3>
- <p className="text-[11px] text-default-500 font-medium">
- Inventory files adjusted automatically.
- </p>
- </div>
-
-  <div className="flex bg-content1 p-1 rounded-xl border border-divider/30 mb-3 bir-report-no-print text-center gap-1">
-    <button
-      type="button"
-      onClick={() => setReceiptViewMode("unified")}
-      className={`flex-1 py-1.5 px-2 text-[10px] font-extrabold uppercase rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
-        receiptViewMode === "unified"
-          ? "bg-primary text-primary-foreground shadow-xs"
-          : "text-default-500 hover:text-foreground"
-      }`}
-    >
-      <Scissors className="h-3 w-3" /> All (Auto-Cut)
-    </button>
-
-    <button
-      type="button"
-      onClick={() => setReceiptViewMode("official")}
-      className={`flex-1 py-1.5 px-2 text-[10px] font-extrabold uppercase rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
-        receiptViewMode === "official"
-          ? "bg-primary text-primary-foreground shadow-xs"
-          : "text-default-500 hover:text-foreground"
-      }`}
-    >
-      <FileText className="h-3 w-3" /> Sales Receipt
-    </button>
-
-    {activeReceiptDelivery && (
-      <button
-        type="button"
-        onClick={() => setReceiptViewMode("delivery")}
-        className={`flex-1 py-1.5 px-2 text-[10px] font-extrabold uppercase rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
-          receiptViewMode === "delivery"
-            ? "bg-primary text-primary-foreground shadow-xs"
-            : "text-default-500 hover:text-foreground"
-        }`}
-      >
-        <Truck className="h-3 w-3" /> Delivery Receipt
-      </button>
-    )}
-  </div>
-
-  <div className={`space-y-3 my-2 select-text text-left max-h-[50vh] overflow-y-auto bir-receipt-container scrollbar-thin p-1 ${receiptFontClass}`}>
-    {receiptViewMode === "unified" && (
-      <>
-        {renderPosSalesReceipt()}
-        {activeReceiptDelivery && (
-          <>
-            {renderCutSeparator("SALES RECEIPT / DELIVERY RECEIPT (STORE COPY)")}
-            {renderPosDeliveryReceiptCopy("STORE COPY")}
-            {renderCutSeparator("STORE COPY / CUSTOMER COPY")}
-            {renderPosDeliveryReceiptCopy("CUSTOMER COPY")}
-          </>
-        )}
-      </>
-    )}
-
-    {receiptViewMode === "official" && (
-      renderPosSalesReceipt()
-    )}
-
-    {receiptViewMode === "delivery" && activeReceiptDelivery && (
-      <>
-        {renderPosDeliveryReceiptCopy("STORE COPY")}
-        {renderCutSeparator("STORE COPY / CUSTOMER COPY")}
-        {renderPosDeliveryReceiptCopy("CUSTOMER COPY")}
-      </>
-    )}
-  </div>
-
-  <div className="flex flex-col sm:flex-row gap-2 mt-4 flex-shrink-0 bir-report-no-print">
-    <button
-      type="button"
-      onClick={() => {
-        window.print();
-        const logType = receiptViewMode === "delivery" 
-          ? "PRINT_DELIVERY_RECEIPT" 
-          : receiptViewMode === "unified" 
-            ? "POS_UNIFIED_RECEIPT_PRINT" 
-            : "POS_RECEIPT_PRINT";
-        const logMsg = receiptViewMode === "delivery"
-          ? `Printed delivery receipt for ${activeReceipt.saleNumber}`
-          : receiptViewMode === "unified"
-            ? `Printed unified sales & delivery receipts (auto-cut) for ${activeReceipt.saleNumber}`
-            : `Printed sales receipt for ${activeReceipt.saleNumber}`;
-        
-        addAuditLog(logType, logMsg, "Sales", activeReceipt.id);
-        showToast("Sent printing signal to hardware terminal.");
-      }}
-      className="flex-1 py-2.5 px-3 text-xs font-black rounded-full bg-primary text-primary-foreground hover:brightness-110 shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center uppercase tracking-wider"
-    >
-      <Printer className="h-4 w-4" />
-      <span>
-        {receiptViewMode === "unified"
-          ? activeReceiptDelivery
-            ? "Print All (1-Click Auto-Cut)"
-            : "Print Receipt"
-          : receiptViewMode === "delivery"
-            ? "Print Delivery Receipt"
-            : "Print Sales Receipt"}
-      </span>
-    </button>
-
-    {activeReceiptDelivery && receiptViewMode !== "unified" && (
-      <button
-        type="button"
-        onClick={() => {
-          setReceiptViewMode("unified");
-          setTimeout(() => {
-            window.print();
-            addAuditLog(
-              "POS_UNIFIED_RECEIPT_PRINT",
-              `Printed unified sales & delivery receipts (auto-cut) for ${activeReceipt.saleNumber}`,
-              "Sales",
-              activeReceipt.id
-            );
-            showToast("Sent unified printing signal (Auto-Cut) to terminal.");
-          }, 120);
-        }}
-        className="py-2.5 px-3 text-xs font-bold rounded-full bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center uppercase tracking-wider"
-        title="Print Sales + Delivery Receipts with Auto-Cut in 1 job"
-      >
-        <Scissors className="h-3.5 w-3.5" />
-        <span>Print All (Auto-Cut)</span>
-      </button>
-    )}
-
-    <button
-      type="button"
-      onClick={() => {
-        setShowReceiptModal(false);
-        setReceiptViewMode("unified");
-      }}
-      className="py-2.5 px-4 text-xs font-bold rounded-full border border-divider/50 hover:bg-default-100 text-foreground transition-colors cursor-pointer text-center uppercase tracking-wider"
-    >
-      Done
-    </button>
-  </div>
- </motion.div>
- </div>
- )}
- </AnimatePresence>
-
- <AnimatePresence>
- {showCustomerModal && (
- <div className="fixed inset-0 flex items-center justify-center z-50 p-4 text-left">
- <motion.div
- initial={{ opacity: 0 }}
- animate={{ opacity: 1 }}
- exit={{ opacity: 0 }}
- transition={{ duration: 0.25 }}
- className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm"
- onClick={() => setShowCustomerModal(false)}
- />
- <motion.form
- initial={{ opacity: 0, scale: 0.95, y: 15 }}
- animate={{ opacity: 1, scale: 1, y: 0 }}
- exit={{ opacity: 0, scale: 0.95, y: 15 }}
- transition={{ type: "spring", duration: 0.4 }}
- onSubmit={handleSaveCustomerName}
- className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4"
- >
- <div className="flex justify-between items-center border-b border-divider/20 pb-2.5">
- <h3 className="text-base font-bold text-primary flex items-center gap-2">
- <span>Assign Customer Profile</span>
- </h3>
- <button
- type="button"
- onClick={() => setShowCustomerModal(false)}
- className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full"
- >
- <X className="h-5 w-5" />
- </button>
- </div>
-
- <div className="space-y-1 relative pr-0 pl-0">
- <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1 block">
- Buyer's Name
- </label>
- <input
- type="text"
- value={customerModalInput ?? ''}
- onChange={(e) => setCustomerModalInput(e.target.value)}
- placeholder="Full Name / Company Name"
- className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold"
- />
- </div>
-
- <div className="space-y-1 relative pr-0 pl-0">
- <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1 block">
- Buyer's Address (BIR / Invoicing)
- </label>
- <input
- type="text"
- value={customerModalAddressInput ?? ''}
- onChange={(e) => setCustomerModalAddressInput(e.target.value)}
- placeholder="Unit / Street / Barangay / City / Province"
- className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold"
- />
- </div>
-
- <div className="grid grid-cols-2 gap-3">
- <div className="space-y-1 relative pr-0 pl-0">
- <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1 block">
- Buyer TIN
- </label>
- <input
- type="text"
- value={customerModalTinInput ?? ''}
- onChange={(e) => setCustomerModalTinInput(formatTin(e.target.value))}
- placeholder="000-000-000-000"
- className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold"
- />
- </div>
-
- <div className="space-y-1 relative pr-0 pl-0">
- <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1 block">
- Business Style
- </label>
- <input
- type="text"
- value={customerModalBusinessStyleInput ?? ''}
- onChange={(e) => setCustomerModalBusinessStyleInput(e.target.value)}
- placeholder="e.g. Retail / General Contractor"
- className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold"
- />
- </div>
- </div>
-
- <div className="space-y-1 relative pr-0 pl-0">
- <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1 block">
- Ticket Note / Project Assign (Optional)
- </label>
- <input
- type="text"
- value={customerModalNotesInput ?? ''}
- onChange={(e) => setCustomerModalNotesInput(e.target.value)}
- placeholder="e.g. Master Bath Renovation / Lot 4 Villa"
- className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold"
- />
- </div>
-
- <div className="space-y-1.5 pt-1">
-   <label className="text-[9px] font-black text-default-500 uppercase tracking-widest pl-1 block">
-     Search Registered Corporate Members
-   </label>
-   <div className="max-h-36 overflow-y-auto border border-divider/20 rounded-xl p-1 bg-content1 divide-y divide-divider/10 scrollbar-thin">
-     {(() => {
-       const filteredModalMembers = members.filter((m) => {
-         if (!customerModalInput.trim()) return true;
-         return m.fullName.toLowerCase().includes(customerModalInput.toLowerCase()) ||
-                m.phone.includes(customerModalInput) ||
-                m.email.toLowerCase().includes(customerModalInput.toLowerCase());
-       });
-
-       if (filteredModalMembers.length === 0) {
-         return (
-           <div className="p-3 text-center space-y-2">
-             <p className="text-default-500 text-[11px] font-medium italic">
-               {customerModalInput.trim()
-                 ? `No corporate members found matching "${customerModalInput}".`
-                 : "No registered corporate members found."}
-             </p>
-             {customerModalInput.trim() &&
-              customerModalInput.toLowerCase() !== "walk-in customer" &&
-              customerModalInput.toLowerCase() !== "walk-in" && (
-               <button
-                 type="button"
-                 onClick={() => {
-                   setNewMemberName(customerModalInput.trim());
-                   setAddMemberError("");
-                   setShowCustomerModal(false);
-                   setShowAddMemberModal(true);
-                 }}
-                 className="px-3 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 text-xs font-extrabold rounded-lg inline-flex items-center gap-1.5 cursor-pointer transition-colors border-0"
-               >
-                 <UserPlus className="h-3.5 w-3.5" />
-                 <span>Add "{customerModalInput.trim()}" as Member</span>
-               </button>
-             )}
-           </div>
-         );
-       }
-
-       return filteredModalMembers.map((m) => (
-         <button
-           type="button"
-           key={m.id}
-           onClick={() => {
-             setCustomerModalInput(m.fullName);
-             if (m.address) setCustomerModalAddressInput(m.address);
-             if (m.tin) setCustomerModalTinInput(formatTin(m.tin));
-           }}
-           className="w-full text-left p-2 hover:bg-primary/10 rounded-lg text-xs font-bold text-foreground flex justify-between items-center cursor-pointer border-0 bg-transparent transition-colors"
-         >
-           <div className="flex flex-col text-left">
-             <span>{m.fullName}</span>
-             <span className="text-[8.5px] text-default-500 font-normal">{m.phone} • {m.email} {m.tin ? `• TIN: ${m.tin}` : ''}</span>
-           </div>
-           <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-black uppercase tracking-wider">
-             Select
-           </span>
-         </button>
-       ));
-     })()}
-   </div>
- </div>
-
- <div className="flex justify-end gap-2 border-t border-divider/20 pt-4">
- <button
- type="button"
- onClick={() => setShowCustomerModal(false)}
- className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors"
- >
- Cancel
- </button>
- <button
- type="submit"
- className="bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20 rounded-medium px-5 py-2 text-xs shadow-sm cursor-pointer"
- >
- Assign Customer
- </button>
- </div>
- </motion.form>
- </div>
- )}
- </AnimatePresence>
+  {/* Customer Profile & Billing Assignment Modal */}
+  <PosCustomerModal
+    isOpen={showCustomerModal}
+    onClose={() => setShowCustomerModal(false)}
+    customerModalInput={customerModalInput}
+    setCustomerModalInput={setCustomerModalInput}
+    customerModalAddressInput={customerModalAddressInput}
+    setCustomerModalAddressInput={setCustomerModalAddressInput}
+    customerModalTinInput={customerModalTinInput}
+    setCustomerModalTinInput={setCustomerModalTinInput}
+    customerModalBusinessStyleInput={customerModalBusinessStyleInput}
+    setCustomerModalBusinessStyleInput={setCustomerModalBusinessStyleInput}
+    customerModalNotesInput={customerModalNotesInput}
+    setCustomerModalNotesInput={setCustomerModalNotesInput}
+    members={members}
+    onSaveCustomerName={handleSaveCustomerName}
+    onOpenAddMember={(name) => {
+      setNewMemberName(name);
+      setAddMemberError("");
+      setShowAddMemberModal(true);
+    }}
+  />
 
  <AnimatePresence>
  {pendingApproval && (
@@ -5559,88 +4777,42 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  )}
 
- <AnimatePresence>
- {showTileCalculatorModal && (
- <div className="fixed inset-0 flex items-center justify-center z-50 p-4 font-sans text-foreground">
- <motion.div
- initial={{ opacity: 0 }}
- animate={{ opacity: 1 }}
- exit={{ opacity: 0 }}
- transition={{ duration: 0.25 }}
- className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
- onClick={() => setShowTileCalculatorModal(false)}
- />
- <motion.div
- initial={{ opacity: 0, scale: 0.95, y: 15 }}
- animate={{ opacity: 1, scale: 1, y: 0 }}
- exit={{ opacity: 0, scale: 0.95, y: 15 }}
- transition={{ type: "spring", duration: 0.4 }}
- className="relative w-full max-w-4xl max-h-[90vh] rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 flex flex-col"
- >
- <div className="flex justify-between items-center border-b border-divider/20 pb-3.5 mb-4 shrink-0 text-left">
- <h3 className="text-base font-black text-primary flex items-center gap-2">
- <Calculator className="h-5 w-5 text-primary" />
- <span>Tile Coverage & Area Estimator Calculator</span>
- </h3>
- <button
- type="button"
- onClick={() => setShowTileCalculatorModal(false)}
- className="text-default-500 hover:text-foreground cursor-pointer p-1.5 rounded-full hover:bg-primary/10 transition-colors"
- >
- <X className="h-5 w-5" />
- </button>
- </div>
-
- <div className="flex-1 overflow-y-auto pr-1">
- <CalculatorModule
- darkMode={darkMode}
- onApply={(product, quantity) => {
- const userBranchId = activePosBranchId;
- const realBranchStock = getBranchStockQuantity(product, userBranchId, branchStock, branches);
- if (realBranchStock <= 0) {
- showToast("Depleted Stock: Selected product is currently out of stock.");
- return;
- }
- const productWithStock = { ...product, stockQuantity: realBranchStock };
- setCart((prev) => {
- const idx = prev.findIndex((item) => item.product.id === product.id);
- if (idx !== -1) {
- const currentQty = prev[idx].quantity;
- if (currentQty + quantity > realBranchStock) {
- showToast(`Stock Limit: Only ${realBranchStock} available. Added remaining stock.`);
- const updated = [...prev];
- updated[idx] = { ...updated[idx], product: productWithStock, quantity: realBranchStock };
- return updated;
- }
- const updated = [...prev];
- updated[idx] = { ...updated[idx], product: productWithStock, quantity: currentQty + quantity };
- return updated;
- }
- const finalQty = Math.min(quantity, realBranchStock);
- if (quantity > realBranchStock) {
- showToast(`Stock Limit: Requested ${quantity}, but only ${realBranchStock} available in branch inventory.`);
- }
- return [...prev, { product: productWithStock, quantity: finalQty }];
- });
- showToast(`Added ${Math.min(quantity, realBranchStock)} ${product.unit} of ${product.productName} to active invoice.`);
- setShowTileCalculatorModal(false);
- }}
- />
- </div>
-
- <div className="flex justify-end gap-2 border-t border-divider/20 pt-4 mt-4 shrink-0">
- <button
- type="button"
- onClick={() => setShowTileCalculatorModal(false)}
- className="px-6 py-2.5 bg-primary hover:bg-primary/95 text-primary-foreground text-xs font-black uppercase tracking-wider rounded-full shadow-sm cursor-pointer transition-colors active:scale-95"
- >
- Close Calculator
- </button>
- </div>
- </motion.div>
- </div>
- )}
- </AnimatePresence>
+  {/* Tile Coverage & Estimator Calculator Modal */}
+  <PosTileCalculatorModal
+    isOpen={showTileCalculatorModal}
+    onClose={() => setShowTileCalculatorModal(false)}
+    darkMode={darkMode}
+    onApplyProductQuantity={(product, quantity) => {
+      const userBranchId = activePosBranchId;
+      const realBranchStock = getBranchStockQuantity(product, userBranchId, branchStock, branches);
+      if (realBranchStock <= 0) {
+        showToast("Depleted Stock: Selected product is currently out of stock.");
+        return;
+      }
+      const productWithStock = { ...product, stockQuantity: realBranchStock };
+      setCart((prev) => {
+        const idx = prev.findIndex((item) => item.product.id === product.id);
+        if (idx !== -1) {
+          const currentQty = prev[idx].quantity;
+          if (currentQty + quantity > realBranchStock) {
+            showToast(`Stock Limit: Only ${realBranchStock} available. Added remaining stock.`);
+            const updated = [...prev];
+            updated[idx] = { ...updated[idx], product: productWithStock, quantity: realBranchStock };
+            return updated;
+          }
+          const updated = [...prev];
+          updated[idx] = { ...updated[idx], product: productWithStock, quantity: currentQty + quantity };
+          return updated;
+        }
+        const finalQty = Math.min(quantity, realBranchStock);
+        if (quantity > realBranchStock) {
+          showToast(`Stock Limit: Requested ${quantity}, but only ${realBranchStock} available in branch inventory.`);
+        }
+        return [...prev, { product: productWithStock, quantity: finalQty }];
+      });
+      showToast(`Added ${Math.min(quantity, realBranchStock)} ${product.unit} of ${product.productName} to active invoice.`);
+    }}
+  />
 
  {/* Success toast alert bar */}
  <ToastNotification
@@ -5649,128 +4821,21 @@ export const PosModule: React.FC<PosModuleProps> = ({
  />
 
  {/* Register Corporate Member Modal */}
- <AnimatePresence>
- {showAddMemberModal && (
- <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
- <motion.div
- initial={{ opacity: 0 }}
- animate={{ opacity: 1 }}
- exit={{ opacity: 0 }}
- className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
- onClick={() => setShowAddMemberModal(false)}
- />
- <motion.div
- initial={{ opacity: 0, scale: 0.95, y: 15 }}
- animate={{ opacity: 1, scale: 1, y: 0 }}
- exit={{ opacity: 0, scale: 0.95, y: 15 }}
- className="relative w-full max-w-lg rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-background flex flex-col space-y-4"
- >
- <div className="flex justify-between items-center border-b border-divider/20 pb-3">
- <div className="flex items-center gap-2">
- <div className="p-2 rounded-xl bg-primary/10 text-primary">
- <UserPlus className="h-5 w-5" />
- </div>
- <div className="text-left">
- <h3 className="text-sm font-extrabold text-foreground">Add Corporate Member Account</h3>
- 
- </div>
- </div>
- <button
- type="button"
- onClick={() => setShowAddMemberModal(false)}
- className="text-default-500 hover:text-foreground p-1.5 rounded-full hover:bg-primary/10 transition-colors cursor-pointer"
- >
- <X className="h-5 w-5" />
- </button>
- </div>
-
- {addMemberError && (
- <div className="p-2.5 bg-rose-500/10 border border-rose-500/25 text-rose-500 text-xs font-bold rounded-xl flex items-center gap-2">
- <ShieldAlert className="h-4 w-4 shrink-0" />
- <span>{addMemberError}</span>
- </div>
- )}
-
- <form onSubmit={handleAddCorporateMember} className="space-y-3 text-left">
- <div className="space-y-1">
- <label className="text-[10px] font-black text-primary uppercase tracking-wider block">
- Full Name / Company Account Name *
- </label>
- <input
- type="text"
- required
- value={newMemberName ?? ''}
- onChange={(e) => setNewMemberName(e.target.value)}
- placeholder="Full Name / Company"
- className="w-full bg-content1 border border-divider/40 rounded-xl px-3.5 py-2 text-xs font-bold text-foreground focus:outline-none focus:border-primary transition-all"
- />
- </div>
-
- <div className="grid grid-cols-2 gap-3">
- <div className="space-y-1">
- <label className="text-[10px] font-black text-primary uppercase tracking-wider block">
- Contact Phone Number (Optional)
- </label>
- <input
- type="text"
- value={newMemberPhone ?? ''}
- onChange={(e) => setNewMemberPhone(e.target.value)}
- placeholder="Phone number"
- className="w-full bg-content1 border border-divider/40 rounded-xl px-3.5 py-2 text-xs font-bold text-foreground focus:outline-none focus:border-primary transition-all"
- />
- </div>
-
- <div className="space-y-1">
- <label className="text-[10px] font-black text-primary uppercase tracking-wider block">
- Email Address (Optional)
- </label>
- <input
- type="email"
- value={newMemberEmail ?? ''}
- onChange={(e) => setNewMemberEmail(e.target.value)}
- placeholder="Email address"
- className="w-full bg-content1 border border-divider/40 rounded-xl px-3.5 py-2 text-xs font-bold text-foreground focus:outline-none focus:border-primary transition-all"
- />
- </div>
- </div>
-
- <div className="space-y-1">
- <label className="text-[10px] font-black text-primary uppercase tracking-wider block">
- Credit Line Ceiling Limit (₱) (Optional)
- </label>
- <input
- type="number"
- min="0"
- step="500"
- value={newMemberLimit ?? ''}
- onChange={(e) => setNewMemberLimit(e.target.value)}
- placeholder="0"
- className="w-full bg-content1 border border-divider/40 rounded-xl px-3.5 py-2 text-xs font-extrabold text-foreground focus:outline-none focus:border-primary transition-all"
- />
- 
- </div>
-
- <div className="flex justify-end gap-2 border-t border-divider/20 pt-3 mt-4">
- <button
- type="button"
- onClick={() => setShowAddMemberModal(false)}
- className="px-4 py-2 border border-divider/40 hover:bg-content3 text-foreground text-xs font-bold rounded-xl cursor-pointer transition-colors"
- >
- Cancel
- </button>
- <button
- type="submit"
- className="px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-extrabold rounded-xl shadow-md cursor-pointer transition-colors flex items-center gap-1.5"
- >
- <UserPlus className="h-4 w-4" />
- <span>Save & Link Account</span>
- </button>
- </div>
- </form>
- </motion.div>
- </div>
- )}
- </AnimatePresence>
+  {/* Register Corporate Member Modal */}
+  <PosAddMemberModal
+    isOpen={showAddMemberModal}
+    onClose={() => setShowAddMemberModal(false)}
+    newMemberName={newMemberName}
+    setNewMemberName={setNewMemberName}
+    newMemberPhone={newMemberPhone}
+    setNewMemberPhone={setNewMemberPhone}
+    newMemberEmail={newMemberEmail}
+    setNewMemberEmail={setNewMemberEmail}
+    newMemberLimit={newMemberLimit}
+    setNewMemberLimit={setNewMemberLimit}
+    addMemberError={addMemberError}
+    onAddCorporateMember={handleAddCorporateMember}
+  />
 
  {/* Loyalty Points Mechanics Configuration Modal */}
  <AnimatePresence>

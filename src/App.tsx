@@ -4,14 +4,13 @@
  */
 
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import React, { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { LoginModule } from "./components/LoginModule";
 import { SetupModule } from "./components/SetupModule";
 import { DbProvider, DbSnapshot, useDb } from "./context/DbContext";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./queries/queryClient";
-import { saveFileToBackup, verifyAndUnwrapBackup } from "./lib/fileBackupHelper";
-import { User, UserRole } from "./types/db";
+import { UserRole } from "./types/db";
 
 // Modular lazy components imports for route-based code splitting
 import {
@@ -54,8 +53,12 @@ import { QuickModuleSwitcherModal } from "./components/QuickModuleSwitcherModal"
 import { Sidebar } from "./components/Sidebar";
 import { SystemLoadingOverlay } from "./components/SystemLoadingOverlay";
 import { ToastNotification } from "./components/ToastNotification";
+import { AppAlertBanners } from "./components/layout/AppAlertBanners";
+import { LogoutConfirmModal } from "./components/modals/LogoutConfirmModal";
+import { UnsavedCartModal } from "./components/modals/UnsavedCartModal";
+import { UserProfileModal } from "./components/modals/UserProfileModal";
+import { DatabaseBackupModal } from "./components/modals/DatabaseBackupModal";
 import { HeroSpinner } from "./components/common/ui/HeroSpinner";
-import { HeroDropdownSelect } from "./components/common/ui/HeroDropdown";
 import { HeroModal } from "./components/common/ui/HeroModal";
 import { HeroButton } from "./components/common/ui/HeroButton";
 import { PATH_TO_TAB, useRouteSyncManager } from "./hooks";
@@ -76,27 +79,14 @@ import {
   AlertTriangle,
   Building2,
   ChevronRight,
-  Database,
   DollarSign,
-  Download,
-  Eye,
-  EyeOff,
   FileText,
   Layers,
   LayoutDashboard,
-  LockKeyhole,
-  Power,
   RefreshCw,
   ShoppingCart,
-  Sparkles,
-  Trash2,
   Truck,
-  Upload,
   Users as UsersIcon,
-  Clock,
-  HardDrive,
-  Zap,
-  Settings,
 } from "lucide-react";
 
 const ALL_ROLES = [
@@ -742,33 +732,9 @@ function AppContent() {
   const [showAccountSettingsModal, setShowAccountSettingsModal] = useState(false);
   const [showSystemSettingsModal, setShowSystemSettingsModal] = useState(false);
   const [showBackupModal, setShowBackupModal] = useState(false);
-  const [backupActiveSubTab, setBackupActiveSubTab] = useState<"scheduler" | "ledger" | "import-export">("scheduler");
-  const [manualSnapshotName, setManualSnapshotName] = useState("");
-  const [backupSuccessMsg, setBackupSuccessMsg] = useState<string | null>(null);
-  const [backupErrorMsg, setBackupErrorMsg] = useState<string | null>(null);
   const [pendingUnsavedCartTargetTab, setPendingUnsavedCartTargetTab] = useState<string | null>(null);
   const [showUnsavedCartModal, setShowUnsavedCartModal] = useState(false);
   const isCompact = false;
-
-  // Profile update modal state
-  const [editFullName, setEditFullName] = useState("");
-  const [editUsername, setEditUsername] = useState("");
-  const [currentPasswordInput, setCurrentPasswordInput] = useState("");
-  const [newPasswordInput, setNewPasswordInput] = useState("");
-  const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [editProfilePicture, setEditProfilePicture] = useState<string | null>(null);
-  const [profileModalError, setProfileModalError] = useState<string | null>(null);
-  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
-
-  useEffect(() => {
-    if (currentUser) {
-      setEditFullName(currentUser.fullName || "");
-      setEditUsername(currentUser.username || "");
-      setEditProfilePicture(currentUser.profilePicture || null);
-    }
-  }, [currentUser, showAccountSettingsModal]);
 
   const handleSmoothTabChange = useCallback((nextTab: string) => {
     cleanupProgressTimers();
@@ -916,97 +882,7 @@ function AppContent() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [currentUser, activeTab, isSidebarHidden, handleChangeTab, showToastMsg]);
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setProfileModalError("");
-    setIsUpdatingProfile(true);
 
-    try {
-      const passwordUpdates: Partial<User> = {};
-      if (currentPasswordInput || newPasswordInput || confirmPasswordInput) {
-        if (!currentPasswordInput || !newPasswordInput || !confirmPasswordInput) {
-          setProfileModalError("To change password, please fill out all password fields.");
-          setIsUpdatingProfile(false);
-          return;
-        }
-        if (newPasswordInput.length < 8) {
-          setProfileModalError("Security Policy: New password must be at least 8 characters.");
-          setIsUpdatingProfile(false);
-          return;
-        }
-        if (newPasswordInput !== confirmPasswordInput) {
-          setProfileModalError("Confirmation Error: New passwords do not match.");
-          setIsUpdatingProfile(false);
-          return;
-        }
-
-        const sessionTok = sessionStorage.getItem("tp_session_token") || localStorage.getItem("tp_session_token");
-        const changeRes = await fetch("/api/auth/change-password", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(sessionTok ? { "Authorization": `Bearer ${sessionTok}` } : {})
-          },
-          body: JSON.stringify({
-            currentPassword: currentPasswordInput,
-            newPassword: newPasswordInput
-          })
-        });
-
-        const changeData = await changeRes.json();
-        if (!changeRes.ok || !changeData.success) {
-          setProfileModalError(changeData.error || "Password update failed on server.");
-          setIsUpdatingProfile(false);
-          return;
-        }
-      }
-
-      if (!editFullName.trim()) {
-        setProfileModalError("Validation Error: Full Name is required.");
-        setIsUpdatingProfile(false);
-        return;
-      }
-      if (!editUsername.trim()) {
-        setProfileModalError("Validation Error: Username is required.");
-        setIsUpdatingProfile(false);
-        return;
-      }
-
-      const cleanUsername = editUsername.trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
-      const initials = editFullName
-        .split(" ")
-        .map((p) => (p ? p[0] : ""))
-        .join("")
-        .toUpperCase()
-        .slice(0, 2) || "AD";
-
-      const updatedData: Partial<User> = {
-        fullName: editFullName.trim(),
-        username: cleanUsername,
-        profilePicture: editProfilePicture || undefined,
-        avatarInitials: initials,
-        ...passwordUpdates,
-      };
-
-      if (currentUser?.id) {
-        updateUser(currentUser.id, updatedData);
-      }
-      updateCurrentUser(updatedData);
-
-      setCurrentPasswordInput("");
-      setNewPasswordInput("");
-      setConfirmPasswordInput("");
-      setShowCurrentPassword(false);
-      setShowNewPassword(false);
-      setShowAccountSettingsModal(false);
-      showToastMsg("Account details successfully updated!");
-    } catch (err: any) {
-      console.error(err);
-      setProfileModalError("Dynamic crypt engine error: unable to update profile.");
-    } finally {
-      setIsUpdatingProfile(false);
-    }
-  };
 
   if (isHydrating || isSystemHydrating) {
     return (
@@ -1098,120 +974,14 @@ function AppContent() {
       >
         <SystemLoadingOverlay />
 
-        {/* CRITICAL LOUD PERSISTENT BANNER: DEGRADED ENGINE ALERT */}
-        {serverDegradedState?.isDegraded && (
-          <div className="fixed inset-x-0 top-0 z-[70] bg-gradient-to-r from-red-700 via-amber-700 to-red-800 text-white shadow-2xl border-b-2 border-amber-400/60 p-3 px-5 flex flex-col sm:flex-row items-center justify-between gap-3 animate-in slide-in-from-top duration-300">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-black/30 rounded-xl border border-white/20 text-amber-300">
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-              <div className="text-left">
-                <div className="flex items-center gap-2">
-                  <h4 className="font-extrabold text-xs sm:text-sm tracking-wide uppercase text-white flex items-center gap-2">
-                    CRITICAL SYSTEM ALERT: DEGRADED DATABASE MODE ACTIVE
-                  </h4>
-                  <span className="bg-red-950/80 text-amber-300 border border-amber-400/40 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
-                    MYSQL OFFLINE
-                  </span>
-                  {(serverDegradedState.queuedWritesCount ?? 0) > 0 && (
-                    <span className="bg-black/40 text-white text-[10px] px-2 py-0.5 rounded font-mono font-bold">
-                      {serverDegradedState.queuedWritesCount} Write(s) Queued
-                    </span>
-                  )}
-                </div>
-                <p className="text-[11px] sm:text-xs text-amber-100/90 mt-0.5 font-medium leading-tight max-w-3xl">
-                  Primary MySQL database engine is disconnected. Transactions are buffered locally in temporary store and will auto-replay on reconnect.
-                  {serverDegradedState.lastDegradedReason ? ` [${serverDegradedState.lastDegradedReason}]` : ""}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => refreshServerStatus()}
-                className="flex items-center gap-1.5 bg-white text-red-900 hover:bg-amber-100 active:scale-95 transition-all text-xs font-black px-3.5 py-1.5 rounded-xl shadow-md cursor-pointer uppercase tracking-wider"
-              >
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                Retry Connection
-              </button>
-            </div>
-          </div>
-        )}
-
-        {apiErrorState && (
-          <div className="fixed inset-x-0 top-0 z-[60] bg-content2/95 backdrop-blur-md border-b border-divider/35 shadow-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top duration-300">
-            <div className="flex items-center gap-3">
-              <div
-                className={`p-2 rounded-xl ${
-                  apiErrorState.statusCode === 429
-                    ? "bg-amber-500/10 text-amber-500"
-                    : "bg-red-500/10 text-red-500"
-                }`}
-              >
-                {apiErrorState.statusCode === 429 ? (
-                  <Clock className="w-5 h-5" />
-                ) : (
-                  <AlertTriangle className="w-5 h-5" />
-                )}
-              </div>
-              <div className="text-left">
-                <h4 className="font-bold text-sm flex items-center gap-2 text-foreground">
-                  <span>System Response Indicator: HTTP {apiErrorState.statusCode}</span>
-                  {apiErrorState.statusCode === 429 && (
-                    <span className="bg-amber-500/20 text-amber-500 text-[10px] px-1.5 py-0.5 rounded font-medium">
-                      COOL-DOWN ACTIVE
-                    </span>
-                  )}
-                </h4>
-                <p className="text-xs text-default-500 mt-0.5 max-w-2xl leading-relaxed">
-                  {apiErrorState.message}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-              {apiErrorState.statusCode === 429 ? (
-                <div className="bg-amber-500/15 border border-amber-500/35 text-amber-500 rounded-lg px-3 py-1.5 text-xs font-medium flex items-center gap-2">
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  Retry in {apiErrorState.retryAfter || 0}s
-                </div>
-              ) : apiErrorState.statusCode === 500 ? (
-                <>
-                  <button
-                    onClick={() => {
-                      clearServerErrorState();
-                      syncFromSharedServer();
-                    }}
-                    className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary-hover active:scale-95 transition-all text-xs font-semibold px-4 py-2 rounded-xl shadow-md cursor-pointer"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    Retry Connection
-                  </button>
-                  <button
-                    onClick={clearServerErrorState}
-                    className="border border-default-200 hover:bg-default-100 text-foreground text-xs font-semibold px-4 py-2 rounded-xl transition-all cursor-pointer"
-                  >
-                    Use Offline Fallback
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={clearServerErrorState}
-                  className="bg-primary text-primary-foreground hover:bg-primary-hover active:scale-95 transition-all text-xs font-semibold px-4 py-2 rounded-xl shadow-md cursor-pointer"
-                >
-                  Dismiss Warning
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {percentProgress > 0 && (
-          <div
-            className="fixed top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-amber-500 lod-progress z-50 origin-left will-change-transform pointer-events-none transition-transform duration-75 ease-out"
-            style={{
-              transform: `scaleX(${Math.min(Math.max(percentProgress, 0), 100) / 100}) translateZ(0)`
-            }}
-          />
-        )}
+        <AppAlertBanners
+          serverDegradedState={serverDegradedState}
+          refreshServerStatus={refreshServerStatus}
+          apiErrorState={apiErrorState}
+          clearServerErrorState={clearServerErrorState}
+          syncFromSharedServer={syncFromSharedServer}
+          percentProgress={percentProgress}
+        />
 
         <div className="flex-1 flex overflow-hidden min-h-0 relative">
           {isSidebarHidden && (
@@ -1486,680 +1256,80 @@ function AppContent() {
         />
 
         {/* LOGOUT CONFIRMATION MODAL */}
-        <HeroModal
+        <LogoutConfirmModal
           isOpen={showLogoutConfirmModal}
           onClose={() => setShowLogoutConfirmModal(false)}
-          size="sm"
-          zIndex={99999}
-        >
-          <HeroModal.Header className="pb-3 border-b border-divider/20">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-2xl bg-danger/10 text-danger shrink-0 border border-danger/20">
-                <Power className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-black text-foreground uppercase tracking-wider">Confirm Sign Out</h3>
-                <p className="text-[10px] text-default-500 font-bold uppercase tracking-wider">Session Termination Guard</p>
-              </div>
-            </div>
-          </HeroModal.Header>
-
-          <HeroModal.Body className="py-4">
-            <p className="text-xs text-default-500 font-medium leading-relaxed">
-              Are you sure you want to log out of TilePoint terminal? Any unsaved active checkout carts will be lost.
-            </p>
-          </HeroModal.Body>
-
-          <HeroModal.Footer className="justify-end gap-2.5 pt-3 pb-4 border-t border-divider/20">
-            <HeroButton
-              type="button"
-              variant="flat"
-              size="sm"
-              onClick={() => setShowLogoutConfirmModal(false)}
-              className="font-bold text-xs"
-            >
-              No, Keep Active
-            </HeroButton>
-            <HeroButton
-              type="button"
-              variant="solid"
-              color="danger"
-              size="sm"
-              onClick={() => {
-                setShowLogoutConfirmModal(false);
-                logout();
-              }}
-              className="font-black text-xs uppercase tracking-wider"
-            >
-              Yes, Sign Out
-            </HeroButton>
-          </HeroModal.Footer>
-        </HeroModal>
+          onConfirm={logout}
+        />
 
         {/* UNSAVED CART MODAL */}
-        <HeroModal
+        <UnsavedCartModal
           isOpen={showUnsavedCartModal}
-          onClose={() => { setShowUnsavedCartModal(false); setPendingUnsavedCartTargetTab(null); }}
-          size="sm"
-          zIndex={60}
-        >
-          <HeroModal.Header className="pb-3 border-b border-divider/20">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-2xl bg-warning/10 text-warning shrink-0 border border-warning/20">
-                <AlertTriangle className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-black text-foreground uppercase tracking-wider">Unsaved Checkout Warning</h3>
-                <p className="text-[10px] text-warning font-bold uppercase tracking-wider">Active Transaction Guard</p>
-              </div>
-            </div>
-          </HeroModal.Header>
-
-          <HeroModal.Body className="py-4 space-y-2">
-            <p className="text-xs text-default-500 font-medium leading-relaxed">
-              Are you sure you want to leave this site? Changes you made may not be saved.
-            </p>
-            <p className="text-xs text-default-500 font-medium leading-relaxed">
-              Leaving the ERP OS terminal now will disrupt the current active customer checkout session and clear the basket.
-            </p>
-          </HeroModal.Body>
-
-          <HeroModal.Footer className="justify-end gap-2.5 pt-3 pb-4 border-t border-divider/20">
-            <HeroButton
-              type="button"
-              variant="flat"
-              size="sm"
-              onClick={() => { setShowUnsavedCartModal(false); setPendingUnsavedCartTargetTab(null); }}
-              className="font-bold text-xs"
-            >
-              Cancel, Keep Basket
-            </HeroButton>
-            <HeroButton
-              type="button"
-              variant="solid"
-              color="warning"
-              size="sm"
-              onClick={() => {
-                setShowUnsavedCartModal(false);
-                if (pendingUnsavedCartTargetTab) handleSmoothTabChange(pendingUnsavedCartTargetTab);
-                setPendingUnsavedCartTargetTab(null);
-              }}
-              className="font-black text-xs uppercase tracking-wider text-black"
-            >
-              Yes, Leave Mode
-            </HeroButton>
-          </HeroModal.Footer>
-        </HeroModal>
+          onClose={() => {
+            setShowUnsavedCartModal(false);
+            setPendingUnsavedCartTargetTab(null);
+          }}
+          onConfirmLeave={() => {
+            if (pendingUnsavedCartTargetTab) handleSmoothTabChange(pendingUnsavedCartTargetTab);
+            setPendingUnsavedCartTargetTab(null);
+          }}
+        />
 
         {/* DATABASE BACKUP & MAINTENANCE MODAL */}
-        <HeroModal
+        <DatabaseBackupModal
           isOpen={showBackupModal}
-          onClose={() => { setShowBackupModal(false); setBackupSuccessMsg(null); setBackupErrorMsg(null); setManualSnapshotName(""); }}
-          size="2xl"
-          zIndex={60}
-        >
-          <HeroModal.Header className="pb-4 border-b border-divider/15">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-success/10 text-success rounded-2xl">
-                <Database className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-black uppercase tracking-wider text-foreground flex items-center gap-2">
-                  Database Core Management
-                  <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${dbSyncStatus === "syncing" ? "bg-warning/20 text-warning" : "bg-success/10 text-success"}`}>
-                    {dbSyncStatus === "syncing" ? "● Sync active" : "● Connected"}
-                  </span>
-                </h3>
-                <p className="text-[10px] text-default-500 uppercase tracking-widest font-bold">
-                  Disaster Recovery & Automated Backup Engine
-                </p>
-              </div>
-            </div>
-          </HeroModal.Header>
-
-          <HeroModal.Body className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-
-              <div className="flex border-b border-divider/10 my-4 p-1 bg-content1/50 rounded-xl">
-                <button
-                  onClick={() => setBackupActiveSubTab("scheduler")}
-                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center ${backupActiveSubTab === "scheduler" ? "bg-primary text-primary-foreground shadow-sm font-black" : "text-default-500 hover:bg-primary/10 hover:text-primary"}`}
-                >
-                  Auto-Backup Configuration
-                </button>
-                <button
-                  onClick={() => setBackupActiveSubTab("ledger")}
-                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 ${backupActiveSubTab === "ledger" ? "bg-primary text-primary-foreground shadow-sm font-black" : "text-default-500 hover:bg-primary/10 hover:text-primary"}`}
-                >
-                  Recovery Ledger
-                  <span className="bg-primary-50 text-primary-700 text-[10px] font-bold px-1.5 py-0.2 rounded-full font-sans">
-                    {dbSnapshots.length}
-                  </span>
-                </button>
-                <button
-                  onClick={() => setBackupActiveSubTab("import-export")}
-                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center ${backupActiveSubTab === "import-export" ? "bg-primary text-primary-foreground shadow-sm font-black" : "text-default-500 hover:bg-primary/10 hover:text-primary"}`}
-                >
-                  Offline Backups & JSON
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto pr-1 space-y-4 max-h-[50vh]">
-                {backupActiveSubTab === "scheduler" && (
-                  <div className="space-y-4">
-                    <div className="p-3.5 rounded-2xl bg-primary/5 border border-primary/10 flex justify-between items-center text-xs">
-                      <div>
-                        <div className="font-extrabold text-primary uppercase text-[10px] tracking-wide">
-                          Optimization Status
-                        </div>
-                        <div className="text-zinc-400 mt-1 font-sans">
-                          Debounce cache buffer operates at{" "}
-                          <span className="font-bold text-foreground">{debounceDelay}ms</span>.
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-emerald-400 font-extrabold">{writeStatsCount.toLocaleString()}</div>
-                        <div className="text-[9px] text-zinc-500 uppercase mt-0.5">Database Writes Saved</div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl border border-divider/20 p-4 space-y-4 bg-content1">
-                      <h4 className="text-xs font-black uppercase tracking-wider text-primary">Automatic Background Scheduler</h4>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-xs font-bold">Hourly Data Preservation</div>
-                          <div className="text-[10px] text-zinc-400 mt-0.5">Protect inventory journals and sales invoices against localStorage eviction.</div>
-                        </div>
-                        <button
-                          type="button"
-                          disabled={currentUser?.role !== UserRole.ADMIN}
-                          onClick={() => {
-                            if (currentUser?.role !== UserRole.ADMIN) {
-                              showToastMsg("Access Denied: Admin authorization required.");
-                              return;
-                            }
-                            setAutoBackupEnabled(!autoBackupEnabled);
-                            showToastMsg(`Automated backup scheduler is now ${autoBackupEnabled ? "DISABLED" : "ENABLED"}`);
-                          }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${autoBackupEnabled ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-zinc-800 text-zinc-400"}`}
-                        >
-                          {autoBackupEnabled ? "Enabled" : "Disabled"}
-                        </button>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-3 border-t border-divider/10">
-                        <div>
-                          <div className="text-xs font-bold">Preservation Frequency Interval</div>
-                          <div className="text-[10px] text-zinc-400 mt-0.5">Frequency for background state snapshots.</div>
-                        </div>
-                        <HeroDropdownSelect
-                          isDisabled={currentUser?.role !== UserRole.ADMIN}
-                          items={[
-                            { key: '1', label: 'Every 1 Hour' },
-                            { key: '3', label: 'Every 3 Hours' },
-                            { key: '6', label: 'Every 6 Hours' },
-                            { key: '12', label: 'Every 12 Hours' },
-                            { key: '24', label: 'Every 24 Hours' },
-                          ]}
-                          selectedKey={String(backupIntervalHours)}
-                          onSelectionChange={(val) => setBackupIntervalHours(Number(val))}
-                          size="sm"
-                          variant="pill"
-                          className="min-w-[140px]"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl border border-divider/20 p-4 space-y-4 bg-content1">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="p-2.5 bg-primary/10 text-primary rounded-xl shrink-0">
-                            <Sparkles className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <h4 className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-2">
-                              Database Maintenance
-                              <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${dbMaintenanceEnabled ? "bg-emerald-500/10 text-emerald-400" : "bg-zinc-800 text-zinc-400"}`}>
-                                {dbMaintenanceEnabled ? "● Active Idle Sweep" : "● Disabled"}
-                              </span>
-                            </h4>
-                            <p className="text-[10px] text-zinc-400 mt-0.5">
-                              Daily index re-indexing and garbage collection sweep during idle periods to improve long-term system performance.
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          disabled={currentUser?.role !== UserRole.ADMIN}
-                          onClick={() => {
-                            if (currentUser?.role !== UserRole.ADMIN) {
-                              showToastMsg("Access Denied: Admin authorization required.");
-                              return;
-                            }
-                            setDbMaintenanceEnabled(!dbMaintenanceEnabled);
-                            showToastMsg(`Idle maintenance is now ${dbMaintenanceEnabled ? "DISABLED" : "ENABLED"}`);
-                          }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${dbMaintenanceEnabled ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-zinc-800 text-zinc-400"}`}
-                        >
-                          {dbMaintenanceEnabled ? "Enabled" : "Disabled"}
-                        </button>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-3 border-t border-divider/10">
-                        <div>
-                          <div className="text-xs font-bold">Last Database Sweep</div>
-                          <div className="text-[10px] text-zinc-400 mt-0.5">
-                            {lastMaintenanceTime ? new Date(lastMaintenanceTime).toLocaleString() : "Never executed on this client"}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          disabled={isMaintenanceRunning}
-                          onClick={async () => {
-                            await runDatabaseMaintenance();
-                            showToastMsg("Database re-indexed & maintenance completed!");
-                          }}
-                          className="px-3.5 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                        >
-                          <Zap className="h-3.5 w-3.5 text-primary" />
-                          {isMaintenanceRunning ? "Optimizing..." : "Run Sweep Now"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {backupActiveSubTab === "ledger" && (
-                  <div className="space-y-4">
-                    <div className="rounded-2xl border border-divider/20 p-4 space-y-3">
-                      <h4 className="text-xs font-black uppercase tracking-wider text-primary">Instantiate Manual Backup Snapshot</h4>
-                      <div className="flex gap-2 font-sans">
-                        <input
-                          type="text"
-                          value={manualSnapshotName}
-                          onChange={(e) => setManualSnapshotName(e.target.value)}
-                          placeholder="Snapshot label (e.g. Pre-Audit Backup)"
-                          className="flex-1 bg-content1 text-xs text-foreground border border-divider/30 px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder-zinc-500 font-bold"
-                        />
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            const name = manualSnapshotName.trim() || `Manual Snapshot ${new Date().toLocaleTimeString()}`;
-                            await triggerSystemProcessing(`Generating Snapshot: ${name}...`, 1200, "db", undefined, "Dumping relational records to snapshot store...");
-                            await createDbSnapshot(name);
-                            setManualSnapshotName("");
-                            showToastMsg(`Snapshot "${name}" generated successfully!`);
-                          }}
-                          className="px-4 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer transition-all shrink-0 shadow-md"
-                        >
-                          Create Snapshot
-                        </button>
-                      </div>
-                    </div>
-
-                    {dbSnapshots.length === 0 ? (
-                      <div className="p-8 text-center bg-content1/40 rounded-2xl border border-dashed border-divider/20 space-y-2">
-                        <HardDrive className="h-8 w-8 text-zinc-600 mx-auto" />
-                        <p className="text-xs text-zinc-400 font-bold">No Database Snapshots Found</p>
-                        <p className="text-[10px] text-zinc-500">Automated and manual snapshots will register here.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
-                        {dbSnapshots.map((snap) => (
-                          <div
-                            key={snap.id}
-                            className="p-3 bg-content1 hover:bg-primary/5 rounded-2xl border border-divider/15 flex items-center justify-between transition-all"
-                          >
-                            <div className="space-y-1">
-                              <div className="text-xs font-black text-foreground">{snap.name}</div>
-                              <div className="text-[9.5px] text-zinc-400 font-bold flex items-center gap-2 flex-wrap">
-                                <span className="text-primary text-[10px]">{snap.creator}</span>
-                                <span>•</span>
-                                <span>{new Date(snap.timestamp).toLocaleString()}</span>
-                                <span>•</span>
-                                <span className="text-zinc-500 bg-content1/55 px-1.5 rounded">
-                                  {((snap.sizeBytes || 0) / 1024).toFixed(1)} KB
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => setConfirmRestoreSnap(snap)}
-                                className="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[11px] font-black uppercase rounded-lg border border-primary/20 cursor-pointer transition-all"
-                              >
-                                Restore
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => deleteDbSnapshot(snap.id)}
-                                className="p-1.5 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg cursor-pointer transition-all"
-                                title="Delete Snapshot"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {backupActiveSubTab === "import-export" && (
-                  <div className="space-y-4">
-                    <div className="rounded-2xl border border-divider/20 p-4 space-y-3 bg-content1">
-                      <h4 className="text-xs font-black uppercase tracking-wider text-primary">Full Database JSON Export</h4>
-                      <p className="text-[10px] text-zinc-400 leading-relaxed">
-                        Download a complete, offline snapshot containing all branch catalogs, member logs, transmittals, and historical sales transactions.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const dump = JSON.stringify(
-                            {
-                              version: "2.0",
-                              timestamp: Date.now(),
-                              users,
-                              branches,
-                              suppliers,
-                              products,
-                              purchaseOrders,
-                              poItems,
-                              transmittals,
-                              shifts,
-                              sales,
-                              saleItems,
-                              movements,
-                              auditLogs,
-                              parkedSales,
-                              stockTransfers,
-                              branchStock,
-                              ledgerEntries,
-                              branchSalesReports,
-                              deliveries,
-                            },
-                            null,
-                            2
-                          );
-                          const filename = `tilepoint_full_backup_${Date.now()}.json`;
-                          saveFileToBackup(dump, filename, "Database_Backups", "application/json")
-                            .then((res) => {
-                              showToastMsg(`Database backup exported to ${res.path || filename} successfully!`);
-                            })
-                            .catch(() => {
-                              const blob = new Blob([dump], { type: "application/json" });
-                              const url = URL.createObjectURL(blob);
-                              const a = document.createElement("a");
-                              a.setAttribute("href", url);
-                              a.setAttribute("download", filename);
-                              a.style.display = "none";
-                              document.body.appendChild(a);
-                              a.click();
-                              document.body.removeChild(a);
-                              URL.revokeObjectURL(url);
-                              showToastMsg("Raw physical database JSON file downloaded successfully!");
-                            });
-                        }}
-                        className="w-full py-2.5 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-extrabold uppercase tracking-wider rounded-xl border border-emerald-500/30 flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
-                      >
-                        <Download className="h-4 w-4" /> Export Complete Database JSON
-                      </button>
-                    </div>
-
-                    <div className="rounded-2xl border border-divider/20 p-4 space-y-3 bg-content1">
-                      <h4 className="text-xs font-black uppercase tracking-wider text-primary">Import Database Snapshot File</h4>
-                      <p className="text-[10px] text-zinc-400 leading-relaxed">
-                        Upload a previously generated `.json` or `.backup` schema file to restore full database records.
-                      </p>
-                      <label className="w-full py-2.5 bg-background hover:bg-default-100 text-foreground text-xs font-extrabold uppercase tracking-wider rounded-xl border border-divider/20 flex items-center justify-center gap-1.5 cursor-pointer transition-colors">
-                        <Upload className="h-4 w-4 text-primary" /> Select Backup JSON File
-                        <input
-                          type="file"
-                          accept=".json,.backup"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            const reader = new FileReader();
-                            reader.onload = async (event) => {
-                              try {
-                                const raw = event.target?.result as string;
-                                const parsed = await verifyAndUnwrapBackup(raw);
-                                if (!parsed || typeof parsed !== "object") {
-                                  throw new Error("Invalid schema structure");
-                                }
-                                setBackupSuccessMsg("Database successfully imported! Reloading interface...");
-                                setTimeout(() => window.location.reload(), 1500);
-                              } catch (err: any) {
-                                setBackupErrorMsg(`ERROR: APPROVED FILE IS CORRUPTED OR INVALID SCHEMA: ${err.message}`);
-                                showToastMsg("Import rejected due to structural validation faults.");
-                              }
-                            };
-                            reader.readAsText(file);
-                          }}
-                        />
-                      </label>
-                    </div>
-
-                    {backupSuccessMsg && (
-                      <div className="p-3 text-[10.5px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/15 rounded-xl text-center">
-                        {backupSuccessMsg}
-                      </div>
-                    )}
-                    {backupErrorMsg && (
-                      <div className="p-3 text-[10.5px] font-bold text-rose-400 bg-rose-500/10 border border-rose-500/15 rounded-xl text-center">
-                        {backupErrorMsg}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-          </HeroModal.Body>
-
-          <HeroModal.Footer className="justify-end gap-2.5 pt-3 pb-4 border-t border-divider/15">
-            <HeroButton
-              type="button"
-              variant="solid"
-              color="primary"
-              size="sm"
-              onClick={() => { setShowBackupModal(false); setBackupSuccessMsg(null); setBackupErrorMsg(null); setManualSnapshotName(""); }}
-              className="font-bold text-xs uppercase tracking-wider"
-            >
-              Done
-            </HeroButton>
-          </HeroModal.Footer>
-        </HeroModal>
+          onClose={() => setShowBackupModal(false)}
+          currentUser={currentUser}
+          dbSyncStatus={dbSyncStatus}
+          debounceDelay={debounceDelay}
+          writeStatsCount={writeStatsCount}
+          autoBackupEnabled={autoBackupEnabled}
+          setAutoBackupEnabled={setAutoBackupEnabled}
+          backupIntervalHours={backupIntervalHours}
+          setBackupIntervalHours={setBackupIntervalHours}
+          dbMaintenanceEnabled={dbMaintenanceEnabled}
+          setDbMaintenanceEnabled={setDbMaintenanceEnabled}
+          lastMaintenanceTime={lastMaintenanceTime}
+          isMaintenanceRunning={isMaintenanceRunning}
+          runDatabaseMaintenance={runDatabaseMaintenance}
+          dbSnapshots={dbSnapshots}
+          createDbSnapshot={createDbSnapshot}
+          deleteDbSnapshot={deleteDbSnapshot}
+          onSelectRestoreSnapshot={(snap) => setConfirmRestoreSnap(snap)}
+          triggerSystemProcessing={triggerSystemProcessing}
+          showToastMsg={showToastMsg}
+          fullDbState={{
+            users,
+            branches,
+            suppliers,
+            products,
+            purchaseOrders,
+            poItems,
+            transmittals,
+            shifts,
+            sales,
+            saleItems,
+            movements,
+            auditLogs,
+            parkedSales,
+            stockTransfers,
+            branchStock,
+            ledgerEntries,
+            branchSalesReports,
+            deliveries,
+          }}
+        />
 
         {/* ACCOUNT PROFILE & SECURITY CREDENTIALS MODAL */}
-        <HeroModal
+        <UserProfileModal
           isOpen={showAccountSettingsModal}
-          onClose={() => {
-            setCurrentPasswordInput("");
-            setNewPasswordInput("");
-            setConfirmPasswordInput("");
-            setProfileModalError("");
-            setShowAccountSettingsModal(false);
-          }}
-          size="md"
-          zIndex={60}
-        >
-          <form onSubmit={handleSaveProfile} className="flex flex-col h-full overflow-hidden">
-            <HeroModal.Header className="pb-4 border-b border-divider/15">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-warning/10 text-warning rounded-2xl">
-                  <LockKeyhole className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-black uppercase tracking-wider text-foreground">
-                    Account Profile & Security
-                  </h3>
-                  <p className="text-[10px] text-default-500 uppercase tracking-widest font-bold">
-                    Personal Credentials & Security Vault
-                  </p>
-                </div>
-              </div>
-            </HeroModal.Header>
-
-            <HeroModal.Body className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold text-default-500 uppercase tracking-widest pl-1">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={editFullName}
-                    onChange={(e) => setEditFullName(e.target.value)}
-                    placeholder="e.g. John Doe"
-                    className="w-full bg-background border border-divider/50 px-3.5 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-xl font-bold"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold text-default-500 uppercase tracking-widest pl-1">
-                    Username
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-2 text-default-400 text-xs select-none">@</span>
-                    <input
-                      type="text"
-                      required
-                      value={editUsername}
-                      onChange={(e) => setEditUsername(e.target.value)}
-                      placeholder="Username"
-                      className="w-full bg-background border border-divider/50 pl-7 pr-3.5 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-xl font-medium"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3 pt-2 border-t border-divider/15">
-                <div className="text-[11px] font-black text-warning uppercase tracking-wider flex items-center gap-1 pl-1">
-                  <span>Update Security Password (Optional)</span>
-                </div>
-
-                <div className="space-y-1 relative">
-                  <label className="text-[10px] font-extrabold text-default-500 uppercase tracking-widest pl-1">
-                    Current Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showCurrentPassword ? "text" : "password"}
-                      value={currentPasswordInput}
-                      onChange={(e) => setCurrentPasswordInput(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full bg-background border border-divider/50 px-3.5 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-xl pr-9 font-medium"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                      className="absolute right-2.5 top-2 text-default-400 hover:text-foreground cursor-pointer"
-                    >
-                      {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-1 relative">
-                  <label className="text-[10px] font-extrabold text-default-500 uppercase tracking-widest pl-1">
-                    New Password (Min 6 Characters)
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showNewPassword ? "text" : "password"}
-                      value={newPasswordInput}
-                      onChange={(e) => setNewPasswordInput(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full bg-background border border-divider/50 px-3.5 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-xl pr-9 font-medium"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-2.5 top-2 text-default-400 hover:text-foreground cursor-pointer"
-                    >
-                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold text-default-500 uppercase tracking-widest pl-1">
-                    Confirm New Password
-                  </label>
-                  <input
-                    type="password"
-                    value={confirmPasswordInput}
-                    onChange={(e) => setConfirmPasswordInput(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full bg-background border border-divider/50 px-3.5 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-xl font-medium"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-1">
-                {profileModalError ? (
-                  <p className="text-[10px] font-bold text-danger px-1 leading-normal">
-                    {profileModalError}
-                  </p>
-                ) : (
-                  <p className="text-[10px] text-default-500 px-1 leading-normal font-medium">
-                    Your account security credentials will be encrypted and updated securely.
-                  </p>
-                )}
-              </div>
-
-              {(currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.MANAGER) && (
-                <div className="pt-2 border-t border-divider/15">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowAccountSettingsModal(false);
-                      setShowSystemSettingsModal(true);
-                    }}
-                    className="w-full flex items-center justify-between px-3.5 py-2.5 bg-content2/60 hover:bg-content2 border border-divider/30 rounded-xl text-xs font-bold text-foreground transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Settings className="h-4 w-4 text-primary" />
-                      <span>System Settings & Config</span>
-                    </div>
-                    <span className="text-[10px] text-default-400 group-hover:text-foreground">Configure &rarr;</span>
-                  </button>
-                </div>
-              )}
-            </HeroModal.Body>
-
-            <HeroModal.Footer className="justify-end gap-2.5 pt-3 pb-4 border-t border-divider/15">
-              <HeroButton
-                type="button"
-                variant="flat"
-                size="sm"
-                onClick={() => {
-                  setCurrentPasswordInput("");
-                  setNewPasswordInput("");
-                  setConfirmPasswordInput("");
-                  setProfileModalError("");
-                  setShowAccountSettingsModal(false);
-                }}
-                className="font-bold text-xs"
-              >
-                Cancel
-              </HeroButton>
-              <HeroButton
-                type="submit"
-                variant="solid"
-                color="warning"
-                size="sm"
-                isLoading={isUpdatingProfile}
-                loadingText="Updating..."
-                className="font-bold text-xs uppercase tracking-wider text-black"
-              >
-                Update Password
-              </HeroButton>
-            </HeroModal.Footer>
-          </form>
-        </HeroModal>
+          onClose={() => setShowAccountSettingsModal(false)}
+          currentUser={currentUser}
+          updateUser={updateUser}
+          updateCurrentUser={updateCurrentUser}
+          onOpenSystemSettings={() => setShowSystemSettingsModal(true)}
+          showToastMsg={showToastMsg}
+        />
 
         {/* SYSTEM SETTINGS MODAL */}
         <HeroModal

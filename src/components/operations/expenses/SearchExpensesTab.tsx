@@ -1,0 +1,237 @@
+import React, { useState } from "react";
+import { CalendarDays, Download, Receipt, Trash2 } from "lucide-react";
+import { Expense } from "../../../types/db";
+import { formatCurrency } from "../../../utils/formatters";
+import { HeroDropdownSelect } from "../../common/ui/HeroDropdown";
+import { saveFileToBackup } from "../../../lib/fileBackupHelper";
+
+export interface SearchExpensesTabProps {
+  expenses: Expense[];
+  onDeleteExpense: (id: string) => void;
+}
+
+export const SearchExpensesTab: React.FC<SearchExpensesTabProps> = ({
+  expenses,
+  onDeleteExpense,
+}) => {
+  const [dateFilter, setDateFilter] = useState("");
+  const [expenseSearchQuery, setExpenseSearchQuery] = useState("");
+  const [expenseCategoryFilter, setExpenseCategoryFilter] = useState("");
+
+  const filteredExpenses = expenses.filter((ex) => {
+    if (ex.isDeleted) return false;
+    if (dateFilter) {
+      const expDate = ex.dateTime ? ex.dateTime.substring(0, 10) : "";
+      if (expDate !== dateFilter) return false;
+    }
+    if (expenseCategoryFilter && ex.category !== expenseCategoryFilter) {
+      return false;
+    }
+    if (expenseSearchQuery) {
+      const q = expenseSearchQuery.toLowerCase();
+      const matchId = ex.id.toLowerCase().includes(q);
+      const matchNotes = (ex.notes || "").toLowerCase().includes(q);
+      const matchCategory = (ex.category || "").toLowerCase().includes(q);
+      const matchUser = ex.recordedBy ? ex.recordedBy.toLowerCase().includes(q) : false;
+      if (!matchId && !matchNotes && !matchCategory && !matchUser) return false;
+    }
+    return true;
+  });
+
+  const totalOutflow = filteredExpenses.reduce((sum, ex) => sum + ex.amount, 0);
+
+  const handleExportCSV = () => {
+    if (filteredExpenses.length === 0) {
+      alert("No disbursement records found to export for current filters.");
+      return;
+    }
+    const headers = ["Receipt No", "Date & Time", "Branch ID", "Category", "Detail Notes", "Recorded By", "Amount (PHP)"];
+    const rows = filteredExpenses.map((ex) => [
+      ex.id,
+      new Date(ex.dateTime || Date.now()).toLocaleString("en-US"),
+      ex.branchId || "N/A",
+      ex.category,
+      ex.notes,
+      ex.recordedBy || "System",
+      ex.amount.toFixed(2),
+    ]);
+    const csvContent = "\uFEFF" + [
+      `"TILEPOINT ENTERPRISES - DISBURSEMENT EXPENSES REGISTRY"`,
+      `"Exported On: ${new Date().toLocaleString()}"`,
+      "",
+      headers.map((h) => `"${h.replace(/"/g, '""')}"`).join(","),
+      ...rows.map((r) => r.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(",")),
+    ].join("\n");
+
+    const filename = `TilePoint_Disbursements_Export_${new Date().toISOString().slice(0, 10)}.csv`;
+    saveFileToBackup(csvContent, filename, "Sales_Reports", "text/csv;charset=utf-8;")
+      .then((res) => {
+        alert(`Disbursement expenses exported to CSV successfully! Saved as ${res.path || filename}`);
+      })
+      .catch(() => {
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.setAttribute("href", url);
+        a.setAttribute("download", filename);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+  };
+
+  const categories = Array.from(new Set(expenses.filter(ex => !ex.isDeleted).map(ex => ex.category)));
+
+  return (
+    <div className="space-y-4 font-sans text-xs">
+      <div className="flex flex-col md:flex-row bg-content1 border border-divider/15 p-4 rounded-xl items-stretch md:items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 text-primary" />
+            <span className="font-extrabold text-default-500">Filter Date:</span>
+            <input
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="bg-content3 border border-divider rounded p-1 outline-none text-foreground"
+            />
+            {dateFilter && (
+              <button
+                type="button"
+                onClick={() => setDateFilter("")}
+                className="text-[10px] text-rose-500 hover:underline font-bold cursor-pointer"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <HeroDropdownSelect
+              items={[
+                { key: '', label: 'All Categories' },
+                ...categories.map(cat => ({
+                  key: cat,
+                  label: cat,
+                })),
+              ]}
+              selectedKey={expenseCategoryFilter}
+              onSelectionChange={(val) => setExpenseCategoryFilter(String(val))}
+              size="sm"
+              variant="pill"
+              className="min-w-[160px]"
+            />
+            {expenseCategoryFilter && (
+              <button
+                type="button"
+                onClick={() => setExpenseCategoryFilter("")}
+                className="text-[10px] text-rose-500 hover:underline font-bold cursor-pointer"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="font-extrabold text-default-500">Search:</span>
+            <input
+              type="text"
+              placeholder="Search detail, user, ID..."
+              value={expenseSearchQuery}
+              onChange={(e) => setExpenseSearchQuery(e.target.value)}
+              className="bg-content3 border border-divider rounded p-1 outline-none text-foreground w-44"
+            />
+            {expenseSearchQuery && (
+              <button
+                type="button"
+                onClick={() => setExpenseSearchQuery("")}
+                className="text-[10px] text-rose-500 hover:underline font-bold cursor-pointer"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleExportCSV}
+          className="px-3.5 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer transition"
+        >
+          <Download className="h-4 w-4" />
+          <span>Export Filtered CSV</span>
+        </button>
+      </div>
+
+      <div className="bg-content1 border border-divider/15 rounded-2xl overflow-hidden shadow-xs">
+        <div className="p-4 bg-content2/40 border-b border-divider/15 flex justify-between items-center">
+          <div>
+            <h4 className="font-bold text-sm text-foreground">Disbursement Records</h4>
+            <span className="text-[10px] text-default-500">{filteredExpenses.length} transaction entries found</span>
+          </div>
+          <div className="text-right">
+            <span className="text-[10px] text-default-500 uppercase font-bold block">Total Outflow</span>
+            <span className="text-sm font-black text-rose-500">-{formatCurrency(totalOutflow)}</span>
+          </div>
+        </div>
+
+        <table className="w-full text-left font-sans text-xs">
+          <thead className="bg-content3/50 font-bold border-b border-divider/15 text-default-500">
+            <tr>
+              <th className="p-3">Track Info / Date</th>
+              <th className="p-3">Category</th>
+              <th className="p-3">Disbursed By</th>
+              <th className="p-3">Branch</th>
+              <th className="p-3 text-right">Amount</th>
+              <th className="p-3 text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-divider/10">
+            {filteredExpenses.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="p-8 text-center text-default-500">
+                  <Receipt className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                  No matching disbursements found for current search filters.
+                </td>
+              </tr>
+            ) : (
+              filteredExpenses.map((ex) => (
+                <tr key={ex.id} className="hover:bg-content2/40 transition">
+                  <td className="p-3 font-semibold text-foreground">
+                    <div>{ex.notes}</div>
+                    <div className="text-[10px] text-default-400 mt-0.5">
+                      {ex.dateTime && !isNaN(new Date(ex.dateTime).getTime())
+                        ? new Date(ex.dateTime).toLocaleString("en-US")
+                        : "N/A"}
+                    </div>
+                  </td>
+                  <td className="p-3">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-content2 text-foreground">
+                      {ex.category}
+                    </span>
+                  </td>
+                  <td className="p-3 text-default-500 font-bold">{ex.recordedBy || "System"}</td>
+                  <td className="p-3 text-default-500">{ex.branchId}</td>
+                  <td className="p-3 text-right text-rose-500 font-bold">
+                    -{formatCurrency(ex.amount)}
+                  </td>
+                  <td className="p-3 text-center">
+                    <button
+                      type="button"
+                      onClick={() => onDeleteExpense(ex.id)}
+                      className="p-1 hover:bg-danger/10 text-default-400 hover:text-danger rounded-lg transition cursor-pointer"
+                      title="Delete Expense"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
