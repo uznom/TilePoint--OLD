@@ -125,7 +125,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             </div>
 
             <span
-              className={`relative z-10 text-[10px] mt-0.5 tracking-tight uppercase leading-none font-bold ${
+              className={`relative z-10 text-[10px] mt-0.5 uppercase leading-none font-bold ${
                 active ? "text-primary font-black" : "text-default-500"
               }`}
             >

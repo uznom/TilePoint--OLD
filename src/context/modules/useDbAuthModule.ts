@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { User, UserRole, Branch, ActiveSession, AuditLog, Product } from "../../types/db";
 import { SEED_AUDIT_LOGS } from "../seedData";
 import { safeParse } from "../dbContextStorage";
@@ -255,13 +255,83 @@ export function useDbAuthModule(options?: UseDbAuthOptions) {
     setCurrentUser(null);
     setIsLoggedIn(false);
     setActiveSessionId(null);
+    setSessionExpiresAt(null);
     sessionStorage.removeItem("tp_current_user");
     sessionStorage.removeItem("tp_is_logged_in");
     sessionStorage.removeItem("tp_active_session_id");
+    sessionStorage.removeItem("tp_session_expires_at");
+    sessionStorage.removeItem("tp_session_remaining_seconds");
     localStorage.removeItem("tp_current_user");
     localStorage.removeItem("tp_is_logged_in");
     localStorage.removeItem("tp_active_session_id");
+    localStorage.removeItem("tp_session_expires_at");
+    localStorage.removeItem("tp_session_remaining_seconds");
   }, [activeSessionId, getAuthHeaders]);
+
+  // Daily Midnight & Session Expiry Watcher
+  useEffect(() => {
+    if (!currentUser || !isLoggedIn) return;
+
+    const computeRemaining = () => {
+      const now = Date.now();
+      const d = new Date(now);
+      d.setHours(24, 0, 0, 0); // Next midnight
+      const midnightMs = d.getTime();
+
+      let targetExpiryMs = midnightMs;
+      if (sessionExpiresAt) {
+        const parsed = new Date(sessionExpiresAt).getTime();
+        if (!isNaN(parsed) && parsed > now) {
+          targetExpiryMs = Math.min(parsed, midnightMs);
+        }
+      }
+
+      const diffSec = Math.max(0, Math.floor((targetExpiryMs - now) / 1000));
+      return diffSec;
+    };
+
+    const initialSec = computeRemaining();
+    setSessionRemainingSeconds(initialSec);
+
+    if (initialSec <= 0) {
+      logout();
+      setSessionSupersededNotice("Your session expired at midnight. Please sign in again for the new business day.");
+      return;
+    }
+
+    const timer = setInterval(() => {
+      const remaining = computeRemaining();
+      setSessionRemainingSeconds(remaining);
+      try {
+        sessionStorage.setItem("tp_session_remaining_seconds", String(remaining));
+      } catch (_) {}
+      if (remaining <= 0) {
+        clearInterval(timer);
+        logout();
+        setSessionSupersededNotice("Your session expired at midnight. Please sign in again for the new business day.");
+      }
+    }, 1000);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        const rem = computeRemaining();
+        setSessionRemainingSeconds(rem);
+        if (rem <= 0) {
+          logout();
+          setSessionSupersededNotice("Your session expired at midnight. Please sign in again for the new business day.");
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", handleVisibility);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", handleVisibility);
+    };
+  }, [currentUser, isLoggedIn, sessionExpiresAt, logout]);
 
   const safeApiFetch = useCallback(
     async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -324,7 +394,20 @@ export function useDbAuthModule(options?: UseDbAuthOptions) {
           body: JSON.stringify({ action: "extend", sessionId: activeSessionId, additionalMinutes }),
         });
         if (res.ok) {
-          setSessionRemainingSeconds((prev) => prev + additionalMinutes * 60);
+          await res.json().catch(() => ({}));
+          const now = Date.now();
+          const d = new Date(now);
+          d.setHours(24, 0, 0, 0); // Midnight
+          const midnightMs = d.getTime();
+
+          const newExpiryMs = Math.min((sessionExpiresAt ? new Date(sessionExpiresAt).getTime() : now) + additionalMinutes * 60 * 1000, midnightMs);
+          const newExpiryIso = new Date(newExpiryMs).toISOString();
+          setSessionExpiresAt(newExpiryIso);
+          sessionStorage.setItem("tp_session_expires_at", newExpiryIso);
+          localStorage.setItem("tp_session_expires_at", newExpiryIso);
+
+          const rem = Math.max(0, Math.floor((newExpiryMs - now) / 1000));
+          setSessionRemainingSeconds(rem);
           return true;
         }
       } catch (e) {
@@ -332,7 +415,7 @@ export function useDbAuthModule(options?: UseDbAuthOptions) {
       }
       return false;
     },
-    [activeSessionId, safeApiFetch]
+    [activeSessionId, sessionExpiresAt, safeApiFetch]
   );
 
   const login = useCallback(
@@ -362,12 +445,21 @@ export function useDbAuthModule(options?: UseDbAuthOptions) {
 
         const body = await res.json();
         if (body.success && body.user) {
+          const now = Date.now();
+          const d = new Date(now);
+          d.setHours(24, 0, 0, 0); // Next midnight
+          const midnightIso = d.toISOString();
+          const finalExpiryIso = body.expiresAt || midnightIso;
+
           setCurrentUser(body.user);
           setIsLoggedIn(true);
           setActiveSessionId(body.sessionId || `SES-${Date.now()}`);
+          setSessionExpiresAt(finalExpiryIso);
           resetLockout();
+
           sessionStorage.setItem("tp_current_user", JSON.stringify(body.user));
           sessionStorage.setItem("tp_is_logged_in", "true");
+          sessionStorage.setItem("tp_session_expires_at", finalExpiryIso);
           if (body.sessionId) {
             sessionStorage.setItem("tp_active_session_id", body.sessionId);
           }

@@ -1025,7 +1025,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                         {/* Employee Profile Cell */}
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
-                            <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary text-xs font-black flex items-center justify-center tracking-tight shadow-inner border border-divider/15 overflow-hidden shrink-0">
+                            <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary text-xs font-black flex items-center justify-center shadow-inner border border-divider/15 overflow-hidden shrink-0">
                               {u.profilePicture ? (
                                 <img src={u.profilePicture} alt={u.fullName} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                               ) : (

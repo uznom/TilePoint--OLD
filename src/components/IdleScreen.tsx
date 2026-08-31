@@ -230,7 +230,7 @@ export const IdleScreen: React.FC = () => {
  {/* Giant Clock Face */}
  <h1 
  id="idle-screen-adaptive-clock"
- className="animate-roboto-flex text-[11vw] font-black leading-none text-[var(--heroui-foreground)] select-none tracking-tighter whitespace-nowrap flex items-baseline justify-center gap-4"
+ className="animate-roboto-flex text-[11vw] font-black leading-none text-[var(--heroui-foreground)] select-none whitespace-nowrap flex items-baseline justify-center gap-4"
  style={{
  fontFamily: "'Roboto Flex Variable', 'Roboto Flex', var(--font-sans)",
  }}

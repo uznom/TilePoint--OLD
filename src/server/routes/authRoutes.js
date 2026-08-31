@@ -4,7 +4,8 @@ import {
   useSsl,
   DEFAULT_SESSION_MAX_DURATION_MINUTES,
   SHIFT_SESSION_DURATION_MS,
-  SESSION_IDLE_TIMEOUT_MS
+  SESSION_IDLE_TIMEOUT_MS,
+  getNextMidnight
 } from '../config/serverConfig.js';
 import {
   authLimiter,
@@ -91,9 +92,10 @@ router.post('/login', authLimiter, async (req, res) => {
     });
 
     const verifiedSessionId = incomingSessionId;
-    const sessionToken = generateServerSessionToken(targetUser, verifiedSessionId);
+    const sessionToken = generateServerSessionToken(targetUser, verifiedSessionId, durationMinutes * 60 * 1000);
     const sessionStartedAt = new Date().toISOString();
-    const expiresAt = new Date(now + durationMinutes * 60 * 1000).toISOString();
+    const nextMidnight = getNextMidnight(now);
+    const expiresAt = new Date(Math.min(now + durationMinutes * 60 * 1000, nextMidnight)).toISOString();
 
     const sessionRecord = {
       id: verifiedSessionId,

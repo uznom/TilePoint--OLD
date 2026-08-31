@@ -256,7 +256,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                   {isCompleted ? <Check className="h-4 w-4 stroke-[3]" /> : s.id}
                 </div>
                 <div className="min-w-0 flex-1 hidden sm:block">
-                  <div className="text-xs font-black uppercase tracking-tight truncate flex items-center gap-1">
+                  <div className="text-xs font-black uppercase truncate flex items-center gap-1">
                     <span>{s.label}</span>
                   </div>
                   <div className="text-[10px] text-default-400 truncate font-medium">{s.desc}</div>

@@ -78,7 +78,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
  <span className="text-[10px] tracking-widest text-red-400 font-bold uppercase block">
  System Recovery
  </span>
- <h1 className="text-lg font-black tracking-tight text-[#F8FAFC]">
+ <h1 className="text-lg font-black text-[#F8FAFC]">
  Application Error
  </h1>
  </div>

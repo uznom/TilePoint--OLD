@@ -1006,7 +1006,7 @@ function AppContent() {
         <div className="flex flex-col items-center gap-3 p-6 rounded-2xl bg-content1/60 border border-divider/40 shadow-sm backdrop-blur-md">
           <HeroSpinner size="lg" color="primary" />
           <div className="text-center space-y-0.5">
-            <h2 className="text-sm font-semibold tracking-tight text-foreground">TilePoint ERP</h2>
+            <h2 className="text-sm font-semibold text-foreground">TilePoint ERP</h2>
             <p className="text-xs text-default-500">Initializing workspace...</p>
           </div>
         </div>
@@ -1146,7 +1146,7 @@ function AppContent() {
                 )}
               </div>
               <div className="text-left">
-                <h4 className="font-bold text-sm tracking-tight flex items-center gap-2 text-foreground">
+                <h4 className="font-bold text-sm flex items-center gap-2 text-foreground">
                   <span>System Response Indicator: HTTP {apiErrorState.statusCode}</span>
                   {apiErrorState.statusCode === 429 && (
                     <span className="bg-amber-500/20 text-amber-500 text-[10px] px-1.5 py-0.5 rounded font-medium">

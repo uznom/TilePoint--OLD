@@ -81,6 +81,15 @@ export const SESSION_IDLE_TIMEOUT_MS = 24 * 60 * 60 * 1000; // 24 hours
 export const LEGACY_MIGRATION_CUTOFF_DATE = new Date('2026-10-01T00:00:00.000Z');
 export const BACKUP_SOFT_DELETE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
+/**
+ * Calculates the exact millisecond timestamp of the upcoming midnight (00:00:00.000)
+ */
+export function getNextMidnight(fromTimestamp = Date.now()) {
+  const d = new Date(fromTimestamp);
+  d.setHours(24, 0, 0, 0);
+  return d.getTime();
+}
+
 // Map JSON collection keys to MySQL tables
 export const KEY_TO_TABLE_MAP = {
   'tp_branches': 'branches',

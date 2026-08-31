@@ -2497,7 +2497,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  <span className="text-[9.5px] font-bold uppercase tracking-widest text-default-500 ">
  Official Corporate Audit Record
  </span>
- <h1 className="text-2xl font-black uppercase tracking-tight text-zinc-950 font-sans">
+ <h1 className="text-2xl font-black uppercase text-zinc-950 font-sans">
  {localStorage.getItem('tilepoint_company_name_v1') || branches[0]?.name || 'Main Enterprise'}
  </h1>
  <p className="text-xs text-default-500 font-medium max-w-sm">

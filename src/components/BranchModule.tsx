@@ -589,21 +589,30 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
     setShowModal(false);
   };
 
- const triggerDelete = (id: string, branchName: string) => {
- if (!isUserAdmin) {
- showToast('Permission Denied: Branch deletion is restricted to Admins.');
- return;
- }
- if (id === primaryBranchId) {
- showToast('Violation Blocked: Deleting the primary Main Branch (HQ) is restricted to maintain transactional ledger continuity.');
- return;
- }
- setConfirmDeleteId(id);
- setConfirmDeleteName(branchName);
- };
+  const triggerDelete = (id: string, branchName: string) => {
+    if (!isUserAdmin) {
+      showToast('Permission Denied: Branch deletion is restricted to Admins.');
+      return;
+    }
+    if (activeBranches.length <= 1) {
+      showToast('Violation Blocked: At least one active branch must remain in the system to maintain inventory and transactional ledger continuity.');
+      return;
+    }
+    if (id === primaryBranchId) {
+      showToast('Violation Blocked: Deleting the primary Main Branch (HQ) is restricted to maintain transactional ledger continuity.');
+      return;
+    }
+    setConfirmDeleteId(id);
+    setConfirmDeleteName(branchName);
+  };
 
   const proceedWithDelete = () => {
     if (confirmDeleteId) {
+      if (activeBranches.length <= 1) {
+        showToast('Violation Blocked: Cannot delete the only remaining active branch.');
+        setConfirmDeleteId(null);
+        return;
+      }
       deleteBranch(confirmDeleteId);
       showToast(`Archived and soft-deleted branch '${confirmDeleteName}'.`);
       setConfirmDeleteId(null);
@@ -641,6 +650,9 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
             .map((b) => {
               const branchEmployees = users.filter((u) => u.branchAssignmentId === b.id);
               const isExpanded = !!expandedBranchUsers[b.id];
+              const isLastActiveBranch = activeBranches.length <= 1;
+              const isPrimaryBranch = b.id === primaryBranchId;
+              const isDeleteForbidden = isLastActiveBranch || isPrimaryBranch;
               return (
                 <div
                   key={b.id}
@@ -658,7 +670,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <h4 className="text-sm font-extrabold tracking-tight text-foreground leading-tight truncate">
+                          <h4 className="text-sm font-extrabold text-foreground leading-tight truncate">
                             {b.name}
                           </h4>
                           {b.id === primaryBranchId && (
@@ -685,13 +697,15 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
                         >
                           <Edit2 className="h-4 w-4" />
                         </button>
-                        <button
-                          onClick={() => triggerDelete(b.id, b.name)}
-                          className="p-1.5 rounded-lg hover:bg-rose-500/10 text-default-400 hover:text-rose-500 cursor-pointer transition-colors"
-                          title="Archive Outlet"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {!isDeleteForbidden && (
+                          <button
+                            onClick={() => triggerDelete(b.id, b.name)}
+                            className="p-1.5 rounded-lg hover:bg-rose-500/10 text-default-400 hover:text-rose-500 cursor-pointer transition-colors"
+                            title="Archive Outlet"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1312,7 +1326,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  {/* Custom Thank You Message */}
  <div className="text-center text-[8px] text-zinc-800 leading-normal">
  {inlineThankYou ? (
- <span className="font-bold tracking-tight block">
+ <span className="font-bold block">
  {inlineThankYou}
  </span>
  ) : (

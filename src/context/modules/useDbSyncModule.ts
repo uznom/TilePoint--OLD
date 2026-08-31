@@ -170,6 +170,7 @@ export function useDbSyncModule({
   setIsConfigured,
   addAuditLog,
   safeApiFetch,
+  getAuthHeaders,
 }: UseDbSyncOptions) {
   const [dbSnapshots, setDbSnapshots] = useState<DbSnapshot[]>(() => {
     return safeParse<DbSnapshot[]>("tp_db_snapshots", []);
@@ -1099,11 +1100,35 @@ export function useDbSyncModule({
 
   const truncateDatabase = useCallback(
     async (mode: "all" | "transactions") => {
-      if (currentUser && currentUser.role !== UserRole.ADMIN) {
+      if (currentUser && currentUser.role !== UserRole.ADMIN && String(currentUser.role).toLowerCase() !== "admin") {
         throw new Error("Unauthorized: Only administrators can reset or truncate database.");
       }
-      generateSystemSnapshot(`Pre-Truncate Auto-Snapshot (${mode}) - ${new Date().toLocaleDateString()}`);
+      try {
+        generateSystemSnapshot(`Pre-Truncate Auto-Snapshot (${mode}) - ${new Date().toLocaleDateString()}`);
+      } catch (_) {}
 
+      // 1. Call backend API to truncate/reset tables in MySQL and AlaSQL
+      try {
+        const res = await safeApiFetch("/api/db/truncate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+          },
+          body: JSON.stringify({
+            mode,
+            confirmation: "RESET",
+          }),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          console.warn("[Truncate API Non-OK]", errData);
+        }
+      } catch (apiErr) {
+        console.warn("[Truncate API Error]", apiErr);
+      }
+
+      // 2. Clear transactional local state
       if (mode === "transactions" || mode === "all") {
         setSales([]);
         setSaleItems([]);
@@ -1119,13 +1144,73 @@ export function useDbSyncModule({
         setPurchaseOrders([]);
         setPoItems([]);
         setTransmittals([]);
+
+        const txKeys = [
+          "tp_sales",
+          "tp_sale_items",
+          "tp_movements",
+          "tp_inventory_movements",
+          "tp_deliveries",
+          "tp_custom_bills",
+          "tp_custom_corporate_bills",
+          "tp_expenses",
+          "tp_product_returns",
+          "tp_damage_logs",
+          "tp_shifts",
+          "tp_stock_transfers",
+          "tp_purchase_orders",
+          "tp_po_items",
+          "tp_transmittals",
+          "tp_ledger_entries",
+          "tp_branch_sales_reports",
+          "tp_parked_sales",
+        ];
+        txKeys.forEach((k) => {
+          try {
+            localStorage.removeItem(k);
+          } catch (_) {}
+        });
       }
+
+      // 3. In transactions mode, zero out all product & branch stock quantities
+      if (mode === "transactions") {
+        setProducts((prev) => {
+          const updated = prev.map((p) => ({ ...p, stockQuantity: 0 }));
+          try {
+            localStorage.setItem("tp_products", JSON.stringify(updated));
+          } catch (_) {}
+          return updated;
+        });
+        setBranchStock((prev) => {
+          const updated = prev.map((bs) => ({ ...bs, quantity: 0 }));
+          try {
+            localStorage.setItem("tp_branch_stock", JSON.stringify(updated));
+          } catch (_) {}
+          return updated;
+        });
+      }
+
+      // 4. In full reset mode, clear entities from state and storage
       if (mode === "all") {
         setProducts([]);
         setBranchStock([]);
         setSuppliers([]);
         setBrands([]);
         setMembers([]);
+
+        const allKeys = [
+          "tp_products",
+          "tp_branch_stock",
+          "tp_suppliers",
+          "tp_brands",
+          "tp_members",
+          "tp_damage_logs",
+        ];
+        allKeys.forEach((k) => {
+          try {
+            localStorage.removeItem(k);
+          } catch (_) {}
+        });
       }
 
       addAuditLog(
@@ -1137,6 +1222,8 @@ export function useDbSyncModule({
     [
       currentUser,
       generateSystemSnapshot,
+      safeApiFetch,
+      getAuthHeaders,
       setSales,
       setSaleItems,
       setMovements,

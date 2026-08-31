@@ -400,7 +400,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
             <Package className="h-4 w-4" />
           </div>
           <div>
-            <span className="text-xs font-black tracking-tight uppercase text-primary">TilePoint</span>
+            <span className="text-xs font-black uppercase text-primary">TilePoint</span>
             <div className="text-[9px] font-bold text-default-500 uppercase tracking-widest leading-none mt-0.5">Staff Portal</div>
           </div>
         </div>

@@ -395,6 +395,34 @@ export function saveKeyToAlasql(key, value) {
       for (const item of value) {
         upsertRecordAlasql(tableName, item);
       }
+      if (key === 'tp_products') {
+        for (const item of value) {
+          const invItem = {
+            id: item.id,
+            productId: item.id,
+            product_sku: item.product_sku || item.sku || item.productCode,
+            category_id: item.category_id || item.category || 'General',
+            productCode: item.productCode,
+            productName: item.productName,
+            category: item.category,
+            brand: item.brand,
+            sku: item.sku,
+            barcode: item.barcode,
+            unit: item.unit,
+            stockQuantity: item.stockQuantity !== undefined ? item.stockQuantity : 0,
+            costPrice: item.costPrice !== undefined ? item.costPrice : 0,
+            sellingPrice: item.sellingPrice !== undefined ? item.sellingPrice : 0,
+            lowStockThreshold: item.minimumStock || item.lowStockThreshold || 10,
+            supplierId: item.supplierId || null,
+            origin: item.origin || null,
+            version: item.version || 1,
+            isDeleted: item.isDeleted ? 1 : 0
+          };
+          try {
+            upsertRecordAlasql('inventory', invItem);
+          } catch (_) {}
+        }
+      }
     } else if (typeof value === 'object' && value !== null) {
       upsertRecordAlasql(tableName, value);
     }
@@ -412,9 +440,53 @@ export async function saveKeyToMysql(key, value) {
 
   if (tableName) {
     if (Array.isArray(value)) {
-      await upsertBatchMysql(tableName, value);
+      let sanitizedBatch = value;
+      if (key === 'tp_products') {
+        // Sanitize supplierId foreign key if needed
+        sanitizedBatch = value.map(p => ({
+          ...p,
+          supplierId: (p.supplierId && p.supplierId !== 'central') ? p.supplierId : null
+        }));
+      }
+      await upsertBatchMysql(tableName, sanitizedBatch);
+
+      if (key === 'tp_products') {
+        const inventoryItems = sanitizedBatch.map(p => ({
+          id: p.id,
+          productId: p.id,
+          product_sku: p.product_sku || p.sku || p.productCode,
+          category_id: p.category_id || p.category || 'General',
+          productCode: p.productCode,
+          productName: p.productName,
+          category: p.category,
+          brand: p.brand,
+          sku: p.sku,
+          barcode: p.barcode,
+          unit: p.unit,
+          stockQuantity: p.stockQuantity !== undefined ? p.stockQuantity : 0,
+          costPrice: p.costPrice !== undefined ? p.costPrice : 0,
+          sellingPrice: p.sellingPrice !== undefined ? p.sellingPrice : 0,
+          lowStockThreshold: p.minimumStock || p.lowStockThreshold || 10,
+          supplierId: p.supplierId || null,
+          origin: p.origin || null,
+          version: p.version || 1,
+          isDeleted: p.isDeleted ? 1 : 0
+        }));
+        try {
+          await upsertBatchMysql('inventory', inventoryItems);
+        } catch (invErr) {
+          console.warn('[saveKeyToMysql inventory sync warning]:', invErr.message);
+        }
+      }
     } else if (typeof value === 'object' && value !== null) {
-      await upsertRecordMysql(tableName, value);
+      let sanitizedRec = value;
+      if (key === 'tp_products') {
+        sanitizedRec = {
+          ...value,
+          supplierId: (value.supplierId && value.supplierId !== 'central') ? value.supplierId : null
+        };
+      }
+      await upsertRecordMysql(tableName, sanitizedRec);
     }
   } else {
     const valStr = typeof value === 'string' ? value : JSON.stringify(value);

@@ -5,7 +5,8 @@ import {
   SHIFT_SESSION_DURATION_MS,
   DEFAULT_SESSION_MAX_DURATION_MINUTES,
   SESSION_IDLE_TIMEOUT_MS,
-  LEGACY_MIGRATION_CUTOFF_DATE
+  LEGACY_MIGRATION_CUTOFF_DATE,
+  getNextMidnight
 } from '../config/serverConfig.js';
 import { pool, isConnectionError } from '../db/mysqlPool.js';
 import { alasql, upsertRecordAlasql } from '../db/alasqlEngine.js';
@@ -129,7 +130,8 @@ export async function verifyAndMigratePassword(password, targetUser) {
 
 export function generateServerSessionToken(user, sessionId, durationMs = SHIFT_SESSION_DURATION_MS) {
   const now = Date.now();
-  const exp = now + durationMs;
+  const nextMidnight = getNextMidnight(now);
+  const exp = Math.min(now + durationMs, nextMidnight);
   const sessId = sessionId || ("SESS_" + Math.random().toString(36).substring(2, 11).toUpperCase());
   const payload = {
     id: user.id,
@@ -203,13 +205,13 @@ export function verifyAndExtractToken(req) {
       return null;
     }
 
-    // Enforce real exp claim (or shift window for legacy tokens)
+    // Enforce real exp claim (or shift window for legacy tokens capped at midnight)
     if (typeof payload.exp === 'number') {
       if (now >= payload.exp) {
         return null;
       }
     } else if (typeof payload.timestamp === 'number') {
-      if (now - payload.timestamp > SHIFT_SESSION_DURATION_MS) {
+      if (now - payload.timestamp > SHIFT_SESSION_DURATION_MS || now >= getNextMidnight(payload.timestamp)) {
         return null;
       }
     } else {
@@ -253,7 +255,9 @@ export async function saveActiveSessionRecord(session) {
 
   const maxDuration = session.maxDurationMinutes || DEFAULT_SESSION_MAX_DURATION_MINUTES;
   const startedAt = session.sessionStartedAt ? new Date(session.sessionStartedAt) : new Date();
-  const expiresAt = session.expiresAt ? new Date(session.expiresAt) : new Date(startedAt.getTime() + maxDuration * 60 * 1000);
+  const nextMidnight = getNextMidnight(startedAt.getTime());
+  const calculatedExpMs = Math.min(startedAt.getTime() + maxDuration * 60 * 1000, nextMidnight);
+  const expiresAt = session.expiresAt ? new Date(Math.min(new Date(session.expiresAt).getTime(), nextMidnight)) : new Date(calculatedExpMs);
 
   const sessionRow = {
     id: session.id,
@@ -352,7 +356,7 @@ export async function pruneExpiredSessions() {
     if (getIsMysqlActive() || getMysqlEnforced()) {
       try {
         await pool.query(
-          'DELETE FROM `active_sessions` WHERE `lastActive` < ? OR (`expiresAt` IS NOT NULL AND `expiresAt` < ?)',
+          'DELETE FROM `active_sessions` WHERE `lastActive` < ? OR (`expiresAt` IS NOT NULL AND `expiresAt` <= ?) OR DATE(`sessionStartedAt`) < CURDATE()',
           [idleCutoff, now]
         );
       } catch (e) {
@@ -365,11 +369,14 @@ export async function pruneExpiredSessions() {
       try { sessions = JSON.parse(sessions); } catch (_) { sessions = []; }
     }
     if (Array.isArray(sessions) && sessions.length > 0) {
+      const todayDateStr = new Date().toISOString().slice(0, 10);
       const fresh = sessions.filter(s => {
         const t = new Date(s.lastActive || 0).getTime();
         const notIdle = !isNaN(t) && t >= (Date.now() - SESSION_IDLE_TIMEOUT_MS);
         const notExpired = !s.expiresAt || new Date(s.expiresAt).getTime() > Date.now();
-        return notIdle && notExpired;
+        const startedDateStr = s.sessionStartedAt ? new Date(s.sessionStartedAt).toISOString().slice(0, 10) : todayDateStr;
+        const isToday = startedDateStr === todayDateStr;
+        return notIdle && notExpired && isToday;
       });
       if (fresh.length !== sessions.length) {
         db.tp_active_sessions = fresh;
@@ -382,6 +389,17 @@ export async function pruneExpiredSessions() {
 }
 
 setInterval(pruneExpiredSessions, 60000).unref();
+
+function scheduleMidnightSessionPurge() {
+  const msToMidnight = Math.max(1000, getNextMidnight() - Date.now());
+  setTimeout(async () => {
+    console.log('[Security] Midnight reached: Resetting all cashier, staff, manager, and admin sessions for the new business day.');
+    await pruneExpiredSessions();
+    scheduleMidnightSessionPurge();
+  }, msToMidnight).unref();
+}
+
+scheduleMidnightSessionPurge();
 
 export async function invalidateAllSessionsOnBoot() {
   try {

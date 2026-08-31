@@ -478,13 +478,18 @@ export function useDbEntitiesModule({
   const deleteBranch = useCallback(
     (id: string) => {
       logBranchAccessScope("DELETE", "Branch", id);
-      setBranches((prev) =>
-        prev.map((b) =>
+      setBranches((prev) => {
+        const remainingActive = prev.filter((b) => b.id !== id && !b.isDeleted);
+        if (remainingActive.length === 0) {
+          console.warn("[Branch Delete] Blocked: At least one active branch must remain.");
+          return prev;
+        }
+        return prev.map((b) =>
           b.id === id
             ? { ...b, isDeleted: true, updatedAt: new Date().toISOString() }
             : b
-        )
-      );
+        );
+      });
       addAuditLog(
         "BRANCH_DELETE",
         `Soft-deleted branch ID ${id}`,

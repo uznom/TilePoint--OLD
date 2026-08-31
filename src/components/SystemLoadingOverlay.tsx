@@ -110,7 +110,7 @@ export const SystemLoadingOverlay: React.FC = () => {
           </div>
 
           {/* Title */}
-          <h3 className="font-sans font-bold text-base tracking-tight text-foreground mb-2">
+          <h3 className="font-sans font-bold text-base text-foreground mb-2">
             {systemProcessingMessage || 'Processing System Task'}
           </h3>
 

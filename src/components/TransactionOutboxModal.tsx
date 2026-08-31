@@ -123,7 +123,7 @@ export const TransactionOutboxModal: React.FC<TransactionOutboxModalProps> = ({
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-base font-bold text-foreground tracking-tight">
+                  <h2 className="text-base font-bold text-foreground">
                     Transactional Outbox Engine
                   </h2>
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-default-100 text-default-600 border border-default-200">

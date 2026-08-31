@@ -783,7 +783,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  <div className="p-4 rounded-2xl border border-divider/30 bg-content1 flex flex-col justify-between">
  <span className="text-[9px] font-black uppercase tracking-widest text-default-500">Gross Deliveries</span>
  <div className="flex items-baseline gap-2 mt-2">
- <span className="text-2xl font-black tracking-tight">{stats.total}</span>
+ <span className="text-2xl font-black">{stats.total}</span>
  <span className="text-[10px] text-default-500 font-bold">Invoices</span>
  </div>
  </div>
@@ -791,7 +791,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  <div className="p-4 rounded-2xl border border-divider/30 bg-amber-500/5 flex flex-col justify-between">
  <span className="text-[9px] font-black uppercase tracking-widest text-amber-500">Pending Dispatch</span>
  <div className="flex items-baseline gap-2 mt-2">
- <span className="text-2xl font-black text-amber-400 tracking-tight">{stats.pending}</span>
+ <span className="text-2xl font-black text-amber-400">{stats.pending}</span>
  <span className="text-[10px] text-amber-600 font-bold uppercase ">Unpacked</span>
  </div>
  </div>
@@ -799,7 +799,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  <div className="p-4 rounded-2xl border border-divider/30 bg-primary/5 flex flex-col justify-between">
  <span className="text-[9px] font-black uppercase tracking-widest text-primary">Scheduled</span>
  <div className="flex items-baseline gap-2 mt-2">
- <span className="text-2xl font-black text-primary tracking-tight">{stats.scheduled}</span>
+ <span className="text-2xl font-black text-primary">{stats.scheduled}</span>
  <span className="text-[10px] text-primary font-bold uppercase ">Ready</span>
  </div>
  </div>
@@ -807,7 +807,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  <div className="p-4 rounded-2xl border border-divider/30 bg-secondary/5 flex flex-col justify-between">
  <span className="text-[9px] font-black uppercase tracking-widest text-secondary">Active Trucks</span>
  <div className="flex items-baseline gap-2 mt-2">
- <span className="text-2xl font-black text-secondary tracking-tight">{stats.transit}</span>
+ <span className="text-2xl font-black text-secondary">{stats.transit}</span>
  <span className="text-[10px] text-secondary font-bold uppercase ">In Transit</span>
  </div>
  </div>
@@ -815,7 +815,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  <div className="col-span-2 md:col-span-1 p-4 rounded-2xl border border-divider/30 bg-emerald-500/5 flex flex-col justify-between">
  <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Completed Gate Pass</span>
  <div className="flex items-baseline gap-2 mt-2">
- <span className="text-2xl font-black text-emerald-400 tracking-tight">{stats.completed}</span>
+ <span className="text-2xl font-black text-emerald-400">{stats.completed}</span>
  <span className="text-[10px] text-emerald-600 font-bold uppercase ">Delivered</span>
  </div>
  </div>

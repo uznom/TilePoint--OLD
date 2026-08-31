@@ -439,7 +439,7 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-black text-foreground tracking-tight">
+              <h1 className="text-xl font-black text-foreground">
                 System Archives & Restore Center
               </h1>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">

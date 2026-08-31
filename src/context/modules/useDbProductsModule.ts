@@ -8,6 +8,7 @@ import {
   Product,
   InventoryLocationStock,
   Branch,
+  Supplier,
   User,
   InventoryMovement,
   DamageLog,
@@ -27,6 +28,7 @@ import { generateEan13Barcode } from "../../utils/barcodeGenerator";
 interface UseDbProductsOptions {
   currentUser: User | null;
   branches: Branch[];
+  suppliers?: Supplier[];
   validateInventoryAccess: (item: any) => boolean;
   logBranchAccessScope: (
     operation: string,
@@ -53,6 +55,7 @@ interface UseDbProductsOptions {
 export function useDbProductsModule({
   currentUser,
   branches,
+  suppliers = [],
   validateInventoryAccess,
   logBranchAccessScope,
   getAuthHeaders,
@@ -623,16 +626,25 @@ export function useDbProductsModule({
   const importProducts = useCallback(
     (imported: Product[], branchMapping?: Record<string, string>) => {
       try {
-        const uniqueImported: Product[] = [];
+        const fallbackBranchId = branches.find((b) => !b.isDeleted)?.id || branches[0]?.id || currentUser?.branchAssignmentId || "B1";
+
+        const existingById = new Map<string, Product>();
+        const existingByCode = new Map<string, Product>();
+        const existingByBarcode = new Map<string, Product>();
+        const existingBySku = new Map<string, Product>();
+
+        products.forEach((prod) => {
+          if (prod.id) existingById.set(prod.id, prod);
+          if (prod.productCode) existingByCode.set(prod.productCode.toLowerCase().trim(), prod);
+          if (prod.barcode) existingByBarcode.set(prod.barcode.toLowerCase().trim(), prod);
+          if (prod.sku) existingBySku.set(prod.sku.toLowerCase().trim(), prod);
+        });
+
         const seenCodes = new Set<string>();
         const seenBarcodes = new Set<string>();
         const seenSkus = new Set<string>();
 
-        products.forEach((prod) => {
-          if (prod.productCode) seenCodes.add(prod.productCode.toLowerCase().trim());
-          if (prod.barcode) seenBarcodes.add(prod.barcode.toLowerCase().trim());
-          if (prod.sku) seenSkus.add(prod.sku.toLowerCase().trim());
-        });
+        const sanitized: Product[] = [];
 
         imported.forEach((p, i) => {
           const rawCode = sanitizeInputText(p.productCode);
@@ -640,44 +652,34 @@ export function useDbProductsModule({
           const rawSku = sanitizeInputText(p.sku);
           const rawName = sanitizeInputText(p.productName) || "Unnamed Imported Product";
 
-          let barcode = rawBarcode;
-          if (!barcode || seenBarcodes.has(barcode.toLowerCase().trim())) {
+          // Match existing product if available
+          const existing =
+            (p.id && existingById.get(p.id)) ||
+            (rawCode && existingByCode.get(rawCode.toLowerCase().trim())) ||
+            (rawBarcode && existingByBarcode.get(rawBarcode.toLowerCase().trim())) ||
+            (rawSku && existingBySku.get(rawSku.toLowerCase().trim()));
+
+          const finalId = existing ? existing.id : (p.id || `P-IMP-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 6)}`);
+
+          let barcode = rawBarcode || (existing && existing.barcode) || "";
+          if (!barcode || (seenBarcodes.has(barcode.toLowerCase().trim()) && (!existing || existing.barcode !== barcode))) {
             barcode = generateEan13Barcode();
           }
           seenBarcodes.add(barcode.toLowerCase().trim());
 
-          let productCode = rawCode || barcode || `TL-IMP-${Date.now()}-${i}`;
-          if (seenCodes.has(productCode.toLowerCase().trim())) {
+          let productCode = rawCode || (existing && existing.productCode) || barcode || `TL-IMP-${Date.now()}-${i}`;
+          if (seenCodes.has(productCode.toLowerCase().trim()) && (!existing || existing.productCode !== productCode)) {
             productCode = `${productCode}-${i + 1}`;
           }
           seenCodes.add(productCode.toLowerCase().trim());
 
-          let sku = rawSku || (barcode ? `SKU-${barcode}` : `SKU-IMP-${Date.now()}-${i}`);
-          if (seenSkus.has(sku.toLowerCase().trim())) {
+          let sku = rawSku || (existing && existing.sku) || (barcode ? `SKU-${barcode}` : `SKU-IMP-${Date.now()}-${i}`);
+          if (seenSkus.has(sku.toLowerCase().trim()) && (!existing || existing.sku !== sku)) {
             sku = `${sku}-${i + 1}`;
           }
           seenSkus.add(sku.toLowerCase().trim());
 
-          uniqueImported.push({
-            ...p,
-            id: p.id || `P-IMPORT-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 6)}`,
-            productCode,
-            barcode,
-            sku,
-            productName: rawName,
-          });
-        });
-
-        if (uniqueImported.length === 0) {
-          return { success: false, count: 0, error: `No valid product entries found to import.` };
-        }
-
-        const sanitized = uniqueImported.map((p, i) => {
-          const barcode = sanitizeInputText(p.barcode) || generateEan13Barcode();
-          const productCode =
-            sanitizeInputText(p.productCode) || barcode || `TL-IMP-${Date.now()}-${i}`;
-          const rawPName = sanitizeInputText(p.productName) || "Unnamed Imported Product";
-          const pName = correctProductName(rawPName);
+          const pName = correctProductName(rawName);
 
           let size = sanitizeInputText(p.size || "");
           if (!size && pName) {
@@ -695,38 +697,37 @@ export function useDbProductsModule({
             size = isTile ? "60x60 cm" : "N/A";
           }
 
-          const sku =
-            sanitizeInputText(p.sku) ||
-            (barcode ? `SKU-${barcode}` : `SKU-IMP-${Date.now()}-${i}`);
-          const finalId = p.id || `P-IMPORT-${Date.now()}-${i}`;
+          // Verify supplier exists in suppliers table or nullify to prevent foreign key errors
+          const rawSupId = sanitizeInputText(p.supplierId || "");
+          const validSup = suppliers.find((s) => s.id === rawSupId && !s.isDeleted);
+          const finalSupplierId = validSup ? validSup.id : undefined;
 
-          return {
-            ...p,
+          const prodItem: Product = {
             id: finalId,
             productCode,
             productName: pName,
             sku,
             barcode,
             qrCode: p.qrCode || `TP-${productCode}`,
-            category: correctCategoryName(sanitizeInputText(p.category || "")),
-            brand: sanitizeInputText(p.brand || "") || "Generic",
+            category: correctCategoryName(sanitizeInputText(p.category || "")) || (existing ? existing.category : "Tiles"),
+            brand: sanitizeInputText(p.brand || "") || (existing ? existing.brand : "Generic"),
             size,
             designName: correctProductName(
               sanitizeInputText(p.designName || "") || p.productName || pName
             ),
-            supplierId: sanitizeInputText(p.supplierId || "") || "central",
-            unit: correctUnitName(sanitizeInputText(p.unit || "") || "Unit"),
-            origin: p.origin ? sanitizeInputText(p.origin) : undefined,
+            supplierId: finalSupplierId,
+            unit: correctUnitName(sanitizeInputText(p.unit || "") || "Pcs"),
+            origin: p.origin ? sanitizeInputText(p.origin) : (existing ? existing.origin : undefined),
             boxQuantity: sanitizeAndValidateNumber(p.boxQuantity || (size !== "N/A" ? 4 : 1), 1),
             coveragePerBox:
               p.coveragePerBox !== undefined
                 ? sanitizeAndValidateNumber(p.coveragePerBox, 1)
-                : undefined,
-            costPrice: sanitizeAndValidateNumber(p.costPrice),
-            sellingPrice: sanitizeAndValidateNumber(p.sellingPrice),
-            stockQuantity: Math.round(sanitizeAndValidateNumber(p.stockQuantity)),
-            minimumStock: Math.round(sanitizeAndValidateNumber(p.minimumStock, 0)),
-            createdAt: p.createdAt || new Date().toISOString(),
+                : (existing ? existing.coveragePerBox : undefined),
+            costPrice: sanitizeAndValidateNumber(p.costPrice ?? (existing ? existing.costPrice : 0)),
+            sellingPrice: sanitizeAndValidateNumber(p.sellingPrice ?? (existing ? existing.sellingPrice : 0)),
+            stockQuantity: Math.round(sanitizeAndValidateNumber(p.stockQuantity ?? (existing ? existing.stockQuantity : 0))),
+            minimumStock: Math.round(sanitizeAndValidateNumber(p.minimumStock ?? (existing ? existing.minimumStock : 0), 0)),
+            createdAt: existing ? existing.createdAt : (p.createdAt || new Date().toISOString()),
             updatedAt: new Date().toISOString(),
             isDeleted: Boolean(p.isDeleted),
             hasExpiration:
@@ -734,10 +735,19 @@ export function useDbProductsModule({
                 ? !!p.hasExpiration
                 : p.expirationDate
                 ? true
+                : existing
+                ? Boolean(existing.hasExpiration)
                 : false,
-            expirationDate: p.expirationDate ? p.expirationDate : undefined,
+            expirationDate: p.expirationDate ? p.expirationDate : (existing ? existing.expirationDate : undefined),
+            version: ((existing && Number(existing.version)) || 0) + 1,
           };
+
+          sanitized.push(prodItem);
         });
+
+        if (sanitized.length === 0) {
+          return { success: false, count: 0, error: `No valid product entries found to import.` };
+        }
 
         const productMap = new Map<string, Product>();
         products.forEach((prod) => {
@@ -757,7 +767,7 @@ export function useDbProductsModule({
             let targetBranchId =
               (branchMapping && branchMapping["default"]) ||
               currentUser?.branchAssignmentId ||
-              "B1";
+              fallbackBranchId;
             if (item.origin) {
               const cleanedOrigin = item.origin.toLowerCase().trim();
               if (branchMapping && branchMapping[cleanedOrigin]) {
@@ -809,7 +819,7 @@ export function useDbProductsModule({
             let targetBranchId =
               (branchMapping && branchMapping["default"]) ||
               currentUser?.branchAssignmentId ||
-              "B1";
+              fallbackBranchId;
             let targetBranchName =
               branches.find((b) => b.id === targetBranchId)?.name ||
               branches[0]?.name ||
@@ -911,6 +921,29 @@ export function useDbProductsModule({
 
         const currentDamage = JSON.parse(localStorage.getItem("tp_damage_logs") || "[]");
 
+        // Prepare materialized inventory records matching products table
+        const inventoryRecords = nextProducts.map((prod) => ({
+          id: prod.id,
+          productId: prod.id,
+          product_sku: prod.sku || prod.productCode,
+          category_id: prod.category || "General",
+          productCode: prod.productCode,
+          productName: prod.productName,
+          category: prod.category,
+          brand: prod.brand,
+          sku: prod.sku,
+          barcode: prod.barcode,
+          unit: prod.unit,
+          stockQuantity: prod.stockQuantity,
+          costPrice: prod.costPrice,
+          sellingPrice: prod.sellingPrice,
+          lowStockThreshold: prod.minimumStock || 10,
+          supplierId: prod.supplierId || null,
+          origin: prod.origin || null,
+          version: prod.version || 1,
+          isDeleted: prod.isDeleted ? 1 : 0,
+        }));
+
         (async () => {
           try {
             await safeApiFetch("/api/db/bulk", {
@@ -922,12 +955,13 @@ export function useDbProductsModule({
               body: JSON.stringify({
                 data: {
                   tp_products: nextProducts,
+                  tp_inventory: inventoryRecords,
                   tp_branch_stock: nextBranchStock,
                   tp_damage_logs: currentDamage,
                 },
               }),
             });
-            console.log("[Bulk Import Sync] Successfully flushed imported products to central server.");
+            console.log("[Bulk Import Sync] Successfully flushed imported products and inventory to central server.");
           } catch (err) {
             console.warn("[Bulk Import Sync] Failed to post bulk sync to server:", err);
           }

@@ -655,7 +655,7 @@ export const TutorialOnboarding: React.FC = () => {
  <div className="inline-flex items-center gap-1 text-[10px] uppercase font-black tracking-wider text-primary bg-primary/10 px-2.5 py-1 rounded-full border border-primary/20">
  <Sparkles className="h-3 w-3" /> System Academy Guide
  </div>
- <h2 className="text-xl md:text-2xl font-black text-foreground uppercase tracking-tight">Onboarding Walkthrough</h2>
+ <h2 className="text-xl md:text-2xl font-black text-foreground uppercase">Onboarding Walkthrough</h2>
  <p className="text-xs text-default-500 max-w-xl font-medium">
  Welcome to the official interactive tutorial suite. Understand the transactional, logs, and logistical functions of your newly created enterprise setup.
  </p>
@@ -708,7 +708,7 @@ export const TutorialOnboarding: React.FC = () => {
  </div>
  <div className="space-y-0.5">
  <span className="text-[9.5px] uppercase font-bold text-primary tracking-wider">{topic.category}</span>
- <h3 className="text-xs font-black tracking-tight">{topic.title}</h3>
+ <h3 className="text-xs font-black">{topic.title}</h3>
  <p className="text-[11px] line-clamp-2 leading-snug font-medium text-default-500/80">{topic.shortDesc}</p>
  </div>
  </button>
@@ -737,7 +737,7 @@ export const TutorialOnboarding: React.FC = () => {
  </div>
  <div>
  <span className="text-[9.5px] uppercase text-primary px-1.5 py-0.5 bg-primary/10 rounded">Active Module</span>
- <h3 className="text-xs font-black text-foreground uppercase tracking-tight mt-0.5">{selectedTopic.title}</h3>
+ <h3 className="text-xs font-black text-foreground uppercase mt-0.5">{selectedTopic.title}</h3>
  </div>
  </div>
  <div className="text-right text-[10px] text-default-500">
@@ -775,7 +775,7 @@ export const TutorialOnboarding: React.FC = () => {
  <div className="space-y-4">
  <div className="space-y-1.5">
  <span className="text-[10px] uppercase font-black tracking-widest text-primary block">Action Workflow • Stage {safeActiveStepIdx + 1}</span>
- <h2 className="text-lg font-black tracking-tight text-foreground leading-tight">
+ <h2 className="text-lg font-black text-foreground">
  {currentStep.title}
  </h2>
  </div>

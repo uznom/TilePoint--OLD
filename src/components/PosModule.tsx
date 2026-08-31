@@ -1997,7 +1997,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
   const renderPosSalesReceipt = () => (
     <div data-receipt-print="true" className="receipt-container px-5 py-5 bg-content1 border border-dashed border-divider/40 rounded-2xl text-[11px] leading-relaxed space-y-3 select-text text-foreground text-left shadow-xs print:border-none print:shadow-none print:p-0 print:text-black">
-      <div className="text-center font-bold tracking-tight border-b border-dashed border-divider/30 pb-3 flex flex-col items-center justify-center space-y-1">
+      <div className="text-center font-bold border-b border-dashed border-divider/30 pb-3 flex flex-col items-center justify-center space-y-1">
         {receiptBranch?.storeLogo ? (
           <div 
             className="mb-1.5 w-auto flex items-center justify-center"
@@ -2265,7 +2265,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
       <div className="text-center font-mono text-[7px] text-default-500/70 uppercase tracking-widest pt-3 border-t border-dotted border-divider/30 mt-3.5">
         {receiptBranch?.receiptThankYou ? (
-          <span className="font-black text-foreground text-[8px] tracking-tight block mb-1 normal-case font-mono">
+          <span className="font-black text-foreground text-[8px] block mb-1 normal-case font-mono">
             {receiptBranch.receiptThankYou}
           </span>
         ) : (
@@ -2738,7 +2738,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <kbd className="px-1.5 py-0.5 text-[9px] font-black bg-content3/60 text-foreground border border-divider/30 rounded shadow-sm group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-colors flex-shrink-0">
  {sh.key}
  </kbd>
- <span className="text-[10px] font-bold tracking-tight text-default-500 leading-tight truncate">
+ <span className="text-[10px] font-bold text-default-500 leading-tight truncate">
  {sh.desc}
  </span>
  </button>
@@ -3538,7 +3538,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
     initial={{ height: 0, opacity: 0, overflow: "hidden" }}
     animate={{ height: "auto", opacity: 1 }}
     exit={{ height: 0, opacity: 0, overflow: "hidden" }}
-    transition={{ duration: 0.2, ease: "easeInOut" }}
+    transition={{ duration: 0.25, ease: "easeInOut" }}
   >
   {/* Quick Stats Grid Dashboard */}
   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
@@ -5896,7 +5896,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <AlertCircle className="h-6 w-6" />
  </div>
  <div>
- <h3 className="text-base font-black tracking-tight text-foreground">Exit Checkout / Cancel Sale?</h3>
+ <h3 className="text-base font-black text-foreground">Exit Checkout / Cancel Sale?</h3>
  <p className="text-xs text-default-500 font-medium">ESC shortcut key triggered</p>
  </div>
  </div>

@@ -601,7 +601,7 @@ export function AdminProfitModule({
               </span>
             </div>
             <div className="my-3">
-              <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+              <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
                 ₱{metrics.grossRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </div>
               <p className="text-[10.5px] text-default-500 mt-1 font-medium">
@@ -661,10 +661,10 @@ export function AdminProfitModule({
               </span>
             </div>
             <div className="my-3">
- <div className="text-2xl font-black tracking-tight">
+              <div className="text-2xl font-black">
                 ₱{metrics.netProfit.toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </div>
- <div className="mt-1 flex items-center gap-1.5 text-xs font-bold text-foreground">
+              <div className="mt-1 flex items-center gap-1.5 text-xs font-bold text-foreground">
                 {metrics.netProfit >= 0 ? (
                   <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                 ) : (

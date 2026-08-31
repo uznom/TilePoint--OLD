@@ -53,7 +53,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         )}
         <div className="space-y-0.5">
           <div className="flex items-center gap-2.5">
-            <h2 className="text-xl font-black tracking-tight text-foreground">{title}</h2>
+            <h2 className="text-xl font-black text-foreground">{title}</h2>
             {badge && (
               <HeroChip variant={getBadgeVariant()} size="sm">
                 {badge.text}

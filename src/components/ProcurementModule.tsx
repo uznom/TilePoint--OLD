@@ -1383,7 +1383,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </div>
  <div>
  <span className="block text-[8px] font-extrabold text-default-500/80 uppercase tracking-widest">Active Vendors</span>
- <div className="text-xl font-black mt-1 text-primary tracking-tight">
+ <div className="text-xl font-black mt-1 text-primary">
  {suppliers.filter((s) => !s.isDeleted).length} Registered
  </div>
  </div>
@@ -1395,7 +1395,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </div>
  <div>
  <span className="block text-[8px] font-extrabold text-default-500/80 uppercase tracking-widest">Pending Cargo Orders</span>
- <div className="text-xl font-black mt-1 text-secondary tracking-tight">
+ <div className="text-xl font-black mt-1 text-secondary">
  {
  purchaseOrders.filter(
  (po) =>
@@ -1413,7 +1413,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </div>
  <div>
  <span className="block text-[8px] font-extrabold text-default-500/80 uppercase tracking-widest">Manufacturer Brands</span>
- <div className="text-xl font-black mt-1 text-emerald-600 dark:text-emerald-400 tracking-tight">
+ <div className="text-xl font-black mt-1 text-emerald-600 dark:text-emerald-400">
  {
  new Set(
  products
@@ -1533,7 +1533,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </div>
  <div>
  <span className="block text-[8px] font-extrabold text-default-500/80 uppercase tracking-widest">Active Brands</span>
- <div className="text-xl font-black mt-1 text-primary tracking-tight">
+ <div className="text-xl font-black mt-1 text-primary">
  {brands.filter((b) => !b.isDeleted).length} Cataloged
  </div>
  </div>
@@ -1545,7 +1545,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </div>
  <div>
  <span className="block text-[8px] font-extrabold text-default-500/80 uppercase tracking-widest">Sourced Vendors</span>
- <div className="text-xl font-black mt-1 text-secondary tracking-tight">
+ <div className="text-xl font-black mt-1 text-secondary">
  {
  new Set(
  brands
@@ -1564,7 +1564,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </div>
  <div>
  <span className="block text-[8px] font-extrabold text-default-500/80 uppercase tracking-widest">Restock Queue Load</span>
- <div className="text-xl font-black mt-1 text-amber-600 dark:text-amber-400 tracking-tight">
+ <div className="text-xl font-black mt-1 text-amber-600 dark:text-amber-400">
  {poCart.length} Pending SKUs
  </div>
  </div>
@@ -1607,7 +1607,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
 
  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
  <div>
- <h2 className="text-base font-black text-foreground tracking-tight font-sans">
+ <h2 className="text-base font-black text-foreground font-sans">
  Brand Sourcing &amp; Directory Deck
  </h2>
  </div>
@@ -1708,7 +1708,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </td>
  </tr>
  )}
-</tbody>
+ </tbody>
  </table>
  </div>
  </div>
@@ -3362,7 +3362,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  )}
  </div>
  <div>
- <h4 className="font-extrabold text-sm text-zinc-900 uppercase tracking-tight">
+ <h4 className="font-extrabold text-sm text-zinc-900 uppercase">
  {companyName}
  </h4>
  <p className="text-[10px] text-default-500">

@@ -1085,7 +1085,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                                         return (
                                           <div key={b.id} className="flex flex-col md:flex-row justify-between md:items-center gap-2 text-xs p-3 rounded-medium bg-content2 border border-divider shadow-xs">
                                             <div className="flex flex-col">
-                                              <span className="font-extrabold text-[10px] text-foreground uppercase tracking-tight">{b.name}</span>
+                                              <span className="font-extrabold text-[10px] text-foreground uppercase">{b.name}</span>
                                               <span className="text-[8px] text-default-500 uppercase">Current Balance: <strong className="text-foreground">{qty} {p.unit || 'Unit'}</strong></span>
                                             </div>
 

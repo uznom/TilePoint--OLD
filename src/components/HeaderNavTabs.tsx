@@ -318,7 +318,7 @@ export const HeaderNavTabs: React.FC<HeaderNavTabsProps> = ({
               title={`Sub-view: ${sub.name}`}
             >
               <SubIcon className="h-4 w-4 shrink-0" />
-              <span className="whitespace-nowrap tracking-tight">{sub.name}</span>
+              <span className="whitespace-nowrap">{sub.name}</span>
               {subBadge}
             </button>
           );
@@ -327,7 +327,7 @@ export const HeaderNavTabs: React.FC<HeaderNavTabsProps> = ({
         {currentUser && sessionRemainingSeconds !== undefined && sessionRemainingSeconds > 0 && (
           <div className="ml-auto flex items-center gap-1.5 pl-2 py-1 pr-1 bg-content1/80 border border-divider/30 rounded-lg text-[10.5px] shrink-0">
             <Clock className={`h-3 w-3 ${sessionRemainingSeconds < 300 ? "text-rose-500 font-bold" : "text-primary"}`} />
-            <span className="font-semibold text-foreground tracking-tight">
+            <span className="font-semibold text-foreground">
               {formatRemainingTime(sessionRemainingSeconds)}
             </span>
             <button

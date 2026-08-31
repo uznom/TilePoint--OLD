@@ -1544,6 +1544,7 @@ router.post(['/truncate', '/reset'], async (req, res) => {
             }
           }
           try { await pool.query('UPDATE products SET stockQuantity = 0'); } catch (e) {}
+          try { await pool.query('UPDATE inventory SET stockQuantity = 0'); } catch (e) {}
           try { await pool.query('UPDATE branch_stock SET quantity = 0'); } catch (e) {}
         }
         await pool.query('SET FOREIGN_KEY_CHECKS = 1');
@@ -1589,6 +1590,7 @@ router.post(['/truncate', '/reset'], async (req, res) => {
         try { alasql(`DELETE FROM \`${t}\``); } catch (e) {}
       }
       try { alasql('UPDATE products SET stockQuantity = 0'); } catch (e) {}
+      try { alasql('UPDATE inventory SET stockQuantity = 0'); } catch (e) {}
       try { alasql('UPDATE branch_stock SET quantity = 0'); } catch (e) {}
 
       invalidateDbCache();

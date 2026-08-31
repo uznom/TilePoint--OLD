@@ -222,7 +222,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     isCategoryActive ? "text-primary-foreground" : "text-default-400 group-hover:text-foreground"
                   }`}
                 />
-                <span className="truncate text-xs font-bold tracking-tight">
+                <span className="truncate text-xs font-bold">
                   {cat.name}
                 </span>
               </div>

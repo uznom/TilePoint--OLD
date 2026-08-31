@@ -103,7 +103,7 @@ export const LoginModule: React.FC = () => {
               <Building2 className="h-8 w-8" />
             </div>
           )}
-          <h2 className="text-3xl md:text-5xl font-black tracking-tight text-foreground leading-none uppercase">
+          <h2 className="text-3xl md:text-5xl font-black text-foreground leading-none uppercase">
             TilePoint
           </h2>
           <p className="text-xs md:text-sm text-default-500 max-w-md mt-2.5 font-semibold tracking-wide">

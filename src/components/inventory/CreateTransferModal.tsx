@@ -154,7 +154,7 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
                   {isCompleted ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : s.id}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs font-black uppercase tracking-tight truncate">{s.label}</div>
+                  <div className="text-xs font-black uppercase truncate">{s.label}</div>
                   <div className="text-[10px] text-default-400 truncate font-medium">{s.desc}</div>
                 </div>
               </button>

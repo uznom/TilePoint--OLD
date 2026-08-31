@@ -228,7 +228,7 @@ export const TopAndSlowSellingModal: React.FC<TopAndSlowSellingModalProps> = ({
             <Trophy className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="text-lg font-black tracking-tight text-foreground uppercase font-sans">
+            <h2 className="text-lg font-black text-foreground uppercase font-sans">
               Product Sales Velocity & Movement Analytics
             </h2>
             <p className="text-xs text-default-500 font-medium mt-0.5">

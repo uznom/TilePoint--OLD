@@ -97,6 +97,7 @@ export const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
   const productsModule = useDbProductsModule({
     currentUser: authModule.currentUser,
     branches: entitiesModule.branches,
+    suppliers: entitiesModule.suppliers,
     validateInventoryAccess: authModule.validateInventoryAccess,
     logBranchAccessScope: authModule.logBranchAccessScope,
     getAuthHeaders: authModule.getAuthHeaders,

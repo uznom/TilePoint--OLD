@@ -57,7 +57,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
             {title}
           </p>
           <div className="flex items-baseline gap-2">
-            <h3 className="text-2xl font-black tracking-tight text-foreground">{value}</h3>
+            <h3 className="text-2xl font-black text-foreground">{value}</h3>
             {trendValue && (
               <span
                 className={`text-xs font-bold ${

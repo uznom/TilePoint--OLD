@@ -536,7 +536,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground">
               {greeting}, {displayName}
             </h1>
             <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 uppercase tracking-wide">
@@ -622,7 +622,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-black text-foreground tracking-tight">
+            <div className="text-2xl font-black text-foreground">
               ₱{totalRevenue.toLocaleString('en-PH', { maximumFractionDigits: 2 })}
             </div>
             <div className="text-xs text-default-400 mt-1 flex items-center gap-1.5 font-medium">
@@ -646,7 +646,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-black text-foreground tracking-tight">
+            <div className="text-2xl font-black text-foreground">
               ₱{totalInventoryValuation.toLocaleString('en-PH', { maximumFractionDigits: 0 })}
             </div>
             <div className="text-xs text-default-400 mt-1 flex items-center gap-1.5 font-medium">
@@ -859,7 +859,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           <HeroCard className="p-5 sm:p-6" variant="bordered">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
               <div>
-                <h3 className="text-base font-extrabold text-foreground tracking-tight">Recent POS Transactions</h3>
+                <h3 className="text-base font-extrabold text-foreground">Recent POS Transactions</h3>
                 <p className="text-xs text-default-400 mt-0.5">Live store sales invoices and settlement records with pagination</p>
               </div>
 

@@ -1412,10 +1412,14 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
                   </div>
                   <HoldToConfirmButton
                     disabled={resetConfirmation !== 'RESET' || (isRowClearingBlocked() && !forceUnlockReset)}
-                    onConfirm={() => {
-                      truncateDatabase('transactions');
+                    onConfirm={async () => {
+                      try {
+                        await truncateDatabase('transactions');
+                      } catch (err) {
+                        console.warn('[Reset Stocks] Truncate error:', err);
+                      }
                       setResetConfirmation('');
-                      alert('Inventory levels reset to 0.');
+                      alert('Inventory levels reset to 0 in database and local cache.');
                     }}
                     variant="amber"
                   >

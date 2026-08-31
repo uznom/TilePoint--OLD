@@ -388,7 +388,7 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-black uppercase tracking-tight text-foreground">
+                <h2 className="text-base font-black uppercase text-foreground">
                   Store Options & Catalogs
                 </h2>
                 <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">

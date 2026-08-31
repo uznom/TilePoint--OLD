@@ -3747,7 +3747,7 @@ export default function StoreOperationsModule({
  <div className="hidden print:block border-b-2 border-black pb-4 mb-4 text-black">
  <div className="flex justify-between items-start">
  <div>
- <h1 className="text-xl font-black uppercase tracking-tight text-black">{localStorage.getItem('tilepoint_company_name_v1') || db.branches[0]?.name || "MAIN STORE"}</h1>
+ <h1 className="text-xl font-black uppercase text-black">{localStorage.getItem('tilepoint_company_name_v1') || db.branches[0]?.name || "MAIN STORE"}</h1>
  <p className="text-xs font-serif font-bold text-black">Bureau of Internal Revenue (BIR) Official Sales & Taxation Ledger</p>
  <p className="text-[10px] text-black mt-0.5">
  {(() => {
