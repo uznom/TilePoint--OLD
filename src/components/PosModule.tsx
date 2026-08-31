@@ -3487,10 +3487,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
   </div>
   </div>
   </div>
- </div>
- ) : (
- /* DAILY SALES LEDGER & VOID TERMINAL (SUB-MODULE TAB) */
- <div className="flex-1 min-h-0 border border-divider/30 rounded-2xl bg-content1 p-5 sm:p-6 text-left flex flex-col gap-6 animate-fade-in shadow-lg overflow-visible">
+  ) : (
+    <div className="flex-1 min-h-0 border border-divider/30 rounded-2xl bg-content1 p-5 sm:p-6 text-left flex flex-col gap-6 animate-fade-in shadow-lg overflow-visible">
+      {/* DAILY SALES LEDGER & VOID TERMINAL (SUB-MODULE TAB) */}
  
  {/* Title Section */}
  <div className="flex flex-col md:flex-row md:items-center md:justify-between border-b border-divider/20 pb-4 gap-4">
