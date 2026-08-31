@@ -18,7 +18,7 @@ import { User, UserRole } from "./types/db";
 import {
   LazyAdminProfitModule as AdminProfitModule,
   LazyArchivesModule as ArchivesModule,
-  LazyAtposExtraModules as AtposExtraModules,
+  LazyStoreOperationsModule as StoreOperationsModule,
   LazyBranchModule as BranchModule,
   LazyCalculatorModule as CalculatorModule,
   LazyDailyReconciliationModule as DailyReconciliationModule,
@@ -1442,7 +1442,7 @@ function AppContent() {
                         "adjustments",
                         "adjustments-return",
                       ].includes(activeTab) && (
-                        <AtposExtraModules
+                        <StoreOperationsModule
                           activeSubTab={
                             activeTab === "members"
                               ? "members-manage"

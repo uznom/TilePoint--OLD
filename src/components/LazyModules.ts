@@ -48,7 +48,8 @@ const MODULE_LOADERS: Record<string, ModuleLoader> = {
   calculator: () => import('./CalculatorModule').then((m) => resolveModule(m, 'CalculatorModule')),
   'staff-portal': () => import('./StaffPortal').then((m) => resolveModule(m, 'StaffPortal')),
   portal: () => import('./StaffPortal').then((m) => resolveModule(m, 'StaffPortal')),
-  'atpos-extra': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  'store-operations': () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
+  'atpos-extra': () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
   deliveries: () => import('./DeliveriesModule').then((m) => resolveModule(m, 'DeliveriesModule')),
   'deliveries-panel': () => import('./DeliveriesModule').then((m) => resolveModule(m, 'DeliveriesModule')),
   'sales-transmission': () => import('./SalesTransmissionModule').then((m) => resolveModule(m, 'SalesTransmissionModule')),
@@ -57,29 +58,29 @@ const MODULE_LOADERS: Record<string, ModuleLoader> = {
   'damage-register': () => import('./DamageRegisterModule').then((m) => resolveModule(m, 'DamageRegisterModule')),
   'inventory-damage': () => import('./DamageRegisterModule').then((m) => resolveModule(m, 'DamageRegisterModule')),
   'adjustments-void': () => import('./PosModule').then((m) => resolveModule(m, 'PosModule')),
-  'adjustments-return': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
-  adjustments: () => import('./AtposExtraModules').then((m) => resolveModule(m)),
-  members: () => import('./AtposExtraModules').then((m) => resolveModule(m)),
-  'members-manage': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
-  'members-receivables': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
-  'members-loyalty': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
-  'members-search-sales': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
-  expenses: () => import('./AtposExtraModules').then((m) => resolveModule(m)),
-  'expenses-add': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
-  'expenses-search': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  'adjustments-return': () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
+  adjustments: () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
+  members: () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
+  'members-manage': () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
+  'members-receivables': () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
+  'members-loyalty': () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
+  'members-search-sales': () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
+  expenses: () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
+  'expenses-add': () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
+  'expenses-search': () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
   supplier: () => import('./ProcurementModule').then((m) => resolveModule(m, 'ProcurementModule')),
   'suppliers-manage': () => import('./ProcurementModule').then((m) => resolveModule(m, 'ProcurementModule')),
-  'suppliers-credits': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
-  'suppliers-calendar': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
-  bir: () => import('./AtposExtraModules').then((m) => resolveModule(m)),
-  'bir-xz': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
-  'bir-summary': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
-  'bir-pwd': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
-  'bir-athletes': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
-  'bir-solo': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
-  'bir-senior20': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
-  'bir-senior5': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
-  'bir-regular': () => import('./AtposExtraModules').then((m) => resolveModule(m)),
+  'suppliers-credits': () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
+  'suppliers-calendar': () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
+  bir: () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
+  'bir-xz': () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
+  'bir-summary': () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
+  'bir-pwd': () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
+  'bir-athletes': () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
+  'bir-solo': () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
+  'bir-senior20': () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
+  'bir-senior5': () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
+  'bir-regular': () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
   tutorials: () => import('./TutorialOnboarding').then((m) => resolveModule(m, 'TutorialOnboarding')),
 };
 
@@ -160,7 +161,8 @@ export const LazyUsersModule = React.lazy(() => getOrLoadModule('users'));
 export const LazySystemSettingsModule = React.lazy(() => getOrLoadModule('system-settings'));
 export const LazyCalculatorModule = React.lazy(() => getOrLoadModule('calculator'));
 export const LazyStaffPortal = React.lazy(() => getOrLoadModule('staff-portal'));
-export const LazyAtposExtraModules = React.lazy(() => getOrLoadModule('atpos-extra'));
+export const LazyStoreOperationsModule = React.lazy(() => getOrLoadModule('store-operations'));
+export const LazyAtposExtraModules = LazyStoreOperationsModule;
 export const LazyDeliveriesModule = React.lazy(() => getOrLoadModule('deliveries'));
 export const LazySalesTransmissionModule = React.lazy(() => getOrLoadModule('sales-transmission'));
 export const LazyDailyReconciliationModule = React.lazy(() => getOrLoadModule('daily-reconciliation'));
@@ -174,7 +176,7 @@ export const MEDIUM_PRIORITY_MODULES = ['profit-analytics', 'deliveries', 'recon
 export const LOW_PRIORITY_MODULES = [
   'branches',
   'system-settings',
-  'atpos-extra',
+  'store-operations',
   'sales-transmission',
   'damage-register',
   'procurement',

@@ -41,22 +41,24 @@ import { formatCurrency } from "../utils/formatters";
 import { ConfirmationModal } from "./ConfirmationModal";
 import { useReceiptFontSize } from "./ReceiptFontSizeControl";
 
-interface AtposExtraModulesProps {
+export interface StoreOperationsModuleProps {
  activeSubTab: string;
  darkMode?: boolean;
  _darkMode?: boolean;
  onNavigate: (tabId: string) => void;
 }
 
+export type AtposExtraModulesProps = StoreOperationsModuleProps;
+
 // Durable local storage keys for persistence
 const LOCAL_STORAGE_MEMBERS = "atpos_v2_members_list";
 
-export default function AtposExtraModules({
+export default function StoreOperationsModule({
   activeSubTab,
   darkMode,
   _darkMode,
   onNavigate,
-}: AtposExtraModulesProps) {
+}: StoreOperationsModuleProps) {
  const db = useDb();
 
  // States from DbContext
