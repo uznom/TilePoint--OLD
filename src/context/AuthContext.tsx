@@ -99,11 +99,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = useCallback(async (username: string, passwordHash: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      const res = await fetch('/api/login', {
+      let res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password: passwordHash }),
       });
+      if (res.status === 404) {
+        res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password: passwordHash }),
+        });
+      }
       const json = await res.json();
       if (res.ok && json.success && json.user) {
         setCurrentUser(json.user);
@@ -136,7 +143,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = useCallback(async () => {
     try {
-      await fetch('/api/logout', { method: 'POST' });
+      await fetch('/api/auth/logout', { method: 'POST' }).catch(() => fetch('/api/logout', { method: 'POST' }));
     } catch {
       // Ignore network errors during logout
     }

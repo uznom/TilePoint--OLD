@@ -12,8 +12,7 @@ Plus,
 Ruler,
 Sparkles,
 Tag,
-Trash2,
-X
+Trash2
 } from 'lucide-react';
 import React,{ useState } from 'react';
 import { HeroSelect } from './common/ui/HeroSelect';

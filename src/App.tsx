@@ -5,7 +5,6 @@
 
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import React, { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { LoginModule } from "./components/LoginModule";
 import { SetupModule } from "./components/SetupModule";
 import { DbProvider, DbSnapshot, useDb } from "./context/DbContext";
@@ -94,7 +93,6 @@ import {
   Truck,
   Upload,
   Users as UsersIcon,
-  X,
   Clock,
   HardDrive,
   Zap,

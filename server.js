@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
@@ -19,7 +20,7 @@ import {
   bodyParserMiddleware,
   antiCrawlerMiddleware
 } from './src/server/middleware/authMiddleware.js';
-import { initDatabaseSchema } from './src/server/db/mysqlPool.js';
+import { initDatabaseSchema, pool } from './src/server/db/mysqlPool.js';
 import { initAlasqlEngine } from './src/server/db/alasqlEngine.js';
 import { checkMysqlConnection } from './src/server/db/degradedStore.js';
 import {
@@ -50,6 +51,7 @@ app.use(antiCrawlerMiddleware);
 
 // Mount Modular API Routers
 app.use('/api/auth', authRoutes);
+app.use('/api', authRoutes); // Handles /api/login, /api/logout, /api/session aliases
 app.use('/api/sync', syncRoutes);
 app.use(['/api/db/backups', '/api/mysql/snapshots', '/api/sqlite/snapshots'], backupRoutes);
 app.use('/api/db', dbRoutes);

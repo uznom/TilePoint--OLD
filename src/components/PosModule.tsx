@@ -46,10 +46,7 @@ import { ToastNotification } from "./ToastNotification";
 import { useReceiptFontSize } from "./ReceiptFontSizeControl";
 import { HeroDropdownSelect } from "./common/ui/HeroDropdown";
 import { HeroButton } from "./common/ui/HeroButton";
-import { HeroCard } from "./common/ui/HeroCard";
 import { HeroChip } from "./common/ui/HeroChip";
-import { HeroModal } from "./common/ui/HeroModal";
-import { HeroTooltip } from "./common/ui/HeroTooltip";
 import { formatTin } from '../utils/formatters';
 
 interface PosModuleProps {

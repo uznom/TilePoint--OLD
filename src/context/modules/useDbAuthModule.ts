@@ -221,13 +221,13 @@ export function useDbAuthModule(options?: UseDbAuthOptions) {
       if (res.ok) {
         const body = await res.json().catch(() => ({}));
         setServerConnected(true);
-        if (body.engine) {
+        if (body.dbEngine || body.engine) {
           setServerDegradedState({
-            isDegraded: false,
-            dbEngine: body.engine,
-            degradedSince: null,
-            lastDegradedReason: "",
-            queuedWritesCount: transactionOutboxService.getStats().pending,
+            isDegraded: body.isDegraded !== undefined ? Boolean(body.isDegraded) : false,
+            dbEngine: body.dbEngine || body.engine || "MySQL",
+            degradedSince: body.degradedSince || null,
+            lastDegradedReason: body.lastDegradedReason || "",
+            queuedWritesCount: body.queuedWritesCount !== undefined ? Number(body.queuedWritesCount) : transactionOutboxService.getStats().pending,
           });
         }
       } else {

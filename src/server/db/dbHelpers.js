@@ -36,6 +36,7 @@ export function invalidateDbCache() {
   isDbCacheDirty = true;
   cachedFullDb = null;
   cachedDbHash = null;
+  isConfiguredCache = null;
 }
 
 export function getCachedDbHash() {
@@ -577,6 +578,10 @@ export async function saveKeyToStore(key, value) {
 }
 
 export async function isDatabaseConfiguredStore() {
+  if (isConfiguredCache !== null) {
+    return isConfiguredCache;
+  }
+
   if (getIsMysqlActive() || getMysqlEnforced()) {
     try {
       const [users] = await pool.query('SELECT COUNT(*) as count FROM users');
@@ -609,6 +614,10 @@ export async function isDatabaseConfiguredStore() {
   } catch (e) {}
 
   return false;
+}
+
+export function getIsConfiguredCache() {
+  return isConfiguredCache;
 }
 
 export function setIsConfiguredCache(val) {

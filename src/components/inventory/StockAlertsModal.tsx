@@ -6,7 +6,10 @@ import {
   AlertCircle, 
   AlertTriangle, 
   Search, 
-  X
+  X,
+  Sliders,
+  Eye,
+  Check
 } from 'lucide-react';
 import { Branch, Product } from '../../types/db';
 import { getBranchOptionLabel } from '../../lib/branchUtils';

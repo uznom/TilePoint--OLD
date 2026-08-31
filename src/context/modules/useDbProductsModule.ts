@@ -984,6 +984,7 @@ export function useDbProductsModule({
       products,
       branchStock,
       branches,
+      suppliers,
       currentUser,
       setDamageLogs,
       addAuditLog,

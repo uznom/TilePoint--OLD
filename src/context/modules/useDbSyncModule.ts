@@ -297,22 +297,22 @@ export function useDbSyncModule({
       let message = "Processing System Task";
       let durationMs = 1200;
       let type: "spinner" | "progress" | "verification" | "db" = "spinner";
-      let onComplete: (() => void) | undefined = undefined;
+      let onComplete: (() => void) | undefined;
       let subtext = "";
       let progress = 0;
 
       if (typeof param1 === "object" && param1 !== null) {
-        message = param1.message || message;
-        durationMs = param1.duration !== undefined ? param1.duration : 1200;
-        type = param1.type || "spinner";
-        subtext = param1.subtext || "";
-        progress = param1.progress || 0;
+        if (param1.message) message = param1.message;
+        if (param1.duration !== undefined) durationMs = param1.duration;
+        if (param1.type) type = param1.type;
+        if (param1.subtext) subtext = param1.subtext;
+        if (param1.progress !== undefined) progress = param1.progress;
       } else {
-        message = typeof param1 === "string" ? param1 : message;
-        durationMs = typeof param2 === "number" ? param2 : 1200;
-        type = param3 || "spinner";
-        onComplete = typeof param4 === "function" ? param4 : undefined;
-        subtext = param5 || "";
+        if (typeof param1 === "string") message = param1;
+        if (typeof param2 === "number") durationMs = param2;
+        if (param3) type = param3;
+        if (typeof param4 === "function") onComplete = param4;
+        if (param5) subtext = param5;
       }
 
       setIsSystemProcessing(true);
