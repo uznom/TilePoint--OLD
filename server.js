@@ -117,7 +117,27 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`Real-Time Engine    : Socket.io (db_pulse_update) + SSE`);
     console.log(`========================================`);
   });
+
+  // Graceful shutdown handling for container and process managers
+  const gracefulShutdown = async (signal) => {
+    console.log(`\n[Server] Received ${signal}. Starting graceful shutdown...`);
+    server.close(() => {
+      console.log('[Server] HTTP/HTTPS server closed to new connections.');
+    });
+    try {
+      await pool.end();
+      console.log('[Server] MySQL connection pool drained and closed.');
+    } catch (e) {
+      console.warn('[Server] Error closing MySQL pool:', e.message);
+    }
+    console.log('[Server] Graceful shutdown complete.');
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 }
 
 export { app, server };
 export default app;
+

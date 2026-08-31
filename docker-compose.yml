@@ -1,0 +1,69 @@
+services:
+  # ----------------------------------------------------------------------------
+  # Primary Relational Database Engine (MySQL 8.0)
+  # ----------------------------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: tilepoint_mysql
+    restart: unless-stopped
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-authentication-plugin=mysql_native_password
+      --max_connections=200
+      --innodb_buffer_pool_size=512M
+    environment:
+      MYSQL_ROOT_PASSWORD: root_secure_password
+      MYSQL_DATABASE: tilepoint_db
+      MYSQL_USER: tilepoint_app
+      MYSQL_PASSWORD: tilepoint_secure_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -proot_secure_password || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - tilepoint_network
+
+  # ----------------------------------------------------------------------------
+  # TilePoint Application Server (Node.js Express + Real-Time Engine)
+  # ----------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tilepoint_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=tilepoint_app
+      - MYSQL_PASSWORD=tilepoint_secure_password
+      - MYSQL_DATABASE=tilepoint_db
+      - MYSQL_CONNECTION_LIMIT=25
+      - MYSQL_MAX_IDLE=10
+      - SECURITY_SECRET=TILEPOINT_ENTERPRISE_PRODUCTION_SECURITY_SECRET_KEY_2026!
+      - ALLOWED_ORIGINS=*
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - tilepoint_network
+
+networks:
+  tilepoint_network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
