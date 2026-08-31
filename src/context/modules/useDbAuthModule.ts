@@ -358,6 +358,7 @@ export function useDbAuthModule(options?: UseDbAuthOptions) {
           if (data && data.isConfigured && isMounted) {
             setIsConfigured(true);
             localStorage.setItem("tp_is_configured", "true");
+          } else if (data && data.isConfigured === false && isMounted) {
             setIsConfigured(false);
             localStorage.removeItem("tp_is_configured");
             localStorage.removeItem("tp_users");

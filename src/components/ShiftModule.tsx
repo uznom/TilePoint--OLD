@@ -304,19 +304,39 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
  </div>
  )}
 
- <div>
- <label className="text-[10px] font-bold text-primary uppercase tracking-widest block mb-1.5 pl-1">
- Declared Starting cash (PHP)
- </label>
- <input
- type="number"
- step="any"
- required
- value={startCashInput ?? ''}
- onChange={e => setStartCashInput(e.target.value)}
- className="w-full bg-background border border-divider focus:border-primary px-3 py-2 text-sm text-center font-bold text-foreground focus:outline-none transition-colors rounded-lg"
- />
- </div>
+  <div className="space-y-1.5">
+    <div className="flex justify-between items-center pl-1">
+      <label className="text-[10px] font-bold text-primary uppercase tracking-widest block">
+        Opening Change Float (PHP)
+      </label>
+      <span className="text-[9px] text-default-500 font-medium">Standard Retail Float</span>
+    </div>
+    <input
+      type="number"
+      step="any"
+      required
+      placeholder="e.g. 1000.00"
+      value={startCashInput ?? ''}
+      onChange={e => setStartCashInput(e.target.value)}
+      className="w-full bg-background border border-divider focus:border-primary px-3 py-2 text-base text-center font-bold text-foreground focus:outline-none transition-colors rounded-lg"
+    />
+    <div className="grid grid-cols-4 gap-1.5 pt-1">
+      {[500, 1000, 2000, 3000].map((amt) => (
+        <button
+          key={amt}
+          type="button"
+          onClick={() => setStartCashInput(amt.toString())}
+          className={`py-1.5 text-[11px] font-bold rounded-lg border transition-all ${
+            startCashInput === amt.toString()
+              ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+              : 'bg-content2 hover:bg-content3 border-divider/40 text-foreground'
+          }`}
+        >
+          ₱{amt.toLocaleString()}
+        </button>
+      ))}
+    </div>
+  </div>
 
  <button
  type="submit"

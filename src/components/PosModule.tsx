@@ -3952,19 +3952,39 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  )}
 
- <div className="space-y-1 relative pr-0 pl-0">
- <label className="text-[10px] font-bold uppercase tracking-widest text-primary block pl-1">
- Starting Cash fund (PHP)
- </label>
- <input
- type="number"
- step="any"
- required
- value={startCashInput ?? ''}
- onChange={(e) => setStartCashInput(e.target.value)}
- className="w-full bg-background border-b-2 border-divider px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary transition-colors text-center font-black rounded-lg"
- />
- </div>
+ <div className="space-y-2 relative pr-0 pl-0">
+    <div className="flex justify-between items-center pl-1">
+      <label className="text-[10px] font-bold uppercase tracking-widest text-primary block">
+        Opening Change Float (PHP)
+      </label>
+      <span className="text-[9px] text-default-500 font-medium">Standard Retail Float</span>
+    </div>
+    <input
+      type="number"
+      step="any"
+      required
+      placeholder="e.g. 1000.00"
+      value={startCashInput ?? ''}
+      onChange={(e) => setStartCashInput(e.target.value)}
+      className="w-full bg-background border-b-2 border-divider px-3 py-2.5 text-base text-foreground focus:outline-none focus:border-primary transition-colors text-center font-black rounded-lg"
+    />
+    <div className="grid grid-cols-4 gap-1.5 pt-1">
+      {[500, 1000, 2000, 3000].map((amt) => (
+        <button
+          key={amt}
+          type="button"
+          onClick={() => setStartCashInput(amt.toString())}
+          className={`py-1.5 text-[11px] font-bold rounded-lg border transition-all ${
+            startCashInput === amt.toString()
+              ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+              : 'bg-content2 hover:bg-content3 border-divider/40 text-foreground'
+          }`}
+        >
+          ₱{amt.toLocaleString()}
+        </button>
+      ))}
+    </div>
+  </div>
 
  <div className="flex gap-2 border-t border-divider/15 pt-4">
  <button
