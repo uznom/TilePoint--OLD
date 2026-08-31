@@ -55,6 +55,7 @@ import { QuickModuleSwitcherModal } from "./components/QuickModuleSwitcherModal"
 import { Sidebar } from "./components/Sidebar";
 import { SystemLoadingOverlay } from "./components/SystemLoadingOverlay";
 import { ToastNotification } from "./components/ToastNotification";
+import { HeroSpinner } from "./components/common/ui/HeroSpinner";
 import { PATH_TO_TAB, useRouteSyncManager } from "./hooks";
 import { isSameBranch } from "./lib/branchUtils";
 
@@ -1001,11 +1002,15 @@ function AppContent() {
 
   if (isHydrating || isSystemHydrating) {
     return (
-      <PageLoadingFallback
-        title="Enterprise System Boot"
-        message="Connecting to central enterprise database and initializing security context..."
-        moduleKey="system-settings"
-      />
+      <div className="fixed inset-0 flex flex-col items-center justify-center bg-background text-foreground animate-fade-in z-50">
+        <div className="flex flex-col items-center gap-3 p-6 rounded-2xl bg-content1/60 border border-divider/40 shadow-sm backdrop-blur-md">
+          <HeroSpinner size="lg" color="primary" />
+          <div className="text-center space-y-0.5">
+            <h2 className="text-sm font-semibold tracking-tight text-foreground">TilePoint ERP</h2>
+            <p className="text-xs text-default-500">Initializing workspace...</p>
+          </div>
+        </div>
+      </div>
     );
   }
 
