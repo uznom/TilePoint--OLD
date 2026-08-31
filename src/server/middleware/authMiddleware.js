@@ -1,0 +1,205 @@
+import express from 'express';
+import rateLimit from 'express-rate-limit';
+import {
+  DEFAULT_SESSION_MAX_DURATION_MINUTES
+} from '../config/serverConfig.js';
+import {
+  verifyAndExtractToken,
+  getActiveSessionsList,
+  saveActiveSessionRecord
+} from '../services/authService.js';
+import { readFullDatabase } from '../db/dbHelpers.js';
+
+// Rate Limiting: General per-IP cap across all API endpoints (with high ceiling for real-time POS operations)
+export const globalApiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5000, // Generous limit for high-frequency POS polling and multi-terminal operations
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many requests from this IP, please try again later.' },
+  skip: (req) => {
+    const p = req.path || req.url || '';
+    return (
+      p.includes('/api/auth/heartbeat') ||
+      p.includes('/api/auth/session') ||
+      p.includes('/api/auth/me') ||
+      p.includes('/api/health') ||
+      p.includes('/api/server/status') ||
+      p.includes('/api/db') ||
+      p.includes('/api/mysql') ||
+      p.includes('/api/sync')
+    );
+  }
+});
+
+// Rate Limiting: Tight per-IP cap on Login, PIN, and credential verification
+export const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Max 10 attempts per IP per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many authentication attempts. Please try again after 15 minutes.' }
+});
+
+export const LARGE_BODY_ROUTES = new Set([
+  '/api/db/backups',
+  '/api/mysql/snapshots',
+  '/api/sqlite/snapshots',
+  '/api/db/sync-batch',
+  '/api/mysql/sync-batch',
+  '/api/mysql/sync-all',
+  '/api/db/sync-all'
+]);
+
+export const bodyParserMiddleware = (req, res, next) => {
+  if (LARGE_BODY_ROUTES.has(req.path)) {
+    return next();
+  }
+  express.json({ limit: '100kb' })(req, res, (err) => {
+    if (err) {
+      return res.status(413).json({ success: false, error: 'Payload too large. General API limit is 100kb.' });
+    }
+    express.urlencoded({ limit: '100kb', extended: true })(req, res, next);
+  });
+};
+
+export const antiCrawlerMiddleware = (req, res, next) => {
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
+  next();
+};
+
+/**
+ * Validates token, client fingerprint, and checks for concurrent login activity
+ * against server-side active sessions registry upon every API request.
+ */
+export async function verifySessionAndCheckConcurrency(req) {
+  const payload = verifyAndExtractToken(req);
+  if (!payload || !payload.id) {
+    return { valid: false, status: 401, code: 'UNAUTHORIZED', error: 'Authentication token missing or invalid.' };
+  }
+
+  const rawIncomingSessionId = req.headers['x-client-id'] || req.headers['x-session-id'] || payload.sessionId;
+  const incomingSessionId = (rawIncomingSessionId && rawIncomingSessionId !== 'unknown') ? rawIncomingSessionId : null;
+
+  // Read full db to verify user and their role
+  const fullDb = await readFullDatabase();
+  const dbUsers = fullDb.db.tp_users || [];
+  const dbUser = dbUsers.find(u => u.id === payload.id || (payload.username && u.username === payload.username));
+  
+  if (!dbUser) {
+    return { valid: false, status: 401, code: 'USER_NOT_FOUND', error: 'User account not found or session invalid. Please log in again.' };
+  }
+  if (dbUser.status !== 'Active') {
+    return { valid: false, status: 403, code: 'FORBIDDEN', error: 'User account has been disabled or suspended.' };
+  }
+
+  // Update role dynamically based on the DB to enforce RBAC changes
+  payload.role = dbUser.role;
+
+  const activeSessions = await getActiveSessionsList();
+  let userSession = activeSessions.find(s => (incomingSessionId && s.id === incomingSessionId) || (payload.sessionId && s.id === payload.sessionId));
+  if (!userSession) {
+    userSession = activeSessions.find(s => s.userId === payload.id);
+  }
+
+  if (!userSession) {
+    // If no active session was found in table (e.g. server restarted or table pruned),
+    // auto-recreate the session record since token signature is cryptographically valid and user is active
+    const effectiveSessionId = incomingSessionId || payload.sessionId || ("SESS_" + Math.random().toString(36).substring(2, 11).toUpperCase());
+    userSession = {
+      id: effectiveSessionId,
+      userId: dbUser.id,
+      username: dbUser.username,
+      fullName: dbUser.fullName,
+      role: dbUser.role,
+      branchId: payload.branchId || dbUser.branchAssignmentId || 'B1',
+      branchName: payload.branchName || 'Main Branch',
+      lastActive: new Date().toISOString(),
+      userAgent: req.headers['user-agent'] || '',
+      sessionStartedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + DEFAULT_SESSION_MAX_DURATION_MINUTES * 60 * 1000).toISOString(),
+      maxDurationMinutes: DEFAULT_SESSION_MAX_DURATION_MINUTES
+    };
+    await saveActiveSessionRecord(userSession);
+  }
+
+  const now = Date.now();
+
+  // 1. Session Duration Check
+  if (userSession.expiresAt) {
+    const expTime = new Date(userSession.expiresAt).getTime();
+    if (!isNaN(expTime) && now >= expTime) {
+      return {
+        valid: false,
+        status: 401,
+        code: 'SESSION_EXPIRED',
+        expired: true,
+        error: 'Your session duration has expired. Please sign in again to verify your corporate identity.',
+        user: payload,
+        session: userSession
+      };
+    }
+  }
+
+  // 2. Concurrency Validation Check (only when an explicit different session ID was provided and payload token disagrees)
+  if (incomingSessionId && userSession.id && userSession.id !== incomingSessionId && payload.sessionId && payload.sessionId !== userSession.id) {
+    return {
+      valid: false,
+      status: 401,
+      code: 'SESSION_SUPERSEDED',
+      superseded: true,
+      error: 'Concurrent login detected: Your account was signed into on another device/browser. This session has been terminated.',
+      user: payload,
+      activeSession: {
+        id: userSession.id,
+        branchName: userSession.branchName,
+        lastActive: userSession.lastActive,
+        userAgent: userSession.userAgent,
+        deviceInfo: userSession.deviceInfo
+      }
+    };
+  }
+
+  // Session is valid; update lastActive in memory & MySQL
+  userSession.lastActive = new Date().toISOString();
+  await saveActiveSessionRecord(userSession);
+
+  const expiresTime = userSession.expiresAt ? new Date(userSession.expiresAt).getTime() : (now + DEFAULT_SESSION_MAX_DURATION_MINUTES * 60000);
+  const remainingSeconds = Math.max(0, Math.floor((expiresTime - now) / 1000));
+
+  return {
+    valid: true,
+    user: payload,
+    session: userSession,
+    remainingSeconds
+  };
+}
+
+export const authenticateAdminForSnapshotUpload = (req, res, next) => {
+  try {
+    const user = verifyAndExtractToken(req);
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
+    }
+    if (user.role !== 'Admin' && user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Forbidden: Admin role required to create database backups.' });
+    }
+    req.user = user;
+    next();
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+export const authenticateUserForSyncBatch = (req, res, next) => {
+  try {
+    const user = verifyAndExtractToken(req);
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required for batch sync.' });
+    }
+    req.user = user;
+    next();
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+};
