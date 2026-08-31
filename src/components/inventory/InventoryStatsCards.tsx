@@ -32,7 +32,7 @@ export const InventoryStatsCards: React.FC<InventoryStatsCardsProps> = ({
   return (
     <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 font-sans">
       {/* Total SKUs */}
-      <div className="p-5 rounded-2xl bg-content1 dark:bg-[#18181B] border border-divider dark:border-white/10 flex items-center gap-3.5 relative shadow-xs overflow-hidden transition-all duration-200 hover:border-default-400">
+      <div className="p-5 rounded-2xl bg-content1 border border-divider flex items-center gap-3.5 relative shadow-xs overflow-hidden transition-all duration-200 hover:border-default-400">
         <div className="p-2.5 rounded-xl bg-primary/10 text-primary shrink-0">
           <Package className="h-5 w-5" />
         </div>
@@ -45,7 +45,7 @@ export const InventoryStatsCards: React.FC<InventoryStatsCardsProps> = ({
       </div>
 
       {/* Global Valuation */}
-      <div className="p-5 rounded-2xl bg-content1 dark:bg-[#18181B] border border-divider dark:border-white/10 flex items-center gap-3.5 relative shadow-xs overflow-hidden transition-all duration-200 hover:border-default-400">
+      <div className="p-5 rounded-2xl bg-content1 border border-divider flex items-center gap-3.5 relative shadow-xs overflow-hidden transition-all duration-200 hover:border-default-400">
         <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 shrink-0">
           <DollarSign className="h-5 w-5" />
         </div>
@@ -63,7 +63,7 @@ export const InventoryStatsCards: React.FC<InventoryStatsCardsProps> = ({
         className={`p-5 rounded-2xl border flex items-center gap-3.5 relative shadow-xs overflow-hidden shrink-0 cursor-pointer hover:border-amber-500/50 transition-all active:scale-[0.98] ${
           stats.lowStockCount > 0 
             ? 'bg-amber-500/5 border-amber-500/25 dark:bg-amber-500/10' 
-            : 'bg-content1 dark:bg-[#18181B] border-divider dark:border-white/10'
+            : 'bg-content1 border-divider'
         }`}
         title="Click to view all Low Stock items in Stock Alert Diagnostics Modal"
       >
@@ -88,7 +88,7 @@ export const InventoryStatsCards: React.FC<InventoryStatsCardsProps> = ({
         className={`p-5 rounded-2xl border flex items-center gap-3.5 relative shadow-xs overflow-hidden shrink-0 cursor-pointer hover:border-rose-500/50 transition-all active:scale-[0.98] ${
           stats.criticalStockCount > 0 
             ? 'bg-rose-500/5 border-rose-500/25 dark:bg-rose-500/10' 
-            : 'bg-content1 dark:bg-[#18181B] border-divider dark:border-white/10'
+            : 'bg-content1 border-divider'
         }`}
         title="Click to view all Critical Stock items in Stock Alert Diagnostics Modal"
       >
@@ -113,7 +113,7 @@ export const InventoryStatsCards: React.FC<InventoryStatsCardsProps> = ({
         className={`p-5 rounded-2xl border col-span-2 lg:col-span-1 flex items-center gap-3.5 relative shadow-xs overflow-hidden shrink-0 cursor-pointer hover:border-rose-500/50 transition-all active:scale-[0.98] ${
           stats.outOfStockCount > 0 
             ? 'bg-rose-500/5 border-rose-500/25 dark:bg-rose-500/10' 
-            : 'bg-content1 dark:bg-[#18181B] border-divider dark:border-white/10'
+            : 'bg-content1 border-divider'
         }`}
         title="Click to view all Out of Stock items in Stock Alert Diagnostics Modal"
       >

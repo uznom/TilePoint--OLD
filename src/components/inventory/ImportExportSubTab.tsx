@@ -67,7 +67,7 @@ export const ImportExportSubTab: React.FC<ImportExportSubTabProps> = ({
   return (
     <div className="space-y-6 text-left animate-fade-in font-sans">
       {/* Tool Header & Mode Selector */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-divider dark:border-white/10 shadow-xs">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-content1 p-5 rounded-2xl border border-divider shadow-xs">
         <div>
           <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
             <Database className="h-5 w-5 text-emerald-500" />
@@ -106,7 +106,7 @@ export const ImportExportSubTab: React.FC<ImportExportSubTabProps> = ({
       {migrationSubTab === 'import' && (
         <div className="space-y-6 animate-fade-in font-sans">
           {/* Target Branch Selection */}
-          <div className="p-5 rounded-2xl bg-content1 dark:bg-[#18181B] border border-divider dark:border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div className="p-5 rounded-2xl bg-content1 border border-divider flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
             <div className="flex items-center gap-2 text-xs font-semibold text-foreground tracking-tight">
               <MapPin className="h-4 w-4 text-primary" />
               <span>Target Destination Branch Allocation</span>

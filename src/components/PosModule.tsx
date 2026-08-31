@@ -45,6 +45,11 @@ import { CalculatorModule } from "./CalculatorModule";
 import { ToastNotification } from "./ToastNotification";
 import { useReceiptFontSize } from "./ReceiptFontSizeControl";
 import { HeroDropdownSelect } from "./common/ui/HeroDropdown";
+import { HeroButton } from "./common/ui/HeroButton";
+import { HeroCard } from "./common/ui/HeroCard";
+import { HeroChip } from "./common/ui/HeroChip";
+import { HeroModal } from "./common/ui/HeroModal";
+import { HeroTooltip } from "./common/ui/HeroTooltip";
 import { formatTin } from '../utils/formatters';
 
 interface PosModuleProps {
@@ -2545,718 +2550,701 @@ export const PosModule: React.FC<PosModuleProps> = ({
           </div>
         </div>
       )}
- <div className="flex lg:hidden bg-content1 border border-divider/15 p-1 rounded-2xl w-full gap-1 flex-shrink-0">
- <button
- onClick={() => setMobilePosTab("basket")}
- className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 ${
- mobilePosTab === "basket"
- ? "bg-primary text-primary-foreground shadow-sm font-black"
- : "text-default-500 hover:bg-primary/5"
- }`}
- >
- <ShoppingCart className="h-4 w-4" />
- <span>Basket ({cart.length})</span>
- </button>
- <button
- onClick={() => setMobilePosTab("queue")}
- className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 relative ${
- mobilePosTab === "queue"
- ? "bg-primary text-primary-foreground shadow-sm font-black"
- : "text-default-500 hover:bg-primary/5"
- }`}
- >
- <History className="h-4 w-4" />
- <span>Hold Queue ({branchParkedSales.length})</span>
- {branchParkedSales.length > 0 && (
- <span className="absolute -top-1 right-2 bg-rose-500 text-white text-[9px] h-4.5 min-w-[18px] px-1 rounded-full flex items-center justify-center font-black border-2 border-divider shadow">
- {branchParkedSales.length}
- </span>
- )}
- </button>
- </div>
-
- <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 animate-fade-in text-foreground items-stretch flex-1 min-h-0 lg:h-full overflow-y-auto lg:overflow-hidden">
- <div
- className={`lg:col-span-4 bg-content1 p-3.5 sm:p-4 rounded-2xl sm:rounded-2xl border border-divider/20 shadow-sm space-y-4 text-left self-stretch flex flex-col h-full overflow-hidden min-h-0 ${
- mobilePosTab === "queue" ? "block" : "hidden lg:flex"
- }`}
- >
- <div className="border-b border-divider/15 pb-2 cursor-default flex-shrink-0">
- <h3 className="text-xs font-black text-primary uppercase tracking-widest flex items-center justify-between gap-1.5 w-full">
- <div className="flex items-center gap-1.5">
- <span className="relative flex h-2 w-2">
- <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500"></span>
- </span>
- <span>
- Yard Staff Transactions HOLD Queue ({branchParkedSales.length})
- </span>
- </div>
- <div className="flex items-center gap-1.5">
- {syncStatus?.[activePosBranchId || "B1"] === "Syncing" && (
- <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-400 border border-amber-500/25 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full">
- <span className="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
- Syncing
- </span>
- )}
- <button
- type="button"
- onClick={async (e) => {
- e.stopPropagation();
- setIsManualSyncingQueue(true);
- try {
- await syncFromSharedServer(true);
- showToast("Queue state refreshed from central register!");
- } catch (_) {
- showToast("Unable to reach sync server.");
- } finally {
- setTimeout(() => setIsManualSyncingQueue(false), 600);
- }
- }}
- className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 rounded-md text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer active:scale-95"
- title="Force refresh hold queue state from server"
- >
- <RefreshCw className={`h-3 w-3 ${isManualSyncingQueue ? "animate-spin" : ""}`} />
- <span>Sync</span>
- </button>
- </div>
- </h3>
- <p className="text-[10px] text-default-500 font-semibold mt-1 leading-tight">
- Materials staged on-the-floor by floor staff are queued below.
- Select to load basket inside terminal drawer.
- </p>
- </div>
-
- <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[600px] lg:max-h-none scrollbar-thin">
- {branchParkedSales.length > 0 ? (
- <div className="flex flex-col gap-3">
- {branchParkedSales.map((park) => {
- const isCurrentResuming = resumingParkedId === park.id;
- return (
- <div
- key={park.id}
- onClick={() => !isCurrentResuming && handleResume(park.id)}
- className={`p-3.5 bg-background border border-divider/35 hover:border-primary rounded-2xl flex flex-col justify-between shadow-sm cursor-pointer transition-all group relative overflow-hidden text-left gap-2 ${
- isCurrentResuming ? "opacity-60 pointer-events-none" : ""
- }`}
- >
- <div className="absolute top-0 bottom-0 left-0 w-1 bg-primary" />
- <div>
- <div className="flex items-center justify-between gap-1">
- <div className="text-xs font-extrabold text-foreground leading-snug group-hover:text-primary transition-colors">
- {park.customerName}
- </div>
- {park.heldBy && (
- <span className="text-[9px] font-bold px-1.5 py-0.5 bg-primary/10 text-primary rounded border border-primary/20">
- {park.heldBy}
- </span>
- )}
- </div>
- <p className="text-[10px] text-default-500 mt-1 flex items-center gap-1 font-bold">
- <span>{park.timestamp}</span>
- <span>•</span>
- <span className="text-primary">
- {park.items?.length || 0} tile sets
- </span>
- </p>
- {park.notes && (
- <p className="text-[9px] italic text-[#10B981] mt-1.5 leading-tight bg-[#10B981]/5 p-1.5 rounded border border-[#10B981]/15">
- "{park.notes}"
- </p>
- )}
- </div>
-
- <button
- type="button"
- disabled={isCurrentResuming}
- className="w-full py-1.5 text-[9.5px] font-black uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/95 transition-colors rounded-xl flex items-center justify-center gap-1 cursor-pointer shadow-sm mt-1 disabled:opacity-50"
- >
- {isCurrentResuming ? "Claiming Order..." : "Resume Staged Order \u2192"}
- </button>
- </div>
- );
- })}
- </div>
- ) : (
- <div className="py-10 px-4 text-center text-xs text-default-500 font-bold border border-dashed border-divider/20 rounded-2xl bg-content1 flex flex-col items-center justify-center gap-2 min-h-[180px] h-full">
- <History className="h-5 w-5 text-default-400" />
- <span className="text-default-400 font-medium">
- No staged or parked orders in queue.
- </span>
- </div>
- )}
- </div>
-
- <div className="border-t border-divider/15 pt-3 mt-auto flex-shrink-0 space-y-2.5">
- <button
- type="button"
- onClick={() => setShortcutsCollapsed(!shortcutsCollapsed)}
- className="flex items-center justify-between w-full hover:bg-content3/15 p-1.5 rounded-xl transition-all cursor-pointer text-left"
- >
- <span className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-1.5 font-sans">
- <Keyboard className="h-3.5 w-3.5 text-primary" />
- <span>Checkout Hotkeys</span>
- </span>
- <div className="flex items-center gap-2">
- <span className="text-[9px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-black uppercase tracking-wider ">
- Active Hotkeys
- </span>
- {shortcutsCollapsed ? (
- <ChevronDown className="h-4 w-4 text-primary transition-transform duration-200" />
- ) : (
- <ChevronUp className="h-4 w-4 text-primary transition-transform duration-200" />
- )}
- </div>
- </button>
-
- {!shortcutsCollapsed && (
- <div className="space-y-2.5 animate-fade-in">
- <div className="grid grid-cols-2 gap-2">
- {[
- { key: "F1", desc: "Void Current Sale", action: () => handleCancelSale(), bg: "hover:bg-rose-500/10 hover:border-rose-500/30 text-rose-600 dark:text-rose-400" },
- { key: "F2", desc: "Focus Search Catalog", action: () => handleFocusSearch(), bg: "hover:bg-primary/10 hover:border-primary/30 text-primary" },
- { key: "F3", desc: "Hold Order Stash", action: () => handleHold(), bg: "hover:bg-amber-500/10 hover:border-amber-500/30 text-amber-600 dark:text-amber-400" },
- { key: "F4", desc: "View Parked Sales", action: () => handleViewParkedSales(), bg: "hover:bg-primary/10 hover:border-primary/30 text-primary" },
- { key: "F5", desc: "Assign Customer Details", action: () => { setCustomerModalInput(customerName); setCustomerModalAddressInput(customerAddress); setCustomerModalTinInput(customerTin); setCustomerModalBusinessStyleInput(businessStyle); setCustomerModalNotesInput(customerNotes); setShowCustomerModal(true); }, bg: "hover:bg-primary/10 hover:border-primary/30 text-primary" },
- { key: "F6", desc: "Apply Code/Discount", action: () => { setDiscountInput(""); setShowDiscountModal(true); }, bg: "hover:bg-teal-500/10 hover:border-teal-500/30 text-teal-600 dark:text-teal-400" },
- { key: "F7", desc: "Pay / Settle Sale", action: () => handlePaySettleSale(), bg: "hover:bg-emerald-500/10 hover:border-emerald-500/30 text-emerald-600 dark:text-emerald-400" },
- { key: "F8", desc: "Reprint Last Receipt", action: () => handleReprintLastReceipt(), bg: "hover:bg-purple-500/10 hover:border-purple-500/30 text-purple-600 dark:text-purple-400" },
- { key: "F9/10", desc: "Shift Active Controls", action: () => {
- if (activeShift) {
- setCloseShiftCashInput("");
- setShowCloseShiftModal(true);
- } else {
- setShowShiftModal(true);
- }
- }, bg: "hover:bg-secondary/10 hover:border-secondary/30 text-secondary" }
- ].map((sh, index) => (
- <button
- key={index}
- type="button"
- onClick={sh.action}
- className={`flex items-center gap-2 p-2 bg-background border border-divider/15 rounded-xl text-left transition-all active:scale-[0.98] group cursor-pointer ${sh.bg}`}
- >
- <kbd className="px-1.5 py-0.5 text-[9px] font-black bg-content3/60 text-foreground border border-divider/30 rounded shadow-sm group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-colors flex-shrink-0">
- {sh.key}
- </kbd>
- <span className="text-[10px] font-bold text-default-500 leading-tight truncate">
- {sh.desc}
- </span>
- </button>
- ))}
- </div>
- <p className="text-[8.5px] text-default-500 text-center ">
- Press physical keys directly, or click above as interactive speed dials.
- </p>
- </div>
- )}
- </div>
- </div>
-
- <div
- className={`lg:col-span-8 text-left h-full flex flex-col overflow-hidden min-h-0 ${
- mobilePosTab === "basket" ? "block" : "hidden lg:flex"
- }`}
- >
- <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-2xl border border-divider/35 bg-content1 shadow-sm flex flex-col h-full overflow-hidden min-h-0">
- <div className="flex-shrink-0 space-y-2.5">
- <div className="border-b border-divider/15 pb-2">
- <div className="flex flex-wrap items-center justify-between gap-2 pl-1 mb-1">
- <h3 className="text-xs font-black text-primary uppercase tracking-widest flex items-center gap-2">
- <ShoppingCart className="h-4 w-4" />
- <span>Active Order list of materials</span>
- {syncStatus?.[activePosBranchId || "B1"] === "Syncing" && (
- <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-400 border border-amber-500/25 text-[9px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded-full ml-1.5">
- <span className="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
- Syncing
- </span>
- )}
- </h3>
- <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[10px] font-black uppercase tracking-wide">
- <button
- type="button"
- onClick={() => setShowTileCalculatorModal(true)}
- className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer transition-colors px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[9.5px]"
- title="Open Tile Coverage Calculator"
- >
- <Calculator className="h-3.5 w-3.5 text-primary" />
- <span>Tile Calculator</span>
- </button>
- <span className="text-default-500">•</span>
- <button
- type="button"
- onClick={() => {
- setCustomerModalInput(customerName);
- setCustomerModalAddressInput(customerAddress);
- setCustomerModalTinInput(customerTin);
- setCustomerModalBusinessStyleInput(businessStyle);
- setCustomerModalNotesInput(customerNotes);
- setShowCustomerModal(true);
- }}
- className="text-primary hover:text-primary/85 flex items-center gap-1.5 cursor-pointer transition-colors px-2.5 py-1 bg-primary/10 border border-primary/25 rounded-full text-[9.5px]"
- title="Assign Customer Profile & Project Note (F5)"
- >
- <Users className="h-3.5 w-3.5 text-primary" />
- <span className="max-w-[130px] truncate">{customerName && customerName !== "Walk-in Customer" ? customerName : "Walk-in Buyer"}</span>
- <span className="text-[8px] bg-primary text-black px-1 rounded font-black">F5</span>
- </button>
- <span className="text-default-500">•</span>
- <button
- type="button"
- onClick={handleCancelSale}
- className="text-rose-500 hover:text-rose-650 flex items-center gap-1 cursor-pointer transition-colors"
- >
- Clear Active Order
- </button>
- </div>
- </div>
- </div>
-
- {!products.some((p) => !p.isDeleted) ? (
- <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl text-left font-sans shadow-inner">
- <div className="flex items-center gap-2 text-amber-500 font-extrabold text-xs uppercase tracking-wider mb-1">
- <span className="text-sm"></span> Scanner Locked / Catalog Empty
- </div>
- <p className="text-[10.5px] text-default-500 font-medium leading-relaxed">
- The Rapid Barcode Laser Scanner is inactive because there are no products in the inventory catalog. Please navigate to the <strong className="text-primary font-bold">Inventory Module</strong> to add or import tile products first.
- </p>
- </div>
- ) : (
- <form
- onSubmit={handleBarcodeSubmit}
- className="bg-content1 border border-primary/15 hover:border-primary/35 p-2.5 rounded-2xl transition-all relative"
- >
- <div className="flex flex-col md:flex-row gap-2 items-end">
- <div className="flex-1 w-full text-left">
- <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block mb-1.5">
- Rapid Barcode Laser Scanner / Item SKU Input
- </label>
- <div className="relative font-sans flex items-center">
- <input ref={searchInputRef}
- type="text"
- value={barcodeSearchTerm ?? ''}
- onChange={(e) =>
- setBarcodeSearchTerm(e.target.value)
- }
- placeholder="Type product name, SKU, or custom design and press Enter..."
- className="w-full bg-content1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 border border-divider/30 pl-3.5 pr-24 py-1.5 rounded-xl placeholder-zinc-500 font-bold h-9 shadow-inner"
- />
- <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-auto">
- {barcodeSearchTerm && (
- <button
- type="button"
- onClick={() => setBarcodeSearchTerm("")}
- className="text-default-500 hover:text-rose-500 text-xs font-black p-0.5 rounded-full hover:bg-default-100 transition-colors cursor-pointer"
- title="Clear search"
- >
- ✕
- </button>
- )}
- <span className="px-1.5 py-0.5 rounded-md bg-background border border-divider/30 text-default-500 text-[9px] font-extrabold uppercase select-none tracking-wider shadow-2xs pointer-events-none">
- ↵ Enter
- </span>
- </div>
-
- {barcodeSearchTerm.trim().length > 0 && (
- <div className="absolute left-0 right-0 mt-2 bg-content1 border border-divider/60 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-divider/20 text-xs max-h-[180px] overflow-y-auto">
- {(() => {
- const matched = products.filter(
- (p) =>
- !p.isDeleted &&
- (selectedCategory === "All" ||
- p.category === selectedCategory) &&
- (p.productName
- .toLowerCase()
- .includes(
- barcodeSearchTerm.toLowerCase(),
- ) ||
- p.sku
- .toLowerCase()
- .includes(
- barcodeSearchTerm.toLowerCase(),
- ) ||
- p.barcode
- .toLowerCase()
- .includes(
- barcodeSearchTerm.toLowerCase(),
- )),
- );
- if (matched.length === 0) {
- return (
- <div className="p-4 text-center text-default-500 font-bold text-xs italic">
- No compatible tiles or SKU listings match "{barcodeSearchTerm}"
- </div>
- );
- }
- return matched.slice(0, 6).map((p) => (
- <div
- key={p.id}
- onClick={() => {
- if (p.stockQuantity <= 0) {
- showToast(
- `Out of stock: Cannot add ${p.productName}`,
- );
- return;
- }
- addToCart(p);
- setBarcodeAddFeedback(
- `Added: ${p.productName}`,
- );
- setBarcodeSearchTerm("");
- setTimeout(
- () => setBarcodeAddFeedback(null),
- 3000,
- );
- }}
- className="p-2.5 hover:bg-primary/10 cursor-pointer flex justify-between items-center transition-colors text-left"
- >
- <div className="space-y-0.5">
- <div className="font-extrabold text-foreground text-xs">
- {p.productName}
- </div>
- <div className="text-[10px] text-default-500 font-bold">
- SKU: {p.sku} • Stock: {p.stockQuantity}
- </div>
- </div>
- <div className="text-right font-black text-emerald-600 dark:text-emerald-400 text-xs">
- ₱
- {(Number(getBranchPrice(p)) || 0).toLocaleString(
- undefined,
- { minimumFractionDigits: 2 },
- )}
- </div>
- </div>
- ));
- })()}
- </div>
- )}
- </div>
- </div>
- <button
- type="submit"
- className="w-full md:w-auto px-4 bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shrink-0 transition-all flex items-center gap-1.5 h-9 shadow-sm justify-center active:scale-95"
- >
- SKU Scan
- </button>
- </div>
- </form>
- )}
- </div>
-
- <div className="flex-1 h-0 overflow-auto my-3 pr-1 space-y-1.5 border border-divider/10 rounded-2xl p-2.5 bg-background/20 scrollbar-thin"><div className="min-w-[550px] w-full pb-1">
- <AnimatePresence initial={false}>
- {cart.map((item, idx) => (
- <motion.div
- key={item.product.id}
- initial={{ opacity: 0, y: 15 }}
- animate={{ opacity: 1, y: 0 }}
- exit={{ opacity: 0, x: -30, height: 0, padding: 0 }}
- transition={{
- type: "spring",
- stiffness: 450,
- damping: 30,
- }}
- className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 py-2.5 border-b border-divider/10 last:border-0 pl-1 overflow-hidden"
- >
- <div className="space-y-1 text-left w-full sm:w-auto">
- <h5 className="text-sm font-black leading-tight text-foreground">
- {item.product.productName}
- </h5>
- <div className="text-xs text-default-500 flex flex-wrap items-center gap-1.5 font-bold">
- {item.overridePrice !== undefined ? (
- <>
- <span className="text-default-500 line-through text-xs">
- {formatCurrency(getBranchPrice(item.product))}
- </span>
- <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-md shadow-2xs">
- {formatCurrency(item.overridePrice)}
- </span>
- </>
- ) : (
- <span className="text-default-500 text-xs">
- {formatCurrency(getBranchPrice(item.product))}
- </span>
- )}
- <span>/{item.product.unit}</span>
- <span>•</span>
- <span className="text-primary text-xs">
- SKU: {item.product.sku}
- </span>
- <span>•</span>
- <button
- type="button"
- onClick={() => handleTriggerPriceOverride(idx)}
- className="text-[11px] font-extrabold text-primary hover:bg-primary/20 bg-primary/10 border border-primary/30 px-2.5 py-1 rounded-md transition-colors uppercase cursor-pointer"
- >
- Override Price
- </button>
- <span>•</span>
- <button
- type="button"
- onClick={() => {
- setSelectedDiscountItemIndex(idx);
- setShowDiscountModal(true);
- }}
- className="text-[11px] font-extrabold text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-md transition-colors uppercase cursor-pointer"
- >
- {item.discountType && item.discountType !== "NONE" ? `Disc: ${item.discountType}` : "Discount"}
- </button>
- {(() => {
- const itemDetail = cartItemDetails[idx];
- if (itemDetail && itemDetail.itemDiscount > 0) {
- return (
- <>
- <span>•</span>
- <span className="text-[11px] font-black text-amber-700 dark:text-amber-300 bg-amber-500/20 px-2.5 py-0.5 rounded-md border border-amber-500/40 shadow-2xs">
- -₱{itemDetail.itemDiscount.toFixed(2)} OFF
- </span>
- </>
- );
- }
- return null;
- })()}
- {item.quantity < 0 && (
- <>
- <span>•</span>
- <span className="text-[10px] font-black uppercase text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20 shrink-0">
- Return / Refund Item
- </span>
- </>
- )}
- </div>
- </div>
-
- <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 w-full sm:w-auto shrink-0">
- {(() => {
- const userBranchId = activePosBranchId;
- const currentMaxStock = products.find((p) => p.id === item.product.id)?.stockQuantity ?? getBranchStockQuantity(item.product, userBranchId, branchStock, branches);
- return (
- <div className="flex items-center border border-divider rounded-lg overflow-hidden shrink-0 bg-background">
- <button
- type="button"
- title="Decrement quantity"
- onClick={() => {
- let nextQty = item.quantity - 1;
- if (nextQty === 0) nextQty = -1;
- updateCartQty(
- item.product.id,
- nextQty,
- currentMaxStock,
- );
- }}
- className="px-2 py-0.5 hover:bg-default-100 text-xs font-bold text-foreground cursor-pointer"
- >
- -
- </button>
- <CartQtyInput
- quantity={item.quantity}
- productId={item.product.id}
- maxStock={currentMaxStock}
- updateCartQty={updateCartQty}
- removeFromCart={removeFromCart}
- />
- <button
- type="button"
- title="Increment quantity"
- onClick={() => {
- let nextQty = item.quantity + 1;
- if (nextQty === 0) nextQty = 1;
- updateCartQty(
- item.product.id,
- nextQty,
- currentMaxStock,
- );
- }}
- className="px-2 py-0.5 hover:bg-default-100 text-xs font-bold text-foreground cursor-pointer"
- >
- +
- </button>
- <button
- type="button"
- title="Toggle positive/negative quantity (Return item)"
- onClick={() =>
- updateCartQty(
- item.product.id,
- -item.quantity,
- currentMaxStock,
- )
- }
- className={`px-1.5 py-0.5 text-[10px] font-black border-l border-divider/30 cursor-pointer transition-colors ${
- item.quantity < 0
- ? "bg-rose-500/20 text-rose-500 hover:bg-rose-500/30"
- : "text-default-500 hover:text-primary hover:bg-default-100"
- }`}
- >
- +/-
- </button>
- </div>
- );
- })()}
-
- <div className="flex items-center gap-3">
- <span className="text-xs font-black min-w-[80px] text-right text-foreground">
- ₱
- {(
- (Number(item.overridePrice !== undefined && item.overridePrice !== null
- ? item.overridePrice
- : getBranchPrice(item.product)) * (item.quantity || 1)) || 0
- ).toLocaleString(undefined, {
- minimumFractionDigits: 2,
- })}
- </span>
- <button
- type="button"
- onClick={() => removeFromCart(item.product.id)}
- className="text-default-500 hover:text-red-500 p-1 rounded-full hover:bg-red-500/10 transition-colors"
- >
- <Trash2 className="h-3.5 w-3.5" />
- </button>
- </div>
- </div>
- </motion.div>
- ))}
- </AnimatePresence>
-
- {cart.length === 0 && (
- <div className="text-center py-12 text-default-500 text-xs flex flex-col items-center justify-center gap-2 font-bold min-h-[160px] h-full">
- <ShoppingCart className="h-8 w-8 text-primary/30" />
- <span className="max-w-xs leading-relaxed text-default-500">
- Active Cashier billing basket is empty. Select a staged
- ticket from the hold queue to begin.
- </span>
- <button
- type="button"
- onClick={() => setShowTileCalculatorModal(true)}
- className="mt-3 py-2 px-4 bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary text-[10.5px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
- >
- <Calculator className="h-4 w-4 text-primary" />
- <span>Open Tile Calculator</span>
- </button>
- </div>
- )}
- </div>
- </div>
-
- <div className="flex-shrink-0 border-t border-divider/20 pt-3 grid grid-cols-1 xl:grid-cols-12 gap-5">
- <div className="xl:col-span-5 xl:space-y-1 pt-0.5">
- <div className="flex justify-between text-xs font-bold text-default-500">
- <span>
- {discountType === "SENIOR" || discountType === "PWD"
- ? "VAT-Exempt Sales"
- : "VATable Sales (Net)"}
- </span>
- <span className="">{formatCurrency(grandTotal - vat)}</span>
- </div>
- <div className="flex justify-between text-xs font-bold text-default-500 mt-0.5">
- <span>
- {discountType === "SENIOR" || discountType === "PWD"
- ? "12% Output VAT (Exempt)"
- : "12% Output VAT"}
- </span>
- <span className="">{formatCurrency(vat)}</span>
- </div>
-
- {discountAmount > 0 && (
- <div className="flex justify-between text-xs font-black text-emerald-500 mt-0.5">
- <span>Discount Voucher Applied</span>
- <span className="">
- -{formatCurrency(discountAmount)}
- </span>
- </div>
- )}
-
- <div className="flex justify-between text-sm font-black border-t border-dashed border-divider/30 pt-2 mt-1.5">
- <span className="text-foreground text-xs uppercase tracking-wide">
- GRAND TOTAL DUE
- </span>
- <span className=" text-primary text-lg font-extrabold">
- ₱
- {(Number(grandTotal) || 0).toLocaleString(undefined, {
- minimumFractionDigits: 2,
- })}
- </span>
- </div>
-
- <button
- type="button"
- onClick={() => {
- setDiscountInput("");
- setShowDiscountModal(true);
- }}
- className="w-full mt-2.5 flex items-center justify-center gap-2 text-xs py-2 px-3 bg-primary/10 hover:bg-primary/20 text-primary font-extrabold rounded-xl border border-primary/30 uppercase tracking-wider transition-colors cursor-pointer shadow-2xs"
- >
- <Sparkles className="h-3.5 w-3.5" /> Apply Cardholder Discount
- (F6)
- </button>
- </div>
-
- <div
- id="checkout-action-panel"
- className="xl:col-span-7 bg-background p-3.5 rounded-2xl border border-divider/35 space-y-2.5 shadow-inner text-left"
- >
- <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
- <div className="sm:col-span-6 space-y-1">
- <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">
- Settlement Method
- </label>
- <div className="grid grid-cols-3 gap-1.5 font-sans">
- {(
-    [
-      { name: `Cash`, label: `Cash`, color: `border-emerald-500/25 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5`, activeColor: `bg-emerald-600 border-emerald-600 text-white` },
-      { name: `GCash`, label: `GCash`, color: `border-sky-500/25 text-sky-600 dark:text-sky-400 bg-sky-500/5`, activeColor: `bg-sky-600 border-sky-600 text-white` },
-      { name: `Maya`, label: `Maya`, color: `border-green-500/25 text-green-600 dark:text-green-400 bg-green-500/5`, activeColor: `bg-green-600 border-green-600 text-white` },
-      { name: `Card / Bank Terminal`, label: `Card / Bank Terminal`, color: `border-violet-500/25 text-violet-600 dark:text-violet-400 bg-violet-500/5`, activeColor: `bg-violet-600 border-violet-600 text-white` },
-      { name: `Member Credit`, label: `Member`, color: `border-primary/25 text-primary bg-primary/5`, activeColor: `bg-primary border-primary text-white` },
-    ] as const
-  ).map((method) => (
-    <button
-      key={method.name}
-      type="button"
-      onClick={() => {
-        setPaymentMethod(method.name);
-        if (method.name !== "Cash") {
-          setAmountTendered(Math.abs(grandTotal).toString());
-        } else {
-          setAmountTendered("");
-        }
-      }}
-      className={`py-2 px-1 text-xs rounded-full border font-semibold select-none text-center transition-all cursor-pointer active:scale-[0.97] ${
-        paymentMethod === method.name
-          ? `${method.activeColor} shadow-xs`
-          : `bg-default-100 dark:bg-zinc-800 border-divider/40 hover:bg-default-200 dark:hover:bg-zinc-700 ${method.color}`
-      }`}
-    >
-      <span className="flex items-center justify-center gap-1 font-sans">
-        {method.label}
+  <div className="flex lg:hidden bg-content2 p-1 rounded-full w-full gap-1 border border-divider/40 flex-shrink-0 font-sans">
+  <HeroButton
+    size="sm"
+    variant={mobilePosTab === "basket" ? "solid" : "light"}
+    color={mobilePosTab === "basket" ? "primary" : "default"}
+    radius="full"
+    onClick={() => setMobilePosTab("basket")}
+    startIcon={<ShoppingCart className="h-4 w-4" />}
+    className="flex-1 font-semibold text-xs"
+  >
+    Basket ({cart.length})
+  </HeroButton>
+  <HeroButton
+    size="sm"
+    variant={mobilePosTab === "queue" ? "solid" : "light"}
+    color={mobilePosTab === "queue" ? "primary" : "default"}
+    radius="full"
+    onClick={() => setMobilePosTab("queue")}
+    startIcon={<History className="h-4 w-4" />}
+    className="flex-1 font-semibold text-xs relative"
+  >
+    <span>Hold Queue ({branchParkedSales.length})</span>
+    {branchParkedSales.length > 0 && (
+      <span className="ml-1 px-1.5 py-0.2 bg-danger text-white text-[9px] font-bold rounded-full">
+        {branchParkedSales.length}
       </span>
-    </button>
+    )}
+  </HeroButton>
+  </div>
+
+  <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 animate-fade-in text-foreground items-stretch flex-1 min-h-0 lg:h-full overflow-y-auto lg:overflow-hidden font-sans">
+  <div
+    className={`lg:col-span-4 bg-content1 p-4 sm:p-5 rounded-2xl border border-divider shadow-xs space-y-4 text-left self-stretch flex flex-col h-full overflow-hidden min-h-0 ${
+      mobilePosTab === "queue" ? "block" : "hidden lg:flex"
+    }`}
+  >
+  <div className="border-b border-divider/30 pb-3 cursor-default flex-shrink-0">
+  <div className="flex items-center justify-between gap-1.5 w-full">
+    <div className="flex items-center gap-2">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+      </span>
+      <h3 className="text-xs font-bold text-foreground tracking-tight uppercase">
+        Yard Staged Queue ({branchParkedSales.length})
+      </h3>
+    </div>
+    <div className="flex items-center gap-1.5">
+      {syncStatus?.[activePosBranchId || "B1"] === "Syncing" && (
+        <HeroChip size="sm" variant="flat" color="warning" className="text-[9px]">
+          Syncing
+        </HeroChip>
+      )}
+      <HeroButton
+        size="sm"
+        variant="flat"
+        color="primary"
+        radius="full"
+        onClick={async (e) => {
+          e.stopPropagation();
+          setIsManualSyncingQueue(true);
+          try {
+            await syncFromSharedServer(true);
+            showToast("Queue state refreshed from central register!");
+          } catch (_) {
+            showToast("Unable to reach sync server.");
+          } finally {
+            setTimeout(() => setIsManualSyncingQueue(false), 600);
+          }
+        }}
+        startIcon={<RefreshCw className={`h-3 w-3 ${isManualSyncingQueue ? "animate-spin" : ""}`} />}
+        className="h-7 px-2.5 text-[10px] font-semibold"
+        title="Force refresh hold queue state from server"
+      >
+        Sync
+      </HeroButton>
+    </div>
+  </div>
+  <p className="text-[10.5px] text-default-500 font-medium mt-1 leading-snug">
+    Materials staged on-the-floor by yard staff. Select an order to resume in cashier terminal.
+  </p>
+  </div>
+
+  <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[600px] lg:max-h-none scrollbar-thin">
+  {branchParkedSales.length > 0 ? (
+  <div className="flex flex-col gap-3">
+  {branchParkedSales.map((park) => {
+  const isCurrentResuming = resumingParkedId === park.id;
+  return (
+  <div
+    key={park.id}
+    onClick={() => !isCurrentResuming && handleResume(park.id)}
+    className={`p-3.5 bg-content2/60 hover:bg-content2 border border-divider/40 hover:border-primary/60 rounded-2xl flex flex-col justify-between shadow-xs cursor-pointer transition-all group relative overflow-hidden text-left gap-2 ${
+      isCurrentResuming ? "opacity-60 pointer-events-none" : ""
+    }`}
+  >
+  <div className="absolute top-0 bottom-0 left-0 w-1 bg-primary" />
+  <div>
+  <div className="flex items-center justify-between gap-1">
+    <div className="text-xs font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
+      {park.customerName}
+    </div>
+    {park.heldBy && (
+      <HeroChip size="sm" variant="flat" color="primary" className="text-[9px] font-bold">
+        {park.heldBy}
+      </HeroChip>
+    )}
+  </div>
+  <p className="text-[10px] text-default-500 mt-1 flex items-center gap-1.5 font-medium">
+    <span>{park.timestamp}</span>
+    <span>•</span>
+    <span className="text-primary font-semibold">
+      {park.items?.length || 0} tile sets
+    </span>
+  </p>
+  {park.notes && (
+    <p className="text-[9.5px] italic text-success mt-1.5 leading-tight bg-success-50 dark:bg-success-500/10 p-1.5 rounded-lg border border-success-500/20">
+      "{park.notes}"
+    </p>
+  )}
+  </div>
+
+  <HeroButton
+    size="sm"
+    color="primary"
+    radius="xl"
+    disabled={isCurrentResuming}
+    className="w-full font-semibold text-xs shadow-xs mt-1"
+  >
+    {isCurrentResuming ? "Claiming Order..." : "Resume Staged Order →"}
+  </HeroButton>
+  </div>
+  );
+  })}
+  </div>
+  ) : (
+  <div className="py-10 px-4 text-center text-xs text-default-500 font-medium border border-dashed border-divider/40 rounded-2xl bg-content2/30 flex flex-col items-center justify-center gap-2 min-h-[180px] h-full">
+  <History className="h-5 w-5 text-default-400" />
+  <span className="text-default-400 font-medium">
+  No staged or parked orders in queue.
+  </span>
+  </div>
+  )}
+  </div>
+
+  <div className="border-t border-divider/30 pt-3 mt-auto flex-shrink-0 space-y-2.5">
+  <button
+  type="button"
+  onClick={() => setShortcutsCollapsed(!shortcutsCollapsed)}
+  className="flex items-center justify-between w-full hover:bg-content2 p-1.5 rounded-xl transition-all cursor-pointer text-left"
+  >
+  <span className="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1.5 font-sans">
+    <Keyboard className="h-3.5 w-3.5 text-primary" />
+    <span>Checkout Hotkeys</span>
+  </span>
+  <div className="flex items-center gap-2">
+    <HeroChip size="sm" variant="flat" color="primary" className="text-[9px] font-bold">
+      Active Speed Dials
+    </HeroChip>
+    {shortcutsCollapsed ? (
+      <ChevronDown className="h-4 w-4 text-primary transition-transform duration-200" />
+    ) : (
+      <ChevronUp className="h-4 w-4 text-primary transition-transform duration-200" />
+    )}
+  </div>
+  </button>
+
+  {!shortcutsCollapsed && (
+  <div className="space-y-2.5 animate-fade-in">
+  <div className="grid grid-cols-2 gap-2">
+  {[
+    { key: "F1", desc: "Void Current Sale", action: () => handleCancelSale(), bg: "hover:bg-danger/10 hover:border-danger/30 text-danger" },
+    { key: "F2", desc: "Focus Search Catalog", action: () => handleFocusSearch(), bg: "hover:bg-primary/10 hover:border-primary/30 text-primary" },
+    { key: "F3", desc: "Hold Order Stash", action: () => handleHold(), bg: "hover:bg-warning/10 hover:border-warning/30 text-warning-600 dark:text-warning" },
+    { key: "F4", desc: "View Parked Sales", action: () => handleViewParkedSales(), bg: "hover:bg-primary/10 hover:border-primary/30 text-primary" },
+    { key: "F5", desc: "Assign Customer Details", action: () => { setCustomerModalInput(customerName); setCustomerModalAddressInput(customerAddress); setCustomerModalTinInput(customerTin); setCustomerModalBusinessStyleInput(businessStyle); setCustomerModalNotesInput(customerNotes); setShowCustomerModal(true); }, bg: "hover:bg-primary/10 hover:border-primary/30 text-primary" },
+    { key: "F6", desc: "Apply Code/Discount", action: () => { setDiscountInput(""); setShowDiscountModal(true); }, bg: "hover:bg-secondary/10 hover:border-secondary/30 text-secondary" },
+    { key: "F7", desc: "Pay / Settle Sale", action: () => handlePaySettleSale(), bg: "hover:bg-success/10 hover:border-success/30 text-success" },
+    { key: "F8", desc: "Reprint Last Receipt", action: () => handleReprintLastReceipt(), bg: "hover:bg-primary/10 hover:border-primary/30 text-primary" },
+    { key: "F9/10", desc: "Shift Active Controls", action: () => {
+      if (activeShift) {
+        setCloseShiftCashInput("");
+        setShowCloseShiftModal(true);
+      } else {
+        setShowShiftModal(true);
+      }
+    }, bg: "hover:bg-secondary/10 hover:border-secondary/30 text-secondary" }
+  ].map((sh, index) => (
+  <button
+    key={index}
+    type="button"
+    onClick={sh.action}
+    className={`flex items-center gap-2 p-2 bg-content2/50 hover:bg-content2 border border-divider/30 hover:border-divider rounded-xl text-left transition-all active:scale-[0.98] group cursor-pointer ${sh.bg}`}
+  >
+  <kbd className="px-1.5 py-0.5 text-[9px] font-bold bg-content3 text-foreground border border-divider rounded shadow-2xs group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition-colors flex-shrink-0">
+    {sh.key}
+  </kbd>
+  <span className="text-[10px] font-semibold text-default-500 leading-tight truncate">
+    {sh.desc}
+  </span>
+  </button>
   ))}
- </div>
- </div>
+  </div>
+  <p className="text-[9px] text-default-400 text-center font-normal">
+    Press physical keyboard hotkeys directly, or tap buttons as interactive speed dials.
+  </p>
+  </div>
+  )}
+  </div>
+  </div>
 
- <div className="sm:col-span-6 space-y-1 font-sans">
- <label className="text-xs font-semibold text-foreground dark:text-zinc-200 tracking-tight pl-1 block font-sans">
- Amount Tendered (PHP)
- </label>
- <input
- id="cash-tendered-field"
- type="number"
- disabled={paymentMethod !== "Cash"}
- value={amountTendered ?? ''}
- onChange={(e) => setAmountTendered(e.target.value)}
- placeholder={grandTotal.toFixed(0)}
- className="w-full bg-default-100 dark:bg-zinc-900 border border-divider/40 px-3.5 py-2 text-xs text-foreground font-semibold tracking-tight focus:outline-none focus:border-primary transition-colors disabled:opacity-45 disabled:cursor-not-allowed rounded-xl font-sans tabular-nums"
- />
+  <div
+  className={`lg:col-span-8 text-left h-full flex flex-col overflow-hidden min-h-0 font-sans ${
+    mobilePosTab === "basket" ? "block" : "hidden lg:flex"
+  }`}
+  >
+  <div className="p-4 sm:p-5 rounded-2xl border border-divider bg-content1 shadow-xs flex flex-col h-full overflow-hidden min-h-0">
+  <div className="flex-shrink-0 space-y-3">
+  <div className="border-b border-divider/30 pb-3">
+  <div className="flex flex-wrap items-center justify-between gap-2 pl-1 mb-1">
+  <div className="flex items-center gap-2">
+    <ShoppingCart className="h-4 w-4 text-primary" />
+    <h3 className="text-xs font-bold text-foreground uppercase tracking-tight">
+      Active Materials Order Basket
+    </h3>
+    {syncStatus?.[activePosBranchId || "B1"] === "Syncing" && (
+      <HeroChip size="sm" variant="flat" color="warning" className="text-[9px]">
+        Syncing
+      </HeroChip>
+    )}
+  </div>
+  <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+    <HeroButton
+      size="sm"
+      variant="flat"
+      color="success"
+      radius="full"
+      onClick={() => setShowTileCalculatorModal(true)}
+      startIcon={<Calculator className="h-3.5 w-3.5" />}
+      className="font-semibold h-7 text-xs"
+      title="Open Tile Coverage Calculator"
+    >
+      Tile Calculator
+    </HeroButton>
 
+    <HeroButton
+      size="sm"
+      variant="flat"
+      color="primary"
+      radius="full"
+      onClick={() => {
+        setCustomerModalInput(customerName);
+        setCustomerModalAddressInput(customerAddress);
+        setCustomerModalTinInput(customerTin);
+        setCustomerModalBusinessStyleInput(businessStyle);
+        setCustomerModalNotesInput(customerNotes);
+        setShowCustomerModal(true);
+      }}
+      startIcon={<Users className="h-3.5 w-3.5" />}
+      endIcon={<span className="text-[8px] bg-primary text-primary-foreground px-1 py-0.2 rounded font-bold">F5</span>}
+      className="font-semibold h-7 text-xs max-w-[220px]"
+      title="Assign Customer Profile & Project Note (F5)"
+    >
+      <span className="truncate">{customerName && customerName !== "Walk-in Customer" ? customerName : "Walk-in Buyer"}</span>
+    </HeroButton>
 
- </div>
- </div>
+    <HeroButton
+      size="sm"
+      variant="light"
+      color="danger"
+      radius="full"
+      onClick={handleCancelSale}
+      startIcon={<Trash2 className="h-3.5 w-3.5" />}
+      className="font-semibold h-7 text-xs"
+    >
+      Clear Order
+    </HeroButton>
+  </div>
+  </div>
+  </div>
 
-{paymentMethod !== "Cash" && paymentMethod !== "Member Credit" && (
-        <div className="p-3 bg-content1 border border-divider/30 rounded-xl space-y-2 mt-2 font-sans animate-fade-in text-xs text-left">
-          {/* Verification Reference Number Field */}
+  {!products.some((p) => !p.isDeleted) ? (
+  <div className="bg-warning-500/10 border border-warning-500/25 p-4 rounded-2xl text-left font-sans shadow-xs">
+    <div className="flex items-center gap-2 text-warning-600 dark:text-warning font-bold text-xs uppercase tracking-wider mb-1">
+      <AlertCircle className="h-4 w-4" />
+      <span>Scanner Locked / Catalog Empty</span>
+    </div>
+    <p className="text-[11px] text-default-500 font-medium leading-relaxed">
+      The Rapid Barcode Laser Scanner is inactive because there are no products in the inventory catalog. Please navigate to the <strong className="text-primary font-bold">Inventory Module</strong> to add or import tile products first.
+    </p>
+  </div>
+  ) : (
+  <form
+    onSubmit={handleBarcodeSubmit}
+    className="bg-content2/50 border border-divider p-3 rounded-2xl transition-all relative font-sans"
+  >
+  <div className="flex flex-col md:flex-row gap-2.5 items-end">
+    <div className="flex-1 w-full text-left">
+      <label className="text-[10px] font-bold text-default-500 uppercase tracking-wider pl-1 block mb-1.5 font-sans">
+        Rapid Barcode Laser Scanner / Item SKU Input
+      </label>
+      <div className="relative font-sans flex items-center">
+        <input
+          ref={searchInputRef}
+          type="text"
+          value={barcodeSearchTerm ?? ''}
+          onChange={(e) => setBarcodeSearchTerm(e.target.value)}
+          placeholder="Type product name, SKU, or custom design and press Enter..."
+          className="w-full bg-content1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 border border-divider/60 focus:border-primary pl-3.5 pr-24 py-2 rounded-xl placeholder-default-400 font-semibold h-10 shadow-inner transition-all"
+        />
+        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-auto">
+          {barcodeSearchTerm && (
+            <button
+              type="button"
+              onClick={() => setBarcodeSearchTerm("")}
+              className="text-default-400 hover:text-danger text-xs font-bold p-1 rounded-full hover:bg-content2 transition-colors cursor-pointer"
+              title="Clear search"
+            >
+              ✕
+            </button>
+          )}
+          <span className="px-1.5 py-0.5 rounded-md bg-content2 border border-divider text-default-500 text-[9px] font-bold uppercase select-none tracking-wider pointer-events-none">
+            ↵ Enter
+          </span>
+        </div>
+
+        {barcodeSearchTerm.trim().length > 0 && (
+          <div className="absolute left-0 right-0 top-full mt-2 bg-content1 border border-divider rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-divider/30 text-xs max-h-[220px] overflow-y-auto">
+            {(() => {
+              const matched = products.filter(
+                (p) =>
+                  !p.isDeleted &&
+                  (selectedCategory === "All" || p.category === selectedCategory) &&
+                  (p.productName.toLowerCase().includes(barcodeSearchTerm.toLowerCase()) ||
+                    p.sku.toLowerCase().includes(barcodeSearchTerm.toLowerCase()) ||
+                    p.barcode.toLowerCase().includes(barcodeSearchTerm.toLowerCase())),
+              );
+              if (matched.length === 0) {
+                return (
+                  <div className="p-4 text-center text-default-500 font-medium text-xs italic">
+                    No compatible tiles or SKU listings match "{barcodeSearchTerm}"
+                  </div>
+                );
+              }
+              return matched.slice(0, 6).map((p) => (
+                <div
+                  key={p.id}
+                  onClick={() => {
+                    if (p.stockQuantity <= 0) {
+                      showToast(`Out of stock: Cannot add ${p.productName}`);
+                      return;
+                    }
+                    addToCart(p);
+                    setBarcodeAddFeedback(`Added: ${p.productName}`);
+                    setBarcodeSearchTerm("");
+                    setTimeout(() => setBarcodeAddFeedback(null), 3000);
+                  }}
+                  className="p-3 hover:bg-primary/10 cursor-pointer flex justify-between items-center transition-colors text-left"
+                >
+                  <div className="space-y-0.5">
+                    <div className="font-bold text-foreground text-xs">
+                      {p.productName}
+                    </div>
+                    <div className="text-[10px] text-default-500 font-medium">
+                      SKU: {p.sku} • Stock: {p.stockQuantity}
+                    </div>
+                  </div>
+                  <div className="text-right font-bold text-success text-xs tabular-nums">
+                    ₱{(Number(getBranchPrice(p)) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+              ));
+            })()}
+          </div>
+        )}
+      </div>
+    </div>
+    <HeroButton
+      type="submit"
+      color="primary"
+      radius="xl"
+      className="w-full md:w-auto h-10 font-semibold shadow-xs"
+    >
+      SKU Scan
+    </HeroButton>
+  </div>
+  </form>
+  )}
+  </div>
+
+  {/* Active Items Table List */}
+  <div className="flex-1 h-0 overflow-auto my-3 pr-1 space-y-2 border border-divider/30 rounded-2xl p-3 bg-content2/30 scrollbar-thin">
+  <div className="min-w-[550px] w-full pb-1">
+  <AnimatePresence initial={false}>
+  {cart.map((item, idx) => (
+    <motion.div
+      key={item.product.id}
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: -30, height: 0, padding: 0 }}
+      transition={{
+        type: "spring",
+        stiffness: 450,
+        damping: 30,
+      }}
+      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 py-2.5 border-b border-divider/20 last:border-0 pl-1 overflow-hidden"
+    >
+    <div className="space-y-1 text-left w-full sm:w-auto">
+      <h5 className="text-xs font-bold leading-tight text-foreground">
+        {item.product.productName}
+      </h5>
+      <div className="text-xs text-default-500 flex flex-wrap items-center gap-1.5 font-medium">
+        {item.overridePrice !== undefined ? (
+          <>
+            <span className="text-default-400 line-through text-xs tabular-nums">
+              {formatCurrency(getBranchPrice(item.product))}
+            </span>
+            <HeroChip size="sm" variant="flat" color="success" className="text-[10px] font-bold">
+              {formatCurrency(item.overridePrice)}
+            </HeroChip>
+          </>
+        ) : (
+          <span className="text-default-500 text-xs font-semibold tabular-nums">
+            {formatCurrency(getBranchPrice(item.product))}
+          </span>
+        )}
+        <span>/{item.product.unit}</span>
+        <span>•</span>
+        <span className="text-primary text-xs font-semibold">
+          SKU: {item.product.sku}
+        </span>
+        <span>•</span>
+        <button
+          type="button"
+          onClick={() => handleTriggerPriceOverride(idx)}
+          className="text-[10.5px] font-semibold text-primary hover:bg-primary/15 bg-primary/10 border border-primary/25 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+        >
+          Override Price
+        </button>
+        <span>•</span>
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedDiscountItemIndex(idx);
+            setShowDiscountModal(true);
+          }}
+          className="text-[10.5px] font-semibold text-warning-600 dark:text-warning hover:bg-warning/20 bg-warning/10 border border-warning/30 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+        >
+          {item.discountType && item.discountType !== "NONE" ? `Disc: ${item.discountType}` : "Discount"}
+        </button>
+        {(() => {
+          const itemDetail = cartItemDetails[idx];
+          if (itemDetail && itemDetail.itemDiscount > 0) {
+            return (
+              <>
+                <span>•</span>
+                <HeroChip size="sm" variant="flat" color="warning" className="text-[10px] font-bold">
+                  -₱{itemDetail.itemDiscount.toFixed(2)} OFF
+                </HeroChip>
+              </>
+            );
+          }
+          return null;
+        })()}
+        {item.quantity < 0 && (
+          <>
+            <span>•</span>
+            <HeroChip size="sm" variant="flat" color="danger" className="text-[10px] font-bold uppercase">
+              Return / Refund Item
+            </HeroChip>
+          </>
+        )}
+      </div>
+    </div>
+
+    <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 w-full sm:w-auto shrink-0">
+      {(() => {
+        const userBranchId = activePosBranchId;
+        const currentMaxStock = products.find((p) => p.id === item.product.id)?.stockQuantity ?? getBranchStockQuantity(item.product, userBranchId, branchStock, branches);
+        return (
+          <div className="flex items-center border border-divider rounded-full overflow-hidden shrink-0 bg-content1 shadow-2xs">
+            <button
+              type="button"
+              title="Decrement quantity"
+              onClick={() => {
+                let nextQty = item.quantity - 1;
+                if (nextQty === 0) nextQty = -1;
+                updateCartQty(item.product.id, nextQty, currentMaxStock);
+              }}
+              className="px-2.5 py-1 hover:bg-content2 text-xs font-bold text-foreground cursor-pointer transition-colors"
+            >
+              -
+            </button>
+            <CartQtyInput
+              quantity={item.quantity}
+              productId={item.product.id}
+              maxStock={currentMaxStock}
+              updateCartQty={updateCartQty}
+              removeFromCart={removeFromCart}
+            />
+            <button
+              type="button"
+              title="Increment quantity"
+              onClick={() => {
+                let nextQty = item.quantity + 1;
+                if (nextQty === 0) nextQty = 1;
+                updateCartQty(item.product.id, nextQty, currentMaxStock);
+              }}
+              className="px-2.5 py-1 hover:bg-content2 text-xs font-bold text-foreground cursor-pointer transition-colors"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              title="Toggle positive/negative quantity (Return item)"
+              onClick={() => updateCartQty(item.product.id, -item.quantity, currentMaxStock)}
+              className={`px-2 py-1 text-[10px] font-bold border-l border-divider/40 cursor-pointer transition-colors ${
+                item.quantity < 0
+                  ? "bg-danger/15 text-danger hover:bg-danger/25"
+                  : "text-default-500 hover:text-primary hover:bg-content2"
+              }`}
+            >
+              +/-
+            </button>
+          </div>
+        );
+      })()}
+
+      <div className="flex items-center gap-3">
+        <span className="text-xs font-bold min-w-[80px] text-right text-foreground tabular-nums">
+          ₱{(
+            (Number(item.overridePrice !== undefined && item.overridePrice !== null
+              ? item.overridePrice
+              : getBranchPrice(item.product)) * (item.quantity || 1)) || 0
+          ).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+          })}
+        </span>
+        <button
+          type="button"
+          onClick={() => removeFromCart(item.product.id)}
+          className="text-default-400 hover:text-danger p-1 rounded-full hover:bg-danger/10 transition-colors"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+    </motion.div>
+  ))}
+  </AnimatePresence>
+
+  {cart.length === 0 && (
+    <div className="text-center py-12 text-default-500 text-xs flex flex-col items-center justify-center gap-2 font-medium min-h-[160px] h-full">
+      <ShoppingCart className="h-8 w-8 text-default-300" />
+      <span className="max-w-xs leading-relaxed text-default-400">
+        Active Cashier billing basket is empty. Select a staged ticket from the hold queue to begin.
+      </span>
+      <HeroButton
+        size="sm"
+        variant="flat"
+        color="primary"
+        radius="xl"
+        onClick={() => setShowTileCalculatorModal(true)}
+        startIcon={<Calculator className="h-4 w-4" />}
+        className="mt-2 font-semibold text-xs"
+      >
+        Open Tile Calculator
+      </HeroButton>
+    </div>
+  )}
+  </div>
+  </div>
+
+  {/* Summary Totals & Settlement Action Section */}
+  <div className="flex-shrink-0 border-t border-divider/30 pt-3.5 grid grid-cols-1 xl:grid-cols-12 gap-4">
+    {/* Left Column: Totals Summary */}
+    <div className="xl:col-span-5 space-y-2 p-3.5 bg-content2/40 border border-divider/40 rounded-2xl">
+      <div className="flex justify-between text-xs font-medium text-default-500">
+        <span>
+          {discountType === "SENIOR" || discountType === "PWD"
+            ? "VAT-Exempt Sales"
+            : "VATable Sales (Net)"}
+        </span>
+        <span className="tabular-nums font-semibold text-foreground">{formatCurrency(grandTotal - vat)}</span>
+      </div>
+      <div className="flex justify-between text-xs font-medium text-default-500">
+        <span>
+          {discountType === "SENIOR" || discountType === "PWD"
+            ? "12% Output VAT (Exempt)"
+            : "12% Output VAT"}
+        </span>
+        <span className="tabular-nums font-semibold text-foreground">{formatCurrency(vat)}</span>
+      </div>
+
+      {discountAmount > 0 && (
+        <div className="flex justify-between text-xs font-semibold text-success">
+          <span>Discount Voucher Applied</span>
+          <span className="tabular-nums font-bold">-{formatCurrency(discountAmount)}</span>
+        </div>
+      )}
+
+      <div className="flex justify-between items-baseline border-t border-divider pt-2 mt-1">
+        <span className="text-foreground text-xs font-bold tracking-tight">
+          GRAND TOTAL DUE
+        </span>
+        <span className="text-primary text-xl font-bold tabular-nums">
+          ₱{(Number(grandTotal) || 0).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+          })}
+        </span>
+      </div>
+
+      <HeroButton
+        variant="flat"
+        color="primary"
+        radius="xl"
+        onClick={() => {
+          setDiscountInput("");
+          setShowDiscountModal(true);
+        }}
+        startIcon={<Sparkles className="h-3.5 w-3.5" />}
+        className="w-full font-semibold text-xs mt-1"
+      >
+        Apply Cardholder Discount (F6)
+      </HeroButton>
+    </div>
+
+    {/* Right Column: Settlement Panel */}
+    <div
+      id="checkout-action-panel"
+      className="xl:col-span-7 bg-content2/50 p-4 rounded-2xl border border-divider space-y-3 text-left"
+    >
+      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+        {/* Payment Methods */}
+        <div className="sm:col-span-6 space-y-1.5">
+          <label className="text-[10px] font-bold text-default-500 uppercase tracking-wider pl-1 block font-sans">
+            Settlement Method
+          </label>
+          <div className="grid grid-cols-3 gap-1.5 font-sans">
+            {[
+              { name: "Cash", label: "Cash", color: "default" as const },
+              { name: "GCash", label: "GCash", color: "primary" as const },
+              { name: "Maya", label: "Maya", color: "success" as const },
+              { name: "Card / Bank Terminal", label: "Card/POS", color: "secondary" as const },
+              { name: "Member Credit", label: "Member", color: "warning" as const },
+            ].map((method) => {
+              const isActive = paymentMethod === method.name;
+              return (
+                <HeroButton
+                  key={method.name}
+                  size="sm"
+                  variant={isActive ? "solid" : "flat"}
+                  color={isActive ? method.color : "default"}
+                  radius="full"
+                  onClick={() => {
+                    setPaymentMethod(method.name as any);
+                    if (method.name !== "Cash") {
+                      setAmountTendered(Math.abs(grandTotal).toString());
+                    } else {
+                      setAmountTendered("");
+                    }
+                  }}
+                  className={`text-xs font-semibold h-8 transition-all ${
+                    !isActive ? "hover:bg-content3" : "shadow-xs"
+                  }`}
+                >
+                  {method.label}
+                </HeroButton>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Amount Tendered */}
+        <div className="sm:col-span-6 space-y-1.5 font-sans">
+          <label className="text-[10px] font-bold text-default-500 uppercase tracking-wider pl-1 block font-sans">
+            Amount Tendered (PHP)
+          </label>
+          <input
+            id="cash-tendered-field"
+            type="number"
+            disabled={paymentMethod !== "Cash"}
+            value={amountTendered ?? ''}
+            onChange={(e) => setAmountTendered(e.target.value)}
+            placeholder={grandTotal.toFixed(0)}
+            className="w-full bg-content1 border border-divider/60 focus:border-primary px-3.5 py-2 text-xs text-foreground font-bold tracking-tight focus:outline-none transition-colors disabled:opacity-45 disabled:cursor-not-allowed rounded-xl font-sans tabular-nums h-9 shadow-inner"
+          />
+        </div>
+      </div>
+
+      {paymentMethod !== "Cash" && paymentMethod !== "Member Credit" && (
+        <div className="p-3 bg-content1 border border-divider/40 rounded-xl space-y-2 font-sans animate-fade-in text-xs text-left">
           <div className="space-y-1">
             <div className="flex justify-between items-center">
-              <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">
+              <label className="text-[10px] font-bold text-default-500 uppercase tracking-wider pl-1 block">
                 {paymentMethod === "Card / Bank Terminal" ? "Receipt Reference / Approval No." : "Payment Reference Number"}
               </label>
             </div>
@@ -3268,231 +3256,237 @@ export const PosModule: React.FC<PosModuleProps> = ({
                 placeholder={
                   paymentMethod === "Card / Bank Terminal"
                     ? "Enter printed receipt reference or card approval code"
-                    : `Enter 13-digit reference number from ${paymentMethod} payment`
+                    : `Enter reference number from ${paymentMethod} payment`
                 }
- className="w-full bg-content1 border border-divider/60 rounded-lg px-3 py-1.5 text-xs text-foreground font-bold focus:outline-none focus:border-primary transition-all"
+                className="w-full bg-content2 border border-divider focus:border-primary rounded-xl px-3.5 py-2 text-xs text-foreground font-semibold focus:outline-none transition-all"
               />
               {paymentRef.trim() && (
-                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-emerald-500 text-[10px] font-bold select-none">
+                <HeroChip size="sm" variant="flat" color="success" className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold">
                   Verified
-                </span>
+                </HeroChip>
               )}
             </div>
           </div>
         </div>
       )}
 
-        {paymentMethod === "Cash" &&
- parseFloat(amountTendered) >= grandTotal && (
- <div className="p-1.5 px-3 bg-secondary-50 border border-secondary/25 text-secondary-700 rounded-lg flex justify-between items-center text-xs font-extrabold animate-fade-in mb-1">
- <span className="text-[9px] font-bold uppercase tracking-wider">
- CHANGE DISPENSE:
- </span>
- <span className="text-xs">
- {formatCurrency(changeAmount)}
- </span>
- </div>
- )}
+      {paymentMethod === "Cash" && parseFloat(amountTendered) >= grandTotal && (
+        <div className="p-2.5 px-3.5 bg-success-50 dark:bg-success-500/15 border border-success-500/30 text-success-700 dark:text-success-300 rounded-xl flex justify-between items-center text-xs font-bold animate-fade-in">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-success-700 dark:text-success-300">
+            CHANGE DISPENSE:
+          </span>
+          <span className="text-sm font-black tabular-nums">
+            {formatCurrency(changeAmount)}
+          </span>
+        </div>
+      )}
 
-				{(paymentMethod === "Member Credit" || (customerName && !customerName.toLowerCase().startsWith("walk-in") && members.some(m => m.fullName.toLowerCase() === customerName.toLowerCase()))) && (() => {
-					const isWalkInName = !customerName || customerName.trim().toLowerCase().startsWith("walk-in");
-					const matchingMember = !isWalkInName ? members.find(
-						(m) => m.fullName.toLowerCase() === customerName.toLowerCase()
-					) : undefined;
-					const spendPerPt = loyaltyConfig?.spendPerPoint || 500;
-					const ptValPhp = loyaltyConfig?.pointValueInPhp || 1.0;
-					const netAmountForPts = Math.max(0, grandTotal - (pointsToRedeem * ptValPhp));
-					const projectedEarnedPts = (!isWalkInName && loyaltyConfig?.enabled && spendPerPt > 0 && netAmountForPts > 0)
-						? Math.floor(netAmountForPts / spendPerPt) * (loyaltyConfig?.pointsPerSpend || 1)
-						: 0;
+      {(paymentMethod === "Member Credit" || (customerName && !customerName.toLowerCase().startsWith("walk-in") && members.some(m => m.fullName.toLowerCase() === customerName.toLowerCase()))) && (() => {
+        const isWalkInName = !customerName || customerName.trim().toLowerCase().startsWith("walk-in");
+        const matchingMember = !isWalkInName ? members.find(
+          (m) => m.fullName.toLowerCase() === customerName.toLowerCase()
+        ) : undefined;
+        const spendPerPt = loyaltyConfig?.spendPerPoint || 500;
+        const ptValPhp = loyaltyConfig?.pointValueInPhp || 1.0;
+        const netAmountForPts = Math.max(0, grandTotal - (pointsToRedeem * ptValPhp));
+        const projectedEarnedPts = (!isWalkInName && loyaltyConfig?.enabled && spendPerPt > 0 && netAmountForPts > 0)
+          ? Math.floor(netAmountForPts / spendPerPt) * (loyaltyConfig?.pointsPerSpend || 1)
+          : 0;
 
-					return (
-						<div className="p-3 bg-content1 border border-divider/30 rounded-xl space-y-2 mt-2 font-sans animate-fade-in text-xs text-left">
-							<div className="flex items-center justify-between font-bold text-[11px] text-primary uppercase tracking-wider">
-								<div className="flex items-center gap-1.5">
-									<Users className="h-4 w-4" />
-									<span>Member Account & Loyalty Desk</span>
-								</div>
-								<div className="flex items-center gap-1.5">
-									<button
-										type="button"
-										onClick={() => {
-											setNewMemberName(customerName !== "Walk-in Customer" ? customerName : "");
-											setAddMemberError("");
-											setShowAddMemberModal(true);
-										}}
-										className="px-2 py-0.5 bg-primary hover:bg-primary/90 text-primary-foreground text-[10px] font-bold rounded-lg flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
-									>
-										<UserPlus className="h-3 w-3" />
-										<span>+ Member</span>
-									</button>
-								</div>
-							</div>
+        return (
+          <div className="p-3.5 bg-content1 border border-divider/40 rounded-2xl space-y-2.5 font-sans animate-fade-in text-xs text-left">
+            <div className="flex items-center justify-between font-bold text-xs text-foreground uppercase tracking-tight">
+              <div className="flex items-center gap-1.5 text-primary">
+                <Users className="h-4 w-4" />
+                <span>Member Account & Loyalty Desk</span>
+              </div>
+              <HeroButton
+                size="sm"
+                variant="flat"
+                color="primary"
+                radius="full"
+                onClick={() => {
+                  setNewMemberName(customerName !== "Walk-in Customer" ? customerName : "");
+                  setAddMemberError("");
+                  setShowAddMemberModal(true);
+                }}
+                startIcon={<UserPlus className="h-3 w-3" />}
+                className="h-7 text-[10px] font-semibold"
+              >
+                + Member
+              </HeroButton>
+            </div>
 
-							{matchingMember ? (
-								<div className="space-y-2">
-									<div className="space-y-1 bg-content1 p-2.5 rounded-lg border border-divider/15">
-										<div className="flex justify-between items-center">
-											<span className="text-default-500 dark:text-default-500">Account:</span>
-											<span className="font-extrabold text-foreground">{matchingMember.fullName}</span>
-										</div>
+            {matchingMember ? (
+              <div className="space-y-2">
+                <div className="space-y-1 bg-content2/50 p-2.5 rounded-xl border border-divider/20">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-default-500 font-medium">Account:</span>
+                    <span className="font-bold text-foreground">{matchingMember.fullName}</span>
+                  </div>
 
-										{paymentMethod === "Member Credit" && (
-											<>
-												<div className="flex justify-between items-center text-[11px]">
-													<span className="text-default-500 dark:text-default-500">Credit Limit:</span>
-													<span className=" font-bold text-foreground">₱{(Number(matchingMember.creditLimit) || 0).toLocaleString()}</span>
-												</div>
-												<div className="flex justify-between items-center text-[11px]">
-													<span className="text-default-500 dark:text-default-500">Outstanding Debt:</span>
-													<span className=" font-bold text-amber-500">₱{(Number(matchingMember.outstandingBalance) || 0).toLocaleString()}</span>
-												</div>
-												<div className="border-t border-divider/10 my-1 pt-1 flex justify-between items-center">
-													<span className="font-bold text-default-500 dark:text-default-500">Available Credit:</span>
-													<span className={` font-black ${(Number(matchingMember.creditLimit) || 0) - (Number(matchingMember.outstandingBalance) || 0) >= grandTotal ? 'text-emerald-500' : 'text-rose-500'}`}>
-														₱{((Number(matchingMember.creditLimit) || 0) - (Number(matchingMember.outstandingBalance) || 0)).toLocaleString()}
-													</span>
-												</div>
-											</>
-										)}
+                  {paymentMethod === "Member Credit" && (
+                    <>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-default-500 font-medium">Credit Limit:</span>
+                        <span className="font-bold text-foreground tabular-nums">₱{(Number(matchingMember.creditLimit) || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-default-500 font-medium">Outstanding Debt:</span>
+                        <span className="font-bold text-warning tabular-nums">₱{(Number(matchingMember.outstandingBalance) || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="border-t border-divider/20 my-1 pt-1 flex justify-between items-center text-xs">
+                        <span className="font-bold text-default-500">Available Credit:</span>
+                        <span className={`font-bold tabular-nums ${(Number(matchingMember.creditLimit) || 0) - (Number(matchingMember.outstandingBalance) || 0) >= grandTotal ? 'text-success' : 'text-danger'}`}>
+                          ₱{((Number(matchingMember.creditLimit) || 0) - (Number(matchingMember.outstandingBalance) || 0)).toLocaleString()}
+                        </span>
+                      </div>
+                    </>
+                  )}
 
-										{matchingMember.status !== "Active" ? (
-											<div className="text-[10px] text-rose-500 font-bold bg-rose-500/10 p-1 px-2 rounded mt-1 border border-rose-500/20">
-												Account is suspended.
-											</div>
-										) : paymentMethod === "Member Credit" && matchingMember.creditLimit - matchingMember.outstandingBalance < grandTotal ? (
-											<div className="text-[10px] text-rose-500 font-bold bg-rose-500/10 p-1 px-2 rounded mt-1 border border-rose-500/20">
-												Purchase exceeds available credit limit.
-											</div>
-										) : null}
-									</div>
+                  {matchingMember.status !== "Active" ? (
+                    <div className="text-[10px] text-danger font-bold bg-danger/10 p-1 px-2 rounded-lg mt-1 border border-danger/20">
+                      Account is suspended.
+                    </div>
+                  ) : paymentMethod === "Member Credit" && matchingMember.creditLimit - matchingMember.outstandingBalance < grandTotal ? (
+                    <div className="text-[10px] text-danger font-bold bg-danger/10 p-1 px-2 rounded-lg mt-1 border border-danger/20">
+                      Purchase exceeds available credit limit.
+                    </div>
+                  ) : null}
+                </div>
 
-									{/* COMPACT LOYALTY POINTS DISPLAY */}
-									<div className="bg-content1 p-2 rounded-lg border border-divider/20 space-y-1.5 text-xs">
-										<div className="flex items-center justify-between text-[11px]">
-											<span className="text-default-500 font-medium">
-												Available Points: <strong className="text-amber-500 ">{matchingMember.points || 0}</strong>
-												{projectedEarnedPts > 0 && (
-													<span className="text-emerald-500 text-[10.5px] ml-1.5 font-bold">
-														(+{projectedEarnedPts} earned)
-													</span>
-												)}
-											</span>
-											{(matchingMember.points || 0) > 0 && (
-												<span className="text-[10px] text-default-500">
-													(₱{((matchingMember.points || 0) * ptValPhp).toFixed(2)})
-												</span>
-											)}
-										</div>
+                {/* Loyalty Points Section */}
+                <div className="bg-content2/50 p-2.5 rounded-xl border border-divider/20 space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-default-500 font-medium">
+                      Available Points: <strong className="text-warning font-bold tabular-nums">{matchingMember.points || 0}</strong>
+                      {projectedEarnedPts > 0 && (
+                        <span className="text-success text-[10.5px] ml-1.5 font-bold">
+                          (+{projectedEarnedPts} earned)
+                        </span>
+                      )}
+                    </span>
+                    {(matchingMember.points || 0) > 0 && (
+                      <span className="text-[10.5px] text-default-400 font-medium tabular-nums">
+                        (₱{((matchingMember.points || 0) * ptValPhp).toFixed(2)})
+                      </span>
+                    )}
+                  </div>
 
-										{/* Point Redemption Input */}
-										{(matchingMember.points || 0) > 0 && grandTotal > 0 && (
-											<div className="flex items-center gap-1.5 pt-1 border-t border-divider/15">
-												<input
-													type="number"
-													min="0"
-													max={Math.min(matchingMember.points || 0, Math.floor(grandTotal / ptValPhp))}
-													value={pointsToRedeem || ""}
-													onChange={(e) => {
-														const val = parseInt(e.target.value) || 0;
-														const maxAllowed = Math.min(matchingMember.points || 0, Math.floor(grandTotal / ptValPhp));
-														setPointsToRedeem(Math.max(0, Math.min(val, maxAllowed)));
-													}}
-													placeholder="Enter points to redeem"
-													className="w-full bg-content3 border border-divider/30 rounded-md px-2 py-1 text-xs font-bold text-foreground focus:outline-none focus:border-amber-500"
-												/>
-												<button
-													type="button"
-													onClick={() => {
-														const maxAllowed = Math.min(matchingMember.points || 0, Math.floor(grandTotal / ptValPhp));
-														setPointsToRedeem(maxAllowed);
-													}}
-													className="px-2 py-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 text-[10px] font-extrabold rounded cursor-pointer whitespace-nowrap transition-colors"
-												>
-													Max
-												</button>
-												{pointsToRedeem > 0 && (
-													<button
-														type="button"
-														onClick={() => setPointsToRedeem(0)}
-														className="px-2 py-1 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-[10px] font-bold rounded cursor-pointer transition-colors"
-													>
-														Clear
-													</button>
-												)}
-												{pointsToRedeem > 0 && (
-													<span className="text-[10px] font-bold text-emerald-500 whitespace-nowrap">
-														-₱{(pointsToRedeem * ptValPhp).toFixed(2)}
-													</span>
-												)}
-											</div>
-										)}
-									</div>
-								</div>
-							) : (
-								<div className="space-y-1.5">
-									<div className="text-[10px] text-default-500 font-bold uppercase tracking-wider px-1">
-										Select Active Member Account:
-									</div>
-									<div className="max-h-36 overflow-y-auto space-y-1 border border-divider/15 rounded-lg p-1 bg-content1">
-										{members.filter(m => m.status === "Active").map((m) => (
-											<button
-												type="button"
-												key={m.id}
-												onClick={() => {
-													setCustomerName(m.fullName);
-												}}
-												className="w-full text-left p-1.5 px-2 hover:bg-primary/10 rounded text-[11px] font-bold text-foreground flex justify-between items-center cursor-pointer border-0 bg-transparent transition-colors"
-											>
-												<span>{m.fullName}</span>
-												<span className=" text-[10px] text-amber-500">{m.points || 0} pts | Ceiling: ₱{(Number(m?.creditLimit) || 0).toLocaleString()}</span>
-											</button>
-										))}
-										{members.filter(m => m.status === "Active").length === 0 && (
-											<p className="text-center p-2 text-default-500 dark:text-default-500 text-[10px] italic">No active corporate members found.</p>
-										)}
-									</div>
-								</div>
-							)}
-						</div>
-					);
-				})()}
+                  {(matchingMember.points || 0) > 0 && grandTotal > 0 && (
+                    <div className="flex items-center gap-1.5 pt-1 border-t border-divider/20">
+                      <input
+                        type="number"
+                        min="0"
+                        max={Math.min(matchingMember.points || 0, Math.floor(grandTotal / ptValPhp))}
+                        value={pointsToRedeem || ""}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          const maxAllowed = Math.min(matchingMember.points || 0, Math.floor(grandTotal / ptValPhp));
+                          setPointsToRedeem(Math.max(0, Math.min(val, maxAllowed)));
+                        }}
+                        placeholder="Points to redeem"
+                        className="w-full bg-content1 border border-divider/40 rounded-xl px-2.5 py-1.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary tabular-nums"
+                      />
+                      <HeroButton
+                        size="sm"
+                        variant="flat"
+                        color="warning"
+                        radius="lg"
+                        onClick={() => {
+                          const maxAllowed = Math.min(matchingMember.points || 0, Math.floor(grandTotal / ptValPhp));
+                          setPointsToRedeem(maxAllowed);
+                        }}
+                        className="h-8 text-[10px] font-bold"
+                      >
+                        Max
+                      </HeroButton>
+                      {pointsToRedeem > 0 && (
+                        <HeroButton
+                          size="sm"
+                          variant="light"
+                          color="default"
+                          radius="lg"
+                          onClick={() => setPointsToRedeem(0)}
+                          className="h-8 text-[10px] font-semibold"
+                        >
+                          Clear
+                        </HeroButton>
+                      )}
+                      {pointsToRedeem > 0 && (
+                        <span className="text-xs font-bold text-success whitespace-nowrap tabular-nums">
+                          -₱{(pointsToRedeem * ptValPhp).toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <div className="text-[10px] text-default-500 font-bold uppercase tracking-wider px-1">
+                  Select Active Member Account:
+                </div>
+                <div className="max-h-36 overflow-y-auto space-y-1 border border-divider/20 rounded-xl p-1 bg-content2/40">
+                  {members.filter(m => m.status === "Active").map((m) => (
+                    <button
+                      type="button"
+                      key={m.id}
+                      onClick={() => {
+                        setCustomerName(m.fullName);
+                      }}
+                      className="w-full text-left p-2 hover:bg-content1 rounded-lg text-xs font-medium text-foreground flex justify-between items-center cursor-pointer transition-colors"
+                    >
+                      <span className="font-bold">{m.fullName}</span>
+                      <span className="text-[10px] text-warning font-semibold tabular-nums">{m.points || 0} pts | Ceiling: ₱{(Number(m?.creditLimit) || 0).toLocaleString()}</span>
+                    </button>
+                  ))}
+                  {members.filter(m => m.status === "Active").length === 0 && (
+                    <p className="text-center p-3 text-default-400 text-xs italic">No active corporate members found.</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
- {errorMessage && (
- <div className="bg-red-500/10 border border-red-500/25 text-red-500 p-1.5 text-[9.5px] font-bold leading-tight rounded-lg">
- {errorMessage}
- </div>
- )}
+      {errorMessage && (
+        <div className="bg-danger/10 border border-danger/25 text-danger p-2.5 text-xs font-bold leading-tight rounded-xl flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
 
- <div className="pt-1 flex gap-2">
- <button
- type="button"
- onClick={handleCancelSale}
- className="px-3.5 py-2.5 sm:py-1.5 min-h-[42px] bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-white rounded-xl text-xs font-black uppercase tracking-wider border border-zinc-700 shadow-sm cursor-pointer transition-all shrink-0"
- >
- Cancel
- </button>
- <button
- type="button"
- disabled={cart.length === 0 || isCheckingOut}
- onClick={clientCheckout}
- className="flex-1 py-2.5 sm:py-1.5 min-h-[42px] bg-primary hover:bg-primary/90 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed text-primary-foreground text-xs font-black uppercase tracking-widest rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
- >
- {isCheckingOut ? (
- <>
- <Loader2 className="h-3 w-3 animate-spin text-primary-foreground" />
- <span>Processing...</span>
- </>
- ) : (
- <span>Execute Settlement (F7)</span>
- )}
- </button>
- </div>
- </div>
- </div>
- </div>
- </div>
- </div>
+      {/* Action Row */}
+      <div className="pt-1 flex gap-2.5">
+        <HeroButton
+          variant="flat"
+          color="default"
+          radius="xl"
+          onClick={handleCancelSale}
+          className="px-4 font-semibold text-xs h-11 shrink-0"
+        >
+          Cancel Order
+        </HeroButton>
+        <HeroButton
+          variant="solid"
+          color="primary"
+          radius="xl"
+          disabled={cart.length === 0 || isCheckingOut}
+          onClick={clientCheckout}
+          startIcon={isCheckingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
+          className="flex-1 font-bold text-xs uppercase tracking-wider h-11 shadow-md"
+        >
+          {isCheckingOut ? "Processing..." : "Execute Settlement (F7)"}
+        </HeroButton>
+      </div>
+    </div>
+  </div>
+  </div>
+  </div>
+  </div>
+  </div>
  </div>
  ) : (
  /* DAILY SALES LEDGER & VOID TERMINAL (SUB-MODULE TAB) */

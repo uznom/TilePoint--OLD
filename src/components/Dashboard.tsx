@@ -649,7 +649,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Revenue */}
         <HeroCard
-          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-default-400 bg-content1 dark:bg-[#18181B] shadow-xs"
+          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-default-400 bg-content1 shadow-xs"
           variant="bordered"
           radius="2xl"
         >
@@ -680,7 +680,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         {/* Inventory Stock Valuation */}
         <HeroCard
-          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-default-400 bg-content1 dark:bg-[#18181B] shadow-xs"
+          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-default-400 bg-content1 shadow-xs"
           variant="bordered"
           radius="2xl"
         >
@@ -711,7 +711,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         {/* Top Performer Tile - Clickable to open Top 20 & Slow 10 Velocity Analytics */}
         <HeroCard
-          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-primary/60 hover:shadow-sm cursor-pointer group bg-content1 dark:bg-[#18181B] shadow-xs"
+          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-primary/60 hover:shadow-sm cursor-pointer group bg-content1 shadow-xs"
           variant="bordered"
           radius="2xl"
           onClick={() => setIsTopSellingModalOpen(true)}
@@ -739,7 +739,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         {/* Operational Pulse & Alerts */}
         <HeroCard
-          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-default-400 bg-content1 dark:bg-[#18181B] shadow-xs"
+          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-default-400 bg-content1 shadow-xs"
           variant="bordered"
           radius="2xl"
         >
@@ -782,7 +782,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         {/* LEFT COLUMN (2 COLS): SPLINE REVENUE CHART & RECENT TRANSACTIONS */}
         <div className="lg:col-span-2 space-y-6">
           {/* Revenue Analytics Spline Chart */}
-          <HeroCard className="p-6 relative bg-content1 dark:bg-[#18181B] shadow-xs" variant="bordered" radius="2xl">
+          <HeroCard className="p-6 relative bg-content1 shadow-xs" variant="bordered" radius="2xl">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-divider/40">
               <div>
                 <span className="text-xs font-medium text-default-500 tracking-tight">
@@ -905,7 +905,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           </HeroCard>
 
           {/* Recent Invoices & Transactions Table with HeroUI v3 design language */}
-          <HeroCard className="p-5 sm:p-6 bg-content1 dark:bg-[#18181B] shadow-xs" variant="bordered" radius="2xl">
+          <HeroCard className="p-5 sm:p-6 bg-content1 shadow-xs" variant="bordered" radius="2xl">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
               <div>
                 <h3 className="text-base font-bold tracking-tight text-foreground">Recent POS Transactions</h3>

@@ -53,7 +53,7 @@ export const BranchPricesSubTab: React.FC<BranchPricesSubTabProps> = ({
 
   return (
     <div className="space-y-6 text-left animate-fade-in font-sans">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-divider dark:border-white/10 shadow-xs">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-content1 p-5 rounded-2xl border border-divider shadow-xs">
         <div>
           <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-primary" />
@@ -74,7 +74,7 @@ export const BranchPricesSubTab: React.FC<BranchPricesSubTabProps> = ({
         }}
       />
 
-      <div className="overflow-x-auto rounded-2xl border border-divider dark:border-white/10 bg-content1 dark:bg-[#18181B] shadow-xs">
+      <div className="overflow-x-auto rounded-2xl border border-divider bg-content1 shadow-xs">
         <HeroTable isStriped className="min-w-full text-xs">
           <HeroTable.Header>
             <tr className="bg-content2 border-b border-divider font-black text-foreground">

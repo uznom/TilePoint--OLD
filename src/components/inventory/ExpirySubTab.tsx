@@ -125,9 +125,9 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
       {/* Top Split: Calendar View Matrix (cols 1 & 2) + Analytics / Protocol (col 3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Column 1 & 2: Interactive Expiration Calendar Matrix */}
-        <div className="lg:col-span-2 bg-content1 dark:bg-[#18181B] border border-divider dark:border-white/10 p-5 rounded-2xl space-y-4 shadow-xs">
+        <div className="lg:col-span-2 bg-content1 border border-divider p-5 rounded-2xl space-y-4 shadow-xs">
           {/* Calendar Header Navigation */}
-          <div className="flex flex-wrap justify-between items-center gap-3 border-b border-divider dark:border-white/10 pb-3">
+          <div className="flex flex-wrap justify-between items-center gap-3 border-b border-divider pb-3">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-primary" />
               <span className="font-sans font-semibold text-xs tracking-tight text-foreground">

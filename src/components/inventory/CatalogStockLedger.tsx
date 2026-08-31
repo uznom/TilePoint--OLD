@@ -370,7 +370,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
   return (
     <>
       {/* Main Filter Controller Panel Card */}
-      <div className="bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-divider dark:border-white/10 shadow-xs space-y-4 font-sans">
+      <div className="bg-content1 p-5 rounded-2xl border border-divider shadow-xs space-y-4 font-sans">
         <div className="flex flex-col xl:flex-row gap-4 items-stretch xl:items-center justify-between">
           {/* Search query box */}
           <div className="relative w-full xl:max-w-md shrink-0">

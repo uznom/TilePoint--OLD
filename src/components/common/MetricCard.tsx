@@ -50,7 +50,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
       variant="bordered"
       radius="2xl"
       isHoverable
-      className={`bg-content1 dark:bg-[#18181B] border border-divider dark:border-white/10 p-5 relative overflow-hidden shadow-xs ${className}`}
+      className={`bg-content1 border border-divider p-5 relative overflow-hidden shadow-xs ${className}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1.5 flex-1 min-w-0">

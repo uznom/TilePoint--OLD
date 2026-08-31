@@ -206,7 +206,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
   </div>
 
   {/* Close shift verification panel (Columns 5) */}
-  <div className="bg-content1 dark:bg-[#18181B] border border-divider dark:border-white/10 rounded-2xl shadow-xs text-foreground lg:col-span-5 p-5 sm:p-6 h-fit space-y-4 font-sans">
+  <div className="bg-content1 border border-divider rounded-2xl shadow-xs text-foreground lg:col-span-5 p-5 sm:p-6 h-fit space-y-4 font-sans">
   <h3 className="text-sm font-semibold tracking-tight flex items-center gap-2 border-b border-divider/20 pb-2.5 text-foreground">
   <Unlock className="h-4 w-4 text-primary" /> Close Drawer Shift
   </h3>
@@ -268,7 +268,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
   </div>
   ) : (
   /* If shift is CLOSED */
-  <div className="bg-content1 dark:bg-[#18181B] border border-divider dark:border-white/10 rounded-2xl shadow-xs text-foreground text-center max-w-md mx-auto p-6 sm:p-8 space-y-5 font-sans">
+  <div className="bg-content1 border border-divider rounded-2xl shadow-xs text-foreground text-center max-w-md mx-auto p-6 sm:p-8 space-y-5 font-sans">
             <div className="p-3.5 bg-primary/10 text-primary border border-primary/20 rounded-full w-fit mx-auto">
               <Lock className="h-6 w-6" />
             </div>

@@ -46,7 +46,7 @@ export const HeroTable: React.FC<HeroTableProps> & {
     <div
       ref={containerRef}
       onScroll={onScroll}
-      className={`w-full overflow-x-auto rounded-2xl border border-divider dark:border-white/10 bg-content1 dark:bg-[#18181B] shadow-xs ${containerClassName}`}
+      className={`w-full overflow-x-auto rounded-2xl border border-divider bg-content1 shadow-xs ${containerClassName}`}
     >
       <table
         id={id}

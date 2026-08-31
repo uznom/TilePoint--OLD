@@ -14,9 +14,13 @@
   --color-focus: var(--heroui-primary);
 
   --color-content1: var(--heroui-content1);
+  --color-content1-foreground: var(--heroui-content1-foreground, var(--heroui-foreground));
   --color-content2: var(--heroui-content2);
+  --color-content2-foreground: var(--heroui-content2-foreground, var(--heroui-foreground));
   --color-content3: var(--heroui-content3);
+  --color-content3-foreground: var(--heroui-content3-foreground, var(--heroui-foreground));
   --color-content4: var(--heroui-content4);
+  --color-content4-foreground: var(--heroui-content4-foreground, var(--heroui-foreground));
 
   --color-default: var(--heroui-default);
   --color-default-foreground: var(--heroui-default-foreground);
@@ -96,15 +100,19 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --heroui-background: #F4F4F5;
-  --heroui-foreground: #09090B;
-  --heroui-divider: rgba(0, 0, 0, 0.08);
+  --heroui-background: #FFFFFF;
+  --heroui-foreground: #11181C;
+  --heroui-divider: rgba(17, 17, 17, 0.12);
   --heroui-content1: #FFFFFF;
+  --heroui-content1-foreground: #11181C;
   --heroui-content2: #F4F4F5;
+  --heroui-content2-foreground: #11181C;
   --heroui-content3: #E4E4E7;
+  --heroui-content3-foreground: #11181C;
   --heroui-content4: #D4D4D8;
+  --heroui-content4-foreground: #11181C;
   --heroui-default: #E4E4E7;
-  --heroui-default-foreground: #09090B;
+  --heroui-default-foreground: #11181C;
   --heroui-default-50: #FAFAFA;
   --heroui-default-100: #F4F4F5;
   --heroui-default-200: #E4E4E7;
@@ -159,15 +167,19 @@
 :root.dark,
 .dark,
 html.dark {
-  --heroui-background: #09090B;
-  --heroui-foreground: #FAFAFA;
-  --heroui-divider: rgba(255, 255, 255, 0.08);
+  --heroui-background: #000000;
+  --heroui-foreground: #ECEDEE;
+  --heroui-divider: rgba(255, 255, 255, 0.15);
   --heroui-content1: #18181B;
-  --heroui-content2: #222226;
-  --heroui-content3: #27272A;
-  --heroui-content4: #3F3F46;
-  --heroui-default: #27272A;
-  --heroui-default-foreground: #FAFAFA;
+  --heroui-content1-foreground: #ECEDEE;
+  --heroui-content2: #27272A;
+  --heroui-content2-foreground: #ECEDEE;
+  --heroui-content3: #3F3F46;
+  --heroui-content3-foreground: #ECEDEE;
+  --heroui-content4: #52525B;
+  --heroui-content4-foreground: #ECEDEE;
+  --heroui-default: #3F3F46;
+  --heroui-default-foreground: #ECEDEE;
   --heroui-default-50: #121215;
   --heroui-default-100: #1E1E22;
   --heroui-default-200: #27272A;

@@ -459,47 +459,36 @@ export function applyHeroUIThemeToDOM(config?: HeroUIConfig) {
     document.body.classList.add('ui-style-opaque');
   }
 
-  // Compute subtle ambient tint from user's selected base color
-  const { r: cr, g: cg, b: cb } = rgbPrimary;
-  const mixColor = (r1: number, g1: number, b1: number, r2: number, g2: number, b2: number, weight: number) => {
-    const p = weight;
-    const w = p * 2 - 1;
-    const a = 0;
-    const w1 = (((w * a === -1) ? w : (w + a) / (1 + w * a)) + 1) / 2.0;
-    const w2 = 1 - w1;
-    return `#${Math.round(r1 * w1 + r2 * w2).toString(16).padStart(2, '0')}${Math.round(g1 * w1 + g2 * w2).toString(16).padStart(2, '0')}${Math.round(b1 * w1 + b2 * w2).toString(16).padStart(2, '0')}`;
-  };
+
 
   if (isDark) {
-    // Dark mode: Refined deep canvas with 4-7% ambient tint of user-selected color (no stark pitch #000000)
-    const darkBg = mixColor(cr, cg, cb, 8, 10, 15, 0.06);
-    const darkContent1 = mixColor(cr, cg, cb, 22, 24, 30, 0.08);
-    const darkContent2 = mixColor(cr, cg, cb, 34, 37, 46, 0.10);
-    const darkContent3 = mixColor(cr, cg, cb, 50, 54, 66, 0.12);
-    const darkContent4 = mixColor(cr, cg, cb, 70, 75, 90, 0.14);
-
-    root.style.setProperty('--heroui-background', darkBg);
-    root.style.setProperty('--heroui-content1', darkContent1);
-    root.style.setProperty('--heroui-content2', darkContent2);
-    root.style.setProperty('--heroui-content3', darkContent3);
-    root.style.setProperty('--heroui-content4', darkContent4);
-    root.style.setProperty('--heroui-card-bg', darkContent1);
-    root.style.setProperty('--heroui-header-bg', darkBg);
+    // Official HeroUI v3 dark mode semantic surfaces (zinc scale: 950 canvas, 900 content1, 800 content2, 700 content3, 600 content4)
+    root.style.setProperty('--heroui-background', '#000000');
+    root.style.setProperty('--heroui-content1', '#18181B');
+    root.style.setProperty('--heroui-content1-foreground', '#ECEDEE');
+    root.style.setProperty('--heroui-content2', '#27272A');
+    root.style.setProperty('--heroui-content2-foreground', '#ECEDEE');
+    root.style.setProperty('--heroui-content3', '#3F3F46');
+    root.style.setProperty('--heroui-content3-foreground', '#ECEDEE');
+    root.style.setProperty('--heroui-content4', '#52525B');
+    root.style.setProperty('--heroui-content4-foreground', '#ECEDEE');
+    root.style.setProperty('--heroui-card-bg', '#18181B');
+    root.style.setProperty('--heroui-header-bg', '#000000');
+    root.style.setProperty('--heroui-divider', 'rgba(255, 255, 255, 0.15)');
   } else {
-    // Light mode: Refined light canvas with 3-5% ambient tint of user-selected color (no harsh blinding #FFFFFF)
-    const lightBg = mixColor(cr, cg, cb, 246, 248, 252, 0.04);
-    const lightContent1 = mixColor(cr, cg, cb, 255, 255, 255, 0.02);
-    const lightContent2 = mixColor(cr, cg, cb, 239, 243, 248, 0.06);
-    const lightContent3 = mixColor(cr, cg, cb, 224, 230, 238, 0.08);
-    const lightContent4 = mixColor(cr, cg, cb, 203, 213, 225, 0.10);
-
-    root.style.setProperty('--heroui-background', lightBg);
-    root.style.setProperty('--heroui-content1', lightContent1);
-    root.style.setProperty('--heroui-content2', lightContent2);
-    root.style.setProperty('--heroui-content3', lightContent3);
-    root.style.setProperty('--heroui-content4', lightContent4);
-    root.style.setProperty('--heroui-card-bg', lightContent1);
-    root.style.setProperty('--heroui-header-bg', lightBg);
+    // Official HeroUI v3 light mode semantic surfaces (white canvas, white content1, zinc-100 content2, zinc-200 content3, zinc-300 content4)
+    root.style.setProperty('--heroui-background', '#FFFFFF');
+    root.style.setProperty('--heroui-content1', '#FFFFFF');
+    root.style.setProperty('--heroui-content1-foreground', '#11181C');
+    root.style.setProperty('--heroui-content2', '#F4F4F5');
+    root.style.setProperty('--heroui-content2-foreground', '#11181C');
+    root.style.setProperty('--heroui-content3', '#E4E4E7');
+    root.style.setProperty('--heroui-content3-foreground', '#11181C');
+    root.style.setProperty('--heroui-content4', '#D4D4D8');
+    root.style.setProperty('--heroui-content4-foreground', '#11181C');
+    root.style.setProperty('--heroui-card-bg', '#FFFFFF');
+    root.style.setProperty('--heroui-header-bg', '#FFFFFF');
+    root.style.setProperty('--heroui-divider', 'rgba(17, 17, 17, 0.12)');
   }
 
   root.style.setProperty('--heroui-surface-blur', '0px');

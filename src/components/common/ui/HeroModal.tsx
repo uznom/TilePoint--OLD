@@ -113,7 +113,7 @@ export const HeroModal: React.FC<HeroModalProps> & {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className={`relative w-full ${getSizeClasses()} bg-content1 dark:bg-[#18181B] rounded-3xl shadow-2xl border border-divider dark:border-white/10 overflow-hidden z-10 flex flex-col max-h-[90vh] ${className}`}
+            className={`relative w-full ${getSizeClasses()} bg-content1 rounded-3xl shadow-2xl border border-divider overflow-hidden z-10 flex flex-col max-h-[90vh] ${className}`}
           >
             {!hideCloseButton && (
               <button

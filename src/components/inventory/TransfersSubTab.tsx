@@ -65,7 +65,7 @@ export const TransfersSubTab: React.FC<TransfersSubTabProps> = ({
 
   return (
     <div className="space-y-6 text-left animate-fade-in font-sans">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-divider dark:border-white/10 shadow-xs">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-content1 p-5 rounded-2xl border border-divider shadow-xs">
         <div>
           <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
             <ArrowRightLeft className="h-5 w-5 text-primary" />
@@ -85,23 +85,23 @@ export const TransfersSubTab: React.FC<TransfersSubTabProps> = ({
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 font-sans">
-        <div className="bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-divider dark:border-white/10 space-y-1 shadow-xs">
+        <div className="bg-content1 p-5 rounded-2xl border border-divider space-y-1 shadow-xs">
           <span className="text-xs font-medium text-default-500 tracking-tight block">Total Transfer Orders</span>
           <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground tabular-nums">{branchFilteredTransfers.length}</div>
         </div>
-        <div className="bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-amber-500/25 dark:border-amber-500/20 space-y-1 shadow-xs">
+        <div className="bg-content1 p-5 rounded-2xl border border-amber-500/25 space-y-1 shadow-xs">
           <span className="text-xs font-medium text-amber-600 dark:text-amber-400 tracking-tight block">Pending Approval</span>
           <div className="text-xl sm:text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400 tabular-nums">
             {branchFilteredTransfers.filter(t => t.status === 'Pending').length} requests
           </div>
         </div>
-        <div className="bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-sky-500/25 dark:border-sky-500/20 space-y-1 shadow-xs">
+        <div className="bg-content1 p-5 rounded-2xl border border-sky-500/25 space-y-1 shadow-xs">
           <span className="text-xs font-medium text-sky-600 dark:text-sky-400 tracking-tight block">In Transit / Dispatched</span>
           <div className="text-xl sm:text-2xl font-bold tracking-tight text-sky-600 dark:text-sky-400 tabular-nums">
             {branchFilteredTransfers.filter(t => t.status === 'Dispatched').length} orders
           </div>
         </div>
-        <div className="bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-emerald-500/25 dark:border-emerald-500/20 space-y-1 shadow-xs">
+        <div className="bg-content1 p-5 rounded-2xl border border-emerald-500/25 space-y-1 shadow-xs">
           <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 tracking-tight block">Received & Settled</span>
           <div className="text-xl sm:text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
             {branchFilteredTransfers.filter(t => t.status === 'Received').length} transfers

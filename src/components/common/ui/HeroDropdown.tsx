@@ -141,7 +141,7 @@ export const HeroDropdownSelect: React.FC<HeroDropdownSelectProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -4 }}
             transition={{ duration: 0.12 }}
-            className="absolute top-full left-0 mt-1.5 z-50 min-w-full sm:min-w-[150px] rounded-2xl bg-white dark:bg-[#18181B] border border-divider/40 dark:border-white/10 shadow-2xl p-1.5 max-h-64 overflow-y-auto space-y-0.5 text-foreground backdrop-blur-md font-sans"
+            className="absolute top-full left-0 mt-1.5 z-50 min-w-full sm:min-w-[150px] rounded-2xl bg-content1 border border-divider/40 shadow-2xl p-1.5 max-h-64 overflow-y-auto space-y-0.5 text-foreground backdrop-blur-md font-sans"
           >
             {items.map((item) => {
               const isSelected = item.key === selectedKey;
@@ -274,7 +274,7 @@ export const HeroDropdownMenu: React.FC<HeroDropdownMenuProps> = ({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: -4 }}
         transition={{ duration: 0.12 }}
-        className={`absolute top-full mt-1.5 z-50 min-w-48 rounded-2xl bg-content1 dark:bg-[#18181B] border border-divider/50 dark:border-white/10 shadow-2xl p-1.5 space-y-0.5 text-foreground backdrop-blur-md font-sans ${alignClass} ${className}`}
+        className={`absolute top-full mt-1.5 z-50 min-w-48 rounded-2xl bg-content1 border border-divider/50 shadow-2xl p-1.5 space-y-0.5 text-foreground backdrop-blur-md font-sans ${alignClass} ${className}`}
       >
         {children}
       </motion.div>

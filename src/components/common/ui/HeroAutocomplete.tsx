@@ -91,7 +91,7 @@ export const HeroAutocomplete: React.FC<HeroAutocompleteProps> = ({
       />
 
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full mt-1.5 z-50 max-h-60 overflow-y-auto rounded-2xl bg-content1 dark:bg-[#18181B] border border-divider dark:border-white/10 shadow-2xl p-1.5 animate-scale-in text-foreground backdrop-blur-md font-sans">
+        <div className="absolute left-0 right-0 top-full mt-1.5 z-50 max-h-60 overflow-y-auto rounded-2xl bg-content1 border border-divider shadow-2xl p-1.5 animate-scale-in text-foreground backdrop-blur-md font-sans">
           {filteredItems.length > 0 ? (
             filteredItems.map((item) => (
               <button
@@ -101,7 +101,7 @@ export const HeroAutocomplete: React.FC<HeroAutocompleteProps> = ({
                 className={`w-full text-left px-3 py-2 rounded-xl text-xs flex flex-col gap-0.5 transition-colors cursor-pointer active:scale-[0.98] ${
                   item.key === activeKey
                     ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                    : 'hover:bg-default-100 dark:hover:bg-[#27272A] text-foreground'
+                    : 'hover:bg-content2 text-foreground'
                 }`}
               >
                 <span className="font-semibold">{item.label}</span>

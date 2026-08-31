@@ -66,7 +66,7 @@ export const MovementsSubTab: React.FC<MovementsSubTabProps> = ({
   return (
     <div className="space-y-6 text-left animate-fade-in font-sans">
       {/* Header & Primary Action Controls */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-divider dark:border-white/10 shadow-xs">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-content1 p-5 rounded-2xl border border-divider shadow-xs">
         <div>
           <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
             <Activity className="h-5 w-5 text-primary" />
@@ -86,23 +86,23 @@ export const MovementsSubTab: React.FC<MovementsSubTabProps> = ({
 
       {/* KPI Overview Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 font-sans">
-        <div className="bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-divider dark:border-white/10 space-y-1 shadow-xs">
+        <div className="bg-content1 p-5 rounded-2xl border border-divider space-y-1 shadow-xs">
           <span className="text-xs font-medium text-default-500 tracking-tight block">Total Movement Logs</span>
           <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground tabular-nums">{filteredMovements.length}</div>
         </div>
-        <div className="bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-emerald-500/25 dark:border-emerald-500/20 space-y-1 shadow-xs">
+        <div className="bg-content1 p-5 rounded-2xl border border-emerald-500/25 space-y-1 shadow-xs">
           <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 tracking-tight block">Stock Inflows (+)</span>
           <div className="text-xl sm:text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
             +{filteredMovements.filter(m => Number(m.quantity || 0) > 0).reduce((acc, m) => acc + Number(m.quantity || 0), 0)} boxes
           </div>
         </div>
-        <div className="bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-rose-500/25 dark:border-rose-500/20 space-y-1 shadow-xs">
+        <div className="bg-content1 p-5 rounded-2xl border border-rose-500/25 space-y-1 shadow-xs">
           <span className="text-xs font-medium text-rose-600 dark:text-rose-400 tracking-tight block">Deductions & Outflows (-)</span>
           <div className="text-xl sm:text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400 tabular-nums">
             {filteredMovements.filter(m => Number(m.quantity || 0) < 0).reduce((acc, m) => acc + Number(m.quantity || 0), 0)} boxes
           </div>
         </div>
-        <div className="bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-amber-500/25 dark:border-amber-500/20 space-y-1 shadow-xs">
+        <div className="bg-content1 p-5 rounded-2xl border border-amber-500/25 space-y-1 shadow-xs">
           <span className="text-xs font-medium text-amber-600 dark:text-amber-400 tracking-tight block">Damaged / Write-Offs</span>
           <div className="text-xl sm:text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400 tabular-nums">
             {filteredMovements.filter(m => (m.type || '').toUpperCase().includes('DAMAGE')).length} incidents

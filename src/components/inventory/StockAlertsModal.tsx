@@ -116,10 +116,10 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
         onClick={onClose} 
       />
       
-      <div className="relative w-full max-w-5xl max-h-[92vh] flex flex-col rounded-3xl border border-divider dark:border-white/10 shadow-2xl bg-content1 dark:bg-[#18181B] text-foreground overflow-hidden z-30 font-sans">
+      <div className="relative w-full max-w-5xl max-h-[92vh] flex flex-col rounded-3xl border border-divider shadow-2xl bg-content1 text-foreground overflow-hidden z-30 font-sans">
         
         {/* Modal Header */}
-        <div className="p-5 md:p-6 border-b border-divider dark:border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-content1 dark:bg-[#18181B]">
+        <div className="p-5 md:p-6 border-b border-divider flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-content1">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-danger/10 text-danger shrink-0 border border-danger/20">
               <ShieldAlert className="h-5 w-5" />
